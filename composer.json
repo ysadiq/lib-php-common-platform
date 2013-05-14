@@ -1,0 +1,41 @@
+{
+	"name":              "dreamfactory/lib-php-common-platform",
+	"description":       "DreamFactory Services Platform(tm) PHP Common Components Library",
+	"version":           "1.0.0",
+	"homepage":          "https://www.dreamfactory.com/df_developers",
+	"keywords":          [
+		"php5", "framework", "library", "dreamfactory"
+	],
+	"type":              "library",
+	"license":           [
+		"Apache-2.0"
+	],
+	"authors":           [
+		{
+			"name":  "Jerry Ablan",
+			"email": "jerryablan@dreamfactory.com",
+			"role":  "Lead Developer, server-side/client-side"
+		},
+		{
+			"name":  "Lee Hicks",
+			"email": "leehicks@dreamfactory.com",
+			"role":  "Lead Guinea Pig, server-side/client-side"
+		}
+	],
+	"require":           {
+		"php":         ">=5.3.10",
+		"kisma/kisma": "dev-master"
+	},
+	"autoload":          {
+		"psr-0": {
+			"DreamFactory\\Platform\\": ""
+		}
+	},
+	"target-dir":        "DreamFactory/Platform",
+	"minimum-stability": "dev",
+	"extra":             {
+		"branch-alias": {
+		}
+	}
+
+}
