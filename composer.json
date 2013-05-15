@@ -23,8 +23,10 @@
 		}
 	],
 	"require":           {
-		"php":         ">=5.3.10",
-		"kisma/kisma": "dev-master"
+		"php":                             ">=5.3.10",
+		"kisma/kisma":                     "dev-master",
+		"dreamfactory/lib-php-common":     "dev-master",
+		"dreamfactory/lib-php-common-yii": "dev-master"
 	},
 	"autoload":          {
 		"psr-0": {
