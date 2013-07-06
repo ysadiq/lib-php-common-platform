@@ -16,8 +16,8 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
-use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Inflector;
 
 /**
  * BasePlatformSystemModel.php
@@ -25,13 +25,13 @@ use DreamFactory\Yii\Utility\Pii;
  *
  * Base Columns:
  *
- * @property integer  $created_by_id
- * @property integer  $last_modified_by_id
+ * @property integer         $created_by_id
+ * @property integer         $last_modified_by_id
  *
  * Base Relations:
  *
- * @property \User    $created_by
- * @property \User    $last_modified_by
+ * @property PlatformUser    $created_by
+ * @property PlatformUser    $last_modified_by
  */
 abstract class BasePlatformSystemModel extends BasePlatformModel
 {
@@ -72,7 +72,7 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	 *
 	 * @param \CDbCriteria $criteria
 	 *
-	 * @return CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
+	 * @return \CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
 	 */
 	public function search( $criteria = null )
 	{
@@ -82,27 +82,6 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 		$_criteria->compare( 'last_modified_by_id', $this->last_modified_by_id );
 
 		return parent::search( $criteria );
-	}
-
-	/**
-	 * @return bool
-	 */
-	protected function beforeValidate()
-	{
-		try
-		{
-			$this->last_modified_by_id = $_userId = UserSession::getCurrentUserId();
-
-			if ( $this->isNewRecord )
-			{
-				$this->created_by_id = $_userId;
-			}
-		}
-		catch ( \Exception $_ex )
-		{
-		}
-
-		return parent::beforeValidate();
 	}
 
 	/**
@@ -167,10 +146,209 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	{
 		return parent::attributeLabels(
 			array(
-				 'created_by_id',
-				 'last_modified_by_id',
+				 'created_by_id'       => 'Created By',
+				 'last_modified_by_id' => 'Last Modified By',
 			)
 		);
 	}
 
+	/**
+	 * @param string $sourceId
+	 * @param string $manyTable
+	 * @param string $targetColumn
+	 * @param array  $targetRows
+	 *
+	 * @throws Exception
+	 * @throws BadRequestException
+	 * @return void
+	 */
+	protected function assignManyToOne( $sourceId, $manyTable, $targetColumn, $targetRows = array() )
+	{
+		if ( empty( $sourceId ) )
+		{
+			throw new BadRequestException( 'The id can not be empty.' );
+		}
+		try
+		{
+
+			$_manyModel = SystemManager::getNewModel( $manyTable );
+			$_primaryKey = $_manyModel->tableSchema->primaryKey;
+
+			$manyTable = static::tableNamePrefix() . $manyTable;
+
+			// use query builder
+			$command = Pii::db()->createCommand();
+			$command->select( "$_primaryKey,$targetColumn" );
+			$command->from( $manyTable );
+			$command->where( "$targetColumn = :oid" );
+			$maps = $command->queryAll( true, array( ':oid' => $sourceId ) );
+			$toDelete = array();
+			foreach ( $maps as $map )
+			{
+				$id = Utilities::getArrayValue( $_primaryKey, $map, '' );
+				$found = false;
+				foreach ( $targetRows as $key => $item )
+				{
+					$assignId = Utilities::getArrayValue( $_primaryKey, $item, '' );
+					if ( $id == $assignId )
+					{
+						// found it, keeping it, so remove it from the list, as this becomes adds
+						unset( $targetRows[$key] );
+						$found = true;
+						continue;
+					}
+				}
+				if ( !$found )
+				{
+					$toDelete[] = $id;
+					continue;
+				}
+			}
+			if ( !empty( $toDelete ) )
+			{
+				// simple update to null request
+				$command->reset();
+				$rows = $command->update( $manyTable, array( $targetColumn => null ), array( 'in', $_primaryKey, $toDelete ) );
+				if ( 0 >= $rows )
+				{
+//					throw new Exception( "Record update failed for table '$manyTable'." );
+				}
+			}
+			if ( !empty( $targetRows ) )
+			{
+				$toAdd = array();
+				foreach ( $targetRows as $item )
+				{
+					$itemId = Utilities::getArrayValue( $_primaryKey, $item, '' );
+					if ( !empty( $itemId ) )
+					{
+						$toAdd[] = $itemId;
+					}
+				}
+				if ( !empty( $toAdd ) )
+				{
+					// simple update to null request
+					$command->reset();
+					$rows = $command->update( $manyTable, array( $targetColumn => $sourceId ), array( 'in', $_primaryKey, $toAdd ) );
+					if ( 0 >= $rows )
+					{
+//						throw new Exception( "Record update failed for table '$manyTable'." );
+					}
+				}
+			}
+		}
+		catch ( Exception $ex )
+		{
+			throw new Exception( "Error updating many to one assignment.\n{$ex->getMessage()}", $ex->getCode() );
+		}
+	}
+
+	/**
+	 * @param        $sourceId
+	 * @param string $manyTable
+	 * @param string $entity The associative entity, or mapping table
+	 * @param        $sourceColumn
+	 * @param        $targetColumn
+	 * @param array  $targetRows
+	 *
+	 * @throws Exception
+	 * @throws BadRequestException
+	 * @internal param int $id
+	 * @return void
+	 */
+	protected function assignManyToOneByMap( $sourceId, $manyTable, $entity, $sourceColumn, $targetColumn, $targetRows = array() )
+	{
+		if ( empty( $sourceId ) )
+		{
+			throw new BadRequestException( "The id can not be empty." );
+		}
+
+		$entity = static::tableNamePrefix() . $entity;
+
+		try
+		{
+			$_manyModel = static::_modelMap( $manyTable );
+			$pkManyField = $_manyModel->tableSchema->primaryKey;
+			$pkMapField = 'id';
+			//	Use query builder
+			$command = Pii::db()->createCommand();
+			$command->select( $pkMapField . ',' . $targetColumn );
+			$command->from( $entity );
+			$command->where( "$sourceColumn = :id" );
+			$maps = $command->queryAll( true, array( ':id' => $sourceId ) );
+
+			$toDelete = array();
+			foreach ( $maps as $map )
+			{
+				$manyId = Utilities::getArrayValue( $targetColumn, $map, '' );
+				$id = Utilities::getArrayValue( $pkMapField, $map, '' );
+				$found = false;
+				foreach ( $targetRows as $key => $item )
+				{
+					$assignId = Utilities::getArrayValue( $pkManyField, $item, '' );
+					if ( $assignId == $manyId )
+					{
+						// found it, keeping it, so remove it from the list, as this becomes adds
+						unset( $targetRows[$key] );
+						$found = true;
+						continue;
+					}
+				}
+				if ( !$found )
+				{
+					$toDelete[] = $id;
+					continue;
+				}
+			}
+			if ( !empty( $toDelete ) )
+			{
+				// simple delete request
+				$command->reset();
+				$rows = $command->delete( $entity, array( 'in', $pkMapField, $toDelete ) );
+				if ( 0 >= $rows )
+				{
+//					throw new Exception( "Record delete failed for table '$entity'." );
+				}
+			}
+			if ( !empty( $targetRows ) )
+			{
+				foreach ( $targetRows as $item )
+				{
+					$itemId = Utilities::getArrayValue( $pkManyField, $item, '' );
+					$record = array( $targetColumn => $itemId, $sourceColumn => $sourceId );
+					// simple update request
+					$command->reset();
+					$rows = $command->insert( $entity, $record );
+					if ( 0 >= $rows )
+					{
+						throw new Exception( "Record insert failed for table '$entity'." );
+					}
+				}
+			}
+		}
+		catch ( Exception $ex )
+		{
+			throw new Exception( "Error updating many to one map assignment.\n{$ex->getMessage()}", $ex->getCode() );
+		}
+	}
+
+	/**
+	 * @param $resource
+	 *
+	 * @return BasePlatformSystemModel
+	 * @throws InternalServerErrorException
+	 */
+	protected static function _modelMap( $resource )
+	{
+		$_namespace = '\\DreamFactory\\Platform\\Yii\\Models\\';
+		$_name = Inflector::deneutralize( $resource );
+		$_modelClass = $_namespace . $_name;
+
+		if ( !class_exists( $_modelClass ) )
+		{
+			throw new InternalServerErrorException( "Attempting to create an invalid system model '$resource'." );
+		}
+
+		return new $_modelClass();
+	}
 }

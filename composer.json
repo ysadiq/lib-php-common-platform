@@ -1,7 +1,7 @@
 {
 	"name":              "dreamfactory/lib-php-common-platform",
-	"description":       "DreamFactory Services Platform(tm) PHP Common Components Library",
-	"version":           "1.0.0",
+	"description":       "DreamFactory Services Platform(tm) Common PHP Platform Components",
+	"version":           "1.0.1",
 	"homepage":          "https://www.dreamfactory.com/df_developers",
 	"keywords":          [
 		"php5", "framework", "library", "dreamfactory"
@@ -19,12 +19,12 @@
 		{
 			"name":  "Lee Hicks",
 			"email": "leehicks@dreamfactory.com",
-			"role":  "Lead Guinea Pig, server-side/client-side"
+			"role":  "Lead Developer, server-side/client-side"
 		}
 	],
 	"require":           {
 		"php":                             ">=5.3.10",
-		"kisma/kisma":                     "dev-master",
+		"kisma/kisma":                     ">=0.1.1",
 		"dreamfactory/lib-php-common":     "dev-master",
 		"dreamfactory/lib-php-common-yii": "dev-master"
 	},
@@ -34,10 +34,5 @@
 		}
 	},
 	"target-dir":        "DreamFactory/Platform",
-	"minimum-stability": "dev",
-	"extra":             {
-		"branch-alias": {
-		}
-	}
-
+	"minimum-stability": "dev"
 }

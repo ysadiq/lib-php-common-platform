@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Yii\Models;
 
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Sql;
 
 /**
  * BasePlatformModel.php
@@ -35,6 +36,15 @@ use Kisma\Core\Utility\Log;
  */
 class BasePlatformModel extends \CActiveRecord
 {
+	//*************************************************************************
+	//* Constants
+	//*************************************************************************
+
+	/**
+	 * @var string Salt used for ID hashes
+	 */
+	const SaltyGoodness = '%]3,]~&t,EOxL30[wKw3auju:[+L>eYEVWEP,@3n79Qy';
+
 	//*******************************************************************************
 	//* Members
 	//*******************************************************************************
@@ -51,6 +61,10 @@ class BasePlatformModel extends \CActiveRecord
 	 * @var \CDbTransaction The current transaction
 	 */
 	protected $_transaction = null;
+	/**
+	 * @var bool If true,save() and delete() will throw an exception on failure
+	 */
+	protected $_throwOnError = true;
 
 	//********************************************************************************
 	//* Methods
@@ -71,11 +85,11 @@ class BasePlatformModel extends \CActiveRecord
 	 *
 	 * @param string $className active record class name.
 	 *
-	 * @return Service the static model class
+	 * @return BasePlatformModel the static model class
 	 */
-	public static function model( $className = __CLASS__ )
+	public static function model( $className = null )
 	{
-		return parent::model( get_called_class() );
+		return parent::model( $className ? : \get_called_class() );
 	}
 
 	/**
@@ -106,13 +120,13 @@ class BasePlatformModel extends \CActiveRecord
 
 		//	Merge all the labels together
 		return $_cache = array_merge(
-		//	Prior
-			parent::attributeLabels(),
-			//	Mine
+		//	Mine
 			array(
 				 'id'                 => 'ID',
+				 'create_date'        => 'Created Date',
 				 'created_date'       => 'Created Date',
 				 'last_modified_date' => 'Last Modified Date',
+				 'lmod_date'          => 'Last Modified Date',
 			),
 			//	Subclass
 			$additionalLabels
@@ -190,17 +204,16 @@ class BasePlatformModel extends \CActiveRecord
 			parent::behaviors(),
 			array(
 				 //	Data formatter
-				 $this->_modelClass . '.data_format_behavior' => array(
-					 'class' => 'DreamFactory\\Yii\\Behaviors\\DataFormatBehavior',
+				 'base_platform_model.data_format_behavior' => array(
+					 'class' => '\\DreamFactory\\Yii\\Behaviors\\DataFormatBehavior',
 				 ),
 				 //	Timestamper
-				 $this->_modelClass . '.timestamp_behavior'   => array(
-					 'class'                => 'DreamFactory\\Yii\\Behaviors\\TimestampBehavior',
-					 'createdColumn'        => 'created_date',
-					 'lastModifiedColumn'   => 'last_modified_date',
-					 //	These are used by the BasePlatformSystemModel subclass
-					 'createdByColumn'      => 'created_by_id',
-					 'lastModifiedByColumn' => 'last_modified_by_id',
+				 'base_platform_model.timestamp_behavior'   => array(
+					 'class'                => '\\DreamFactory\\Yii\\Behaviors\\TimestampBehavior',
+					 'createdColumn'        => array( 'create_date', 'created_date' ),
+					 'createdByColumn'      => array( 'create_user_id', 'created_by_id' ),
+					 'lastModifiedColumn'   => array( 'lmod_date', 'last_modified_date' ),
+					 'lastModifiedByColumn' => array( 'lmod_user_id', 'last_modified_by_id' ),
 				 ),
 			)
 		);
@@ -224,7 +237,7 @@ class BasePlatformModel extends \CActiveRecord
 		{
 			foreach ( $_errors as $_attribute => $_error )
 			{
-				$_result .= $_i++ . '. [' . $_attribute . '] : ' . implode( '|', $_error );
+				$_result .= $_i++ . '. [' . $_attribute . '] : ' . implode( '|', $_error ) . PHP_EOL;
 			}
 		}
 
@@ -244,7 +257,12 @@ class BasePlatformModel extends \CActiveRecord
 	{
 		if ( !parent::save( $runValidation, $attributes ) )
 		{
-			throw new \CDbException( $this->getErrorsForLogging() );
+			if ( $this->_throwOnError )
+			{
+				throw new \CDbException( $this->getErrorsForLogging() );
+			}
+
+			return false;
 		}
 
 		return true;
@@ -300,7 +318,12 @@ class BasePlatformModel extends \CActiveRecord
 	{
 		if ( !parent::delete() )
 		{
-			throw new \CDbException( $this->getErrorsForLogging() );
+			if ( $this->_throwOnError )
+			{
+				throw new \CDbException( $this->getErrorsForLogging() );
+			}
+
+			return false;
 		}
 
 		return true;
@@ -347,6 +370,89 @@ class BasePlatformModel extends \CActiveRecord
 	public function getModelClass()
 	{
 		return $this->_modelClass;
+	}
+
+	//*************************************************************************
+	//* Named Scopes
+	//*************************************************************************
+
+	/**
+	 * Selects a row from the database that has a hashed ID. Like from a form.
+	 * This allows you to hide your PKs/IDs from prying eyes
+	 *
+	 * @param string $id
+	 * @param bool   $isHashed
+	 * @param string $salt The salt to use for hashing
+	 *
+	 * @return BasePlatformModel
+	 */
+	public function unhashId( $id, $isHashed = false, $salt = self::SaltyGoodness )
+	{
+		$_salt = str_replace( "'", "''", $salt );
+
+		$this->getDbCriteria()->mergeWith(
+			array(
+				 'condition' => <<<TEXT
+sha1(concat('{$_salt}',id)) = :hashed_id
+TEXT
+				 ,
+				 'params'    => array(
+					 ':hashed_id' => $isHashed ? $id : $salt,
+				 ),
+			)
+		);
+
+		return $this;
+	}
+
+	/**
+	 * Named scope
+	 *
+	 * @param int  $userId
+	 * @param bool $adminView If true, all users' rows are returned
+	 *
+	 * @return $this
+	 */
+	public function userOwned( $userId = null, $adminView = false )
+	{
+		$_condition = $_params = array();
+
+		//	Admin views have limited restrictions
+		if ( $adminView )
+		{
+			if ( $this->hasAttribute( 'admin_ind' ) || ( $this->hasRelated( 'user' ) && $this->getRelated( 'user' )->hasAttribute( 'admin_ind' ) ) )
+			{
+				if ( 1 != $this->getRelated( 'user' )->admin_ind )
+				{
+					$adminView = false;
+				}
+			}
+		}
+
+		if ( !$adminView )
+		{
+			$_condition[] = 'user_id = :user_id';
+			$_params[':user_id'] = $userId ? : Pii::user()->getId();
+		}
+
+		$this->getDbCriteria()->mergeWith(
+			array(
+				 'condition' => implode( ' AND ', $_condition ),
+				 'params'    => $_params,
+			)
+		);
+
+		return $this;
+	}
+
+	/**
+	 * Criteria that limits results to system-owned
+	 *
+	 * @return BaseFactoryModel
+	 */
+	public function systemOwned()
+	{
+		return $this->userOwned( 0 );
 	}
 
 	//*******************************************************************************
@@ -452,8 +558,8 @@ class BasePlatformModel extends \CActiveRecord
 				case 'date':
 				case 'datetime':
 				case 'timestamp':
-					//	Handle blanks
-					if ( null !== $_attributeValue && $_attributeValue != '0000-00-00' && $_attributeValue != '0000-00-00 00:00:00' )
+					//	Avoid blanks and bogosity
+					if ( -1 != date( 'Y', strtotime( $_attributeValue ) ) )
 					{
 						$_attributeValue = date( 'c', strtotime( $_attributeValue ) );
 					}
@@ -529,7 +635,22 @@ class BasePlatformModel extends \CActiveRecord
 	 */
 	public static function execute( $sql, $parameters = array() )
 	{
-		return static::createCommand( $sql )->execute( $parameters );
+		return Sql::execute( $sql, $parameters, static::model()->getDbConnection()->getPdoInstance() );
+	}
+
+	/**
+	 * Convenience method to execute a scalar query (static version)
+	 *
+	 * @param string $sql
+	 * @param array  $parameters
+	 *
+	 * @param int    $columnNumber
+	 *
+	 * @return int|string|null The result or null if nada
+	 */
+	public static function scalar( $sql, $parameters = array(), $columnNumber = 0 )
+	{
+		return Sql::scalar( $sql, $columnNumber, $parameters, static::model()->getDbConnection()->getPdoInstance() );
 	}
 
 	/**
