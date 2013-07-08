@@ -154,33 +154,51 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 
 	/**
 	 * @param string $sourceId
-	 * @param string $manyTable
-	 * @param string $targetColumn
+	 * @param string $mapTable
+	 * @param string $mapColumn
 	 * @param array  $targetRows
 	 *
 	 * @throws Exception
 	 * @throws BadRequestException
 	 * @return void
 	 */
-	protected function assignManyToOne( $sourceId, $manyTable, $targetColumn, $targetRows = array() )
+	protected function assignManyToOne( $sourceId, $mapTable, $mapColumn, $targetRows = array() )
 	{
 		if ( empty( $sourceId ) )
 		{
 			throw new BadRequestException( 'The id can not be empty.' );
 		}
+
+		/**
+		 * Map tables have a
+		 */
+
 		try
 		{
+			$_sql = <<<SQL
+SELECT
+	id,
+	$mapColumn
+FROM
+	$mapTable
+WHERE
+	$mapColumn = :id
+SQL;
 
-			$_manyModel = SystemManager::getNewModel( $manyTable );
+
+
+			$_manyModel = SystemManager::getNewModel( $mapTable );
 			$_primaryKey = $_manyModel->tableSchema->primaryKey;
 
-			$manyTable = static::tableNamePrefix() . $manyTable;
+			$mapTable = static::tableNamePrefix() . $mapTable;
 
 			// use query builder
 			$command = Pii::db()->createCommand();
-			$command->select( "$_primaryKey,$targetColumn" );
-			$command->from( $manyTable );
-			$command->where( "$targetColumn = :oid" );
+			$command->select( "$_primaryKey,$mapColumn" );
+			$command->from( $mapTable );
+			$command->where( "$mapColumn = :oid" );
+
+
 			$maps = $command->queryAll( true, array( ':oid' => $sourceId ) );
 			$toDelete = array();
 			foreach ( $maps as $map )
@@ -208,10 +226,10 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 			{
 				// simple update to null request
 				$command->reset();
-				$rows = $command->update( $manyTable, array( $targetColumn => null ), array( 'in', $_primaryKey, $toDelete ) );
+				$rows = $command->update( $mapTable, array( $mapColumn => null ), array( 'in', $_primaryKey, $toDelete ) );
 				if ( 0 >= $rows )
 				{
-//					throw new Exception( "Record update failed for table '$manyTable'." );
+//					throw new Exception( "Record update failed for table '$mapTable'." );
 				}
 			}
 			if ( !empty( $targetRows ) )
@@ -229,10 +247,10 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 				{
 					// simple update to null request
 					$command->reset();
-					$rows = $command->update( $manyTable, array( $targetColumn => $sourceId ), array( 'in', $_primaryKey, $toAdd ) );
+					$rows = $command->update( $mapTable, array( $mapColumn => $sourceId ), array( 'in', $_primaryKey, $toAdd ) );
 					if ( 0 >= $rows )
 					{
-//						throw new Exception( "Record update failed for table '$manyTable'." );
+//						throw new Exception( "Record update failed for table '$mapTable'." );
 					}
 				}
 			}
@@ -245,10 +263,10 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 
 	/**
 	 * @param        $sourceId
-	 * @param string $manyTable
+	 * @param string $mapTable
 	 * @param string $entity The associative entity, or mapping table
 	 * @param        $sourceColumn
-	 * @param        $targetColumn
+	 * @param        $mapColumn
 	 * @param array  $targetRows
 	 *
 	 * @throws Exception
@@ -256,7 +274,7 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	 * @internal param int $id
 	 * @return void
 	 */
-	protected function assignManyToOneByMap( $sourceId, $manyTable, $entity, $sourceColumn, $targetColumn, $targetRows = array() )
+	protected function assignManyToOneByMap( $sourceId, $mapTable, $entity, $sourceColumn, $mapColumn, $targetRows = array() )
 	{
 		if ( empty( $sourceId ) )
 		{
@@ -267,12 +285,12 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 
 		try
 		{
-			$_manyModel = static::_modelMap( $manyTable );
+			$_manyModel = static::_modelMap( $mapTable );
 			$pkManyField = $_manyModel->tableSchema->primaryKey;
 			$pkMapField = 'id';
 			//	Use query builder
 			$command = Pii::db()->createCommand();
-			$command->select( $pkMapField . ',' . $targetColumn );
+			$command->select( $pkMapField . ',' . $mapColumn );
 			$command->from( $entity );
 			$command->where( "$sourceColumn = :id" );
 			$maps = $command->queryAll( true, array( ':id' => $sourceId ) );
@@ -280,7 +298,7 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 			$toDelete = array();
 			foreach ( $maps as $map )
 			{
-				$manyId = Utilities::getArrayValue( $targetColumn, $map, '' );
+				$manyId = Utilities::getArrayValue( $mapColumn, $map, '' );
 				$id = Utilities::getArrayValue( $pkMapField, $map, '' );
 				$found = false;
 				foreach ( $targetRows as $key => $item )
@@ -315,7 +333,7 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 				foreach ( $targetRows as $item )
 				{
 					$itemId = Utilities::getArrayValue( $pkManyField, $item, '' );
-					$record = array( $targetColumn => $itemId, $sourceColumn => $sourceId );
+					$record = array( $mapColumn => $itemId, $sourceColumn => $sourceId );
 					// simple update request
 					$command->reset();
 					$rows = $command->insert( $entity, $record );

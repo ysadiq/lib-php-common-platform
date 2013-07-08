@@ -36,15 +36,6 @@ use Kisma\Core\Utility\Sql;
  */
 class BasePlatformModel extends \CActiveRecord
 {
-	//*************************************************************************
-	//* Constants
-	//*************************************************************************
-
-	/**
-	 * @var string Salt used for ID hashes
-	 */
-	const SaltyGoodness = '%]3,]~&t,EOxL30[wKw3auju:[+L>eYEVWEP,@3n79Qy';
-
 	//*******************************************************************************
 	//* Members
 	//*******************************************************************************
@@ -382,13 +373,13 @@ class BasePlatformModel extends \CActiveRecord
 	 *
 	 * @param string $id
 	 * @param bool   $isHashed
-	 * @param string $salt The salt to use for hashing
+	 * @param string $salt The salt to use for hashing. Defaults to the database password
 	 *
 	 * @return BasePlatformModel
 	 */
-	public function unhashId( $id, $isHashed = false, $salt = self::SaltyGoodness )
+	public function unhashId( $id, $isHashed = false, $salt = null )
 	{
-		$_salt = str_replace( "'", "''", $salt );
+		$_salt = str_replace( "'", "''", $salt ? : $this->getDb()->password );
 
 		$this->getDbCriteria()->mergeWith(
 			array(
@@ -397,7 +388,7 @@ sha1(concat('{$_salt}',id)) = :hashed_id
 TEXT
 				 ,
 				 'params'    => array(
-					 ':hashed_id' => $isHashed ? $id : $salt,
+					 ':hashed_id' => $isHashed ? $id : $_salt,
 				 ),
 			)
 		);
