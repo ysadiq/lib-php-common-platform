@@ -26,8 +26,7 @@
 		"php":                             ">=5.3.10",
 		"kisma/kisma":                     ">=0.1.2",
 		"dreamfactory/lib-php-common":     "dev-master",
-		"dreamfactory/lib-php-common-yii": "dev-master",
-		"zircote/swagger-php":             "0.7.*@dev"
+		"dreamfactory/lib-php-common-yii": "dev-master"
 	},
 	"autoload":          {
 		"psr-0": {
