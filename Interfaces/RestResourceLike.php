@@ -17,21 +17,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Exceptions;
+namespace DreamFactory\Platform\Interfaces;
+
+use Kisma\Core\Interfaces\HttpMethod;
 
 /**
- * BadRequestException
+ * RestResourceLike
+ *
+ * @package DreamFactory\Platform\Interfaces
  */
-class BadRequestException extends RestException
+interface RestResourceLike extends HttpMethod
 {
 	/**
-	 * Constructor.
+	 * @param string $action
 	 *
-	 * @param string  $message error message
-	 * @param integer $code    error code
+	 * @return mixed
 	 */
-	public function __construct( $message = null, $code = null )
-	{
-		parent::__construct( static::BadRequest, $message, $code ? : static::BadRequest );
-	}
+	public function processRequest( $action = self::Get );
 }

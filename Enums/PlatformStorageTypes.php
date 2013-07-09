@@ -17,21 +17,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Exceptions;
+namespace DreamFactory\Platform\Enums;
+
+use Kisma\Core\Enums\SeedEnum;
 
 /**
- * BadRequestException
+ * PlatformStorageTypes
  */
-class BadRequestException extends RestException
+class PlatformStorageTypes extends SeedEnum
 {
+	//*************************************************************************
+	//* Constants
+	//*************************************************************************
+
 	/**
-	 * Constructor.
-	 *
-	 * @param string  $message error message
-	 * @param integer $code    error code
+	 * @var int
 	 */
-	public function __construct( $message = null, $code = null )
-	{
-		parent::__construct( static::BadRequest, $message, $code ? : static::BadRequest );
-	}
+	const AWS_S3 = 0;
+	/**
+	 * @var int
+	 */
+	const AWS_DYNAMODB = 1;
+	/**
+	 * @var int
+	 */
+	const AWS_SIMPLEDB = 2;
+	/**
+	 * @var int
+	 */
+	const AZURE_BLOB = 3;
+	/**
+	 * @var int
+	 */
+	const AZURE_TABLES = 4;
+	/**
+	 * @var int
+	 */
+	const COUCHDB = 5;
+	/**
+	 * @var int
+	 */
+	const MONGODB = 6;
+	/**
+	 * @var int
+	 */
+	const OPENSTACK_OBJECT_STORAGE = 7;
+	/**
+	 * @var int
+	 */
+	const RACKSPACE_CLOUDFILES = 8;
 }

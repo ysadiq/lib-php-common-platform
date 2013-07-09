@@ -17,21 +17,54 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Exceptions;
+namespace DreamFactory\Platform\Enums;
+
+use Kisma\Core\Enums\SeedEnum;
 
 /**
- * BadRequestException
+ * PlatformStorageDrivers
+ * Storage driver string constants
  */
-class BadRequestException extends RestException
+class PlatformStorageDrivers extends SeedEnum
 {
+	//*************************************************************************
+	//	Constants
+	//*************************************************************************
+
 	/**
-	 * Constructor.
-	 *
-	 * @param string  $message error message
-	 * @param integer $code    error code
+	 * @var string
 	 */
-	public function __construct( $message = null, $code = null )
-	{
-		parent::__construct( static::BadRequest, $message, $code ? : static::BadRequest );
-	}
+	const MS_SQL = 'mssql';
+	/**
+	 * @var string
+	 */
+	const SYBASE = 'dblib';
+	/**
+	 * @var string
+	 */
+	const SQL_SERVER = 'sqlsrv';
+	/**
+	 * @var string
+	 */
+	const MYSQL = 'mysql';
+	/**
+	 * @var string
+	 */
+	const MYSQLI = 'mysqli';
+	/**
+	 * @var string
+	 */
+	const SQLITE = 'sqlite';
+	/**
+	 * @var string
+	 */
+	const SQLITE2 = 'sqlite2';
+	/**
+	 * @var string
+	 */
+	const ORACLE = 'oci';
+	/**
+	 * @var string
+	 */
+	const POSTGRESQL = 'pgsql';
 }

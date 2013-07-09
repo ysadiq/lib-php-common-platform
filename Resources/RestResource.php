@@ -17,62 +17,85 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Exceptions;
+namespace DreamFactory\Platform\Resources;
 
-use Kisma\Core\Interfaces\HttpResponse;
+use DreamFactory\Platform\Interfaces\RestResourceLike;
 
 /**
- * RestException
- * Represents an exception caused by REST API operations of end-users.
- *
- * The HTTP error code can be obtained via {@link statusCode}.
+ * RestService
+ * A base class to handle service resources accessed through the REST API.
  */
-class RestException extends PlatformServiceException implements HttpResponse
+abstract class RestResource extends BaseResource implements RestResourceLike
 {
 	//*************************************************************************
 	//* Members
 	//*************************************************************************
 
 	/**
-	 * @var int HTTP status code, such as 403, 404, 500, etc.
+	 * @var string
 	 */
-	protected $_statusCode;
+	protected $_action = self::Get;
 
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
 
 	/**
-	 * Constructor.
-	 *
-	 * @param int    $status  HTTP status code, such as 404, 500, etc.
-	 * @param string $message error message
-	 * @param int    $code    error code
+	 * @param string $action
 	 */
-	public function __construct( $status, $message = null, $code = null )
+	protected function _setAction( $action = self::Get )
 	{
-		$this->_statusCode = $status;
-
-		parent::__construct( $message, $code ? : $this->_statusCode );
+		$this->_action = strtoupper( $action );
 	}
 
 	/**
-	 * @param int $statusCode
-	 *
-	 * @return RestException
+	 * Apply the commonly used REST path members to the class
 	 */
-	public function setStatusCode( $statusCode )
+	protected function _detectResourceMembers()
 	{
-		$this->_statusCode = $statusCode;
-
-		return $this;
 	}
 
 	/**
-	 * @return int
+	 *
 	 */
-	public function getStatusCode()
+	protected function _preProcess()
 	{
-		return $this->_statusCode;
+		// throw exception here to stop processing
+	}
+
+	/**
+	 * @param mixed $results
+	 *
+	 * @return mixed|null
+	 */
+	protected function _postProcess( $results = null )
+	{
+	}
+
+	/**
+	 * @return bool
+	 */
+	protected function _handleAction()
+	{
+		return false;
+	}
+
+	/**
+	 * @param string $action
+	 *
+	 * @return bool
+	 */
+	public function processRequest( $action = self::Get )
+	{
+		$this->_setAction( $action );
+		$this->_detectResourceMembers();
+
+		$this->_preProcess();
+
+		$_results = $this->_handleAction();
+
+		$this->_postProcess( $_results );
+
+		return $_results;
 	}
 }

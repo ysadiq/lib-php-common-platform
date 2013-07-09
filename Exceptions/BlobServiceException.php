@@ -20,18 +20,8 @@
 namespace DreamFactory\Platform\Exceptions;
 
 /**
- * BadRequestException
+ * PlatformServiceException
  */
-class BadRequestException extends RestException
+class BlobServiceException extends PlatformServiceException
 {
-	/**
-	 * Constructor.
-	 *
-	 * @param string  $message error message
-	 * @param integer $code    error code
-	 */
-	public function __construct( $message = null, $code = null )
-	{
-		parent::__construct( static::BadRequest, $message, $code ? : static::BadRequest );
-	}
 }

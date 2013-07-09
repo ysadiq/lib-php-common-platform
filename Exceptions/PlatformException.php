@@ -19,19 +19,11 @@
  */
 namespace DreamFactory\Platform\Exceptions;
 
+use Kisma\Core\Exceptions\ServiceException;
+
 /**
- * BadRequestException
+ * PlatformException
  */
-class BadRequestException extends RestException
+class PlatformException extends ServiceException
 {
-	/**
-	 * Constructor.
-	 *
-	 * @param string  $message error message
-	 * @param integer $code    error code
-	 */
-	public function __construct( $message = null, $code = null )
-	{
-		parent::__construct( static::BadRequest, $message, $code ? : static::BadRequest );
-	}
 }

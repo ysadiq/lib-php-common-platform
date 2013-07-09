@@ -17,21 +17,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Exceptions;
+namespace DreamFactory\Platform\Interfaces;
+
+use Kisma\Core\Interfaces\SeedLike;
 
 /**
- * BadRequestException
+ * ControllerLike
+ * Things that act like controllers
  */
-class BadRequestException extends RestException
+interface ControllerLike extends SeedLike
 {
+	//*************************************************************************
+	//* Constants
+	//*************************************************************************
+
 	/**
-	 * Constructor.
-	 *
-	 * @param string  $message error message
-	 * @param integer $code    error code
+	 * @var string
 	 */
-	public function __construct( $message = null, $code = null )
-	{
-		parent::__construct( static::BadRequest, $message, $code ? : static::BadRequest );
-	}
+	const PreProcess = 'platform.controller_like.pre_process';
+	/**
+	 * @var string
+	 */
+	const PostProcess = 'platform.controller_like.post_process';
 }

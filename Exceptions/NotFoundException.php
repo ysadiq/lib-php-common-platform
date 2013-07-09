@@ -20,9 +20,9 @@
 namespace DreamFactory\Platform\Exceptions;
 
 /**
- * BadRequestException
+ * NotFoundException
  */
-class BadRequestException extends RestException
+class NotFoundException extends RestException
 {
 	/**
 	 * Constructor.
@@ -32,6 +32,6 @@ class BadRequestException extends RestException
 	 */
 	public function __construct( $message = null, $code = null )
 	{
-		parent::__construct( static::BadRequest, $message, $code ? : static::BadRequest );
+		parent::__construct( static::NotFound, $message, $code ? : static::NotFound );
 	}
 }

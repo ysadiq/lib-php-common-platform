@@ -17,21 +17,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Exceptions;
+namespace DreamFactory\Platform\Interfaces;
 
 /**
- * BadRequestException
+ * PermissionTypes
  */
-class BadRequestException extends RestException
+interface PermissionTypes
 {
 	/**
-	 * Constructor.
-	 *
-	 * @param string  $message error message
-	 * @param integer $code    error code
+	 * @var int
 	 */
-	public function __construct( $message = null, $code = null )
-	{
-		parent::__construct( static::BadRequest, $message, $code ? : static::BadRequest );
-	}
+	const READ_MODE = 4;
+	/**
+	 * @var int
+	 */
+	const WRITE_MODE = 2;
+	/**
+	 * @var int
+	 */
+	const EXEC_MODE = 1;
+	/**
+	 * @var string
+	 */
+	const READ_ONLY = 4;
+	/**
+	 * @var string
+	 */
+	const WRITE_ONLY = 2;
+	/**
+	 * @var string
+	 */
+	const READ_WRITE = 6;
+	/**
+	 * @var string
+	 */
+	const FULL_ACCESS = 7;
 }

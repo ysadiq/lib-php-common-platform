@@ -17,21 +17,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Exceptions;
+namespace DreamFactory\Platform\Interfaces;
 
 /**
- * BadRequestException
+ * SqlDbDriverTypes.php
+ * The various supported SQL database drivers
  */
-class BadRequestException extends RestException
+interface SqlDbDriverTypes
 {
+	//*************************************************************************
+	//	Constants
+	//*************************************************************************
+
 	/**
-	 * Constructor.
-	 *
-	 * @param string  $message error message
-	 * @param integer $code    error code
+	 * @var int
 	 */
-	public function __construct( $message = null, $code = null )
-	{
-		parent::__construct( static::BadRequest, $message, $code ? : static::BadRequest );
-	}
+	const DRV_OTHER = 0;
+	/**
+	 * @var int
+	 */
+	const DRV_SQLSRV = 1;
+	/**
+	 * @var int
+	 */
+	const DRV_MYSQL = 2;
+	/**
+	 * @var int
+	 */
+	const DRV_SQLITE = 3;
+	/**
+	 * @var int
+	 */
+	const DRV_PGSQL = 4;
+	/**
+	 * @var int
+	 */
+	const DRV_OCSQL = 5;
 }

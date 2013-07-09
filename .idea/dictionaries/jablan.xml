@@ -1,7 +1,14 @@
 <component name="ProjectDictionaryState">
   <dictionary name="jablan">
     <words>
+      <w>cloudfiles</w>
+      <w>dfpkg</w>
       <w>doctype</w>
+      <w>dynamodb</w>
+      <w>nosql</w>
+      <w>ocsql</w>
+      <w>openstack</w>
+      <w>simpledb</w>
     </words>
   </dictionary>
 </component>

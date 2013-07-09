@@ -1,8 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory PHP Common Components Library
+ * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
+ * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +19,9 @@
  */
 namespace DreamFactory\Platform\Exceptions;
 
-use Kisma\Core\Exceptions\ServiceException;
-
 /**
  * PlatformServiceException
  */
-class PlatformServiceException extends ServiceException
+class PlatformServiceException extends PlatformException
 {
 }

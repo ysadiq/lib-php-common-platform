@@ -20,9 +20,9 @@
 namespace DreamFactory\Platform\Exceptions;
 
 /**
- * BadRequestException
+ * InternalServerErrorException
  */
-class BadRequestException extends RestException
+class InternalServerErrorException extends RestException
 {
 	/**
 	 * Constructor.
@@ -32,6 +32,6 @@ class BadRequestException extends RestException
 	 */
 	public function __construct( $message = null, $code = null )
 	{
-		parent::__construct( static::BadRequest, $message, $code ? : static::BadRequest );
+		parent::__construct( static::InternalServerError, $message, $code ? : static::InternalServerError );
 	}
 }

@@ -17,21 +17,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Exceptions;
+namespace DreamFactory\Platform\Interfaces;
 
 /**
- * BadRequestException
+ * PlatformStates
+ * Defines the various states in which a platforms may exist
  */
-class BadRequestException extends RestException
+interface PlatformStates
 {
+	//*************************************************************************
+	//* Constants
+	//*************************************************************************
+
 	/**
-	 * Constructor.
-	 *
-	 * @param string  $message error message
-	 * @param integer $code    error code
+	 * @var string
 	 */
-	public function __construct( $message = null, $code = null )
-	{
-		parent::__construct( static::BadRequest, $message, $code ? : static::BadRequest );
-	}
+	const ADMIN_REQUIRED = 0;
+	/**
+	 * @var string
+	 */
+	const DATA_REQUIRED = 1;
+	/**
+	 * @var string
+	 */
+	const INIT_REQUIRED = 2;
+	/**
+	 * @var string
+	 */
+	const READY = 3;
+	/**
+	 * @var string
+	 */
+	const SCHEMA_REQUIRED = 4;
+	/**
+	 * @var string
+	 */
+	const UPGRADE_REQUIRED = 5;
 }

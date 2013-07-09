@@ -17,21 +17,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Exceptions;
+namespace DreamFactory\Platform\Interfaces;
 
 /**
- * BadRequestException
+ * RestLike
+ * Controllers that can talk REST
  */
-class BadRequestException extends RestException
+interface RestLike extends ControllerLike
 {
 	/**
-	 * Constructor.
-	 *
-	 * @param string  $message error message
-	 * @param integer $code    error code
+	 * @return mixed
 	 */
-	public function __construct( $message = null, $code = null )
-	{
-		parent::__construct( static::BadRequest, $message, $code ? : static::BadRequest );
-	}
+	public function restGet();
+
+	/**
+	 * @return mixed
+	 */
+	public function restPost();
+
+	/**
+	 * @return mixed
+	 */
+	public function restPatch();
+
+	/**
+	 * @return mixed
+	 */
+	public function restPut();
+
+	/**
+	 * @return mixed
+	 */
+	public function restMerge();
+
+	/**
+	 * @return mixed
+	 */
+	public function restDelete();
 }
