@@ -75,6 +75,36 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	//*************************************************************************
 
 	/**
+	 * @param string $resource
+	 * @param string $action
+	 *
+	 * @return mixed
+	 * @throws BadRequestException
+	 */
+	public function processRequest( $resource = null, $action = self::Get )
+	{
+		$this->_setResource( $resource );
+		$this->_setAction( $action );
+		$this->_detectResourceMembers();
+
+		$this->_preProcess();
+
+		//	Inherent failure?
+		if ( false === ( $this->_response = $this->_handleResource() ) )
+		{
+			$_message = $this->_action . ' requests' .
+						( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
+						' are not currently supported by the "' . $this->_apiName . '" service.';
+
+			throw new BadRequestException( $_message );
+		}
+
+		$this->_postProcess();
+
+		return $this->_response;
+	}
+
+	/**
 	 * Apply the commonly used REST path members to the class
 	 */
 	protected function _detectResourceMembers()
@@ -115,36 +145,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	protected function _listResources()
 	{
 		return false;
-	}
-
-	/**
-	 * @param string $resource
-	 * @param string $action
-	 *
-	 * @return mixed
-	 * @throws BadRequestException
-	 */
-	public function processRequest( $resource = null, $action = self::Get )
-	{
-		$this->_setResource( $resource );
-		$this->_setAction( $action );
-		$this->_detectResourceMembers();
-
-		$this->_preProcess();
-
-		//	Inherent failure?
-		if ( false === ( $this->_response = $this->_handleResource() ) )
-		{
-			$_message = $this->_action . ' requests' .
-						( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
-						' are not currently supported by the "' . $this->_apiName . '" service.';
-
-			throw new BadRequestException( $_message );
-		}
-
-		$this->_postProcess();
-
-		return $this->_response;
 	}
 
 	/**
@@ -220,19 +220,59 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 	/**
 	 * @param string $resourcePath
+	 *
+	 * @return BasePlatformRestService
 	 */
 	protected function _setResource( $resourcePath = null )
 	{
 		$this->_resourcePath = $resourcePath;
 		$this->_resourceArray = ( !empty( $this->_resourcePath ) ) ? explode( '/', $this->_resourcePath ) : array();
+
+		return $this;
 	}
 
 	/**
 	 * @param string $action
+	 *
+	 * @return BasePlatformRestService
 	 */
 	protected function _setAction( $action = self::Get )
 	{
 		$this->_action = trim( strtoupper( $action ) );
+
+		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getAction()
+	{
+		return $this->_action;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getResource()
+	{
+		return $this->_resource;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getResourceArray()
+	{
+		return $this->_resourceArray;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getResourcePath()
+	{
+		return $this->_resourcePath;
 	}
 
 }

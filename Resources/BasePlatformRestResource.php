@@ -19,83 +19,63 @@
  */
 namespace DreamFactory\Platform\Resources;
 
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Interfaces\RestResourceLike;
+use DreamFactory\Platform\Services\BasePlatformRestService;
+use DreamFactory\Platform\Services\BasePlatformService;
+use Kisma\Core\Seed;
 
 /**
- * RestService
- * A base class to handle service resources accessed through the REST API.
+ * BasePlatformResource
+ * A base service resource class to handle service resources of various kinds.
  */
-abstract class RestResource extends BaseResource implements RestResourceLike
+abstract class BasePlatformRestResource extends BasePlatformRestService implements RestResourceLike
 {
 	//*************************************************************************
 	//* Members
 	//*************************************************************************
 
 	/**
-	 * @var string
+	 * @var BasePlatformService
 	 */
-	protected $_action = self::Get;
+	protected $_consumer;
 
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
 
 	/**
-	 * @param string $action
-	 */
-	protected function _setAction( $action = self::Get )
-	{
-		$this->_action = strtoupper( $action );
-	}
-
-	/**
-	 * Apply the commonly used REST path members to the class
-	 */
-	protected function _detectResourceMembers()
-	{
-	}
-
-	/**
+	 * Create a new service
 	 *
-	 */
-	protected function _preProcess()
-	{
-		// throw exception here to stop processing
-	}
-
-	/**
-	 * @param mixed $results
+	 * @param BasePlatformService $consumer
+	 * @param array               $settings configuration array
 	 *
-	 * @return mixed|null
+	 * @throws \InvalidArgumentException
 	 */
-	protected function _postProcess( $results = null )
+	public function __construct( $consumer, $settings = array() )
 	{
+		$this->_consumer = $consumer;
+		parent::__construct( $settings );
 	}
 
 	/**
-	 * @return bool
-	 */
-	protected function _handleAction()
-	{
-		return false;
-	}
-
-	/**
-	 * @param string $action
+	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
 	 *
-	 * @return bool
+	 * @return BasePlatformResource
 	 */
-	public function processRequest( $action = self::Get )
+	public function setConsumer( $consumer )
 	{
-		$this->_setAction( $action );
-		$this->_detectResourceMembers();
+		$this->_consumer = $consumer;
 
-		$this->_preProcess();
-
-		$_results = $this->_handleAction();
-
-		$this->_postProcess( $_results );
-
-		return $_results;
+		return $this;
 	}
+
+	/**
+	 * @return \DreamFactory\Platform\Services\BasePlatformService
+	 */
+	public function getConsumer()
+	{
+		return $this->_consumer;
+	}
+
 }
