@@ -46,6 +46,10 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	protected $_type;
 	/**
+	 * @var int Designated type ID of this service
+	 */
+	protected $_typeId;
+	/**
 	 * @var boolean Is this service activated for use?
 	 */
 	protected $_isActive = false;
@@ -217,4 +221,23 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 		return $this->_proxyClient;
 	}
 
+	/**
+	 * @param int $typeId
+	 *
+	 * @return BasePlatformService
+	 */
+	public function setTypeId( $typeId )
+	{
+		$this->_typeId = $typeId;
+
+		return $this;
+	}
+
+	/**
+	 * @return int
+	 */
+	public function getTypeId()
+	{
+		return $this->_typeId;
+	}
 }
