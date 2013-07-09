@@ -81,12 +81,12 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 		// Validate basic settings
 		if ( empty( $this->_apiName ) )
 		{
-			throw new \InvalidArgumentException( 'Service name can not be empty.' );
+			throw new \InvalidArgumentException( '"api_name" can not be empty.' );
 		}
 
 		if ( empty( $this->_type ) )
 		{
-			throw new \InvalidArgumentException( 'Service type can not be empty.' );
+			throw new \InvalidArgumentException( '"type" can not be empty.' );
 		}
 	}
 
