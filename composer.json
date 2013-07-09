@@ -1,7 +1,7 @@
 {
 	"name":              "dreamfactory/lib-php-common-platform",
 	"description":       "DreamFactory Services Platform(tm) Common PHP Platform Components",
-	"version":           "1.0.1",
+	"version":           "1.0.5",
 	"homepage":          "https://www.dreamfactory.com/df_developers",
 	"keywords":          [
 		"php5", "framework", "library", "dreamfactory"
@@ -26,7 +26,8 @@
 		"php":                             ">=5.3.10",
 		"kisma/kisma":                     ">=0.1.2",
 		"dreamfactory/lib-php-common":     "dev-master",
-		"dreamfactory/lib-php-common-yii": "dev-master"
+		"dreamfactory/lib-php-common-yii": "dev-master",
+		"zircote/swagger-php":             "0.7.*@dev"
 	},
 	"autoload":          {
 		"psr-0": {

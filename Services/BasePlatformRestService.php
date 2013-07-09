@@ -19,10 +19,11 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Common\Interfaces\RestServiceLike;
-use DreamFactory\Common\Exceptions\BadRequestException;
-use DreamFactory\Common\Interfaces\BasePlatformRestServiceLike;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Interfaces\RestServiceLike;
 use Kisma\Core\Interfaces\HttpMethod;
+use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Option;
 use Swagger\Annotations as SWG;
 
 /**
@@ -64,40 +65,25 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @var string REST verb to take action on
 	 */
 	protected $_action = self::Get;
+	/**
+	 * @var mixed The response to the request
+	 */
+	protected $_response = null;
 
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
 
 	/**
-	 * @param null $resource_path
-	 */
-	protected function _setResource( $resource_path = null )
-	{
-		$this->_resourcePath = $resource_path;
-		$this->_resourceArray = ( !empty( $this->_resourcePath ) ) ? explode( '/', $this->_resourcePath ) : array();
-	}
-
-	/**
-	 * @param string $action
-	 */
-	protected function _setAction( $action = self::Get )
-	{
-		$this->_action = strtoupper( $action );
-	}
-
-	/**
 	 * Apply the commonly used REST path members to the class
 	 */
 	protected function _detectResourceMembers()
 	{
-		$this->_resource = ( isset( $this->_resourceArray, $this->_resourceArray[0] ) )
-			? strtolower( $this->_resourceArray[0] )
-			: null;
+		$this->_resource = strtolower( Option::get( $this->_resourceArray, 0 ) );
 	}
 
 	/**
-	 * @return mixed
+	 * @return void
 	 */
 	protected function _preProcess()
 	{
@@ -105,13 +91,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	}
 
 	/**
-	 * @param mixed $results
-	 *
-	 * @return mixed
+	 * @return void
 	 */
-	protected function _postProcess( $results = null )
+	protected function _postProcess()
 	{
-		// throw exception here to stop processing
+		//	Throw exception here to stop processing
 	}
 
 	/**
@@ -134,10 +118,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	}
 
 	/**
-	 * @param null   $resource
+	 * @param string $resource
 	 * @param string $action
 	 *
-	 * @return array|bool
+	 * @return mixed
 	 * @throws BadRequestException
 	 */
 	public function processRequest( $resource = null, $action = self::Get )
@@ -148,29 +132,107 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 		$this->_preProcess();
 
-		if ( empty( $this->_resource ) && ( 0 == strcasecmp( self::Get, $action ) ) )
+		//	Inherent failure?
+		if ( false === ( $this->_response = $this->_handleResource() ) )
 		{
-			if ( false === ( $results = $this->_listResources() ) )
+			$_message = $this->_action . ' requests' .
+						( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
+						' are not currently supported by the "' . $this->_apiName . '" service.';
+
+			throw new BadRequestException( $_message );
+		}
+
+		$this->_postProcess();
+
+		return $this->_response;
+	}
+
+	/**
+	 * Adds criteria garnered from the query string from DataTables
+	 *
+	 * @param array|\CDbCriteria $criteria
+	 * @param array              $columns
+	 *
+	 * @return array|\CDbCriteria
+	 */
+	protected function _buildCriteria( $columns, $criteria = null )
+	{
+		$criteria = $criteria ? : array();
+
+		$_criteria = ( !( $criteria instanceof \CDbCriteria ) ? new \CDbCriteria( $criteria ) : $criteria );
+
+		//	Columns
+		$_criteria->select = ( !empty( $_columns ) ? implode( ', ', $_columns ) : array_keys( \Registry::model()->restMap() ) );
+
+		//	Limits
+		$_limit = FilterInput::get( INPUT_GET, 'iDisplayLength', -1, FILTER_SANITIZE_NUMBER_INT );
+		$_limitStart = FilterInput::get( INPUT_GET, 'iDisplayStart', 0, FILTER_SANITIZE_NUMBER_INT );
+
+		if ( -1 != $_limit )
+		{
+			$_criteria->limit = $_limit;
+			$_criteria->offset = $_limitStart;
+		}
+
+		//	Sort
+		$_order = array();
+
+		if ( isset( $_GET['iSortCol_0'] ) )
+		{
+			for ( $_i = 0, $_count = FilterInput::get( INPUT_GET, 'iSortingCols', 0, FILTER_SANITIZE_NUMBER_INT ); $_i < $_count; $_i++ )
 			{
-				$results = $this->_handleResource();
+				$_column = FilterInput::get( INPUT_GET, 'iSortCol_' . $_i, 0, FILTER_SANITIZE_NUMBER_INT );
+
+				if ( isset( $_GET['bSortable_' . $_column] ) && 'true' == $_GET['bSortable_' . $_column] )
+				{
+					$_order[] = $columns[$_column] . ' ' . FilterInput::get( INPUT_GET, 'sSortDir_' . $_i, null, FILTER_SANITIZE_STRING );
+				}
 			}
 		}
-		else
+
+		if ( !empty( $_order ) )
 		{
-			$results = $this->_handleResource();
+			$_criteria->order = implode( ', ', $_order );
 		}
 
-		$this->_postProcess( $results );
+		return $_criteria;
+	}
 
-		if ( false === $results )
-		{
-			$msg = strtoupper( $action ) . ' Request';
-			$msg .= ( empty( $this->_resource ) ) ? " for resource '$this->_resourcePath'" : ' with no resource';
-			$msg .= " is not currently supported by the '$this->_apiName' service API.";
-			throw new BadRequestException( $msg );
-		}
+	/**
+	 * @param mixed $response
+	 *
+	 * @return BasePlatformRestService
+	 */
+	public function setResponse( $response )
+	{
+		$this->_response = $response;
 
-		return $results;
+		return $this;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function getResponse()
+	{
+		return $this->_response;
+	}
+
+	/**
+	 * @param string $resourcePath
+	 */
+	protected function _setResource( $resourcePath = null )
+	{
+		$this->_resourcePath = $resourcePath;
+		$this->_resourceArray = ( !empty( $this->_resourcePath ) ) ? explode( '/', $this->_resourcePath ) : array();
+	}
+
+	/**
+	 * @param string $action
+	 */
+	protected function _setAction( $action = self::Get )
+	{
+		$this->_action = trim( strtoupper( $action ) );
 	}
 
 }

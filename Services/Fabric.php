@@ -1,5 +1,8 @@
 <?php
 /**
+ * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ *
+ * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
  * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,15 +17,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Utility;
 
 use Kisma\Core\Enums\DateTime;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\SeedUtility;
-use Kisma\Core\Utility\Curl;
+
+//use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
-use DreamFactory\Yii\Utility\Pii;
+use Platform\Utility\Curl;
+use Platform\Yii\Utility\Pii;
 
 /**
  * Fabric.php
@@ -76,6 +80,14 @@ class Fabric extends SeedUtility
 	//*************************************************************************
 
 	/**
+	 * @return string
+	 */
+	public static function getHostName()
+	{
+		return FilterInput::server( 'HTTP_HOST', gethostname() );
+	}
+
+	/**
 	 * @return bool True if this DSP is fabric-hosted
 	 */
 	public static function fabricHosted()
@@ -105,8 +117,9 @@ class Fabric extends SeedUtility
 	}
 
 	/**
-	 * @throws \CHttpException
 	 * @return array|mixed
+	 * @throws RuntimeException
+	 * @throws CHttpException
 	 */
 	public static function initialize()
 	{
@@ -115,7 +128,7 @@ class Fabric extends SeedUtility
 		//	If this isn't a cloud request, bail
 		$_host = static::getHostName();
 
-		if ( false === stripos( $_host, static::DSP_DEFAULT_SUBDOMAIN ) && !static::hostedPrivatePlatform( $_host ) )
+		if ( false !== static::hostedPrivatePlatform() && false === strpos( $_host, static::DSP_DEFAULT_SUBDOMAIN ) )
 		{
 			Log::error( 'Attempt to access system from non-provisioned host: ' . $_host );
 			throw new \CHttpException( HttpResponse::Forbidden, 'You are not authorized to access this system you cheeky devil you. (' . $_host . ').' );
@@ -140,7 +153,8 @@ class Fabric extends SeedUtility
 			$_dbName = str_replace( '-', '_', $_dspName = $_parts[0] );
 
 			//	Otherwise, get the credentials from the auth server...
-			$_response = Curl::get( Pii::getParam( 'dsp.auth_endpoint', static::DEFAULT_AUTH_ENDPOINT ) . '/' . $_dspName . '/database' );
+//			Log::info( 'Credentials pull' );
+			$_response = Curl::get( static::DEFAULT_AUTH_ENDPOINT . '/' . $_dspName . '/database' );
 
 			if ( HttpResponse::NotFound == Curl::getLastHttpCode() )
 			{
@@ -194,14 +208,6 @@ class Fabric extends SeedUtility
 
 //		Log::error( 'Unable to find private path or database config: ' . $_dbConfigFileName );
 		throw new \CHttpException( HttpResponse::BadRequest );
-	}
-
-	/**
-	 * @return string
-	 */
-	public static function getHostName()
-	{
-		return FilterInput::server( 'HTTP_HOST', gethostname() );
 	}
 
 	/**
@@ -263,5 +269,4 @@ class Fabric extends SeedUtility
 	{
 		return rtrim( sys_get_temp_dir(), '/' ) . '/.dsp-' . sha1( $host . $_SERVER['REMOTE_ADDR'] );
 	}
-
 }
