@@ -30,4 +30,11 @@ interface RestResourceLike extends RestServiceLike
 	 * @return BasePlatformService
 	 */
 	public function getConsumer();
+
+	/**
+	 * @param BasePlatformService $consumer
+	 *
+	 * @return mixed
+	 */
+	public function setConsumer( $consumer );
 }
