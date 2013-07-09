@@ -43,7 +43,7 @@ use Swagger\Annotations as SWG;
  * )
  *
  */
-abstract class BasePlatformRestService extends BasePlatformService implements RestServiceLike, HttpMethod
+abstract class BasePlatformRestService extends BasePlatformService implements RestServiceLike
 {
 	//*************************************************************************
 	//* Members
