@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
+use Kisma\Core\Utility\Option;
 
 /**
  * BaseSystemRestService
