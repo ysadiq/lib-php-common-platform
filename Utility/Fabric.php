@@ -96,6 +96,7 @@ class Fabric extends SeedUtility
 		static $_allowedHosts
 		= array(
 			'launchpad-dev.dreamfactory.com',
+			'launchpad-demo.dreamfactory.com',
 		);
 
 		$_host = $host ? : FilterInput::server( 'HTTP_HOST', gethostname() );
