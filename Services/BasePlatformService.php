@@ -48,7 +48,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	/**
 	 * @var boolean Is this service activated for use?
 	 */
-	protected $_enabled = false;
+	protected $_isActive = false;
 	/**
 	 * @var string Native format of output of service, null for php, otherwise json, xml, etc.
 	 */
@@ -138,13 +138,13 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	}
 
 	/**
-	 * @param boolean $enabled
+	 * @param boolean $isActive
 	 *
 	 * @return BasePlatformService
 	 */
-	public function setEnabled( $enabled = false )
+	public function setIsActive( $isActive = false )
 	{
-		$this->_enabled = $enabled;
+		$this->_isActive = $isActive;
 
 		return $this;
 	}
@@ -152,9 +152,9 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	/**
 	 * @return boolean
 	 */
-	public function getEnabled()
+	public function getIsActive()
 	{
-		return $this->_enabled;
+		return $this->_isActive;
 	}
 
 	/**
