@@ -34,6 +34,22 @@ abstract class BaseSystemRestService extends BasePlatformRestService
 	//*************************************************************************
 
 	/**
+	 * @param array $settings
+	 */
+	public function __construct( $settings = array() )
+	{
+		//	Pull out our settings before calling daddy
+		$this->_name = Option::get( $settings, 'name', null, true );
+		$this->_apiName = Option::get( $settings, 'api_name', null, true );
+		$this->_type = Option::get( $settings, 'type', null, true );
+		$this->_typeId = Option::get( $settings, 'type_id', PlatformServiceTypes::SYSTEM_SERVICE, true );
+		$this->_description = Option::get( $settings, 'description', null, true );
+		$this->_isActive = Option::getBool( $settings, 'is_active', true, true );
+
+		parent::__construct( $settings );
+	}
+
+	/**
 	 * @param string $apiName
 	 *
 	 * @throws \InvalidArgumentException
