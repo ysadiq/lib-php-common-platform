@@ -264,7 +264,7 @@ class ResourceStore extends SeedUtility
 			throw new BadRequestException( 'There is no record in the request.' );
 		}
 
-		$_ids = explode( ',', $ids );
+		$_ids = explode( ',', $ids ?: static::$_resourceId);
 
 		$_records = array();
 		$_pk = static::model()->primaryKey;
@@ -373,7 +373,7 @@ class ResourceStore extends SeedUtility
 	{
 		static::_permissionCheck( 'delete' );
 
-		$_ids = array_map( 'trim', explode( ',', $ids ) );
+		$_ids = array_map( 'trim', explode( ',', $ids ?: static::$_resourceId ) );
 
 		$_response = array();
 
@@ -393,17 +393,6 @@ class ResourceStore extends SeedUtility
 	}
 
 	/**
-	 * @param int $id
-	 *
-	 * @throws BadRequestException
-	 * @return array
-	 */
-	public static function deleteRecordById( $id )
-	{
-		return static::bulkDeleteById( $id );
-	}
-
-	/**
 	 * @param string $ids
 	 *
 	 * @throws \Exception
@@ -418,7 +407,7 @@ class ResourceStore extends SeedUtility
 			throw new BadRequestException( 'There is no record in the request.' );
 		}
 
-		$_ids = explode( ',', $ids );
+		$_ids = explode( ',', $ids ? : static::$_resourceId );
 		$_pk = static::model()->primaryKey;
 
 		$_models = static::_find( $_pk . ' in (' . implode( ',', $_ids ) . ')' );

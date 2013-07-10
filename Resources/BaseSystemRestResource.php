@@ -23,6 +23,7 @@ use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
+use DreamFactory\Platform\Utility\ResourceStore;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Option;
@@ -114,7 +115,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			}
 		}
 
-		ResourceStorage::reset(
+		ResourceStore::reset(
 			array(
 				 'resource_name'    => $this->_apiName,
 				 'resource_array'   => $this->_resourceArray,
@@ -158,7 +159,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		//	Single resource by ID
 		if ( !empty( $this->_resourceId ) )
 		{
-			return ResourceStorage::retrieveRecordById();
+			return ResourceStore::select( $this->_resourceId );
 		}
 
 		$_payload = $this->_determineRequestedResource( $_ids, $_records );
@@ -166,25 +167,32 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		//	Multiple resources by ID
 		if ( !empty( $_ids ) )
 		{
-			return ResourceStorage::retrieveRecordsByIds( $this->_apiName, $_ids );
+			return ResourceStore::bulkSelectById( $_ids );
 		}
 
 		if ( !empty( $_records ) )
 		{
-			/**
-			 * Passing records to have them updated with new or more values, id field required
-			 * for single record and no id field given, get records matching given fields
-			 */
-			return ResourceStorage::retrieveRecords( $this->_apiName, $_records );
+			$_pk = ResourceStore::model()->primaryKey;
+			$_ids = array();
+
+			foreach ( $_records as $_record )
+			{
+				$_ids[] = Option::get( $_record, $_pk );
+			}
+
+			return ResourceStore::bulkSelectById( implode( ',', $_ids ) );
 		}
 
 		//	Otherwise return the resources
-		return ResourceStorage::retrieveRecordsByFilter(
-			$this->_apiName,
-			Option::get( $_payload, 'filter' ),
-			Option::get( $_payload, 'limit', 0 ),
-			Option::get( $_payload, 'order' ),
-			Option::get( $_payload, 'offset', 0 ),
+		return ResourceStore::select(
+			null,
+			array(
+				 'condition' => Option::get( $_payload, 'filter' ),
+				 'limit'     => Option::get( $_payload, 'limit', 0 ),
+				 'order'     => Option::get( $_payload, 'order' ),
+				 'offset'    => Option::get( $_payload, 'offset', 0 ),
+			),
+			array(),
 			Option::getBool( $_payload, 'include_count' ),
 			Option::getBool( $_payload, 'include_schema' )
 		);
@@ -197,22 +205,21 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	protected function _handlePut()
 	{
 		$_payload = $this->_determineRequestedResource( $_ids, $_records );
+		$_rollback = Option::getBool( $_payload, 'rollback' );
 
 		if ( !empty( $this->_resourceId ) )
 		{
-			return ResourceStorage::updateRecordById( $this->_apiName, $this->_resourceId, $_payload );
+			return ResourceStore::bulkUpdateById( $this->_resourceId, $_payload, $_rollback );
 		}
-
-		$_rollback = Option::getBool( $_payload, 'rollback' );
 
 		if ( !empty( $_ids ) )
 		{
-			return ResourceStorage::updateRecordsByIds( $this->_apiName, $_ids, $_payload, $_rollback );
+			return ResourceStore::bulkUpdateById( $_ids, $_payload, $_rollback );
 		}
 
 		if ( !empty( $_records ) )
 		{
-			return ResourceStorage::updateRecords( $this->_apiName, $_records, $_rollback );
+			return ResourceStore::bulkUpdate( $_records, $_rollback );
 		}
 
 		if ( empty( $_payload ) )
@@ -220,7 +227,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			throw new BadRequestException( 'No record in PUT update request.' );
 		}
 
-		return ResourceStorage::updateRecord( $this->_apiName, $_payload );
+		return ResourceStore::update( $_payload );
 	}
 
 	/**
@@ -249,13 +256,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 		if ( !empty( $_records ) )
 		{
-			return ResourceStorage::createRecords(
-				$this->_apiName,
-				$_records,
-				Option::getBool( $_payload, 'rollback' ),
-				$this->_fields,
-				$this->_extras
-			);
+			return ResourceStore::bulkInsert( $_records, Option::getBool( $_payload, 'rollback' ) );
 		}
 
 		if ( empty( $_payload ) )
@@ -263,7 +264,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			throw new BadRequestException( 'No record in POST create request.' );
 		}
 
-		return ResourceStorage::createRecord( $this->_apiName, $_payload );
+		return ResourceStore::insert( $_payload );
 	}
 
 	/**
@@ -274,19 +275,19 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	{
 		if ( !empty( $this->_resourceId ) )
 		{
-			return ResourceStorage::deleteRecordById( $this->_apiName, $this->_resourceId );
+			return ResourceStore::bulkDeleteById( $this->_resourceId );
 		}
 
 		$_payload = $this->_determineRequestedResource( $_ids, $_records );
 
 		if ( !empty( $_ids ) )
 		{
-			return ResourceStorage::deleteRecordsByIds( $this->_apiName, $_ids );
+			return ResourceStore::bulkDeleteById( $_ids );
 		}
 
 		if ( !empty( $_records ) )
 		{
-			return ResourceStorage::deleteRecords( $this->_apiName, $_records );
+			return ResourceStore::bulkDelete( $_records );
 		}
 
 		if ( empty( $_payload ) )
@@ -294,7 +295,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			throw new BadRequestException( "Id list or record containing Id field required to delete $this->_apiName records." );
 		}
 
-		return ResourceStorage::deleteRecord( $this->_apiName, $_payload );
+		return ResourceStore::delete( $_payload );
 	}
 
 	/**
