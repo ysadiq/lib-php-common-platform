@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Resources;
+namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -33,10 +33,10 @@ use Kisma\Core\Utility\Option;
 use Platform\Resources\UserSession;
 
 /**
- * ResourceStorage
+ * ResourceStore
  * A base service resource class to handle service resources of various kinds.
  */
-class ResourceStorage extends SeedUtility
+class ResourceStore extends SeedUtility
 {
 	//*************************************************************************
 	//* Members
@@ -721,7 +721,7 @@ class ResourceStorage extends SeedUtility
 			throw new BadRequestException( 'Identifying field "id" can not be empty for update request . ' );
 		}
 
-		$_model = static::findByPk( $id );
+		$_model = static::_findByPk( $id );
 
 		//	Remove the PK from the record since this is an update
 		Option::remove( $record, $_model->tableSchema->primaryKey );
@@ -755,7 +755,7 @@ class ResourceStorage extends SeedUtility
 			throw new BadRequestException( "Identifying field 'id' can not be empty for delete request." );
 		}
 
-		$_model = static::findByPk( $id );
+		$_model = static::_findByPk( $id );
 
 		try
 		{
@@ -771,8 +771,6 @@ class ResourceStorage extends SeedUtility
 
 	/**
 	 * @param string $relatedResource
-	 *
-	 * @return ResourceStorage
 	 */
 	public static function setRelatedResource( $relatedResource )
 	{
@@ -789,8 +787,6 @@ class ResourceStorage extends SeedUtility
 
 	/**
 	 * @param array $resourceArray
-	 *
-	 * @return ResourceStorage
 	 */
 	public static function setResourceArray( $resourceArray )
 	{
@@ -807,8 +803,6 @@ class ResourceStorage extends SeedUtility
 
 	/**
 	 * @param int $resourceId
-	 *
-	 * @return ResourceStorage
 	 */
 	public static function setResourceId( $resourceId )
 	{
