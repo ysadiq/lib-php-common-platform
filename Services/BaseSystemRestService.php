@@ -57,7 +57,7 @@ abstract class BaseSystemRestService extends BasePlatformRestService
 	 */
 	public function setApiName( $apiName )
 	{
-		throw new \InvalidArgumentException( '"apiName" is a read-only property.' );
+		throw new \InvalidArgumentException( '"$apiName" is a read-only property.' );
 	}
 
 	/**
@@ -68,7 +68,7 @@ abstract class BaseSystemRestService extends BasePlatformRestService
 	 */
 	public function setDescription( $description )
 	{
-		throw new \InvalidArgumentException( '"description" is a read-only property.' );
+		throw new \InvalidArgumentException( '"$description" is a read-only property.' );
 	}
 
 	/**
@@ -79,7 +79,7 @@ abstract class BaseSystemRestService extends BasePlatformRestService
 	 */
 	public function setIsActive( $isActive = false )
 	{
-		throw new \InvalidArgumentException( '"isActive" is a read-only property.' );
+		throw new \InvalidArgumentException( '"$isActive" is a read-only property.' );
 	}
 
 	/**
@@ -90,7 +90,7 @@ abstract class BaseSystemRestService extends BasePlatformRestService
 	 */
 	public function setNativeFormat( $nativeFormat )
 	{
-		throw new \InvalidArgumentException( '"nativeFormat" is a read-only property.' );
+		throw new \InvalidArgumentException( '"$nativeFormat" is a read-only property.' );
 	}
 
 	/**
@@ -101,7 +101,7 @@ abstract class BaseSystemRestService extends BasePlatformRestService
 	 */
 	public function setType( $type )
 	{
-		throw new \InvalidArgumentException( '"type" is a read-only property.' );
+		throw new \InvalidArgumentException( '"$type" is a read-only property.' );
 	}
 
 	/**
@@ -112,7 +112,6 @@ abstract class BaseSystemRestService extends BasePlatformRestService
 	 */
 	public function setTypeId( $typeId )
 	{
-		throw new \InvalidArgumentException( '"typeId" is a read-only property.' );
+		throw new \InvalidArgumentException( '"$typeId" is a read-only property.' );
 	}
-
 }

@@ -24,6 +24,8 @@ use DreamFactory\Platform\Interfaces\RestResourceLike;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
 use Kisma\Core\Seed;
+use Kisma\Core\Utility\Option;
+use Platform\Resources\UserSession;
 
 /**
  * BasePlatformResource
@@ -39,6 +41,10 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	 * @var BasePlatformService
 	 */
 	protected $_consumer;
+	/**
+	 * @var string The name of this service
+	 */
+	protected $_serviceName;
 
 	//*************************************************************************
 	//* Methods
@@ -55,7 +61,22 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	public function __construct( $consumer, $settings = array() )
 	{
 		$this->_consumer = $consumer;
+		$this->_serviceName = Option::get( $settings, 'service_name', null, true );
+
+		if ( empty( $this->_serviceName ) )
+		{
+			throw new \InvalidArgumentException( 'You must supply a value for "$serviceName".' );
+		}
+
 		parent::__construct( $settings );
+	}
+
+	/**
+	 * @param string $request
+	 */
+	protected function checkPermission( $request )
+	{
+		UserSession::checkSessionPermission( $request, $this->_serviceName, $this->_apiName );
 	}
 
 	/**
@@ -78,4 +99,23 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 		return $this->_consumer;
 	}
 
+	/**
+	 * @param mixed $serviceName
+	 *
+	 * @return BasePlatformRestService
+	 */
+	public function setServiceName( $serviceName )
+	{
+		$this->_serviceName = $serviceName;
+
+		return $this;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function getServiceName()
+	{
+		return $this->_serviceName;
+	}
 }

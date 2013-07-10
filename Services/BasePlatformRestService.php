@@ -21,7 +21,7 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
-use Kisma\Core\Interfaces\HttpMethod;
+use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 use Swagger\Annotations as SWG;
@@ -46,6 +46,19 @@ use Swagger\Annotations as SWG;
 abstract class BasePlatformRestService extends BasePlatformService implements RestServiceLike
 {
 	//*************************************************************************
+	//* Constants
+	//*************************************************************************
+
+	/**
+	 * @var string
+	 */
+	const ACTION_TOKEN = '{action}';
+	/**
+	 * @var string The default pattern of dispatch methods. Action token embedded.
+	 */
+	const DEFAULT_HANDLER_PATTERN = '_handle{action}';
+
+	//*************************************************************************
 	//* Members
 	//*************************************************************************
 
@@ -69,6 +82,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @var mixed The response to the request
 	 */
 	protected $_response = null;
+	/**
+	 * @var bool If true, _handleResource() dispatches a call to _handle[Action]() methods if defined. For example, a GET request would be dispatched to _handleGet().
+	 */
+	protected $_autoDispatch = true;
+	/**
+	 * @var string The pattern to search for dispatch methods. The string {action} will be replaced by the inbound action (i.e. Get, Put, Post, etc.)
+	 */
+	protected $_autoDispatchPattern = self::DEFAULT_HANDLER_PATTERN;
 
 	//*************************************************************************
 	//* Methods
@@ -90,7 +111,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		$this->_preProcess();
 
 		//	Inherent failure?
-		if ( false === ( $this->_response = $this->_handleResource() ) )
+		if ( false === ( $this->_response = call_user_func( $this, $this->_handleResource() ) ) )
 		{
 			$_message = $this->_action . ' requests' .
 						( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
@@ -102,6 +123,29 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		$this->_postProcess();
 
 		return $this->_response;
+	}
+
+	/**
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @return bool
+	 */
+	protected function _handleResource()
+	{
+		if ( !HttpMethod::defines( $this->_action ) )
+		{
+			throw new BadRequestException( 'The action "' . $this->_action . '" is not supported.' );
+		}
+
+		//	If we have a dedicated handler method, call it
+		$_method = str_ireplace( static::ACTION_TOKEN, $this->_action, $this->_autoDispatchPattern );
+
+		if ( $this->_autoDispatch && method_exists( $this, $_method ) )
+		{
+			return call_user_func( array( $this, $_method ) );
+		}
+
+		//	Otherwise just return false
+		return false;
 	}
 
 	/**
@@ -131,7 +175,71 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	/**
 	 * @return bool
 	 */
-	protected function _handleResource()
+	protected function _handleGet()
+	{
+		return false;
+	}
+
+	/**
+	 * @return bool
+	 */
+	protected function _handleMerge()
+	{
+		return false;
+	}
+
+	/**
+	 * @return bool
+	 */
+	protected function _handleOptions()
+	{
+		return false;
+	}
+
+	/**
+	 * @return bool
+	 */
+	protected function _handleCopy()
+	{
+		return false;
+	}
+
+	/**
+	 * @return bool
+	 */
+	protected function _handleConnect()
+	{
+		return false;
+	}
+
+	/**
+	 * @return bool
+	 */
+	protected function _handlePost()
+	{
+		return false;
+	}
+
+	/**
+	 * @return bool
+	 */
+	protected function _handlePut()
+	{
+		return false;
+	}
+
+	/**
+	 * @return bool
+	 */
+	protected function _handlePatch()
+	{
+		return false;
+	}
+
+	/**
+	 * @return bool
+	 */
+	protected function _handleDelete()
 	{
 		return false;
 	}
@@ -275,4 +383,43 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		return $this->_resourcePath;
 	}
 
+	/**
+	 * @param boolean $autoDispatch
+	 *
+	 * @return BasePlatformRestService
+	 */
+	public function setAutoDispatch( $autoDispatch )
+	{
+		$this->_autoDispatch = $autoDispatch;
+
+		return $this;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function getAutoDispatch()
+	{
+		return $this->_autoDispatch;
+	}
+
+	/**
+	 * @param string $autoDispatchPattern
+	 *
+	 * @return BasePlatformRestService
+	 */
+	public function setAutoDispatchPattern( $autoDispatchPattern )
+	{
+		$this->_autoDispatchPattern = $autoDispatchPattern;
+
+		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getAutoDispatchPattern()
+	{
+		return $this->_autoDispatchPattern;
+	}
 }

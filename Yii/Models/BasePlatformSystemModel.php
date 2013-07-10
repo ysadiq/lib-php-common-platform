@@ -153,6 +153,31 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	}
 
 	/**
+	 * @param array $values
+	 * @param int   $id
+	 */
+	public function setRelated( $values, $id )
+	{
+//		$relations = $obj->relations();
+//
+//		foreach ( $relations as $key => $related )
+//		{
+//			if ( isset( $record[$key] ) )
+//			{
+//				switch ( $related[0] )
+//				{
+//					case CActiveRecord::HAS_MANY:
+//						$this->assignManyToOne( $table, $id, $related[1], $related[2], $record[$key] );
+//						break;
+//					case CActiveRecord::MANY_MANY:
+//						$this->assignManyToOneByMap( $table, $id, $related[1], 'app_to_role', 'role_id', 'app_id', $record[$key] );
+//						break;
+//				}
+//			}
+//		}
+	}
+
+	/**
 	 * @param string $sourceId
 	 * @param string $mapTable
 	 * @param string $mapColumn
@@ -185,8 +210,6 @@ WHERE
 	$mapColumn = :id
 SQL;
 
-
-
 			$_manyModel = SystemManager::getNewModel( $mapTable );
 			$_primaryKey = $_manyModel->tableSchema->primaryKey;
 
@@ -197,7 +220,6 @@ SQL;
 			$command->select( "$_primaryKey,$mapColumn" );
 			$command->from( $mapTable );
 			$command->where( "$mapColumn = :oid" );
-
 
 			$maps = $command->queryAll( true, array( ':oid' => $sourceId ) );
 			$toDelete = array();
