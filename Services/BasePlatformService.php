@@ -16,11 +16,10 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Common\Interfaces\PlatformServiceLike;
+use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Seed;
-use Kisma\Core\Utility\Option;
 use DreamFactory\Common\Utility\DataFormat;
 
 /**

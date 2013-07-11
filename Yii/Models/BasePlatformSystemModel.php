@@ -145,9 +145,12 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-			array(
-				 'created_by_id'       => 'Created By',
-				 'last_modified_by_id' => 'Last Modified By',
+			array_merge(
+				array(
+					 'created_by_id'       => 'Created By',
+					 'last_modified_by_id' => 'Last Modified By',
+				),
+				$additionalLabels
 			)
 		);
 	}
@@ -200,7 +203,8 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 
 		try
 		{
-			$_sql = <<<SQL
+			$_sql
+				= <<<SQL
 SELECT
 	id,
 	$mapColumn

@@ -3,7 +3,7 @@
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -134,9 +134,10 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 		ResourceStore::reset(
 			array(
+				 'service'          => $this->_serviceName,
 				 'resource_name'    => $this->_apiName,
-				 'resource_array'   => $this->_resourceArray,
 				 'resource_id'      => $this->_resourceId,
+				 'resource_array'   => $this->_resourceArray,
 				 'related_resource' => $this->_relatedResource,
 				 'fields'           => $this->_fields,
 				 'extras'           => $this->_extras,
@@ -197,19 +198,19 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 				$_ids[] = Option::get( $_record, $_pk );
 			}
 
-			return ResourceStore::bulkSelectById( implode( ',', $_ids ) );
+			return ResourceStore::bulkSelectById( $_ids );
 		}
 
 		//	Otherwise return the resources
 		return ResourceStore::select(
 			null,
 			array(
+				 'select'    => $this->_fields,
 				 'condition' => Option::get( $_payload, 'filter' ),
 				 'limit'     => Option::get( $_payload, 'limit', 0 ),
 				 'order'     => Option::get( $_payload, 'order' ),
 				 'offset'    => Option::get( $_payload, 'offset', 0 ),
 			),
-			array(),
 			Option::getBool( $_payload, 'include_count' ),
 			Option::getBool( $_payload, 'include_schema' )
 		);

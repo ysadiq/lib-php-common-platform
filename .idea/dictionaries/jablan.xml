@@ -9,7 +9,9 @@
       <w>nosql</w>
       <w>ocsql</w>
       <w>openstack</w>
+      <w>postgresql</w>
       <w>simpledb</w>
+      <w>sybase</w>
     </words>
   </dictionary>
 </component>

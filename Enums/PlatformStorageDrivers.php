@@ -3,7 +3,7 @@
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +19,14 @@
  */
 namespace DreamFactory\Platform\Enums;
 
+use DreamFactory\Platform\Interfaces\SqlDbDriverTypes;
 use Kisma\Core\Enums\SeedEnum;
 
 /**
  * PlatformStorageDrivers
  * Storage driver string constants
  */
-class PlatformStorageDrivers extends SeedEnum
+class PlatformStorageDrivers extends SeedEnum implements SqlDbDriverTypes
 {
 	//*************************************************************************
 	//	Constants
@@ -67,4 +68,40 @@ class PlatformStorageDrivers extends SeedEnum
 	 * @var string
 	 */
 	const POSTGRESQL = 'pgsql';
+
+	/**
+	 * Returns the PDO driver type for the given connection's driver name
+	 *
+	 * @param string $driverType
+	 *
+	 * @return int
+	 */
+	public static function driverType( $driverType )
+	{
+		switch ( $driverType )
+		{
+			case static::MS_SQL:
+			case static::SYBASE:
+			case static::SQL_SERVER:
+				return static::DRV_SQLSRV;
+
+			case static::MYSQL:
+			case static::MYSQLI:
+				return static::DRV_MYSQL;
+
+			case static::SQLITE:
+			case static::SQLITE2:
+				return static::DRV_SQLITE;
+
+			case static::ORACLE:
+				return static::DRV_OCSQL;
+
+			case static::POSTGRESQL:
+				return static::DRV_PGSQL;
+
+			default:
+				return static::DRV_OTHER;
+		}
+	}
+
 }

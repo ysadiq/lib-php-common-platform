@@ -3,7 +3,7 @@
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Interfaces\RestResourceLike;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
+use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Option;
 use Platform\Resources\UserSession;
@@ -69,6 +70,16 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 		}
 
 		parent::__construct( $settings );
+	}
+
+	/**
+	 * @param BasePlatformSystemModel $resource
+	 *
+	 * @return mixed
+	 */
+	public function _getSchema( $resource )
+	{
+		return SqlDbUtilities::describeTable( $resource->getDb(), $resource->tableName(), $resource->tableNamePrefix() );
 	}
 
 	/**

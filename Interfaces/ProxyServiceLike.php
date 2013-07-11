@@ -3,7 +3,7 @@
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,38 +20,20 @@
 namespace DreamFactory\Platform\Interfaces;
 
 /**
- * RestLike
- * Controllers that can talk REST
+ * ProxyServiceLike
+ * An interface for the base platform service.
  */
-interface RestLike extends ControllerLike
+interface ProxyServiceLike extends PlatformServiceLike
 {
 	/**
-	 * @return mixed
+	 * @param RestResourceLike $proxyClient
+	 *
+	 * @return ProxyServiceLike
 	 */
-	public function restGet();
+	public function setProxyClient( $proxyClient );
 
 	/**
-	 * @return mixed
+	 * @return RestResourceLike
 	 */
-	public function restPost();
-
-	/**
-	 * @return mixed
-	 */
-	public function restPatch();
-
-	/**
-	 * @return mixed
-	 */
-	public function restPut();
-
-	/**
-	 * @return mixed
-	 */
-	public function restMerge();
-
-	/**
-	 * @return mixed
-	 */
-	public function restDelete();
+	public function getProxyClient();
 }

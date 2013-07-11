@@ -3,7 +3,7 @@
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+namespace DreamFactory\Platform\Yii\Models;
+
+use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
-use Platform\Exceptions\BadRequestException;
-use Platform\Yii\Utility\Pii;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Yii\Utility\Pii;
 
 /**
  * Service.php
@@ -35,6 +41,7 @@ use Platform\Yii\Utility\Pii;
  * @property integer             $is_active
  * @property integer             $is_system
  * @property string              $type
+ * @property int                 $type_id
  * @property string              $storage_name
  * @property string              $storage_type
  * @property string              $credentials
@@ -49,7 +56,7 @@ use Platform\Yii\Utility\Pii;
  * @property App[]               $apps
  * @property Role[]              $roles
  */
-class Service extends BaseDspSystemModel
+class Service extends BasePlatformSystemModel
 {
 	//*************************************************************************
 	//* Members
@@ -63,18 +70,6 @@ class Service extends BaseDspSystemModel
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
-
-	/**
-	 * Returns the static model of the specified AR class.
-	 *
-	 * @param string $className active record class name.
-	 *
-	 * @return Service the static model class
-	 */
-	public static function model( $className = __CLASS__ )
-	{
-		return parent::model( $className );
-	}
 
 	/**
 	 * @return string the associated database table name
@@ -96,16 +91,29 @@ class Service extends BaseDspSystemModel
 	{
 		if ( false !== $bust || null === ( $_serviceCache = Pii::getState( 'dsp.service_cache' ) ) )
 		{
-			Log::debug( 'Reloading available service cache' );
-			$_serviceCache = Pii::getParam( 'dsp.default_services', array() );
+			Log::debug( 'Service cache reloaded.' );
 
-			// list all available services from db
-			$_command = Pii::db()->createCommand();
+			$_serviceCache = Pii::getParam( 'dsp.default_services', array() );
 			$_tableName = static::model()->tableName();
-			$_services = $_command->select( 'api_name,name' )->from( $_tableName )->queryAll();
+
+			//	List all available services from db
+			$_services = Sql::query( <<<MYSQL
+SELECT
+	`api_name`,
+	`name`
+FROM
+	{$_tableName}
+ORDER BY
+	api_name
+MYSQL
+				,
+				null,
+				Pii::pdo()
+			);
+
 			$_serviceCache = array_merge(
 				$_serviceCache,
-				$_services
+				$_services ? : array()
 			);
 
 			Pii::setState( 'dsp.service_cache', $_serviceCache );
@@ -115,9 +123,26 @@ class Service extends BaseDspSystemModel
 	}
 
 	/**
-	 * Retrieves the record of the particular service
+	 * Named scope that filters by api_name
 	 *
-	 * @access private
+	 * @param string $name
+	 *
+	 * @return Service
+	 */
+	public function byApiName( $name )
+	{
+		$this->getDbCriteria()->mergeWith(
+			array(
+				 'condition' => 'api_name = :api_name',
+				 'params'    => array( ':api_name' => $name ),
+			)
+		);
+
+		return $this;
+	}
+
+	/**
+	 * Retrieves the record of the particular service
 	 *
 	 * @param string $api_name
 	 *
@@ -126,32 +151,14 @@ class Service extends BaseDspSystemModel
 	 */
 	public static function getRecordByName( $api_name )
 	{
-		$command = Pii::db()->createCommand();
-		$_tableName = static::model()->tableName();
-		$result = $command->from( $_tableName )
-			->where( 'api_name=:name' )
-			->queryRow( true, array( ':name' => $api_name ) );
-		if ( !$result )
+		/** @noinspection PhpUndefinedMethodInspection */
+		/** @var $_model BasePlatformModel */
+		if ( null === ( $_model = static::model()->byApiName( $api_name )->find() ) )
 		{
 			return array();
 		}
 
-		if ( isset( $result['credentials'] ) )
-		{
-			$result['credentials'] = json_decode( $result['credentials'], true );
-		}
-
-		if ( isset( $result['parameters'] ) )
-		{
-			$result['parameters'] = json_decode( $result['parameters'], true );
-		}
-
-		if ( isset( $result['headers'] ) )
-		{
-			$result['headers'] = json_decode( $result['headers'], true );
-		}
-
-		return $result;
+		return $_model->getAttributes();
 	}
 
 	/**
@@ -164,32 +171,12 @@ class Service extends BaseDspSystemModel
 	 */
 	public static function getRecordById( $id )
 	{
-		$command = Pii::db()->createCommand();
-		$_tableName = static::model()->tableName();
-		$result = $command->from( $_tableName )
-			->where( 'id=:id' )
-			->queryRow( true, array( ':id' => $id ) );
-		if ( !$result )
+		if ( null === ( $_model = static::model()->findByPk( $id ) ) )
 		{
 			return array();
 		}
 
-		if ( isset( $result['credentials'] ) )
-		{
-			$result['credentials'] = json_decode( $result['credentials'], true );
-		}
-
-		if ( isset( $result['parameters'] ) )
-		{
-			$result['parameters'] = json_decode( $result['parameters'], true );
-		}
-
-		if ( isset( $result['headers'] ) )
-		{
-			$result['headers'] = json_decode( $result['headers'], true );
-		}
-
-		return $result;
+		return $_model->getAttributes();
 	}
 
 	/**
@@ -221,65 +208,62 @@ class Service extends BaseDspSystemModel
 	public function relations()
 	{
 		$_relations = array(
-			'role_service_accesses' => array( self::HAS_MANY, 'RoleServiceAccess', 'service_id' ),
-			'apps'                  => array( self::MANY_MANY, 'App', 'df_sys_app_to_service(app_id, service_id)' ),
-			'roles'                 => array( self::MANY_MANY, 'Role', 'df_sys_role_service_access(service_id, role_id)' ),
+			'role_service_accesses' => array( static::HAS_MANY, 'RoleServiceAccess', 'service_id' ),
+			'apps'                  => array( static::MANY_MANY, 'App', 'df_sys_app_to_service(app_id, service_id)' ),
+			'roles'                 => array( static::MANY_MANY, 'Role', 'df_sys_role_service_access(service_id, role_id)' ),
 		);
 
 		return array_merge( parent::relations(), $_relations );
 	}
 
 	/**
+	 * @param array $additionalLabels
+	 *
 	 * @return array customized attribute labels (name=>label)
 	 */
-	public function attributeLabels()
+	public function attributeLabels( $additionalLabels = array() )
 	{
-		$_labels = array(
-			'name'          => 'Name',
-			'api_name'      => 'API Name',
-			'description'   => 'Description',
-			'is_active'     => 'Is Active',
-			'is_system'     => 'Is System',
-			'type'          => 'Type',
-			'storage_name'  => 'Storage Name',
-			'storage_type'  => 'Storage Type',
-			'credentials'   => 'Credentials',
-			'native_format' => 'Native Format',
-			'base_url'      => 'Base Url',
-			'parameters'    => 'Parameters',
-			'headers'       => 'Headers',
+		return parent::attributeLabels(
+			array_merge(
+				array(
+					 'name'          => 'Name',
+					 'api_name'      => 'API Name',
+					 'description'   => 'Description',
+					 'is_active'     => 'Is Active',
+					 'is_system'     => 'Is System',
+					 'type'          => 'Type',
+					 'storage_name'  => 'Storage Name',
+					 'storage_type'  => 'Storage Type',
+					 'credentials'   => 'Credentials',
+					 'native_format' => 'Native Format',
+					 'base_url'      => 'Base Url',
+					 'parameters'    => 'Parameters',
+					 'headers'       => 'Headers',
+				),
+				$additionalLabels
+			)
 		);
-
-		return array_merge( parent::attributeLabels(), $_labels );
 	}
 
 	/**
 	 * Retrieves a list of models based on the current search/filter conditions.
 	 *
-	 * @return CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
+	 * @param mixed $criteria
+	 *
+	 * @return \CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
 	 */
-	public function search()
+	public function search( $criteria = null )
 	{
-		$_criteria = new CDbCriteria();
+		$_criteria = $criteria ? : new \CDbCriteria();
 
-		$_criteria->compare( 'id', $this->id );
 		$_criteria->compare( 'name', $this->name, true );
 		$_criteria->compare( 'api_name', $this->api_name, true );
 		$_criteria->compare( 'is_active', $this->is_active );
 		$_criteria->compare( 'type', $this->type, true );
 		$_criteria->compare( 'storage_name', $this->storage_name, true );
 		$_criteria->compare( 'storage_type', $this->storage_type, true );
-		$_criteria->compare( 'created_date', $this->created_date, true );
-		$_criteria->compare( 'last_modified_date', $this->last_modified_date, true );
-		$_criteria->compare( 'created_by_id', $this->created_by_id );
-		$_criteria->compare( 'last_modified_by_id', $this->last_modified_by_id );
 
-		return new CActiveDataProvider(
-			$this,
-			array(
-				 'criteria' => $_criteria,
-			)
-		);
+		return parent::search( $_criteria );
 	}
 
 	/**
@@ -289,17 +273,23 @@ class Service extends BaseDspSystemModel
 	{
 		if ( !$this->isNewRecord )
 		{
-			if ( isset( $values['type'] ) && 0 !== strcasecmp( $this->type, $values['type'] ) )
+			$_type = Option::get( $values, 'type' );
+
+			if ( !empty( $_type ) && 0 !== strcasecmp( $this->type, $_type ) )
 			{
-				throw new BadRequestException( 'Service type currently can not be modified after creation.' );
+				throw new BadRequestException( 'Service type cannot be changed after creation.' );
 			}
 
-			if ( ( 0 == strcasecmp( 'app', $this->api_name ) ) && isset( $values['api_name'] ) )
+			if ( null === ( $_typeId = Option::get( $values, 'type_id', $this->type_id ) ) )
 			{
-				if ( 0 != strcasecmp( $this->api_name, $values['api_name'] ) )
-				{
-					throw new BadRequestException( 'Service API name currently can not be modified after creation.' );
-				}
+				$this->type_id = PlatformServiceTypes::defines( $_type, true );
+			}
+
+			$_apiName = Option::get( $values, 'api_name' );
+
+			if ( ( 0 == strcasecmp( 'app', $this->api_name ) ) && !empty( $_apiName ) && 0 != strcasecmp( $this->api_name, $values['api_name'] ) )
+			{
+				throw new BadRequestException( 'Service API name currently can not be modified after creation.' );
 			}
 		}
 
@@ -312,14 +302,14 @@ class Service extends BaseDspSystemModel
 	 */
 	public function setRelated( $values, $id )
 	{
-		if ( isset( $values['apps'] ) )
+		if ( null !== ( $_apps = Option::get( $values, 'apps' ) ) )
 		{
-			$this->assignManyToOneByMap( $id, 'app', 'app_to_service', 'service_id', 'app_id', $values['apps'] );
+			$this->assignManyToOneByMap( $id, 'app', 'app_to_service', 'service_id', 'app_id', $_apps );
 		}
 
-		if ( isset( $values['roles'] ) )
+		if ( null !== ( $_roles = Option::get( $values, 'roles' ) ) )
 		{
-			$this->assignManyToOneByMap( $id, 'role', 'role_service_access', 'service_id', 'role_id', $values['roles'] );
+			$this->assignManyToOneByMap( $id, 'role', 'role_service_access', 'service_id', 'role_id', $_roles );
 		}
 	}
 
@@ -328,8 +318,8 @@ class Service extends BaseDspSystemModel
 	 */
 	protected function beforeValidate()
 	{
-		// correct data type
-		$this->is_active = intval( \Platform\Utility\DataFormat::boolval( $this->is_active ) );
+		//	Correct data type
+		$this->is_active = DataFormat::boolval( $this->is_active ) ? 1 : 0;
 
 		return parent::beforeValidate();
 	}
@@ -339,20 +329,11 @@ class Service extends BaseDspSystemModel
 	 */
 	protected function beforeSave()
 	{
-		if ( is_array( $this->credentials ) )
-		{
-			$this->credentials = json_encode( $this->credentials );
-		}
+		$_salt = Pii::db()->password;
 
-		if ( is_array( $this->parameters ) )
-		{
-			$this->parameters = json_encode( $this->parameters );
-		}
-
-		if ( is_array( $this->headers ) )
-		{
-			$this->headers = json_encode( $this->headers );
-		}
+		$this->credentials = empty( $this->credentials ) ? null : ( Hasher::encryptString( json_encode( $this->credentials ), $_salt ) ? : $this->credentials );
+		$this->parameters = empty( $this->parameters ) ? null : ( Hasher::encryptString( json_encode( $this->parameters ), $_salt ) ? : $this->parameters );
+		$this->headers = empty( $this->headers ) ? null : ( Hasher::encryptString( json_encode( $this->headers ), $_salt ) ? : $this->headers );
 
 		return parent::beforeSave();
 	}
@@ -384,12 +365,13 @@ class Service extends BaseDspSystemModel
 	 */
 	protected function beforeDelete()
 	{
-		switch ( $this->type )
+		switch ( $this->type_id )
 		{
-			case 'Local SQL DB':
-			case 'Local SQL DB Schema':
+			case PlatformServiceTypes::LOCAL_SQL_DB:
+			case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
 				throw new BadRequestException( 'System generated database services can not be deleted.' );
-			case 'Local File Storage':
+
+			case PlatformServiceTypes::LOCAL_FILE_STORAGE:
 				switch ( $this->api_name )
 				{
 					case 'app':
@@ -407,20 +389,18 @@ class Service extends BaseDspSystemModel
 	public function afterFind()
 	{
 		//	Correct data type
-		$this->is_active = intval( $this->is_active );
+		$this->is_active = ( 0 != $this->is_active );
 
 		//	Add fake field for client
-		$this->is_system = false;
-
 		switch ( $this->type )
 		{
-			case 'Local SQL DB':
-			case 'Local SQL DB Schema':
+			case PlatformServiceTypes::LOCAL_SQL_DB:
+			case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
 				$this->is_system = true;
 				break;
 
-			case 'Local File Storage':
-			case 'Remote File Storage':
+			case PlatformServiceTypes::LOCAL_FILE_STORAGE:
+			case PlatformServiceTypes::REMOTE_FILE_STORAGE:
 				switch ( $this->api_name )
 				{
 					case 'app':
@@ -428,30 +408,26 @@ class Service extends BaseDspSystemModel
 						break;
 				}
 				break;
+
+			default:
+				$this->is_system = false;
+				break;
 		}
 
-		if ( isset( $this->credentials ) )
-		{
-			$this->credentials = json_decode( $this->credentials, true );
-		}
+		//	Decrypt our stuff
+		$_salt = Pii::db()->password;
 
-		if ( isset( $this->parameters ) )
-		{
-			$this->parameters = json_decode( $this->parameters, true );
-		}
-		else
-		{
-			$this->parameters = array();
-		}
+		$this->credentials = empty( $this->credentials )
+			? array()
+			: ( json_decode( Hasher::decryptString( $this->credentials, $_salt ), true )
+				? : $this->credentials );
 
-		if ( isset( $this->headers ) )
-		{
-			$this->headers = json_decode( $this->headers, true );
-		}
-		else
-		{
-			$this->headers = array();
-		}
+		$this->parameters = empty( $this->parameters )
+			? array()
+			: ( json_decode( Hasher::decryptString( $this->parameters, $_salt ), true )
+				? : $this->parameters );
+
+		$this->headers = empty( $this->headers ) ? array() : ( json_decode( Hasher::decryptString( $this->headers, $_salt ), true ) ? : $this->headers );
 
 		parent::afterFind();
 	}

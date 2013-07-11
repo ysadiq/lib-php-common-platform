@@ -1,9 +1,55 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="WEB_MODULE" version="4">
   <component name="NewModuleRootManager">
-    <content url="file://$MODULE_DIR$" />
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/vendor/composer" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common-yii" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/dreamfactory/yii" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/kisma/kisma" />
+    </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module-library">
+      <library name="Composer Vendors">
+        <CLASSES>
+          <root url="file://$MODULE_DIR$/vendor/kisma/kisma" />
+          <root url="file://$MODULE_DIR$/vendor/composer" />
+          <root url="file://$MODULE_DIR$/vendor/dreamfactory/yii" />
+          <root url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common" />
+          <root url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common-yii" />
+        </CLASSES>
+        <SOURCES>
+          <root url="file://$MODULE_DIR$/vendor/kisma/kisma" />
+          <root url="file://$MODULE_DIR$/vendor/composer" />
+          <root url="file://$MODULE_DIR$/vendor/dreamfactory/yii" />
+          <root url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common" />
+          <root url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common-yii" />
+        </SOURCES>
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="PHP">
+        <CLASSES>
+          <root url="file:///usr/share/php" />
+          <root url="file:///usr/local/bin/composer.phar" />
+        </CLASSES>
+        <SOURCES>
+          <root url="file:///usr/share/php" />
+          <root url="file:///usr/local/bin/composer.phar" />
+        </SOURCES>
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="PHARS">
+        <CLASSES>
+          <root url="phar:///usr/local/bin/composer.phar" />
+        </CLASSES>
+        <SOURCES>
+          <root url="phar:///usr/local/bin/composer.phar" />
+        </SOURCES>
+      </library>
+    </orderEntry>
   </component>
 </module>
 

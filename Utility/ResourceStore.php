@@ -3,7 +3,7 @@
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,6 +86,7 @@ class ResourceStore extends SeedUtility
 		static::$_resourceId = Option::get( $settings, 'resource_id' );
 		static::$_resourceName = Option::get( $settings, 'resource_name' );
 		static::$_relatedResource = Option::get( $settings, 'related_resource' );
+		static::$_service = Option::get( $settings, 'service' );
 		static::$_fields = Option::get( $settings, 'fields' );
 		static::$_extras = Option::get( $settings, 'extras' );
 
@@ -96,26 +97,77 @@ class ResourceStore extends SeedUtility
 	}
 
 	/**
-	 * @param        $records
+	 * Individual Methods
+	 */
+
+	/**
+	 * @param array  $record
 	 * @param bool   $rollback
+	 * @param string $fields
+	 * @param array  $extras
 	 *
-	 * @throws BadRequestException
 	 * @return array
 	 */
-	public static function bulkInsert( $records, $rollback = false )
+	public static function insert( $record, $rollback = false, $fields = null, $extras = null )
 	{
-		if ( empty( $records ) )
-		{
-			throw new BadRequestException( 'There are no record sets in the request.' );
-		}
+		return static::bulkInsert( array( $record ), $rollback, $fields, $extras );
+	}
 
-		if ( !isset( $records[0] ) )
-		{
-			// conversion from xml can pull single record out of array format
-			$records = array( $records );
-		}
+	/**
+	 * @param array  $record
+	 * @param bool   $rollback
+	 * @param string $fields
+	 * @param array  $extras
+	 *
+	 * @return array
+	 */
+	public static function update( $record, $rollback = false, $fields = null, $extras = null )
+	{
+		return static::bulkUpdate( array( $record ), $rollback, $fields, $extras );
+	}
 
+	/**
+	 * @param array $record
+	 *
+	 * @param null  $fields
+	 * @param null  $extras
+	 *
+	 * @return array
+	 */
+	public static function delete( $record, $fields = null, $extras = null )
+	{
+		return static::bulkDelete( array( $record ) );
+	}
+
+	/**
+	 * @param int   $id Optional ID
+	 * @param mixed $criteria
+	 * @param array $params
+	 *
+	 * @return array
+	 */
+	public static function select( $id = null, $criteria = null, $params = array() )
+	{
+		return static::bulkSelectById( array( $id ), $criteria, $params );
+	}
+
+	/**
+	 * BULK Methods
+	 */
+
+	/**
+	 * @param array  $records
+	 * @param bool   $rollback
+	 * @param string $fields
+	 * @param array  $extras
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @return array
+	 */
+	public static function bulkInsert( $records, $rollback = false, $fields = null, $extras = null )
+	{
 		static::checkPermission( 'create' );
+		static::_validateRecords( $records );
 
 		$_response = array();
 		$_transaction = null;
@@ -132,7 +184,7 @@ class ResourceStore extends SeedUtility
 			{
 				try
 				{
-					$_response[] = static::_insertInternal( $_record );
+					$_response[] = static::_insertInternal( $_record, $fields, $extras );
 				}
 				catch ( \Exception $_ex )
 				{
@@ -163,108 +215,25 @@ class ResourceStore extends SeedUtility
 	}
 
 	/**
-	 * @param array $record
-	 *
-	 * @throws BadRequestException
-	 * @return array
-	 */
-	public static function insert( $record )
-	{
-		static::checkPermission( 'create' );
-
-		return static::_insertInternal( $record );
-	}
-
-	/**
-	 * @param array $records
-	 * @param bool  $rollback
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
-	 */
-	public static function bulkUpdate( $records, $rollback = false )
-	{
-		if ( empty( $records ) )
-		{
-			throw new BadRequestException( 'There are no record sets in the request.' );
-		}
-
-		if ( !isset( $records[0] ) )
-		{
-			// conversion from xml can pull single record out of array format
-			$records = array( $records );
-		}
-
-		static::checkPermission( 'update' );
-
-		$_response = array();
-		$_transaction = null;
-
-		//	Start a transaction
-		if ( false !== $rollback )
-		{
-			$_transaction = Pii::db()->beginTransaction();
-		}
-
-		$_pk = static::model()->primaryKey;
-
-		foreach ( $records as $_record )
-		{
-			try
-			{
-				$_response[] = static::_updateInternal( Option::get( $_record, $_pk ), $_record );
-			}
-			catch ( \CDbException $_ex )
-			{
-				$_response[] = array( 'error' => array( 'message' => $_ex->getMessage(), 'code' => $_ex->getCode() ) );
-
-				if ( false !== $rollback && $_transaction )
-				{
-					//	Rollback
-					$_transaction->rollback();
-
-					return array( 'record' => $_response );
-				}
-			}
-		}
-
-		//	Commit
-		if ( $_transaction )
-		{
-			$_transaction->commit();
-		}
-
-		return array( 'record' => $_response );
-	}
-
-	/**
-	 * @param $record
-	 *
-	 * @return array
-	 */
-	public static function update( $record )
-	{
-		static::checkPermission( 'update' );
-
-		return static::_updateByPk( Option::get( $record, static::model()->primaryKey ), $record );
-	}
-
-	/**
 	 * @param string $ids
 	 * @param array  $record
 	 * @param bool   $rollback
+	 * @param string $fields
+	 * @param array  $extras
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
-	public static function bulkUpdateById( $ids, $record, $rollback = false )
+	public static function bulkUpdateById( $ids, $record, $rollback = false, $fields = null, $extras = null )
 	{
+		static::_validateRecords( $records );
+
 		if ( empty( $record ) )
 		{
 			throw new BadRequestException( 'There is no record in the request.' );
 		}
 
-		$_ids = explode( ',', $ids ? : static::$_resourceId );
+		$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
 
 		$_records = array();
 		$_pk = static::model()->primaryKey;
@@ -275,42 +244,23 @@ class ResourceStore extends SeedUtility
 			$_records[] = $_record;
 		}
 
-		return static::bulkUpdate( $_records );
-	}
-
-	/**
-	 * @param $id
-	 * @param $record
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
-	 */
-	protected static function _updateByPk( $id, $record )
-	{
-		return static::_updateInternal( $id, $record );
+		return static::bulkUpdate( $_records, $rollback, $fields, $extras );
 	}
 
 	/**
 	 * @param array $records
 	 * @param bool  $rollback
 	 *
+	 * @param null  $fields
+	 * @param null  $extras
+	 *
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
-	public static function bulkDelete( $records, $rollback = false )
+	public static function bulkUpdate( $records, $rollback = false, $fields = null, $extras = null )
 	{
-		if ( empty( $records ) )
-		{
-			throw new BadRequestException( 'There are no record sets in the request.' );
-		}
-
-		if ( !isset( $records[0] ) )
-		{
-			//	Conversion from xml can pull single record out of array format
-			$records = array( $records );
-		}
-
-		static::checkPermission( 'delete' );
+		static::checkPermission( 'update' );
+		static::_validateRecords( $records );
 
 		$_response = array();
 		$_transaction = null;
@@ -327,7 +277,7 @@ class ResourceStore extends SeedUtility
 		{
 			try
 			{
-				$_response[] = static::_deleteInternal( Option::get( $_record, $_pk ) );
+				$_response[] = static::_updateInternal( Option::get( $_record, $_pk ), $_record, $fields, $extras );
 			}
 			catch ( \CDbException $_ex )
 			{
@@ -353,40 +303,78 @@ class ResourceStore extends SeedUtility
 	}
 
 	/**
-	 * @param array $record
+	 * @param string $ids
+	 * @param bool   $rollback
+	 * @param string $fields
+	 * @param array  $extras
 	 *
-	 * @throws BadRequestException
 	 * @return array
 	 */
-	public static function delete( $record )
+	public static function bulkDeleteById( $ids, $rollback = false, $fields = null, $extras = null )
 	{
-		return static::bulkDelete( array( $record ) );
-	}
+		$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
 
-	/**
-	 * @param        $ids
-	 *
-	 * @throws BadRequestException
-	 * @return array
-	 */
-	public static function bulkDeleteById( $ids )
-	{
-		static::checkPermission( 'delete' );
-
-		$_ids = array_map( 'trim', explode( ',', $ids ? : static::$_resourceId ) );
-
-		$_response = array();
+		$_records = array();
+		$_pk = static::model()->primaryKey;
 
 		foreach ( $_ids as $_id )
 		{
+			$_records[] = array( $_pk => $_id );
+		}
+
+		return static::bulkDelete( $_records, $rollback, $fields, $extras );
+	}
+
+	/**
+	 * @param array $records
+	 * @param bool  $rollback
+	 *
+	 * @param null  $fields
+	 * @param null  $extras
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @return array
+	 */
+	public static function bulkDelete( $records, $rollback = false, $fields = null, $extras = null )
+	{
+		static::checkPermission( 'delete' );
+		static::_validateRecords( $records );
+
+		$_response = array();
+		$_transaction = null;
+
+		//	Start a transaction
+		if ( false !== $rollback )
+		{
+			$_transaction = Pii::db()->beginTransaction();
+		}
+
+		$_pk = static::model()->primaryKey;
+
+		foreach ( $records as $_record )
+		{
 			try
 			{
-				$_response[] = static::_deleteInternal( $_id );
+				$_response[] = static::_deleteInternal( Option::get( $_record, $_pk ), $fields, $extras );
 			}
-			catch ( \Exception $_ex )
+			catch ( \CDbException $_ex )
 			{
 				$_response[] = array( 'error' => array( 'message' => $_ex->getMessage(), 'code' => $_ex->getCode() ) );
+
+				if ( false !== $rollback && $_transaction )
+				{
+					//	Rollback
+					$_transaction->rollback();
+
+					return array( 'record' => $_response );
+				}
 			}
+		}
+
+		//	Commit
+		if ( $_transaction )
+		{
+			$_transaction->commit();
 		}
 
 		return array( 'record' => $_response );
@@ -394,24 +382,28 @@ class ResourceStore extends SeedUtility
 
 	/**
 	 * @param string $ids
+	 * @param mixed  $criteria
+	 * @param array  $params
 	 *
-	 * @throws \Exception
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @throws NotFoundException
 	 * @return array
 	 */
-	public static function bulkSelectById( $ids )
+	public static function bulkSelectById( $ids, $criteria = null, $params = array() )
 	{
-		if ( empty( $record ) )
-		{
-			throw new BadRequestException( 'There is no record in the request.' );
-		}
+		static::checkPermission( 'read' );
 
-		$_ids = explode( ',', $ids ? : static::$_resourceId );
+		$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
 		$_pk = static::model()->primaryKey;
 
-		$_models = static::_find( $_pk . ' in (' . implode( ',', $_ids ) . ')' );
+		$_criteria = new \CDbCriteria( $criteria );
+
+		if ( !empty( $_ids ) )
+		{
+			$_criteria->addInCondition( $_pk, $_ids );
+		}
+
 		$_response = array();
+
+		$_models = static::_find( $_criteria, $params );
 
 		if ( !empty( $_models ) )
 		{
@@ -422,80 +414,6 @@ class ResourceStore extends SeedUtility
 		}
 
 		return $_response;
-	}
-
-	/**
-	 * @param int    $id Optional ID
-	 * @param string $criteria
-	 * @param array  $params
-	 *
-	 * @return array
-	 */
-	public static function select( $id = null, $criteria = null, $params = array() )
-	{
-		return static::bulkSelectById( $id );
-	}
-
-	/**
-	 * @param int   $id Optional ID
-	 * @param mixed $criteria
-	 * @param array $params
-	 *
-	 * @throws NotFoundException
-	 * @return \DreamFactory\Platform\Yii\Models\BasePlatformSystemModel
-	 */
-	protected static function _findByPk( $id = null, $criteria = null, $params = array() )
-	{
-		static::checkPermission( 'read' );
-
-		if ( null === ( $_resource = static::model()->findByPk( $id ? : static::$_resourceId, $criteria, $params ) ) )
-		{
-			throw new NotFoundException();
-		}
-
-		return $_resource;
-	}
-
-	/**
-	 * @param mixed $criteria
-	 * @param array $params
-	 *
-	 * @throws NotFoundException
-	 * @internal param int $id Optional ID
-	 *
-	 * @return \DreamFactory\Platform\Yii\Models\BasePlatformSystemModel
-	 */
-	protected static function _find( $criteria = null, $params = array() )
-	{
-		static::checkPermission( 'read' );
-
-		if ( null === ( $_resource = static::model()->find( $criteria, $params ) ) )
-		{
-			throw new NotFoundException();
-		}
-
-		return $_resource;
-	}
-
-	/**
-	 * @param mixed $criteria
-	 * @param array $params
-	 *
-	 * @throws NotFoundException
-	 * @internal param int $id Optional ID
-	 *
-	 * @return \DreamFactory\Platform\Yii\Models\BasePlatformSystemModel
-	 */
-	protected static function _findAll( $criteria = null, $params = array() )
-	{
-		static::checkPermission( 'read' );
-
-		if ( null === ( $_resources = static::model()->findAll( $criteria, $params ) ) )
-		{
-			throw new NotFoundException();
-		}
-
-		return $_resources;
 	}
 
 	/**
@@ -639,14 +557,115 @@ class ResourceStore extends SeedUtility
 	}
 
 	/**
+	 * @param array $records
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 */
+	protected static function _validateRecords( &$records )
+	{
+		if ( empty( $records ) )
+		{
+			throw new BadRequestException( 'There are no record sets in the request.' );
+		}
+
+		if ( !isset( $records[0] ) )
+		{
+			// conversion from xml can pull single record out of array format
+			$records = array( $records );
+		}
+	}
+
+	//*************************************************************************
+	//	Internal Provider Specific Methods
+	//*************************************************************************
+
+	/**
+	 * @param int   $id Optional ID
+	 * @param mixed $criteria
+	 * @param array $params
+	 *
+	 * @throws NotFoundException
+	 * @return \DreamFactory\Platform\Yii\Models\BasePlatformSystemModel
+	 */
+	protected static function _findByPk( $id = null, $criteria = null, $params = array() )
+	{
+		static::checkPermission( 'read' );
+
+		if ( null === ( $_resource = static::model()->findByPk( $id ? : static::$_resourceId, $criteria, $params ) ) )
+		{
+			throw new NotFoundException();
+		}
+
+		return $_resource;
+	}
+
+	/**
+	 * @param mixed $criteria
+	 * @param array $params
+	 *
+	 * @throws NotFoundException
+	 * @internal param int $id Optional ID
+	 *
+	 * @return \DreamFactory\Platform\Yii\Models\BasePlatformSystemModel
+	 */
+	protected static function _find( $criteria = null, $params = array() )
+	{
+		static::checkPermission( 'read' );
+
+		if ( null === ( $_resource = static::model()->find( $criteria, $params ) ) )
+		{
+			throw new NotFoundException();
+		}
+
+		return $_resource;
+	}
+
+	/**
+	 * @param mixed $criteria
+	 * @param array $params
+	 *
+	 * @throws NotFoundException
+	 * @internal param int $id Optional ID
+	 *
+	 * @return \DreamFactory\Platform\Yii\Models\BasePlatformSystemModel
+	 */
+	protected static function _findAll( $criteria = null, $params = array() )
+	{
+		static::checkPermission( 'read' );
+
+		if ( null === ( $_resources = static::model()->findAll( $criteria, $params ) ) )
+		{
+			throw new NotFoundException();
+		}
+
+		return $_resources;
+	}
+
+	/**
+	 * @param int    $id
+	 * @param array  $record
+	 * @param string $fields
+	 * @param array  $extras
+	 *
+	 * @return array
+	 */
+	protected static function _updateByPk( $id, $record, $fields = null, $extras = null )
+	{
+		return static::_updateInternal( $id, $record, $fields, $extras );
+	}
+
+	/**
 	 * @param array $record
+	 *
+	 * @param null  $fields
+	 * @param null  $extras
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException|\Exception
 	 * @return array
 	 */
-	protected static function _insertInternal( $record )
+	protected static function _insertInternal( $record, $fields = null, $extras = null )
 	{
 		if ( empty( $record ) )
 		{
@@ -698,11 +717,14 @@ class ResourceStore extends SeedUtility
 	 * @param int   $id
 	 * @param array $record
 	 *
+	 * @param null  $fields
+	 * @param null  $extras
+	 *
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
-	protected static function _updateInternal( $id, $record )
+	protected static function _updateInternal( $id, $record, $fields = null, $extras = null )
 	{
 		if ( empty( $record ) )
 		{
@@ -735,13 +757,15 @@ class ResourceStore extends SeedUtility
 	}
 
 	/**
-	 * @param int $id
+	 * @param int    $id
+	 * @param string $fields
+	 * @param array  $extras
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
-	protected static function _deleteInternal( $id )
+	protected static function _deleteInternal( $id, $fields = null, $extras = null )
 	{
 		if ( empty( $id ) )
 		{
@@ -761,6 +785,10 @@ class ResourceStore extends SeedUtility
 			throw new InternalServerErrorException( 'Failed to delete "' . static::$_resourceName . '" record:' . $_ex->getMessage() );
 		}
 	}
+
+	//*************************************************************************
+	//	Properties
+	//*************************************************************************
 
 	/**
 	 * @param string $relatedResource
@@ -856,5 +884,21 @@ class ResourceStore extends SeedUtility
 	public static function getResourceName()
 	{
 		return static::$_resourceName;
+	}
+
+	/**
+	 * @param string $service
+	 */
+	public static function setService( $service )
+	{
+		self::$_service = $service;
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function getService()
+	{
+		return self::$_service;
 	}
 }

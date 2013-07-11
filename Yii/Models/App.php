@@ -3,7 +3,7 @@
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -225,9 +225,9 @@ class App extends BasePlatformSystemModel
 		//	Make sure we have an app in the folder
 		if ( !$this->is_url_external )
 		{
-			/** @var $_service BaseFileSvc */
 			if ( empty( $this->storage_service_id ) )
 			{
+				/** @var $_service BaseFileSvc */
 				$_service = ServiceHandler::getServiceObject( 'app' );
 				$_container = 'applications';
 			}
