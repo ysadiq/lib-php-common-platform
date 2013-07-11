@@ -115,7 +115,7 @@ class ResourceStore extends SeedUtility
 			$records = array( $records );
 		}
 
-		static::_permissionCheck( 'create' );
+		static::checkPermission( 'create' );
 
 		$_response = array();
 		$_transaction = null;
@@ -170,7 +170,7 @@ class ResourceStore extends SeedUtility
 	 */
 	public static function insert( $record )
 	{
-		static::_permissionCheck( 'create' );
+		static::checkPermission( 'create' );
 
 		return static::_insertInternal( $record );
 	}
@@ -195,7 +195,7 @@ class ResourceStore extends SeedUtility
 			$records = array( $records );
 		}
 
-		static::_permissionCheck( 'update' );
+		static::checkPermission( 'update' );
 
 		$_response = array();
 		$_transaction = null;
@@ -244,7 +244,7 @@ class ResourceStore extends SeedUtility
 	 */
 	public static function update( $record )
 	{
-		static::_permissionCheck( 'update' );
+		static::checkPermission( 'update' );
 
 		return static::_updateByPk( Option::get( $record, static::model()->primaryKey ), $record );
 	}
@@ -264,7 +264,7 @@ class ResourceStore extends SeedUtility
 			throw new BadRequestException( 'There is no record in the request.' );
 		}
 
-		$_ids = explode( ',', $ids ?: static::$_resourceId);
+		$_ids = explode( ',', $ids ? : static::$_resourceId );
 
 		$_records = array();
 		$_pk = static::model()->primaryKey;
@@ -310,7 +310,7 @@ class ResourceStore extends SeedUtility
 			$records = array( $records );
 		}
 
-		static::_permissionCheck( 'delete' );
+		static::checkPermission( 'delete' );
 
 		$_response = array();
 		$_transaction = null;
@@ -371,9 +371,9 @@ class ResourceStore extends SeedUtility
 	 */
 	public static function bulkDeleteById( $ids )
 	{
-		static::_permissionCheck( 'delete' );
+		static::checkPermission( 'delete' );
 
-		$_ids = array_map( 'trim', explode( ',', $ids ?: static::$_resourceId ) );
+		$_ids = array_map( 'trim', explode( ',', $ids ? : static::$_resourceId ) );
 
 		$_response = array();
 
@@ -446,7 +446,7 @@ class ResourceStore extends SeedUtility
 	 */
 	protected static function _findByPk( $id = null, $criteria = null, $params = array() )
 	{
-		static::_permissionCheck( 'read' );
+		static::checkPermission( 'read' );
 
 		if ( null === ( $_resource = static::model()->findByPk( $id ? : static::$_resourceId, $criteria, $params ) ) )
 		{
@@ -467,7 +467,7 @@ class ResourceStore extends SeedUtility
 	 */
 	protected static function _find( $criteria = null, $params = array() )
 	{
-		static::_permissionCheck( 'read' );
+		static::checkPermission( 'read' );
 
 		if ( null === ( $_resource = static::model()->find( $criteria, $params ) ) )
 		{
@@ -488,7 +488,7 @@ class ResourceStore extends SeedUtility
 	 */
 	protected static function _findAll( $criteria = null, $params = array() )
 	{
-		static::_permissionCheck( 'read' );
+		static::checkPermission( 'read' );
 
 		if ( null === ( $_resources = static::model()->findAll( $criteria, $params ) ) )
 		{
@@ -628,10 +628,14 @@ class ResourceStore extends SeedUtility
 	 * @param string $operation
 	 * @param string $service
 	 * @param string $resource
+	 *
+	 * @return bool
 	 */
-	protected static function _permissionCheck( $operation, $service = null, $resource = null )
+	public static function checkPermission( $operation, $service = null, $resource = null )
 	{
 		UserSession::checkSessionPermission( $operation, $service ? : static::$_service, $resource ? : static::$_resourceName );
+
+		return true;
 	}
 
 	/**

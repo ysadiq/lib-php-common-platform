@@ -72,14 +72,6 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	}
 
 	/**
-	 * @param string $request
-	 */
-	protected function checkPermission( $request )
-	{
-		UserSession::checkSessionPermission( $request, $this->_serviceName, $this->_apiName );
-	}
-
-	/**
 	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
 	 *
 	 * @return BasePlatformResource

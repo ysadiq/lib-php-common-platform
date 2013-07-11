@@ -59,6 +59,10 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 * @var array
 	 */
 	protected $_extras;
+	/**
+	 * @var bool Query option for output format of package
+	 */
+	protected $_exportPackage = false;
 
 	//*************************************************************************
 	//* Methods
@@ -81,6 +85,18 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	}
 
 	/**
+	 * @param string $operation
+	 * @param string $service
+	 * @param string $resource
+	 *
+	 * @return bool|void
+	 */
+	public static function checkPermission( $operation, $service = null, $resource = null )
+	{
+		return ResourceStore::checkPermission( $operation, $service, $resource );
+	}
+
+	/**
 	 * Apply the commonly used REST path members to the class
 	 */
 	protected function _detectResourceMembers()
@@ -98,6 +114,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		//	Most requests contain 'returned fields' parameter, all by default
 		$this->_extras = array();
 		$this->_fields = Option::get( $_REQUEST, 'fields', '*' );
+		$this->_exportPackage = Option::getBool( $_REQUEST, 'pkg' );
 
 		$_related = Option::get( $_REQUEST, 'related' );
 

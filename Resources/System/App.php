@@ -17,17 +17,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Resources;
+namespace DreamFactory\Platform\Resources\System;
 
+use DreamFactory\Platform\Resources\BaseSystemRestResource;
+use DreamFactory\Platform\Utility\FileSystem;
+use DreamFactory\Platform\Utility\Packager;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\Sql;
-use DreamFactory\Platform\Utility\DataFormat;
-use DreamFactory\Platform\Utility\FileUtilities;
-use DreamFactory\Platform\Utility\ServiceHandler;
-use DreamFactory\Platform\Utility\SwaggerUtilities;
-use DreamFactory\Platform\Utility\Utilities;
 use Swagger\Annotations as SWG;
 
 /**
@@ -68,16 +65,8 @@ use Swagger\Annotations as SWG;
  * )
  *
  */
-class App extends SystemResource
+class App extends BaseSystemRestResource
 {
-	//*************************************************************************
-	//	Constants
-	//*************************************************************************
-
-	//*************************************************************************
-	//	Members
-	//*************************************************************************
-
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
@@ -87,24 +76,21 @@ class App extends SystemResource
 	 *
 	 *
 	 */
-	public function __construct( $resourceArray = array() )
+	public function __construct( $consumer, $resourceArray = array() )
 	{
 		parent::__construct(
+			$consumer,
 			array(
-				 'service_name' => 'system',
-				 'name'         => 'Application',
-				 'api_name'     => 'app',
-				 'type'         => 'System',
-				 'description'  => 'System application administration.',
-				 'is_active'    => true,
-			),
-			$resourceArray
+				 'service_name'   => 'system',
+				 'name'           => 'Application',
+				 'api_name'       => 'app',
+				 'type'           => 'System',
+				 'description'    => 'System application administration.',
+				 'is_active'      => true,
+				 'resource_array' => $resourceArray,
+			)
 		);
 	}
-
-	// Service interface implementation
-
-	// REST interface implementation
 
 	/**
 	 *
@@ -320,583 +306,117 @@ class App extends SystemResource
 	 *     )
 	 *   )
 	 *
+	 * @throws \Exception
+	 * @return array|bool
+	 */
+	protected function _handleGet()
+	{
+		if ( false !== $this->_exportPackage && !empty( $this->_resourceId ) )
+		{
+			$_includeFiles = Option::getBool( $_REQUEST, 'include_files' );
+			$_includeServices = Option::getBool( $_REQUEST, 'include_services' );
+			$_includeSchema = Option::getBool( $_REQUEST, 'include_schema' );
+			$_includeData = Option::getBool( $_REQUEST, 'include_data' );
+
+			return Packager::exportAppAsPackage( $this->_resourceId, $_includeFiles, $_includeServices, $_includeSchema, $_includeData );
+		}
+
+		return parent::_handleGet();
+	}
+
+	/**
 	 * @return array|bool
 	 * @throws \Exception
 	 */
-	protected function _handleAction()
+	protected function _handlePost()
 	{
-		switch ( $this->_action )
+		//	You can import an application package file, local or remote, or from zip, but nothing else
+		$_name = FilterInput::request( 'name' );
+		$_packageUrl = FilterInput::request( 'url' );
+		$_extension = strtolower( pathinfo( $_packageUrl, PATHINFO_EXTENSION ) );
+
+		if ( !empty( $_packageUrl ) )
 		{
-			case self::Get:
-				if ( !empty( $this->_resourceId ) )
-				{
-					$asPkg = FilterInput::request( 'pkg', false, FILTER_VALIDATE_BOOLEAN );
-					if ( $asPkg )
-					{
-						$includeFiles = FilterInput::request( 'include_files', false, FILTER_VALIDATE_BOOLEAN );
-						$includeServices = FilterInput::request( 'include_services', false, FILTER_VALIDATE_BOOLEAN );
-						$includeSchema = FilterInput::request( 'include_schema', false, FILTER_VALIDATE_BOOLEAN );
-						$includeData = FilterInput::request( 'include_data', false, FILTER_VALIDATE_BOOLEAN );
-
-						return static::exportAppAsPackage( $this->_resourceId, $includeFiles, $includeServices, $includeSchema, $includeData );
-					}
-				}
-				break;
-			case self::Post:
-				// you can import an application package file, local or remote, or from zip, but nothing else
-				$fileUrl = FilterInput::request( 'url', '' );
-				if ( !empty( $fileUrl ) )
-				{
-					if ( 0 === strcasecmp( 'dfpkg', FileUtilities::getFileExtension( $fileUrl ) ) )
-					{
-						// need to download and extract zip file and move contents to storage
-						$filename = FileUtilities::importUrlFileToTemp( $fileUrl );
-						try
-						{
-							return static::importAppFromPackage( $filename, $fileUrl );
-						}
-						catch ( \Exception $ex )
-						{
-							throw new \Exception( "Failed to import application package $fileUrl.\n{$ex->getMessage()}" );
-						}
-					}
-					$name = FilterInput::request( 'name', '' );
-					// from repo or remote zip file
-					if ( !empty( $name ) && ( 0 === strcasecmp( 'zip', FileUtilities::getFileExtension( $fileUrl ) ) ) )
-					{
-						// need to download and extract zip file and move contents to storage
-						$filename = FileUtilities::importUrlFileToTemp( $fileUrl );
-						try
-						{
-							return static::importAppFromZip( $name, $filename );
-							// todo save url for later updates
-						}
-						catch ( \Exception $ex )
-						{
-							throw new \Exception( "Failed to import application package $fileUrl.\n{$ex->getMessage()}" );
-						}
-					}
-				}
-				if ( isset( $_FILES['files'] ) && !empty( $_FILES['files'] ) )
-				{
-					// older html multi-part/form-data post, single or multiple files
-					$files = $_FILES['files'];
-					if ( is_array( $files['error'] ) )
-					{
-						throw new \Exception( "Only a single application package file is allowed for import." );
-					}
-					$filename = $files['name'];
-					$error = $files['error'];
-					if ( $error !== UPLOAD_ERR_OK )
-					{
-						throw new \Exception( "Failed to import application package $filename.\n$error" );
-					}
-					$tmpName = $files['tmp_name'];
-					$contentType = $files['type'];
-					if ( 0 === strcasecmp( 'dfpkg', FileUtilities::getFileExtension( $filename ) ) )
-					{
-						try
-						{
-							// need to extract zip file and move contents to storage
-							return static::importAppFromPackage( $tmpName );
-						}
-						catch ( \Exception $ex )
-						{
-							throw new \Exception( "Failed to import application package $filename.\n{$ex->getMessage()}" );
-						}
-					}
-					if ( !empty( $name ) && !FileUtilities::isZipContent( $contentType ) )
-					{
-						try
-						{
-							// need to extract zip file and move contents to storage
-							return static::importAppFromZip( $name, $tmpName );
-						}
-						catch ( \Exception $ex )
-						{
-							throw new \Exception( "Failed to import application package $filename.\n{$ex->getMessage()}" );
-						}
-					}
-				}
-				break;
-		}
-
-		return parent::_handleAction();
-	}
-
-	//-------- System Records Operations ---------------------
-	// records is an array of field arrays
-
-	/**
-	 * @param string $app_id
-	 * @param bool   $include_files
-	 * @param bool   $include_services
-	 * @param bool   $include_schema
-	 * @param bool   $include_data
-	 *
-	 * @throws \Exception
-	 * @return null
-	 */
-	public static function exportAppAsPackage( $app_id,
-											   $include_files = false,
-											   $include_services = false,
-											   $include_schema = false,
-											   $include_data = false )
-	{
-		UserSession::checkSessionPermission( 'read', 'system', 'app' );
-		$model = \App::model();
-		if ( $include_services || $include_schema )
-		{
-			$model->with( 'app_service_relations.service' );
-		}
-		$app = $model->findByPk( $app_id );
-		if ( null === $app )
-		{
-			throw new \Exception( "No database entry exists for this application with id '$app_id'." );
-		}
-		$fields = array(
-			'api_name',
-			'name',
-			'description',
-			'is_active',
-			'url',
-			'is_url_external',
-			'import_url',
-			'requires_fullscreen',
-			'requires_plugin'
-		);
-		$record = $app->getAttributes( $fields );
-		$app_root = Option::get( $record, 'api_name' );
-
-		try
-		{
-			$zip = new \ZipArchive();
-			$tempDir = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR;
-			$zipFileName = $tempDir . $app_root . '.dfpkg';
-			if ( true !== $zip->open( $zipFileName, \ZipArchive::CREATE ) )
+			if ( 'dfpkg' == $_extension )
 			{
-				throw new \Exception( 'Can not create package file for this application.' );
-			}
+				// need to download and extract zip file and move contents to storage
+				$_filename = FileSystem::importUrlFileToTemp( $_packageUrl );
 
-			// add database entry file
-			if ( !$zip->addFromString( 'description.json', json_encode( $record ) ) )
-			{
-				throw new \Exception( "Can not include description in package file." );
-			}
-			if ( $include_services || $include_schema )
-			{
-				/**
-				 * @var \Service[] $serviceRelations
-				 */
-				$serviceRelations = $app->getRelated( 'app_service_relations' );
-				if ( !empty( $serviceRelations ) )
-				{
-					$services = array();
-					$schemas = array();
-					$serviceFields = array(
-						'name',
-						'api_name',
-						'description',
-						'is_active',
-						'type',
-						'is_system',
-						'storage_name',
-						'storage_type',
-						'credentials',
-						'native_format',
-						'base_url',
-						'parameters',
-						'headers',
-					);
-					foreach ( $serviceRelations as $relation )
-					{
-						/** @var \Service $service */
-						$service = $relation->getRelated( 'service' );
-						if ( !empty( $service ) )
-						{
-							if ( $include_services )
-							{
-								if ( !DataFormat::boolval( $service->getAttribute( 'is_system' ) ) )
-								{
-									// get service details to restore with app
-									$temp = $service->getAttributes( $serviceFields );
-									$services[] = $temp;
-								}
-							}
-							if ( $include_schema )
-							{
-								$component = $relation->getAttribute( 'component' );
-								if ( !empty( $component ) )
-								{
-									// service is probably a db, export table schema if possible
-									$serviceName = $service->getAttribute( 'api_name' );
-									$serviceType = $service->getAttribute( 'type' );
-									switch ( strtolower( $serviceType ) )
-									{
-										case 'local sql db schema':
-										case 'remote sql db schema':
-											/** @var $db \Platform\Services\SchemaSvc */
-											$db = ServiceHandler::getServiceObject( $serviceName );
-											$describe = $db->describeTables( implode( ',', $component ) );
-											$temp = array(
-												'api_name' => $serviceName,
-												'table'    => $describe
-											);
-											$schemas[] = $temp;
-											break;
-									}
-								}
-							}
-						}
-					}
-					if ( !empty( $services ) && !$zip->addFromString( 'services.json', json_encode( $services ) ) )
-					{
-						throw new \Exception( "Can not include services in package file." );
-					}
-					if ( !empty( $schemas ) && !$zip->addFromString( 'schema.json', json_encode( array( 'service' => $schemas ) ) ) )
-					{
-						throw new \Exception( "Can not include database schema in package file." );
-					}
-				}
-			}
-			$isExternal = DataFormat::boolval( Option::get( $record, 'is_url_external', false ) );
-			if ( !$isExternal && $include_files )
-			{
-				// add files
-				$_storageServiceId = Option::get( $record, 'storage_service_id' );
-				/** @var $_service \Platform\Services\BaseFileSvc */
-				if ( empty( $_storageServiceId ) )
-				{
-					$_service = ServiceHandler::getServiceObject( 'app' );
-					$_container = 'applications';
-				}
-				else
-				{
-					$_service = ServiceHandler::getServiceObjectById( $_storageServiceId );
-					$_container = Option::get( $record, 'storage_container' );
-				}
-				if ( empty( $_container ) )
-				{
-					if ( $_service->containerExists( $app_root ) )
-					{
-						$_service->getFolderAsZip( $app_root, '', $zip, $zipFileName, true );
-					}
-				}
-				else
-				{
-					if ( $_service->folderExists( $_container, $app_root ) )
-					{
-						$_service->getFolderAsZip( $_container, $app_root, $zip, $zipFileName, true );
-					}
-				}
-			}
-			$zip->close();
-
-			$fd = fopen( $zipFileName, "r" );
-			if ( $fd )
-			{
-				$fsize = filesize( $zipFileName );
-				$path_parts = pathinfo( $zipFileName );
-				header( "Content-type: application/zip" );
-				header( "Content-Disposition: filename=\"" . $path_parts["basename"] . "\"" );
-				header( "Content-length: $fsize" );
-				header( "Cache-control: private" ); //use this to open files directly
-				while ( !feof( $fd ) )
-				{
-					$buffer = fread( $fd, 2048 );
-					echo $buffer;
-				}
-			}
-			fclose( $fd );
-			unlink( $zipFileName );
-
-			return null;
-		}
-		catch ( \Exception $ex )
-		{
-			throw $ex;
-		}
-	}
-
-	/**
-	 * @param string $pkg_file
-	 * @param string $import_url
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public static function importAppFromPackage( $pkg_file, $import_url = '' )
-	{
-		$zip = new \ZipArchive();
-		if ( true !== $zip->open( $pkg_file ) )
-		{
-			throw new \Exception( 'Error opening zip file.' );
-		}
-		$data = $zip->getFromName( 'description.json' );
-		if ( false === $data )
-		{
-			throw new \Exception( 'No application description file in this package file.' );
-		}
-		$record = DataFormat::jsonToArray( $data );
-		if ( !empty( $import_url ) )
-		{
-			$record['import_url'] = $import_url;
-		}
-		try
-		{
-			$returnData = static::createRecord( 'app', $record, 'id,api_name' );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Could not create the application.\n{$ex->getMessage()}" );
-		}
-		$id = Option::get( $returnData, 'id' );
-		$zip->deleteName( 'description.json' );
-		try
-		{
-			$data = $zip->getFromName( 'services.json' );
-			if ( false !== $data )
-			{
-				$data = DataFormat::jsonToArray( $data );
 				try
 				{
-					$result = static::createRecords( 'service', $data, true );
-					// clear swagger cache upon any service changes.
-					SwaggerUtilities::clearCache();
+					return Packager::importAppFromPackage( $_filename, $_packageUrl );
 				}
 				catch ( \Exception $ex )
 				{
-					throw new \Exception( "Could not create the services.\n{$ex->getMessage()}" );
+					throw new \Exception( "Failed to import application package $_packageUrl.\n{$ex->getMessage()}" );
 				}
-				$zip->deleteName( 'services.json' );
 			}
-			$data = $zip->getFromName( 'schema.json' );
-			if ( false !== $data )
+
+			// from repo or remote zip file
+			if ( !empty( $_name ) && 'zip' == $_extension )
 			{
-				$data = DataFormat::jsonToArray( $data );
-				$services = Option::get( $data, 'service' );
-				if ( !empty( $services ) )
+				// need to download and extract zip file and move contents to storage
+				$_filename = FileSystem::importUrlFileToTemp( $_packageUrl );
+
+				try
 				{
-					foreach ( $services as $schemas )
-					{
-						$serviceName = Option::get( $schemas, 'api_name' );
-						$db = ServiceHandler::getServiceObject( $serviceName );
-						$tables = Option::get( $schemas, 'table' );
-						if ( !empty( $tables ) )
-						{
-							/** @var $db \Platform\Services\SchemaSvc */
-							$result = $db->createTables( $tables, true );
-							if ( isset( $result[0]['error'] ) )
-							{
-								$msg = $result[0]['error']['message'];
-								throw new \Exception( "Could not create the database tables for this application.\n$msg" );
-							}
-						}
-					}
+					return Packager::importAppFromZip( $_name, $_filename );
+					// todo save url for later updates
 				}
-				else
+				catch ( \Exception $ex )
 				{
-					// single or multiple tables for one service
-					$tables = Option::get( $data, 'table' );
-					if ( !empty( $tables ) )
-					{
-						$serviceName = Option::get( $data, 'api_name' );
-						if ( empty( $serviceName ) )
-						{
-							$serviceName = 'schema'; // for older packages
-						}
-						/** @var $db \Platform\Services\SchemaSvc */
-						$db = ServiceHandler::getServiceObject( $serviceName );
-						$result = $db->createTables( $tables, true );
-						if ( isset( $result[0]['error'] ) )
-						{
-							$msg = $result[0]['error']['message'];
-							throw new \Exception( "Could not create the database tables for this application.\n$msg" );
-						}
-					}
-					else
-					{
-						// single table with no wrappers - try default schema service
-						$table = Option::get( $data, 'name' );
-						if ( !empty( $table ) )
-						{
-							$serviceName = 'schema';
-							/** @var $db \Platform\Services\SchemaSvc */
-							$db = ServiceHandler::getServiceObject( $serviceName );
-							$result = $db->createTables( $data, true );
-							if ( isset( $result['error'] ) )
-							{
-								$msg = $result['error']['message'];
-								throw new \Exception( "Could not create the database tables for this application.\n$msg" );
-							}
-						}
-					}
+					throw new \Exception( "Failed to import application package $_packageUrl.\n{$ex->getMessage()}" );
 				}
-				$zip->deleteName( 'schema.json' );
 			}
-			$data = $zip->getFromName( 'data.json' );
-			if ( false !== $data )
+		}
+
+		if ( null !== ( $_files = Option::get( $_FILES, 'files' ) ) )
+		{
+			//	Older html multi-part/form-data post, single or multiple files
+			if ( is_array( $_files['error'] ) )
 			{
-				$data = DataFormat::jsonToArray( $data );
-				$services = Option::get( $data, 'service' );
-				if ( !empty( $services ) )
+				throw new \Exception( "Only a single application package file is allowed for import." );
+			}
+
+			$_filename = $_files['name'];
+			$_error = $_files['error'];
+
+			if ( UPLOAD_ERR_OK !== $_error )
+			{
+				throw new \Exception( "Failed to import application package $_filename.\n$error" );
+			}
+
+			$_tmpName = $_files['tmp_name'];
+			$_contentType = $_files['type'];
+
+			if ( 'dfpkg' == $_extension )
+			{
+				try
 				{
-					foreach ( $services as $service )
-					{
-						$serviceName = Option::get( $service, 'api_name' );
-						$db = ServiceHandler::getServiceObject( $serviceName );
-						$tables = Option::get( $data, 'table' );
-						foreach ( $tables as $table )
-						{
-							$tableName = Option::get( $table, 'name' );
-							$records = Option::get( $table, 'record' );
-							/** @var $db \Platform\Services\BaseDbSvc */
-							$result = $db->createRecords( $tableName, $records );
-							if ( isset( $result['record'][0]['error'] ) )
-							{
-								$msg = $result['record'][0]['error']['message'];
-								throw new \Exception( "Could not insert the database entries for table '$tableName'' for this application.\n$msg" );
-							}
-						}
-					}
+					//	Need to extract zip file and move contents to storage
+					return Packager::importAppFromPackage( $_tmpName );
 				}
-				else
+				catch ( \Exception $ex )
 				{
-					// single or multiple tables for one service
-					$tables = Option::get( $data, 'table' );
-					if ( !empty( $tables ) )
-					{
-						$serviceName = Option::get( $data, 'api_name' );
-						if ( empty( $serviceName ) )
-						{
-							$serviceName = 'db'; // for older packages
-						}
-						$db = ServiceHandler::getServiceObject( $serviceName );
-						foreach ( $tables as $table )
-						{
-							$tableName = Option::get( $table, 'name' );
-							$records = Option::get( $table, 'record' );
-							/** @var $db \Platform\Services\BaseDbSvc */
-							$result = $db->createRecords( $tableName, $records );
-							if ( isset( $result['record'][0]['error'] ) )
-							{
-								$msg = $result['record'][0]['error']['message'];
-								throw new \Exception( "Could not insert the database entries for table '$tableName'' for this application.\n$msg" );
-							}
-						}
-					}
-					else
-					{
-						// single table with no wrappers - try default database service
-						$tableName = Option::get( $data, 'name' );
-						if ( !empty( $tableName ) )
-						{
-							$serviceName = 'db';
-							$db = ServiceHandler::getServiceObject( $serviceName );
-							$records = Option::get( $data, 'record' );
-							/** @var $db \Platform\Services\BaseDbSvc */
-							$result = $db->createRecords( $tableName, $records );
-							if ( isset( $result['record'][0]['error'] ) )
-							{
-								$msg = $result['record'][0]['error']['message'];
-								throw new \Exception( "Could not insert the database entries for table '$tableName'' for this application.\n$msg" );
-							}
-						}
-					}
+					throw new \Exception( "Failed to import application package $_filename.\n{$ex->getMessage()}" );
 				}
-				$zip->deleteName( 'data.json' );
 			}
-		}
-		catch ( \Exception $ex )
-		{
-			// delete db record
-			// todo anyone else using schema created?
-			static::deleteRecordById( 'app', $id );
-			throw $ex;
-		}
 
-		// extract the rest of the zip file into storage
-		$_storageServiceId = Option::get( $record, 'storage_service_id' );
-		$_apiName = Option::get( $record, 'api_name' );
-
-		/** @var $_service \Platform\Services\BaseFileSvc */
-		if ( empty( $_storageServiceId ) )
-		{
-			$_service = ServiceHandler::getServiceObject( 'app' );
-			$_container = 'applications';
-		}
-		else
-		{
-			$_service = ServiceHandler::getServiceObjectById( $_storageServiceId );
-			$_container = Option::get( $record, 'storage_container' );
-		}
-		if ( empty( $_container ) )
-		{
-			$_service->extractZipFile( $_apiName, '', $zip, false, $_apiName . '/' );
-		}
-		else
-		{
-			$_service->extractZipFile( $_container, '', $zip );
-		}
-
-		return $returnData;
-	}
-
-	/**
-	 * @param $name
-	 * @param $zip_file
-	 *
-	 * @return array
-	 * @throws \Exception
-	 */
-	public static function importAppFromZip( $name, $zip_file )
-	{
-		$record = array( 'api_name' => $name, 'name' => $name, 'is_url_external' => 0, 'url' => '/index.html' );
-		try
-		{
-			$result = static::createRecord( 'app', $record );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Could not create the database entry for this application.\n{$ex->getMessage()}" );
-		}
-		$id = ( isset( $result['id'] ) ) ? $result['id'] : '';
-
-		$zip = new \ZipArchive();
-		if ( true === $zip->open( $zip_file ) )
-		{
-			// extract the rest of the zip file into storage
-			$dropPath = $zip->getNameIndex( 0 );
-			$dropPath = substr( $dropPath, 0, strpos( $dropPath, '/' ) ) . '/';
-
-			$_storageServiceId = Option::get( $record, 'storage_service_id' );
-			$_apiName = Option::get( $record, 'api_name' );
-
-			/** @var $_service \Platform\Services\BaseFileSvc */
-			if ( empty( $_storageServiceId ) )
+			//	Zip file?
+			if ( !empty( $_name ) && FileSystem::isZipContent( $_contentType ) )
 			{
-				$_service = ServiceHandler::getServiceObject( 'app' );
-				$_container = 'applications';
+				try
+				{
+					// need to extract zip file and move contents to storage
+					return Packager::importAppFromZip( $_name, $_tmpName );
+				}
+				catch ( \Exception $ex )
+				{
+					throw new \Exception( "Failed to import application package $_filename.\n{$ex->getMessage()}" );
+				}
 			}
-			else
-			{
-				$_service = ServiceHandler::getServiceObjectById( $_storageServiceId );
-				$_container = Option::get( $record, 'storage_container' );
-			}
-			if ( empty( $_container ) )
-			{
-				$_service->extractZipFile( $_apiName, '', $zip, false, $dropPath );
-			}
-			else
-			{
-				$_service->extractZipFile( $_container, $_apiName, $zip, false, $dropPath );
-			}
+		}
 
-			return $result;
-		}
-		else
-		{
-			throw new \Exception( 'Error opening zip file.' );
-		}
+		return parent::_handlePost();
 	}
 }
