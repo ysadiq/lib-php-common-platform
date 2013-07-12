@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
+use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Utility\FileSystem;
 use DreamFactory\Platform\Utility\Packager;
@@ -332,10 +333,26 @@ class App extends BaseSystemRestResource
 	{
 		//	You can import an application package file, local or remote, or from zip, but nothing else
 		$_name = FilterInput::request( 'name' );
-		$_packageUrl = FilterInput::request( 'url' );
-		$_extension = strtolower( pathinfo( $_packageUrl, PATHINFO_EXTENSION ) );
+		$_importUrl = FilterInput::request( 'url' );
+		$_extension = strtolower( pathinfo( $_importUrl, PATHINFO_EXTENSION ) );
 
-		if ( !empty( $_packageUrl ) )
+		if ( null !== ( $_files = Option::get( $_FILES, 'files' ) ) )
+		{
+			//	Older html multi-part/form-data post, single or multiple files
+			if ( is_array( $_files['error'] ) )
+			{
+				throw new \Exception( "Only a single application package file is allowed for import." );
+			}
+
+			$_importUrl = 'file://' . $_files['tmp_name'] . '#' . $_files['name'] . '#' . $_files['type'];
+
+			if ( UPLOAD_ERR_OK !== ( $_error = $_files['error'] ) )
+			{
+				throw new \Exception( 'Failed to receive upload of "' . $_files['name'] . '": ' . $_error );
+			}
+		}
+
+		if ( !empty( $_importUrl ) )
 		{
 			if ( 'dfpkg' == $_extension )
 			{
@@ -366,53 +383,6 @@ class App extends BaseSystemRestResource
 				catch ( \Exception $ex )
 				{
 					throw new \Exception( "Failed to import application package $_packageUrl.\n{$ex->getMessage()}" );
-				}
-			}
-		}
-
-		if ( null !== ( $_files = Option::get( $_FILES, 'files' ) ) )
-		{
-			//	Older html multi-part/form-data post, single or multiple files
-			if ( is_array( $_files['error'] ) )
-			{
-				throw new \Exception( "Only a single application package file is allowed for import." );
-			}
-
-			$_filename = $_files['name'];
-			$_error = $_files['error'];
-
-			if ( UPLOAD_ERR_OK !== $_error )
-			{
-				throw new \Exception( "Failed to import application package $_filename.\n$error" );
-			}
-
-			$_tmpName = $_files['tmp_name'];
-			$_contentType = $_files['type'];
-
-			if ( 'dfpkg' == $_extension )
-			{
-				try
-				{
-					//	Need to extract zip file and move contents to storage
-					return Packager::importAppFromPackage( $_tmpName );
-				}
-				catch ( \Exception $ex )
-				{
-					throw new \Exception( "Failed to import application package $_filename.\n{$ex->getMessage()}" );
-				}
-			}
-
-			//	Zip file?
-			if ( !empty( $_name ) && FileSystem::isZipContent( $_contentType ) )
-			{
-				try
-				{
-					// need to extract zip file and move contents to storage
-					return Packager::importAppFromZip( $_name, $_tmpName );
-				}
-				catch ( \Exception $ex )
-				{
-					throw new \Exception( "Failed to import application package $_filename.\n{$ex->getMessage()}" );
 				}
 			}
 		}
