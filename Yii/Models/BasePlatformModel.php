@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Yii\Models;
 
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Sql;
 
 /**
@@ -74,7 +75,7 @@ class BasePlatformModel extends \CActiveRecord
 	/**
 	 * Returns the static model of the specified AR class.
 	 *
-	 * @param string $className active record class name.
+	 * @param string $className
 	 *
 	 * @return BasePlatformModel the static model class
 	 */
