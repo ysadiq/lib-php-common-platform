@@ -28,6 +28,7 @@ use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Option;
 use Platform\Resources\UserSession;
+use Platform\Utility\RestData;
 
 /**
  * BaseSystemRestResource
@@ -35,6 +36,15 @@ use Platform\Resources\UserSession;
  */
 abstract class BaseSystemRestResource extends BasePlatformRestResource
 {
+	//*************************************************************************
+	//* Constants
+	//*************************************************************************
+
+	/**
+	 * @var string
+	 */
+	const DEFAULT_SERVICE_NAME = 'system';
+
 	//*************************************************************************
 	//* Members
 	//*************************************************************************
@@ -80,6 +90,18 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	public function __construct( $consumer, $settings = array(), $resourceArray = array() )
 	{
 		$this->_resourceArray = empty( $resourceArray ) ? Option::get( $settings, 'resource_array', array(), true ) : array();
+
+		//	Default service name if not supplied. Should work for subclasses by defining the constant in your class
+		$settings['service_name'] = Option::get( $settings, 'service_name', static::DEFAULT_SERVICE_NAME, true );
+
+		//	Default verb aliases for all system resources
+		$settings['verb_aliases'] = array_merge(
+			array(
+				 static::Patch => static::Put,
+				 static::Merge => static::Put,
+			),
+			Option::get( $settings, 'verb_aliases', array(), true )
+		);
 
 		parent::__construct( $consumer, $settings );
 	}
@@ -154,7 +176,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	protected function _determineRequestedResource( &$ids = null, &$records = null )
 	{
 		//	Which payload do we love?
-		$_payload = RestRequest::getPostDataAsArray();
+		$_payload = RestData::getPostDataAsArray();
 
 		//	Use $_REQUEST instead of POSTed data
 		if ( empty( $_payload ) )
@@ -170,6 +192,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	}
 
 	/**
+	 * Default GET implementation
+	 *
 	 * @return bool
 	 */
 	protected function _handleGet()
@@ -217,6 +241,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	}
 
 	/**
+	 * Default PUT implementation
+	 *
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return bool
 	 */
@@ -249,22 +275,28 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	}
 
 	/**
+	 * Default PATCH implementation
+	 *
 	 * @return bool
 	 */
 	protected function _handlePatch()
 	{
-		return $this->_handlePut();
+		return false;
 	}
 
 	/**
+	 * Default MERGE implementation
+	 *
 	 * @return bool
 	 */
 	protected function _handleMerge()
 	{
-		return $this->_handlePut();
+		return false;
 	}
 
 	/**
+	 * Default POST implementation
+	 *
 	 * @return array|bool
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 */
@@ -286,6 +318,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	}
 
 	/**
+	 * Default DELETE implementation
+	 *
 	 * @return bool|void
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 */

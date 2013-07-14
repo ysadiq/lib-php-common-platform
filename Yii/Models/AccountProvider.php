@@ -44,7 +44,7 @@ class AccountProvider extends BasePlatformSystemModel
 	 */
 	public function tableName()
 	{
-		return static::tableNamePrefix() . 'service_account';
+		return static::tableNamePrefix() . 'account_provider';
 	}
 
 	/**
@@ -70,9 +70,9 @@ class AccountProvider extends BasePlatformSystemModel
 			array(
 				 //	Secure JSON
 				 'base_platform_model.secure_json' => array(
-					 'class'      => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'       => $this->getDb()->password,
-					 'attributes' => array(
+					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					 'salt'             => $this->getDb()->password,
+					 'secureAttributes' => array(
 						 'provider_options',
 						 'master_auth_text',
 					 )

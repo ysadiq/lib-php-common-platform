@@ -62,7 +62,7 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	public function __construct( $consumer, $settings = array() )
 	{
 		$this->_consumer = $consumer;
-		$this->_serviceName = Option::get( $settings, 'service_name', null, true );
+		$this->_serviceName = $this->_serviceName ? : Option::get( $settings, 'service_name', null, true );
 
 		if ( empty( $this->_serviceName ) )
 		{

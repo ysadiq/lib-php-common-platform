@@ -19,15 +19,18 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use Composer\Autoload\ClassLoader;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Seed;
 use Kisma\Core\SeedUtility;
+use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Platform\Resources\UserSession;
@@ -38,6 +41,15 @@ use Platform\Resources\UserSession;
  */
 class ResourceStore extends SeedUtility
 {
+	//*************************************************************************
+	//* Constants
+	//*************************************************************************
+
+	/**
+	 * @var string
+	 */
+	const DEFAULT_MODEL_NAMESPACE = 'DreamFactory\\Platform\\Yii\\Models\\';
+
 	//*************************************************************************
 	//* Members
 	//*************************************************************************
@@ -391,7 +403,15 @@ class ResourceStore extends SeedUtility
 	{
 		static::checkPermission( 'read' );
 
+		if ( $ids == array( null ) )
+		{
+			$ids = null;
+		}
+		else
+		{
 		$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
+		}
+
 		$_pk = static::model()->primaryKey;
 
 		$_criteria = new \CDbCriteria( $criteria );
@@ -499,7 +519,7 @@ class ResourceStore extends SeedUtility
 		//	Try dynamic system models first
 		$_className = \ucwords( $_resourceName );
 
-		if ( !class_exists( $_className ) )
+		if ( !class_exists( $_className, false ) )
 		{
 			$_className = null;
 
@@ -529,12 +549,41 @@ class ResourceStore extends SeedUtility
 				case 'email_template':
 					$_className = '\\EmailTemplate';
 					break;
+
+				default:
+					/** @var ClassLoader $_loader */
+					$_loader = \Kisma::get( 'app.autoloader' );
+					$_name = ucfirst( Inflector::deneutralize( $_resourceName ) );
+
+					if ( class_exists( $_resourceName, false ) || $_loader->loadClass( $_resourceName ) )
+					{
+						$_className = $_resourceName;
+			}
+					else if ( class_exists( $_name, false ) || $_loader->loadClass( $_name ) )
+					{
+						$_className = $_name;
+		}
+					else if ( class_exists( '\\' . $_name, false ) || $_loader->loadClass( '\\' . $_name ) )
+					{
+						$_className = '\\' . $_name;
+					}
+					else if ( class_exists( static::DEFAULT_MODEL_NAMESPACE . $_name, false ) || $_loader->loadClass( static::DEFAULT_MODEL_NAMESPACE . $_name ) )
+					{
+						$_className = static::DEFAULT_MODEL_NAMESPACE . $_name;
+					}
+
+					//	Let the autoloader try to find it...
+					if ( !empty( $_className ) && !class_exists( $_className ) )
+					{
+						$_className = null;
+					}
+					break;
 			}
 		}
 
 		if ( empty( $_className ) )
 		{
-			throw new InternalServerErrorException( 'Invalid resource model "' . $_resourceName . '" requested . ' );
+			throw new InternalServerErrorException( 'Invalid resource type \'' . $_resourceName . '\' requested.' );
 		}
 
 		return call_user_func( array( $_className, 'model' ) );

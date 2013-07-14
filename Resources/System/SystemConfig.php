@@ -27,7 +27,7 @@ use Platform\Exceptions\InternalServerErrorException;
 use Platform\Resources\UserSession;
 use Platform\Services\SystemManager;
 use Platform\Utility\DataFormat;
-use Platform\Utility\RestRequest;
+use Platform\Utility\RestData;
 use Platform\Utility\SqlDbUtilities;
 use Platform\Utility\Utilities;
 use Platform\Yii\Utility\Pii;
@@ -126,7 +126,7 @@ class SystemConfig extends RestResource
 			case self::Put:
 			case self::Patch:
 			case self::Merge:
-				$data = RestRequest::getPostDataAsArray();
+				$data = RestData::getPostDataAsArray();
 				if ( empty( $data ) )
 				{
 					throw new BadRequestException( 'No record in POST create request.' );

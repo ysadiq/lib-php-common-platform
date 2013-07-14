@@ -189,7 +189,7 @@ class SecureJson extends BaseModelBehavior
 		//	Make sure we can serialize...
 		if ( empty( $data ) )
 		{
-			$data = $defaultValue;
+			return $data = $defaultValue;
 		}
 
 		if ( false === ( $_encoded = json_encode( $data ) ) )
@@ -213,7 +213,7 @@ class SecureJson extends BaseModelBehavior
 	{
 		if ( empty( $data ) )
 		{
-			return $defaultValue;
+			return $data = $defaultValue;
 		}
 
 		//	Make sure we can deserialize...

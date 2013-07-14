@@ -28,7 +28,7 @@ use Platform\Exceptions\InternalServerErrorException;
 use Platform\Exceptions\UnauthorizedException;
 use Platform\Interfaces\PermissionTypes;
 use Platform\Resources\RestResource;
-use Platform\Utility\RestRequest;
+use Platform\Utility\RestData;
 use Platform\Utility\Utilities;
 use Platform\Yii\Utility\Pii;
 use Swagger\Annotations as SWG;
@@ -138,7 +138,7 @@ class UserSession extends RestResource
 				$result = $this->userSession( $ticket );
 				break;
 			case self::Post:
-				$data = RestRequest::getPostDataAsArray();
+				$data = RestData::getPostDataAsArray();
 				$email = Utilities::getArrayValue( 'email', $data, '' );
 				$password = Utilities::getArrayValue( 'password', $data, '' );
 				//$password = Utilities::decryptPassword($password);

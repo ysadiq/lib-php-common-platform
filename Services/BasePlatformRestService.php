@@ -90,6 +90,29 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @var string The pattern to search for dispatch methods. The string {action} will be replaced by the inbound action (i.e. Get, Put, Post, etc.)
 	 */
 	protected $_autoDispatchPattern = self::DEFAULT_HANDLER_PATTERN;
+	/**
+	 * @var bool|array Array of verb aliases. Has no effect if $autoDispatch !== true
+	 *
+	 * Example:
+	 *
+	 * $this->_verbAliases = array(
+	 *     static::Put => static::Post,
+	 *     static::Patch => static::Post,
+	 *     static::Merge => static::Post,
+	 *
+	 *     // Use a closure too!
+	 *     static::Get => function($resource){
+	 *    ...
+	 *   },
+	 * );
+	 *
+	 *    The result will be that handleResource() will dispatch a PUT, PATCH, or MERGE request to the POST handler.
+	 */
+	protected $_verbAliases;
+	/**
+	 * @var string REST verb of original request. Set after verb change from $verbAliases map
+	 */
+	protected $_originalAction = null;
 
 	//*************************************************************************
 	//* Methods
@@ -111,7 +134,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		$this->_preProcess();
 
 		//	Inherent failure?
-		if ( false === ( $this->_response = call_user_func( $this, $this->_handleResource() ) ) )
+		if ( false === ( $this->_response = $this->_handleResource() ) )
 		{
 			$_message = $this->_action . ' requests' .
 						( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
@@ -134,6 +157,20 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		if ( !HttpMethod::defines( $this->_action ) )
 		{
 			throw new BadRequestException( 'The action "' . $this->_action . '" is not supported.' );
+		}
+
+		//	Check verb aliases
+		if ( true === $this->_autoDispatch && null !== ( $_alias = Option::get( $this->_verbAliases, $this->_action ) ) )
+		{
+			//	A closure?
+			if ( is_callable( $_alias ) )
+			{
+				return call_user_func( $_alias );
+			}
+
+			//	Swap 'em and dispatch
+			$this->_originalAction = $this->_action;
+			$this->_action = $_alias;
 		}
 
 		//	If we have a dedicated handler method, call it
@@ -421,5 +458,65 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function getAutoDispatchPattern()
 	{
 		return $this->_autoDispatchPattern;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getOriginalAction()
+	{
+		return $this->_originalAction;
+	}
+
+	/**
+	 * @param array|bool $verbAliases
+	 *
+	 * @return BasePlatformRestService
+	 */
+	public function setVerbAliases( $verbAliases )
+	{
+		$this->_verbAliases = $verbAliases;
+
+		return $this;
+	}
+
+	/**
+	 * @param string $verb
+	 * @param string $alias
+	 *
+	 * @return BasePlatformRestService
+	 */
+	public function setVerbAlias( $verb, $alias )
+	{
+		Option::set( $this->_verbAliases, $verb, $alias );
+
+		return $this;
+	}
+
+	/**
+	 * @param string $verb Clear one, or all if $verb === null, verb alias mappings
+	 *
+	 * @return $this
+	 */
+	public function clearVerbAlias( $verb = null )
+	{
+		if ( null === $verb || empty( $this->_verbAliases ) )
+		{
+			$this->_verbAliases = array();
+		}
+		else
+		{
+			unset( $this->_verbAliases[$verb] );
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return array|bool
+	 */
+	public function getVerbAliases()
+	{
+		return $this->_verbAliases;
 	}
 }

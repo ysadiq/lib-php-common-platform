@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Exceptions;
 
 use Kisma\Core\Interfaces\HttpResponse;
+use Kisma\Core\Utility\Inflector;
 
 /**
  * RestException
@@ -52,8 +53,15 @@ class RestException extends PlatformServiceException implements HttpResponse
 	public function __construct( $status, $message = null, $code = null )
 	{
 		$this->_statusCode = $status;
+		$code = $code ? : $this->_statusCode;
 
-		parent::__construct( $message, $code ? : $this->_statusCode );
+		if ( empty( $message ) )
+		{
+			$_name = \Kisma\Core\Enums\HttpResponse::nameof( $code );
+			$message = Inflector::camelize( Inflector::neutralize( $_name ), '_', true );
+		}
+
+		parent::__construct( $message, $code );
 	}
 
 	/**
@@ -72,6 +80,14 @@ class RestException extends PlatformServiceException implements HttpResponse
 	 * @return int
 	 */
 	public function getStatusCode()
+	{
+		return $this->_statusCode;
+	}
+
+	/**
+	 * @return int
+	 */
+	public function statusCode()
 	{
 		return $this->_statusCode;
 	}
