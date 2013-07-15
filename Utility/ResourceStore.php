@@ -24,6 +24,7 @@ use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
@@ -49,6 +50,10 @@ class ResourceStore extends SeedUtility
 	 * @var string
 	 */
 	const DEFAULT_MODEL_NAMESPACE = 'DreamFactory\\Platform\\Yii\\Models\\';
+	/**
+	 * @var string
+	 */
+	const DEFAULT_RESOURCE_NAMESPACE = 'DreamFactory\\Platform\\Resources\\';
 
 	//*************************************************************************
 	//* Members
@@ -152,15 +157,21 @@ class ResourceStore extends SeedUtility
 	}
 
 	/**
-	 * @param int   $id Optional ID
-	 * @param mixed $criteria
-	 * @param array $params
+	 * @param int                       $id       Optional ID
+	 * @param array|\CDbCriteria|string $criteria An array of criteria, a criteria object, or a comma-delimited list of columns to select
+	 * @param array                     $params   Bind variable values
 	 *
 	 * @return array
 	 */
 	public static function select( $id = null, $criteria = null, $params = array() )
 	{
-		return static::bulkSelectById( array( $id ), $criteria, $params );
+		//	Passed in a comma-delimited string of ids...
+		if ( $criteria && is_string( $criteria ) )
+		{
+			$criteria = array( 'select' => $criteria );
+		}
+
+		return static::bulkSelectById( null !== $id ? array( $id ) : null, $criteria, $params, true );
 	}
 
 	/**
@@ -396,20 +407,21 @@ class ResourceStore extends SeedUtility
 	 * @param string $ids
 	 * @param mixed  $criteria
 	 * @param array  $params
+	 * @param bool   $single If true, will return a single array instead of an array of one row
 	 *
-	 * @return array
+	 * @return array|array[]
 	 */
-	public static function bulkSelectById( $ids, $criteria = null, $params = array() )
+	public static function bulkSelectById( $ids, $criteria = null, $params = array(), $single = false )
 	{
 		static::checkPermission( 'read' );
 
-		if ( $ids == array( null ) )
+		if ( empty( $ids ) || array( null ) == $ids )
 		{
 			$ids = null;
 		}
 		else
 		{
-		$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
+			$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
 		}
 
 		$_pk = static::model()->primaryKey;
@@ -423,13 +435,25 @@ class ResourceStore extends SeedUtility
 
 		$_response = array();
 
-		$_models = static::_find( $_criteria, $params );
-
-		if ( !empty( $_models ) )
+		//	Only one row
+		if ( false !== $single )
 		{
-			foreach ( $_models as $_model )
+			if ( null !== ( $_model = static::_find( $_criteria, $params ) ) )
 			{
-				$_response[] = static::buildResponsePayload( $_model );
+				$_response = static::buildResponsePayload( $_model, false );
+			}
+		}
+		//	Multiple rows
+		else
+		{
+			$_models = static::_findAll( $_criteria, $params );
+
+			if ( !empty( $_models ) )
+			{
+				foreach ( $_models as $_model )
+				{
+					$_response[] = static::buildResponsePayload( $_model, false );
+				}
 			}
 		}
 
@@ -440,11 +464,16 @@ class ResourceStore extends SeedUtility
 	 * @param BasePlatformSystemModel $resource
 	 * @param bool                    $refresh
 	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException * @return array
 	 */
 	public static function buildResponsePayload( $resource, $refresh = true )
 	{
+		if ( empty( $resource ) )
+		{
+			return array();
+		}
+
 		if ( empty( static::$_fields ) && empty( static::$_extras ) )
 		{
 			$_pk = $resource->primaryKey;
@@ -464,42 +493,49 @@ class ResourceStore extends SeedUtility
 		if ( !empty( static::$_extras ) )
 		{
 			$_relations = $resource->relations();
-			$_relatedData = array();
 
-			/**
-			 * @var BasePlatformSystemModel[] $_relations
-			 */
-			foreach ( static::$_extras as $_extra )
+			if ( !empty( $_relations ) )
 			{
-				$_extraName = $_extra['name'];
+				$_relatedData = array();
 
-				if ( !isset( $_relations[$_extraName] ) )
+				/**
+				 * @var BasePlatformSystemModel[] $_relations
+				 */
+				foreach ( static::$_extras as $_extra )
 				{
-					throw new BadRequestException( 'Invalid relation "' . $_extraName . '" requested . ' );
+					$_extraName = $_extra['name'];
+
+					if ( !isset( $_relations[$_extraName] ) )
+					{
+						throw new BadRequestException( 'Invalid relation "' . $_extraName . '" requested . ' );
+					}
+
+					$_extraFields = $_extra['fields'];
+					$_relations = $resource->getRelated( $_extraName, true );
+
+					//	Got relations?
+					if ( !is_array( $_relations ) && !empty( $_relations ) )
+					{
+						$_relations = array( $_relations );
+					}
+
+					$_relatedFields = $_relations[0]->getRetrievableAttributes( $_extraFields );
+
+					foreach ( $_relations as $_relative )
+					{
+						$_payload[] = $_relative->getAttributes( $_relatedFields );
+						unset( $_relative );
+					}
+
+					$_relatedData[$_extraName] = $_payload;
+
+					unset( $_extra, $_relations, $_relatedFields, $_extraFields );
 				}
 
-				$_extraFields = $_extra['fields'];
-				$_relations = $resource->getRelated( $_extraName, true );
-
-				//	Got relations?
-				if ( !is_array( $_relations ) && !empty( $_relations ) )
+				if ( !empty( $_relatedData ) )
 				{
-					$_relations = array( $_relations );
+					$_payload += $_relatedData;
 				}
-
-				$_relatedFields = $_relations[0]->getRetrievableAttributes( $_extraFields );
-
-				foreach ( $_relations as $_relative )
-				{
-					$_payload[] = $_relative->getAttributes( $_relatedFields );
-				}
-
-				$_relatedData[$_extraName] = $_payload;
-			}
-
-			if ( !empty( $_relatedData ) )
-			{
-				$_payload = array_merge( $_payload, $_relatedData );
 			}
 		}
 
@@ -509,81 +545,103 @@ class ResourceStore extends SeedUtility
 	/**
 	 * @param string $resourceName
 	 *
-	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @return BasePlatformSystemModel
+	 * @return BasePlatformRestResource|BasePlatformSystemModel
 	 */
-	public static function model( $resourceName = null )
+	public static function resource( $resourceName = null )
 	{
+		return static::model( $resourceName, true );
+	}
+
+	/**
+	 * @param string $resourceName
+	 * @param bool   $returnResource If true, a RestResource-based class will returned instead of a model
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @return BasePlatformSystemModel|BasePlatformRestResource
+	 */
+	public static function model( $resourceName = null, $returnResource = false )
+	{
+		/** @var ClassLoader $_loader */
+		static $_loader;
+
+		if ( !$_loader )
+		{
+			$_loader = \Kisma::get( 'app.autoloader' );
+		};
+
 		$_resourceName = $resourceName ? : static::$_resourceName;
 
 		//	Try dynamic system models first
 		$_className = \ucwords( $_resourceName );
+		$_name = ucfirst( Inflector::deneutralize( $_resourceName ) );
 
 		if ( !class_exists( $_className, false ) )
 		{
 			$_className = null;
 
+			//	Set KNOWN names...
 			switch ( strtolower( $_resourceName ) )
 			{
 				case 'app':
-					$_className = '\\App';
+					$_name = 'App';
 					break;
 
 				case 'app_group':
 				case 'appgroup':
-					$_className = '\\AppGroup';
+					$_name = 'AppGroup';
 					break;
 
 				case 'role':
-					$_className = '\\Role';
+					$_name = 'Role';
 					break;
 
 				case 'service':
-					$_className = '\\Service';
+					$_name = 'Service';
 					break;
 
 				case 'user':
-					$_className = '\\User';
+					$_name = 'User';
 					break;
 
 				case 'email_template':
-					$_className = '\\EmailTemplate';
-					break;
-
-				default:
-					/** @var ClassLoader $_loader */
-					$_loader = \Kisma::get( 'app.autoloader' );
-					$_name = ucfirst( Inflector::deneutralize( $_resourceName ) );
-
-					if ( class_exists( $_resourceName, false ) || $_loader->loadClass( $_resourceName ) )
-					{
-						$_className = $_resourceName;
-			}
-					else if ( class_exists( $_name, false ) || $_loader->loadClass( $_name ) )
-					{
-						$_className = $_name;
-		}
-					else if ( class_exists( '\\' . $_name, false ) || $_loader->loadClass( '\\' . $_name ) )
-					{
-						$_className = '\\' . $_name;
-					}
-					else if ( class_exists( static::DEFAULT_MODEL_NAMESPACE . $_name, false ) || $_loader->loadClass( static::DEFAULT_MODEL_NAMESPACE . $_name ) )
-					{
-						$_className = static::DEFAULT_MODEL_NAMESPACE . $_name;
-					}
-
-					//	Let the autoloader try to find it...
-					if ( !empty( $_className ) && !class_exists( $_className ) )
-					{
-						$_className = null;
-					}
+					$_name = 'EmailTemplate';
 					break;
 			}
 		}
 
-		if ( empty( $_className ) )
+		//	Does the resource have a class?
+		if ( class_exists( $_resourceName, false ) || $_loader->loadClass( $_resourceName ) )
+		{
+			$_className = $_resourceName;
+		}
+		//	Does the cleaned name have a class?
+		else if ( class_exists( $_name, false ) || $_loader->loadClass( $_name ) )
+		{
+			$_className = $_name;
+		}
+//		else if ( class_exists( '\\' . $_name, false ) || $_loader->loadClass( '\\' . $_name ) )
+//		{
+//			$_className = '\\' . $_name;
+//		}
+
+		$_namespace = ( false !== $returnResource ? static::DEFAULT_RESOURCE_NAMESPACE : static::DEFAULT_MODEL_NAMESPACE );
+
+		//	Is it in the namespace?
+		if ( class_exists( $_namespace . $_name, false ) || $_loader->loadClass( $_namespace . $_name ) )
+		{
+			$_className = $_namespace . $_name;
+		}
+
+		//	So, still not found, just let the SPL autoloader have a go and give up.
+		if ( !empty( $_className ) && !class_exists( $_className ) )
 		{
 			throw new InternalServerErrorException( 'Invalid resource type \'' . $_resourceName . '\' requested.' );
+		}
+
+		//	Return a resource
+		if ( false !== $returnResource )
+		{
+			return new $_className( null, array() );
 		}
 
 		return call_user_func( array( $_className, 'model' ) );

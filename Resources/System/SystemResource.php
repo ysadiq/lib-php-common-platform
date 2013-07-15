@@ -139,7 +139,7 @@ class SystemResource extends BasePlatformRestResource
 	}
 
 	/**
-	 * @param int $resourceArray
+	 * @param array $resourceArray
 	 */
 	public function setResourceArray( $resourceArray )
 	{
@@ -192,7 +192,7 @@ class SystemResource extends BasePlatformRestResource
 					}
 					else
 					{ // get by filter or all
-						$data = RestData::getPostDataAsArray();
+						$data = RestRequest::getPostDataAsArray();
 						if ( !empty( $data ) )
 						{ // complex filters or large numbers of ids require post
 							$ids = Utilities::getArrayValue( 'ids', $data, '' );
@@ -265,7 +265,7 @@ class SystemResource extends BasePlatformRestResource
 				}
 				break;
 			case self::Post:
-				$data = RestData::getPostDataAsArray();
+				$data = RestRequest::getPostDataAsArray();
 				$records = Utilities::getArrayValue( 'record', $data, array() );
 				if ( empty( $records ) )
 				{
@@ -293,7 +293,7 @@ class SystemResource extends BasePlatformRestResource
 			case self::Put:
 			case self::Patch:
 			case self::Merge:
-				$data = RestData::getPostDataAsArray();
+				$data = RestRequest::getPostDataAsArray();
 				if ( empty( $this->_resourceId ) )
 				{
 					$rollback = ( isset( $_REQUEST['rollback'] ) ) ? Utilities::boolval( $_REQUEST['rollback'] ) : null;
@@ -340,7 +340,7 @@ class SystemResource extends BasePlatformRestResource
 			case self::Delete:
 				if ( empty( $this->_resourceId ) )
 				{
-					$data = RestData::getPostDataAsArray();
+					$data = RestRequest::getPostDataAsArray();
 					$ids = ( isset( $_REQUEST['ids'] ) ) ? $_REQUEST['ids'] : '';
 					if ( empty( $ids ) )
 					{

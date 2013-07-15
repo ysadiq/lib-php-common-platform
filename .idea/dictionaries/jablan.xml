@@ -13,6 +13,7 @@
       <w>openstack</w>
       <w>postgresql</w>
       <w>simpledb</w>
+      <w>strtolower</w>
       <w>sybase</w>
     </words>
   </dictionary>

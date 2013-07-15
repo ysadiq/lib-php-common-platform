@@ -24,11 +24,12 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Option;
 use Platform\Resources\UserSession;
-use Platform\Utility\RestData;
+use DreamFactory\Platform\Utility\RestData;
 
 /**
  * BaseSystemRestResource
@@ -111,11 +112,34 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 * @param string $service
 	 * @param string $resource
 	 *
-	 * @return bool|void
+	 * @return bool
 	 */
 	public static function checkPermission( $operation, $service = null, $resource = null )
 	{
 		return ResourceStore::checkPermission( $operation, $service, $resource );
+	}
+
+	/**
+	 * @param string $resource
+	 *
+	 * @return BasePlatformSystemModel
+	 */
+	public static function model( $resource = null )
+	{
+		return ResourceStore::model( $resource );
+	}
+
+	/**
+	 * @param string $ids
+	 * @param string $fields
+	 * @param bool   $includeSchema
+	 * @param array  $extras
+	 *
+	 * @return array
+	 */
+	public static function select( $ids = null, $fields = '', $includeSchema = false, $extras = array() )
+	{
+		return ResourceStore::bulkSelectById( $ids, empty( $fields ) ? null : array( 'select' => $fields ), array(), ( false === strpos( $ids, ',' ) || empty( $ids ) ) );
 	}
 
 	/**
@@ -214,7 +238,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 		if ( !empty( $_records ) )
 		{
-			$_pk = ResourceStore::model()->primaryKey;
+			$_pk = static::model()->primaryKey;
 			$_ids = array();
 
 			foreach ( $_records as $_record )
@@ -225,18 +249,42 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			return ResourceStore::bulkSelectById( $_ids );
 		}
 
+		$_criteria = null;
+
+		if ( !empty( $this->_fields ) )
+		{
+			$_criteria['select'] = $this->_fields;
+		}
+
+		if ( null !== ( $_value = Option::get( $_payload, 'filter' ) ) )
+		{
+			$_criteria['condition'] = $_value;
+		}
+
+		if ( null !== ( $_value = Option::get( $_payload, 'limit' ) ) )
+		{
+			$_criteria['limit'] = $_value;
+
+			if ( null !== ( $_value = Option::get( $_payload, 'offset' ) ) )
+			{
+				$_criteria['offset'] = $_value;
+			}
+		}
+
+		if ( null !== ( $_value = Option::get( $_payload, 'order' ) ) )
+		{
+			$_criteria['order'] = $_value;
+		}
+
 		//	Otherwise return the resources
-		return ResourceStore::select(
-			null,
-			array(
-				 'select'    => $this->_fields,
-				 'condition' => Option::get( $_payload, 'filter' ),
-				 'limit'     => Option::get( $_payload, 'limit', 0 ),
-				 'order'     => Option::get( $_payload, 'order' ),
-				 'offset'    => Option::get( $_payload, 'offset', 0 ),
-			),
-			Option::getBool( $_payload, 'include_count' ),
-			Option::getBool( $_payload, 'include_schema' )
+		return array(
+			'record' => ResourceStore::select(
+				null,
+				$_criteria,
+				array(),
+				Option::getBool( $_payload, 'include_count' ),
+				Option::getBool( $_payload, 'include_schema' )
+			)
 		);
 	}
 
@@ -281,7 +329,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	protected function _handlePatch()
 	{
-		return false;
+		throw new BadRequestException();
 	}
 
 	/**
@@ -291,7 +339,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	protected function _handleMerge()
 	{
-		return false;
+		throw new BadRequestException();
 	}
 
 	/**

@@ -17,6 +17,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+namespace DreamFactory\Platform\Yii\Models;
+
 use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Sql;
@@ -29,7 +31,6 @@ use Platform\Utility\DataFormat;
  *
  * Columns
  *
- * @property integer    $id
  * @property string     $email
  * @property string     $password
  * @property string     $first_name
@@ -60,23 +61,11 @@ use Platform\Utility\DataFormat;
  * @property App        $default_app
  * @property Role       $role
  */
-class User extends BaseDspSystemModel
+class User extends BasePlatformSystemModel
 {
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
-
-	/**
-	 * Returns the static model of the specified AR class.
-	 *
-	 * @param string $className active record class name.
-	 *
-	 * @return User the static model class
-	 */
-	public static function model( $className = __CLASS__ )
-	{
-		return parent::model( $className );
-	}
 
 	/**
 	 * @return string the associated database table name
@@ -131,9 +120,9 @@ class User extends BaseDspSystemModel
 	/**
 	 * @return array customized attribute labels (name=>label)
 	 */
-	public function attributeLabels()
+	public function attributeLabels( $additionalLabels = array() )
 	{
-		$_labels = array(
+		$_myLabels = array(
 			'email'             => 'Email',
 			'password'          => 'Password',
 			'first_name'        => 'First Name',
@@ -149,7 +138,7 @@ class User extends BaseDspSystemModel
 			'security_answer'   => 'Security Answer',
 		);
 
-		return array_merge( parent::attributeLabels(), $_labels );
+		return parent::attributeLabels( array_merge( $_myLabels, $additionalLabels ) );
 	}
 
 	/** {@InheritDoc} */
@@ -159,7 +148,7 @@ class User extends BaseDspSystemModel
 		{
 			if ( !empty( $values['password'] ) )
 			{
-				$this->setAttribute( 'password', CPasswordHelper::hashPassword( $values['password'] ) );
+				$this->password = CPasswordHelper::hashPassword( $values['password'] );
 			}
 
 			unset( $values['password'] );
@@ -169,8 +158,9 @@ class User extends BaseDspSystemModel
 		{
 			if ( !empty( $values['security_answer'] ) )
 			{
-				$this->setAttribute( 'security_answer', CPasswordHelper::hashPassword( $values['security_answer'] ) );
+				$this->security_answer = CPasswordHelper::hashPassword( $values['security_answer'] );
 			}
+
 			unset( $values['security_answer'] );
 		}
 
@@ -189,44 +179,40 @@ class User extends BaseDspSystemModel
 		{
 			if ( empty( $this->first_name ) )
 			{
-				$temp = strstr( $this->email, '@', true );
-				$this->first_name = $temp;
+				$this->first_name = strstr( $this->email, '@', true );
 			}
 
 			if ( empty( $this->display_name ) )
 			{
-				$this->display_name = $this->first_name;
+				$this->display_name = trim( $this->first_name . ' ' . $this->last_name );
+			}
+		}
 
-				if ( !empty( $this->last_name ) )
-				{
-					$this->display_name .= ' ' . $this->last_name;
-				}
-			}
-		}
-		$this->is_active = intval( DataFormat::boolval( $this->is_active ) );
-		$this->is_sys_admin = intval( DataFormat::boolval( $this->is_sys_admin ) );
-		if ( is_string( $this->role_id ) )
-		{
-			if ( empty( $this->role_id ) )
-			{
-				$this->role_id = null;
-			}
-			else
-			{
-				$this->role_id = intval( $this->role_id );
-			}
-		}
-		if ( is_string( $this->default_app_id ) )
-		{
-			if ( empty( $this->default_app_id ) )
-			{
-				$this->default_app_id = null;
-			}
-			else
-			{
-				$this->default_app_id = intval( $this->default_app_id );
-			}
-		}
+		$this->is_active = ( $this->is_active ? 1 : 0 );
+		$this->is_sys_admin = ( $this->is_active ? 1 : 0 );
+
+//		if ( is_string( $this->role_id ) )
+//		{
+//			if ( empty( $this->role_id ) )
+//			{
+//				$this->role_id = null;
+//			}
+//			else
+//			{
+//				$this->role_id = intval( $this->role_id );
+//			}
+//		}
+//		if ( is_string( $this->default_app_id ) )
+//		{
+//			if ( empty( $this->default_app_id ) )
+//			{
+//				$this->default_app_id = null;
+//			}
+//			else
+//			{
+//				$this->default_app_id = intval( $this->default_app_id );
+//			}
+//		}
 
 		return parent::beforeValidate();
 	}
@@ -236,16 +222,14 @@ class User extends BaseDspSystemModel
 	{
 		$_id = $this->getPrimaryKey();
 
-		// make sure you don't delete yourself
+		//	Make sure you don't delete yourself
 		if ( $_id == UserSession::getCurrentUserId() )
 		{
 			throw new StorageException( 'The currently logged in user may not be deleted.' );
 		}
 
 		//	Check and make sure this is not the last admin user
-		if ( $this->is_sys_admin &&
-			 !static::model()->count( 'is_sys_admin = :is AND id != :id', array( ':is' => 1, ':id' => $_id ) )
-		)
+		if ( $this->is_sys_admin && !static::model()->count( 'is_sys_admin = :is AND id != :id', array( ':is' => 1, ':id' => $_id ) ) )
 		{
 			throw new StorageException( 'There must be at least one administrative account. This one may not be deleted.' );
 		}
@@ -266,6 +250,33 @@ class User extends BaseDspSystemModel
 	}
 
 	/**
+	 * @param array $mappings
+	 *
+	 * @return array
+	 */
+	public function restMap( $mappings = array() )
+	{
+		$_map = array(
+			'display_name',
+			'first_name',
+			'last_name',
+			'email',
+			'phone',
+			'is_active',
+			'is_sys_admin',
+			'role_id',
+			'default_app_id',
+		);
+
+		if ( UserSession::isSystemAdmin() )
+		{
+			$_map[] = 'confirm_code';
+		}
+
+		return parent::restMap( array_combine( $_map, $_map ) + $mappings );
+	}
+
+	/**
 	 * @param string $requested
 	 * @param array  $columns
 	 * @param array  $hidden
@@ -274,35 +285,10 @@ class User extends BaseDspSystemModel
 	 */
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
-		$addConfirmCode = UserSession::isSystemAdmin();
+		//	Don't show these
+		$hidden = array( 'password', 'security_question', 'security_answer' ) + $hidden;
 
-		return parent::getRetrievableAttributes(
-			$requested,
-			array_merge(
-				array(
-					 'display_name',
-					 'first_name',
-					 'last_name',
-					 'email',
-					 'phone',
-					 'is_active',
-					 'is_sys_admin',
-					 'role_id',
-					 'default_app_id',
-					 ( $addConfirmCode ? 'confirm_code' : '' )
-				),
-				$columns
-			),
-			// hide these from the general public
-			array_merge(
-				array(
-					 'password',
-					 'security_question',
-					 'security_answer'
-				),
-				$hidden
-			)
-		);
+		return parent::getRetrievableAttributes( $requested, $columns, $hidden );
 	}
 
 	/**
@@ -315,11 +301,7 @@ class User extends BaseDspSystemModel
 	{
 		$_user = static::model()
 				 ->with( 'role.role_service_accesses', 'role.apps', 'role.services' )
-				 ->findByAttributes(
-				array(
-					 'email' => $userName
-				)
-			);
+				 ->findByAttributes( array( 'email' => $userName ) );
 
 		if ( empty( $_user ) || !CPasswordHelper::verifyPassword( $password, $_user->password ) )
 		{

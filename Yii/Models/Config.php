@@ -17,14 +17,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-use Platform\Utility\DataFormat;
+namespace DreamFactory\Platform\Yii\Models;
+
+use DreamFactory\Common\Utility\DataFormat;
+
 /**
  * Config.php
  * The system configuration model for the DSP
  *
  * Columns
  *
- * @property integer    $id
  * @property string     $db_version
  * @property integer    $allow_open_registration
  * @property integer    $open_reg_role_id
@@ -37,19 +39,11 @@ use Platform\Utility\DataFormat;
  * @property Role       $open_reg_role
  * @property Role       $guest_role
  */
-class Config extends BaseDspSystemModel
+class Config extends BasePlatformSystemModel
 {
-	/**
-	 * Returns the static model of the specified AR class.
-	 *
-	 * @param string $className active record class name.
-	 *
-	 * @return Config the static model class
-	 */
-	public static function model( $className = __CLASS__ )
-	{
-		return parent::model( $className );
-	}
+	//*************************************************************************
+	//* Methods
+	//*************************************************************************
 
 	/**
 	 * @return string the associated database table name
@@ -88,109 +82,122 @@ class Config extends BaseDspSystemModel
 	/**
 	 * @return array customized attribute labels (name=>label)
 	 */
-	public function attributeLabels()
+	public function attributeLabels( $additionalLabels = array() )
 	{
 		return array(
-			'id'                      => 'Config Id',
-			'db_version'              => 'Db Version',
-			'allow_open_registration' => 'Allow Open Registration',
-			'open_reg_role_id'        => 'Open Registration Default Role Id',
-			'allow_guest_user'        => 'Allow Guest User',
-			'guest_role_id'           => 'Guest Role Id',
-			'editable_profile_fields' => 'Editable Profile Fields',
-		);
-	}
-
-	/**
-	 * Retrieves a list of models based on the current search/filter conditions.
-	 *
-	 * @return CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
-	 */
-	public function search()
-	{
-		$_criteria = new CDbCriteria();
-
-		$_criteria->compare( 'id', $this->id );
-		$_criteria->compare( 'db_version', $this->db_version, true );
-
-		return new CActiveDataProvider(
-			$this,
-			array(
-				 'criteria' => $_criteria,
-			)
-		);
-	}
-
-	/** {@InheritDoc} */
-	protected function beforeValidate()
-	{
-		$this->allow_open_registration = intval( DataFormat::boolval( $this->allow_open_registration ) );
-		$this->allow_guest_user = intval( DataFormat::boolval( $this->allow_guest_user ) );
-		if ( is_string( $this->open_reg_role_id ) )
-		{
-			if ( empty( $this->open_reg_role_id ) )
-			{
-				$this->open_reg_role_id = null;
-			}
-			else
-			{
-				$this->open_reg_role_id = intval( $this->open_reg_role_id );
-			}
-		}
-		if ( is_string( $this->guest_role_id ) )
-		{
-			if ( empty( $this->guest_role_id ) )
-			{
-				$this->guest_role_id = null;
-			}
-			else
-			{
-				$this->guest_role_id = intval( $this->guest_role_id );
-			}
-		}
-
-		return parent::beforeValidate();
+				   'id'                      => 'Config Id',
+				   'db_version'              => 'Db Version',
+				   'allow_open_registration' => 'Allow Open Registration',
+				   'open_reg_role_id'        => 'Open Registration Default Role Id',
+				   'allow_guest_user'        => 'Allow Guest User',
+				   'guest_role_id'           => 'Guest Role Id',
+				   'editable_profile_fields' => 'Editable Profile Fields',
+			   ) + $additionalLabels;
 	}
 
 	/**
 	 * {@InheritDoc}
 	 */
-	public function afterFind()
+	public function search( $criteria = null )
 	{
-		parent::afterFind();
+		$_criteria = $criteria ? : new \CDbCriteria();
 
-		//	Correct data type
-		$this->allow_open_registration = intval( $this->allow_open_registration );
-		$this->allow_guest_user = intval( $this->allow_guest_user );
+		$_criteria->compare( 'id', $this->id );
+		$_criteria->compare( 'db_version', $this->db_version, true );
+
+		return parent::search( $criteria );
 	}
 
+	/** {@InheritDoc} */
+	protected function beforeValidate()
+	{
+//		$this->allow_open_registration = intval( DataFormat::boolval( $this->allow_open_registration ) );
+//		$this->allow_guest_user = intval( DataFormat::boolval( $this->allow_guest_user ) );
+
+//		if ( is_string( $this->open_reg_role_id ) )
+//		{
+//			if ( empty( $this->open_reg_role_id ) )
+//			{
+//				$this->open_reg_role_id = null;
+//			}
+//			else
+//			{
+//				$this->open_reg_role_id = intval( $this->open_reg_role_id );
+//			}
+//		}
+
+//		if ( is_string( $this->guest_role_id ) )
+//		{
+//			if ( empty( $this->guest_role_id ) )
+//			{
+//				$this->guest_role_id = null;
+//			}
+//			else
+//			{
+//				$this->guest_role_id = intval( $this->guest_role_id );
+//			}
+//		}
+
+		return parent::beforeValidate();
+	}
+
+//	/**
+//	 * {@InheritDoc}
+//	 */
+//	public function afterFind()
+//	{
+//		parent::afterFind();
+//
+//		//	Correct data type
+//		$this->allow_open_registration = intval( $this->allow_open_registration );
+//		$this->allow_guest_user = intval( $this->allow_guest_user );
+//	}
+
 	/**
-	 * @param string $requested
-	 * @param array  $columns
-	 * @param array  $hidden
+	 * @param array $mappings
 	 *
 	 * @return array
 	 */
-	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
+	public function restMap( $mappings = array() )
 	{
-		return parent::getRetrievableAttributes(
-			$requested,
-			array_merge(
-				array(
-					 'db_version',
-					 'allow_open_registration',
-					 'open_reg_role_id',
-					 'allow_guest_user',
-					 'guest_role_id',
-					 'editable_profile_fields',
-				),
-				$columns
-			),
-			// hide these from the general public
-			array_merge(
-				array(),
-				$hidden
-			)
+		$_map = array(
+			'db_version',
+			'allow_open_registration',
+			'open_reg_role_id',
+			'allow_guest_user',
+			'guest_role_id',
+			'editable_profile_fields',
 		);
+
+		return parent::restMap( array_combine( $_map, $_map ) + $mappings );
 	}
+//	/**
+//	 * @param string $requested
+//	 * @param array  $columns
+//	 * @param array  $hidden
+//	 *
+//	 * @return array
+//	 */
+//	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
+//	{
+//		return parent::getRetrievableAttributes(
+//			$requested,
+//			array_merge(
+//				array(
+//					 'db_version',
+//					 'allow_open_registration',
+//					 'open_reg_role_id',
+//					 'allow_guest_user',
+//					 'guest_role_id',
+//					 'editable_profile_fields',
+//				),
+//				$columns
+//			),
+//			// hide these from the general public
+//			array_merge(
+//				array(),
+//				$hidden
+//			)
+//		);
+//	}
 }

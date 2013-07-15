@@ -19,6 +19,9 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use DreamFactory\Platform\Utility\ResourceStore;
+use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Hasher;
@@ -57,6 +60,10 @@ class BasePlatformModel extends \CActiveRecord
 	 * @var bool If true,save() and delete() will throw an exception on failure
 	 */
 	protected $_throwOnError = true;
+	/**
+	 * @var BasePlatformRestResource
+	 */
+	protected $_resourceClass = null;
 
 	//********************************************************************************
 	//* Methods
@@ -345,6 +352,20 @@ class BasePlatformModel extends \CActiveRecord
 	}
 
 	/**
+	 * @param string $requested Comma-delimited list of requested fields
+	 * @param array  $columns   Additional columns to add
+	 * @param array  $hidden    Columns to hide from requested
+	 *
+	 * @throws \Kisma\Core\Exceptions\NotImplementedException
+	 * @return array
+	 */
+	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
+	{
+		//	Default implementation
+		throw new NotImplementedException( 'This model is not compatible with the REST API.' );
+	}
+
+	/**
 	 * @param string $modelClass
 	 *
 	 * @return BasePlatformModel
@@ -362,6 +383,54 @@ class BasePlatformModel extends \CActiveRecord
 	public function getModelClass()
 	{
 		return $this->_modelClass;
+	}
+
+	/**
+	 * @param \DreamFactory\Platform\Resources\BasePlatformRestResource $resourceClass
+	 *
+	 * @return BasePlatformModel
+	 */
+	public function setResourceClass( $resourceClass )
+	{
+		$this->_resourceClass = $resourceClass;
+
+		return $this;
+	}
+
+	/**
+	 * @return \DreamFactory\Platform\Resources\BasePlatformRestResource
+	 */
+	public function getResourceClass()
+	{
+		return $this->_resourceClass;
+	}
+
+	/**
+	 * @return \CDbTransaction
+	 */
+	public function getTransaction()
+	{
+		return $this->_transaction;
+	}
+
+	/**
+	 * @param boolean $throwOnError
+	 *
+	 * @return BasePlatformModel
+	 */
+	public function setThrowOnError( $throwOnError )
+	{
+		$this->_throwOnError = $throwOnError;
+
+		return $this;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function getThrowOnError()
+	{
+		return $this->_throwOnError;
 	}
 
 	//*************************************************************************
@@ -514,17 +583,37 @@ TEXT
 	//*******************************************************************************
 
 	/**
-	 * A mapping of attributes to REST attributes
+	 * A mapping of model attributes to REST attributes.
+	 * Only columns that are in this array are emitted when the model is requested
+	 * as a REST resource.
+	 *
+	 * Example:
+	 *
+	 *    return array(
+	 * //     Column Name              REST name
+	 * //     ==================       =====================
+	 *        'id'                  => 'id',
+	 *        'some_column_name'    => 'rest_attribute_name',
+	 *        'lmod_user_id'        => 'last_modified_by',
+	 *        'auth_encrypted_text' => 'encrypted_data',
+	 * );
+	 *
+	 * @param array $mappings
 	 *
 	 * @return array
 	 */
-	public function restMap()
+	public function restMap( $mappings = array() )
 	{
-		return array();
+		//	Include the default id, created_date, and last_modified_date
+		$_map = array( 'id', 'created_date', 'last_modified_date' );
+		$_all = array_combine( $_map, $_map ) + $mappings;
+		ksort( $_all );
+
+		return $_all;
 	}
 
 	/**
-	 * If a model has a REST mapping, attributes are mapped an returned in an array.
+	 * If a model has a REST mapping, attributes are mapped and returned in an array.
 	 *
 	 * @return array|null The resulting view
 	 */
@@ -587,6 +676,14 @@ TEXT
 		}
 
 		return $this;
+	}
+
+	/**
+	 * @return array The model as a resource
+	 */
+	public function asResource()
+	{
+		return ResourceStore::buildResponsePayload( $this );
 	}
 
 	//*************************************************************************

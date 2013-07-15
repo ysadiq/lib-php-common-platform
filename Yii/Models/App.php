@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
@@ -31,7 +32,6 @@ use Kisma\Core\Utility\Sql;
  *
  * Columns:
  *
- * @property integer              $id
  * @property string               $name
  * @property string               $api_name
  * @property string               $description
@@ -85,21 +85,19 @@ class App extends BasePlatformSystemModel
 	 */
 	public function rules()
 	{
-		return array_merge(
-			parent::rules(),
+		return
 			array(
-				 array( 'name, api_name', 'required' ),
-				 array( 'name, api_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
-				 array(
-					 'is_active, is_url_external, requires_fullscreen, requires_plugin, allow_fullscreen_toggle, storage_service_id',
-					 'numerical',
-					 'integerOnly' => true
-				 ),
-				 array( 'name, api_name', 'length', 'max' => 64 ),
-				 array( 'storage_container', 'length', 'max' => 255 ),
-				 array( 'description, url, import_url, toggle_location', 'safe' ),
-			)
-		);
+				array( 'name, api_name', 'required' ),
+				array( 'name, api_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
+				array(
+					'is_active, is_url_external, requires_fullscreen, requires_plugin, allow_fullscreen_toggle, storage_service_id',
+					'numerical',
+					'integerOnly' => true
+				),
+				array( 'name, api_name', 'length', 'max' => 64 ),
+				array( 'storage_container', 'length', 'max' => 255 ),
+				array( 'description, url, import_url, toggle_location', 'safe' ),
+			);
 	}
 
 	/**
@@ -121,37 +119,35 @@ class App extends BasePlatformSystemModel
 	}
 
 	/**
-	 * @return array customized attribute labels (name=>label)
+	 * {@InheritDoc}
 	 */
-	public function attributeLabels()
+	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
 			array(
-				 'name'                    => 'Name',
-				 'api_name'                => 'API Name',
-				 'description'             => 'Description',
-				 'is_active'               => 'Is Active',
-				 'url'                     => 'Url',
-				 'is_url_external'         => 'Is Url External',
-				 'import_url'              => 'Import Url',
-				 'storage_service_id'      => 'Storage Service',
-				 'storage_container'       => 'Storage Container',
-				 'requires_fullscreen'     => 'Requires Fullscreen',
-				 'allow_fullscreen_toggle' => 'Allow Fullscreen Toggle',
-				 'toggle_location'         => 'Toggle Location',
-				 'requires_plugin'         => 'Requires Plugin',
-			)
+				'name'                    => 'Name',
+				'api_name'                => 'API Name',
+				'description'             => 'Description',
+				'is_active'               => 'Is Active',
+				'url'                     => 'Url',
+				'is_url_external'         => 'Is Url External',
+				'import_url'              => 'Import Url',
+				'storage_service_id'      => 'Storage Service',
+				'storage_container'       => 'Storage Container',
+				'requires_fullscreen'     => 'Requires Fullscreen',
+				'allow_fullscreen_toggle' => 'Allow Fullscreen Toggle',
+				'toggle_location'         => 'Toggle Location',
+				'requires_plugin'         => 'Requires Plugin',
+			) + $additionalLabels
 		);
 	}
 
 	/**
-	 * Retrieves a list of models based on the current search/filter conditions.
-	 *
-	 * @return CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
+	 * {@InheritDoc}
 	 */
-	public function search()
+	public function search( $criteria = null )
 	{
-		$_criteria = new \CDbCriteria();
+		$_criteria = $criteria ? : new \CDbCriteria();
 
 		$_criteria->compare( 'name', $this->name, true );
 		$_criteria->compare( 'api_name', $this->api_name, true );
@@ -225,17 +221,12 @@ class App extends BasePlatformSystemModel
 		//	Make sure we have an app in the folder
 		if ( !$this->is_url_external )
 		{
-			if ( empty( $this->storage_service_id ) )
-			{
-				/** @var $_service BaseFileSvc */
-				$_service = ServiceHandler::getServiceObject( 'app' );
-				$_container = 'applications';
-			}
-			else
-			{
-				$_service = ServiceHandler::getServiceObjectById( $this->storage_service_id );
-				$_container = $this->storage_container;
-			}
+			$_local = empty( $this->storage_service_id );
+			$_serviceId = $_local ? 'app' : $this->storage_service_id;
+			$_container = $_local ? 'applications' : $this->storage_container;
+
+			/** @var BaseFileService $_service */
+			$_service = ServiceHandler::getServiceObject( $_serviceId );
 
 			if ( empty( $_container ) )
 			{
@@ -379,8 +370,8 @@ class App extends BasePlatformSystemModel
 	 * @param array $relations
 	 *
 	 * @throws Exception
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \CDbException
-	 * @throws \Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
 	protected function assignAppServiceRelations( $id, $relations = array() )
@@ -420,13 +411,13 @@ class App extends BasePlatformSystemModel
 			$_command->where( 'app_id = :aid' );
 			$maps = $_command->queryAll( true, array( ':aid' => $app_id ) );
 			$toDelete = array();
-			$toUpdate = array();
+			$_updates = array();
 			foreach ( $maps as $map )
 			{
 				$manyId = Utilities::getArrayValue( 'service_id', $map, null );
 				$id = Utilities::getArrayValue( $_mapPrimaryKey, $map, '' );
 				$found = false;
-				foreach ( $relations as $key => $item )
+				foreach ( $relations as $_key => $item )
 				{
 					$assignId = Utilities::getArrayValue( 'service_id', $item, null );
 					if ( $assignId == $manyId )
@@ -447,10 +438,10 @@ class App extends BasePlatformSystemModel
 						if ( $oldComponent != $newComponent )
 						{
 							$map['component'] = $newComponent;
-							$toUpdate[] = $map;
+							$_updates[] = $map;
 						}
 						// otherwise throw it out
-						unset( $relations[$key] );
+						unset( $relations[$_key] );
 						$found = true;
 						continue;
 					}
@@ -467,9 +458,9 @@ class App extends BasePlatformSystemModel
 				$_command->reset();
 				$rows = $_command->delete( $_mapTable, array( 'in', $_mapPrimaryKey, $toDelete ) );
 			}
-			if ( !empty( $toUpdate ) )
+			if ( !empty( $_updates ) )
 			{
-				foreach ( $toUpdate as $item )
+				foreach ( $_updates as $item )
 				{
 					$itemId = Utilities::getArrayValue( 'id', $item, '' );
 					unset( $item['id'] );
@@ -517,15 +508,16 @@ class App extends BasePlatformSystemModel
 	}
 
 	/**
-	 * @param  int  $id The row ID
-	 * @param array $relations
+	 * @param  int   $id          The row ID
+	 * @param array  $relations   Array of relational data for this relation
+	 * @param string $relationKey The name of the column in the map table
 	 *
-	 * @throws Exception
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \CDbException
-	 * @throws \Platform\Exceptions\BadRequestException
+	 *
 	 * @return void
 	 */
-	protected function _mapRelations( $id, $relations = array() )
+	protected function _mapRelations( $id, $relations = array(), $relationKey = null )
 	{
 		if ( empty( $id ) )
 		{
@@ -547,16 +539,17 @@ class App extends BasePlatformSystemModel
 				}
 			}
 
-			$_mapTable = static::tableNamePrefix() . 'app_to_service';
+			$_model = static::model();
+			$_mapTable = $_model->tableName();
 			$_mapPrimaryKey = 'id';
+			$_relationKey = $relationKey ? : 'service_id';
 
-			// use query builder
 			/** @var CDbCommand $_command */
 			$_mapRows = Sql::findAll(
 				<<<MYSQL
 SELECT
 	id,
-	service_id,
+	{$_relationKey},
 	component
 FROM
 	{$_mapTable}
@@ -570,99 +563,88 @@ MYSQL
 				Pii::pdo()
 			);
 
-			$_command = Pii::db()->createCommand();
-			$_command->select( 'id,service_id,component' );
-			$_command->from( $_mapTable );
-			$_command->where( 'app_id = :aid' );
-			$maps = $_command->queryAll( true, array( ':aid' => $id ) );
-			$toDelete = array();
-			$toUpdate = array();
+			$_deletes = array();
+			$_updates = array();
 
-			foreach ( $maps as $map )
+			foreach ( $_mapRows as $_mapping )
 			{
-				$manyId = Utilities::getArrayValue( 'service_id', $map, null );
-				$id = Utilities::getArrayValue( $_mapPrimaryKey, $map, '' );
-				$found = false;
-				foreach ( $relations as $key => $item )
+				$_serviceId = Option::get( $_mapping, $_relationKey );
+				$_id = Option::get( $_mapping, $_mapPrimaryKey );
+
+				$_found = false;
+
+				foreach ( $relations as $_key => $_item )
 				{
-					$assignId = Utilities::getArrayValue( 'service_id', $item, null );
-					if ( $assignId == $manyId )
+					// Found it, keeping it, so remove it from the list, as this becomes adds update if need be
+					if ( $_serviceId == ( $_assignId = Option::get( $_item, $_relationKey ) ) )
 					{
-						// found it, keeping it, so remove it from the list, as this becomes adds
-						// update if need be
-						$oldComponent = Utilities::getArrayValue( 'component', $map, null );
-						$newComponent = Utilities::getArrayValue( 'component', $item, null );
-						if ( !empty( $newComponent ) )
-						{
-							$newComponent = json_encode( $newComponent );
-						}
-						else
-						{
-							$newComponent = null; // no empty arrays here
-						}
 						// old should be encoded in the db
-						if ( $oldComponent != $newComponent )
+						if ( Option::get( $_mapping, 'component' ) != ( $_newComponent = json_encode( Option::get( $_item, 'component' ) ) ) )
 						{
-							$map['component'] = $newComponent;
-							$toUpdate[] = $map;
+							$_mapping['component'] = $_newComponent;
+							$_updates[] = $_mapping;
 						}
+
 						// otherwise throw it out
-						unset( $relations[$key] );
-						$found = true;
+						unset( $relations[$_key] );
+
+						$_found = true;
 						continue;
 					}
 				}
-				if ( !$found )
+
+				if ( !$_found )
 				{
-					$toDelete[] = $id;
+					$_deletes[] = $_id;
 					continue;
 				}
+
+				unset( $_mapping );
 			}
-			if ( !empty( $toDelete ) )
+
+			if ( !empty( $_deletes ) )
 			{
 				// simple delete request
-				$_command->reset();
-				$rows = $_command->delete( $_mapTable, array( 'in', $_mapPrimaryKey, $toDelete ) );
-			}
-			if ( !empty( $toUpdate ) )
-			{
-				foreach ( $toUpdate as $item )
+				$_sql = 'delete from ' . $_mapTable . ' where ' . $_mapPrimaryKey . ' in (' . implode( ', ', $_deletes ) . ')';
+
+				if ( !Sql::execute( $_sql ) )
 				{
-					$itemId = Utilities::getArrayValue( 'id', $item, '' );
-					unset( $item['id'] );
+					Log::notice( 'Error deleting rows from ' . $_mapTable . ': ' . $_sql );
+				}
+			}
+
+			if ( !empty( $_updates ) )
+			{
+				foreach ( $_updates as $_item )
+				{
 					// simple update request
-					$_command->reset();
-					$rows = $_command->update( $_mapTable, $item, 'id = :id', array( ':id' => $itemId ) );
-					if ( 0 >= $rows )
+					$_itemId = Option::get( $_item, 'id', null, true );
+
+					if ( !static::model()->update( $_mapTable, $_item, 'id = :id', array( ':id' => $_itemId ) ) )
 					{
-						throw new \CDbException( "Record update failed." );
+						throw new \CDbException( 'Record update failed' );
 					}
 				}
 			}
+
 			if ( !empty( $relations ) )
 			{
-				foreach ( $relations as $item )
+				foreach ( $relations as $_item )
 				{
 					// simple insert request
-					$newComponent = Utilities::getArrayValue( 'component', $item, null );
-					if ( !empty( $newComponent ) )
-					{
-						$newComponent = json_encode( $newComponent );
-					}
-					else
-					{
-						$newComponent = null; // no empty arrays here
-					}
-					$record = array(
-						'app_id'     => $id,
-						'service_id' => Utilities::getArrayValue( 'service_id', $item, null ),
-						'component'  => $newComponent
+					$_newComponent = json_encode( Option::get( $_item, 'component' ) );
+
+					$rows = static::model()->insert(
+						array(
+							 'app_id'     => $id,
+							 'service_id' => Option::get( $_item, 'service_id' ),
+							 'component'  => $_newComponent
+						)
 					);
-					$_command->reset();
-					$rows = $_command->insert( $_mapTable, $record );
+
 					if ( 0 >= $rows )
 					{
-						throw new Exception( "Record insert failed." );
+						throw new \CDbException( 'Record insert failed.' );
 					}
 				}
 			}

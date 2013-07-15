@@ -16,6 +16,7 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
 
@@ -85,13 +86,17 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	}
 
 	/**
-	 * @param string $requested Comma-delimited list of requested fields
-	 *
-	 * @param array  $columns   Additional columns to add
-	 *
-	 * @param array  $hidden    Columns to hide from requested
-	 *
-	 * @return array
+	 * {@InheritDoc}
+	 */
+	public function restMap( $mappings = array() )
+	{
+		$_map = array( 'created_by_id', 'last_modified_by_id' );
+
+		return parent::restMap( array_combine( $_map, $_map ) + $mappings );
+	}
+
+	/**
+	 * {@InheritDoc}
 	 */
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
@@ -101,33 +106,23 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 			return array( 'id' );
 		}
 
-		if ( static::ALL_ATTRIBUTES == $requested )
+		if ( empty( $requested ) || static::ALL_ATTRIBUTES == $requested )
 		{
-			return array_merge(
-				array(
-					 'id',
-					 'created_date',
-					 'created_by_id',
-					 'last_modified_date',
-					 'last_modified_by_id'
-				),
-				$columns
-			);
+			return array_values( $this->restMap() ) + $columns;
 		}
 
 		//	Remove the hidden fields
-		$_columns = explode( ',', $requested );
+		$_columns = ( is_string( $requested ) ? explode( ',', $requested ) : $requested ? : array() );
 
 		if ( !empty( $hidden ) )
 		{
-			foreach ( $_columns as $_index => $_column )
+			$_compare = array_map( 'strtolower', $_columns );
+
+			foreach ( $hidden as $_hide )
 			{
-				foreach ( $hidden as $_hide )
+				if ( false !== ( $_index = array_search( strtolower( $_hide ), $_compare ) ) )
 				{
-					if ( 0 == strcasecmp( $_column, $_hide ) )
-					{
-						unset( $_columns[$_index] );
-					}
+					unset( $_columns[$_index] );
 				}
 			}
 		}
@@ -145,14 +140,19 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-			array_merge(
-				array(
-					 'created_by_id'       => 'Created By',
-					 'last_modified_by_id' => 'Last Modified By',
-				),
-				$additionalLabels
-			)
+			array(
+				'created_by_id'       => 'Created By',
+				'last_modified_by_id' => 'Last Modified By',
+			) + $additionalLabels
 		);
+	}
+
+	/**
+	 * @return array The model as a resource
+	 */
+	public function asResource()
+	{
+		return ResourceStore::buildResponsePayload( $this );
 	}
 
 	/**
@@ -161,23 +161,7 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	 */
 	public function setRelated( $values, $id )
 	{
-//		$relations = $obj->relations();
-//
-//		foreach ( $relations as $key => $related )
-//		{
-//			if ( isset( $record[$key] ) )
-//			{
-//				switch ( $related[0] )
-//				{
-//					case CActiveRecord::HAS_MANY:
-//						$this->assignManyToOne( $table, $id, $related[1], $related[2], $record[$key] );
-//						break;
-//					case CActiveRecord::MANY_MANY:
-//						$this->assignManyToOneByMap( $table, $id, $related[1], 'app_to_role', 'role_id', 'app_id', $record[$key] );
-//						break;
-//				}
-//			}
-//		}
+		//	Does nothing here
 	}
 
 	/**
@@ -311,7 +295,7 @@ SQL;
 
 		try
 		{
-			$_manyModel = static::_modelMap( $mapTable );
+			$_manyModel = ResourceStore::model( $mapTable );
 			$pkManyField = $_manyModel->tableSchema->primaryKey;
 			$pkMapField = 'id';
 			//	Use query builder
@@ -374,25 +358,5 @@ SQL;
 		{
 			throw new Exception( "Error updating many to one map assignment.\n{$ex->getMessage()}", $ex->getCode() );
 		}
-	}
-
-	/**
-	 * @param $resource
-	 *
-	 * @return BasePlatformSystemModel
-	 * @throws InternalServerErrorException
-	 */
-	protected static function _modelMap( $resource )
-	{
-		$_namespace = '\\DreamFactory\\Platform\\Yii\\Models\\';
-		$_name = Inflector::deneutralize( $resource );
-		$_modelClass = $_namespace . $_name;
-
-		if ( !class_exists( $_modelClass ) )
-		{
-			throw new InternalServerErrorException( "Attempting to create an invalid system model '$resource'." );
-		}
-
-		return new $_modelClass();
 	}
 }

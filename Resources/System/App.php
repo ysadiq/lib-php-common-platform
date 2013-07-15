@@ -357,15 +357,15 @@ class App extends BaseSystemRestResource
 			if ( 'dfpkg' == $_extension )
 			{
 				// need to download and extract zip file and move contents to storage
-				$_filename = FileSystem::importUrlFileToTemp( $_packageUrl );
+				$_filename = FileSystem::importUrlFileToTemp( $_importUrl );
 
 				try
 				{
-					return Packager::importAppFromPackage( $_filename, $_packageUrl );
+					return Packager::importAppFromPackage( $_filename, $_importUrl );
 				}
 				catch ( \Exception $ex )
 				{
-					throw new \Exception( "Failed to import application package $_packageUrl.\n{$ex->getMessage()}" );
+					throw new \Exception( "Failed to import application package $_importUrl.\n{$ex->getMessage()}" );
 				}
 			}
 
@@ -373,16 +373,16 @@ class App extends BaseSystemRestResource
 			if ( !empty( $_name ) && 'zip' == $_extension )
 			{
 				// need to download and extract zip file and move contents to storage
-				$_filename = FileSystem::importUrlFileToTemp( $_packageUrl );
+				$_filename = FileSystem::importUrlFileToTemp( $_importUrl );
 
 				try
 				{
+					//@todo save url for later updates
 					return Packager::importAppFromZip( $_name, $_filename );
-					// todo save url for later updates
 				}
 				catch ( \Exception $ex )
 				{
-					throw new \Exception( "Failed to import application package $_packageUrl.\n{$ex->getMessage()}" );
+					throw new \Exception( "Failed to import application package $_importUrl.\n{$ex->getMessage()}" );
 				}
 			}
 		}
