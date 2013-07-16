@@ -17,14 +17,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace Platform\Resources;
+namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use Platform\Utility\SwaggerUtilities;
 use Swagger\Annotations as SWG;
 
 /**
- * SystemService
+ * Service
  * DSP system administration manager
  *
  * @SWG\Resource(
@@ -58,14 +59,14 @@ use Swagger\Annotations as SWG;
  * )
  *
  */
-class SystemService extends SystemResource
+class Service extends BaseSystemRestResource
 {
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
 
 	/**
-	 * Creates a new SystemService
+	 * Creates a new Service
 	 *
 	 * @param array $resource_array
 	 */

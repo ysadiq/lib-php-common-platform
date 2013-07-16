@@ -3,7 +3,7 @@
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,18 +19,23 @@
  */
 namespace Platform\Resources;
 
+use DreamFactory\Platform\Resources\BaseSystemRestResource;
+use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Yii\Models\Config;
+use DreamFactory\Platform\Yii\Models\User;
+use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
-use \Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
-use Platform\Exceptions\BadRequestException;
-use Platform\Exceptions\ForbiddenException;
-use Platform\Exceptions\InternalServerErrorException;
-use Platform\Exceptions\UnauthorizedException;
-use Platform\Interfaces\PermissionTypes;
-use Platform\Resources\RestResource;
-use Platform\Utility\RestData;
-use Platform\Utility\Utilities;
-use Platform\Yii\Utility\Pii;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\ForbiddenException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\UnauthorizedException;
+use DreamFactory\Platform\Interfaces\PermissionTypes;
+use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Utility\Utilities;
 use Swagger\Annotations as SWG;
 
 /**
@@ -45,114 +50,97 @@ use Swagger\Annotations as SWG;
  * )
  *
  * @SWG\Model(id="Session",
- *   @SWG\Property(name="id",type="string",description="Identifier for the current user."),
- *   @SWG\Property(name="email",type="string",description="Email address of the current user."),
- *   @SWG\Property(name="first_name",type="string",description="First name of the current user."),
- *   @SWG\Property(name="last_name",type="string",description="Last name of the current user."),
- *   @SWG\Property(name="display_name",type="string",description="Full display name of the current user."),
- *   @SWG\Property(name="is_sys_admin",type="boolean",description="Is the current user a system administrator."),
- *   @SWG\Property(name="last_login_date",type="string",description="Date and time of the last login for the current user."),
- *   @SWG\Property(name="app_groups",type="Array",description="App groups and the containing apps."),
- *   @SWG\Property(name="no_group_apps",type="Array",description="Apps that are not in any app groups."),
- *   @SWG\Property(name="ticket",type="string",description="Timed ticket that can be used to start a separate session."),
- *   @SWG\Property(name="ticket_expiry",type="string",description="Expiration time for the given ticket.")
+ * @SWG\Property(name="id",type="string",description="Identifier for the current user."),
+ * @SWG\Property(name="email",type="string",description="Email address of the current user."),
+ * @SWG\Property(name="first_name",type="string",description="First name of the current user."),
+ * @SWG\Property(name="last_name",type="string",description="Last name of the current user."),
+ * @SWG\Property(name="display_name",type="string",description="Full display name of the current user."),
+ * @SWG\Property(name="is_sys_admin",type="boolean",description="Is the current user a system administrator."),
+ * @SWG\Property(name="last_login_date",type="string",description="Date and time of the last login for the current user."),
+ * @SWG\Property(name="app_groups",type="Array",description="App groups and the containing apps."),
+ * @SWG\Property(name="no_group_apps",type="Array",description="Apps that are not in any app groups."),
+ * @SWG\Property(name="ticket",type="string",description="Timed ticket that can be used to start a separate session."),
+ * @SWG\Property(name="ticket_expiry",type="string",description="Expiration time for the given ticket.")
  * )
  *
  * @SWG\Model(id="Login",
- *   @SWG\Property(name="email",type="string"),
- *   @SWG\Property(name="password",type="string")
+ * @SWG\Property(name="email",type="string"),
+ * @SWG\Property(name="password",type="string")
  * )
- *
  */
-class UserSession extends RestResource
+class UserSession extends BaseSystemRestResource
 {
+	//*************************************************************************
+	//* Members
+	//*************************************************************************
+
 	/**
 	 * @var string
 	 */
 	protected static $_randKey;
-
 	/**
-	 * @var null
+	 * @var int
 	 */
 	protected static $_userId = null;
-
 	/**
 	 * @var array
 	 */
 	protected static $_cache = null;
 
 	/**
-	 * Create a new UserSession
-	 *
+	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+	 * @param array                                               $resources
 	 */
-	public function __construct()
+	public function __construct( $consumer, $resources = array() )
 	{
 		$config = array(
-			'service_name'=> 'user',
-			'name'        => 'User Session',
-			'api_name'    => 'session',
-			'description' => 'Resource for a user to manage their session.',
-			'is_active'   => true,
+			'service_name'   => 'user',
+			'name'           => 'User Session',
+			'api_name'       => 'session',
+			'description'    => 'Resource for a user to manage their session.',
+			'is_active'      => true,
+			'resource_array' => $resources,
 		);
-		parent::__construct( $config );
+		parent::__construct( $consumer, $config );
 
-		//For better security. Get a random string from this link: http://tinyurl.com/randstr and put it here
-		static::$_randKey = 'M1kVi0kE9ouXxF9';
-	}
-
-	// Service interface implementation
-
-	public function setApiName( $apiName )
-	{
-		throw new \Exception( 'UserSession API name can not be changed.' );
-	}
-
-	public function setType( $type )
-	{
-		throw new \Exception( 'UserSession type can not be changed.' );
-	}
-
-	public function setDescription( $description )
-	{
-		throw new \Exception( 'UserSession description can not be changed.' );
-	}
-
-	public function setIsActive( $isActive )
-	{
-		throw new \Exception( 'UserSession active flag can not be changed.' );
-	}
-
-	public function setName( $name )
-	{
-		throw new \Exception( 'UserSession name can not be changed.' );
+		//	For better security. Get a random string from this link: http://tinyurl.com/randstr and put it here
+		static::$_randKey = static::$_randKey ? : Pii::db()->password;
 	}
 
 	// REST interface implementation
 
-	protected function _handleAction()
+	/**
+	 * @return bool
+	 */
+	protected function _handleGet()
 	{
-		switch ( $this->_action )
-		{
-			case self::Get:
-				$ticket = Utilities::getArrayValue( 'ticket', $_REQUEST, '' );
-				$result = $this->userSession( $ticket );
-				break;
-			case self::Post:
-				$data = RestData::getPostDataAsArray();
-				$email = Utilities::getArrayValue( 'email', $data, '' );
-				$password = Utilities::getArrayValue( 'password', $data, '' );
-				//$password = Utilities::decryptPassword($password);
-				$result = $this->userLogin( $email, $password );
-				break;
-			case self::Delete:
-				$this->userLogout();
-				$result = array( 'success' => true );
-				break;
-			default:
-				return false;
-		}
+		$_ticket = FilterInput::request( 'ticket' );
 
-		return $result;
+		return $this->userSession( $_ticket );
+	}
+
+	/**
+	 * @return array|bool|void
+	 */
+	protected function _handlePost()
+	{
+		$data = RestData::getPostDataAsArray();
+		$email = Option::get( $data, 'email' );
+		$password = Option::get( $data, 'password' );
+
+		//$password = Utilities::decryptPassword($password);
+
+		return $this->userLogin( $email, $password );
+	}
+
+	/**
+	 * @return array|bool|void
+	 */
+	protected function _handleDelete()
+	{
+		$this->userLogout();
+
+		return array( 'success' => true );
 	}
 
 	//-------- User Operations ------------------------------------------------
@@ -163,14 +151,14 @@ class UserSession extends RestResource
 	 *
 	 * @SWG\Api(
 	 *   path="/user/session", description="Operations on a user's session.",
-	 *   @SWG\Operations(
-	 *     @SWG\Operation(
+	 * @SWG\Operations(
+	 * @SWG\Operation(
 	 *       httpMethod="GET", summary="Retrieve the current user session information.",
 	 *       notes="Calling this refreshes the current session, or returns an error for timed-out or invalid sessions.",
 	 *       responseClass="Session", nickname="getSession",
-	 *       @SWG\ErrorResponses(
-	 *          @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 *          @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
+	 * @SWG\ErrorResponses(
+	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
+	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
 	 *       )
 	 *     )
 	 *   )
@@ -195,15 +183,15 @@ class UserSession extends RestResource
 				static::userLogout();
 
 				// special case for possible guest user
-				$theConfig = \Config::model()->with(
-					'guest_role.role_service_accesses',
-					'guest_role.apps',
-					'guest_role.services'
-				)->find();
+				$theConfig = ResourceStore::model( 'config' )->with(
+								 'guest_role.role_service_accesses',
+								 'guest_role.apps',
+								 'guest_role.services'
+							 )->find();
 
 				if ( !empty( $theConfig ) )
 				{
-					if ( Utilities::boolval( $theConfig->allow_guest_user ) )
+					if ( $theConfig->allow_guest_user )
 					{
 						$result = static::generateSessionDataFromRole( null, $theConfig->getRelated( 'guest_role' ) );
 
@@ -212,12 +200,13 @@ class UserSession extends RestResource
 					}
 				}
 
-				// otherwise throw original exception
+				//	Otherwise throw original exception
 				throw $ex;
 			}
 		}
 		else
-		{ // process ticket
+		{
+			// process ticket
 			$creds = Utilities::decryptCreds( $ticket, "gorilla" );
 			$pieces = explode( ',', $creds );
 			$userId = $pieces[0];
@@ -233,7 +222,7 @@ class UserSession extends RestResource
 
 		try
 		{
-			$theUser = \User::model()->with( 'role.role_service_accesses', 'role.apps', 'role.services' )->findByPk( $userId );
+			$theUser = ResourceStore::model( 'user' )->with( 'role.role_service_accesses', 'role.apps', 'role.services' )->findByPk( $userId );
 			if ( null === $theUser )
 			{
 				throw new UnauthorizedException( "The user identified in the session or ticket does not exist in the system." );
@@ -331,14 +320,14 @@ class UserSession extends RestResource
 	/**
 	 * @SWG\Api(
 	 *   path="/user/session", description="Operations on a user's session.",
-	 *   @SWG\Operations(
-	 *     @SWG\Operation(
+	 * @SWG\Operations(
+	 * @SWG\Operation(
 	 *       httpMethod="DELETE", summary="Logout and destroy the current user session.",
 	 *       notes="Calling this deletes the current session and logs out the user.",
 	 *       responseClass="Success", nickname="logout",
-	 *       @SWG\ErrorResponses(
-	 *          @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 *          @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
+	 * @SWG\ErrorResponses(
+	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
+	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
 	 *       )
 	 *     )
 	 *   )
@@ -362,7 +351,7 @@ class UserSession extends RestResource
 	{
 		if ( !isset( $user ) )
 		{
-			$user = \User::model()->with( 'role.role_service_accesses', 'role.apps', 'role.services' )->findByPk( $user_id );
+			$user = ResourceStore::model( 'user' )->with( 'role.role_service_accesses', 'role.apps', 'role.services' )->findByPk( $user_id );
 		}
 		if ( null === $user )
 		{
@@ -419,7 +408,7 @@ class UserSession extends RestResource
 			$permsFields = array( 'service_id', 'component', 'access' );
 			/**
 			 * @var \RoleServiceAccess[] $thePerms
-			 * @var \Service[] $theServices
+			 * @var \Service[]           $theServices
 			 */
 			$thePerms = $theRole->getRelated( 'role_service_accesses' );
 			$theServices = $theRole->getRelated( 'services' );
@@ -465,7 +454,7 @@ class UserSession extends RestResource
 			{
 				throw new UnauthorizedException( "No valid role is assigned for guest users." );
 			}
-			$role = \Role::model()->with( 'role_service_accesses', 'apps', 'services' )->findByPk( $role_id );
+			$role = ResourceStore::model( 'role' )->with( 'role_service_accesses', 'apps', 'services' )->findByPk( $role_id );
 		}
 		if ( null === $role )
 		{
@@ -504,7 +493,7 @@ class UserSession extends RestResource
 		$permsFields = array( 'service_id', 'component', 'access' );
 		/**
 		 * @var \RoleServiceAccess[] $thePerms
-		 * @var \Service[] $theServices
+		 * @var \Service[]           $theServices
 		 */
 		$thePerms = $role->getRelated( 'role_service_accesses' );
 		$theServices = $role->getRelated( 'services' );
@@ -545,7 +534,7 @@ class UserSession extends RestResource
 		}
 
 		// helper for non-browser-managed sessions
-		$_sessionId = Utilities::getArrayValue( 'HTTP_X_DREAMFACTORY_SESSION_TOKEN', $_SERVER, '' );
+		$_sessionId = FilterInput::server( 'HTTP_X_DREAMFACTORY_SESSION_TOKEN' );
 //		Log::debug('passed in session ' . $_sessionId);
 		if ( !empty( $_sessionId ) )
 		{
@@ -571,9 +560,9 @@ class UserSession extends RestResource
 	{
 		static::_checkCache();
 
-		$_public = Utilities::getArrayValue( 'public', static::$_cache, array() );
+		$_public = Option::get( static::$_cache, 'public' );
 
-		return Utilities::boolval( Utilities::getArrayValue( 'is_sys_admin', $_public, false ) );
+		return Option::getBool( $_public, 'is_sys_admin' );
 	}
 
 	/**
@@ -588,14 +577,14 @@ class UserSession extends RestResource
 	{
 		static::_checkCache();
 
-		$_public = Utilities::getArrayValue( 'public', static::$_cache, array() );
-
-		$admin = Utilities::getArrayValue( 'is_sys_admin', $_public, false );
+		$_public = Option::get( static::$_cache, 'public' );
+		$admin = Option::getBool( $_public, 'is_sys_admin' );
 		if ( $admin )
 		{
 			return; // no need to check role
 		}
-		$roleInfo = Utilities::getArrayValue( 'role', $_public, array() );
+
+		$roleInfo = Option::get( $_public, 'role' );
 		if ( empty( $roleInfo ) )
 		{
 			// no role assigned, if not sys admin, denied service
@@ -609,7 +598,7 @@ class UserSession extends RestResource
 			throw new BadRequestException( "A valid application name is required to access services." );
 		}
 
-		$apps = Utilities::getArrayValue( 'apps', $roleInfo, null );
+		$apps = Option::get( $roleInfo, 'apps' );
 		if ( !is_array( $apps ) || empty( $apps ) )
 		{
 			throw new ForbiddenException( "Access to application '$appName' is not provisioned for this user's role." );
@@ -619,7 +608,7 @@ class UserSession extends RestResource
 
 		foreach ( $apps as $app )
 		{
-			$temp = Utilities::getArrayValue( 'api_name', $app );
+			$temp = Option::get( $app, 'api_name' );
 
 			if ( 0 == strcasecmp( $appName, $temp ) )
 			{
@@ -633,7 +622,7 @@ class UserSession extends RestResource
 			throw new ForbiddenException( "Access to application '$appName' is not provisioned for this user's role." );
 		}
 
-		$services = Utilities::getArrayValue( 'services', $roleInfo, null );
+		$services = Option::get( $roleInfo, 'services' );
 
 		if ( !is_array( $services ) || empty( $services ) )
 		{
@@ -647,12 +636,12 @@ class UserSession extends RestResource
 
 		foreach ( $services as $svcInfo )
 		{
-			$theService = Utilities::getArrayValue( 'service', $svcInfo );
-			$theAccess = Utilities::getArrayValue( 'access', $svcInfo, '' );
+			$theService = Option::get( $svcInfo, 'service', '' );
+			$theAccess = Option::get( $svcInfo, 'access', '' );
 
 			if ( 0 == strcasecmp( $service, $theService ) )
 			{
-				$theComponent = Utilities::getArrayValue( 'component', $svcInfo );
+				$theComponent = Option::get( $svcInfo, 'component' );
 				if ( !empty( $component ) )
 				{
 					if ( 0 == strcasecmp( $component, $theComponent ) )
@@ -768,27 +757,32 @@ class UserSession extends RestResource
 	 */
 	public static function setCurrentUserId( $userId )
 	{
-		static::$_userId = $userId;
+		if ( !Pii::guest() && false === Pii::getState( 'df_authenticated' ) )
+		{
+			static::$_userId = $userId;
+		}
 
 		return $userId;
 	}
 
 	/**
+	 * @param mixed $inquirer For future use
+	 *
 	 * @return int|null
 	 */
-	public static function getCurrentUserId()
+	public static function getCurrentUserId( $inquirer = null )
 	{
 		if ( !empty( static::$_userId ) )
 		{
 			return static::$_userId;
 		}
 
-		if ( !Pii::guest() && false === Pii::getState( 'df_authenticated', false ) )
+		if ( !Pii::guest() && false === Pii::getState( 'df_authenticated' ) )
 		{
 			return static::$_userId = Pii::user()->getId();
 		}
 
-		return null;
+		return static::$_userId = null;
 	}
 
 	/**
@@ -806,17 +800,18 @@ class UserSession extends RestResource
 			catch ( \Exception $ex )
 			{
 				// special case for possible guest user
-				$theConfig = \Config::model()->with(
-					'guest_role.role_service_accesses',
-					'guest_role.apps',
-					'guest_role.services'
-				)->find();
+				$theConfig = ResourceStore::model( 'config' )->with(
+								 'guest_role.role_service_accesses',
+								 'guest_role.apps',
+								 'guest_role.services'
+							 )->find();
 
 				if ( !empty( $theConfig ) )
 				{
-					if ( Utilities::boolval( $theConfig->allow_guest_user ) )
+					if ( DataFormat::boolval( $theConfig->allow_guest_user ) )
 					{
 						static::$_cache = static::generateSessionDataFromRole( null, $theConfig->getRelated( 'guest_role' ) );
+
 						return;
 					}
 				}
@@ -836,8 +831,8 @@ class UserSession extends RestResource
 	 */
 	public static function addSessionExtras( $session, $is_sys_admin = false, $add_apps = false )
 	{
-		$data = Utilities::getArrayValue( 'data', $session, array() );
-		$userId = Utilities::getArrayValue( 'id', $data, '' );
+		$data = Option::get( $session, 'data' );
+		$userId = Option::get( $data, 'id', '' );
 		$timestamp = time();
 		$ticket = Utilities::encryptCreds( "$userId,$timestamp", "gorilla" );
 		$data['ticket'] = $ticket;
@@ -850,18 +845,18 @@ class UserSession extends RestResource
 			/**
 			 * @var \App[] $theApps
 			 */
-			$theApps = Utilities::getArrayValue( 'allowed_apps', $session, array() );
+			$theApps = Option::get( $session, 'allowed_apps', array() );
 			if ( $is_sys_admin )
 			{
-				$theApps = \App::model()->findAll( 'is_active = :ia', array( ':ia' => 1 ) );
+				$theApps = ResourceStore::model( 'app' )->findAll( 'is_active = :ia', array( ':ia' => 1 ) );
 			}
 			/**
 			 * @var \AppGroup[] $theGroups
 			 */
-			$theGroups = \AppGroup::model()->with( 'apps' )->findAll();
+			$theGroups = ResourceStore::model( 'app_group' )->with( 'apps' )->findAll();
 			$appGroups = array();
 			$noGroupApps = array();
-			$defaultAppId = Utilities::getArrayValue( 'default_app_id', $session, null );
+			$defaultAppId = Option::get( $session, 'default_app_id' );
 			foreach ( $theApps as $app )
 			{
 				$appId = $app->id;
@@ -878,7 +873,7 @@ class UserSession extends RestResource
 						if ( $tempGroup->id === $groupId )
 						{
 							$found = true;
-							$temp = Utilities::getArrayValue( 'apps', $groupData, array() );
+							$temp = Option::get( $groupData, 'apps', array() );
 							$temp[] = $appData;
 							$groupData['apps'] = $temp;
 						}

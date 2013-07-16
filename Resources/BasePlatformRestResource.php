@@ -23,6 +23,7 @@ use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Interfaces\RestResourceLike;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
+use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Option;
@@ -70,6 +71,18 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 		}
 
 		parent::__construct( $settings );
+	}
+
+	/**
+	 * @param string $name
+	 * @param array $arguments
+	 *
+	 * @return mixed
+	 */
+	public static function __callStatic( $name, $arguments )
+	{
+		//	Pass-thru to store
+		return ResourceStore::__callStatic( $name, $arguments );
 	}
 
 	/**

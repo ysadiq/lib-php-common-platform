@@ -17,71 +17,66 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace Platform\Resources;
+namespace DreamFactory\Platform\Resources\System;
 
 use Swagger\Annotations as SWG;
 
 /**
- * SystemEmailTemplate
+ * Role
  * DSP system administration manager
  *
  * @SWG\Resource(
  *   resourcePath="/system"
  * )
  *
- * @SWG\Model(id="EmailTemplates",
- *   @SWG\Property(name="record",type="Array",items="$ref:EmailTemplate",description="Array of system email template records.")
+ * @SWG\Model(id="Roles",
+ * @SWG\Property(name="record",type="Array",items="$ref:Role",description="Array of system role records.")
  * )
- * @SWG\Model(id="EmailTemplate",
- *   @SWG\Property(name="id",type="int",description="Identifier of this email template."),
- *   @SWG\Property(name="name",type="string",description="Displayable name of this email template."),
- *   @SWG\Property(name="description",type="string",description="Description of this email template."),
- *   @SWG\Property(name="to",type="Array",items="$ref:EmailAddress",description="Single or multiple receiver addresses."),
- *   @SWG\Property(name="cc",type="Array",items="$ref:EmailAddress",description="Optional CC receiver addresses."),
- *   @SWG\Property(name="bcc",type="Array",items="$ref:EmailAddress",description="Optional BCC receiver addresses."),
- *   @SWG\Property(name="subject",type="string",description="Text only subject line."),
- *   @SWG\Property(name="body_text",type="string",description="Text only version of the body."),
- *   @SWG\Property(name="body_html",type="string",description="Escaped HTML version of the body."),
- *   @SWG\Property(name="from",type="EmailAddress",description="Required sender name and email."),
- *   @SWG\Property(name="reply_to",type="EmailAddress",description="Optional reply to name and email."),
- *   @SWG\Property(name="defaults",type="Array",items="$ref:string",description="Array of default name value pairs for template replacement."),
- *   @SWG\Property(name="created_date",type="string",description="Date this email template was created."),
- *   @SWG\Property(name="created_by_id",type="int",description="User Id of who created this email template."),
- *   @SWG\Property(name="last_modified_date",type="string",description="Date this email template was last modified."),
- *   @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this email template.")
+ * @SWG\Model(id="Role",
+ * @SWG\Property(name="id",type="int",description="Identifier of this role."),
+ * @SWG\Property(name="name",type="string",description="Displayable name of this role."),
+ * @SWG\Property(name="description",type="string",description="Description of this role."),
+ * @SWG\Property(name="is_active",type="boolean",description="Is this role active for use."),
+ * @SWG\Property(name="default_app_id",type="int",description="Default launched app for this role."),
+ * @SWG\Property(name="default_app",type="App",description="Related app by default_app_id."),
+ * @SWG\Property(name="users",type="Array",items="$ref:string",description="Related users by User.role_id."),
+ * @SWG\Property(name="apps",type="Array",items="$ref:string",description="Related apps by role assignment."),
+ * @SWG\Property(name="services",type="Array",items="$ref:string",description="Related services by role assignment."),
+ * @SWG\Property(name="created_date",type="string",description="Date this role was created."),
+ * @SWG\Property(name="created_by_id",type="int",description="User Id of who created this role."),
+ * @SWG\Property(name="last_modified_date",type="string",description="Date this role was last modified."),
+ * @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this role.")
  * )
  *
  */
-class SystemEmailTemplate extends SystemResource
+class Role extends BaseSystemRestResource
 {
 	//*************************************************************************
 	//	Constants
 	//*************************************************************************
 
-
 	//*************************************************************************
 	//	Members
 	//*************************************************************************
-
 
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
 
 	/**
-	 * Creates a new SystemEmailTemplate
+	 * Creates a new Role
 	 *
 	 *
 	 */
 	public function __construct( $resource_array = array() )
 	{
 		$config = array(
-			'service_name'=> 'system',
-			'name'        => 'Email Template',
-			'api_name'    => 'email_template',
-			'type'        => 'System',
-			'description' => 'System email template administration.',
-			'is_active'   => true,
+			'service_name' => 'system',
+			'name'         => 'Role',
+			'api_name'     => 'role',
+			'type'         => 'System',
+			'description'  => 'System role administration.',
+			'is_active'    => true,
 		);
 
 		parent::__construct( $config, $resource_array );
@@ -93,213 +88,213 @@ class SystemEmailTemplate extends SystemResource
 
 	/**
 	 *
-	 *   @SWG\Api(
-	 *     path="/system/email_template", description="Operations for email template administration.",
-	 *     @SWG\Operations(
-	 *       @SWG\Operation(
-	 *         httpMethod="GET", summary="Retrieve multiple email templates.",
+	 * @SWG\Api(
+	 *     path="/system/role", description="Operations for role administration.",
+	 * @SWG\Operations(
+	 * @SWG\Operation(
+	 *         httpMethod="GET", summary="Retrieve multiple roles.",
 	 *         notes="Use the 'ids' or 'filter' parameter to limit records that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.",
-	 *         responseClass="EmailTemplates", nickname="getEmailTemplates",
-	 *         @SWG\Parameters(
-	 *           @SWG\Parameter(
+	 *         responseClass="Roles", nickname="getRoles",
+	 * @SWG\Parameters(
+	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="filter", description="SQL-like filter to limit the records to retrieve.",
 	 *             paramType="query", required="false", allowMultiple=false, dataType="string"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="limit", description="Set to limit the filter results.",
 	 *             paramType="query", required="false", allowMultiple=false, dataType="int"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="order", description="SQL-like order containing field and direction for filter results.",
 	 *             paramType="query", required="false", allowMultiple=false, dataType="string"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="offset", description="Set to offset the filter results to a particular record count.",
 	 *             paramType="query", required="false", allowMultiple=false, dataType="int"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="include_count", description="Include the total number of filter results.",
 	 *             paramType="query", required="false", allowMultiple=false, dataType="boolean"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="include_schema", description="Include the schema of the table queried.",
 	 *             paramType="query", required="false", allowMultiple=false, dataType="boolean"
 	 *           )
 	 *         ),
-	 *         @SWG\ErrorResponses(
-	 *            @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 *            @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 *            @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
+	 * @SWG\ErrorResponses(
+	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
+	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
+	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
 	 *         )
 	 *       ),
-	 *       @SWG\Operation(
-	 *         httpMethod="POST", summary="Create one or more email templates.",
+	 * @SWG\Operation(
+	 *         httpMethod="POST", summary="Create one or more roles.",
 	 *         notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *         responseClass="Success", nickname="createEmailTemplates",
-	 *         @SWG\Parameters(
-	 *           @SWG\Parameter(
+	 *         responseClass="Success", nickname="createRoles",
+	 * @SWG\Parameters(
+	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to create.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="EmailTemplates"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="Roles"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           )
 	 *         ),
-	 *         @SWG\ErrorResponses(
-	 *            @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 *            @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 *            @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
+	 * @SWG\ErrorResponses(
+	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
+	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
+	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
 	 *         )
 	 *       ),
-	 *       @SWG\Operation(
-	 *         httpMethod="PUT", summary="Update one or more email templates.",
+	 * @SWG\Operation(
+	 *         httpMethod="PUT", summary="Update one or more roles.",
 	 *         notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *         responseClass="Success", nickname="updateEmailTemplates",
-	 *         @SWG\Parameters(
-	 *           @SWG\Parameter(
+	 *         responseClass="Success", nickname="updateRoles",
+	 * @SWG\Parameters(
+	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="EmailTemplates"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="Roles"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           )
 	 *         ),
-	 *         @SWG\ErrorResponses(
-	 *            @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 *            @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 *            @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
+	 * @SWG\ErrorResponses(
+	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
+	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
+	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
 	 *         )
 	 *       ),
-	 *       @SWG\Operation(
-	 *         httpMethod="DELETE", summary="Delete one or more email templates.",
+	 * @SWG\Operation(
+	 *         httpMethod="DELETE", summary="Delete one or more roles.",
 	 *         notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *         responseClass="Success", nickname="deleteEmailTemplates",
-	 *         @SWG\Parameters(
-	 *           @SWG\Parameter(
+	 *         responseClass="Success", nickname="deleteRoles",
+	 * @SWG\Parameters(
+	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to delete.",
-	 *             paramType="body", required="false", allowMultiple=false, dataType="EmailTemplates"
+	 *             paramType="body", required="false", allowMultiple=false, dataType="Roles"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           )
 	 *         ),
-	 *         @SWG\ErrorResponses(
-	 *            @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 *            @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 *            @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
+	 * @SWG\ErrorResponses(
+	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
+	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
+	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
 	 *         )
 	 *       )
 	 *     )
 	 *   )
 	 *
-	 *   @SWG\Api(
-	 *     path="/system/email_template/{id}", description="Operations for individual email template administration.",
-	 *     @SWG\Operations(
-	 *       @SWG\Operation(
-	 *         httpMethod="GET", summary="Retrieve one application by identifier.",
+	 * @SWG\Api(
+	 *     path="/system/role/{id}", description="Operations for individual role administration.",
+	 * @SWG\Operations(
+	 * @SWG\Operation(
+	 *         httpMethod="GET", summary="Retrieve one role by identifier.",
 	 *         notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
-	 *         responseClass="EmailTemplate", nickname="getEmailTemplate",
-	 *         @SWG\Parameters(
-	 *           @SWG\Parameter(
+	 *         responseClass="Role", nickname="getRole",
+	 * @SWG\Parameters(
+	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
 	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           )
 	 *         ),
-	 *         @SWG\ErrorResponses(
-	 *            @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 *            @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 *            @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
+	 * @SWG\ErrorResponses(
+	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
+	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
+	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
 	 *         )
 	 *       ),
-	 *       @SWG\Operation(
-	 *         httpMethod="PUT", summary="Update one email template.",
+	 * @SWG\Operation(
+	 *         httpMethod="PUT", summary="Update one role.",
 	 *         notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
-	 *         responseClass="Success", nickname="updateEmailTemplate",
-	 *         @SWG\Parameters(
-	 *           @SWG\Parameter(
+	 *         responseClass="Success", nickname="updateRole",
+	 * @SWG\Parameters(
+	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
 	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="EmailTemplate"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="Role"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           )
 	 *         ),
-	 *         @SWG\ErrorResponses(
-	 *            @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 *            @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 *            @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
+	 * @SWG\ErrorResponses(
+	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
+	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
+	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
 	 *         )
 	 *       ),
-	 *       @SWG\Operation(
-	 *         httpMethod="DELETE", summary="Delete one email template.",
+	 * @SWG\Operation(
+	 *         httpMethod="DELETE", summary="Update one role.",
 	 *         notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
-	 *         responseClass="Success", nickname="deleteEmailTemplate",
-	 *         @SWG\Parameters(
-	 *           @SWG\Parameter(
+	 *         responseClass="Success", nickname="deleteRole",
+	 * @SWG\Parameters(
+	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
 	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           ),
-	 *           @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
 	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
 	 *           )
 	 *         ),
-	 *         @SWG\ErrorResponses(
-	 *            @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 *            @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 *            @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
+	 * @SWG\ErrorResponses(
+	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
+	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
+	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
 	 *         )
 	 *       )
 	 *     )
@@ -311,5 +306,4 @@ class SystemEmailTemplate extends SystemResource
 	{
 		return parent::_handleAction();
 	}
-
 }

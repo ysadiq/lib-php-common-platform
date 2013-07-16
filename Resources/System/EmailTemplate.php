@@ -17,39 +17,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace Platform\Resources;
+namespace DreamFactory\Platform\Resources\System;
 
 use Swagger\Annotations as SWG;
 
 /**
- * SystemRole
+ * EmailTemplate
  * DSP system administration manager
  *
  * @SWG\Resource(
  *   resourcePath="/system"
  * )
  *
- * @SWG\Model(id="Roles",
- *   @SWG\Property(name="record",type="Array",items="$ref:Role",description="Array of system role records.")
+ * @SWG\Model(id="EmailTemplates",
+ *   @SWG\Property(name="record",type="Array",items="$ref:EmailTemplate",description="Array of system email template records.")
  * )
- * @SWG\Model(id="Role",
- *   @SWG\Property(name="id",type="int",description="Identifier of this role."),
- *   @SWG\Property(name="name",type="string",description="Displayable name of this role."),
- *   @SWG\Property(name="description",type="string",description="Description of this role."),
- *   @SWG\Property(name="is_active",type="boolean",description="Is this role active for use."),
- *   @SWG\Property(name="default_app_id",type="int",description="Default launched app for this role."),
- *   @SWG\Property(name="default_app",type="App",description="Related app by default_app_id."),
- *   @SWG\Property(name="users",type="Array",items="$ref:string",description="Related users by User.role_id."),
- *   @SWG\Property(name="apps",type="Array",items="$ref:string",description="Related apps by role assignment."),
- *   @SWG\Property(name="services",type="Array",items="$ref:string",description="Related services by role assignment."),
- *   @SWG\Property(name="created_date",type="string",description="Date this role was created."),
- *   @SWG\Property(name="created_by_id",type="int",description="User Id of who created this role."),
- *   @SWG\Property(name="last_modified_date",type="string",description="Date this role was last modified."),
- *   @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this role.")
+ * @SWG\Model(id="EmailTemplate",
+ *   @SWG\Property(name="id",type="int",description="Identifier of this email template."),
+ *   @SWG\Property(name="name",type="string",description="Displayable name of this email template."),
+ *   @SWG\Property(name="description",type="string",description="Description of this email template."),
+ *   @SWG\Property(name="to",type="Array",items="$ref:EmailAddress",description="Single or multiple receiver addresses."),
+ *   @SWG\Property(name="cc",type="Array",items="$ref:EmailAddress",description="Optional CC receiver addresses."),
+ *   @SWG\Property(name="bcc",type="Array",items="$ref:EmailAddress",description="Optional BCC receiver addresses."),
+ *   @SWG\Property(name="subject",type="string",description="Text only subject line."),
+ *   @SWG\Property(name="body_text",type="string",description="Text only version of the body."),
+ *   @SWG\Property(name="body_html",type="string",description="Escaped HTML version of the body."),
+ *   @SWG\Property(name="from",type="EmailAddress",description="Required sender name and email."),
+ *   @SWG\Property(name="reply_to",type="EmailAddress",description="Optional reply to name and email."),
+ *   @SWG\Property(name="defaults",type="Array",items="$ref:string",description="Array of default name value pairs for template replacement."),
+ *   @SWG\Property(name="created_date",type="string",description="Date this email template was created."),
+ *   @SWG\Property(name="created_by_id",type="int",description="User Id of who created this email template."),
+ *   @SWG\Property(name="last_modified_date",type="string",description="Date this email template was last modified."),
+ *   @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this email template.")
  * )
  *
  */
-class SystemRole extends SystemResource
+class EmailTemplate extends BaseSystemRestResource
 {
 	//*************************************************************************
 	//	Constants
@@ -66,7 +69,7 @@ class SystemRole extends SystemResource
 	//*************************************************************************
 
 	/**
-	 * Creates a new SystemRole
+	 * Creates a new EmailTemplate
 	 *
 	 *
 	 */
@@ -74,10 +77,10 @@ class SystemRole extends SystemResource
 	{
 		$config = array(
 			'service_name'=> 'system',
-			'name'        => 'Role',
-			'api_name'    => 'role',
+			'name'        => 'Email Template',
+			'api_name'    => 'email_template',
 			'type'        => 'System',
-			'description' => 'System role administration.',
+			'description' => 'System email template administration.',
 			'is_active'   => true,
 		);
 
@@ -91,12 +94,12 @@ class SystemRole extends SystemResource
 	/**
 	 *
 	 *   @SWG\Api(
-	 *     path="/system/role", description="Operations for role administration.",
+	 *     path="/system/email_template", description="Operations for email template administration.",
 	 *     @SWG\Operations(
 	 *       @SWG\Operation(
-	 *         httpMethod="GET", summary="Retrieve multiple roles.",
+	 *         httpMethod="GET", summary="Retrieve multiple email templates.",
 	 *         notes="Use the 'ids' or 'filter' parameter to limit records that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.",
-	 *         responseClass="Roles", nickname="getRoles",
+	 *         responseClass="EmailTemplates", nickname="getEmailTemplates",
 	 *         @SWG\Parameters(
 	 *           @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -142,13 +145,13 @@ class SystemRole extends SystemResource
 	 *         )
 	 *       ),
 	 *       @SWG\Operation(
-	 *         httpMethod="POST", summary="Create one or more roles.",
+	 *         httpMethod="POST", summary="Create one or more email templates.",
 	 *         notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *         responseClass="Success", nickname="createRoles",
+	 *         responseClass="Success", nickname="createEmailTemplates",
 	 *         @SWG\Parameters(
 	 *           @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to create.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="Roles"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="EmailTemplates"
 	 *           ),
 	 *           @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -166,13 +169,13 @@ class SystemRole extends SystemResource
 	 *         )
 	 *       ),
 	 *       @SWG\Operation(
-	 *         httpMethod="PUT", summary="Update one or more roles.",
+	 *         httpMethod="PUT", summary="Update one or more email templates.",
 	 *         notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *         responseClass="Success", nickname="updateRoles",
+	 *         responseClass="Success", nickname="updateEmailTemplates",
 	 *         @SWG\Parameters(
 	 *           @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="Roles"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="EmailTemplates"
 	 *           ),
 	 *           @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -190,9 +193,9 @@ class SystemRole extends SystemResource
 	 *         )
 	 *       ),
 	 *       @SWG\Operation(
-	 *         httpMethod="DELETE", summary="Delete one or more roles.",
+	 *         httpMethod="DELETE", summary="Delete one or more email templates.",
 	 *         notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *         responseClass="Success", nickname="deleteRoles",
+	 *         responseClass="Success", nickname="deleteEmailTemplates",
 	 *         @SWG\Parameters(
 	 *           @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -200,7 +203,7 @@ class SystemRole extends SystemResource
 	 *           ),
 	 *           @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to delete.",
-	 *             paramType="body", required="false", allowMultiple=false, dataType="Roles"
+	 *             paramType="body", required="false", allowMultiple=false, dataType="EmailTemplates"
 	 *           ),
 	 *           @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -221,12 +224,12 @@ class SystemRole extends SystemResource
 	 *   )
 	 *
 	 *   @SWG\Api(
-	 *     path="/system/role/{id}", description="Operations for individual role administration.",
+	 *     path="/system/email_template/{id}", description="Operations for individual email template administration.",
 	 *     @SWG\Operations(
 	 *       @SWG\Operation(
-	 *         httpMethod="GET", summary="Retrieve one role by identifier.",
+	 *         httpMethod="GET", summary="Retrieve one application by identifier.",
 	 *         notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
-	 *         responseClass="Role", nickname="getRole",
+	 *         responseClass="EmailTemplate", nickname="getEmailTemplate",
 	 *         @SWG\Parameters(
 	 *           @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -248,9 +251,9 @@ class SystemRole extends SystemResource
 	 *         )
 	 *       ),
 	 *       @SWG\Operation(
-	 *         httpMethod="PUT", summary="Update one role.",
+	 *         httpMethod="PUT", summary="Update one email template.",
 	 *         notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
-	 *         responseClass="Success", nickname="updateRole",
+	 *         responseClass="Success", nickname="updateEmailTemplate",
 	 *         @SWG\Parameters(
 	 *           @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -258,7 +261,7 @@ class SystemRole extends SystemResource
 	 *           ),
 	 *           @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="Role"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="EmailTemplate"
 	 *           ),
 	 *           @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -276,9 +279,9 @@ class SystemRole extends SystemResource
 	 *         )
 	 *       ),
 	 *       @SWG\Operation(
-	 *         httpMethod="DELETE", summary="Update one role.",
+	 *         httpMethod="DELETE", summary="Delete one email template.",
 	 *         notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
-	 *         responseClass="Success", nickname="deleteRole",
+	 *         responseClass="Success", nickname="deleteEmailTemplate",
 	 *         @SWG\Parameters(
 	 *           @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",

@@ -21,6 +21,8 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
+use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
@@ -146,6 +148,26 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		$this->_postProcess();
 
 		return $this->_response;
+	}
+
+	/**
+	 * @param string $resourceName
+	 *
+	 * @return \DreamFactory\Platform\Resources\BasePlatformRestResource|BasePlatformSystemModel
+	 */
+	public static function getNewResource( $resourceName = null )
+	{
+		return ResourceStore::resource( $resourceName );
+	}
+
+	/**
+	 * @param string $resourceName
+	 *
+	 * @return BasePlatformSystemModel
+	 */
+	public static function getNewModel( $resourceName = null )
+	{
+		return ResourceStore::model( $resourceName );
 	}
 
 	/**
