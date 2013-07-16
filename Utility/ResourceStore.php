@@ -39,6 +39,8 @@ use Platform\Resources\UserSession;
 /**
  * ResourceStore
  * A base service resource class to handle service resources of various kinds.
+ *
+ * This object DOES NOT check permissions.
  */
 class ResourceStore extends SeedUtility
 {
@@ -157,13 +159,14 @@ class ResourceStore extends SeedUtility
 	}
 
 	/**
-	 * @param int                       $id       Optional ID
-	 * @param array|\CDbCriteria|string $criteria An array of criteria, a criteria object, or a comma-delimited list of columns to select
-	 * @param array                     $params   Bind variable values
+	 * @param int                       $id        Optional ID
+	 * @param array|\CDbCriteria|string $criteria  An array of criteria, a criteria object, or a comma-delimited list of columns to select
+	 * @param array                     $params    Bind variable values
+	 * @param bool                      $singleRow If true, only one row is returned
 	 *
 	 * @return array
 	 */
-	public static function select( $id = null, $criteria = null, $params = array() )
+	public static function select( $id = null, $criteria = null, $params = array(), $singleRow = false )
 	{
 		//	Passed in a comma-delimited string of ids...
 		if ( $criteria && is_string( $criteria ) )
@@ -171,7 +174,7 @@ class ResourceStore extends SeedUtility
 			$criteria = array( 'select' => $criteria );
 		}
 
-		return static::bulkSelectById( null !== $id ? array( $id ) : null, $criteria, $params, true );
+		return static::bulkSelectById( null !== $id ? array( $id ) : null, $criteria, $params, $singleRow );
 	}
 
 	/**
@@ -189,7 +192,6 @@ class ResourceStore extends SeedUtility
 	 */
 	public static function bulkInsert( $records, $rollback = false, $fields = null, $extras = null )
 	{
-		static::checkPermission( 'create' );
 		static::_validateRecords( $records );
 
 		$_response = array();
@@ -249,7 +251,7 @@ class ResourceStore extends SeedUtility
 	 */
 	public static function bulkUpdateById( $ids, $record, $rollback = false, $fields = null, $extras = null )
 	{
-		static::_validateRecords( $records );
+		static::_validateRecords( $record );
 
 		if ( empty( $record ) )
 		{
@@ -282,7 +284,6 @@ class ResourceStore extends SeedUtility
 	 */
 	public static function bulkUpdate( $records, $rollback = false, $fields = null, $extras = null )
 	{
-		static::checkPermission( 'update' );
 		static::_validateRecords( $records );
 
 		$_response = array();
@@ -360,7 +361,6 @@ class ResourceStore extends SeedUtility
 	 */
 	public static function bulkDelete( $records, $rollback = false, $fields = null, $extras = null )
 	{
-		static::checkPermission( 'delete' );
 		static::_validateRecords( $records );
 
 		$_response = array();
@@ -413,8 +413,6 @@ class ResourceStore extends SeedUtility
 	 */
 	public static function bulkSelectById( $ids, $criteria = null, $params = array(), $single = false )
 	{
-		static::checkPermission( 'read' );
-
 		if ( empty( $ids ) || array( null ) == $ids )
 		{
 			$ids = null;
@@ -633,7 +631,7 @@ class ResourceStore extends SeedUtility
 		}
 
 		//	So, still not found, just let the SPL autoloader have a go and give up.
-		if ( !empty( $_className ) && !class_exists( $_className ) )
+		if ( !empty( $_className ) && !class_exists( $_className, false ) )
 		{
 			throw new InternalServerErrorException( 'Invalid resource type \'' . $_resourceName . '\' requested.' );
 		}
@@ -696,8 +694,6 @@ class ResourceStore extends SeedUtility
 	 */
 	protected static function _findByPk( $id = null, $criteria = null, $params = array() )
 	{
-		static::checkPermission( 'read' );
-
 		if ( null === ( $_resource = static::model()->findByPk( $id ? : static::$_resourceId, $criteria, $params ) ) )
 		{
 			throw new NotFoundException();
@@ -717,8 +713,6 @@ class ResourceStore extends SeedUtility
 	 */
 	protected static function _find( $criteria = null, $params = array() )
 	{
-		static::checkPermission( 'read' );
-
 		if ( null === ( $_resource = static::model()->find( $criteria, $params ) ) )
 		{
 			throw new NotFoundException();
@@ -738,8 +732,6 @@ class ResourceStore extends SeedUtility
 	 */
 	protected static function _findAll( $criteria = null, $params = array() )
 	{
-		static::checkPermission( 'read' );
-
 		if ( null === ( $_resources = static::model()->findAll( $criteria, $params ) ) )
 		{
 			throw new NotFoundException();

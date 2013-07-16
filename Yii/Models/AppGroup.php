@@ -17,6 +17,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+namespace DreamFactory\Platform\Yii\Models;
+
 /**
  * AppGroup.php
  * This is the model for "df_sys_app_group".
@@ -31,20 +33,8 @@
  *
  * @property App[]   $apps
  */
-class AppGroup extends BaseDspSystemModel
+class AppGroup extends BasePlatformSystemModel
 {
-	/**
-	 * Returns the static model of the specified AR class.
-	 *
-	 * @param string $className active record class name.
-	 *
-	 * @return AppGroup the static model class
-	 */
-	public static function model( $className = __CLASS__ )
-	{
-		return parent::model( $className );
-	}
-
 	/**
 	 * @return string the associated database table name
 	 */
@@ -83,40 +73,34 @@ class AppGroup extends BaseDspSystemModel
 	}
 
 	/**
+	 * @param array $additionalLabels
+	 *
 	 * @return array customized attribute labels (name=>label)
 	 */
-	public function attributeLabels()
+	public function attributeLabels( $additionalLabels = array() )
 	{
 		$_labels = array(
 			'name'        => 'Name',
 			'description' => 'Description',
 		);
 
-		return array_merge( parent::attributeLabels(), $_labels );
+		return parent::attributeLabels( array_merge( $_labels, $additionalLabels ) );
 	}
 
 	/**
 	 * Retrieves a list of models based on the current search/filter conditions.
 	 *
-	 * @return CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
+	 * @param null $criteria
+	 *
+	 * @return \CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
 	 */
-	public function search()
+	public function search( $criteria = null )
 	{
-		$_criteria = new CDbCriteria();
+		$_criteria = $criteria ? : new \CDbCriteria();
 
-		$_criteria->compare( 'id', $this->id );
 		$_criteria->compare( 'name', $this->name, true );
-		$_criteria->compare( 'created_date', $this->created_date, true );
-		$_criteria->compare( 'last_modified_date', $this->last_modified_date, true );
-		$_criteria->compare( 'created_by_id', $this->created_by_id );
-		$_criteria->compare( 'last_modified_by_id', $this->last_modified_by_id );
 
-		return new CActiveDataProvider(
-			$this,
-			array(
-				 'criteria' => $_criteria,
-			)
-		);
+		return parent::search( $criteria );
 	}
 
 	/**
@@ -152,5 +136,4 @@ class AppGroup extends BaseDspSystemModel
 			$hidden
 		);
 	}
-
 }

@@ -21,7 +21,7 @@ namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use Platform\Utility\SwaggerUtilities;
+use DreamFactory\Platform\Utility\SwaggerUtilities;
 use Swagger\Annotations as SWG;
 
 /**
@@ -304,11 +304,6 @@ class Service extends BaseSystemRestResource
 	 *
 	 * @return array|bool
 	 */
-	protected function _handleAction()
-	{
-		return parent::_handleAction();
-	}
-
 	/**
 	 * @param mixed $results
 	 */

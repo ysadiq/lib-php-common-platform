@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Common\Utility\DataFormat;
 use Kisma\Core\Utility\FilterInput;
 
 /**

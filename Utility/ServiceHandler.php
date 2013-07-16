@@ -29,7 +29,6 @@ use DreamFactory\Platform\Services\LocalFileSvc;
 use DreamFactory\Platform\Services\RemoteWebSvc;
 use DreamFactory\Platform\Services\RestService;
 use DreamFactory\Platform\Services\SchemaSvc;
-use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Services\UserManager;
 
 /**

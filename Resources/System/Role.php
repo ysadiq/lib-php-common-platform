@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
+use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use Swagger\Annotations as SWG;
 
 /**

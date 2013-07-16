@@ -17,16 +17,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace Platform\Resources;
+namespace DreamFactory\Platform\Resources\System;
 
+use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Yii\Models\App;
 use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\User;
+use DreamFactory\Platform\Yii\Models\Role;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Scalar;
 use Kisma\Core\Utility\Sql;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
@@ -93,18 +97,25 @@ class UserSession extends BaseSystemRestResource
 	 */
 	public function __construct( $consumer, $resources = array() )
 	{
-		$config = array(
-			'service_name'   => 'user',
-			'name'           => 'User Session',
-			'api_name'       => 'session',
-			'description'    => 'Resource for a user to manage their session.',
-			'is_active'      => true,
-			'resource_array' => $resources,
-		);
-		parent::__construct( $consumer, $config );
-
 		//	For better security. Get a random string from this link: http://tinyurl.com/randstr and put it here
 		static::$_randKey = static::$_randKey ? : Pii::db()->password;
+
+		parent::__construct(
+			$consumer,
+			array(
+				 'name'           => 'User Session',
+				 'service_name'   => 'user',
+				 'type'           => 'System',
+				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				 'api_name'       => 'session',
+				 'description'    => 'Resource for a user to manage their session.',
+				 'is_active'      => true,
+				 'resource_array' => $resources,
+				 'verb_aliases'   => array(
+					 static::Put => static::Post,
+				 )
+			)
+		);
 	}
 
 	// REST interface implementation
@@ -124,13 +135,11 @@ class UserSession extends BaseSystemRestResource
 	 */
 	protected function _handlePost()
 	{
-		$data = RestData::getPostDataAsArray();
-		$email = Option::get( $data, 'email' );
-		$password = Option::get( $data, 'password' );
+		$_data = RestData::getPostDataAsArray();
 
 		//$password = Utilities::decryptPassword($password);
 
-		return $this->userLogin( $email, $password );
+		return $this->userLogin( Option::get( $_data, 'email' ), Option::get( $_data, 'password' ) );
 	}
 
 	/**
@@ -170,33 +179,58 @@ class UserSession extends BaseSystemRestResource
 	 * @throws \Exception
 	 * @throws UnauthorizedException
 	 */
-	public static function userSession( $ticket = '' )
+	protected static function userSession( $ticket = null )
+	{
+		//	Process ticket
+		$_user = static::_validateTicket( $ticket );
+
+		try
+		{
+			$_result = static::generateSessionDataFromUser( null, $_user );
+
+			//	Additional stuff for session - launchpad mainly
+			return static::addSessionExtras( $_result, $_user->is_sys_admin, true );
+		}
+		catch ( \Exception $ex )
+		{
+			throw $ex;
+		}
+	}
+
+	/**
+	 * @param string $ticket
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\UnauthorizedException
+	 * @throws \Exception
+	 * @return User
+	 */
+	protected static function _validateTicket( $ticket )
 	{
 		if ( empty( $ticket ) )
 		{
 			try
 			{
-				$userId = static::validateSession();
+				$_userId = static::validateSession();
 			}
 			catch ( \Exception $ex )
 			{
 				static::userLogout();
 
-				// special case for possible guest user
-				$theConfig = ResourceStore::model( 'config' )->with(
-								 'guest_role.role_service_accesses',
-								 'guest_role.apps',
-								 'guest_role.services'
-							 )->find();
+				//	Special case for guest user
+				$_config = ResourceStore::model( 'config' )->with(
+							   'guest_role.role_service_accesses',
+							   'guest_role.apps',
+							   'guest_role.services'
+						   )->find();
 
-				if ( !empty( $theConfig ) )
+				if ( !empty( $_config ) )
 				{
-					if ( $theConfig->allow_guest_user )
+					if ( $_config->allow_guest_user )
 					{
-						$result = static::generateSessionDataFromRole( null, $theConfig->getRelated( 'guest_role' ) );
+						$_result = static::generateSessionDataFromRole( null, $_config->getRelated( 'guest_role' ) );
 
 						// additional stuff for session - launchpad mainly
-						return static::addSessionExtras( $result, false, true );
+						return static::addSessionExtras( $_result, false, true );
 					}
 				}
 
@@ -206,32 +240,32 @@ class UserSession extends BaseSystemRestResource
 		}
 		else
 		{
-			// process ticket
-			$creds = Utilities::decryptCreds( $ticket, "gorilla" );
-			$pieces = explode( ',', $creds );
-			$userId = $pieces[0];
-			$timestamp = $pieces[1];
-			$curTime = time();
-			$lapse = $curTime - $timestamp;
-			if ( empty( $userId ) || ( $lapse > 300 ) )
-			{ // only lasts 5 minutes
+			$_creds = Utilities::decryptCreds( $ticket, "gorilla" );
+			$_pieces = explode( ',', $_creds );
+			$_userId = $_pieces[0];
+			$_timestamp = $_pieces[1];
+			$_curTime = time();
+			$_lapse = $_curTime - $_timestamp;
+
+			if ( empty( $_userId ) || ( $_lapse > 300 ) )
+			{
+				// only lasts 5 minutes
 				static::userLogout();
-				throw new UnauthorizedException( "Ticket used for session generation is too old." );
+				throw new UnauthorizedException( 'Ticket expired' );
 			}
 		}
 
+		//	Load user...
 		try
 		{
-			$theUser = ResourceStore::model( 'user' )->with( 'role.role_service_accesses', 'role.apps', 'role.services' )->findByPk( $userId );
-			if ( null === $theUser )
-			{
-				throw new UnauthorizedException( "The user identified in the session or ticket does not exist in the system." );
-			}
-			$isSysAdmin = $theUser->is_sys_admin;
-			$result = static::generateSessionDataFromUser( null, $theUser );
+			$_user = ResourceStore::model( 'user' )->with( 'role.role_service_accesses', 'role.apps', 'role.services' )->findByPk( $_userId );
 
-			// additional stuff for session - launchpad mainly
-			return static::addSessionExtras( $result, $isSysAdmin, true );
+			if ( empty( $_user ) )
+			{
+				throw new UnauthorizedException( 'Invalid credentials' );
+			}
+
+			return $_user;
 		}
 		catch ( \Exception $ex )
 		{
@@ -294,27 +328,26 @@ class UserSession extends BaseSystemRestResource
 			throw new UnauthorizedException( 'The credentials supplied do not match system records.' );
 		}
 
-		if ( null === ( $theUser = $_model->getIdentity()->getUser() ) )
+		if ( null === ( $_user = $_model->getIdentity()->getUser() ) )
 		{
 			// bad user object
-			throw new InternalServerErrorException( "The user session contains no data." );
+			throw new InternalServerErrorException( 'The user session contains no data.' );
 		}
 
-		if ( 'y' !== $theUser->confirm_code )
+		if ( 'y' !== $_user->confirm_code )
 		{
-			throw new BadRequestException( "Login registration has not been confirmed." );
+			throw new BadRequestException( 'Login registration has not been confirmed.' );
 		}
 
-		$isSysAdmin = $theUser->is_sys_admin;
-		$result = static::generateSessionDataFromUser( $theUser->id, $theUser );
+		$_result = static::generateSessionDataFromUser( $_user->id, $_user );
 
 		// write back login datetime
-		$theUser->update( array( 'last_login_date' => date( 'c' ) ) );
+		$_user->update( array( 'last_login_date' => date( 'c' ) ) );
 
-		static::$_userId = $theUser->id;
+		static::$_userId = $_user->id;
 
-		// additional stuff for session - launchpad mainly
-		return static::addSessionExtras( $result, $isSysAdmin, true );
+		// 	Additional stuff for session - launchpad mainly
+		return static::addSessionExtras( $_result, $_user->is_sys_admin, true );
 	}
 
 	/**
@@ -340,185 +373,146 @@ class UserSession extends BaseSystemRestResource
 	}
 
 	/**
-	 * @param      $user_id
-	 * @param null $user
+	 * @param      $userId
+	 * @param User $user
 	 *
-	 * @throws UnauthorizedException
-	 * @throws ForbiddenException
+	 * @throws \DreamFactory\Platform\Exceptions\UnauthorizedException
+	 * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
+	 * @internal param int $user_id
 	 * @return array
 	 */
-	public static function generateSessionDataFromUser( $user_id, $user = null )
+	public static function generateSessionDataFromUser( $userId, $user = null )
 	{
-		if ( !isset( $user ) )
+		static $_fields = array( 'id', 'display_name', 'first_name', 'last_name', 'email', 'is_sys_admin', 'last_login_date' );
+		static $_appFields = array( 'id', 'api_name', 'is_active' );
+
+		/** @var User $_user */
+		$_user = $user ? : ResourceStore::model( 'user' )->with( 'role.role_service_accesses', 'role.apps', 'role.services' )->findByPk( $userId );
+
+		if ( empty( $_user ) )
 		{
-			$user = ResourceStore::model( 'user' )->with( 'role.role_service_accesses', 'role.apps', 'role.services' )->findByPk( $user_id );
-		}
-		if ( null === $user )
-		{
-			throw new UnauthorizedException( "The user with id $user_id does not exist in the system." );
-		}
-		$email = $user->getAttribute( 'email' );
-		if ( !$user->getAttribute( 'is_active' ) )
-		{
-			throw new ForbiddenException( "The user with email '$email' is not currently active." );
+			throw new UnauthorizedException( 'The user with id ' . $userId . ' is invalid.' );
 		}
 
-		$isSysAdmin = $user->getAttribute( 'is_sys_admin' );
-		$defaultAppId = $user->getAttribute( 'default_app_id' );
-		$fields = array( 'id', 'display_name', 'first_name', 'last_name', 'email', 'is_sys_admin', 'last_login_date' );
-		$userInfo = $user->getAttributes( $fields );
-		$data = $userInfo; // reply data
-		$allowedApps = array();
+		$_email = $_user->email;
 
-		if ( !$isSysAdmin )
+		if ( !$_user->is_active )
 		{
-			$theRole = $user->getRelated( 'role' );
-			if ( !isset( $theRole ) )
+			throw new ForbiddenException( "The user with email '$_email' is not currently active." );
+		}
+
+		$_isAdmin = $_user->getAttribute( 'is_sys_admin' );
+		$_defaultAppId = $_user->getAttribute( 'default_app_id' );
+		$_data = $_userInfo = $_user->getAttributes( $_fields );
+
+		$_perms = $_roleApps = $_allowedApps = array();
+
+		if ( !$_isAdmin )
+		{
+			if ( !$_user->role )
 			{
-				throw new ForbiddenException( "The user '$email' has not been assigned a role." );
+				throw new ForbiddenException( "The user '$_email' has not been assigned a role." );
 			}
-			if ( !$theRole->getAttribute( 'is_active' ) )
+
+			if ( !$_user->role->is_active )
 			{
 				throw new ForbiddenException( "The role this user is assigned to is not currently active." );
 			}
 
-			if ( !isset( $defaultAppId ) )
+			if ( !isset( $_defaultAppId ) )
 			{
-				$defaultAppId = $theRole->getAttribute( 'default_app_id' );
+				$_defaultAppId = $_user->role->default_app_id;
 			}
-			$role = $theRole->attributes;
-			$roleApps = array();
+
+			$_role = $_user->role->attributes;
+
 			/**
-			 * @var \App[] $theApps
+			 * @var \App[] $_apps
 			 */
-			$theApps = $theRole->getRelated( 'apps' );
-			if ( !empty( $theApps ) )
+			if ( $_user->role->apps )
 			{
-				$appFields = array( 'id', 'api_name', 'is_active' );
-				foreach ( $theApps as $app )
+				foreach ( $_apps as $_app )
 				{
-					$roleApps[] = $app->getAttributes( $appFields );
-					if ( $app->getAttribute( 'is_active' ) )
+					$_roleApps[] = $_app->getAttributes( $_appFields );
+
+					if ( $_app->is_active )
 					{
-						$allowedApps[] = $app;
+						$_allowedApps[] = $_app;
 					}
 				}
 			}
-			$role['apps'] = $roleApps;
-			$permsFields = array( 'service_id', 'component', 'access' );
-			/**
-			 * @var \RoleServiceAccess[] $thePerms
-			 * @var \Service[]           $theServices
-			 */
-			$thePerms = $theRole->getRelated( 'role_service_accesses' );
-			$theServices = $theRole->getRelated( 'services' );
-			$perms = array();
-			foreach ( $thePerms as $perm )
-			{
-				$permServiceId = $perm->getAttribute( 'service_id' );
-				$temp = $perm->getAttributes( $permsFields );
-				foreach ( $theServices as $service )
-				{
-					if ( $permServiceId == $service->getAttribute( 'id' ) )
-					{
-						$temp['service'] = $service->getAttribute( 'api_name' );
-					}
-				}
-				$perms[] = $temp;
-			}
-			$role['services'] = $perms;
-			$userInfo['role'] = $role;
+
+			$_role['apps'] = $_roleApps;
+			$_role['services'] = $_user->getRoleServicePermissions();
+			$_userInfo['role'] = $_role;
 		}
 
 		return array(
-			'public'         => $userInfo,
-			'data'           => $data,
-			'allowed_apps'   => $allowedApps,
-			'default_app_id' => $defaultAppId
+			'public'         => $_userInfo,
+			'data'           => $_data,
+			'allowed_apps'   => $_allowedApps,
+			'default_app_id' => $_defaultAppId
 		);
 	}
 
 	/**
-	 * @param      $role_id
-	 * @param null $role
+	 * @param int  $roleId
+	 * @param Role $role
 	 *
 	 * @throws UnauthorizedException
 	 * @throws ForbiddenException
 	 * @return array
 	 */
-	public static function generateSessionDataFromRole( $role_id, $role = null )
+	public static function generateSessionDataFromRole( $roleId, $role = null )
 	{
-		if ( !isset( $role ) )
+		static $_appFields = array( 'id', 'api_name', 'is_active' );
+
+		/** @var Role $_role */
+		$_role = $role ? : ResourceStore::model( 'role' )->with( 'role_service_accesses', 'apps', 'services' )->findByPk( $roleId );
+
+		if ( empty( $_role ) )
 		{
-			if ( empty( $role_id ) )
-			{
-				throw new UnauthorizedException( "No valid role is assigned for guest users." );
-			}
-			$role = ResourceStore::model( 'role' )->with( 'role_service_accesses', 'apps', 'services' )->findByPk( $role_id );
-		}
-		if ( null === $role )
-		{
-			throw new UnauthorizedException( "The role with id $role_id does not exist in the system." );
-		}
-		$name = $role->getAttribute( 'name' );
-		if ( !$role->getAttribute( 'is_active' ) )
-		{
-			throw new ForbiddenException( "The role '$name' is not currently active." );
+			throw new UnauthorizedException( "The role with id $roleId does not exist in the system." );
 		}
 
-		$userInfo = array();
-		$data = array(); // reply data
-		$allowedApps = array();
+		if ( !$_role->is_active )
+		{
+			throw new ForbiddenException( "The role '$role->name' is not currently active." );
+		}
 
-		$defaultAppId = $role->getAttribute( 'default_app_id' );
-		$roleData = $role->attributes;
+		$_allowedApps = $_data = $_userInfo = array();
+		$_defaultAppId = $_role->default_app_id;
+		$_roleData = $role->attributes;
+
 		/**
-		 * @var \App[] $theApps
+		 * @var \App[] $_apps
 		 */
-		$theApps = $role->getRelated( 'apps' );
-		$roleApps = array();
-		if ( !empty( $theApps ) )
+		if ( $_role->apps )
 		{
-			$appFields = array( 'id', 'api_name', 'is_active' );
-			foreach ( $theApps as $app )
+			$_roleApps = array();
+
+			/** @var App $_app */
+			foreach ( $_role->apps as $_app )
 			{
-				$roleApps[] = $app->getAttributes( $appFields );
-				if ( $app->getAttribute( 'is_active' ) )
+				$_roleApps[] = $_app->getAttributes( $_appFields );
+
+				if ( $_app->is_active )
 				{
-					$allowedApps[] = $app;
+					$_allowedApps[] = $_app;
 				}
 			}
+
+			$_roleData['apps'] = $_roleApps;
 		}
-		$roleData['apps'] = $roleApps;
-		$permsFields = array( 'service_id', 'component', 'access' );
-		/**
-		 * @var \RoleServiceAccess[] $thePerms
-		 * @var \Service[]           $theServices
-		 */
-		$thePerms = $role->getRelated( 'role_service_accesses' );
-		$theServices = $role->getRelated( 'services' );
-		$perms = array();
-		foreach ( $thePerms as $perm )
-		{
-			$permServiceId = $perm->getAttribute( 'service_id' );
-			$temp = $perm->getAttributes( $permsFields );
-			foreach ( $theServices as $service )
-			{
-				if ( $permServiceId == $service->getAttribute( 'id' ) )
-				{
-					$temp['service'] = $service->getAttribute( 'api_name' );
-				}
-			}
-			$perms[] = $temp;
-		}
-		$roleData['services'] = $perms;
-		$userInfo['role'] = $roleData;
+
+		$_roleData['services'] = $_role->getRoleServicePermissions();
+		$_userInfo['role'] = $_roleData;
 
 		return array(
-			'public'         => $userInfo,
-			'data'           => $data,
-			'allowed_apps'   => $allowedApps,
-			'default_app_id' => $defaultAppId
+			'public'         => $_userInfo,
+			'data'           => $_data,
+			'allowed_apps'   => $_allowedApps,
+			'default_app_id' => $_defaultAppId
 		);
 	}
 
@@ -535,11 +529,13 @@ class UserSession extends BaseSystemRestResource
 
 		// helper for non-browser-managed sessions
 		$_sessionId = FilterInput::server( 'HTTP_X_DREAMFACTORY_SESSION_TOKEN' );
-//		Log::debug('passed in session ' . $_sessionId);
+		//Log::debug('passed in session ' . $_sessionId);
+
 		if ( !empty( $_sessionId ) )
 		{
 			session_write_close();
 			session_id( $_sessionId );
+
 			if ( session_start() )
 			{
 				if ( !Pii::guest() && false === Pii::getState( 'df_authenticated', false ) )
@@ -556,13 +552,14 @@ class UserSession extends BaseSystemRestResource
 		throw new UnauthorizedException( "There is no valid session for the current request." );
 	}
 
+	/**
+	 * @return bool
+	 */
 	public static function isSystemAdmin()
 	{
 		static::_checkCache();
 
-		$_public = Option::get( static::$_cache, 'public' );
-
-		return Option::getBool( $_public, 'is_sys_admin' );
+		return Scalar::boolval( Option::getDeep( static::$_cache, 'public', 'is_sys_admin' ) );
 	}
 
 	/**
@@ -573,58 +570,49 @@ class UserSession extends BaseSystemRestResource
 	 * @throws ForbiddenException
 	 * @throws BadRequestException
 	 */
-	public static function checkSessionPermission( $request, $service, $component = '' )
+	public static function checkSessionPermission( $request, $service, $component = null )
 	{
 		static::_checkCache();
 
 		$_public = Option::get( static::$_cache, 'public' );
-		$admin = Option::getBool( $_public, 'is_sys_admin' );
-		if ( $admin )
+
+		if ( false !== ( $_admin = Option::getBool( $_public, 'is_sys_admin' ) ) )
 		{
 			return; // no need to check role
 		}
 
-		$roleInfo = Option::get( $_public, 'role' );
-		if ( empty( $roleInfo ) )
+		if ( null === ( $_roleInfo = Option::get( $_public, 'role' ) ) )
 		{
 			// no role assigned, if not sys admin, denied service
 			throw new ForbiddenException( "A valid user role or system administrator is required to access services." );
 		}
 
 		// check if app allowed in role
-		$appName = Option::get( $GLOBALS, 'app_name' );
-		if ( empty( $appName ) )
+		if ( null !== ( $_appName = Option::get( $GLOBALS, 'app_name' ) ) )
 		{
-			throw new BadRequestException( "A valid application name is required to access services." );
+			throw new BadRequestException( 'A valid application name is required to access services.' );
 		}
 
-		$apps = Option::get( $roleInfo, 'apps' );
-		if ( !is_array( $apps ) || empty( $apps ) )
+		$_found = false;
+
+		/** @var App $_app */
+		foreach ( Option::clean( Option::get( $_roleInfo, 'apps' ) ) as $_app )
 		{
-			throw new ForbiddenException( "Access to application '$appName' is not provisioned for this user's role." );
-		}
-
-		$found = false;
-
-		foreach ( $apps as $app )
-		{
-			$temp = Option::get( $app, 'api_name' );
-
-			if ( 0 == strcasecmp( $appName, $temp ) )
+			if ( 0 == strcasecmp( $_appName, Option::get( $_app, 'api_name' ) ) )
 			{
-				$found = true;
+				$_found = true;
 				break;
 			}
 		}
 
-		if ( !$found )
+		if ( !$_found )
 		{
-			throw new ForbiddenException( "Access to application '$appName' is not provisioned for this user's role." );
+			throw new ForbiddenException( "Access to application '$_appName' is not provisioned for this user's role." );
 		}
 
-		$services = Option::get( $roleInfo, 'services' );
+		$_services = Option::clean( Option::get( $_roleInfo, 'services' ) );
 
-		if ( !is_array( $services ) || empty( $services ) )
+		if ( !is_array( $_services ) || empty( $services ) )
 		{
 			throw new ForbiddenException( "Access to service '$service' is not provisioned for this user's role." );
 		}
@@ -634,7 +622,7 @@ class UserSession extends BaseSystemRestResource
 		$serviceAllowed = false;
 		$serviceFound = false;
 
-		foreach ( $services as $svcInfo )
+		foreach ( $_services as $svcInfo )
 		{
 			$theService = Option::get( $svcInfo, 'service', '' );
 			$theAccess = Option::get( $svcInfo, 'access', '' );
@@ -753,16 +741,16 @@ class UserSession extends BaseSystemRestResource
 	}
 
 	/**
-	 * @param $userId
+	 * @param $_userId
 	 */
-	public static function setCurrentUserId( $userId )
+	public static function setCurrentUserId( $_userId )
 	{
 		if ( !Pii::guest() && false === Pii::getState( 'df_authenticated' ) )
 		{
-			static::$_userId = $userId;
+			static::$_userId = $_userId;
 		}
 
-		return $userId;
+		return $_userId;
 	}
 
 	/**
@@ -794,23 +782,23 @@ class UserSession extends BaseSystemRestResource
 		{
 			try
 			{
-				$userId = static::validateSession();
-				static::$_cache = static::generateSessionDataFromUser( $userId );
+				$_userId = static::validateSession();
+				static::$_cache = static::generateSessionDataFromUser( $_userId );
 			}
 			catch ( \Exception $ex )
 			{
 				// special case for possible guest user
-				$theConfig = ResourceStore::model( 'config' )->with(
-								 'guest_role.role_service_accesses',
-								 'guest_role.apps',
-								 'guest_role.services'
-							 )->find();
+				$_config = ResourceStore::model( 'config' )->with(
+							   'guest_role.role_service_accesses',
+							   'guest_role.apps',
+							   'guest_role.services'
+						   )->find();
 
-				if ( !empty( $theConfig ) )
+				if ( !empty( $_config ) )
 				{
-					if ( DataFormat::boolval( $theConfig->allow_guest_user ) )
+					if ( DataFormat::boolval( $_config->allow_guest_user ) )
 					{
-						static::$_cache = static::generateSessionDataFromRole( null, $theConfig->getRelated( 'guest_role' ) );
+						static::$_cache = static::generateSessionDataFromRole( null, $_config->getRelated( 'guest_role' ) );
 
 						return;
 					}
@@ -832,9 +820,9 @@ class UserSession extends BaseSystemRestResource
 	public static function addSessionExtras( $session, $is_sys_admin = false, $add_apps = false )
 	{
 		$data = Option::get( $session, 'data' );
-		$userId = Option::get( $data, 'id', '' );
-		$timestamp = time();
-		$ticket = Utilities::encryptCreds( "$userId,$timestamp", "gorilla" );
+		$_userId = Option::get( $data, 'id', '' );
+		$_timestamp = time();
+		$ticket = Utilities::encryptCreds( "$_userId,$_timestamp", "gorilla" );
 		$data['ticket'] = $ticket;
 		$data['ticket_expiry'] = time() + ( 5 * 60 );
 		$data['session_id'] = session_id();
@@ -843,12 +831,12 @@ class UserSession extends BaseSystemRestResource
 		{
 			$appFields = 'id,api_name,name,description,is_url_external,launch_url,requires_fullscreen,allow_fullscreen_toggle,toggle_location';
 			/**
-			 * @var \App[] $theApps
+			 * @var \App[] $_apps
 			 */
-			$theApps = Option::get( $session, 'allowed_apps', array() );
+			$_apps = Option::get( $session, 'allowed_apps', array() );
 			if ( $is_sys_admin )
 			{
-				$theApps = ResourceStore::model( 'app' )->findAll( 'is_active = :ia', array( ':ia' => 1 ) );
+				$_apps = ResourceStore::model( 'app' )->findAll( 'is_active = :ia', array( ':ia' => 1 ) );
 			}
 			/**
 			 * @var \AppGroup[] $theGroups
@@ -856,13 +844,13 @@ class UserSession extends BaseSystemRestResource
 			$theGroups = ResourceStore::model( 'app_group' )->with( 'apps' )->findAll();
 			$appGroups = array();
 			$noGroupApps = array();
-			$defaultAppId = Option::get( $session, 'default_app_id' );
-			foreach ( $theApps as $app )
+			$_defaultAppId = Option::get( $session, 'default_app_id' );
+			foreach ( $_apps as $app )
 			{
 				$appId = $app->id;
 				$tempGroups = $app->getRelated( 'app_groups' );
 				$appData = $app->getAttributes( explode( ',', $appFields ) );
-				$appData['is_default'] = ( $defaultAppId === $appId );
+				$appData['is_default'] = ( $_defaultAppId === $appId );
 				$found = false;
 				foreach ( $theGroups as $g_key => $group )
 				{

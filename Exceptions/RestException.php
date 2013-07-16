@@ -91,4 +91,21 @@ class RestException extends PlatformServiceException implements HttpResponse
 	{
 		return $this->_statusCode;
 	}
+
+	/**
+	 * This ONLY exists because Yii uses public variables ARGH!
+	 *
+	 * @param string $name
+	 *
+	 * @return mixed
+	 */
+	public function __get( $name )
+	{
+		$name = strtolower( $name );
+
+		if ( method_exists( $this, 'get' . $name ) )
+		{
+			return $this->{'get' . $name}();
+		}
+	}
 }

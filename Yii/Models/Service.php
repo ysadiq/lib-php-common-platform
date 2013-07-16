@@ -97,8 +97,9 @@ class Service extends BasePlatformSystemModel
 			$_tableName = static::model()->tableName();
 
 			//	List all available services from db
-			$_services = Sql::query( <<<MYSQL
-SELECT
+			$_services = Sql::query(
+				<<<MYSQL
+				SELECT
 	`api_name`,
 	`name`
 FROM
@@ -464,5 +465,4 @@ MYSQL
 			$hidden
 		);
 	}
-
 }

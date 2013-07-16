@@ -359,4 +359,45 @@ SQL;
 			throw new Exception( "Error updating many to one map assignment.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
+
+	/**
+	 * @param array $columns The columns to return in the permissions array
+	 *
+	 * @return array|null
+	 */
+	public function getRoleServicePermissions( $columns = null )
+	{
+		static $_permsFields = array( 'service_id', 'component', 'access' );
+
+		$_perms = null;
+
+		/**
+		 * @var \RoleServiceAccess[] $_permissions
+		 * @var \Service[]           $_services
+		 */
+		if ( $this->hasRelated( 'role' ) && $this->role && $this->role->role_service_accesses )
+		{
+			/** @var Role $_perm */
+			foreach ( $this->role->role_service_accesses as $_perm )
+			{
+				$_permServiceId = $_perm->service_id;
+				$_temp = $_perm->getAttributes( $columns ? : $_permsFields );
+
+				if ( $this->role->services )
+				{
+					foreach ( $this->role->services as $_service )
+					{
+						if ( $_permServiceId == $_service->id )
+						{
+							$_temp['service'] = $_service->api_name;
+						}
+					}
+				}
+
+				$_perms[] = $_temp;
+			}
+		}
+
+		return $_perms;
+	}
 }

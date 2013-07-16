@@ -105,11 +105,11 @@ class Config extends BaseSystemRestResource
 	 *
 	 * @return array
 	 */
-	public static function retrieveConfig( $fields = '', $includeSchema = false, $extras = array() )
+	public static function retrieveConfig( $fields = null, $includeSchema = false, $extras = array() )
 	{
 		//@TODO	Currently allow everyone to query config, long term this needs to hide certain fields
 		//@TODO //UserManager::checkSessionPermission( 'read', 'system', 'config' );
 
-		return parent::select( null, $fields, $includeSchema, $extras );
+		return parent::select( null, $fields, $includeSchema, $extras, true );
 	}
 }
