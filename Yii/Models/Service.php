@@ -194,7 +194,7 @@ MYSQL
 			array( 'base_url', 'length', 'max' => 255 ),
 			array( 'description, credentials, parameters, headers', 'safe' ),
 			array(
-				'id, name, api_name, is_active, type, storage_name, storage_type',
+				'id, name, api_name, is_active, type, type_id, storage_type_id, native_format_id, storage_name, storage_type',
 				'safe',
 				'on' => 'search'
 			),
@@ -233,6 +233,7 @@ MYSQL
 					 'is_active'     => 'Is Active',
 					 'is_system'     => 'Is System',
 					 'type'          => 'Type',
+					 'type_id'       => 'Type ID',
 					 'storage_name'  => 'Storage Name',
 					 'storage_type'  => 'Storage Type',
 					 'credentials'   => 'Credentials',
@@ -393,7 +394,7 @@ MYSQL
 		$this->is_active = ( 0 != $this->is_active );
 
 		//	Add fake field for client
-		switch ( $this->type )
+		switch ( $this->type_id )
 		{
 			case PlatformServiceTypes::LOCAL_SQL_DB:
 			case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
@@ -451,6 +452,7 @@ MYSQL
 					 'description',
 					 'is_active',
 					 'type',
+					 'type_id',
 					 'is_system',
 					 'storage_name',
 					 'storage_type',

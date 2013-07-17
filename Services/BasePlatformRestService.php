@@ -24,8 +24,10 @@ use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
+use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
+use Platform\Resources\UserSession;
 use Swagger\Annotations as SWG;
 
 /**
@@ -315,6 +317,18 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	}
 
 	/**
+	 * @param string $operation
+	 * @param string $service
+	 * @param string $resource
+	 *
+	 * @return bool
+	 */
+	public static function checkPermission( $operation, $service, $resource = null )
+	{
+		return ResourceStore::checkPermission( $operation, $service, $resource );
+	}
+
+	/**
 	 * Adds criteria garnered from the query string from DataTables
 	 *
 	 * @param array|\CDbCriteria $criteria
@@ -540,5 +554,13 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function getVerbAliases()
 	{
 		return $this->_verbAliases;
+	}
+
+	/**
+	 * @return string The action actually requested
+	 */
+	public function getRequestedAction()
+	{
+		return $this->_originalAction ? : $this->_action;
 	}
 }

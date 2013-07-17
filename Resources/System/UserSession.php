@@ -24,7 +24,6 @@ use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Yii\Models\App;
 use DreamFactory\Platform\Yii\Models\Config;
-use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Platform\Yii\Models\Role;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;

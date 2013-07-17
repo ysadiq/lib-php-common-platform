@@ -166,7 +166,7 @@ class UserManager extends BaseSystemRestService
 
 			case 'session':
 				$obj = new UserSession( $this );
-				$result = $obj->processRequest( $this->_action );
+				$result = $obj->processRequest( null, $this->_action );
 				break;
 
 			case 'profile':

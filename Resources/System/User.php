@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
+use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use Swagger\Annotations as SWG;
 
@@ -53,41 +54,31 @@ use Swagger\Annotations as SWG;
  * @SWG\Property(name="last_modified_date",type="string",description="Date this user was last modified."),
  * @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this user.")
  * )
- *
  */
 class User extends BaseSystemRestResource
 {
-	//*************************************************************************
-	//	Constants
-	//*************************************************************************
-
-	//*************************************************************************
-	//	Members
-	//*************************************************************************
-
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
 
 	/**
-	 * Creates a new User
-	 *
-	 *
+	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+	 * @param array                                               $resources
 	 */
-	public function __construct( $resource_array = array() )
+	public function __construct( $consumer, $resources = array() )
 	{
 		$config = array(
 			'service_name' => 'system',
 			'name'         => 'User',
 			'api_name'     => 'user',
 			'type'         => 'System',
+			'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
 			'description'  => 'System user administration.',
 			'is_active'    => true,
 		);
 
-		parent::__construct( $config, $resource_array );
+		parent::__construct( $consumer, $config, $resources );
 	}
-
 	// Resource interface implementation
 
 	// REST interface implementation
@@ -308,8 +299,4 @@ class User extends BaseSystemRestResource
 	 *
 	 * @return array|bool
 	 */
-	protected function _handleAction()
-	{
-		return parent::_handleAction();
-	}
 }

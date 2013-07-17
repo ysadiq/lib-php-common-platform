@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Log;
 use DreamFactory\Platform\Exceptions\RestException;
@@ -104,12 +105,7 @@ class RestResponse extends HttpResponse
 	 */
 	public static function sendResults( $result, $code = RestResponse::Ok, $result_format = null, $desired_format = 'json' )
 	{
-		/**
-		 * @var \Platform\Yii\Components\PlatformWebApplication $app
-		 */
-		$app = \Yii::app();
-
-		// Some REST services may handle the response, they just return null
+		//	Some REST services may handle the response, they just return null
 		if ( !is_null( $result ) )
 		{
 			$code = static::getHttpStatusCode( $code );
@@ -121,15 +117,17 @@ class RestResponse extends HttpResponse
 				case 'json':
 					static::sendJsonResponse( $result );
 					break;
+
 				case 'xml':
 					static::sendXmlResponse( $result );
 					break;
 			}
 
-			// Add additional headers for CORS support
-			$app->addCorsHeaders();
+			//	Add additional headers for CORS support
+			Pii::app()->addCorsHeaders();
 		}
-		$app->end();
+
+		Pii::end();
 	}
 
 	/**

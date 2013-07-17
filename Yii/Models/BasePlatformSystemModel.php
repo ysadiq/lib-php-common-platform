@@ -92,6 +92,13 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	{
 		$_map = array( 'created_by_id', 'last_modified_by_id' );
 
+		//	Default to everything if none are specified
+		if ( empty( $mappings ) )
+		{
+			$mappings = $this->getTableSchema()->getColumnNames();
+			$mappings = array_combine( $mappings, $mappings );
+		}
+
 		return parent::restMap( array_combine( $_map, $_map ) + $mappings );
 	}
 

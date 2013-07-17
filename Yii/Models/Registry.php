@@ -17,6 +17,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+namespace DreamFactory\Platform\Yii\Models;
+
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Sql;
@@ -38,7 +40,7 @@ use Platform\Yii\Utility\Pii;
  * @property int                 $enabled_ind
  * @property string              $last_use_date
  */
-class Registry extends BaseDspSystemModel
+class Registry extends BasePlatformSystemModel
 {
 	//*************************************************************************
 	//* Constants
@@ -295,7 +297,7 @@ MYSQL;
 			parent::restMap(),
 			array(
 				 'id'                  => 'id',
-				 'service_type_nbr'   => 'type',
+				 'service_type_nbr'    => 'type',
 				 'service_tag_text'    => 'tag',
 				 'service_name_text'   => 'name',
 				 'service_config_text' => 'config',

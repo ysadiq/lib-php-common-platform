@@ -20,11 +20,19 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Resources\System\Config;
+use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Utility\Packager;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
 use DreamFactory\Platform\Yii\Models\App;
+use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
+use DreamFactory\Platform\Yii\Models\EmailTemplate;
+use DreamFactory\Platform\Yii\Models\Service;
+use DreamFactory\Platform\Yii\Models\User;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -33,11 +41,6 @@ use Kisma\Core\Interfaces\HttpResponse;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Interfaces\PlatformStates;
-use DreamFactory\Platform\Resources\AppGroup;
-use DreamFactory\Platform\Resources\EmailTemplate;
-use DreamFactory\Platform\Resources\Role;
-use DreamFactory\Platform\Resources\Service;
-use DreamFactory\Platform\Resources\User;
 use DreamFactory\Platform\Utility\Curl;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Utility\FileUtilities;
@@ -183,7 +186,7 @@ class SystemManager extends BaseSystemRestService
 			}
 
 			//	Need to check for the default services
-			if ( 0 == \Service::model()->count() )
+			if ( 0 == Service::model()->count() )
 			{
 				return PlatformStates::DATA_REQUIRED;
 			}
@@ -346,12 +349,12 @@ class SystemManager extends BaseSystemRestService
 
 		try
 		{
-			/** @var \User $_user */
-			$_user = \User::model()->find( 'email = :email', array( ':email' => $_email ) );
+			/** @var User $_user */
+			$_user = User::model()->find( 'email = :email', array( ':email' => $_email ) );
 
 			if ( empty( $_user ) )
 			{
-				$_user = new \User();
+				$_user = new User();
 				$_firstName = Pii::getState( 'first_name', Option::get( $_model, 'firstName' ) );
 				$_lastName = Pii::getState( 'last_name', Option::get( $_model, 'lastName' ) );
 				$_displayName = Pii::getState(
@@ -402,7 +405,7 @@ class SystemManager extends BaseSystemRestService
 	/**
 	 * Configures the default system data.
 	 *
-	 * @throws \Platform\Exceptions\InternalServerErrorException
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @throws \Exception
 	 * @return boolean whether configuration is successful
 	 */
@@ -420,7 +423,7 @@ class SystemManager extends BaseSystemRestService
 			switch ( $table )
 			{
 				case 'df_sys_service':
-					$result = \Service::model()->findAll();
+					$result = Service::model()->findAll();
 					if ( empty( $result ) )
 					{
 						if ( empty( $content ) )
@@ -431,7 +434,7 @@ class SystemManager extends BaseSystemRestService
 						{
 							try
 							{
-								$obj = new \Service;
+								$obj = new Service();
 								$obj->setAttributes( $service );
 								$obj->save();
 							}
@@ -443,7 +446,7 @@ class SystemManager extends BaseSystemRestService
 					}
 					break;
 				case 'df_sys_email_template':
-					$result = \EmailTemplate::model()->findAll();
+					$result = EmailTemplate::model()->findAll();
 					if ( empty( $result ) )
 					{
 						if ( !empty( $content ) )
@@ -452,7 +455,7 @@ class SystemManager extends BaseSystemRestService
 							{
 								try
 								{
-									$obj = new \EmailTemplate;
+									$obj = new EmailTemplate();
 									$obj->setAttributes( $template );
 									$obj->save();
 								}
@@ -482,7 +485,7 @@ class SystemManager extends BaseSystemRestService
 							{
 								try
 								{
-									$obj = new \Service;
+									$obj = new Service();
 									$obj->setAttributes( $service );
 									$obj->save();
 								}
@@ -494,7 +497,7 @@ class SystemManager extends BaseSystemRestService
 						}
 						break;
 					case 'app_package':
-						$result = \App::model()->findAll();
+						$result = App::model()->findAll();
 						if ( empty( $result ) )
 						{
 							if ( !empty( $content ) )
@@ -750,124 +753,41 @@ class SystemManager extends BaseSystemRestService
 	 */
 	protected function _handleResource()
 	{
-		switch ( $this->_resource )
+		if ( empty( $this->_resource ) )
 		{
-			case '':
-				switch ( $this->_action )
-				{
-					case self::Get:
-						return $this->_listResources();
-						break;
-					default:
-						return false;
-				}
-				break;
-			case 'config':
-				$obj = new Config( $this );
+			if ( static::Get == $this->_action )
+			{
+				return $this->_listResources();
+			}
 
-				return $obj->processRequest( $this->_resource, $this->_action );
-				break;
-			case 'app':
-			case 'app_group':
-			case 'role':
-			case 'service':
-			case 'user':
-			case 'email_template':
-				$_resource = static::getNewResource( $this->_resource );
-				$_resource->setResourceArray( $this->_resourceArray );
-
-				return $_resource->processRequest( $this->_action );
-				break;
-			default:
-				$_class = 'DreamFactory\\Platform\\Resources\\System\\' . ucfirst( Inflector::deneutralize( $this->_resource ) );
-
-				if ( \Kisma::get( 'app.autoloader' )->loadClass( $_class ) )
-				{
-					/** @var BasePlatformRestResource $_resource */
-					$_resource = new $_class( $this, array( 'resource_array' => $this->_resourceArray ) );
-
-					return $_resource->processRequest( $this->_resource, $this->_action );
-				}
-				break;
+			return false;
 		}
 
-		return false;
+		$_resource = ResourceStore::resource( $this->_resource, $this->_resourceArray );
+
+		return $_resource->processRequest( $this->_resource, $this->_action );
 	}
 
 	/**
 	 * @param $resource
 	 *
-	 * @throws \Platform\Exceptions\BadRequestException
-	 * @return \App|\AppGroup|\Role|\Service|\User|\EmailTemplate
+	 * @throws BadRequestException
+	 * @return BasePlatformSystemModel
 	 */
 	public static function getResourceModel( $resource )
 	{
 		return ResourceStore::model( $resource );
-//		switch ( strtolower( $resource ) )
-//		{
-//			case 'app':
-//				$model = \App::model();
-//				break;
-//			case 'app_group':
-//			case 'appgroup':
-//				$model = \AppGroup::model();
-//				break;
-//			case 'role':
-//				$model = \Role::model();
-//				break;
-//			case 'service':
-//				$model = \Service::model();
-//				break;
-//			case 'user':
-//				$model = \User::model();
-//				break;
-//			case 'email_template':
-//				$model = \EmailTemplate::model();
-//				break;
-//			default:
-//				//	Let the resource store have a go...
-//				$model = ResourceStore::model( $resource );
-//				break;
-//		}
-//
-//		return $model;
 	}
 
 	/**
 	 * @param $resource
 	 *
-	 * @return \App|\AppGroup|\Role|\Service|\User|\EmailTemplate
+	 * @return BasePlatformSystemModel
 	 * @throws InternalServerErrorException
 	 */
 	public static function getNewModel( $resource )
 	{
-		switch ( strtolower( $resource ) )
-		{
-			case 'app':
-				$obj = new \App;
-				break;
-			case 'app_group':
-			case 'appgroup':
-				$obj = new \AppGroup;
-				break;
-			case 'role':
-				$obj = new \Role;
-				break;
-			case 'service':
-				$obj = new \Service;
-				break;
-			case 'user':
-				$obj = new \User;
-				break;
-			case 'email_template':
-				$obj = new \EmailTemplate();
-				break;
-			default:
-				throw new InternalServerErrorException( "Attempting to create an invalid system model '$resource'." );
-				break;
-		}
-
-		return $obj;
+		return stati::getResourceModel( $resource );
 	}
 
 	//-------- System Helper Operations -------------------------------------------------
@@ -884,7 +804,7 @@ class SystemManager extends BaseSystemRestService
 		{
 			try
 			{
-				$app = \App::model()->findByPk( $id );
+				$app = App::model()->findByPk( $id );
 				if ( isset( $app ) )
 				{
 					return $app->getAttribute( 'name' );
@@ -911,7 +831,7 @@ class SystemManager extends BaseSystemRestService
 		{
 			try
 			{
-				$app = \App::model()->find( 'name=:name', array( ':name' => $name ) );
+				$app = App::model()->find( 'name=:name', array( ':name' => $name ) );
 				if ( isset( $app ) )
 				{
 					return $app->getPrimaryKey();
@@ -964,7 +884,7 @@ class SystemManager extends BaseSystemRestService
 	/**
 	 * Automatically logs in the first admin user
 	 *
-	 * @param \User $user
+	 * @param User $user
 	 *
 	 * @return bool
 	 */
@@ -972,16 +892,16 @@ class SystemManager extends BaseSystemRestService
 	{
 		try
 		{
-			/** @var \User $_user */
+			/** @var User $_user */
 			$_user = $user
-				? : \User::model()->find(
+				? : User::model()->find(
 					'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
 					array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
 				);
 
 			if ( !empty( $_user ) )
 			{
-				$_identity = new \PlatformUserIdentity( $_user->email, null );
+				$_identity = new PlatformUserIdentity( $_user->email, null );
 
 				if ( $_identity->logInUser( $_user ) )
 				{

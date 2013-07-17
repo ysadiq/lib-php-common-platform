@@ -17,6 +17,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+namespace DreamFactory\Platform\Yii\Models;
+
 /**
  * AppServiceRelation.php
  * The system application to service relationship model for the DSP
@@ -33,7 +35,7 @@
  * @property App     $app
  * @property Service $service
  */
-class AppServiceRelation extends BaseDspSystemModel
+class AppServiceRelation extends BasePlatformSystemModel
 {
 	/**
 	 * Returns the static model of the specified AR class.

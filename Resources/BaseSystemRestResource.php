@@ -108,18 +108,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	}
 
 	/**
-	 * @param string $operation
-	 * @param string $service
-	 * @param string $resource
-	 *
-	 * @return bool
-	 */
-	public static function checkPermission( $operation, $service = null, $resource = null )
-	{
-		return ResourceStore::checkPermission( $operation, $service, $resource );
-	}
-
-	/**
 	 * @param string $resource
 	 *
 	 * @return BasePlatformSystemModel
@@ -137,9 +125,14 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 *
 	 * @return array
 	 */
-	public static function select( $ids = null, $fields = '', $includeSchema = false, $extras = array() )
+	public static function select( $ids = null, $fields = null, $includeSchema = false, $extras = array(), $singleRow = false )
 	{
-		return ResourceStore::bulkSelectById( $ids, empty( $fields ) ? null : array( 'select' => $fields ), array(), ( false === strpos( $ids, ',' ) || empty( $ids ) ) );
+		return ResourceStore::bulkSelectById(
+			$ids,
+			empty( $fields ) ? null : array( 'select' => $fields ),
+			array(),
+			$singleRow
+		);
 	}
 
 	/**
@@ -228,6 +221,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			return ResourceStore::select( $this->_resourceId );
 		}
 
+		$_singleRow = false;
+
 		$_payload = $this->_determineRequestedResource( $_ids, $_records );
 
 		//	Multiple resources by ID
@@ -245,6 +240,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			{
 				$_ids[] = Option::get( $_record, $_pk );
 			}
+
+			$_singleRow = ( 1 == sizeof( $_ids ) );
 
 			return ResourceStore::bulkSelectById( $_ids );
 		}
@@ -283,7 +280,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 				$_criteria,
 				array(),
 				Option::getBool( $_payload, 'include_count' ),
-				Option::getBool( $_payload, 'include_schema' )
+				Option::getBool( $_payload, 'include_schema' ),
+				$_singleRow
 			)
 		);
 	}

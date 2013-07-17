@@ -22,8 +22,8 @@ namespace DreamFactory\Platform\Yii\Models;
 use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Sql;
-use Platform\Resources\UserSession;
-use Platform\Utility\DataFormat;
+use DreamFactory\Platform\Resources\System\UserSession;
+use DreamFactory\Common\Utility\DataFormat;
 
 /**
  * User.php
@@ -148,7 +148,7 @@ class User extends BasePlatformSystemModel
 		{
 			if ( !empty( $values['password'] ) )
 			{
-				$this->password = CPasswordHelper::hashPassword( $values['password'] );
+				$this->password = \CPasswordHelper::hashPassword( $values['password'] );
 			}
 
 			unset( $values['password'] );
@@ -158,7 +158,7 @@ class User extends BasePlatformSystemModel
 		{
 			if ( !empty( $values['security_answer'] ) )
 			{
-				$this->security_answer = CPasswordHelper::hashPassword( $values['security_answer'] );
+				$this->security_answer = \CPasswordHelper::hashPassword( $values['security_answer'] );
 			}
 
 			unset( $values['security_answer'] );
@@ -303,7 +303,7 @@ class User extends BasePlatformSystemModel
 				 ->with( 'role.role_service_accesses', 'role.apps', 'role.services' )
 				 ->findByAttributes( array( 'email' => $userName ) );
 
-		if ( empty( $_user ) || !CPasswordHelper::verifyPassword( $password, $_user->password ) )
+		if ( empty( $_user ) || !\CPasswordHelper::verifyPassword( $password, $_user->password ) )
 		{
 			return false;
 		}

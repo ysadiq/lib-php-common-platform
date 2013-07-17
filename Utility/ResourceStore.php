@@ -34,7 +34,7 @@ use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Platform\Resources\UserSession;
+use DreamFactory\Platform\Resources\System\UserSession;
 
 /**
  * ResourceStore
@@ -55,7 +55,7 @@ class ResourceStore extends SeedUtility
 	/**
 	 * @var string
 	 */
-	const DEFAULT_RESOURCE_NAMESPACE = 'DreamFactory\\Platform\\Resources\\';
+	const DEFAULT_RESOURCE_NAMESPACE = 'DreamFactory\\Platform\\Resources\\System\\';
 
 	//*************************************************************************
 	//* Members
@@ -162,7 +162,7 @@ class ResourceStore extends SeedUtility
 	 * @param int                       $id        Optional ID
 	 * @param array|\CDbCriteria|string $criteria  An array of criteria, a criteria object, or a comma-delimited list of columns to select
 	 * @param array                     $params    Bind variable values
-	 * @param bool                      $singleRow If true, only one row is returned
+	 * @param bool                      $singleRow If true, only a single row will be queried
 	 *
 	 * @return array
 	 */
@@ -512,22 +512,28 @@ class ResourceStore extends SeedUtility
 					$_relations = $resource->getRelated( $_extraName, true );
 
 					//	Got relations?
-					if ( !is_array( $_relations ) && !empty( $_relations ) )
+					if ( !empty( $_relations ) )
 					{
-						$_relations = array( $_relations );
+						$_relations = Option::clean( $_relations );
+						$_relative = current( $_relations );
+
+						if ( !empty( $_relative ) )
+						{
+							$_relatedFields = $_relative->getRetrievableAttributes( $_extraFields );
+
+							foreach ( $_relations as $_relation )
+							{
+								$_payload[] = $_relation->getAttributes( $_relatedFields );
+								unset( $_relation );
+							}
+
+							$_relatedData[$_extraName] = $_payload;
+						}
+
+						unset( $_relatedFields );
 					}
 
-					$_relatedFields = $_relations[0]->getRetrievableAttributes( $_extraFields );
-
-					foreach ( $_relations as $_relative )
-					{
-						$_payload[] = $_relative->getAttributes( $_relatedFields );
-						unset( $_relative );
-					}
-
-					$_relatedData[$_extraName] = $_payload;
-
-					unset( $_extra, $_relations, $_relatedFields, $_extraFields );
+					unset( $_extra, $_relations, $_relative, $_extraFields );
 				}
 
 				if ( !empty( $_relatedData ) )
@@ -542,22 +548,24 @@ class ResourceStore extends SeedUtility
 
 	/**
 	 * @param string $resourceName
+	 * @param array  $resources
 	 *
 	 * @return BasePlatformRestResource|BasePlatformSystemModel
 	 */
-	public static function resource( $resourceName = null )
+	public static function resource( $resourceName = null, $resources = array() )
 	{
-		return static::model( $resourceName, true );
+		return static::model( $resourceName, true, $resources );
 	}
 
 	/**
 	 * @param string $resourceName
 	 * @param bool   $returnResource If true, a RestResource-based class will returned instead of a model
+	 * @param array  $resources
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @return BasePlatformSystemModel|BasePlatformRestResource
+	 * @return BasePlatformSystemModel
 	 */
-	public static function model( $resourceName = null, $returnResource = false )
+	public static function model( $resourceName = null, $returnResource = false, $resources = array() )
 	{
 		/** @var ClassLoader $_loader */
 		static $_loader;
@@ -631,18 +639,32 @@ class ResourceStore extends SeedUtility
 		}
 
 		//	So, still not found, just let the SPL autoloader have a go and give up.
-		if ( !empty( $_className ) && !class_exists( $_className, false ) )
+		if ( empty( $_className ) || ( !empty( $_className ) && !class_exists( $_className, false ) ) )
 		{
-			throw new InternalServerErrorException( 'Invalid resource type \'' . $_resourceName . '\' requested.' );
+			throw new InternalServerErrorException( 'Invalid ' . ( $returnResource ? 'resource' : 'model' ) . ' type \'' . $_resourceName . '\' requested.' );
 		}
 
 		//	Return a resource
 		if ( false !== $returnResource )
 		{
-			return new $_className( null, array() );
+			try
+			{
+				return new $_className( null, $resources );
+			}
+			catch ( \Exception $_ex )
+			{
+				Log::error( 'Invalid resource class identified: ' . $_className . ' Error: ' . $_ex->getMessage() );
+			}
 		}
 
-		return call_user_func( array( $_className, 'model' ) );
+		try
+		{
+			return call_user_func( array( $_className, 'model' ) );
+		}
+		catch ( \Exception $_ex )
+		{
+			Log::error( 'Invalid model class identified: ' . $_className . ' Error: ' . $_ex->getMessage() );
+		}
 	}
 
 	/**

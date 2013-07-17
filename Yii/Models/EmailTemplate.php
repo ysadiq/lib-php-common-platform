@@ -17,6 +17,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+namespace DreamFactory\Platform\Yii\Models;
+
 /**
  * EmailTemplate.php
  * The system email template model for the DSP
@@ -41,7 +43,7 @@
  * Relations:
  *
  */
-class EmailTemplate extends BaseDspSystemModel
+class EmailTemplate extends BasePlatformSystemModel
 {
 	/**
 	 * Returns the static model of the specified AR class.

@@ -19,10 +19,8 @@
  */
 namespace DreamFactory\Platform\Interfaces;
 
-use DreamFactory\Common\Interfaces\PlatformServiceLike;
-
 /**
- * FileServiceLike.php
+ * FileServiceLike
  * Interface for handling file storage resources.
  */
 interface FileServiceLike

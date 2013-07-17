@@ -17,8 +17,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+namespace DreamFactory\Platform\Yii\Models;
+
 use Kisma\Core\Utility\Sql;
-use Platform\Yii\Utility\Pii;
+use DreamFactory\Yii\Utility\Pii;
 
 /**
  * Stats.php
@@ -31,7 +33,7 @@ use Platform\Yii\Utility\Pii;
  * @property string  $stat_date
  * @property string  $stat_data
  */
-class Stat extends BaseDspSystemModel
+class Stat extends BasePlatformSystemModel
 {
 	//*************************************************************************
 	//* Constants
@@ -53,18 +55,6 @@ class Stat extends BaseDspSystemModel
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
-
-	/**
-	 * Returns the static model of the specified AR class.
-	 *
-	 * @param string $className active record class name.
-	 *
-	 * @return Config the static model class
-	 */
-	public static function model( $className = __CLASS__ )
-	{
-		return parent::model( $className );
-	}
 
 	/**
 	 * @return string the associated database table name

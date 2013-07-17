@@ -105,11 +105,18 @@ class Config extends BaseSystemRestResource
 	 *
 	 * @return array
 	 */
-	public static function retrieveConfig( $fields = null, $includeSchema = false, $extras = array() )
-	{
-		//@TODO	Currently allow everyone to query config, long term this needs to hide certain fields
-		//@TODO //UserManager::checkSessionPermission( 'read', 'system', 'config' );
 
-		return parent::select( null, $fields, $includeSchema, $extras, true );
+	/**
+	 * {@InheritDoc}
+	 */
+	protected function _postProcess()
+	{
+		//	Only return a single row, not in an array
+		if ( is_array( $this->_response ) && isset( $this->_response['record'], $this->_response['record'][0] ) && 1 == sizeof( $this->_response['record'] ) )
+		{
+			$this->_response['record'] = current( $this->_response['record'] );
+		}
+
+		parent::_postProcess();
 	}
 }

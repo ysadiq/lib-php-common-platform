@@ -17,6 +17,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+namespace DreamFactory\Platform\Yii\Models;
+
 /**
  * RoleServiceAccess.php
  * The system access model for the DSP
@@ -34,7 +36,7 @@
  * @property Role    $role
  * @property Service $service
  */
-class RoleServiceAccess extends BaseDspSystemModel
+class RoleServiceAccess extends BasePlatformSystemModel
 {
 	/**
 	 * Returns the static model of the specified AR class.

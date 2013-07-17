@@ -1,0 +1,888 @@
+<?php
+/**
+ * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ *
+ * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
+ * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+namespace DreamFactory\Platform\Services;
+
+use DreamFactory\Platform\Utility\RestData;
+use Kisma\Core\Utility\Option;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Utility\RestRequest;
+use DreamFactory\Platform\Utility\SqlDbUtilities;
+use DreamFactory\Platform\Utility\Utilities;
+use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Scalar;
+use Swagger\Annotations as SWG;
+
+/**
+ * SchemaSvc
+ * A service to handle SQL database schema-related services accessed through the REST API.
+ *
+ * @SWG\Resource(
+ *   resourcePath="/{sql_schema}"
+ * )
+ *
+ * @SWG\Model(id="Tables",
+ * @SWG\Property(name="table",type="Array",items="$ref:TableSchema",description="An array of table definitions.")
+ * )
+ * @SWG\Model(id="TableSchema",
+ * @SWG\Property(name="name",type="string",description="Identifier/Name for the table."),
+ * @SWG\Property(name="label",type="Array",items="$ref:EmailAddress",description="Displayable singular name for the table."),
+ * @SWG\Property(name="plural",type="Array",items="$ref:EmailAddress",description="Displayable plural name for the table."),
+ * @SWG\Property(name="primary_key",type="string",description="Field(s), if any, that represent the primary key of each record."),
+ * @SWG\Property(name="name_field",type="string",description="Field(s), if any, that represent the name of each record."),
+ * @SWG\Property(name="field",type="Array",items="$ref:FieldSchema",description="An array of available fields in each record."),
+ * @SWG\Property(name="related",type="Array",items="$ref:RelatedSchema",description="An array of available relationships to other tables.")
+ * )
+ * @SWG\Model(id="Fields",
+ * @SWG\Property(name="field",type="Array",items="$ref:FieldSchema",description="An array of field definitions.")
+ * )
+ * @SWG\Model(id="FieldSchema",
+ * @SWG\Property(name="name",type="string",description="The API name of the field."),
+ * @SWG\Property(name="label",type="string",description="The displayable label for the field."),
+ * @SWG\Property(name="type",type="string",description="The DSP abstract data type for this field."),
+ * @SWG\Property(name="db_type",type="string",description="The native database type used for this field."),
+ * @SWG\Property(name="length",type="int",description="The maximum length allowed (in characters for string, displayed for numbers)."),
+ * @SWG\Property(name="precision",type="int",description="Total number of places for numbers."),
+ * @SWG\Property(name="scale",type="int",description="Number of decimal places allowed for numbers."),
+ * @SWG\Property(name="default",type="string",description="Default value for this field."),
+ * @SWG\Property(name="required",type="boolean",description="Is a value required for record creation."),
+ * @SWG\Property(name="allow_null",type="boolean",description="Is null allowed as a value."),
+ * @SWG\Property(name="fixed_length",type="boolean",description="Is the length fixed (not variable)."),
+ * @SWG\Property(name="supports_multibyte",type="boolean",description="Does the data type support multibyte characters."),
+ * @SWG\Property(name="auto_increment",type="boolean",description="Does the integer field value increment upon new record creation."),
+ * @SWG\Property(name="is_primary_key",type="boolean",description="Is this field used as/part of the primary key."),
+ * @SWG\Property(name="is_foreign_key",type="boolean",description="Is this field used as a foreign key."),
+ * @SWG\Property(name="ref_table",type="string",description="For foreign keys, the referenced table name."),
+ * @SWG\Property(name="ref_fields",type="string",description="For foreign keys, the referenced table field name."),
+ * @SWG\Property(name="validation",type="Array",items="$ref:string",description="validations to be performed on this field."),
+ * @SWG\Property(name="values",type="Array",items="$ref:string",description="Selectable string values for picklist validation.")
+ * )
+ * @SWG\Model(id="Relateds",
+ * @SWG\Property(name="related",type="Array",items="$ref:RelatedSchema",description="An array of relationship definitions.")
+ * )
+ * @SWG\Model(id="RelatedSchema",
+ * @SWG\Property(name="name",type="string",description="Name of the relationship."),
+ * @SWG\Property(name="type",type="string",description="Relationship type - belongs_to, has_many, many_many."),
+ * @SWG\Property(name="ref_table",type="string",description="The table name that is referenced by the relationship."),
+ * @SWG\Property(name="ref_field",type="string",description="The field name that is referenced by the relationship."),
+ * @SWG\Property(name="join",type="string",description="The intermediate joining table used for many_many relationships."),
+ * @SWG\Property(name="field",type="string",description="The current table field that is used in the relationship.")
+ * )
+ *
+ *
+ */
+class SchemaSvc extends BasePlatformRestService
+{
+	//*************************************************************************
+	//	Members
+	//*************************************************************************
+
+	/**
+	 * @var string
+	 */
+	protected $_tableName;
+	/**
+	 * @var string
+	 */
+	protected $_fieldName;
+	/**
+	 * @var \CDbConnection
+	 */
+	protected $_sqlConn;
+	/**
+	 * @var bool
+	 */
+	protected $_isNative = false;
+	/**
+	 * @var array
+	 */
+	protected $_tables;
+	/**
+	 * @var array
+	 */
+	protected $_fields;
+	/**
+	 * @var array
+	 */
+	protected $_payload;
+
+	//*************************************************************************
+	//	Methods
+	//*************************************************************************
+
+	/**
+	 * Create a new SchemaSvc
+	 *
+	 * @param array $config
+	 * @param bool  $native
+	 *
+	 * @throws \InvalidArgumentException
+	 */
+	public function __construct( $config, $native = false )
+	{
+		parent::__construct( $config );
+
+		if ( empty( $this->_verbAliases ) )
+		{
+			$this->_verbAliases = array(
+				static::Patch => static::Put,
+				static::Merge => static::Put,
+			);
+		}
+
+		if ( false !== ( $this->_isNative = $native ) )
+		{
+			$this->_sqlConn = Pii::db();
+		}
+		else
+		{
+			$_credentials = Option::get( $config, 'credentials' );
+
+			if ( null === ( $dsn = Option::get( $_credentials, 'dsn' ) ) )
+			{
+				throw new \InvalidArgumentException( 'DB connection string (DSN) can not be empty.' );
+			}
+
+			if ( null === ( $user = Option::get( $_credentials, 'user' ) ) )
+			{
+				throw new \InvalidArgumentException( 'DB admin name can not be empty.' );
+			}
+
+			if ( null === ( $password = Option::get( $_credentials, 'pwd' ) ) )
+			{
+				throw new \InvalidArgumentException( 'DB admin password can not be empty.' );
+			}
+
+			// 	Create pdo connection, activate later
+			$this->_sqlConn = new \CDbConnection( $dsn, $user, $pwd );
+		}
+
+		switch ( $this->_driverType = SqlDbUtilities::getDbDriverType( $this->_sqlConn ) )
+		{
+			case SqlDbUtilities::DRV_MYSQL:
+				$this->_sqlConn->setAttribute( \PDO::ATTR_EMULATE_PREPARES, true );
+//				$this->_sqlConn->setAttribute( 'charset', 'utf8' );
+				break;
+
+			case SqlDbUtilities::DRV_SQLSRV:
+				$this->_sqlConn->setAttribute( \PDO::SQLSRV_ATTR_DIRECT_QUERY, true );
+//				$this->_sqlConn->setAttribute( 'MultipleActiveResultSets', false );
+//				$this->_sqlConn->setAttribute( 'ReturnDatesAsStrings', true );
+				$this->_sqlConn->setAttribute( 'CharacterSet', 'UTF-8' );
+				break;
+		}
+
+		$_attributes = Option::clean( Option::get( $config, 'parameters' ) );
+
+		if ( !empty( $_attributes ) )
+		{
+			$this->_sqlConn->setAttributes( $_attributes );
+		}
+	}
+
+	/**
+	 * Object destructor
+	 */
+	public function __destruct()
+	{
+		if ( !$this->_isNative )
+		{
+			unset( $this->_sqlConn );
+		}
+	}
+
+	/**
+	 * Get a mano in there...
+	 */
+	protected function _preProcess()
+	{
+		parent::_preProcess();
+
+		$this->_payload = RestData::getPostDataAsArray();
+		$this->_tables = Option::get( $_payload, 'table', $_payload );
+
+		if ( empty( $this->_tables ) )
+		{
+			$this->_tables = Option::getDeep( $_payload, 'tables', 'table' );
+		}
+
+		if ( static::Get != ( $_action = $this->getRequestedAction() ) && empty( $this->_tableName ) )
+		{
+			throw new BadRequestException();
+		}
+
+		//	Create fields in existing table
+		if ( !empty( $this->_tableName ) )
+		{
+			$this->_fields = Option::get( $_payload, 'field', $_payload );
+
+			if ( empty( $this->_fields ) )
+			{
+				// temporary, layer created from xml to array conversion
+				$this->_fields = Option::getDeep( $_payload, 'fields', 'field' );
+			}
+
+			if ( static::Post == $_action && empty( $this->_fieldName ) )
+			{
+				throw new BadRequestException( 'No new field resources currently supported.' );
+			}
+		}
+	}
+
+	/**
+	 * @return array|bool
+	 */
+	protected function _handleGet()
+	{
+		if ( empty( $this->_tableName ) )
+		{
+			if ( empty( $this->_tables ) )
+			{
+				return array( 'resource' => $this->describeDatabase() );
+			}
+
+			return array( 'table' => $this->describeTables( $this->_tables ) );
+		}
+
+		if ( empty( $this->_fieldName ) )
+		{
+			return $this->describeTable( $this->_tableName );
+		}
+
+		return $this->describeField( $this->_tableName, $this->_fieldName );
+	}
+
+	/**
+	 * @return bool
+	 */
+	protected function _handlePost()
+	{
+		if ( empty( $this->_tableName ) )
+		{
+			if ( empty( $this->_tables ) )
+			{
+				return $this->createTable( $this->_payload );
+			}
+
+			return array( 'table' => $this->createTables( $this->_tables ) );
+		}
+
+		if ( empty( $this->_fields ) )
+		{
+			return $this->createField( $this->_tableName, $this->_payload );
+		}
+
+		return array( 'field' => $this->createFields( $this->_tableName, $this->_fields ) );
+	}
+
+	/**
+	 * @return bool
+	 */
+	protected function _handlePut()
+	{
+		if ( empty( $this->_tableName ) )
+		{
+			if ( empty( $this->_tables ) )
+			{
+				return $this->updateTable( $this->_payload );
+			}
+
+			return array( 'table' => $this->updateTables( $this->_tables ) );
+		}
+
+		if ( empty( $this->_fieldName ) )
+		{
+			if ( empty( $this->_fields ) )
+			{
+				return $this->updateField( $this->_tableName, null, $this->_payload );
+			}
+
+			return array( 'field' => $this->updateFields( $this->_tableName, $this->_fields ) );
+		}
+
+		//	Create new field in existing table
+		if ( empty( $this->_payload ) )
+		{
+			throw new BadRequestException( 'No data in schema create request.' );
+		}
+
+		return $this->updateField( $this->_tableName, $this->_fieldName, $this->_payload );
+	}
+
+	/**
+	 * @return array|bool
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 */
+	protected function _handleDelete()
+	{
+		if ( empty( $this->_fieldName ) )
+		{
+			$this->deleteTable( $this->_tableName );
+
+			return array( 'table' => $this->_tableName );
+		}
+
+		$this->deleteField( $this->_tableName, $this->_fieldName );
+
+		return array( 'field' => $this->_fieldName );
+	}
+
+	/**
+	 * {@InheritDoc}
+	 */
+	protected function _detectResourceMembers()
+	{
+		$this->_tableName = Option::get( $this->_resourceArray, 0 );
+		$this->_fieldName = Option::get( $this->_resourceArray, 1 );
+	}
+
+	/**
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function describeDatabase()
+	{
+		// 	Exclude system tables
+		$_exclude = $this->_isNative ? SystemManager::SYSTEM_TABLE_PREFIX : null;
+
+		try
+		{
+			return SqlDbUtilities::describeDatabase( $this->_sqlConn, null, $_exclude );
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Error describing database tables.\n{$ex->getMessage()}", $ex->getCode() );
+		}
+	}
+
+	/**
+	 * @param array $table_list
+	 *
+	 * @return array|string
+	 * @throws \Exception
+	 */
+	public function describeTables( $table_list )
+	{
+		$_tables = array_map( 'trim', explode( ',', trim( $table_list, ',' ) ) );
+
+		//	Check for system tables and deny
+		$_sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
+		$_length = strlen( $_sysPrefix );
+
+		foreach ( $_tables as $_table )
+		{
+			if ( $this->_isNative )
+			{
+				if ( 0 === substr_compare( $_table, $_sysPrefix, 0, $_length ) )
+				{
+					throw new NotFoundException( "Table '$table' not found." );
+				}
+			}
+
+			$this->checkPermission( 'read', $_table );
+		}
+
+		try
+		{
+			return SqlDbUtilities::describeTables( $this->_sqlConn, $tables );
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Error describing database tables '$table_list'.\n{$ex->getMessage()}", $ex->getCode() );
+		}
+	}
+
+	/**
+	 * @param $table
+	 *
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function describeTable( $table )
+	{
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( 'Table name can not be empty.' );
+		}
+
+		if ( $this->_isNative )
+		{
+			// check for system tables and deny
+			if ( 0 === substr_compare( $table, SystemManager::SYSTEM_TABLE_PREFIX, 0, strlen( SystemManager::SYSTEM_TABLE_PREFIX ) ) )
+			{
+				throw new NotFoundException( "Table '$table' not found." );
+			}
+		}
+
+		$this->checkPermission( 'read', $table );
+
+		try
+		{
+			return SqlDbUtilities::describeTable( $this->_sqlConn, $table );
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Error describing database table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
+		}
+	}
+
+	/**
+	 * @param $table
+	 * @param $field
+	 *
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function describeField( $table, $field )
+	{
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( 'Table name can not be empty.' );
+		}
+
+		if ( $this->_isNative )
+		{
+			// check for system tables and deny
+			if ( 0 === substr_compare( $table, SystemManager::SYSTEM_TABLE_PREFIX, 0, strlen( SystemManager::SYSTEM_TABLE_PREFIX ) ) )
+			{
+				throw new NotFoundException( "Table '$table' not found." );
+			}
+		}
+
+		$this->checkPermission( 'read', $table );
+
+		try
+		{
+			return SqlDbUtilities::describeField( $this->_sqlConn, $table, $field );
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Error describing database table '$table' field '$field'.\n{$ex->getMessage()}", $ex->getCode() );
+		}
+	}
+
+	/**
+	 * @param      $tables
+	 * @param bool $allow_merge
+	 *
+	 * @throws \Exception
+	 * @return array
+	 */
+	public function createTables( $tables, $allow_merge = false )
+	{
+		if ( !isset( $tables ) || empty( $tables ) )
+		{
+			throw new BadRequestException( 'There are no table sets in the request.' );
+		}
+
+		$_length = strlen( SystemManager::SYSTEM_TABLE_PREFIX );
+
+		if ( $this->_isNative )
+		{
+			// check for system tables and deny
+			if ( isset( $tables[0] ) )
+			{
+				foreach ( $tables as $table )
+				{
+					$name = Option::get( $table, 'name' );
+
+					if ( 0 === substr_compare( $name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
+					{
+						throw new BadRequestException( "Tables can not use the prefix '$sysPrefix'. '$name' can not be created." );
+					}
+				}
+			}
+			else
+			{
+				//	single table
+				$name = Option::get( $tables, 'name' );
+
+				if ( 0 === substr_compare( $name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
+				{
+					throw new BadRequestException( "Tables can not use the prefix '$sysPrefix'. '$name' can not be created." );
+				}
+			}
+		}
+
+		$this->checkPermission( 'create' );
+
+		return SqlDbUtilities::createTables( $this->_sqlConn, $tables, $allow_merge );
+	}
+
+	/**
+	 * @param $table
+	 *
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function createTable( $table )
+	{
+		$result = $this->createTables( $table );
+
+		return Option::get( $result, 0, array() );
+	}
+
+	/**
+	 * @param $table
+	 * @param $fields
+	 *
+	 * @throws \Exception
+	 * @return array
+	 */
+	public function createFields( $table, $fields )
+	{
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( 'Table name can not be empty.' );
+		}
+
+		if ( $this->_isNative )
+		{
+			// check for system tables and deny
+			$sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
+			if ( 0 === substr_compare( $table, $sysPrefix, 0, strlen( $sysPrefix ) ) )
+			{
+				throw new NotFoundException( "Table '$table' not found." );
+			}
+		}
+		$this->checkPermission( 'create', $table );
+		try
+		{
+			$names = SqlDbUtilities::createFields( $this->_sqlConn, $table, $fields );
+
+			return SqlDbUtilities::describeFields( $this->_sqlConn, $table, $names );
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Error creating database fields for table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
+		}
+	}
+
+	/**
+	 * @param $table
+	 * @param $_data
+	 *
+	 * @throws \Exception
+	 * @return array
+	 */
+	public function createField( $table, $_data )
+	{
+		$result = $this->createFields( $table, $_data );
+
+		return Option::get( $result, 0, array() );
+	}
+
+	/**
+	 * @param $tables
+	 *
+	 * @return mixed
+	 * @throws \Exception
+	 */
+	public function updateTables( $tables )
+	{
+		if ( !isset( $tables ) || empty( $tables ) )
+		{
+			throw new BadRequestException( 'There are no table sets in the request.' );
+		}
+		if ( $this->_isNative )
+		{
+			// check for system tables and deny
+			$sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
+			if ( isset( $tables[0] ) )
+			{
+				foreach ( $tables as $table )
+				{
+					$name = Option::get( $table, 'name', '' );
+					if ( 0 === substr_compare( $name, $sysPrefix, 0, strlen( $sysPrefix ) ) )
+					{
+						throw new BadRequestException( "Tables can not use the prefix '$sysPrefix'. '$name' can not be created." );
+					}
+				}
+			}
+			else
+			{ // single table
+				$name = Option::get( $tables, 'name', '' );
+				if ( 0 === substr_compare( $name, $sysPrefix, 0, strlen( $sysPrefix ) ) )
+				{
+					throw new BadRequestException( "Tables can not use the prefix '$sysPrefix'. '$name' can not be created." );
+				}
+			}
+		}
+		$this->checkPermission( 'update' );
+
+		return SqlDbUtilities::createTables( $this->_sqlConn, $tables, true );
+	}
+
+	/**
+	 * @param $table
+	 *
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function updateTable( $table )
+	{
+		$result = $this->updateTables( $table );
+
+		return Option::get( $result, 0, array() );
+	}
+
+	/**
+	 * @param $table
+	 * @param $fields
+	 *
+	 * @throws \Exception
+	 * @return array
+	 */
+	public function updateFields( $table, $fields )
+	{
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( 'Table name can not be empty.' );
+		}
+		if ( $this->_isNative )
+		{
+			// check for system tables and deny
+			$sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
+			if ( 0 === substr_compare( $table, $sysPrefix, 0, strlen( $sysPrefix ) ) )
+			{
+				throw new NotFoundException( "Table '$table' not found." );
+			}
+		}
+		$this->checkPermission( 'update', $table );
+		try
+		{
+			$names = SqlDbUtilities::createFields( $this->_sqlConn, $table, $fields, true );
+
+			return SqlDbUtilities::describeFields( $this->_sqlConn, $table, $names );
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Error updating database table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
+		}
+	}
+
+	/**
+	 * @param $table
+	 * @param $field
+	 * @param $_data
+	 *
+	 * @throws \Exception
+	 * @return array
+	 */
+	public function updateField( $table, $field, $_data )
+	{
+		if ( !empty( $field ) )
+		{
+			$_data['name'] = $field;
+		}
+		$result = $this->updateFields( $table, $_data );
+
+		return Option::get( $result, 0, array() );
+	}
+
+	/**
+	 * @param $table
+	 *
+	 * @throws \Exception
+	 */
+	public function deleteTable( $table )
+	{
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( 'Table name can not be empty.' );
+		}
+		if ( $this->_isNative )
+		{
+			// check for system tables and deny
+			$sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
+			if ( 0 === substr_compare( $table, $sysPrefix, 0, strlen( $sysPrefix ) ) )
+			{
+				throw new NotFoundException( "Table '$table' not found." );
+			}
+		}
+		$this->checkPermission( 'delete', $table );
+		SqlDbUtilities::dropTable( $this->_sqlConn, $table );
+	}
+
+	/**
+	 * @param $table
+	 * @param $field
+	 *
+	 * @throws \Exception
+	 */
+	public function deleteField( $table, $field )
+	{
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( 'Table name can not be empty.' );
+		}
+		if ( $this->_isNative )
+		{
+			// check for system tables and deny
+			$sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
+			if ( 0 === substr_compare( $table, $sysPrefix, 0, strlen( $sysPrefix ) ) )
+			{
+				throw new NotFoundException( "Table '$table' not found." );
+			}
+		}
+		$this->checkPermission( 'delete', $table );
+		SqlDbUtilities::dropField( $this->_sqlConn, $table, $field );
+	}
+
+	/**
+	 * @param string $fieldName
+	 *
+	 * @return SchemaSvc
+	 */
+	public function setFieldName( $fieldName )
+	{
+		$this->_fieldName = $fieldName;
+
+		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getFieldName()
+	{
+		return $this->_fieldName;
+	}
+
+	/**
+	 * @param boolean $isNative
+	 *
+	 * @return SchemaSvc
+	 */
+	public function setIsNative( $isNative )
+	{
+		$this->_isNative = $isNative;
+
+		return $this;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function getIsNative()
+	{
+		return $this->_isNative;
+	}
+
+	/**
+	 * @param array $payload
+	 *
+	 * @return SchemaSvc
+	 */
+	public function setPayload( $payload )
+	{
+		$this->_payload = $payload;
+
+		return $this;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getPayload()
+	{
+		return $this->_payload;
+	}
+
+	/**
+	 * @param \CDbConnection $sqlConn
+	 *
+	 * @return SchemaSvc
+	 */
+	public function setSqlConn( $sqlConn )
+	{
+		$this->_sqlConn = $sqlConn;
+
+		return $this;
+	}
+
+	/**
+	 * @return \CDbConnection
+	 */
+	public function getSqlConn()
+	{
+		return $this->_sqlConn;
+	}
+
+	/**
+	 * @param string $tableName
+	 *
+	 * @return SchemaSvc
+	 */
+	public function setTableName( $tableName )
+	{
+		$this->_tableName = $tableName;
+
+		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getTableName()
+	{
+		return $this->_tableName;
+	}
+
+	/**
+	 * @param mixed $tables
+	 *
+	 * @return SchemaSvc
+	 */
+	public function setTables( $tables )
+	{
+		$this->_tables = $tables;
+
+		return $this;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function getTables()
+	{
+		return $this->_tables;
+	}
+
+	/**
+	 * @param array $fields
+	 *
+	 * @return SchemaSvc
+	 */
+	public function setFields( $fields )
+	{
+		$this->_fields = $fields;
+
+		return $this;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getFields()
+	{
+		return $this->_fields;
+	}
+}

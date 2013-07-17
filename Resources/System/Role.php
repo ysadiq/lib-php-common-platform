@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
+use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use Swagger\Annotations as SWG;
 
@@ -53,40 +54,29 @@ use Swagger\Annotations as SWG;
 class Role extends BaseSystemRestResource
 {
 	//*************************************************************************
-	//	Constants
-	//*************************************************************************
-
-	//*************************************************************************
-	//	Members
-	//*************************************************************************
-
-	//*************************************************************************
 	//	Methods
 	//*************************************************************************
 
 	/**
-	 * Creates a new Role
-	 *
-	 *
+	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+	 * @param array                                               $resources
 	 */
-	public function __construct( $resource_array = array() )
+	public function __construct( $consumer, $resources = array() )
 	{
-		$config = array(
-			'service_name' => 'system',
-			'name'         => 'Role',
-			'api_name'     => 'role',
-			'type'         => 'System',
-			'description'  => 'System role administration.',
-			'is_active'    => true,
+		return parent::__construct(
+			$consumer,
+			array(
+				 'service_name' => 'system',
+				 'name'         => 'Role',
+				 'api_name'     => 'role',
+				 'type'         => 'System',
+				 'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
+				 'description'  => 'System role administration.',
+				 'is_active'    => true,
+			),
+			$resources
 		);
-
-		parent::__construct( $config, $resource_array );
 	}
-
-	// Resource interface implementation
-
-	// REST interface implementation
-
 	/**
 	 *
 	 * @SWG\Api(
@@ -303,8 +293,4 @@ class Role extends BaseSystemRestResource
 	 *
 	 * @return array|bool
 	 */
-	protected function _handleAction()
-	{
-		return parent::_handleAction();
-	}
 }

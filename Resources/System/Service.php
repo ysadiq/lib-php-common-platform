@@ -68,20 +68,22 @@ class Service extends BaseSystemRestResource
 	/**
 	 * Creates a new Service
 	 *
-	 * @param array $resource_array
+	 * @param array $resources
 	 */
-	public function __construct( $resource_array = array() )
+	public function __construct( $consumer, $resources = array() )
 	{
-		$config = array(
-			'service_name' => 'system',
-			'name'         => 'Service',
-			'api_name'     => 'service',
-			'type'         => 'System',
-			'description'  => 'System service administration.',
-			'is_active'    => true,
+		return parent::__construct(
+			$consumer,
+			array(
+				 'service_name'   => 'system',
+				 'name'           => 'Service',
+				 'api_name'       => 'service',
+				 'type'           => 'System',
+				 'description'    => 'System service administration.',
+				 'is_active'      => true,
+				 'resource_array' => $resources,
+			)
 		);
-
-		parent::__construct( $config, $resource_array );
 	}
 
 	// Resource interface implementation

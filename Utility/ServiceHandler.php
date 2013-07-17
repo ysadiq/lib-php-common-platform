@@ -19,17 +19,13 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Services\BasePlatformRestService;
+use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use DreamFactory\Platform\Services\EmailSvc;
-use DreamFactory\Platform\Services\LocalFileSvc;
-use DreamFactory\Platform\Services\RemoteWebSvc;
-use DreamFactory\Platform\Services\RestService;
-use DreamFactory\Platform\Services\SchemaSvc;
-use DreamFactory\Platform\Services\UserManager;
 
 /**
  * ServiceHandler
@@ -160,7 +156,8 @@ class ServiceHandler
 	 */
 	public static function getServiceObjectById( $id, $check_active = false )
 	{
-		if ( null === ( $_record = \Service::getRecordById( $id ) ) )
+		if ( null === ( $_record = Service::getRecordById( $id ) ) )
+
 		{
 			throw new \Exception( "Failed to launch service, no service record found." );
 		}
@@ -178,11 +175,11 @@ class ServiceHandler
 	 */
 	protected static function _createService( $record )
 	{
-		$_serviceType = trim( strtolower( Option::get( $record, 'type' ) ) );
+		$_serviceTypeId = trim( strtolower( Option::get( $record, 'type_id', PlatformServiceTypes::SYSTEM_SERVICE ) ) );
 
-		if ( null === ( $_config = Option::get( static::$_serviceConfig, $_serviceType ) ) )
+		if ( null === ( $_config = Option::get( static::$_serviceConfig, $_serviceTypeId ) ) )
 		{
-			throw new \InvalidArgumentException( 'Service type "' . $_serviceType . '" is invalid.' );
+			throw new \InvalidArgumentException( 'Service type "' . Option::get( $record, 'type' ) . '" is invalid.' );
 		}
 
 		if ( null !== ( $_serviceClass = Option::get( $_config, 'class' ) ) )
