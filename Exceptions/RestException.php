@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Exceptions;
 
 use Kisma\Core\Interfaces\HttpResponse;
 use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Log;
 
 /**
  * RestException
@@ -62,6 +63,8 @@ class RestException extends PlatformServiceException implements HttpResponse
 		}
 
 		parent::__construct( $message, $code );
+
+		Log::error( 'REST Exception #' . $code . ' > ' . $message );
 	}
 
 	/**

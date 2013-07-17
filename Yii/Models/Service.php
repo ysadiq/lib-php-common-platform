@@ -97,20 +97,20 @@ class Service extends BasePlatformSystemModel
 			$_tableName = static::model()->tableName();
 
 			//	List all available services from db
-			$_services = Sql::query(
-				<<<MYSQL
-				SELECT
+			$_pdo = Pii::pdo();
+
+			$_sql
+				= <<<MYSQL
+SELECT
 	`api_name`,
 	`name`
 FROM
 	{$_tableName}
 ORDER BY
 	api_name
-MYSQL
-				,
-				null,
-				Pii::pdo()
-			);
+MYSQL;
+
+			$_services = Sql::findAll( $_sql, null, $_pdo );
 
 			$_serviceCache = array_merge(
 				$_serviceCache,
@@ -188,7 +188,7 @@ MYSQL
 		$_rules = array(
 			array( 'name, api_name, type', 'required' ),
 			array( 'name, api_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
-			array( 'is_active', 'numerical', 'integerOnly' => true ),
+			array( 'is_active, type_id, storage_type_id, native_format_id', 'numerical', 'integerOnly' => true ),
 			array( 'name, api_name, type, storage_type, native_format', 'length', 'max' => 64 ),
 			array( 'storage_name', 'length', 'max' => 80 ),
 			array( 'base_url', 'length', 'max' => 255 ),
@@ -209,9 +209,9 @@ MYSQL
 	public function relations()
 	{
 		$_relations = array(
-			'role_service_accesses' => array( static::HAS_MANY, 'RoleServiceAccess', 'service_id' ),
-			'apps'                  => array( static::MANY_MANY, 'App', 'df_sys_app_to_service(app_id, service_id)' ),
-			'roles'                 => array( static::MANY_MANY, 'Role', 'df_sys_role_service_access(service_id, role_id)' ),
+			'role_service_accesses' => array( static::HAS_MANY, __NAMESPACE__ . '\\RoleServiceAccess', 'service_id' ),
+			'apps'                  => array( static::MANY_MANY, __NAMESPACE__ . '\\App', 'df_sys_app_to_service(app_id, service_id)' ),
+			'roles'                 => array( static::MANY_MANY, __NAMESPACE__ . '\\Role', 'df_sys_role_service_access(service_id, role_id)' ),
 		);
 
 		return array_merge( parent::relations(), $_relations );

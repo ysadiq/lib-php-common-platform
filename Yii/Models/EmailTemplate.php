@@ -46,18 +46,6 @@ namespace DreamFactory\Platform\Yii\Models;
 class EmailTemplate extends BasePlatformSystemModel
 {
 	/**
-	 * Returns the static model of the specified AR class.
-	 *
-	 * @param string $className active record class name.
-	 *
-	 * @return Role the static model class
-	 */
-	public static function model( $className = __CLASS__ )
-	{
-		return parent::model( $className );
-	}
-
-	/**
 	 * @return string the associated database table name
 	 */
 	public function tableName()
@@ -84,62 +72,47 @@ class EmailTemplate extends BasePlatformSystemModel
 	}
 
 	/**
-	 * @return array relational rules.
-	 */
-	public function relations()
-	{
-		$_relations = array();
-
-		return array_merge( parent::relations(), $_relations );
-	}
-
-	/**
+	 * @param array $additionalLabels
+	 *
 	 * @return array customized attribute labels (name=>label)
 	 */
-	public function attributeLabels()
+	public function attributeLabels( $additionalLabels = array() )
 	{
-		$_labels = array(
-			'name'           => 'Name',
-			'description'    => 'Description',
-			'to'             => 'To Email List',
-			'cc'             => 'CC Email List',
-			'bcc'            => 'BCC Email List',
-			'subject'        => 'Subject',
-			'body_text'      => 'Body Text Format',
-			'body_html'      => 'Body HTML Format',
-			'from_name'      => 'From Name',
-			'from_email'     => 'From Email',
-			'reply_to_name'  => 'Reply To Name',
-			'reply_to_email' => 'Reply To Email',
-			'defaults'       => 'Default Values',
+		$_labels = array_merge(
+			array(
+				 'name'           => 'Name',
+				 'description'    => 'Description',
+				 'to'             => 'To Email List',
+				 'cc'             => 'CC Email List',
+				 'bcc'            => 'BCC Email List',
+				 'subject'        => 'Subject',
+				 'body_text'      => 'Body Text Format',
+				 'body_html'      => 'Body HTML Format',
+				 'from_name'      => 'From Name',
+				 'from_email'     => 'From Email',
+				 'reply_to_name'  => 'Reply To Name',
+				 'reply_to_email' => 'Reply To Email',
+				 'defaults'       => 'Default Values',
+			),
+			$additionalLabels
 		);
 
-		return array_merge( parent::attributeLabels(), $_labels );
+		return parent::attributeLabels( $_labels );
 	}
 
 	/**
-	 * Retrieves a list of models based on the current search/filter conditions.
+	 * @param mixed $criteria
 	 *
-	 * @return CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
+	 * @return \CActiveDataProvider
 	 */
-	public function search()
+	public function search( $criteria = null )
 	{
-		$_criteria = new CDbCriteria();
+		$_criteria = $criteria ? : new \CDbCriteria();
 
-		$_criteria->compare( 'id', $this->id );
 		$_criteria->compare( 'name', $this->name, true );
 		$_criteria->compare( 'subject', $this->subject );
-		$_criteria->compare( 'created_date', $this->created_date, true );
-		$_criteria->compare( 'last_modified_date', $this->last_modified_date, true );
-		$_criteria->compare( 'created_by_id', $this->created_by_id );
-		$_criteria->compare( 'last_modified_by_id', $this->last_modified_by_id );
 
-		return new CActiveDataProvider(
-			$this,
-			array(
-				 'criteria' => $_criteria,
-			)
-		);
+		return parent::search( $criteria );
 	}
 
 	/**

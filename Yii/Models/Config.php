@@ -72,8 +72,8 @@ class Config extends BasePlatformSystemModel
 	public function relations()
 	{
 		$_relations = array(
-			'open_reg_role' => array( self::BELONGS_TO, 'Role', 'open_reg_role_id' ),
-			'guest_role'    => array( self::BELONGS_TO, 'Role', 'guest_role_id' ),
+			'open_reg_role' => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'open_reg_role_id' ),
+			'guest_role'    => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'guest_role_id' ),
 		);
 
 		return array_merge( parent::relations(), $_relations );

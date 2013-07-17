@@ -121,7 +121,9 @@ class ServiceHandler
 
 		try
 		{
-			if ( null === ( $_config = Service::getRecordByName( $api_name ) ) )
+			$_config = Service::getRecordByName( $api_name );
+
+			if ( empty( $_config ) )
 			{
 				throw new NotFoundException( 'Service not found' );
 			}

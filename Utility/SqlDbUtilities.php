@@ -1712,6 +1712,8 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					{
 						if ( $allow_merge )
 						{
+							Log::debug( 'Updating table schema: ' . $name );
+
 							$results = static::updateTable( $db, $name, $table, true );
 						}
 						else
@@ -1721,6 +1723,8 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					}
 					else
 					{
+						Log::debug( 'Creating table: ' . $name );
+
 						$results = static::createTable( $db, $name, $table, true, false );
 
 						if ( $rollback )

@@ -57,6 +57,7 @@ class Config extends BaseSystemRestResource
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
+
 	/**
 	 * Constructor
 	 *
@@ -89,7 +90,7 @@ class Config extends BaseSystemRestResource
 
 	/**
 	 * @SWG\Api(
-	 *   path="/system/config", description="Operations for system configuration options.",
+	 *       path="/system/config", description="Operations for system configuration options.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
 	 *       httpMethod="GET", summary="Retrieve system configuration options.",
@@ -119,4 +120,5 @@ class Config extends BaseSystemRestResource
 
 		parent::_postProcess();
 	}
+
 }

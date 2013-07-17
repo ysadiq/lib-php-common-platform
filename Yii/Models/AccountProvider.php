@@ -55,7 +55,7 @@ class AccountProvider extends BasePlatformSystemModel
 		return array_merge(
 			parent::relations(),
 			array(
-				 'service' => array( static::BELONGS_TO, 'DreamFactory\\Platform\\Yii\\Models\\Service', 'service_id' ),
+				 'service' => array( static::BELONGS_TO, __NAMESPACE__ . '\\\\Service', 'service_id' ),
 			)
 		);
 	}

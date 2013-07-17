@@ -483,6 +483,8 @@ class SystemManager extends BaseSystemRestService
 						{
 							foreach ( $content as $service )
 							{
+								Log::debug( 'Importing service: ' . $service['api_name'] );
+
 								try
 								{
 									$obj = new Service();
@@ -504,18 +506,22 @@ class SystemManager extends BaseSystemRestService
 							{
 								foreach ( $content as $package )
 								{
-									$fileUrl = Option::get( $package, 'url', '' );
-									if ( 0 === strcasecmp( 'dfpkg', FileUtilities::getFileExtension( $fileUrl ) ) )
+									if ( null !== ( $fileUrl = Option::get( $package, 'url' ) ) )
 									{
-										try
+										if ( 0 === strcasecmp( 'dfpkg', FileUtilities::getFileExtension( $fileUrl ) ) )
 										{
-											// need to download and extract zip file and move contents to storage
-											$filename = FileUtilities::importUrlFileToTemp( $fileUrl );
-											Packager::importAppFromPackage( $filename, $fileUrl );
-										}
-										catch ( \Exception $ex )
-										{
-											Log::error( "Failed to import application package $fileUrl.\n{$ex->getMessage()}" );
+											Log::debug( 'Importing application: ' . $fileUrl );
+
+											try
+											{
+												// need to download and extract zip file and move contents to storage
+												$filename = FileUtilities::importUrlFileToTemp( $fileUrl );
+												Packager::importAppFromPackage( $filename, $fileUrl );
+											}
+											catch ( \Exception $ex )
+											{
+												Log::error( "Failed to import application package $fileUrl.\n{$ex->getMessage()}" );
+											}
 										}
 									}
 								}

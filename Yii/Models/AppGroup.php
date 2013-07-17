@@ -66,7 +66,7 @@ class AppGroup extends BasePlatformSystemModel
 	public function relations()
 	{
 		$_relations = array(
-			'apps' => array( self::MANY_MANY, 'App', 'df_sys_app_to_app_group(app_id, app_group_id)' ),
+			'apps' => array( self::MANY_MANY, __NAMESPACE__ .'App', 'df_sys_app_to_app_group(app_id, app_group_id)' ),
 		);
 
 		return array_merge( parent::relations(), $_relations );

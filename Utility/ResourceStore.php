@@ -372,7 +372,7 @@ class ResourceStore extends SeedUtility
 			$_transaction = Pii::db()->beginTransaction();
 		}
 
-		$_pk = static::model()->primaryKey;
+		$_pk = static::model()->getTableSchema()->primaryKey;
 
 		foreach ( $records as $_record )
 		{
@@ -794,10 +794,11 @@ class ResourceStore extends SeedUtility
 		}
 
 		//	Create record
+		$_resource = static::model();
+		$_resource->setAttributes( $record );
+
 		try
 		{
-			$_resource = static::model();
-			$_resource->setAttributes( $record );
 			$_resource->save();
 		}
 		catch ( \Exception $_ex )
@@ -808,7 +809,7 @@ class ResourceStore extends SeedUtility
 		//	Set related and return
 		try
 		{
-			$_id = $_resource->primaryKey;
+			$_id = $_resource->tableSchema->primaryKey;
 
 			if ( empty( $_id ) )
 			{
@@ -817,7 +818,7 @@ class ResourceStore extends SeedUtility
 				throw new InternalServerErrorException( 'Failed to get primary key from created user . ' );
 			}
 
-			$_resource->setRelated( $record, $_id );
+			$_resource->setRelated( $record, $_resource->getAttribute( $_id ) );
 
 			//	Return requested data
 			return static::buildResponsePayload( $_resource );

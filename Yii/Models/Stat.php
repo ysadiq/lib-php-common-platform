@@ -116,6 +116,8 @@ SQL;
 			':last_modified_date' => date( 'c' ),
 		);
 
-		return Sql::execute( $_sql, $_params, Pii::pdo() );
+		$_pdo = Pii::pdo();
+
+		return Sql::execute( $_sql, $_params, $_pdo );
 	}
 }

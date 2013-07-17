@@ -38,18 +38,6 @@ namespace DreamFactory\Platform\Yii\Models;
 class AppServiceRelation extends BasePlatformSystemModel
 {
 	/**
-	 * Returns the static model of the specified AR class.
-	 *
-	 * @param string $className active record class name.
-	 *
-	 * @return AppServiceRelation the static model class
-	 */
-	public static function model( $className = __CLASS__ )
-	{
-		return parent::model( $className );
-	}
-
-	/**
 	 * @return string the associated database table name
 	 */
 	public function tableName()
@@ -78,8 +66,8 @@ class AppServiceRelation extends BasePlatformSystemModel
 	public function relations()
 	{
 		return array(
-			'app'     => array( self::BELONGS_TO, 'App', 'app_id' ),
-			'service' => array( self::BELONGS_TO, 'Service', 'service_id' ),
+			'app'     => array( self::BELONGS_TO, __NAMESPACE__ . '\\App', 'app_id' ),
+			'service' => array( self::BELONGS_TO, __NAMESPACE__ . '\\Service', 'service_id' ),
 		);
 	}
 

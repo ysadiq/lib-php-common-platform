@@ -39,18 +39,6 @@ namespace DreamFactory\Platform\Yii\Models;
 class RoleServiceAccess extends BasePlatformSystemModel
 {
 	/**
-	 * Returns the static model of the specified AR class.
-	 *
-	 * @param string $className active record class name.
-	 *
-	 * @return RoleServiceAccess the static model class
-	 */
-	public static function model( $className = __CLASS__ )
-	{
-		return parent::model( $className );
-	}
-
-	/**
 	 * @return string the associated database table name
 	 */
 	public function tableName()
@@ -78,46 +66,42 @@ class RoleServiceAccess extends BasePlatformSystemModel
 	public function relations()
 	{
 		return array(
-			'role'    => array( self::BELONGS_TO, 'Role', 'role_id' ),
-			'service' => array( self::BELONGS_TO, 'Service', 'service_id' ),
+			'role'    => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'role_id' ),
+			'service' => array( self::BELONGS_TO, __NAMESPACE__ . '\\Service', 'service_id' ),
 		);
 	}
 
 	/**
 	 * @return array customized attribute labels (name=>label)
 	 */
-	public function attributeLabels()
+	public function attributeLabels( $additionalLabels = array() )
 	{
-		return array(
-			'id'         => 'Id',
-			'role_id'    => 'Role',
-			'service_id' => 'Service',
-			'component'  => 'Component',
-			'access'     => 'Access',
+		$_labels = array_merge(
+			array(
+				 'role_id'    => 'Role',
+				 'service_id' => 'Service',
+				 'component'  => 'Component',
+				 'access'     => 'Access',
+			),
+			$additionalLabels
 		);
+
+		return parent::attributeLabels( $_labels );
 	}
 
 	/**
-	 * Retrieves a list of models based on the current search/filter conditions.
-	 *
-	 * @return CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
+	 * {@InheritDoc}
 	 */
-	public function search()
+	public function search( $criteria = null )
 	{
-		$_criteria = new CDbCriteria();
+		$_criteria = $criteria ? : new \CDbCriteria();
 
-		$_criteria->compare( 'id', $this->id );
 		$_criteria->compare( 'role_id', $this->role_id );
 		$_criteria->compare( 'service_id', $this->service_id );
 		$_criteria->compare( 'component', $this->component );
 		$_criteria->compare( 'access', $this->access );
 
-		return new CActiveDataProvider(
-			$this,
-			array(
-				 'criteria' => $_criteria,
-			)
-		);
+		return parent::search( $_criteria );
 	}
 
 	/**

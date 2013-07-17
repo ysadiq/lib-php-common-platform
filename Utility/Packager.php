@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Utility\FileSystem;
 use Kisma\Core\SeedUtility;
@@ -26,7 +27,6 @@ use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
-use DreamFactory\Platform\Utility\DataFormat;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Utility\SwaggerUtilities;
@@ -54,6 +54,7 @@ class Packager
 	 */
 	public static function exportAppAsPackage( $app_id, $include_files = false, $include_services = false, $include_schema = false, $include_data = false )
 	{
+		ResourceStore::setResourceName( 'app' );
 		ResourceStore::checkPermission( 'read' );
 
 		$model = \App::model();
@@ -239,6 +240,9 @@ class Packager
 	 */
 	public static function importAppFromPackage( $pkg_file, $import_url = '' )
 	{
+		ResourceStore::setResourceName( 'app' );
+		ResourceStore::checkPermission( 'create' );
+
 		$zip = new \ZipArchive();
 		if ( true !== $zip->open( $pkg_file ) )
 		{
@@ -259,6 +263,7 @@ class Packager
 
 		try
 		{
+			ResourceStore::setResourceName( 'app' );
 			$returnData = ResourceStore::insert( $record, 'id,api_name' );
 		}
 		catch ( \Exception $ex )
@@ -276,6 +281,7 @@ class Packager
 				try
 				{
 					//set service 'service',
+					ResourceStore::setResourceName( 'service' );
 					$result = ResourceStore::insert( $data );
 					// clear swagger cache upon any service changes.
 					SwaggerUtilities::clearCache();
@@ -427,7 +433,11 @@ class Packager
 		{
 			// delete db record
 			// todo anyone else using schema created?
-			static::deleteRecordById( 'app', $id );
+			if ( !empty( $id ) )
+			{
+				ResourceStore::setResourceName( 'app' );
+				ResourceStore::delete( array( 'id' => $id ) );
+			}
 			throw $ex;
 		}
 
@@ -471,6 +481,7 @@ class Packager
 
 		try
 		{
+			ResourceStore::setResourceName( 'app' );
 			$result = ResourceStore::insert( $record );
 		}
 		catch ( \Exception $ex )

@@ -77,11 +77,11 @@ class Role extends BasePlatformSystemModel
 	public function relations()
 	{
 		$_relations = array(
-			'default_app'           => array( self::BELONGS_TO, 'App', 'default_app_id' ),
-			'role_service_accesses' => array( self::HAS_MANY, 'RoleServiceAccess', 'role_id' ),
-			'users'                 => array( self::HAS_MANY, 'User', 'role_id' ),
-			'apps'                  => array( self::MANY_MANY, 'App', 'df_sys_app_to_role(app_id, role_id)' ),
-			'services'              => array( self::MANY_MANY, 'Service', 'df_sys_role_service_access(role_id, service_id)' ),
+			'default_app'           => array( self::BELONGS_TO, __NAMESPACE__ . '\\App', 'default_app_id' ),
+			'role_service_accesses' => array( self::HAS_MANY, __NAMESPACE__ . '\\RoleServiceAccess', 'role_id' ),
+			'users'                 => array( self::HAS_MANY, __NAMESPACE__ . '\\User', 'role_id' ),
+			'apps'                  => array( self::MANY_MANY, __NAMESPACE__ . '\\App', 'df_sys_app_to_role(app_id, role_id)' ),
+			'services'              => array( self::MANY_MANY, __NAMESPACE__ . '\\Service', 'df_sys_role_service_access(role_id, service_id)' ),
 		);
 
 		return array_merge( parent::relations(), $_relations );

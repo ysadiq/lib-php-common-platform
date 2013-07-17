@@ -100,18 +100,18 @@ class User extends BasePlatformSystemModel
 	public function relations()
 	{
 		$_relations = array(
-			'apps_created'        => array( self::HAS_MANY, 'App', 'created_by_id' ),
-			'apps_modified'       => array( self::HAS_MANY, 'App', 'last_modified_by_id' ),
-			'app_groups_created'  => array( self::HAS_MANY, 'AppGroup', 'created_by_id' ),
-			'app_groups_modified' => array( self::HAS_MANY, 'AppGroup', 'last_modified_by_id' ),
-			'roles_created'       => array( self::HAS_MANY, 'Role', 'created_by_id' ),
-			'roles_modified'      => array( self::HAS_MANY, 'Role', 'last_modified_by_id' ),
-			'services_created'    => array( self::HAS_MANY, 'Service', 'created_by_id' ),
-			'services_modified'   => array( self::HAS_MANY, 'Service', 'last_modified_by_id' ),
-			'users_created'       => array( self::HAS_MANY, 'User', 'created_by_id' ),
-			'users_modified'      => array( self::HAS_MANY, 'User', 'last_modified_by_id' ),
-			'default_app'         => array( self::BELONGS_TO, 'App', 'default_app_id' ),
-			'role'                => array( self::BELONGS_TO, 'Role', 'role_id' ),
+			'apps_created'        => array( self::HAS_MANY, __NAMESPACE__ . '\\App', 'created_by_id' ),
+			'apps_modified'       => array( self::HAS_MANY, __NAMESPACE__ . '\\App', 'last_modified_by_id' ),
+			'app_groups_created'  => array( self::HAS_MANY, __NAMESPACE__ . '\\AppGroup', 'created_by_id' ),
+			'app_groups_modified' => array( self::HAS_MANY, __NAMESPACE__ . '\\AppGroup', 'last_modified_by_id' ),
+			'roles_created'       => array( self::HAS_MANY, __NAMESPACE__ . '\\Role', 'created_by_id' ),
+			'roles_modified'      => array( self::HAS_MANY, __NAMESPACE__ . '\\Role', 'last_modified_by_id' ),
+			'services_created'    => array( self::HAS_MANY, __NAMESPACE__ . '\\Service', 'created_by_id' ),
+			'services_modified'   => array( self::HAS_MANY, __NAMESPACE__ . '\\Service', 'last_modified_by_id' ),
+			'users_created'       => array( self::HAS_MANY, __NAMESPACE__ . '\\User', 'created_by_id' ),
+			'users_modified'      => array( self::HAS_MANY, __NAMESPACE__ . '\\User', 'last_modified_by_id' ),
+			'default_app'         => array( self::BELONGS_TO, __NAMESPACE__ . '\\App', 'default_app_id' ),
+			'role'                => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'role_id' ),
 		);
 
 		return array_merge( parent::relations(), $_relations );

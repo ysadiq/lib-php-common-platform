@@ -106,13 +106,13 @@ class App extends BasePlatformSystemModel
 	public function relations()
 	{
 		$_relations = array(
-			'roles_default_app'     => array( static::HAS_MANY, 'Role', 'default_app_id' ),
-			'users_default_app'     => array( static::HAS_MANY, 'User', 'default_app_id' ),
-			'app_groups'            => array( static::MANY_MANY, 'AppGroup', 'df_sys_app_to_app_group(app_id, app_group_id)' ),
-			'roles'                 => array( static::MANY_MANY, 'Role', 'df_sys_app_to_role(app_id, role_id)' ),
-			'app_service_relations' => array( static::HAS_MANY, 'AppServiceRelation', 'app_id' ),
-			'services'              => array( static::MANY_MANY, 'Service', 'df_sys_app_to_service(app_id, service_id)' ),
-			'storage_service'       => array( static::BELONGS_TO, 'Service', 'storage_service_id' ),
+			'roles_default_app'     => array( static::HAS_MANY, __NAMESPACE__ . '\\Role', 'default_app_id' ),
+			'users_default_app'     => array( static::HAS_MANY, __NAMESPACE__ . '\\User', 'default_app_id' ),
+			'app_groups'            => array( static::MANY_MANY, __NAMESPACE__ . '\\AppGroup', 'df_sys_app_to_app_group(app_id, app_group_id)' ),
+			'roles'                 => array( static::MANY_MANY, __NAMESPACE__ . '\\Role', 'df_sys_app_to_role(app_id, role_id)' ),
+			'app_service_relations' => array( static::HAS_MANY, __NAMESPACE__ . '\\AppServiceRelation', 'app_id' ),
+			'services'              => array( static::MANY_MANY, __NAMESPACE__ . '\\Service', 'df_sys_app_to_service(app_id, service_id)' ),
+			'storage_service'       => array( static::BELONGS_TO, __NAMESPACE__ . '\\Service', 'storage_service_id' ),
 		);
 
 		return array_merge( parent::relations(), $_relations );
@@ -226,7 +226,14 @@ class App extends BasePlatformSystemModel
 			$_container = $_local ? 'applications' : $this->storage_container;
 
 			/** @var BaseFileService $_service */
-			$_service = ServiceHandler::getServiceObject( $_serviceId );
+			if ( is_numeric( $_serviceId ) )
+			{
+				$_service = ServiceHandler::getServiceObjectById( $_serviceId );
+			}
+			else
+			{
+				$_service = ServiceHandler::getServiceObject( $_serviceId );
+			}
 
 			if ( empty( $_container ) )
 			{
