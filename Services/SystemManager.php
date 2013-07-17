@@ -779,17 +779,6 @@ class SystemManager extends BaseSystemRestService
 		return ResourceStore::model( $resource );
 	}
 
-	/**
-	 * @param $resource
-	 *
-	 * @return BasePlatformSystemModel
-	 * @throws InternalServerErrorException
-	 */
-	public static function getNewModel( $resource )
-	{
-		return stati::getResourceModel( $resource );
-	}
-
 	//-------- System Helper Operations -------------------------------------------------
 
 	/**

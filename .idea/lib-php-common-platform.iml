@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="WEB_MODULE" version="4">
   <component name="NewModuleRootManager">
-    <content url="file://$MODULE_DIR$" />
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/vendor/composer" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common-yii" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/dreamfactory/yii" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/kisma/kisma" />
+    </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module-library">
@@ -19,26 +25,28 @@
     <orderEntry type="module-library">
       <library name="PHARS">
         <CLASSES>
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/modified.phar" />
-          <root url="phar:///usr/share/php/phpDocumentor/tests/data/test.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/nosig.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/nosigmodified.phar" />
-          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/phpdocumentor/fileset/tests/data/test.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/wrongsig.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/test.phar" />
-          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/symfony/dependency-injection/Symfony/Component/DependencyInjection/Tests/Fixtures/includes/ProjectWithXsdExtensionInPhar.phar" />
           <root url="phar:///usr/local/bin/composer.phar" />
         </CLASSES>
         <SOURCES>
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/modified.phar" />
-          <root url="phar:///usr/share/php/phpDocumentor/tests/data/test.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/nosig.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/nosigmodified.phar" />
-          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/phpdocumentor/fileset/tests/data/test.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/wrongsig.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/test.phar" />
-          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/symfony/dependency-injection/Symfony/Component/DependencyInjection/Tests/Fixtures/includes/ProjectWithXsdExtensionInPhar.phar" />
           <root url="phar:///usr/local/bin/composer.phar" />
+        </SOURCES>
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="Composer Vendors">
+        <CLASSES>
+          <root url="file://$MODULE_DIR$/vendor/kisma/kisma" />
+          <root url="file://$MODULE_DIR$/vendor/composer" />
+          <root url="file://$MODULE_DIR$/vendor/dreamfactory/yii" />
+          <root url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common" />
+          <root url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common-yii" />
+        </CLASSES>
+        <SOURCES>
+          <root url="file://$MODULE_DIR$/vendor/kisma/kisma" />
+          <root url="file://$MODULE_DIR$/vendor/composer" />
+          <root url="file://$MODULE_DIR$/vendor/dreamfactory/yii" />
+          <root url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common" />
+          <root url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common-yii" />
         </SOURCES>
       </library>
     </orderEntry>
