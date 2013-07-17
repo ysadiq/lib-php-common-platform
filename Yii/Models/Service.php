@@ -97,8 +97,6 @@ class Service extends BasePlatformSystemModel
 			$_tableName = static::model()->tableName();
 
 			//	List all available services from db
-			$_pdo = Pii::pdo();
-
 			$_sql
 				= <<<MYSQL
 SELECT
@@ -110,7 +108,8 @@ ORDER BY
 	api_name
 MYSQL;
 
-			$_services = Sql::findAll( $_sql, null, $_pdo );
+			$_pdo = Pii::pdo();
+			$_services = Sql::query( $_sql, null, $_pdo );
 
 			$_serviceCache = array_merge(
 				$_serviceCache,
@@ -188,7 +187,7 @@ MYSQL;
 		$_rules = array(
 			array( 'name, api_name, type', 'required' ),
 			array( 'name, api_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
-			array( 'is_active, type_id, storage_type_id, native_format_id', 'numerical', 'integerOnly' => true ),
+			array( 'is_active', 'numerical', 'integerOnly' => true ),
 			array( 'name, api_name, type, storage_type, native_format', 'length', 'max' => 64 ),
 			array( 'storage_name', 'length', 'max' => 80 ),
 			array( 'base_url', 'length', 'max' => 255 ),
