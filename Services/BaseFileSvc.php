@@ -41,13 +41,14 @@ use Swagger\Annotations as SWG;
  * )
  * @SWG\Model(id="Container",
  * @SWG\Property(name="name",type="string",description="Identifier/Name for the container."),
+ * @SWG\Property(name="path",type="string",description="Same as name for the container."),
  * @SWG\Property(name="last_modified",type="string",description="A GMT date timestamp of when the container was last modified."),
  * @SWG\Property(name="_property_",type="string",description="Storage type specific properties."),
  * @SWG\Property(name="metadata",type="Array",items="$ref:string",description="An array of name-value pairs.")
  * )
  * @SWG\Model(id="FoldersAndFiles",
- * @SWG\Property(name="name",type="string",description="Identifier/Name for the current folder."),
- * @SWG\Property(name="path",type="string",description="Path of the folder localized to requested folder resource."),
+ * @SWG\Property(name="name",type="string",description="Identifier/Name for the current folder, localized to requested folder resource."),
+ * @SWG\Property(name="path",type="string",description="Full path of the folder, from the service including container."),
  * @SWG\Property(name="container",type="string",description="Container for the current folder."),
  * @SWG\Property(name="last_modified",type="string",description="A GMT date timestamp of when the folder was last modified."),
  * @SWG\Property(name="_property_",type="string",description="Storage type specific properties."),
@@ -56,15 +57,15 @@ use Swagger\Annotations as SWG;
  * @SWG\Property(name="file",type="Array",items="$ref:File",description="An array of contained files.")
  * )
  * @SWG\Model(id="Folder",
- * @SWG\Property(name="name",type="string",description="Identifier/Name for the folder."),
- * @SWG\Property(name="path",type="string",description="Path of the folder localized to requested folder resource."),
+ * @SWG\Property(name="name",type="string",description="Identifier/Name for the folder, localized to requested folder resource."),
+ * @SWG\Property(name="path",type="string",description="Full path of the folder, from the service including container."),
  * @SWG\Property(name="last_modified",type="string",description="A GMT date timestamp of when the folder was last modified."),
  * @SWG\Property(name="_property_",type="string",description="Storage type specific properties."),
  * @SWG\Property(name="metadata",type="Array",items="$ref:string",description="An array of name-value pairs.")
  * )
  * @SWG\Model(id="File",
- * @SWG\Property(name="name",type="string",description="Identifier/Name for the file."),
- * @SWG\Property(name="path",type="string",description="Path of the file localized to requested folder resource."),
+ * @SWG\Property(name="name",type="string",description="Identifier/Name for the file, localized to requested folder resource."),
+ * @SWG\Property(name="path",type="string",description="Full path of the file, from the service including container."),
  * @SWG\Property(name="content_type",type="string",description="The media type of the content of the file."),
  * @SWG\Property(name="content_length",type="string",description="Size of the file in bytes."),
  * @SWG\Property(name="last_modified",type="string",description="A GMT date timestamp of when the file was last modified."),
@@ -716,9 +717,22 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				if ( empty( $this->_container ) )
 				{
 					// create one or more containers
-					$content = RestData::getPostDataAsArray();
-					$result = $this->createContainers( $content );
-					$result = array( 'container' => $result );
+					$checkExist = FilterInput::request( 'check_exist', false, FILTER_VALIDATE_BOOLEAN );
+					$data = RestData::getPostDataAsArray();
+					$containers = Option::get( $data, 'container' );
+					if ( empty( $containers ) )
+					{
+						$containers = Option::getDeep( $data, 'containers', 'container' );
+					}
+					if ( !empty( $containers ) )
+					{
+						$result = $this->createContainers( $containers, $checkExist );
+						$result = array( 'container' => $result );
+					}
+					else
+					{
+						$result = $this->createContainer( $data, $checkExist );
+					}
 				}
 				else if ( empty( $this->_folderPath ) || empty( $this->_filePath ) )
 				{
@@ -750,7 +764,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 						// html5 single posting for folder create
 						$fullPathName = $this->_folderPath . $folderNameHeader;
 						$content = RestData::getPostDataAsArray();
-						$this->createFolder( $this->_container, $fullPathName, true, $content, true );
+						$this->createFolder( $this->_container, $fullPathName, $content );
 						$result = array( 'folder' => array( array( 'name' => $folderNameHeader, 'path' => $this->_container . '/' . $fullPathName ) ) );
 					}
 					elseif ( !empty( $fileUrl ) )
@@ -896,10 +910,27 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				$content = RestData::getPostDataAsArray();
 				if ( empty( $this->_container ) )
 				{
-					// delete multiple containers
 					$containers = Option::get( $content, 'container' );
-					$result = $this->deleteContainers( $containers, $force );
-					$result = array( 'container' => $result );
+					if ( empty( $containers ) )
+					{
+						$containers = Option::getDeep( $content, 'containers', 'container' );
+					}
+					if ( !empty( $containers ) )
+					{
+						// delete multiple containers
+						$result = $this->deleteContainers( $containers, $force );
+						$result = array( 'container' => $result );
+					}
+					else
+					{
+						$_name = Option::get( $content, 'name', trim( Option::get( $content, 'path' ), '/' ) );
+						if ( empty( $_name ) )
+						{
+							throw new BadRequestException( 'No name found for container in delete request.' );
+						}
+						$this->deleteContainer( $_name, $force );
+						$result = array( 'name' => $_name, 'path' => $_name );
+					}
 				}
 				else if ( empty( $this->_folderPath ) )
 				{
@@ -908,7 +939,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 					if ( empty( $content ) )
 					{
 						$this->deleteContainer( $this->_container, $force );
-						$result = array( 'container' => array( array( 'name' => $this->_container ) ) );
+						$result = array( 'name' => $this->_container );
 					}
 					else
 					{

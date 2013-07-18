@@ -130,7 +130,9 @@ class SqlDbSvc extends BaseDbSvc
 				break;
 
 			case SqlDbUtilities::DRV_SQLSRV:
-				$this->_sqlConn->setAttribute( constant( \PDO::SQLSRV_ATTR_DIRECT_QUERY ), true );
+				$this->_sqlConn->setAttribute( constant( '\\PDO::SQLSRV_ATTR_DIRECT_QUERY' ), true );
+
+				//	These need to be on the dsn
 //				$this->_sqlConn->setAttribute( 'MultipleActiveResultSets', false );
 //				$this->_sqlConn->setAttribute( 'ReturnDatesAsStrings', true );
 //				$this->_sqlConn->setAttribute( 'CharacterSet', 'UTF-8' );
@@ -907,7 +909,7 @@ class SqlDbSvc extends BaseDbSvc
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
-	 * @throws \Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
 	public function updateRecordsByIds( $table, $record, $id_list, $id_field = '', $rollback = false, $fields = '', $extras = array() )
@@ -1244,8 +1246,8 @@ class SqlDbSvc extends BaseDbSvc
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
-	 * @throws \Platform\Exceptions\NotFoundException
-	 * @throws \Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
 	public function deleteRecordsByIds( $table, $id_list, $id_field = '', $rollback = false, $fields = '', $extras = array() )
@@ -2177,7 +2179,7 @@ class SqlDbSvc extends BaseDbSvc
 	 * @param        $avail_fields
 	 * @param string $prefix
 	 *
-	 * @throws \Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return string
 	 */
 	public function parseOutFields( $fields, $avail_fields, $prefix = 'INSERTED' )
@@ -2213,8 +2215,8 @@ class SqlDbSvc extends BaseDbSvc
 	 * @param $data
 	 * @param $extras
 	 *
-	 * @throws \Platform\Exceptions\InternalServerErrorException
-	 * @throws \Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
 	protected function retrieveRelatedRecords( $relations, $data, $extras )
