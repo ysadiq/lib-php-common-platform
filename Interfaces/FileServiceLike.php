@@ -60,22 +60,22 @@ interface FileServiceLike
 	/**
 	 * Create a container using properties, where at least name is required
 	 *
-	 * @param array $properties
-	 * @param bool  $check_exist If true, throws error if the container already exists
-	 *
-	 * @return void
-	 */
-	public function createContainer( $properties = array(), $check_exist = false );
-
-	/**
-	 * Create multiple containers using array of properties, where at least name is required
-	 *
-	 * @param array $properties
+	 * @param array $container
 	 * @param bool  $check_exist If true, throws error if the container already exists
 	 *
 	 * @return array
 	 */
-	public function createContainers( $properties = array(), $check_exist = false );
+	public function createContainer( $container, $check_exist = false );
+
+	/**
+	 * Create multiple containers using array of properties, where at least name is required
+	 *
+	 * @param array $containers
+	 * @param bool  $check_exist If true, throws error if the container already exists
+	 *
+	 * @return array
+	 */
+	public function createContainers( $containers, $check_exist = false );
 
 	/**
 	 * Update a container with some properties

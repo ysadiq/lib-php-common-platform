@@ -24,7 +24,6 @@ use Kisma\Core\Utility\Option;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Utility\FileUtilities;
-use DreamFactory\Platform\Utility\Utilities;
 
 /**
  * LocalFileSvc.php
@@ -126,12 +125,16 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param bool  $check_exist If true, throws error if the container already exists
 	 *
 	 * @throws \Exception
-	 * @throws \Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
 	public function createContainer( $properties = array(), $check_exist = false )
 	{
 		$_container = Option::get( $properties, 'name', Option::get( $properties, 'path' ) );
+		if ( empty( $_container ) )
+		{
+			throw new BadRequestException( 'No name found for container in create request.' );
+		}
 		// does this folder already exist?
 		if ( $this->folderExists( $_container, '' ) )
 		{
@@ -145,6 +148,7 @@ class LocalFileSvc extends BaseFileSvc
 
 		// create the container
 		$_dir = self::addContainerToName( $_container, '' );
+
 		if ( !mkdir( $_dir, 0777, true ) )
 		{
 			throw new \Exception( 'Failed to create container.' );
@@ -156,8 +160,21 @@ class LocalFileSvc extends BaseFileSvc
 //            }
 	}
 
+	/**
+	 * Create multiple containers using array of properties, where at least name is required
+	 *
+	 * @param array $containers
+	 * @param bool  $check_exist If true, throws error if the container already exists
+	 *
+	 * @return array
+	 */
 	public function createContainers( $containers = array(), $check_exist = false )
 	{
+		if ( empty( $containers ) )
+		{
+			return array();
+		}
+
 		$_out = array();
 		foreach ( $containers as $_key => $_folder )
 		{
@@ -191,7 +208,7 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param string $container
 	 * @param array  $properties
 	 *
-	 * @throws \Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
 	 * @return void
 	 */
 	public function updateContainerProperties( $container, $properties = array() )
@@ -234,30 +251,38 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param array $containers
 	 * @param bool  $force Force a delete if it is not empty
 	 *
-	 * @throws \Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
 	public function deleteContainers( $containers, $force = false )
 	{
-		foreach ( $containers as $_key => $_folder )
+		if ( !empty( $containers ) )
 		{
-			try
+			if ( !isset( $containers[0] ) )
 			{
-				// path is full path, name is relative to root, take either
-				$_name = Option::get( $_folder, 'name', Option::get( $folder, 'path' ) );
-				if ( !empty( $_name ) )
-				{
-					$this->deleteContainer( $_name, $force );
-				}
-				else
-				{
-					throw new BadRequestException( 'No name found for container in delete request.' );
-				}
+				// single folder, make into array
+				$containers = array( $containers );
 			}
-			catch ( \Exception $ex )
+			foreach ( $containers as $_key => $_folder )
 			{
-				// error whole batch here?
-				$containers[$_key]['error'] = array( 'message' => $ex->getMessage(), 'code' => $ex->getCode() );
+				try
+				{
+					// path is full path, name is relative to root, take either
+					$_name = Option::get( $_folder, 'name', trim( Option::get( $_folder, 'path' ), '/' ) );
+					if ( !empty( $_name ) )
+					{
+						$this->deleteContainer( $_name, $force );
+					}
+					else
+					{
+						throw new BadRequestException( 'No name found for container in delete request.' );
+					}
+				}
+				catch ( \Exception $ex )
+				{
+					// error whole batch here?
+					$containers[$_key]['error'] = array( 'message' => $ex->getMessage(), 'code' => $ex->getCode() );
+				}
 			}
 		}
 
@@ -286,24 +311,19 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param bool   $full_tree
 	 * @param bool   $include_properties
 	 *
-	 * @throws \Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
 	 * @return array
 	 */
 	public function getFolder( $container, $path, $include_files = true, $include_folders = true, $full_tree = false, $include_properties = false )
 	{
 		$path = FileUtilities::fixFolderPath( $path );
-		$_out = array( 'container' => $container );
-		if ( empty( $path ) )
-		{
-			$_out['name'] = $container;
-			$_out['path'] = $container;
-		}
-		else
-		{
-			$_name = basename( $path );
-			$_out['name'] = $_name;
-			$_out['path'] = $container . '/' . $path;
-		}
+
+		$_out = array(
+			'container' => $container,
+			'name'      => empty( $path ) ? $container : basename( $path ),
+			'path'      => empty( $path ) ? $container : $container . '/' . $path,
+		);
+
 		if ( $include_properties )
 		{
 			$_dirPath = self::addContainerToName( $container, $path );
@@ -364,8 +384,8 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param bool   $check_exist
 	 *
 	 * @throws \Exception
-	 * @throws \Platform\Exceptions\NotFoundException
-	 * @throws \Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
 	public function createFolder( $container, $path, $is_public = true, $properties = array(), $check_exist = true )
@@ -410,8 +430,8 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param string $src_path
 	 * @param bool   $check_exist
 	 *
-	 * @throws \Platform\Exceptions\NotFoundException
-	 * @throws \Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
 	public function copyFolder( $container, $dest_path, $src_container, $src_path, $check_exist = false )
@@ -447,7 +467,7 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param string $path
 	 * @param array  $properties
 	 *
-	 * @throws \Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
 	 * @return void
 	 */
 	public function updateFolderProperties( $container, $path, $properties = array() )
@@ -488,7 +508,7 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param bool   $force If true, delete folder content as well,
 	 *                      otherwise return error when content present.
 	 *
-	 * @throws \Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
 	public function deleteFolders( $container, $folders, $root = '', $force = false )
@@ -549,7 +569,7 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param bool   $content_as_base
 	 *
 	 * @throws \Exception
-	 * @throws \Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
 	 * @return string
 	 */
 	public function getFileContent( $container, $path, $local_file = '', $content_as_base = true )
@@ -593,7 +613,7 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param bool   $include_content
 	 * @param bool   $content_as_base
 	 *
-	 * @throws \Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
 	 * @throws \Exception
 	 * @return array
 	 */
@@ -680,7 +700,7 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param boolean $content_is_base
 	 * @param bool    $check_exist
 	 *
-	 * @throws \Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
 	 * @throws \Exception
 	 * @return void
 	 */
@@ -722,8 +742,8 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param bool   $check_exist
 	 *
 	 * @throws \Exception
-	 * @throws \Platform\Exceptions\NotFoundException
-	 * @throws \Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
 	public function moveFile( $container, $path, $local_path, $check_exist = true )
@@ -765,8 +785,8 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param bool   $check_exist
 	 *
 	 * @throws \Exception
-	 * @throws \Platform\Exceptions\NotFoundException
-	 * @throws \Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
 	public function copyFile( $container, $dest_path, $src_container, $src_path, $check_exist = false )
@@ -806,7 +826,7 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param string $path
 	 *
 	 * @throws \Exception
-	 * @throws \Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
 	public function deleteFile( $container, $path )
@@ -827,7 +847,7 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param array  $files
 	 * @param string $root
 	 *
-	 * @throws \Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
 	public function deleteFiles( $container, $files, $root = '' )
@@ -883,7 +903,7 @@ class LocalFileSvc extends BaseFileSvc
 	 * @param bool        $overwrite
 	 *
 	 * @throws \Exception
-	 * @throws \Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return string Zip File Name created/updated
 	 */
 	public function getFolderAsZip( $container, $path, $zip = null, $zipFileName = '', $overwrite = false )

@@ -24,10 +24,8 @@ use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
-use Platform\Resources\UserSession;
 use Swagger\Annotations as SWG;
 
 /**

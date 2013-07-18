@@ -19,13 +19,13 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Platform\Interfaces\FileServiceLike;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\FilterInput;
-use DreamFactory\Platform\Interfaces\FileServiceLike;
 use DreamFactory\Platform\Utility\DataFormat;
 use DreamFactory\Platform\Utility\FileUtilities;
-use DreamFactory\Platform\Utility\RestRequest;
+use DreamFactory\Platform\Utility\RestData;
 use Swagger\Annotations as SWG;
 
 /**
@@ -129,6 +129,12 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 		}
 	}
 
+	/**
+	 * List all possible resources accessible via this service,
+	 * return false if this is not applicable
+	 *
+	 * @return array|boolean
+	 */
 	protected function _listResources()
 	{
 		$result = $this->listContainers();
@@ -607,7 +613,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 		switch ( $this->_action )
 		{
 			case self::Get:
-				$this->checkPermission( 'read', $this->_container );
+				static::checkPermission( 'read', $this->_container );
 				if ( empty( $this->_container ) )
 				{
 					// no resource
@@ -706,11 +712,11 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				break;
 			case self::Post:
 			case self::Put:
-				$this->checkPermission( 'create', $this->_container );
+				static::checkPermission( 'create', $this->_container );
 				if ( empty( $this->_container ) )
 				{
 					// create one or more containers
-					$content = RestRequest::getPostDataAsArray();
+					$content = RestData::getPostDataAsArray();
 					$result = $this->createContainers( $content );
 					$result = array( 'container' => $result );
 				}
@@ -727,7 +733,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 					if ( !empty( $fileNameHeader ) )
 					{
 						// html5 single posting for file create
-						$content = RestRequest::getPostData();
+						$content = RestData::getPostData();
 						$contentType = FilterInput::server( 'CONTENT_TYPE', '' );
 						$result = $this->_handleFileContent(
 							$this->_folderPath,
@@ -743,7 +749,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 					{
 						// html5 single posting for folder create
 						$fullPathName = $this->_folderPath . $folderNameHeader;
-						$content = RestRequest::getPostDataAsArray();
+						$content = RestData::getPostDataAsArray();
 						$this->createFolder( $this->_container, $fullPathName, true, $content, true );
 						$result = array( 'folder' => array( array( 'name' => $folderNameHeader, 'path' => $this->_container . '/' . $fullPathName ) ) );
 					}
@@ -770,7 +776,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 					else
 					{
 						// possibly xml or json post either of files or folders to create, copy or move
-						$data = RestRequest::getPostDataAsArray();
+						$data = RestData::getPostDataAsArray();
 						if ( empty( $data ) )
 						{
 							// create folder from resource path
@@ -798,7 +804,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 						$contentType = Option::get( $_SERVER, 'CONTENT_TYPE', '' );
 						// direct load from posted data as content
 						// or possibly xml or json post of file properties create, copy or move
-						$content = RestRequest::getPostData();
+						$content = RestData::getPostData();
 						$result = $this->_handleFileContent(
 							$path,
 							$name,
@@ -846,7 +852,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				break;
 			case self::Patch:
 			case self::Merge:
-				$this->checkPermission( 'update' );
+				static::checkPermission( 'update', $this->_container );
 				if ( empty( $this->_container ) )
 				{
 					// nothing?
@@ -855,14 +861,14 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				else if ( empty( $this->_folderPath ) )
 				{
 					// update container properties
-					$content = RestRequest::getPostDataAsArray();
+					$content = RestData::getPostDataAsArray();
 					$this->updateContainerProperties( $this->_container, $content );
 					$result = array( 'container' => array( 'name' => $this->_container ) );
 				}
 				else if ( empty( $this->_filePath ) )
 				{
 					// update folder properties
-					$content = RestRequest::getPostDataAsArray();
+					$content = RestData::getPostDataAsArray();
 					$this->updateFolderProperties( $this->_container, $this->_folderPath, $content );
 					$result = array(
 						'folder' => array(
@@ -874,7 +880,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				else
 				{
 					// update file properties?
-					$content = RestRequest::getPostDataAsArray();
+					$content = RestData::getPostDataAsArray();
 					$this->updateFileProperties( $this->_container, $this->_filePath, $content );
 					$result = array(
 						'file' => array(
@@ -885,9 +891,9 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				}
 				break;
 			case self::Delete:
-				$this->checkPermission( 'delete' );
+				static::checkPermission( 'delete', $this->_container );
 				$force = FilterInput::request( 'force', false, FILTER_VALIDATE_BOOLEAN );
-				$content = RestRequest::getPostDataAsArray();
+				$content = RestData::getPostDataAsArray();
 				if ( empty( $this->_container ) )
 				{
 					// delete multiple containers
@@ -1025,6 +1031,15 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 		}
 	}
 
+	/**
+	 * @param array $files
+	 * @param bool  $extract
+	 * @param bool  $clean
+	 * @param bool  $checkExist
+	 *
+	 * @return array
+	 * @throws \Exception
+	 */
 	protected function _handleFolderContentFromFiles( $files, $extract = false, $clean = false, $checkExist = false )
 	{
 		$out = array();
@@ -1062,6 +1077,14 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 		return array( 'file' => $out );
 	}
 
+	/**
+	 * @param array $data
+	 * @param bool  $extract
+	 * @param bool  $clean
+	 * @param bool  $checkExist
+	 *
+	 * @return array
+	 */
 	protected function _handleFolderContentFromData( $data, $extract = false, $clean = false, $checkExist = false )
 	{
 		$out = array( 'folder' => array(), 'file' => array() );
@@ -1233,152 +1256,6 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 		return $out;
 	}
 
-	/* Implement File Service */
-
-	/**
-	 * List all containers, just names if noted
-	 *
-	 * @param bool $include_properties If true, additional properties are retrieved
-	 *
-	 * @return array
-	 */
-	abstract public function listContainers( $include_properties = false );
-
-	/**
-	 * Check if a container exists
-	 *
-	 * @param  string $container Container name
-	 *
-	 * @return boolean
-	 * @throws \Exception
-	 */
-	abstract public function containerExists( $container );
-
-	/**
-	 * Gets all properties of a particular container
-	 *
-	 * @param string $container Container name
-	 * @param bool   $include_files
-	 * @param bool   $include_folders
-	 * @param bool   $full_tree
-	 * @param bool   $include_properties
-	 *
-	 * @return array
-	 */
-	abstract public function getContainer( $container, $include_files = true, $include_folders = true, $full_tree = false, $include_properties = false );
-
-	/**
-	 * Create a container using properties, where at least name is required
-	 *
-	 * @param array $properties
-	 * @param bool  $check_exist If true, throws error if the container already exists
-	 *
-	 * @throws \Exception
-	 */
-	abstract public function createContainer( $properties = array(), $check_exist = false );
-
-	/**
-	 * Create multiple containers using array of properties, where at least name is required
-	 *
-	 * @param array $properties
-	 * @param bool  $check_exist If true, throws error if the container already exists
-	 *
-	 * @return array
-	 * @throws \Exception
-	 */
-	abstract public function createContainers( $properties = array(), $check_exist = false );
-
-	/**
-	 * Delete a container and all of its content
-	 *
-	 * @param string $container
-	 * @param array  $properties
-	 *
-	 * @throws \Exception
-	 * @return void
-	 */
-	abstract public function updateContainerProperties( $container, $properties = array() );
-
-	/**
-	 * Delete a container and all of its content
-	 *
-	 * @param string $container
-	 * @param bool   $force
-	 *
-	 * @throws \Exception
-	 */
-	abstract public function deleteContainer( $container, $force = false );
-
-	/**
-	 * Delete multiple containers and all of their content
-	 *
-	 * @param array $containers
-	 * @param bool  $force Force a delete if it is not empty
-	 *
-	 * @return array
-	 */
-	abstract public function deleteContainers( $containers, $force = false );
-
-	/**
-	 * @param $container
-	 * @param $path
-	 *
-	 * @return bool
-	 * @throw \Exception
-	 */
-	abstract public function folderExists( $container, $path );
-
-	/**
-	 * @param string $container
-	 * @param string $path
-	 * @param bool   $include_files
-	 * @param bool   $include_folders
-	 * @param bool   $full_tree
-	 * @param bool   $include_properties
-	 *
-	 * @return bool
-	 * @throw \Exception
-	 */
-	abstract public function getFolder( $container, $path, $include_files = true, $include_folders = true, $full_tree = false, $include_properties = false );
-
-	/**
-	 * @param        $container
-	 * @param string $path
-	 * @param array  $properties
-	 *
-	 * @return void
-	 */
-	abstract public function createFolder( $container, $path, $properties = array() );
-
-	/**
-	 * @param              $container
-	 * @param string       $path
-	 * @param array|string $properties
-	 *
-	 * @return void
-	 */
-	abstract public function updateFolderProperties( $container, $path, $properties = array() );
-
-	/**
-	 * @param        $container
-	 * @param string $dest_path
-	 * @param        $src_container
-	 * @param string $src_path
-	 * @param bool   $check_exist
-	 *
-	 * @return void
-	 */
-	abstract public function copyFolder( $container, $dest_path, $src_container, $src_path, $check_exist = false );
-
-	/**
-	 * @param        $container
-	 * @param string $path Folder path relative to the service root directory
-	 * @param  bool  $force
-	 *
-	 * @return void
-	 */
-	abstract public function deleteFolder( $container, $path, $force = false );
-
 	/**
 	 * @param        $container
 	 * @param array  $folders Array of folder paths that are relative to the root directory
@@ -1388,121 +1265,4 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 * @return array
 	 */
 	abstract public function deleteFolders( $container, $folders, $root = '', $force = false );
-
-	/**
-	 * @param $container
-	 * @param $path
-	 *
-	 * @return bool
-	 */
-	abstract public function fileExists( $container, $path );
-
-	/**
-	 * @param         $container
-	 * @param         $path
-	 * @param  string $local_file
-	 * @param  bool   $content_as_base
-	 *
-	 * @return string
-	 */
-	abstract public function getFileContent( $container, $path, $local_file = '', $content_as_base = true );
-
-	/**
-	 * @param       $container
-	 * @param       $path
-	 * @param  bool $include_content
-	 * @param  bool $content_as_base
-	 *
-	 * @return array
-	 */
-	abstract public function getFileProperties( $container, $path, $include_content = false, $content_as_base = true );
-
-	/**
-	 * @param string $container
-	 * @param string $path
-	 * @param bool   $download
-	 *
-	 * @return void
-	 */
-	abstract public function streamFile( $container, $path, $download = false );
-
-	/**
-	 * @param string $container
-	 * @param string $path
-	 * @param array  $properties
-	 *
-	 * @return void
-	 */
-	abstract public function updateFileProperties( $container, $path, $properties = array() );
-
-	/**
-	 * @param         $container
-	 * @param string  $path
-	 * @param string  $content
-	 * @param boolean $content_is_base
-	 * @param bool    $check_exist
-	 *
-	 * @return void
-	 */
-	abstract public function writeFile( $container, $path, $content, $content_is_base = true, $check_exist = false );
-
-	/**
-	 * @param        $container
-	 * @param string $path
-	 * @param string $local_path
-	 * @param bool   $check_exist
-	 *
-	 * @return void
-	 */
-	abstract public function moveFile( $container, $path, $local_path, $check_exist = false );
-
-	/**
-	 * @param        $container
-	 * @param string $dest_path
-	 * @param        $sc_container
-	 * @param string $src_path
-	 * @param bool   $check_exist
-	 *
-	 * @return void
-	 */
-	abstract public function copyFile( $container, $dest_path, $sc_container, $src_path, $check_exist = false );
-
-	/**
-	 * @param        $container
-	 * @param string $path File path relative to the service root directory
-	 *
-	 * @return void
-	 */
-	abstract public function deleteFile( $container, $path );
-
-	/**
-	 * @param        $container
-	 * @param array  $files Array of file paths relative to root
-	 * @param string $root
-	 *
-	 * @return array
-	 */
-	abstract public function deleteFiles( $container, $files, $root = '' );
-
-	/**
-	 * @param             $container
-	 * @param             $path
-	 * @param \ZipArchive $zip
-	 * @param bool        $clean
-	 * @param string      $drop_path
-	 *
-	 * @return array
-	 */
-	abstract public function extractZipFile( $container, $path, $zip, $clean = false, $drop_path = '' );
-
-	/**
-	 * @param                  $container
-	 * @param string           $path
-	 * @param null|\ZipArchive $zip
-	 * @param string           $zipFileName
-	 * @param bool             $overwrite
-	 *
-	 * @return string Zip File Name created/updated
-	 */
-	abstract public function getFolderAsZip( $container, $path, $zip = null, $zipFileName = '', $overwrite = false );
 }
