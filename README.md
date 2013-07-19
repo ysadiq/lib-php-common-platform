@@ -1,15 +1,13 @@
-DreamFactory PHP Components
-===============================
+# lib-php-common-platform
 
-This library is a set of components for PHP used by the DreamFactory Services Platform&trade;
+## Common DSP Components for the DreamFactory Services Platform&trade;
 
-Installation
-============
+## Installation
 
 Add a line to your "require" section in your composer configuration:
 
 	"require":           {
-		"dreamfactory/lib-php-common": "dev-master"
+		"dreamfactory/lib-php-common-platform": "dev-master"
 	}
 
 Run a composer update:
