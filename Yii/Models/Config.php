@@ -80,78 +80,23 @@ class Config extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @param array $additionalLabels
+	 *
 	 * @return array customized attribute labels (name=>label)
 	 */
 	public function attributeLabels( $additionalLabels = array() )
 	{
-		return array(
-				   'id'                      => 'Config Id',
-				   'db_version'              => 'Db Version',
-				   'allow_open_registration' => 'Allow Open Registration',
-				   'open_reg_role_id'        => 'Open Registration Default Role Id',
-				   'allow_guest_user'        => 'Allow Guest User',
-				   'guest_role_id'           => 'Guest Role Id',
-				   'editable_profile_fields' => 'Editable Profile Fields',
-			   ) + $additionalLabels;
+		return parent::attributeLabels(
+			array(
+				'db_version'              => 'Db Version',
+				'allow_open_registration' => 'Allow Open Registration',
+				'open_reg_role_id'        => 'Open Registration Default Role Id',
+				'allow_guest_user'        => 'Allow Guest User',
+				'guest_role_id'           => 'Guest Role Id',
+				'editable_profile_fields' => 'Editable Profile Fields',
+			) + $additionalLabels
+		);
 	}
-
-	/**
-	 * {@InheritDoc}
-	 */
-	public function search( $criteria = null )
-	{
-		$_criteria = $criteria ? : new \CDbCriteria();
-
-		$_criteria->compare( 'id', $this->id );
-		$_criteria->compare( 'db_version', $this->db_version, true );
-
-		return parent::search( $criteria );
-	}
-
-	/** {@InheritDoc} */
-	protected function beforeValidate()
-	{
-//		$this->allow_open_registration = intval( DataFormat::boolval( $this->allow_open_registration ) );
-//		$this->allow_guest_user = intval( DataFormat::boolval( $this->allow_guest_user ) );
-
-//		if ( is_string( $this->open_reg_role_id ) )
-//		{
-//			if ( empty( $this->open_reg_role_id ) )
-//			{
-//				$this->open_reg_role_id = null;
-//			}
-//			else
-//			{
-//				$this->open_reg_role_id = intval( $this->open_reg_role_id );
-//			}
-//		}
-
-//		if ( is_string( $this->guest_role_id ) )
-//		{
-//			if ( empty( $this->guest_role_id ) )
-//			{
-//				$this->guest_role_id = null;
-//			}
-//			else
-//			{
-//				$this->guest_role_id = intval( $this->guest_role_id );
-//			}
-//		}
-
-		return parent::beforeValidate();
-	}
-
-//	/**
-//	 * {@InheritDoc}
-//	 */
-//	public function afterFind()
-//	{
-//		parent::afterFind();
-//
-//		//	Correct data type
-//		$this->allow_open_registration = intval( $this->allow_open_registration );
-//		$this->allow_guest_user = intval( $this->allow_guest_user );
-//	}
 
 	/**
 	 * @param array $mappings
@@ -160,44 +105,49 @@ class Config extends BasePlatformSystemModel
 	 */
 	public function restMap( $mappings = array() )
 	{
-		$_map = array(
-			'db_version',
-			'allow_open_registration',
-			'open_reg_role_id',
-			'allow_guest_user',
-			'guest_role_id',
-			'editable_profile_fields',
-		);
+		static $_map;
 
-		return parent::restMap( array_combine( $_map, $_map ) + $mappings );
+		if ( empty( $_map ) )
+		{
+			$_map = array(
+				'db_version',
+				'allow_open_registration',
+				'open_reg_role_id',
+				'allow_guest_user',
+				'guest_role_id',
+				'editable_profile_fields',
+			);
+
+			$_map = array_combine( $_map, $_map );
+		}
+
+		return parent::restMap( $_map + $mappings );
 	}
-//	/**
-//	 * @param string $requested
-//	 * @param array  $columns
-//	 * @param array  $hidden
-//	 *
-//	 * @return array
-//	 */
-//	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
-//	{
-//		return parent::getRetrievableAttributes(
-//			$requested,
-//			array_merge(
-//				array(
-//					 'db_version',
-//					 'allow_open_registration',
-//					 'open_reg_role_id',
-//					 'allow_guest_user',
-//					 'guest_role_id',
-//					 'editable_profile_fields',
-//				),
-//				$columns
-//			),
-//			// hide these from the general public
-//			array_merge(
-//				array(),
-//				$hidden
-//			)
-//		);
-//	}
+
+	/**
+	 * @param string $requested
+	 * @param array  $columns
+	 * @param array  $hidden
+	 *
+	 * @return array
+	 */
+	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
+	{
+		return parent::getRetrievableAttributes(
+			$requested,
+			array_merge(
+				array(
+					 'db_version',
+					 'allow_open_registration',
+					 'open_reg_role_id',
+					 'allow_guest_user',
+					 'guest_role_id',
+					 'editable_profile_fields',
+				),
+				$columns
+			),
+			// hide these from the general public
+			$hidden
+		);
+	}
 }

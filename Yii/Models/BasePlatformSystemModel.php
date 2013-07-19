@@ -16,6 +16,7 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
@@ -90,7 +91,13 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	 */
 	public function restMap( $mappings = array() )
 	{
-		$_map = array( 'created_by_id', 'last_modified_by_id' );
+		static $_map;
+
+		if ( null === $_map )
+		{
+			$_map = array( 'created_by_id', 'last_modified_by_id' );
+			$_map = array_combine( $_map, $_map );
+		}
 
 		//	Default to everything if none are specified
 		if ( empty( $mappings ) )
@@ -99,7 +106,7 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 			$mappings = array_combine( $mappings, $mappings );
 		}
 
-		return parent::restMap( array_combine( $_map, $_map ) + $mappings );
+		return parent::restMap( $_map + $mappings );
 	}
 
 	/**
@@ -115,7 +122,7 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 
 		if ( empty( $requested ) || static::ALL_ATTRIBUTES == $requested )
 		{
-			return array_values( $this->restMap() ) + $columns;
+			return $this->restMap() + $columns;
 		}
 
 		//	Remove the hidden fields
@@ -195,7 +202,7 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 		try
 		{
 			$_sql
-				= <<<SQL
+				= <<<MYSQL
 SELECT
 	id,
 	$mapColumn
@@ -203,20 +210,19 @@ FROM
 	$mapTable
 WHERE
 	$mapColumn = :id
-SQL;
+MYSQL;
 
-			$_manyModel = SystemManager::getNewModel( $mapTable );
+			$_manyModel = ResourceStore::model( $mapTable );
 			$_primaryKey = $_manyModel->tableSchema->primaryKey;
-
-			$mapTable = static::tableNamePrefix() . $mapTable;
+			$mapTable = $_manyModel->tableName();
 
 			// use query builder
 			$command = Pii::db()->createCommand();
 			$command->select( "$_primaryKey,$mapColumn" );
 			$command->from( $mapTable );
 			$command->where( "$mapColumn = :oid" );
-
 			$maps = $command->queryAll( true, array( ':oid' => $sourceId ) );
+
 			$toDelete = array();
 			foreach ( $maps as $map )
 			{
@@ -379,8 +385,8 @@ SQL;
 		$_perms = null;
 
 		/**
-		 * @var \RoleServiceAccess[] $_permissions
-		 * @var \Service[]           $_services
+		 * @var RoleServiceAccess[] $_permissions
+		 * @var Service[]           $_services
 		 */
 		if ( $this->hasRelated( 'role' ) && $this->role && $this->role->role_service_accesses )
 		{

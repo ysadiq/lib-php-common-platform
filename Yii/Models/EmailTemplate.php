@@ -25,7 +25,6 @@ namespace DreamFactory\Platform\Yii\Models;
  *
  * Columns:
  *
- * @property integer             $id
  * @property string              $name
  * @property string              $description
  * @property string              $to
@@ -45,18 +44,6 @@ namespace DreamFactory\Platform\Yii\Models;
  */
 class EmailTemplate extends BasePlatformSystemModel
 {
-	/**
-	 * Returns the static model of the specified AR class.
-	 *
-	 * @param string $className active record class name.
-	 *
-	 * @return Role the static model class
-	 */
-	public static function model( $className = __CLASS__ )
-	{
-		return parent::model( $className );
-	}
-
 	/**
 	 * @return string the associated database table name
 	 */

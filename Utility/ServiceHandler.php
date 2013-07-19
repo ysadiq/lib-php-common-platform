@@ -20,7 +20,10 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Yii\Utility\Pii;
@@ -84,18 +87,27 @@ class ServiceHandler
 	}
 
 	/**
+	 * @param int|string $serviceId
+	 * @param bool       $checkActive
+	 *
+	 * @return \DreamFactory\Platform\Services\BasePlatformRestService
+	 */
+	public static function getService( $serviceId, $checkActive = false )
+	{
+		return static::getServiceObject( $serviceId, $checkActive );
+	}
+
+	/**
 	 * Retrieves the pointer to the particular service handler
 	 *
 	 * If the service is already created, it just returns the private class
 	 * member that holds the pointer, otherwise it calls the constructor for
 	 * the new service, passing in parameters based on the stored configuration settings.
 	 *
-	 * @access public
+	 * @param int|string $api_name
+	 * @param boolean    $check_active Throws an exception if true and the service is not active.
 	 *
-	 * @param string  $api_name
-	 * @param boolean $check_active Throws an exception if true and the service is not active.
-	 *
-	 * @return RestService The new or previously constructed XXXSvc
+	 * @return BasePlatformRestService The new or previously constructed XXXSvc
 	 * @throws \Exception if construction of service is not possible
 	 */
 	public static function getServiceObject( $api_name, $check_active = false )
@@ -121,25 +133,23 @@ class ServiceHandler
 
 		try
 		{
-			$_config = Service::getRecordByName( $api_name );
-
-			if ( empty( $_config ) )
+			if ( null === ( $_config = Service::model()->byServiceId( $api_name )->find() ) )
 			{
 				throw new NotFoundException( 'Service not found' );
 			}
 
-			$_service = static::_createService( $_config );
+			$_service = static::_createService( $_config->getAttributes() );
 
 			if ( $check_active && !$_service->getIsActive() )
 			{
-				throw new \Exception( 'Requested service "' . $api_name . '" is not active.' );
+				throw new BadRequestException( 'Requested service "' . $api_name . '" is not active.' );
 			}
 
 			return static::$_serviceCache[$api_name] = $_service;
 		}
 		catch ( \Exception $_ex )
 		{
-			throw new \Exception( 'Failed to launch service "' . $api_name . '": ' . $_ex->getMessage() );
+			throw new InternalServerErrorException( 'Failed to launch service "' . $api_name . '": ' . $_ex->getMessage() );
 		}
 	}
 
@@ -153,18 +163,12 @@ class ServiceHandler
 	 * @param int     $id
 	 * @param boolean $check_active Throws an exception if true and the service is not active.
 	 *
-	 * @return RestService The new or previously constructed XXXSvc
+	 * @return BasePlatformRestService The new or previously constructed XXXSvc
 	 * @throws \Exception if construction of service is not possible
 	 */
 	public static function getServiceObjectById( $id, $check_active = false )
 	{
-		if ( null === ( $_record = Service::getRecordById( $id ) ) )
-
-		{
-			throw new \Exception( "Failed to launch service, no service record found." );
-		}
-
-		return static::getServiceObject( $_record['api_name'], $check_active );
+		return static::getServiceObject( $id, $check_active );
 	}
 
 	/**

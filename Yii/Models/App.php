@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Services\BaseFileSvc;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
@@ -189,20 +190,6 @@ class App extends BasePlatformSystemModel
 	/**
 	 * {@InheritDoc}
 	 */
-	protected function beforeValidate()
-	{
-		$this->is_active = ( $this->is_active ? 1 : 0 );
-		$this->is_url_external = ( $this->is_url_external ? 1 : 0 );
-		$this->requires_fullscreen = ( $this->requires_fullscreen ? 1 : 0 );
-		$this->allow_fullscreen_toggle = ( $this->allow_fullscreen_toggle ? 1 : 0 );
-		$this->requires_plugin = ( $this->requires_plugin ? 1 : 0 );
-
-		return parent::beforeValidate();
-	}
-
-	/**
-	 * {@InheritDoc}
-	 */
 	protected function beforeSave()
 	{
 		if ( !$this->is_url_external && empty( $this->url ) )
@@ -222,34 +209,18 @@ class App extends BasePlatformSystemModel
 		if ( !$this->is_url_external )
 		{
 			$_local = empty( $this->storage_service_id );
+
 			$_serviceId = $_local ? 'app' : $this->storage_service_id;
 			$_container = $_local ? 'applications' : $this->storage_container;
 
-			/** @var BaseFileService $_service */
-			if ( is_numeric( $_serviceId ) )
-			{
-				$_service = ServiceHandler::getServiceObjectById( $_serviceId );
-			}
-			else
-			{
-				$_service = ServiceHandler::getServiceObject( $_serviceId );
-			}
+			/** @var BaseFileSvc $_service */
+			$_service = ServiceHandler::getService( $_serviceId );
 
 			if ( empty( $_container ) )
 			{
 				if ( !$_service->containerExists( $this->api_name ) )
 				{
-					// create in permanent storage
-					$_service->createContainer( array( 'name' => $this->api_name ) );
-					$name = ( !empty( $this->name ) ) ? $this->name : $this->api_name;
-					$content = "<!DOCTYPE html>\n<html>\n<head>\n<title>" . $name . "</title>\n</head>\n";
-					$content .= "<body>\nYour app " . $name . " now lives here.</body>\n</html>";
-					$path = ( !empty( $this->url ) ) ? ltrim( $this->url, '/' ) : 'index.html';
-
-					if ( !$_service->fileExists( $this->api_name, $path ) )
-					{
-						$_service->writeFile( $this->api_name, $path, $content );
-					}
+					$this->_createContainer( $_service );
 				}
 			}
 			else
@@ -258,19 +229,12 @@ class App extends BasePlatformSystemModel
 				{
 					$_service->createContainer( array( 'name' => $_container ) );
 				}
+
 				if ( !$_service->folderExists( $_container, $this->api_name ) )
 				{
 					// create in permanent storage
 					$_service->createFolder( $_container, $this->api_name );
-					$name = ( !empty( $this->name ) ) ? $this->name : $this->api_name;
-					$content = "<!DOCTYPE html>\n<html>\n<head>\n<title>" . $name . "</title>\n</head>\n";
-					$content .= "<body>\nYour app " . $name . " now lives here.</body>\n</html>";
-					$path = $this->api_name . '/';
-					$path .= ( !empty( $this->url ) ) ? ltrim( $this->url, '/' ) : 'index.html';
-					if ( !$_service->fileExists( $_container, $path ) )
-					{
-						$_service->writeFile( $_container, $path, $content );
-					}
+					$this->_createContainer( $_service );
 				}
 			}
 		}
@@ -299,13 +263,6 @@ class App extends BasePlatformSystemModel
 	{
 		parent::afterFind();
 
-		//	Correct data types
-		$this->is_active = ( 0 != $this->is_active );
-		$this->is_url_external = ( 0 != $this->is_url_external );
-		$this->requires_fullscreen = ( 0 != $this->requires_fullscreen );
-		$this->allow_fullscreen_toggle = ( 0 != $this->allow_fullscreen_toggle );
-		$this->requires_plugin = ( 0 != $this->requires_plugin );
-
 		if ( !$this->is_url_external )
 		{
 			$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
@@ -330,6 +287,7 @@ class App extends BasePlatformSystemModel
 			{
 				$this->_launchUrl .= 'app/applications/';
 			}
+
 			$this->_launchUrl .= $this->api_name . $this->url;
 		}
 		else
@@ -659,6 +617,29 @@ MYSQL
 		catch ( \Exception $_ex )
 		{
 			throw new \CDbException( 'Error updating application service assignment: ' . $_ex->getMessage(), $_ex->getCode() );
+		}
+	}
+
+	/**
+	 * @param BaseFileSvc $service
+	 *
+	 * @return mixed
+	 */
+	protected function _createContainer( $service )
+	{
+		// create in permanent storage
+		$service->createContainer( array( 'name' => $this->api_name ) );
+
+		$_name = $this->name ? : $this->api_name;
+		$_content = "<!DOCTYPE html>\n<html>\n<head>\n<title>" . $_name . "</title>\n</head>\n";
+		$_content .= "<body>\nYour app " . $_name . " now lives here.</body>\n</html>";
+
+		$_url = ltrim( $this->url, '/ ' );
+		$_path = $_url ? : 'index.html';
+
+		if ( !$service->fileExists( $this->api_name, $_path ) )
+		{
+			$service->writeFile( $this->api_name, $_path, $_content );
 		}
 	}
 }

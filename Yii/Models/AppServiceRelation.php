@@ -37,6 +37,10 @@ namespace DreamFactory\Platform\Yii\Models;
  */
 class AppServiceRelation extends BasePlatformSystemModel
 {
+	//*************************************************************************
+	//* Methods
+	//*************************************************************************
+
 	/**
 	 * @return string the associated database table name
 	 */
@@ -54,9 +58,6 @@ class AppServiceRelation extends BasePlatformSystemModel
 			array( 'app_id', 'required' ),
 			array( 'app_id, service_id', 'numerical', 'integerOnly' => true ),
 			array( 'component', 'length', 'max' => 128 ),
-			// The following rule is used by search().
-			// Please remove those attributes that should not be searched.
-			array( 'id, app_id, service_id, component', 'safe', 'on' => 'search' ),
 		);
 	}
 
@@ -72,50 +73,61 @@ class AppServiceRelation extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @return array
+	 */
+	public function behaviors()
+	{
+		return array_merge(
+			parent::behaviors(),
+			array(
+				 //	Secure JSON
+				 'base_platform_model.secure_json' => array(
+					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					 'salt'             => $this->getDb()->password,
+					 'secureAttributes' => array(
+						 'component',
+					 )
+				 ),
+			)
+		);
+	}
+
+	/**
+	 * @param array $additionalLabels
+	 *
 	 * @return array customized attribute labels (name=>label)
 	 */
-	public function attributeLabels()
+	public function attributeLabels( $additionalLabels = array() )
 	{
-		return array(
-			'id'         => 'Id',
-			'app_id'     => 'App',
-			'service_id' => 'Service',
-			'component'  => 'Component',
+		return parent::attributeLabels(
+			array_merge(
+				array(
+					 'id'         => 'Id',
+					 'app_id'     => 'App',
+					 'service_id' => 'Service',
+					 'component'  => 'Component',
+				),
+				$additionalLabels
+			)
 		);
 	}
 
 	/**
 	 * Retrieves a list of models based on the current search/filter conditions.
 	 *
-	 * @return CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
+	 * @param mixed $criteria
+	 *
+	 * @return \CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
 	 */
-	public function search()
+	public function search( $criteria = null )
 	{
-		$criteria = new CDbCriteria;
+		$_criteria = $criteria ? : new \CDbCriteria;
 
-		$criteria->compare( 'id', $this->id );
-		$criteria->compare( 'app_id', $this->app_id );
-		$criteria->compare( 'service_id', $this->service_id );
-		$criteria->compare( 'component', $this->component );
+		$_criteria->compare( 'app_id', $this->app_id );
+		$_criteria->compare( 'service_id', $this->service_id );
+		$_criteria->compare( 'component', $this->component );
 
-		return new CActiveDataProvider(
-			$this,
-			array( 'criteria' => $criteria, )
-		);
-	}
-
-	/**
-	 * {@InheritDoc}
-	 */
-	public function afterFind()
-	{
-		parent::afterFind();
-
-		// unserialize component data
-		if ( !empty( $this->component ) )
-		{
-			$this->component = json_decode( $this->component, true );
-		}
+		return parent::search( $criteria );
 	}
 
 	/**
@@ -128,7 +140,17 @@ class AppServiceRelation extends BasePlatformSystemModel
 	 */
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
-		// don't use base class here as those fields are not supported
-		return array( 'app_id', 'service_id', 'component' );
+		return parent::getRetrievableAttributes(
+			$requested,
+			array_merge(
+				array(
+					 'app_id',
+					 'service_id',
+					 'component',
+				),
+				$columns
+			),
+			$hidden
+		);
 	}
 }

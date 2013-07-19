@@ -38,6 +38,10 @@ namespace DreamFactory\Platform\Yii\Models;
  */
 class RoleServiceAccess extends BasePlatformSystemModel
 {
+	//*************************************************************************
+	//* Methods
+	//*************************************************************************
+
 	/**
 	 * @return string the associated database table name
 	 */
@@ -72,6 +76,8 @@ class RoleServiceAccess extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @param array $additionalLabels
+	 *
 	 * @return array customized attribute labels (name=>label)
 	 */
 	public function attributeLabels( $additionalLabels = array() )
@@ -106,7 +112,6 @@ class RoleServiceAccess extends BasePlatformSystemModel
 
 	/**
 	 * @param string $requested
-	 *
 	 * @param array  $columns
 	 * @param array  $hidden
 	 *
@@ -114,7 +119,18 @@ class RoleServiceAccess extends BasePlatformSystemModel
 	 */
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
-		// don't use base class here as those fields are not supported
-		return array( 'role_id', 'service_id', 'component', 'access' );
+		return parent::getRetrievableAttributes(
+			$requested,
+			array_merge(
+				array(
+					 'role_id',
+					 'service_id',
+					 'component',
+					 'access',
+				),
+				$columns
+			),
+			$hidden
+		);
 	}
 }

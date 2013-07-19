@@ -21,8 +21,8 @@ namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Yii\Models\BaseFactoryModel;
 use Kisma\Core\Exceptions\NotImplementedException;
-use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Sql;
@@ -38,28 +38,12 @@ use Kisma\Core\Utility\Sql;
  * @property string $created_date
  * @property string $last_modified_date
  */
-class BasePlatformModel extends \CActiveRecord
+class BasePlatformModel extends BaseFactoryModel
 {
 	//*******************************************************************************
 	//* Members
 	//*******************************************************************************
 
-	/**
-	 * @var array Our schema, cached for speed
-	 */
-	protected $_schema;
-	/**
-	 * @var string The name of the model class
-	 */
-	protected $_modelClass = null;
-	/**
-	 * @var \CDbTransaction The current transaction
-	 */
-	protected $_transaction = null;
-	/**
-	 * @var bool If true,save() and delete() will throw an exception on failure
-	 */
-	protected $_throwOnError = true;
 	/**
 	 * @var BasePlatformRestResource
 	 */
@@ -68,38 +52,6 @@ class BasePlatformModel extends \CActiveRecord
 	//********************************************************************************
 	//* Methods
 	//********************************************************************************
-
-	/**
-	 * Init
-	 */
-	public function init()
-	{
-		$this->_modelClass = get_class( $this );
-
-		parent::init();
-	}
-
-	/**
-	 * Returns the static model of the specified AR class.
-	 *
-	 * @param string $className
-	 *
-	 * @return BasePlatformModel the static model class
-	 */
-	public static function model( $className = null )
-	{
-		return parent::model( $className ? : \get_called_class() );
-	}
-
-	/**
-	 * Returns this model's schema
-	 *
-	 * @return array()
-	 */
-	public function getSchema()
-	{
-		return $this->_schema ? : $this->_schema = $this->getMetaData()->columns;
-	}
 
 	/**
 	 * Returns an array of all attribute labels.
@@ -132,452 +84,6 @@ class BasePlatformModel extends \CActiveRecord
 		);
 	}
 
-	/**
-	 * Retrieves a single attribute label
-	 *
-	 * @param string $attribute
-	 *
-	 * @return array
-	 */
-	public function attributeLabel( $attribute )
-	{
-		return Option::get( $this->attributeLabels(), $attribute );
-	}
-
-	/**
-	 * PHP sleep magic method.
-	 * Take opportunity to flush schema cache...
-	 *
-	 * @return array
-	 */
-	public function __sleep()
-	{
-		//	Clean up and phone home...
-		$this->_schema = null;
-
-		return parent::__sleep();
-	}
-
-	/**
-	 * Override of CModel::setAttributes
-	 * Populates member variables as well.
-	 *
-	 * @param array $attributes
-	 * @param bool  $safeOnly
-	 *
-	 * @return void
-	 */
-	public function setAttributes( $attributes, $safeOnly = true )
-	{
-		if ( !is_array( $attributes ) )
-		{
-			return;
-		}
-
-		$_attributes = array_flip( $safeOnly ? $this->getSafeAttributeNames() : $this->attributeNames() );
-
-		foreach ( $attributes as $_column => $_value )
-		{
-			if ( isset( $_attributes[$_column] ) )
-			{
-				$this->setAttribute( $_column, $_value );
-			}
-			else
-			{
-				if ( $this->canSetProperty( $_column ) )
-				{
-					$this->{$_column} = $_value;
-				}
-			}
-		}
-	}
-
-	/**
-	 * Sets our default behaviors
-	 *
-	 * @return array
-	 */
-	public function behaviors()
-	{
-		return array_merge(
-			parent::behaviors(),
-			array(
-				 //	Data formatter
-				 'base_platform_model.data_format_behavior' => array(
-					 'class' => '\\DreamFactory\\Yii\\Behaviors\\DataFormatBehavior',
-				 ),
-				 //	Timestamper
-				 'base_platform_model.timestamp_behavior'   => array(
-					 'class'                => '\\DreamFactory\\Yii\\Behaviors\\TimestampBehavior',
-					 'createdColumn'        => array( 'create_date', 'created_date' ),
-					 'createdByColumn'      => array( 'create_user_id', 'created_by_id' ),
-					 'lastModifiedColumn'   => array( 'lmod_date', 'last_modified_date' ),
-					 'lastModifiedByColumn' => array( 'lmod_user_id', 'last_modified_by_id' ),
-				 ),
-			)
-		);
-	}
-
-	/**
-	 * Returns the errors on this model in a single string suitable for logging.
-	 *
-	 * @param string $attribute Attribute name. Use null to retrieve errors for all attributes.
-	 *
-	 * @return string
-	 */
-	public function getErrorsForLogging( $attribute = null )
-	{
-		$_result = null;
-		$_i = 1;
-
-		$_errors = $this->getErrors( $attribute );
-
-		if ( !empty( $_errors ) )
-		{
-			foreach ( $_errors as $_attribute => $_error )
-			{
-				$_result .= $_i++ . '. [' . $_attribute . '] : ' . implode( '|', $_error ) . PHP_EOL;
-			}
-		}
-
-		return $_result;
-	}
-
-	/**
-	 * Forces an exception on failed save
-	 *
-	 * @param bool  $runValidation
-	 * @param array $attributes
-	 *
-	 * @throws \CDbException
-	 * @return bool
-	 */
-	public function save( $runValidation = true, $attributes = null )
-	{
-		if ( !parent::save( $runValidation, $attributes ) )
-		{
-			if ( $this->_throwOnError )
-			{
-				throw new \CDbException( $this->getErrorsForLogging() );
-			}
-
-			return false;
-		}
-
-		return true;
-	}
-
-	/**
-	 * A mo-betta CActiveRecord update method. Pass in array( column => value, ... ) to update.
-	 *
-	 * Simply, this method updates each attribute with the passed value, then calls parent::update();
-	 *
-	 * NB: validation is not performed in this method. You may call {@link validate} to perform the validation.
-	 *
-	 * @param array $attributes list of attributes and values that need to be saved. Defaults to null, meaning do a full update.
-	 *
-	 * @return bool whether the update is successful
-	 * @throws \CException if the record is new
-	 */
-	public function update( $attributes = null )
-	{
-		if ( empty( $attributes ) )
-		{
-			return parent::update();
-		}
-
-		$_columns = array();
-
-		foreach ( $attributes as $_column => $_value )
-		{
-			//	column => value specified
-			if ( !is_numeric( $_column ) )
-			{
-				$this->{$_column} = $_value;
-			}
-			else
-			{
-				//	n => column specified
-				$_column = $_value;
-			}
-
-			$_columns[] = $_column;
-		}
-
-		return parent::update( $_columns );
-	}
-
-	/**
-	 * Forces an exception on failed delete
-	 *
-	 * @throws \CDbException
-	 * @return bool
-	 */
-	public function delete()
-	{
-		if ( !parent::delete() )
-		{
-			if ( $this->_throwOnError )
-			{
-				throw new \CDbException( $this->getErrorsForLogging() );
-			}
-
-			return false;
-		}
-
-		return true;
-	}
-
-	/**
-	 * Retrieves a list of models based on the current search/filter conditions.
-	 *
-	 * @param \CDbCriteria $criteria
-	 *
-	 * @return bool the data provider that can return the models based on the search/filter conditions.
-	 */
-	public function search( $criteria = null )
-	{
-		$_criteria = $criteria ? : new \CDbCriteria;
-
-		$_criteria->compare( 'id', $this->id );
-		$_criteria->compare( 'created_date', $this->created_date, true );
-		$_criteria->compare( 'last_modified_date', $this->last_modified_date, true );
-
-		return new \CActiveDataProvider(
-			$this,
-			array(
-				 'criteria' => $_criteria,
-			)
-		);
-	}
-
-	/**
-	 * @param string $requested Comma-delimited list of requested fields
-	 * @param array  $columns   Additional columns to add
-	 * @param array  $hidden    Columns to hide from requested
-	 *
-	 * @throws \Kisma\Core\Exceptions\NotImplementedException
-	 * @return array
-	 */
-	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
-	{
-		//	Default implementation
-		throw new NotImplementedException( 'This model is not compatible with the REST API.' );
-	}
-
-	/**
-	 * @param string $modelClass
-	 *
-	 * @return BasePlatformModel
-	 */
-	public function setModelClass( $modelClass )
-	{
-		$this->_modelClass = $modelClass;
-
-		return $this;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function getModelClass()
-	{
-		return $this->_modelClass;
-	}
-
-	/**
-	 * @param \DreamFactory\Platform\Resources\BasePlatformRestResource $resourceClass
-	 *
-	 * @return BasePlatformModel
-	 */
-	public function setResourceClass( $resourceClass )
-	{
-		$this->_resourceClass = $resourceClass;
-
-		return $this;
-	}
-
-	/**
-	 * @return \DreamFactory\Platform\Resources\BasePlatformRestResource
-	 */
-	public function getResourceClass()
-	{
-		return $this->_resourceClass;
-	}
-
-	/**
-	 * @return \CDbTransaction
-	 */
-	public function getTransaction()
-	{
-		return $this->_transaction;
-	}
-
-	/**
-	 * @param boolean $throwOnError
-	 *
-	 * @return BasePlatformModel
-	 */
-	public function setThrowOnError( $throwOnError )
-	{
-		$this->_throwOnError = $throwOnError;
-
-		return $this;
-	}
-
-	/**
-	 * @return boolean
-	 */
-	public function getThrowOnError()
-	{
-		return $this->_throwOnError;
-	}
-
-	//*************************************************************************
-	//* Named Scopes
-	//*************************************************************************
-
-	/**
-	 * Selects a row from the database that has a hashed ID. Like from a form.
-	 * This allows you to hide your PKs/IDs from prying eyes
-	 *
-	 * @param string $id
-	 * @param bool   $isHashed
-	 * @param string $salt The salt to use for hashing. Defaults to the database password
-	 *
-	 * @return BasePlatformModel
-	 */
-	public function unhashId( $id, $isHashed = false, $salt = null )
-	{
-		$_salt = str_replace( "'", "''", $salt ? : $this->getDb()->password );
-
-		$this->getDbCriteria()->mergeWith(
-			array(
-				 'condition' => <<<TEXT
-sha1(concat('{$_salt}',id)) = :hashed_id
-TEXT
-				 ,
-				 'params'    => array(
-					 ':hashed_id' => $isHashed ? $id : $_salt,
-				 ),
-			)
-		);
-
-		return $this;
-	}
-
-	/**
-	 * Named scope
-	 *
-	 * @param int  $userId
-	 * @param bool $adminView If true, all users' rows are returned
-	 *
-	 * @return $this
-	 */
-	public function userOwned( $userId = null, $adminView = false )
-	{
-		$_condition = $_params = array();
-
-		//	Admin views have limited restrictions
-		if ( $adminView )
-		{
-			if ( $this->hasAttribute( 'admin_ind' ) || ( $this->hasRelated( 'user' ) && $this->getRelated( 'user' )->hasAttribute( 'admin_ind' ) ) )
-			{
-				if ( 1 != $this->getRelated( 'user' )->admin_ind )
-				{
-					$adminView = false;
-				}
-			}
-		}
-
-		if ( !$adminView )
-		{
-			$_condition[] = 'user_id = :user_id';
-			$_params[':user_id'] = $userId ? : Pii::user()->getId();
-		}
-
-		$this->getDbCriteria()->mergeWith(
-			array(
-				 'condition' => implode( ' AND ', $_condition ),
-				 'params'    => $_params,
-			)
-		);
-
-		return $this;
-	}
-
-	/**
-	 * Criteria that limits results to system-owned
-	 *
-	 * @return BaseFactoryModel
-	 */
-	public function systemOwned()
-	{
-		return $this->userOwned( 0 );
-	}
-
-	//*******************************************************************************
-	//* Transaction Management
-	//*******************************************************************************
-
-	/**
-	 * Checks to see if there are any transactions going...
-	 *
-	 * @return boolean
-	 */
-	public function hasTransaction()
-	{
-		return ( null !== $this->_transaction );
-	}
-
-	/**
-	 * Begins a database transaction
-	 *
-	 * @throws \CDbException
-	 * @return \CDbTransaction
-	 */
-	public function transaction()
-	{
-		if ( $this->hasTransaction() )
-		{
-			throw new \CDbException( 'Cannot start new transaction while one is in progress.' );
-		}
-
-		return $this->_transaction = static::model()->getDbConnection()->beginTransaction();
-	}
-
-	/**
-	 * Commits the transaction at the top of the stack, if any.
-	 *
-	 * @throws \CDbException
-	 */
-	public function commit()
-	{
-		if ( $this->hasTransaction() )
-		{
-			$this->_transaction->commit();
-		}
-	}
-
-	/**
-	 * Rolls back the current transaction, if any...
-	 *
-	 * @throws \CDbException
-	 */
-	public function rollback( Exception $exception = null )
-	{
-		if ( $this->hasTransaction() )
-		{
-			$this->_transaction->rollback();
-		}
-
-		//	Throw it if given
-		if ( null !== $exception )
-		{
-			throw $exception;
-		}
-	}
-
 	//*******************************************************************************
 	//* REST Methods
 	//*******************************************************************************
@@ -604,9 +110,16 @@ TEXT
 	 */
 	public function restMap( $mappings = array() )
 	{
+		static $_map;
+
+		if ( null === $_map )
+		{
+			$_map = array( 'id', 'created_date', 'last_modified_date' );
+			$_map = array_combine( $_map, $_map );
+		}
+
 		//	Include the default id, created_date, and last_modified_date
-		$_map = array( 'id', 'created_date', 'last_modified_date' );
-		$_all = array_combine( $_map, $_map ) + $mappings;
+		$_all = $_map + $mappings;
 		ksort( $_all );
 
 		return $_all;
@@ -686,81 +199,17 @@ TEXT
 		return ResourceStore::buildResponsePayload( $this );
 	}
 
-	//*************************************************************************
-	//* Static Helper Methods
-	//*************************************************************************
-
 	/**
-	 * Executes the SQL statement and returns all rows. (static version)
+	 * @param string $requested Comma-delimited list of requested fields
+	 * @param array  $columns   Additional columns to add
+	 * @param array  $hidden    Columns to hide from requested
 	 *
-	 * @param mixed   $_criteria         The criteria for the query
-	 * @param boolean $fetchAssociative  Whether each row should be returned as an associated array with column names as the keys or the array keys are column indexes (0-based).
-	 * @param array   $parameters        input parameters (name=>value) for the SQL execution. This is an alternative to {@link bindParam} and {@link bindValue}. If you have multiple input parameters, passing them in this way can improve the performance. Note that you pass parameters in this way, you cannot bind parameters or values using {@link bindParam} or {@link bindValue}, and vice versa. binding methods and  the input parameters this way can improve the performance. This parameter has been available since version 1.0.10.
-	 *
-	 * @return array All rows of the query result. Each array element is an array representing a row. An empty array is returned if the query results in nothing.
-	 * @throws \CException execution failed
-	 * @static
+	 * @throws \Kisma\Core\Exceptions\NotImplementedException
+	 * @return array
 	 */
-	public static function queryAll( $_criteria, $fetchAssociative = true, $parameters = array() )
+	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
-		if ( null !== ( $_builder = static::getDb()->getCommandBuilder() ) )
-		{
-			if ( null !== ( $_command = $_builder->createFindCommand( static::model()->getTableSchema(), $_criteria ) ) )
-			{
-				return $_command->queryAll( $fetchAssociative, $parameters );
-			}
-		}
-
-		return null;
-	}
-
-	/**
-	 * Convenience method to execute a query (static version)
-	 *
-	 * @param string $sql
-	 * @param array  $parameters
-	 *
-	 * @return int The number of rows affected by the operation
-	 */
-	public static function execute( $sql, $parameters = array() )
-	{
-		return Sql::execute( $sql, $parameters, static::model()->getDbConnection()->getPdoInstance() );
-	}
-
-	/**
-	 * Convenience method to execute a scalar query (static version)
-	 *
-	 * @param string $sql
-	 * @param array  $parameters
-	 *
-	 * @param int    $columnNumber
-	 *
-	 * @return int|string|null The result or null if nada
-	 */
-	public static function scalar( $sql, $parameters = array(), $columnNumber = 0 )
-	{
-		return Sql::scalar( $sql, $columnNumber, $parameters, static::model()->getDbConnection()->getPdoInstance() );
-	}
-
-	/**
-	 * Convenience method to get a database connection to a model's database
-	 *
-	 * @return \CDbConnection
-	 */
-	public static function getDb()
-	{
-		return static::model()->getDbConnection();
-	}
-
-	/**
-	 * Convenience method to get a database command model's database
-	 *
-	 * @param string $sql
-	 *
-	 * @return \CDbCommand
-	 */
-	public static function createCommand( $sql )
-	{
-		return static::getDb()->createCommand( $sql );
+		//	Default implementation
+		throw new NotImplementedException( 'This model is not compatible with the REST API.' );
 	}
 }

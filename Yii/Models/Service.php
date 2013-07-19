@@ -66,6 +66,21 @@ class Service extends BasePlatformSystemModel
 	 * @var bool Is this service a system service that should not be deleted or modified in certain ways, i.e. api name and type.
 	 */
 	protected $is_system = false;
+	/**
+	 * @var array
+	 */
+	protected static $_serviceConfig = array();
+	/**
+	 * @var array
+	 */
+	protected static $_serviceCache = array();
+	/**
+	 * @var array
+	 */
+	protected static $_systemServices = array(
+		'system' => 'DreamFactory\\Platform\\Services\\SystemManager',
+		'user'   => 'DreamFactory\\Platform\\Services\\UserManager',
+	);
 
 	//*************************************************************************
 	//* Methods
@@ -89,10 +104,9 @@ class Service extends BasePlatformSystemModel
 	 */
 	public static function available( $bust = false )
 	{
+		/** @var array $_serviceCache */
 		if ( false !== $bust || null === ( $_serviceCache = Pii::getState( 'dsp.service_cache' ) ) )
 		{
-			Log::debug( 'Service cache reloaded.' );
-
 			$_serviceCache = Pii::getParam( 'dsp.default_services', array() );
 			$_tableName = static::model()->tableName();
 
@@ -117,6 +131,7 @@ MYSQL;
 			);
 
 			Pii::setState( 'dsp.service_cache', $_serviceCache );
+			Log::debug( 'Service cache reloaded: ' . print_r( $_serviceCache, true ) );
 		}
 
 		return $_serviceCache;
@@ -137,6 +152,25 @@ MYSQL;
 				 'params'    => array( ':api_name' => $name ),
 			)
 		);
+
+		return $this;
+	}
+
+	/**
+	 * Named scope that filters the select to the $id or $api_name
+	 *
+	 * @param int|string $serviceId
+	 *
+	 * @return Service
+	 */
+	public function byServiceId( $serviceId )
+	{
+		$_criteria = array(
+			'condition' => is_numeric( $serviceId ) ? 'id = :service_id' : 'api_name = :service_id',
+			'params'    => array( ':service_id' => $serviceId )
+		);
+
+		$this->getDbCriteria()->mergeWith( $_criteria );
 
 		return $this;
 	}
@@ -465,5 +499,77 @@ MYSQL;
 			),
 			$hidden
 		);
+	}
+
+	public static function create( $serviceId )
+	{
+		if ( empty( static::$_serviceConfig ) )
+		{
+			static::$_serviceConfig = Pii::getParam( 'dsp.service_config', array() );
+		}
+
+		if ( null === ( $_service = static::model()->byServiceId( $serviceId )->find() ) )
+		{
+		}
+		
+		$_tag = strtolower( trim( $api_name ) );
+
+		//	Cached?
+		if ( null !== ( $_service = Option::get( static::$_serviceCache, $_tag ) ) )
+		{
+			return $_service;
+		}
+
+		//	A base service?
+		if ( isset( static::$_baseServices[$_tag] ) )
+		{
+			return new static::$_baseServices[$_tag];
+		}
+
+		if ( null === ( $_service = static::model()->byServiceId( $serviceId )->find() ) )
+		{
+			return false;
+		}
+
+		$_serviceTypeId = $_service->type_id ? : PlatformServiceTypes::SYSTEM_SERVICE;
+
+		if ( null === ( $_config = Option::get( static::$_serviceConfig, $_serviceTypeId ) ) )
+		{
+			throw new \InvalidArgumentException( 'Service type "' . Option::get( $record, 'type' ) . '" is invalid.' );
+		}
+
+		if ( null !== ( $_serviceClass = Option::get( $_config, 'class' ) ) )
+		{
+			if ( is_array( $_serviceClass ) )
+			{
+				$_storageType = strtolower( trim( Option::get( $record, 'storage_type' ) ) );
+				$_config = Option::get( $_serviceClass, $_storageType );
+				$_serviceClass = Option::get( $_config, 'class' );
+			}
+
+			$_arguments = array( $record, Option::get( $_config, 'local', true ) );
+
+			$_mirror = new \ReflectionClass( $_serviceClass );
+
+			return $_mirror->newInstanceArgs( $_arguments );
+		}
+
+		throw new \InvalidArgumentException( 'The service requested is invalid.' );
+	}
+
+	/**
+	 * @return array
+	 */
+	public static function getServiceCache()
+	{
+		return self::$_serviceCache;
+	}
+
+	/**
+	 * @return array
+	 */
+	public static function getServiceConfig()
+	{
+		return self::$_serviceConfig;
 	}
 }

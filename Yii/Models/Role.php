@@ -30,7 +30,6 @@ use DreamFactory\Platform\Utility\Pii;
  *
  * Columns:
  *
- * @property integer             $id
  * @property string              $name
  * @property string              $description
  * @property integer             $is_active
@@ -46,6 +45,10 @@ use DreamFactory\Platform\Utility\Pii;
  */
 class Role extends BasePlatformSystemModel
 {
+	//*************************************************************************
+	//* Methods
+	//*************************************************************************
+
 	/**
 	 * @return string the associated database table name
 	 */
@@ -107,7 +110,7 @@ class Role extends BasePlatformSystemModel
 	/**
 	 * Retrieves a list of models based on the current search/filter conditions.
 	 *
-	 * @param null $criteria
+	 * @param mixed $criteria
 	 *
 	 * @return CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
 	 */
@@ -151,25 +154,6 @@ class Role extends BasePlatformSystemModel
 
 	/**
 	 * @param \CModelEvent $event
-	 */
-	public function onBeforeValidate( $event )
-	{
-		$this->is_active = intval( Utilities::boolval( $this->is_active ) );
-
-		if ( empty( $this->default_app_id ) )
-		{
-			$this->default_app_id = null;
-		}
-		else if ( is_string( $this->default_app_id ) )
-		{
-			$this->default_app_id = intval( $this->default_app_id );
-		}
-
-		parent::onBeforeValidate( $event );
-	}
-
-	/**
-	 * @param \CModelEvent $event
 	 *
 	 * @throws StorageException
 	 */
@@ -181,17 +165,6 @@ class Role extends BasePlatformSystemModel
 		}
 
 		parent::onBeforeDelete( $event );
-	}
-
-	/**
-	 * @param \CEvent $event
-	 */
-	public function onAfterFind( $event )
-	{
-		//	Correct data type
-		$this->is_active = intval( $this->is_active ) ? true : false;
-
-		parent::onAfterFind( $event );
 	}
 
 	/**
