@@ -129,6 +129,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	public function processRequest( $resource = null, $action = self::Get )
 	{
+		$resource = trim( $resource, '/ ' );
+
 		$this->_setResource( $resource );
 		$this->_setAction( $action );
 		$this->_detectResourceMembers();
