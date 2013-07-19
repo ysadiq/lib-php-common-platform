@@ -150,7 +150,7 @@ MYSQL;
 
 			$_serviceCache = array_merge(
 				$_serviceCache,
-				$_services ? : array()
+				$_services->fetchAll() ? : array()
 			);
 
 			Pii::setState( 'dsp.service_cache', $_serviceCache );
