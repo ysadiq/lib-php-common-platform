@@ -1,6 +1,6 @@
 {
 	"name":              "dreamfactory/lib-php-common-platform",
-	"description":       "DreamFactory Services Platform(tm) Common PHP Platform Components",
+	"description":       "DreamFactory Services Platform(tm) Components Library",
 	"version":           "1.0.5",
 	"homepage":          "https://www.dreamfactory.com/df_developers",
 	"keywords":          [
