@@ -21,12 +21,12 @@ namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
-use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Yii\Utility\Pii;
 
 /**
  * Service.php
@@ -324,7 +324,7 @@ MYSQL;
 
 			if ( null === ( $_typeId = Option::get( $values, 'type_id', $this->type_id ) ) )
 			{
-				$this->type_id = PlatformServiceTypes::defines( $_type, true );
+				$this->type_id = $this->getServiceTypeId();
 			}
 
 			$_apiName = Option::get( $values, 'api_name' );
@@ -430,6 +430,19 @@ MYSQL;
 	 */
 	public function afterFind()
 	{
+		if ( empty( $this->type_id ) )
+		{
+			if ( false === ( $_typeId = $this->getServiceTypeId() ) )
+			{
+				Log::error( 'Invalid service type "' . $this->type . '" found in row id#' . $this->id );
+			}
+			else
+			{
+				$this->update( array( 'type_id' => $_typeId ) );
+				Log::debug( 'Properly set service type id of service "' . $this->api_name . '"' );
+			}
+		}
+
 		//	Add fake field for client
 		switch ( $this->type_id )
 		{
@@ -504,5 +517,22 @@ MYSQL;
 	public static function getServiceConfig()
 	{
 		return self::$_serviceConfig;
+	}
+
+	/**
+	 * @param string $type
+	 *
+	 * @return int|false
+	 */
+	public function getServiceTypeId( $type = null )
+	{
+		$_type = $type ? : $this->type;
+
+		if ( false !== ( $_typeId = PlatformServiceTypes::defines( $_type, true ) ) )
+		{
+			return $_typeId;
+		}
+
+		return false;
 	}
 }
