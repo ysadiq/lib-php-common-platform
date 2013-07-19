@@ -585,22 +585,10 @@ class SqlDbUtilities implements SqlDbDriverTypes
 	 */
 	protected static function _determineDfType( $column, $label_info = null )
 	{
-		$_simpleType = strstr( $column->dbType, '(', true );
-		$_simpleType = ( $_simpleType ? strtolower( $_simpleType ) : $column->dbType );
+		$_simpleType = static::determineGenericType( $column );
 
 		switch ( $_simpleType )
 		{
-			case 'bool':
-				return 'boolean';
-
-			case 'double':
-				return 'float';
-
-			case 'tinyint':
-			case 'smallint':
-			case 'mediumint':
-			case 'int':
-			case 'bigint':
 			case 'integer':
 				if ( $column->isPrimaryKey && $column->autoIncrement )
 				{
@@ -621,32 +609,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 				{
 					return 'reference';
 				}
-
-				if ( 1 == $column->size )
-				{
-					return 'boolean';
-				}
-
-				//	The basic type...
-				return 'integer';
-
-			case 'binary':
-			case 'varbinary':
-				return 'binary';
-
-			//	String types
-			case 'string':
-			case 'char':
-			case 'text':
-			case 'mediumtext':
-			case 'longtext':
-			case 'varchar':
-			case 'nchar':
-			case 'nvarchar':
-				return 'string';
-
-			case 'datetime2':
-				return 'datetime';
+				break;
 
 			case 'datetimeoffset':
 			case 'timestamp':
@@ -2072,4 +2035,67 @@ SQL;
 
 		return $_new;
 	}
+
+	/**
+	 * Returns a generic type suitable for type-casting
+	 *
+	 * @param \CDbColumnSchema $column
+	 *
+	 * @return string
+	 */
+	public static function determineGenericType( $column )
+	{
+		$_simpleType = strstr( $column->dbType, '(', true );
+		$_simpleType = strtolower( $_simpleType ? : $column->dbType );
+
+		switch ( $_simpleType )
+		{
+			case 'bool':
+				return 'boolean';
+
+			case 'double':
+			case 'float':
+			case 'numeric':
+				return 'float';
+
+			case 'tinyint':
+			case 'smallint':
+			case 'mediumint':
+			case 'int':
+			case 'bigint':
+			case 'integer':
+				if ( $column->size == 1 )
+				{
+					return 'boolean';
+				}
+
+				return 'integer';
+
+			case 'binary':
+			case 'varbinary':
+			case 'blob':
+			case 'mediumblob':
+			case 'largeblob':
+				return 'binary';
+
+			case 'datetimeoffset':
+			case 'timestamp':
+			case 'datetime':
+			case 'datetime2':
+				return 'datetime';
+
+			//	String types
+			default:
+			case 'string':
+			case 'char':
+			case 'text':
+			case 'mediumtext':
+			case 'longtext':
+			case 'varchar':
+			case 'nchar':
+			case 'nvarchar':
+				return 'string';
+		}
+	}
+
 }

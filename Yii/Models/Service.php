@@ -77,10 +77,11 @@ class Service extends BasePlatformSystemModel
 	/**
 	 * @var array
 	 */
-	protected static $_systemServices = array(
-		'system' => 'DreamFactory\\Platform\\Services\\SystemManager',
-		'user'   => 'DreamFactory\\Platform\\Services\\UserManager',
-	);
+	protected static $_systemServices
+		= array(
+			'system' => 'DreamFactory\\Platform\\Services\\SystemManager',
+			'user'   => 'DreamFactory\\Platform\\Services\\UserManager',
+		);
 
 	//*************************************************************************
 	//* Methods
@@ -92,6 +93,28 @@ class Service extends BasePlatformSystemModel
 	public function tableName()
 	{
 		return static::tableNamePrefix() . 'service';
+	}
+
+	/**
+	 * @return array
+	 */
+	public function behaviors()
+	{
+		return array_merge(
+			parent::behaviors(),
+			array(
+				 //	Secure JSON
+				 'base_platform_model.secure_json' => array(
+					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					 'salt'             => $this->getDb()->password,
+					 'secureAttributes' => array(
+						 'credentials',
+						 'parameters',
+						 'headers',
+					 )
+				 ),
+			)
+		);
 	}
 
 	/**
@@ -178,6 +201,24 @@ MYSQL;
 	/**
 	 * Retrieves the record of the particular service
 	 *
+	 * @param id|string $serviceId
+	 *
+	 * @return array The service record array
+	 * @throws \Exception if retrieving of service is not possible
+	 */
+	public static function getRecord( $serviceId )
+	{
+		if ( null === ( $_model = static::model()->byServiceId( $serviceId )->find() ) )
+		{
+			return array();
+		}
+
+		return $_model->getAttributes();
+	}
+
+	/**
+	 * Retrieves the record of the particular service
+	 *
 	 * @param string $api_name
 	 *
 	 * @return array The service record array
@@ -185,14 +226,7 @@ MYSQL;
 	 */
 	public static function getRecordByName( $api_name )
 	{
-		/** @noinspection PhpUndefinedMethodInspection */
-		/** @var $_model BasePlatformModel */
-		if ( null === ( $_model = static::model()->byApiName( $api_name )->find() ) )
-		{
-			return array();
-		}
-
-		return $_model->getAttributes();
+		return static::getRecord( $api_name );
 	}
 
 	/**
@@ -205,12 +239,7 @@ MYSQL;
 	 */
 	public static function getRecordById( $id )
 	{
-		if ( null === ( $_model = static::model()->findByPk( $id ) ) )
-		{
-			return array();
-		}
-
-		return $_model->getAttributes();
+		return static::getRecord( $id );
 	}
 
 	/**
@@ -225,7 +254,6 @@ MYSQL;
 			array( 'name, api_name, type, storage_type, native_format', 'length', 'max' => 64 ),
 			array( 'storage_name', 'length', 'max' => 80 ),
 			array( 'base_url', 'length', 'max' => 255 ),
-			array( 'description, credentials, parameters, headers', 'safe' ),
 			array(
 				'id, name, api_name, is_active, type, type_id, storage_type_id, native_format_id, storage_name, storage_type',
 				'safe',
@@ -281,27 +309,6 @@ MYSQL;
 	}
 
 	/**
-	 * Retrieves a list of models based on the current search/filter conditions.
-	 *
-	 * @param mixed $criteria
-	 *
-	 * @return \CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
-	 */
-	public function search( $criteria = null )
-	{
-		$_criteria = $criteria ? : new \CDbCriteria();
-
-		$_criteria->compare( 'name', $this->name, true );
-		$_criteria->compare( 'api_name', $this->api_name, true );
-		$_criteria->compare( 'is_active', $this->is_active );
-		$_criteria->compare( 'type', $this->type, true );
-		$_criteria->compare( 'storage_name', $this->storage_name, true );
-		$_criteria->compare( 'storage_type', $this->storage_type, true );
-
-		return parent::search( $_criteria );
-	}
-
-	/**
 	 * {@InheritDoc}
 	 */
 	public function setAttributes( $values, $safeOnly = true )
@@ -348,30 +355,30 @@ MYSQL;
 		}
 	}
 
-	/**
-	 * {@InheritDoc}
-	 */
-	protected function beforeValidate()
-	{
-		//	Correct data type
-		$this->is_active = DataFormat::boolval( $this->is_active ) ? 1 : 0;
+//	/**
+//	 * {@InheritDoc}
+//	 */
+//	protected function beforeValidate()
+//	{
+//		//	Correct data type
+//		$this->is_active = DataFormat::boolval( $this->is_active ) ? 1 : 0;
+//
+//		return parent::beforeValidate();
+//	}
 
-		return parent::beforeValidate();
-	}
-
-	/**
-	 * {@InheritDoc}
-	 */
-	protected function beforeSave()
-	{
-		$_salt = Pii::db()->password;
-
-		$this->credentials = empty( $this->credentials ) ? null : ( Hasher::encryptString( json_encode( $this->credentials ), $_salt ) ? : $this->credentials );
-		$this->parameters = empty( $this->parameters ) ? null : ( Hasher::encryptString( json_encode( $this->parameters ), $_salt ) ? : $this->parameters );
-		$this->headers = empty( $this->headers ) ? null : ( Hasher::encryptString( json_encode( $this->headers ), $_salt ) ? : $this->headers );
-
-		return parent::beforeSave();
-	}
+//	/**
+//	 * {@InheritDoc}
+//	 */
+//	protected function beforeSave()
+//	{
+//		$_salt = Pii::db()->password;
+//
+//		$this->credentials = empty( $this->credentials ) ? null : ( Hasher::encryptString( json_encode( $this->credentials ), $_salt ) ? : $this->credentials );
+//		$this->parameters = empty( $this->parameters ) ? null : ( Hasher::encryptString( json_encode( $this->parameters ), $_salt ) ? : $this->parameters );
+//		$this->headers = empty( $this->headers ) ? null : ( Hasher::encryptString( json_encode( $this->headers ), $_salt ) ? : $this->headers );
+//
+//		return parent::beforeSave();
+//	}
 
 	/**
 	 * {@InheritDoc}
@@ -423,9 +430,6 @@ MYSQL;
 	 */
 	public function afterFind()
 	{
-		//	Correct data type
-		$this->is_active = ( 0 != $this->is_active );
-
 		//	Add fake field for client
 		switch ( $this->type_id )
 		{
@@ -448,21 +452,6 @@ MYSQL;
 				$this->is_system = false;
 				break;
 		}
-
-		//	Decrypt our stuff
-		$_salt = Pii::db()->password;
-
-		$this->credentials = empty( $this->credentials )
-			? array()
-			: ( json_decode( Hasher::decryptString( $this->credentials, $_salt ), true )
-				? : $this->credentials );
-
-		$this->parameters = empty( $this->parameters )
-			? array()
-			: ( json_decode( Hasher::decryptString( $this->parameters, $_salt ), true )
-				? : $this->parameters );
-
-		$this->headers = empty( $this->headers ) ? array() : ( json_decode( Hasher::decryptString( $this->headers, $_salt ), true ) ? : $this->headers );
 
 		parent::afterFind();
 	}
@@ -499,62 +488,6 @@ MYSQL;
 			),
 			$hidden
 		);
-	}
-
-	public static function create( $serviceId )
-	{
-		if ( empty( static::$_serviceConfig ) )
-		{
-			static::$_serviceConfig = Pii::getParam( 'dsp.service_config', array() );
-		}
-
-		if ( null === ( $_service = static::model()->byServiceId( $serviceId )->find() ) )
-		{
-		}
-		
-		$_tag = strtolower( trim( $api_name ) );
-
-		//	Cached?
-		if ( null !== ( $_service = Option::get( static::$_serviceCache, $_tag ) ) )
-		{
-			return $_service;
-		}
-
-		//	A base service?
-		if ( isset( static::$_baseServices[$_tag] ) )
-		{
-			return new static::$_baseServices[$_tag];
-		}
-
-		if ( null === ( $_service = static::model()->byServiceId( $serviceId )->find() ) )
-		{
-			return false;
-		}
-
-		$_serviceTypeId = $_service->type_id ? : PlatformServiceTypes::SYSTEM_SERVICE;
-
-		if ( null === ( $_config = Option::get( static::$_serviceConfig, $_serviceTypeId ) ) )
-		{
-			throw new \InvalidArgumentException( 'Service type "' . Option::get( $record, 'type' ) . '" is invalid.' );
-		}
-
-		if ( null !== ( $_serviceClass = Option::get( $_config, 'class' ) ) )
-		{
-			if ( is_array( $_serviceClass ) )
-			{
-				$_storageType = strtolower( trim( Option::get( $record, 'storage_type' ) ) );
-				$_config = Option::get( $_serviceClass, $_storageType );
-				$_serviceClass = Option::get( $_config, 'class' );
-			}
-
-			$_arguments = array( $record, Option::get( $_config, 'local', true ) );
-
-			$_mirror = new \ReflectionClass( $_serviceClass );
-
-			return $_mirror->newInstanceArgs( $_arguments );
-		}
-
-		throw new \InvalidArgumentException( 'The service requested is invalid.' );
 	}
 
 	/**

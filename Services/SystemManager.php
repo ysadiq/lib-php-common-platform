@@ -248,6 +248,8 @@ class SystemManager extends BaseSystemRestService
 				throw new \Exception( "No default system schema found." );
 			}
 
+			Log::debug( 'Creating tables: ' . implode( ', ', array_keys( $tables ) ) );
+
 			$result = SqlDbUtilities::createTables( $_db, $tables, true, false );
 
 			if ( !empty( $oldVersion ) )
