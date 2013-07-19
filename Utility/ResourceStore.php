@@ -261,7 +261,7 @@ class ResourceStore extends SeedUtility
 		$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
 
 		$_records = array();
-		$_pk = static::model()->primaryKey;
+		$_pk = static::model()->tableSchema->primaryKey;
 
 		foreach ( $_ids as $_id )
 		{
@@ -295,7 +295,7 @@ class ResourceStore extends SeedUtility
 			$_transaction = Pii::db()->beginTransaction();
 		}
 
-		$_pk = static::model()->primaryKey;
+		$_pk = static::model()->tableSchema->primaryKey;
 
 		foreach ( $records as $_record )
 		{
@@ -339,7 +339,7 @@ class ResourceStore extends SeedUtility
 		$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
 
 		$_records = array();
-		$_pk = static::model()->primaryKey;
+		$_pk = static::model()->tableSchema->primaryKey;
 
 		foreach ( $_ids as $_id )
 		{
@@ -372,7 +372,7 @@ class ResourceStore extends SeedUtility
 			$_transaction = Pii::db()->beginTransaction();
 		}
 
-		$_pk = static::model()->getTableSchema()->primaryKey;
+		$_pk = static::model()->tableSchema->primaryKey;
 
 		foreach ( $records as $_record )
 		{
@@ -422,7 +422,7 @@ class ResourceStore extends SeedUtility
 			$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
 		}
 
-		$_pk = static::model()->primaryKey;
+		$_pk = static::model()->tableSchema->primaryKey;
 
 		$_criteria = new \CDbCriteria( $criteria );
 
@@ -474,7 +474,7 @@ class ResourceStore extends SeedUtility
 
 		if ( empty( static::$_fields ) && empty( static::$_extras ) )
 		{
-			$_pk = $resource->primaryKey;
+			$_pk = static::model()->tableSchema->primaryKey;
 
 			return array( $_pk => $resource->getAttribute( $_pk ) );
 		}
