@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use CModelEvent;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -534,5 +535,17 @@ MYSQL;
 		}
 
 		return false;
+	}
+
+	/**
+	 * Make sure type and type_id are selected...
+	 *
+	 * @param \CModelEvent $event
+	 */
+	public function onBeforeFind( $event )
+	{
+		$this->getDbCriteria()->mergeWith( array( 'select' => 'type,type_id' ) );
+
+		parent::onBeforeFind( $event );
 	}
 }

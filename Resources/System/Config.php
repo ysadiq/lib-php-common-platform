@@ -24,6 +24,7 @@ use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Utility\ResourceStore;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
 use Swagger\Annotations as SWG;
 
@@ -113,12 +114,16 @@ class Config extends BaseSystemRestResource
 	protected function _postProcess()
 	{
 		//	Only return a single row, not in an array
-		if ( is_array( $this->_response ) && isset( $this->_response['record'], $this->_response['record'][0] ) && 1 == sizeof( $this->_response['record'] ) )
+		if ( null !== ( $_record = Option::getDeep( $this->_response, 'record', 0 ) ) )
 		{
-			$this->_response['record'] = current( $this->_response['record'] );
+			if ( 1 == sizeof( $this->_response['record'] ) )
+			{
+				$this->_response = $_record;
+			}
 		}
+
+		$this->_response['dsp_version'] = DSP_VERSION;
 
 		parent::_postProcess();
 	}
-
 }

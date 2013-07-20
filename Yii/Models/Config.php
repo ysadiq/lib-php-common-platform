@@ -99,32 +99,6 @@ class Config extends BasePlatformSystemModel
 	}
 
 	/**
-	 * @param array $mappings
-	 *
-	 * @return array
-	 */
-	public function restMap( $mappings = array() )
-	{
-		static $_map;
-
-		if ( empty( $_map ) )
-		{
-			$_map = array(
-				'db_version',
-				'allow_open_registration',
-				'open_reg_role_id',
-				'allow_guest_user',
-				'guest_role_id',
-				'editable_profile_fields',
-			);
-
-			$_map = array_combine( $_map, $_map );
-		}
-
-		return parent::restMap( $_map + $mappings );
-	}
-
-	/**
 	 * @param string $requested
 	 * @param array  $columns
 	 * @param array  $hidden

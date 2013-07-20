@@ -133,7 +133,7 @@ class ServiceHandler
 
 		try
 		{
-			if ( null === ( $_config = Service::model()->byServiceId( $api_name )->find() ) )
+			if ( null === ( $_config = Service::model()->byServiceId( $_tag )->find() ) )
 			{
 				throw new NotFoundException( 'Service not found' );
 			}
@@ -142,14 +142,14 @@ class ServiceHandler
 
 			if ( $check_active && !$_service->getIsActive() )
 			{
-				throw new BadRequestException( 'Requested service "' . $api_name . '" is not active.' );
+				throw new BadRequestException( 'Requested service "' . $_tag . '" is not active.' );
 			}
 
-			return static::$_serviceCache[$api_name] = $_service;
+			return static::$_serviceCache[$_tag] = $_service;
 		}
 		catch ( \Exception $_ex )
 		{
-			throw new InternalServerErrorException( 'Failed to launch service "' . $api_name . '": ' . $_ex->getMessage() );
+			throw new InternalServerErrorException( 'Failed to launch service "' . $_tag . '": ' . $_ex->getMessage() );
 		}
 	}
 
