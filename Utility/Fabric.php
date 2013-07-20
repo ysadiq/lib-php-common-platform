@@ -16,13 +16,13 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\DateTime;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
-use DreamFactory\Yii\Utility\Pii;
 
 /**
  * Fabric.php
@@ -76,6 +76,14 @@ class Fabric extends SeedUtility
 	//*************************************************************************
 
 	/**
+	 * @return string
+	 */
+	public static function getHostName()
+	{
+		return FilterInput::server( 'HTTP_HOST', gethostname() );
+	}
+
+	/**
 	 * @return bool True if this DSP is fabric-hosted
 	 */
 	public static function fabricHosted()
@@ -107,6 +115,8 @@ class Fabric extends SeedUtility
 	/**
 	 * @throws \CHttpException
 	 * @return array|mixed
+	 * @throws RuntimeException
+	 * @throws CHttpException
 	 */
 	public static function initialize()
 	{
@@ -115,8 +125,9 @@ class Fabric extends SeedUtility
 		//	If this isn't a cloud request, bail
 		$_host = static::getHostName();
 
-		if ( false === stripos( $_host, static::DSP_DEFAULT_SUBDOMAIN ) && !static::hostedPrivatePlatform( $_host ) )
+		if ( !static::hostedPrivatePlatform() && false === strpos( $_host, static::DSP_DEFAULT_SUBDOMAIN ) )
 		{
+			Log::setDefaultLog( \Kisma::get( 'app.log_path' ) . '/error.log' );
 			Log::error( 'Attempt to access system from non-provisioned host: ' . $_host );
 			throw new \CHttpException( HttpResponse::Forbidden, 'You are not authorized to access this system you cheeky devil you. (' . $_host . ').' );
 		}
@@ -140,24 +151,27 @@ class Fabric extends SeedUtility
 			$_dbName = str_replace( '-', '_', $_dspName = $_parts[0] );
 
 			//	Otherwise, get the credentials from the auth server...
-			$_response = Curl::get( Pii::getParam( 'dsp.auth_endpoint', static::DEFAULT_AUTH_ENDPOINT ) . '/' . $_dspName . '/database' );
+			$_response = Curl::get( static::DEFAULT_AUTH_ENDPOINT . '/' . $_dspName . '/database' );
 
 			if ( HttpResponse::NotFound == Curl::getLastHttpCode() )
 			{
-				Log::error( 'DB Credential pull failure. Redirecting to df.com' );
+				Log::setDefaultLog( \Kisma::get( 'app.log_path' ) . '/error.log' );
+				Log::error( 'DB Credential pull failure. Redirecting to df.com', array( 'host' => $_host ) );
 				header( 'Location: https://www.dreamfactory.com/dsp-not-found?dn=' . urlencode( $_dspName ) );
 				exit();
 			}
 
 			if ( is_object( $_response ) && isset( $_response->details, $_response->details->code ) && HttpResponse::NotFound == $_response->details->code )
 			{
-//				Log::error( 'Instance "' . $_dspName . '" not found during web initialize.' );
+				Log::setDefaultLog( \Kisma::get( 'app.log_path' ) . '/error.log' );
+				Log::error( 'Instance "' . $_dspName . '" not found during web initialize.' );
 				throw new \CHttpException( HttpResponse::NotFound, 'Instance not available.' );
 			}
 
 			if ( !$_response || !is_object( $_response ) || false == $_response->success )
 			{
-				error_log( 'Error connecting to Cerberus Authentication System: ' . print_r( $_response, true ) );
+				Log::setDefaultLog( \Kisma::get( 'app.log_path' ) . '/error.log' );
+				Log::error( 'Error connecting to authentication service: ' . print_r( $_response, true ) );
 				throw new \CHttpException( HttpResponse::InternalServerError, 'Cannot connect to authentication service' );
 			}
 
@@ -194,14 +208,6 @@ class Fabric extends SeedUtility
 
 //		Log::error( 'Unable to find private path or database config: ' . $_dbConfigFileName );
 		throw new \CHttpException( HttpResponse::BadRequest );
-	}
-
-	/**
-	 * @return string
-	 */
-	public static function getHostName()
-	{
-		return FilterInput::server( 'HTTP_HOST', gethostname() );
 	}
 
 	/**
@@ -263,5 +269,4 @@ class Fabric extends SeedUtility
 	{
 		return rtrim( sys_get_temp_dir(), '/' ) . '/.dsp-' . sha1( $host . $_SERVER['REMOTE_ADDR'] );
 	}
-
 }

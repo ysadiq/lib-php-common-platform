@@ -19,11 +19,12 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Utility\FileUtilities;
+use DreamFactory\Platform\Utility\Platform;
+use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 
 /**
  * LocalFileSvc.php
@@ -1005,7 +1006,7 @@ class LocalFileSvc extends BaseFileSvc
 	 */
 	private static function asFullPath( $name )
 	{
-		return \Defaults::getStoragePath( $name );
+		return Platform::getStoragePath( $name );
 	}
 
 	/**
@@ -1015,7 +1016,7 @@ class LocalFileSvc extends BaseFileSvc
 	 */
 	private static function asLocalPath( $name )
 	{
-		return basename( \Defaults::getStoragePath( $name ) );
+		return basename( Platform::getStoragePath( $name ) );
 	}
 
 	/**

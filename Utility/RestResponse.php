@@ -20,16 +20,26 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Log;
-use DreamFactory\Platform\Exceptions\RestException;
+use Kisma\Core\Utility\Option;
 
 /**
+ * RestResponse
  * REST Response Utilities
  */
 class RestResponse extends HttpResponse
 {
+	//*************************************************************************
+	//* Constants
+	//*************************************************************************
+
+	/**
+	 * @var int
+	 */
+	const GZIP_THRESHOLD = 2048;
 
 	//*************************************************************************
 	//	Methods
@@ -135,20 +145,7 @@ class RestResponse extends HttpResponse
 	 */
 	public static function sendResponse()
 	{
-		$accepted = ( !empty( $_SERVER["HTTP_ACCEPT_ENCODING"] ) ) ? $_SERVER["HTTP_ACCEPT_ENCODING"] : '';
-
-		if ( headers_sent() )
-		{
-			$encoding = false;
-		}
-		elseif ( strpos( $accepted, 'gzip' ) !== false )
-		{
-			$encoding = true;
-		}
-		else
-		{
-			$encoding = false;
-		}
+		$_encoding = ( !headers_sent() && false !== strpos( Option::server( 'HTTP_ACCEPT_ENCODING' ), 'gzip' ) );
 
 		//	IE 9 requires hoop for session cookies in iframes
 		if ( !headers_sent() )
@@ -156,26 +153,25 @@ class RestResponse extends HttpResponse
 			header( 'P3P:CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"' );
 		}
 
-		if ( $encoding )
+		if ( $_encoding )
 		{
-			$contents = ob_get_clean();
-			$_temp1 = strlen( $contents );
+			$_output = ob_get_clean();
 
-			if ( $_temp1 < 2048 )
+			if ( strlen( $_output ) < static::GZIP_THRESHOLD )
 			{
 				//	no need to waste resources in compressing very little data
-				echo $contents;
+				echo $_output;
 			}
 			else
 			{
 				header( 'Content-Encoding: gzip' );
-				echo gzencode( $contents, 9 );
+				echo gzencode( $_output, 9 );
 			}
+
+			return;
 		}
-		else
-		{
-			ob_end_flush();
-		}
+
+		ob_end_flush();
 	}
 
 	/**
@@ -202,6 +198,7 @@ class RestResponse extends HttpResponse
 		ob_implicit_flush( 0 );
 
 		header( 'Content-type: application/json; charset=utf-8' );
+
 		// JSON if no callback
 		if ( isset( $_GET['callback'] ) )
 		{
