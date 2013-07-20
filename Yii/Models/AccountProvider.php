@@ -25,13 +25,16 @@ namespace DreamFactory\Platform\Yii\Models;
  *
  * Our columns are:
  *
- * @property int    $service_id
- * @property string $provider_name
- * @property string $auth_endpoint
- * @property string $service_endpoint
- * @property array  $provider_options
- * @property array  $master_auth_text
- * @property string $last_use_date
+ * @property int     $service_id
+ * @property string  $api_name
+ * @property string  $handler_class
+ * @property string  $auth_endpoint
+ * @property string  $service_endpoint
+ * @property array   $provider_options
+ * @property array   $master_auth_text
+ * @property string  $last_use_date
+ *
+ * @property Service $service
  */
 class AccountProvider extends BasePlatformSystemModel
 {
@@ -93,7 +96,8 @@ class AccountProvider extends BasePlatformSystemModel
 				$additionalLabels,
 				array(
 					 'service_id'       => 'Service Parent',
-					 'provider_name'    => 'Provider Name',
+					 'api_name'         => 'Portal Endpoint',
+					 'handler_class'    => 'Request Handler Class',
 					 'auth_endpoint'    => 'Authorization Endpoint',
 					 'service_endpoint' => 'Service Endpoint',
 					 'provider_options' => 'Provider Options',

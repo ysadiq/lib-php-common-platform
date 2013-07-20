@@ -79,10 +79,6 @@ class User extends BaseSystemRestResource
 
 		parent::__construct( $consumer, $config, $resources );
 	}
-	// Resource interface implementation
-
-	// REST interface implementation
-
 	/**
 	 *
 	 * @SWG\Api(

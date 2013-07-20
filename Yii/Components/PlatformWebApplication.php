@@ -19,13 +19,14 @@
  */
 namespace DreamFactory\Platform\Yii\Components;
 
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
-use DreamFactory\Yii\Utility\Pii;
 
 /**
  * PlatformWebApplication
@@ -56,6 +57,10 @@ class PlatformWebApplication extends \CWebApplication
 	 * @var string The private CORS configuration file
 	 */
 	const CORS_DEFAULT_CONFIG_FILE = '/cors.config.json';
+	/**
+	 * @var The default DSP resource namespace
+	 */
+	const DEFAULT_RESOURCE_NAMESPACE = 'DreamFactory\\Platform\\Resource';
 
 	//*************************************************************************
 	//	Members
@@ -74,6 +79,12 @@ class PlatformWebApplication extends \CWebApplication
 	 * @var bool If true, adds some extended information about the request in the form of X-DreamFactory-* headers
 	 */
 	protected $_extendedHeaders = true;
+	/**
+	 * @var array The namespaces that contain resources. Used by the routing engine
+	 */
+	protected $_resourceNamespaces = array(
+		self::DEFAULT_RESOURCE_NAMESPACE,
+	);
 
 	//*************************************************************************
 	//	Methods
@@ -88,6 +99,7 @@ class PlatformWebApplication extends \CWebApplication
 
 		//	Get CORS data from config file
 		$_config = Pii::getParam( 'storage_base_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
+
 		if ( !file_exists( $_config ) )
 		{
 			// old location
@@ -115,19 +127,25 @@ class PlatformWebApplication extends \CWebApplication
 	 * Handles an OPTIONS request to the server to allow CORS and optionally sends the CORS headers
 	 *
 	 * @param \CEvent $event
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 */
 	public function checkRequestMethod( \CEvent $event )
 	{
 		//	Answer an options call...
-		if ( HttpMethod::Options == FilterInput::server( 'REQUEST_METHOD' ) )
+		switch ( FilterInput::server( 'REQUEST_METHOD' ) )
 		{
-			header( 'HTTP/1.1 204' );
-			header( 'content-length: 0' );
-			header( 'content-type: text/plain' );
+			case HttpMethod::Options:
+				header( 'HTTP/1.1 204' );
+				header( 'content-length: 0' );
+				header( 'content-type: text/plain' );
 
-			$this->addCorsHeaders();
+				$this->addCorsHeaders();
+				Pii::end();
+				break;
 
-			Pii::end();
+			case HttpMethod::Trace:
+				throw new BadRequestException();
 		}
 
 		//	Auto-add the CORS headers...
@@ -421,5 +439,43 @@ class PlatformWebApplication extends \CWebApplication
 	public function getExtendedHeaders()
 	{
 		return $this->_extendedHeaders;
+	}
+
+	/**
+	 * @param array $resourceNamespaces
+	 *
+	 * @return PlatformWebApplication
+	 */
+	public function setResourceNamespaces( $resourceNamespaces )
+	{
+		$this->_resourceNamespaces = $resourceNamespaces;
+
+		return $this;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getResourceNamespaces()
+	{
+		return $this->_resourceNamespaces;
+	}
+
+	/**
+	 * @param string|array $namespace
+	 *
+	 * @return PlatformWebApplication
+	 */
+	public function addResourceNamespace( $namespace )
+	{
+		foreach ( Option::clean( $namespace ) as $_entry )
+		{
+			if ( !in_array( $_entry, $this->_resourceNamespaces ) )
+			{
+				$this->_resourceNamespaces[] = $_entry;
+			}
+		}
+
+		return $this;
 	}
 }

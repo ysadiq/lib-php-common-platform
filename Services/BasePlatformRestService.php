@@ -115,10 +115,24 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @var string REST verb of original request. Set after verb change from $verbAliases map
 	 */
 	protected $_originalAction = null;
+	/**
+	 * @var int
+	 */
+	protected $_serviceId = null;
 
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
+
+	/**
+	 * @param array $settings
+	 */
+	public function __construct( $settings = array() )
+	{
+		$this->_serviceId = Option::get( $settings, 'id', null, true );
+
+		parent::__construct( $settings );
+	}
 
 	/**
 	 * @param string $resource

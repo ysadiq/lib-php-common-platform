@@ -24,10 +24,11 @@ use DreamFactory\Platform\Interfaces\RestResourceLike;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Option;
-use Platform\Resources\UserSession;
+use DreamFactory\Platform\Resources\User\Session;
 
 /**
  * BasePlatformResource

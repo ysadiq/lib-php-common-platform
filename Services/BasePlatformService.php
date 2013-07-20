@@ -16,11 +16,12 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
+use DreamFactory\Platform\Resources\System\UserSession;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Seed;
-use DreamFactory\Common\Utility\DataFormat;
 
 /**
  * BasePlatformService
@@ -60,6 +61,10 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 * @var mixed The local service client for proxying
 	 */
 	protected $_proxyClient;
+	/**
+	 * @var The current user ID
+	 */
+	protected $_currentUserId;
 
 	//*************************************************************************
 	//* Methods
@@ -87,6 +92,8 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 		{
 			throw new \InvalidArgumentException( '"type" can not be empty.' );
 		}
+
+		$this->_currentUserId = $this->_currentUserId ? : UserSession::getCurrentUserId();
 	}
 
 	/**
@@ -238,5 +245,13 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	public function getTypeId()
 	{
 		return $this->_typeId;
+	}
+
+	/**
+	 * @return \DreamFactory\Platform\Services\The
+	 */
+	public function getUserId()
+	{
+		return $this->_currentUserId;
 	}
 }

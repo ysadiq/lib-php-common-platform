@@ -413,4 +413,26 @@ MYSQL;
 
 		return $_perms;
 	}
+
+	/**
+	 * Named scope that filters by api_name
+	 *
+	 * @param string $name
+	 *
+	 * @return Service
+	 */
+	public function byApiName( $name )
+	{
+		if ( $this->hasAttribute( 'api_name' ) )
+		{
+			$this->getDbCriteria()->mergeWith(
+				array(
+					 'condition' => 'api_name = :api_name',
+					 'params'    => array( ':api_name' => $name ),
+				)
+			);
+		}
+
+		return $this;
+	}
 }

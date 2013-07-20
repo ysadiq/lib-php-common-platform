@@ -34,6 +34,9 @@ use Kisma\Core\Utility\Sql;
  * @property int                 $account_type
  * @property array               $auth_text
  * @property string              $last_use_date
+ *
+ * @property AccountProvider     $provider
+ * @property User                $user
  */
 class ServiceAccount extends BasePlatformSystemModel
 {
@@ -57,8 +60,8 @@ class ServiceAccount extends BasePlatformSystemModel
 		return array_merge(
 			parent::relations(),
 			array(
-				 'provider' => array( static::BELONGS_TO, __NAMESPACE__ . '\\AccountProvider', 'provider_id' ),
-				 'user'     => array( static::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id' ),
+				 'provider' => array( static::BELONGS_TO, 'DreamFactory\\Platform\\Yii\\Models\\AccountProvider', 'provider_id' ),
+				 'user'     => array( static::BELONGS_TO, 'DreamFactory\\Platform\\Yii\\Models\\User', 'user_id' ),
 			)
 		);
 	}
@@ -102,5 +105,28 @@ class ServiceAccount extends BasePlatformSystemModel
 				)
 			)
 		);
+	}
+
+	/**
+	 * Named scope that filters by user_id and service_id
+	 *
+	 * @param int $userId
+	 * @param int $providerId
+	 *
+	 * @return $this
+	 */
+	public function byUserService( $userId, $providerId )
+	{
+		$this->getDbCriteria()->mergeWith(
+			array(
+				 'condition' => 'user_id = :user_id and provider_id = :provider_id',
+				 'params'    => array(
+					 ':user_id'     => $userId,
+					 ':provider_id' => $providerId
+				 ),
+			)
+		);
+
+		return $this;
 	}
 }
