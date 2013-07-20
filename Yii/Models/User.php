@@ -19,11 +19,11 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Resources\System\UserSession;
 use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Sql;
-use DreamFactory\Platform\Resources\System\UserSession;
-use DreamFactory\Common\Utility\DataFormat;
 
 /**
  * User.php
@@ -188,8 +188,8 @@ class User extends BasePlatformSystemModel
 			}
 		}
 
-		$this->is_active = ( $this->is_active ? 1 : 0 );
-		$this->is_sys_admin = ( $this->is_active ? 1 : 0 );
+//		$this->is_active = ( $this->is_active ? 1 : 0 );
+//		$this->is_sys_admin = ( $this->is_active ? 1 : 0 );
 
 //		if ( is_string( $this->role_id ) )
 //		{
@@ -237,17 +237,17 @@ class User extends BasePlatformSystemModel
 		return parent::beforeDelete();
 	}
 
-	/**
-	 * {@InheritDoc}
-	 */
-	public function afterFind()
-	{
-		parent::afterFind();
-
-		//	Correct data type
-		$this->is_active = intval( $this->is_active );
-		$this->is_sys_admin = intval( $this->is_sys_admin );
-	}
+//	/**
+//	 * {@InheritDoc}
+//	 */
+//	public function afterFind()
+//	{
+//		parent::afterFind();
+//
+//		//	Correct data type
+//		$this->is_active = intval( $this->is_active );
+//		$this->is_sys_admin = intval( $this->is_sys_admin );
+//	}
 
 	/**
 	 * @param array $mappings

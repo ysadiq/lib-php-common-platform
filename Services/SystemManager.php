@@ -19,34 +19,28 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
-use DreamFactory\Platform\Resources\BasePlatformRestResource;
-use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Resources\System\Config;
-use DreamFactory\Platform\Services\BasePlatformRestService;
-use DreamFactory\Platform\Services\BasePlatformService;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Interfaces\PlatformStates;
+use DreamFactory\Platform\Utility\Curl;
+use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\Packager;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
 use DreamFactory\Platform\Yii\Models\App;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Platform\Yii\Models\EmailTemplate;
 use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Platform\Yii\Models\User;
+use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Interfaces\HttpResponse;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
-use Kisma\Core\Interfaces\HttpResponse;
-use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Platform\Interfaces\PlatformStates;
-use DreamFactory\Platform\Utility\Curl;
-use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\Platform\Utility\FileUtilities;
-use DreamFactory\Platform\Utility\SqlDbUtilities;
-use DreamFactory\Platform\Utility\Utilities;
-use DreamFactory\Yii\Utility\Pii;
 use Swagger\Annotations as SWG;
 
 /**
@@ -248,7 +242,7 @@ class SystemManager extends BaseSystemRestService
 				throw new \Exception( "No default system schema found." );
 			}
 
-			Log::debug( 'Creating tables: ' . implode( ', ', array_keys( $tables ) ) );
+			Log::debug( 'Checking database schema' );
 
 			$result = SqlDbUtilities::createTables( $_db, $tables, true, false );
 
@@ -304,9 +298,13 @@ class SystemManager extends BaseSystemRestService
 				{
 					$rows = $command->update( 'df_sys_config', array( 'db_version' => $version ) );
 				}
+
 				if ( 0 >= $rows )
 				{
-					throw new \Exception( "old_version: $oldVersion new_version: $version" );
+					if ( $oldVersion != $version )
+					{
+						throw new \Exception( "old_version: $oldVersion new_version: $version" );
+					}
 				}
 			}
 			catch ( \Exception $_ex )

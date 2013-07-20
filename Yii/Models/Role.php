@@ -67,7 +67,6 @@ class Role extends BasePlatformSystemModel
 			array( 'name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
 			array( 'is_active, default_app_id', 'numerical', 'integerOnly' => true ),
 			array( 'name', 'length', 'max' => 64 ),
-			array( 'description', 'safe' ),
 			array( 'id, name, is_active, default_app_id', 'safe', 'on' => 'search' ),
 		);
 
