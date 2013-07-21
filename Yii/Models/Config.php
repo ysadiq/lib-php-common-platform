@@ -62,7 +62,6 @@ class Config extends BasePlatformSystemModel
 			array( 'db_version', 'length', 'max' => 32 ),
 			array( 'editable_profile_fields', 'length', 'max' => 255 ),
 			array( 'allow_open_registration, allow_guest_user, open_reg_role_id, guest_role_id', 'numerical', 'integerOnly' => true ),
-			array( 'id, db_version, editable_profile_fields', 'safe', 'on' => 'search' ),
 		);
 	}
 

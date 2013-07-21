@@ -143,28 +143,6 @@ class App extends BasePlatformSystemModel
 	}
 
 	/**
-	 * {@InheritDoc}
-	 */
-	public function search( $criteria = null )
-	{
-		$_criteria = $criteria ? : new \CDbCriteria();
-
-		$_criteria->compare( 'name', $this->name, true );
-		$_criteria->compare( 'api_name', $this->api_name, true );
-		$_criteria->compare( 'is_active', $this->is_active );
-		$_criteria->compare( 'is_url_external', $this->is_url_external );
-		$_criteria->compare( 'import_url', $this->import_url );
-		$_criteria->compare( 'storage_service_id', $this->storage_service_id );
-		$_criteria->compare( 'storage_container', $this->storage_container );
-		$_criteria->compare( 'requires_fullscreen', $this->requires_fullscreen );
-		$_criteria->compare( 'allow_fullscreen_toggle', $this->allow_fullscreen_toggle );
-		$_criteria->compare( 'toggle_location', $this->toggle_location );
-		$_criteria->compare( 'requires_plugin', $this->requires_plugin );
-
-		return parent::search( $_criteria );
-	}
-
-	/**
 	 * @param array $values
 	 * @param int   $id
 	 */

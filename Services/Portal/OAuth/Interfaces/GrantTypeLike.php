@@ -17,73 +17,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Enums;
-
-use Kisma\Core\Enums\SeedEnum;
+namespace DreamFactory\Platform\Services\Portal\OAuth\Interfaces;
 
 /**
- * PlatformServiceTypes
+ * GrantTypeLike
  */
-class PlatformServiceTypes extends SeedEnum
+interface GrantTypeLike
 {
 	//*************************************************************************
-	//* Constants
+	//	Constants
 	//*************************************************************************
 
 	/**
-	 * @var int
+	 * @var string
 	 */
-	const SYSTEM_SERVICE = 0x0000;
+	const AUTHORIZATION_CODE = 'authorization_code';
 	/**
-	 * @var int
+	 * @var string
 	 */
-	const LOCAL_EMAIL_SERVICE = 0x0001;
+	const PASSWORD = 'password';
 	/**
-	 * @var int
+	 * @var string
 	 */
-	const LOCAL_FILE_STORAGE = 0x0002;
+	const CLIENT_CREDENTIALS = 'client_credentials';
 	/**
-	 * @var int
+	 * @var string
 	 */
-	const LOCAL_SQL_DB = 0x0004;
+	const REFRESH_TOKEN = 'refresh_token';
+
+	//*************************************************************************
+	//	Methods
+	//*************************************************************************
+
 	/**
-	 * @var int
+	 * @param array|\stdClass $payload
+	 *
+	 * @return array|\stdClass
 	 */
-	const LOCAL_SQL_DB_SCHEMA = 0x0008;
-	/**
-	 * @var int
-	 */
-	const LOCAL_NOSQL_DB = 0x0010;
-	/**
-	 * @var int
-	 */
-	const LOCAL_WEB_SERVICE = 0x0020;
-	/**
-	 * @var int
-	 */
-	const LOCAL_PORTAL_SERVICE = 0x0040;
-	/**
-	 * @var int
-	 */
-	const REMOTE_EMAIL_SERVICE = 0x1001;
-	/**
-	 * @var int
-	 */
-	const REMOTE_FILE_STORAGE = 0x1002;
-	/**
-	 * @var int
-	 */
-	const REMOTE_SQL_DB = 0x1004;
-	/**
-	 * @var int
-	 */
-	const REMOTE_SQL_DB_SCHEMA = 0x1008;
-	/**
-	 * @var int
-	 */
-	const REMOTE_NOSQL_DB = 0x1010;
-	/**
-	 * @var int
-	 */
-	const REMOTE_WEB_SERVICE = 0x1020;
+	public static function validatePayload( $payload );
 }
+

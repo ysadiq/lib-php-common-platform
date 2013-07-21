@@ -188,32 +188,6 @@ class User extends BasePlatformSystemModel
 			}
 		}
 
-//		$this->is_active = ( $this->is_active ? 1 : 0 );
-//		$this->is_sys_admin = ( $this->is_active ? 1 : 0 );
-
-//		if ( is_string( $this->role_id ) )
-//		{
-//			if ( empty( $this->role_id ) )
-//			{
-//				$this->role_id = null;
-//			}
-//			else
-//			{
-//				$this->role_id = intval( $this->role_id );
-//			}
-//		}
-//		if ( is_string( $this->default_app_id ) )
-//		{
-//			if ( empty( $this->default_app_id ) )
-//			{
-//				$this->default_app_id = null;
-//			}
-//			else
-//			{
-//				$this->default_app_id = intval( $this->default_app_id );
-//			}
-//		}
-
 		return parent::beforeValidate();
 	}
 
@@ -237,45 +211,6 @@ class User extends BasePlatformSystemModel
 		return parent::beforeDelete();
 	}
 
-//	/**
-//	 * {@InheritDoc}
-//	 */
-//	public function afterFind()
-//	{
-//		parent::afterFind();
-//
-//		//	Correct data type
-//		$this->is_active = intval( $this->is_active );
-//		$this->is_sys_admin = intval( $this->is_sys_admin );
-//	}
-
-	/**
-	 * @param array $mappings
-	 *
-	 * @return array
-	 */
-	public function restMap( $mappings = array() )
-	{
-		$_map = array(
-			'display_name',
-			'first_name',
-			'last_name',
-			'email',
-			'phone',
-			'is_active',
-			'is_sys_admin',
-			'role_id',
-			'default_app_id',
-		);
-
-		if ( UserSession::isSystemAdmin() )
-		{
-			$_map[] = 'confirm_code';
-		}
-
-		return parent::restMap( array_combine( $_map, $_map ) + $mappings );
-	}
-
 	/**
 	 * @param string $requested
 	 * @param array  $columns
@@ -288,7 +223,31 @@ class User extends BasePlatformSystemModel
 		//	Don't show these
 		$hidden = array( 'password', 'security_question', 'security_answer' ) + $hidden;
 
-		return parent::getRetrievableAttributes( $requested, $columns, $hidden );
+		$_myColumns = array_merge(
+			array(
+				 'display_name',
+				 'first_name',
+				 'last_name',
+				 'email',
+				 'phone',
+				 'is_active',
+				 'is_sys_admin',
+				 'role_id',
+				 'default_app_id',
+			),
+			$columns
+		);
+
+		if ( UserSession::isSystemAdmin() && !in_array( 'confirm_code', $_myColumns ) )
+		{
+			$_myColumns[] = 'confirm_code';
+		}
+
+		return parent::getRetrievableAttributes(
+			$requested,
+			$_myColumns,
+			$hidden
+		);
 	}
 
 	/**

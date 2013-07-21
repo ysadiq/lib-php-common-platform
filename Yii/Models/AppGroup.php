@@ -57,7 +57,6 @@ class AppGroup extends BasePlatformSystemModel
 				 array( 'name', 'required' ),
 				 array( 'name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
 				 array( 'name', 'length', 'max' => 64 ),
-				 array( 'id, name', 'safe', 'on' => 'search' ),
 			)
 		);
 	}
@@ -87,22 +86,6 @@ class AppGroup extends BasePlatformSystemModel
 		);
 
 		return parent::attributeLabels( array_merge( $_labels, $additionalLabels ) );
-	}
-
-	/**
-	 * Retrieves a list of models based on the current search/filter conditions.
-	 *
-	 * @param null $criteria
-	 *
-	 * @return \CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
-	 */
-	public function search( $criteria = null )
-	{
-		$_criteria = $criteria ? : new \CDbCriteria();
-
-		$_criteria->compare( 'name', $this->name, true );
-
-		return parent::search( $criteria );
 	}
 
 	/**

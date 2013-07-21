@@ -120,9 +120,18 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 			return array( 'id' );
 		}
 
-		if ( empty( $requested ) || static::ALL_ATTRIBUTES == $requested )
+		if ( static::ALL_ATTRIBUTES == $requested )
 		{
-			return $this->restMap() + $columns;
+			return array_merge(
+				array(
+					 'id',
+					 'created_date',
+					 'created_by_id',
+					 'last_modified_date',
+					 'last_modified_by_id'
+				),
+				$columns
+			);
 		}
 
 		//	Remove the hidden fields

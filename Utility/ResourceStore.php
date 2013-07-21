@@ -169,7 +169,7 @@ class ResourceStore extends SeedUtility
 	public static function select( $id = null, $criteria = null, $params = array(), $singleRow = false )
 	{
 		//	Passed in a comma-delimited string of ids...
-		if ( $criteria && is_string( $criteria ) )
+		if ( $criteria && is_string( $criteria ) && $criteria !== '*' )
 		{
 			$criteria = array( 'select' => $criteria );
 		}
@@ -485,8 +485,7 @@ class ResourceStore extends SeedUtility
 			$resource->refresh();
 		}
 
-		static::$_fields = $resource->getRetrievableAttributes( static::$_fields );
-		$_payload = $resource->getAttributes( static::$_fields );
+		$_payload = $resource->getAttributes( $resource->getRetrievableAttributes( static::$_fields ) );
 
 		if ( !empty( static::$_extras ) )
 		{

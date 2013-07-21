@@ -67,7 +67,6 @@ class Role extends BasePlatformSystemModel
 			array( 'name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
 			array( 'is_active, default_app_id', 'numerical', 'integerOnly' => true ),
 			array( 'name', 'length', 'max' => 64 ),
-			array( 'id, name, is_active, default_app_id', 'safe', 'on' => 'search' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -104,24 +103,6 @@ class Role extends BasePlatformSystemModel
 		);
 
 		return parent::attributeLabels( array_merge( $_labels, $additionalLabels ) );
-	}
-
-	/**
-	 * Retrieves a list of models based on the current search/filter conditions.
-	 *
-	 * @param mixed $criteria
-	 *
-	 * @return CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
-	 */
-	public function search( $criteria = null )
-	{
-		$_criteria = $criteria ? : new \CDbCriteria();
-
-		$_criteria->compare( 'name', $this->name, true );
-		$_criteria->compare( 'is_active', $this->is_active );
-		$_criteria->compare( 'default_app_id', $this->default_app_id );
-
-		return parent::search( $_criteria );
 	}
 
 	/**

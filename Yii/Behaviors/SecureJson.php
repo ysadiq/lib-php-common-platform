@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Behaviors;
 
 use DreamFactory\Yii\Behaviors\BaseModelBehavior;
+use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Scalar;
 
 /**

@@ -60,7 +60,6 @@ class RoleServiceAccess extends BasePlatformSystemModel
 			array( 'role_id, service_id', 'numerical', 'integerOnly' => true ),
 			array( 'access', 'length', 'max' => 64 ),
 			array( 'component', 'length', 'max' => 128 ),
-			array( 'id, role_id, service_id, component, access', 'safe', 'on' => 'search' ),
 		);
 	}
 
@@ -93,21 +92,6 @@ class RoleServiceAccess extends BasePlatformSystemModel
 		);
 
 		return parent::attributeLabels( $_labels );
-	}
-
-	/**
-	 * {@InheritDoc}
-	 */
-	public function search( $criteria = null )
-	{
-		$_criteria = $criteria ? : new \CDbCriteria();
-
-		$_criteria->compare( 'role_id', $this->role_id );
-		$_criteria->compare( 'service_id', $this->service_id );
-		$_criteria->compare( 'component', $this->component );
-		$_criteria->compare( 'access', $this->access );
-
-		return parent::search( $_criteria );
 	}
 
 	/**

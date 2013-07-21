@@ -121,21 +121,12 @@ class Portal extends BaseSystemRestService
 	 */
 	protected function _validateProvider( $providerName = null )
 	{
-		$_provider = AccountProvider::model()->byApiName( $providerName ? : $this->_resource );
-
-		if ( empty( $_provider ) )
+		if ( null === ( $_provider = ResourceStore::model( 'account_provider' )->byApiName( $providerName ? : $this->_resource )->find() ) )
 		{
-			throw new NotFoundException();
+			throw new NotFoundException( 'Invalid account provider' );
 		}
 
-		$_account = $this->_getAuthorization( $_provider->id );
-
-		if ( empty( $_account ) )
-		{
-			throw new NotFoundException();
-		}
-
-		return $_account;
+		return $_provider;
 	}
 
 	/**
@@ -146,6 +137,11 @@ class Portal extends BaseSystemRestService
 	 */
 	protected function _createProviderClient( $provider )
 	{
+		if ( !class_exists( $provider->handler_class, false ) && !\Kisma::get( 'app.autoloader' )->loadClass( $provider->handler_class ) )
+		{
+			Log::error( 'Cannot find handler class: ' . $provider->handler_class );
+		}
+
 		$_mirror = new \ReflectionClass( $provider->handler_class );
 
 		return $_mirror->newInstance( array( $provider->provider_options ) );
@@ -158,7 +154,7 @@ class Portal extends BaseSystemRestService
 	 */
 	protected function _getAuthorization( $providerId )
 	{
-		return ServiceAccount::model()->byUserService( $this->_currentUserId, $providerId );
+		return ResourceStore::model( 'service_account' )->byUserService( $this->_currentUserId, $providerId )->find();
 	}
 
 	/**
@@ -253,9 +249,9 @@ class Portal extends BaseSystemRestService
 		$_host = \Kisma::get( 'app.host_name' );
 
 		//	Find service auth record
-		$_account = $this->_validateProvider();
+		$_provider = $this->_validateProvider();
 
-		$this->_client = $this->_createProviderClient( $_account->provider );
+		$this->_client = $this->_createProviderClient( $_provider );
 
 		$_state = $this->_currentUserId . '_' . $this->_resource . '_' . $this->_client->getClientId();
 		$_token = $this->_checkPriorAuthorization( $_state, $_account->id );

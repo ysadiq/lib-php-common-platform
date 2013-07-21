@@ -170,14 +170,7 @@ MYSQL;
 	 */
 	public function byApiName( $name )
 	{
-		$this->getDbCriteria()->mergeWith(
-			array(
-				 'condition' => 'api_name = :api_name',
-				 'params'    => array( ':api_name' => $name ),
-			)
-		);
-
-		return $this;
+		return $this->byServiceId( $name );
 	}
 
 	/**
@@ -255,11 +248,6 @@ MYSQL;
 			array( 'name, api_name, type, storage_type, native_format', 'length', 'max' => 64 ),
 			array( 'storage_name', 'length', 'max' => 80 ),
 			array( 'base_url', 'length', 'max' => 255 ),
-			array(
-				'id, name, api_name, is_active, type, type_id, storage_type_id, native_format_id, storage_name, storage_type',
-				'safe',
-				'on' => 'search'
-			),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -355,31 +343,6 @@ MYSQL;
 			$this->assignManyToOneByMap( $id, 'role', 'role_service_access', 'service_id', 'role_id', $_roles );
 		}
 	}
-
-//	/**
-//	 * {@InheritDoc}
-//	 */
-//	protected function beforeValidate()
-//	{
-//		//	Correct data type
-//		$this->is_active = DataFormat::boolval( $this->is_active ) ? 1 : 0;
-//
-//		return parent::beforeValidate();
-//	}
-
-//	/**
-//	 * {@InheritDoc}
-//	 */
-//	protected function beforeSave()
-//	{
-//		$_salt = Pii::db()->password;
-//
-//		$this->credentials = empty( $this->credentials ) ? null : ( Hasher::encryptString( json_encode( $this->credentials ), $_salt ) ? : $this->credentials );
-//		$this->parameters = empty( $this->parameters ) ? null : ( Hasher::encryptString( json_encode( $this->parameters ), $_salt ) ? : $this->parameters );
-//		$this->headers = empty( $this->headers ) ? null : ( Hasher::encryptString( json_encode( $this->headers ), $_salt ) ? : $this->headers );
-//
-//		return parent::beforeSave();
-//	}
 
 	/**
 	 * {@InheritDoc}
@@ -529,9 +492,16 @@ MYSQL;
 	{
 		$_type = $type ? : $this->type;
 
-		if ( false !== ( $_typeId = PlatformServiceTypes::defines( $_type, true ) ) )
+		try
 		{
-			return $_typeId;
+			if ( false !== ( $_typeId = PlatformServiceTypes::defines( $_type, true ) ) )
+			{
+				return $_typeId;
+			}
+		}
+		catch ( \Exception $_ex )
+		{
+			return false;
 		}
 
 		return false;
@@ -544,7 +514,22 @@ MYSQL;
 	 */
 	public function onBeforeFind( $event )
 	{
-		$this->getDbCriteria()->mergeWith( array( 'select' => 'type,type_id' ) );
+		$_criteria = $this->getDbCriteria();
+
+		if ( !empty( $_criteria->select ) && $_criteria->select != '*' )
+		{
+			if ( false === strpos( $_criteria->select, 'type' ) )
+			{
+				$_criteria->select += ', type';
+			}
+
+			if ( false === strpos( $_criteria->select, 'type_id' ) )
+			{
+				$_criteria->select += ', type_id';
+			}
+
+			$this->getDbCriteria()->mergeWith( $_criteria );
+		}
 
 		parent::onBeforeFind( $event );
 	}

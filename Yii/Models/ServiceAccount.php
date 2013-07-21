@@ -60,8 +60,8 @@ class ServiceAccount extends BasePlatformSystemModel
 		return array_merge(
 			parent::relations(),
 			array(
-				 'provider' => array( static::BELONGS_TO, 'DreamFactory\\Platform\\Yii\\Models\\AccountProvider', 'provider_id' ),
-				 'user'     => array( static::BELONGS_TO, 'DreamFactory\\Platform\\Yii\\Models\\User', 'user_id' ),
+				 'provider' => array( static::BELONGS_TO, __NAMESPACE__ . '\\AccountProvider', 'provider_id' ),
+				 'user'     => array( static::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id' ),
 			)
 		);
 	}

@@ -113,24 +113,6 @@ class AppServiceRelation extends BasePlatformSystemModel
 	}
 
 	/**
-	 * Retrieves a list of models based on the current search/filter conditions.
-	 *
-	 * @param mixed $criteria
-	 *
-	 * @return \CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
-	 */
-	public function search( $criteria = null )
-	{
-		$_criteria = $criteria ? : new \CDbCriteria;
-
-		$_criteria->compare( 'app_id', $this->app_id );
-		$_criteria->compare( 'service_id', $this->service_id );
-		$_criteria->compare( 'component', $this->component );
-
-		return parent::search( $criteria );
-	}
-
-	/**
 	 * @param string $requested
 	 *
 	 * @param array  $columns

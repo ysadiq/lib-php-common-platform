@@ -62,31 +62,6 @@ class ServiceHandler
 	//*************************************************************************
 
 	/**
-	 * Creates a new ServiceHandler instance
-	 */
-	public function __construct()
-	{
-		//	Create services as needed, store local pointer in array for speed
-		static::$_serviceConfig = static::$_serviceCache = array();
-	}
-
-	/**
-	 * Object destructor
-	 */
-	public function __destruct()
-	{
-		if ( !empty( static::$_serviceCache ) )
-		{
-			foreach ( static::$_serviceCache as $_key => $_service )
-			{
-				unset( static::$_serviceCache[$_key] );
-			}
-
-			static::$_serviceCache = null;
-		}
-	}
-
-	/**
 	 * @param int|string $serviceId
 	 * @param bool       $checkActive
 	 *
@@ -117,6 +92,11 @@ class ServiceHandler
 			static::$_serviceConfig = Pii::getParam( 'dsp.service_config', array() );
 		}
 
+		if ( empty( static::$_serviceCache ) )
+		{
+			static::$_serviceCache = Pii::getState( 'dsp.service_cache' );
+		}
+
 		$_tag = strtolower( trim( $api_name ) );
 
 		//	Cached?
@@ -133,12 +113,12 @@ class ServiceHandler
 
 		try
 		{
-			if ( null === ( $_config = Service::model()->byServiceId( $_tag )->find() ) )
+			if ( null === ( $_config = Service::model()->byServiceId( $_tag )->find( array( 'select' => 'id,name,api_name,type,type_id,description,is_active' ) ) ) )
 			{
 				throw new NotFoundException( 'Service not found' );
 			}
 
-			$_service = static::_createService( $_config->getAttributes() );
+			$_service = static::_createService( $_config->getAttributes( null ) );
 
 			if ( $check_active && !$_service->getIsActive() )
 			{
