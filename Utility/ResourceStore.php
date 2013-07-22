@@ -25,6 +25,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
@@ -34,7 +35,6 @@ use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use DreamFactory\Platform\Resources\System\UserSession;
 
 /**
  * ResourceStore
@@ -677,7 +677,7 @@ class ResourceStore extends SeedUtility
 	 */
 	public static function checkPermission( $operation, $service = null, $resource = null )
 	{
-		UserSession::checkSessionPermission( $operation, $service ? : static::$_service, $resource ? : static::$_resourceName );
+		Session::checkSessionPermission( $operation, $service ? : static::$_service, $resource ? : static::$_resourceName );
 
 		return true;
 	}

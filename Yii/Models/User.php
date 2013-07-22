@@ -20,7 +20,7 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\Platform\Resources\System\UserSession;
+use DreamFactory\Platform\Resources\User\Session;
 use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Sql;
@@ -197,7 +197,7 @@ class User extends BasePlatformSystemModel
 		$_id = $this->getPrimaryKey();
 
 		//	Make sure you don't delete yourself
-		if ( $_id == UserSession::getCurrentUserId() )
+		if ( $_id == Session::getCurrentUserId() )
 		{
 			throw new StorageException( 'The currently logged in user may not be deleted.' );
 		}
@@ -238,7 +238,7 @@ class User extends BasePlatformSystemModel
 			$columns
 		);
 
-		if ( UserSession::isSystemAdmin() && !in_array( 'confirm_code', $_myColumns ) )
+		if ( Session::isSystemAdmin() && !in_array( 'confirm_code', $_myColumns ) )
 		{
 			$_myColumns[] = 'confirm_code';
 		}

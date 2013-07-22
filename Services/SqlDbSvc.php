@@ -19,16 +19,16 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Kisma\Core\Utility\FilterInput;
-use Kisma\Core\Utility\Option;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Platform\Resources\System\UserSession;
+use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Services\BaseDbSvc;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
-use DreamFactory\Platform\Services\BaseDbSvc;
+use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Option;
 use Swagger\Annotations as SWG;
 
 /**
@@ -1952,7 +1952,7 @@ class SqlDbSvc extends BaseDbSvc
 				case 'user_id_on_create':
 					if ( !$for_update )
 					{
-						$userId = UserSession::getCurrentUserId();
+						$userId = Session::getCurrentUserId();
 						if ( isset( $userId ) )
 						{
 							$parsed[$name] = $userId;
@@ -1960,7 +1960,7 @@ class SqlDbSvc extends BaseDbSvc
 					}
 					break;
 				case 'user_id_on_update':
-					$userId = UserSession::getCurrentUserId();
+					$userId = Session::getCurrentUserId();
 					if ( isset( $userId ) )
 					{
 						$parsed[$name] = $userId;
