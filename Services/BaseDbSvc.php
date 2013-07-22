@@ -24,7 +24,7 @@ use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\FilterInput;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Utility\RestData;
-use Platform\Services\SystemManager;
+use DreamFactory\Platform\Services\SystemManager;
 
 /**
  * BaseDbSvc

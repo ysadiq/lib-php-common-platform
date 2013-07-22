@@ -97,6 +97,10 @@ class App extends BasePlatformSystemModel
 				),
 				array( 'name, api_name', 'length', 'max' => 64 ),
 				array( 'storage_container', 'length', 'max' => 255 ),
+				array(
+					'name, api_name, description, is_active, url, is_url_external, import_url, storage_service_id, storage_container, _launchUrl, requires_fullscreen, allow_fullscreen_toggle, toggle_location, requires_plugin',
+					'safe'
+				),
 			);
 	}
 

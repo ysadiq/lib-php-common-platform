@@ -19,11 +19,10 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Platform\Utility\RestData;
 use Kisma\Core\Utility\Option;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Platform\Utility\RestRequest;
+use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
@@ -521,7 +520,7 @@ class SchemaSvc extends BasePlatformRestService
 			}
 		}
 
-		$this->checkPermission( 'create' );
+		static::checkPermission( 'create', $this->_apiName );
 
 		return SqlDbUtilities::createTables( $this->_sqlConn, $tables, $allow_merge );
 	}
@@ -562,7 +561,7 @@ class SchemaSvc extends BasePlatformRestService
 				throw new NotFoundException( "Table '$table' not found." );
 			}
 		}
-		$this->checkPermission( 'create', $table );
+		static::checkPermission( 'create', $table );
 		try
 		{
 			$names = SqlDbUtilities::createFields( $this->_sqlConn, $table, $fields );
@@ -625,7 +624,7 @@ class SchemaSvc extends BasePlatformRestService
 				}
 			}
 		}
-		$this->checkPermission( 'update' );
+		static::checkPermissions( 'update', $this->_apiName );
 
 		return SqlDbUtilities::createTables( $this->_sqlConn, $tables, true );
 	}
@@ -665,7 +664,7 @@ class SchemaSvc extends BasePlatformRestService
 				throw new NotFoundException( "Table '$table' not found." );
 			}
 		}
-		$this->checkPermission( 'update', $table );
+		static::checkPermissions( 'update', $table );
 		try
 		{
 			$names = SqlDbUtilities::createFields( $this->_sqlConn, $table, $fields, true );
@@ -717,7 +716,7 @@ class SchemaSvc extends BasePlatformRestService
 				throw new NotFoundException( "Table '$table' not found." );
 			}
 		}
-		$this->checkPermission( 'delete', $table );
+		static::checkPermissions( 'delete', $table );
 		SqlDbUtilities::dropTable( $this->_sqlConn, $table );
 	}
 
@@ -742,7 +741,7 @@ class SchemaSvc extends BasePlatformRestService
 				throw new NotFoundException( "Table '$table' not found." );
 			}
 		}
-		$this->checkPermission( 'delete', $table );
+		static::checkPermissions( 'delete', $table );
 		SqlDbUtilities::dropField( $this->_sqlConn, $table, $field );
 	}
 

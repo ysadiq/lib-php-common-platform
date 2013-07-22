@@ -53,6 +53,18 @@ class ServiceAccount extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @return array validation rules for model attributes.
+	 */
+	public function rules()
+	{
+		$_rules = array(
+			array( 'user_id, provider_id, account_type, auth_text, last_use_date', 'safe' ),
+		);
+
+		return array_merge( parent::rules(), $_rules );
+	}
+
+	/**
 	 * @return array
 	 */
 	public function relations()

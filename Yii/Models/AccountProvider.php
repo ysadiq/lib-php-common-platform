@@ -51,6 +51,18 @@ class AccountProvider extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @return array validation rules for model attributes.
+	 */
+	public function rules()
+	{
+		$_rules = array(
+			array( 'service_id, api_name, handler_class, auth_endpoint, service_endpoint, provider_options, master_auth_text, last_use_date', 'safe' ),
+		);
+
+		return array_merge( parent::rules(), $_rules );
+	}
+
+	/**
 	 * @return array
 	 */
 	public function relations()

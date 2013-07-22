@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Resources\System;
+namespace DreamFactory\Platform\Resources\User;
 
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
@@ -158,7 +158,7 @@ class Session extends BaseSystemRestResource
 	 * Refreshes an existing session or allows the SSO creation of a new session for external apps via timed ticket
 	 *
 	 * @SWG\Api(
-	 *   path="/user/session", description="Operations on a user's session.",
+	 *       path="/user/session", description="Operations on a user's session.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
 	 *       httpMethod="GET", summary="Retrieve the current user session information.",
@@ -351,7 +351,7 @@ class Session extends BaseSystemRestResource
 
 	/**
 	 * @SWG\Api(
-	 *   path="/user/session", description="Operations on a user's session.",
+	 *       path="/user/session", description="Operations on a user's session.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
 	 *       httpMethod="DELETE", summary="Logout and destroy the current user session.",

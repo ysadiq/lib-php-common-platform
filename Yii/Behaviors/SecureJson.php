@@ -41,6 +41,10 @@ class SecureJson extends BaseModelBehavior
 	 * @var string The salt/password to use to encrypt/decrypt the data
 	 */
 	protected $_salt;
+	/**
+	 * @var array The attributes which will be converted to json by not encrypted
+	 */
+	protected $_insecureAttributes;
 
 	//*************************************************************************
 	//* Methods
@@ -143,6 +147,21 @@ class SecureJson extends BaseModelBehavior
 			}
 		}
 
+		foreach ( $this->_insecureAttributes as $_attribute )
+		{
+			if ( $event->sender->hasAttribute( $_attribute ) )
+			{
+				if ( false !== ( $_secrets = $this->_toSecureJson( $event->sender->getAttribute( $_attribute ), false ) ) )
+				{
+					$event->sender->setAttribute( $_attribute, $_secrets );
+					continue;
+				}
+
+				$event->isValid = false;
+				$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" is malformed or otherwise invalid.' );
+			}
+		}
+
 		parent::beforeValidate( $event );
 	}
 
@@ -173,7 +192,42 @@ class SecureJson extends BaseModelBehavior
 			}
 		}
 
+		foreach ( $this->_insecureAttributes as $_attribute )
+		{
+			if ( $event->sender->hasAttribute( $_attribute ) )
+			{
+				if ( false !== ( $_secrets = $this->_fromSecureJson( $event->sender->getAttribute( $_attribute ), false ) ) )
+				{
+					$event->sender->setAttribute( $_attribute, $_secrets );
+					continue;
+				}
+
+				$event->isValid = false;
+				$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" is malformed or otherwise invalid.' );
+			}
+		}
+
 		return parent::afterFind( $event );
+	}
+
+	/**
+	 * @param array $insecureAttributes
+	 *
+	 * @return SecureJson
+	 */
+	public function setInsecureAttributes( $insecureAttributes )
+	{
+		$this->_insecureAttributes = $insecureAttributes;
+
+		return $this;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getInsecureAttributes()
+	{
+		return $this->_insecureAttributes;
 	}
 
 	/**
@@ -197,7 +251,8 @@ class SecureJson extends BaseModelBehavior
 		}
 
 		//	Encrypt it...
-		return Hasher::encryptString( $_encoded, $salt ? : $this->_salt );
+		return
+			false === $salt ? $_encoded : Hasher::encryptString( $_encoded, $salt ? : $this->_salt );
 	}
 
 	/**
@@ -215,13 +270,17 @@ class SecureJson extends BaseModelBehavior
 			return $defaultValue;
 		}
 
+		if ( false !== $salt )
+		{
+			$data = Hasher::decryptString( $data, $salt ? : $this->_salt );
+		}
+
 		//	Make sure we can deserialize...
 		if ( false === ( $_decoded = json_decode( $data, $asArray ) ) )
 		{
 			return false;
 		}
 
-		//	Decrypt it...
-		return json_decode( Hasher::decryptString( $data, $salt ? : $this->_salt ), $asArray ) ? : $defaultValue;
+		return $_decoded ? : $defaultValue;
 	}
 }

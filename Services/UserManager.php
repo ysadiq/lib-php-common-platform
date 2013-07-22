@@ -32,7 +32,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\UnauthorizedException;
 use DreamFactory\Platform\Resources\System\UserSession;
-use DreamFactory\Platform\Utility\RestRequest;
+use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
 use Swagger\Annotations as SWG;
 
@@ -179,7 +179,7 @@ class UserManager extends BaseSystemRestService
 					case self::Put:
 					case self::Patch:
 					case self::Merge:
-						$data = RestRequest::getPostDataAsArray();
+						$data = RestData::getPostDataAsArray();
 						$result = $this->changeProfile( $data );
 						break;
 					default:
@@ -194,7 +194,7 @@ class UserManager extends BaseSystemRestService
 					case self::Put:
 					case self::Patch:
 					case self::Merge:
-						$data = RestRequest::getPostDataAsArray();
+						$data = RestData::getPostDataAsArray();
 						$oldPassword = Utilities::getArrayValue( 'old_password', $data, '' );
 						//$oldPassword = Utilities::decryptPassword($oldPassword);
 						$newPassword = Utilities::getArrayValue( 'new_password', $data, '' );
@@ -210,7 +210,7 @@ class UserManager extends BaseSystemRestService
 				switch ( $this->_action )
 				{
 					case self::Post:
-						$data = RestRequest::getPostDataAsArray();
+						$data = RestData::getPostDataAsArray();
 						$firstName = Utilities::getArrayValue( 'first_name', $data, '' );
 						$lastName = Utilities::getArrayValue( 'last_name', $data, '' );
 						$displayName = Utilities::getArrayValue( 'display_name', $data, '' );
@@ -226,7 +226,7 @@ class UserManager extends BaseSystemRestService
 				switch ( $this->_action )
 				{
 					case self::Post:
-						$data = RestRequest::getPostDataAsArray();
+						$data = RestData::getPostDataAsArray();
 						$code = Utilities::getArrayValue( 'code', $_REQUEST, '' );
 						if ( empty( $code ) )
 						{
@@ -271,7 +271,7 @@ class UserManager extends BaseSystemRestService
 					case self::Put:
 					case self::Patch:
 					case self::Merge:
-						$data = RestRequest::getPostDataAsArray();
+						$data = RestData::getPostDataAsArray();
 						$email = Utilities::getArrayValue( 'email', $_REQUEST, '' );
 						if ( empty( $email ) )
 						{

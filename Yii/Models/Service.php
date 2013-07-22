@@ -106,12 +106,14 @@ class Service extends BasePlatformSystemModel
 			array(
 				 //	Secure JSON
 				 'base_platform_model.secure_json' => array(
-					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'             => $this->getDb()->password,
-					 'secureAttributes' => array(
-						 'credentials',
+					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					 'salt'               => $this->getDb()->password,
+					 'insecureAttributes' => array(
 						 'parameters',
 						 'headers',
+					 ),
+					 'secureAttributes'   => array(
+						 'credentials',
 					 )
 				 ),
 			)
@@ -155,7 +157,7 @@ MYSQL;
 			);
 
 			Pii::setState( 'dsp.service_cache', $_serviceCache );
-			Log::debug( 'Service cache reloaded: ' . print_r( $_serviceCache, true ) );
+//			Log::debug( 'Service cache reloaded: ' . print_r( $_serviceCache, true ) );
 		}
 
 		return $_serviceCache;
@@ -244,10 +246,11 @@ MYSQL;
 		$_rules = array(
 			array( 'name, api_name, type', 'required' ),
 			array( 'name, api_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
-			array( 'is_active', 'numerical', 'integerOnly' => true ),
+			array( 'is_active, type_id, storage_type_id, native_format_id', 'numerical', 'integerOnly' => true ),
 			array( 'name, api_name, type, storage_type, native_format', 'length', 'max' => 64 ),
 			array( 'storage_name', 'length', 'max' => 80 ),
 			array( 'base_url', 'length', 'max' => 255 ),
+			array( 'type_id, storage_type_id, native_format_id, description, credentials, parameters, headers', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );

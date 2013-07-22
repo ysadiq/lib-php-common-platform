@@ -63,6 +63,10 @@ class EmailTemplate extends BasePlatformSystemModel
 			array( 'name', 'length', 'max' => 64 ),
 			array( 'subject, from_name, reply_to_name', 'length', 'max' => 80 ),
 			array( 'from_email, reply_to_email', 'length', 'max' => 255 ),
+			array(
+				'name, description, to, cc, bcc, subject, body_text, body_html, from_name, from_email, reply_to_name, reply_to_email, defaults',
+				'safe'
+			),
 		);
 
 		return array_merge( parent::rules(), $_rules );
