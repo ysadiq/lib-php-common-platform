@@ -17,6 +17,7 @@
 namespace DreamFactory\Platform\Services\Portal;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Services\Portal\OAuth\Enums\OAuthTokenTypes;
 
 /**
  * Github
@@ -46,6 +47,7 @@ class Github extends BasePortalClient
 					 'scope'             => array( 'user', 'user:email', 'user:follow', 'public_repo', 'repo', 'repo:status', 'notifications', 'gist' ),
 					 'authHeaderName'    => 'token',
 					 'userAgent'         => 'dreamfactorysoftware/portal-github',
+					 'access_token_type' => OAuthTokenTypes::BEARER,
 				),
 				$options
 			)

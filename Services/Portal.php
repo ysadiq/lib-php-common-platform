@@ -74,6 +74,7 @@ class Portal extends BaseSystemRestService
 		'app_name', // app_name required by our api
 		'method', // method option for our api
 		'format',
+		'path',
 	);
 
 	//*************************************************************************
@@ -172,11 +173,12 @@ class Portal extends BaseSystemRestService
 	/**
 	 * @param string $state
 	 * @param array  $config
+	 * @param int    $providerId
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\RestException
 	 * @return string
 	 */
-	protected function _registerAuthorization( $state, $config )
+	protected function _registerAuthorization( $state, $config, $providerId )
 	{
 		$_payload = array(
 			'state'  => $state,
@@ -292,7 +294,7 @@ class Portal extends BaseSystemRestService
 						'authorize_redirect_uri' => 'http://' . Option::server( 'HTTP_HOST', $_host ) . Option::server( 'REQUEST_URI', '/' ),
 					);
 
-				if ( false !== ( $_redirectUri = $this->_registerAuthorization( $_state, $_config ) ) )
+				if ( false !== ( $_redirectUri = $this->_registerAuthorization( $_state, $_config, $_provider->id ) ) )
 				{
 					$this->_client->setRedirectUri( $_redirectUri );
 				}
