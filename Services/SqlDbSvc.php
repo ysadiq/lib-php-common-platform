@@ -119,7 +119,7 @@ class SqlDbSvc extends BaseDbSvc
 			}
 
 			// 	Create pdo connection, activate later
-			$this->_sqlConn = new \CDbConnection( $dsn, $user, $pwd );
+			$this->_sqlConn = new \CDbConnection( $dsn, $user, $password );
 		}
 
 		switch ( $this->_driverType = SqlDbUtilities::getDbDriverType( $this->_sqlConn ) )
@@ -255,7 +255,7 @@ class SqlDbSvc extends BaseDbSvc
 
 	/**
 	 * @SWG\Api(
-	 *   path="/{sql_db}", description="Operations available for SQL database tables.",
+	 *       path="/{sql_db}", description="Operations available for SQL database tables.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
 	 *       httpMethod="GET", summary="List resources available for database schema.",
@@ -293,12 +293,12 @@ class SqlDbSvc extends BaseDbSvc
 
 	/**
 	 * @SWG\Api(
-	 *   path="/{sql_db}/{table_name}", description="Operations for table records administration.",
+	 *             path="/{sql_db}/{table_name}", description="Operations for table records administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="Retrieve multiple records.",
-	 *       notes="Use the 'ids' or 'filter' parameter to limit resources that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each resource. By default, all fields and no relations are returned for all resources.",
-	 *       responseClass="Records", nickname="getRecords",
+	 *             httpMethod="GET", summary="Retrieve multiple records.",
+	 *             notes="Use the 'ids' or 'filter' parameter to limit resources that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each resource. By default, all fields and no relations are returned for all resources.",
+	 *             responseClass="Records", nickname="getRecords",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="table_name", description="Name of the table to perform operations on.",
@@ -349,9 +349,9 @@ class SqlDbSvc extends BaseDbSvc
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="POST", summary="Create one or more records.",
-	 *       notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *       responseClass="Records", nickname="createRecords",
+	 *             httpMethod="POST", summary="Create one or more records.",
+	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
+	 *             responseClass="Records", nickname="createRecords",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="table_name", description="Name of the table to perform operations on.",
@@ -378,9 +378,9 @@ class SqlDbSvc extends BaseDbSvc
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="PUT", summary="Update one or more records.",
-	 *       notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *       responseClass="Success", nickname="updateRecords",
+	 *             httpMethod="PUT", summary="Update one or more records.",
+	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
+	 *             responseClass="Success", nickname="updateRecords",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="table_name", description="Name of the table to perform operations on.",
@@ -407,9 +407,9 @@ class SqlDbSvc extends BaseDbSvc
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="DELETE", summary="Delete one or more records.",
-	 *       notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *       responseClass="Records", nickname="deleteRecords",
+	 *             httpMethod="DELETE", summary="Delete one or more records.",
+	 *             notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
+	 *             responseClass="Records", nickname="deleteRecords",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="table_name", description="Name of the table to perform operations on.",
@@ -443,12 +443,12 @@ class SqlDbSvc extends BaseDbSvc
 	 * )
 	 *
 	 * @SWG\Api(
-	 *   path="/{sql_db}/{table_name}/{id}", description="Operations for single record administration.",
+	 *             path="/{sql_db}/{table_name}/{id}", description="Operations for single record administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="Retrieve one record by identifier.",
-	 *       notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
-	 *       responseClass="Record", nickname="getRecord",
+	 *             httpMethod="GET", summary="Retrieve one record by identifier.",
+	 *             notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
+	 *             responseClass="Record", nickname="getRecord",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="table_name", description="Name of the table to perform operations on.",
@@ -475,9 +475,9 @@ class SqlDbSvc extends BaseDbSvc
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="PUT", summary="Update one record by identifier.",
-	 *       notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
-	 *       responseClass="Record", nickname="updateRecord",
+	 *             httpMethod="PUT", summary="Update one record by identifier.",
+	 *             notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
+	 *             responseClass="Record", nickname="updateRecord",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="table_name", description="Name of the table to perform operations on.",
@@ -508,9 +508,9 @@ class SqlDbSvc extends BaseDbSvc
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="DELETE", summary="Delete one record by identifier.",
-	 *       notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
-	 *       responseClass="Record", nickname="deleteRecord",
+	 *             httpMethod="DELETE", summary="Delete one record by identifier.",
+	 *             notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
+	 *             responseClass="Record", nickname="deleteRecord",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="table_name", description="Name of the table to perform operations on.",
@@ -562,19 +562,23 @@ class SqlDbSvc extends BaseDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+
 		try
 		{
 			$fieldInfo = $this->describeTableFields( $table );
 			$relatedInfo = $this->describeTableRelated( $table );
 			$idField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $fieldInfo );
+
 			/** @var \CDbCommand $command */
 			$command = $this->_sqlConn->createCommand();
-			$ids = array();
-			$errors = array();
+			$ids = $errors = array();
+			$_transaction = null;
+
 			if ( $rollback )
 			{
-//                $this->_sqlConn->beginTransaction();
+				$_transaction = $this->_sqlConn->beginTransaction();
 			}
+
 			$count = count( $records );
 			foreach ( $records as $key => $record )
 			{
@@ -598,22 +602,22 @@ class SqlDbSvc extends BaseDbSvc
 				}
 				catch ( \Exception $ex )
 				{
-					if ( $rollback )
+					if ( $rollback && $_transaction )
 					{
-//                        $this->_sqlConn->rollBack();
+						$_transaction->rollBack();
 						throw $ex;
 					}
 					$errors[$key] = $ex->getMessage();
 				}
 			}
-			if ( $rollback )
+
+			if ( $rollback && $_transaction )
 			{
-//                if (!$this->_sqlConn->commit()) {
-//                    throw new \Exception("Transaction failed.");
-//                }
+				$_transaction->commit();
 			}
 
 			$results = array();
+
 			if ( empty( $fields ) || ( 0 === strcasecmp( $idField, $fields ) ) )
 			{
 				for ( $i = 0; $i < $count; $i++ )

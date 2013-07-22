@@ -69,13 +69,14 @@ class Portal extends BaseSystemRestService
 	/**
 	 * @var array The parameters we don't want to proxy
 	 */
-	protected $_ignoredParameters = array(
-		'_', // timestamp added by jquery
-		'app_name', // app_name required by our api
-		'method', // method option for our api
-		'format',
-		'path',
-	);
+	protected $_ignoredParameters
+		= array(
+			'_', // timestamp added by jquery
+			'app_name', // app_name required by our api
+			'method', // method option for our api
+			'format',
+			'path',
+		);
 
 	//*************************************************************************
 	//* Methods
@@ -284,15 +285,15 @@ class Portal extends BaseSystemRestService
 		{
 			if ( !$this->_client->authorized( false ) )
 			{
-				$_config =
-					array(
-						'provider_id'            => $_provider->id,
-						'user_id'                => $this->_currentUserId,
-						'host_name'              => $_host,
-						'client'                 => serialize( $this->_client ),
-						'resource'               => $this->_resourcePath,
-						'authorize_redirect_uri' => 'http://' . Option::server( 'HTTP_HOST', $_host ) . Option::server( 'REQUEST_URI', '/' ),
-					);
+				$_config
+					= array(
+					'provider_id'            => $_provider->id,
+					'user_id'                => $this->_currentUserId,
+					'host_name'              => $_host,
+					'client'                 => serialize( $this->_client ),
+					'resource'               => $this->_resourcePath,
+					'authorize_redirect_uri' => 'http://' . Option::server( 'HTTP_HOST', $_host ) . Option::server( 'REQUEST_URI', '/' ),
+				);
 
 				if ( false !== ( $_redirectUri = $this->_registerAuthorization( $_state, $_config, $_provider->id ) ) )
 				{

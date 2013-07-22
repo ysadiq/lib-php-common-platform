@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
+use DreamFactory\Platform\Services\BaseDbSvc;
 use DreamFactory\Platform\Utility\FileSystem;
 use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\FilterInput;
@@ -356,6 +357,7 @@ class Packager
 				}
 				$zip->deleteName( 'schema.json' );
 			}
+
 			$data = $zip->getFromName( 'data.json' );
 			if ( false !== $data )
 			{
@@ -366,14 +368,18 @@ class Packager
 					foreach ( $services as $service )
 					{
 						$serviceName = Option::get( $service, 'api_name' );
+
+						/** @var BaseDbSvc $db */
 						$db = ServiceHandler::getServiceObject( $serviceName );
 						$tables = Option::get( $data, 'table' );
+
 						foreach ( $tables as $table )
 						{
 							$tableName = Option::get( $table, 'name' );
 							$records = Option::get( $table, 'record' );
-							/** @var $db \Platform\Services\BaseDbSvc */
-							$result = $db->createRecords( $tableName, $records );
+
+							$result = $db->createRecords( $tableName, $records, true );
+
 							if ( isset( $result['record'][0]['error'] ) )
 							{
 								$msg = $result['record'][0]['error']['message'];
@@ -398,8 +404,8 @@ class Packager
 						{
 							$tableName = Option::get( $table, 'name' );
 							$records = Option::get( $table, 'record' );
-							/** @var $db \Platform\Services\BaseDbSvc */
-							$result = $db->createRecords( $tableName, $records );
+							/** @var $db BaseDbSvc */
+							$result = $db->createRecords( $tableName, $records, true );
 							if ( isset( $result['record'][0]['error'] ) )
 							{
 								$msg = $result['record'][0]['error']['message'];
@@ -416,8 +422,8 @@ class Packager
 							$serviceName = 'db';
 							$db = ServiceHandler::getServiceObject( $serviceName );
 							$records = Option::get( $data, 'record' );
-							/** @var $db \Platform\Services\BaseDbSvc */
-							$result = $db->createRecords( $tableName, $records );
+							/** @var $db BaseDbSvc */
+							$result = $db->createRecords( $tableName, $records, true );
 							if ( isset( $result['record'][0]['error'] ) )
 							{
 								$msg = $result['record'][0]['error']['message'];
