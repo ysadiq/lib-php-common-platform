@@ -397,11 +397,11 @@ MYSQL;
 	 */
 	public function afterFind()
 	{
-		if ( empty( $this->type_id ) )
+		if ( !empty( $this->type ) && empty( $this->type_id ) )
 		{
 			if ( false === ( $_typeId = $this->getServiceTypeId() ) )
 			{
-				Log::error( 'Invalid service type "' . $this->type . '" found in row id#' . $this->id );
+				Log::error( 'Invalid service type "' . $this->type . '" found in row: ' . print_r( $this->getAttributes(), true ) );
 			}
 			else
 			{

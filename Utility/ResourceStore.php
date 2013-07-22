@@ -562,6 +562,7 @@ class ResourceStore extends SeedUtility
 	 * @param array  $resources
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 *
 	 * @return BasePlatformSystemModel
 	 */
 	public static function model( $resourceName = null, $returnResource = false, $resources = array() )
@@ -569,10 +570,18 @@ class ResourceStore extends SeedUtility
 		/** @var ClassLoader $_loader */
 		static $_loader;
 
+		$_returnClass = false;
+
 		if ( !$_loader )
 		{
 			$_loader = \Kisma::get( 'app.autoloader' );
 		};
+
+		if ( true === $resourceName && false === $returnResource )
+		{
+			$resourceName = null;
+			$_returnClass = true;
+		}
 
 		$_resourceName = $resourceName ? : static::$_resourceName;
 
@@ -658,6 +667,11 @@ class ResourceStore extends SeedUtility
 
 		try
 		{
+			if ( false !== $_returnClass )
+			{
+				return new $_className();
+			}
+
 			return call_user_func( array( $_className, 'model' ) );
 		}
 		catch ( \Exception $_ex )
@@ -793,7 +807,7 @@ class ResourceStore extends SeedUtility
 		}
 
 		//	Create record
-		$_resource = static::model();
+		$_resource = static::model( true );
 		$_resource->setAttributes( $record );
 
 		try
