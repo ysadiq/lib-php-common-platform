@@ -16,6 +16,8 @@
  */
 namespace DreamFactory\Platform\Services\Portal;
 
+use DreamFactory\Platform\Enums\PlatformServiceTypes;
+
 /**
  * Github
  * An Github specific portal client
@@ -37,6 +39,8 @@ class Github extends BasePortalClient
 		parent::__construct(
 			array_merge(
 				array(
+					 'api_name'          => 'github',
+					 //					 'type'              => PlatformServiceTypes::LOCAL_PORTAL_SERVICE,
 					 'service_endpoint'  => 'https://github.com/login',
 					 'resource_endpoint' => 'https://api.github.com',
 					 'scope'             => array( 'user', 'user:email', 'user:follow', 'public_repo', 'repo', 'repo:status', 'notifications', 'gist' ),

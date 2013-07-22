@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use DreamFactory\Platform\Resources\System\UserSession;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Models\BaseFactoryModel;
 use Kisma\Core\Exceptions\NotImplementedException;
@@ -52,6 +53,29 @@ class BasePlatformModel extends BaseFactoryModel
 	//********************************************************************************
 	//* Methods
 	//********************************************************************************
+
+	/**
+	 * @return array
+	 */
+	public function behaviors()
+	{
+		return array_merge(
+			parent::behaviors(),
+			array( //	Timestamper
+				 'base_platform_model.timestamp_behavior' => array(
+					 'class'                => '\\DreamFactory\\Yii\\Behaviors\\TimestampBehavior',
+					 'createdColumn'        => array( 'create_date', 'created_date' ),
+					 'createdByColumn'      => array( 'create_user_id', 'created_by_id' ),
+					 'lastModifiedColumn'   => array( 'lmod_date', 'last_modified_date' ),
+					 'lastModifiedByColumn' => array( 'lmod_user_id', 'last_modified_by_id' ),
+					 'currentUserId'        => function ()
+					 {
+						 return UserSession::getCurrentUserId();
+					 }
+				 ),
+			)
+		);
+	}
 
 	/**
 	 * Returns an array of all attribute labels.

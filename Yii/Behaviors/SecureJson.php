@@ -135,8 +135,7 @@ class SecureJson extends BaseModelBehavior
 				if ( false !== ( $_secrets = $this->_toSecureJson( $event->sender->getAttribute( $_attribute ) ) ) )
 				{
 					$event->sender->setAttribute( $_attribute, $_secrets );
-
-					return;
+					continue;
 				}
 
 				$event->isValid = false;
@@ -166,8 +165,7 @@ class SecureJson extends BaseModelBehavior
 				if ( false !== ( $_secrets = $this->_fromSecureJson( $event->sender->getAttribute( $_attribute ) ) ) )
 				{
 					$event->sender->setAttribute( $_attribute, $_secrets );
-
-					return;
+					continue;
 				}
 
 				$event->isValid = false;

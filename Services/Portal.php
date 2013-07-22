@@ -24,6 +24,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
+use DreamFactory\Platform\Services\Portal\BasePortalClient;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\AccountProvider;
@@ -78,6 +79,17 @@ class Portal extends BaseSystemRestService
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
+
+	/**
+	 * {@InheritDoc}
+	 */
+	protected function _preProcess()
+	{
+		parent::_preProcess();
+
+		//	Clean up the resource path
+		$this->_resourcePath = trim( str_replace( $this->_apiName, null, $this->_resourcePath ), ' /' );
+	}
 
 	/**
 	 * @param string $action
@@ -144,7 +156,7 @@ class Portal extends BaseSystemRestService
 
 		$_mirror = new \ReflectionClass( $provider->handler_class );
 
-		return $_mirror->newInstance( array( $provider->provider_options ) );
+		return $_mirror->newInstance( $provider->provider_options );
 	}
 
 	/**
@@ -186,6 +198,34 @@ class Portal extends BaseSystemRestService
 			throw new RestException( 'Error registering authorization request.', HttpResponse::InternalServerError );
 		}
 
+		Log::info( 'Registering auth request: ' . $state );
+
+		$_endpoint = Pii::getParam( 'cloud.endpoint' ) . '/oauth/register?state=' . $state;
+		$_result = Curl::get( $_endpoint );
+
+		if ( false === $_result || !is_object( $_result ) )
+		{
+			Log::error( 'Error checking authorization request.', HttpResponse::InternalServerError );
+
+			return false;
+		}
+
+		if ( !$_result->success || !$_result->details )
+		{
+			return false;
+		}
+
+		if ( null === ( $_account = ServiceAccount::model()->byUserService( $this->_currentUserId, $providerId )->find() ) )
+		{
+			$_account = new ServiceAccount();
+			$_account->user_id = $this->_currentUserId;
+			$_account->provider_id = $providerId;
+			$_account->account_type = ServiceAccountTypes::INDIVIDUAL_USER;
+		}
+
+		$_account->auth_text = $_result->details->token;
+		$_account->save();
+
 		return $_redirectUri;
 	}
 
@@ -202,30 +242,7 @@ class Portal extends BaseSystemRestService
 
 		if ( empty( $_account ) )
 		{
-			Log::info( 'Registering auth request: ' . $state );
-
-			$_endpoint = Pii::getParam( 'cloud.endpoint' ) . '/oauth/register?state=' . $state;
-			$_result = Curl::get( $_endpoint );
-
-			if ( false === $_result || !is_object( $_result ) )
-			{
-				Log::error( 'Error checking authorization request.', HttpResponse::InternalServerError );
-
-				return false;
-			}
-
-			if ( !$_result->success || !$_result->details )
-			{
-				return false;
-			}
-
-			//	Looks like we have a token, save it!
-			$_account = new ServiceAccount();
-			$_account->user_id = $this->_currentUserId;
-			$_account->provider_id = $providerId;
-			$_account->account_type = ServiceAccountTypes::INDIVIDUAL_USER;
-			$_account->auth_text = $_result->details->token;
-			$_account->save();
+			return false;
 		}
 
 		return $_account->auth_text;
@@ -252,9 +269,10 @@ class Portal extends BaseSystemRestService
 		$_provider = $this->_validateProvider();
 
 		$this->_client = $this->_createProviderClient( $_provider );
+		$this->_client->setInteractive( false );
 
 		$_state = $this->_currentUserId . '_' . $this->_resource . '_' . $this->_client->getClientId();
-		$_token = $this->_checkPriorAuthorization( $_state, $_account->id );
+		$_token = $this->_checkPriorAuthorization( $_state, $_provider->id );
 
 		if ( false !== $_token )
 		{
@@ -264,18 +282,25 @@ class Portal extends BaseSystemRestService
 		{
 			if ( !$this->_client->authorized( false ) )
 			{
-				$_config = array_merge(
-					$_account->getAttributes(),
+				$_config =
 					array(
-						 'host_name'              => $_host,
-						 'client'                 => serialize( $this->_client ),
-						 'resource'               => $this->_resourcePath,
-						 'authorize_redirect_uri' => 'http://' . Option::server( 'HTTP_HOST', $_host ) . Option::server( 'REQUEST_URI', '/' ),
-					)
-				);
+						'provider_id'            => $_provider->id,
+						'user_id'                => $this->_currentUserId,
+						'host_name'              => $_host,
+						'client'                 => serialize( $this->_client ),
+						'resource'               => $this->_resourcePath,
+						'authorize_redirect_uri' => 'http://' . Option::server( 'HTTP_HOST', $_host ) . Option::server( 'REQUEST_URI', '/' ),
+					);
 
-				$_redirectUri = $this->_registerAuthorization( $_state, $_config );
-				$this->_client->setRedirectUri( $_redirectUri );
+				if ( false !== ( $_redirectUri = $this->_registerAuthorization( $_state, $_config ) ) )
+				{
+					$this->_client->setRedirectUri( $_redirectUri );
+				}
+
+				if ( !$this->_client->getInteractive() )
+				{
+					return array( 'redirect_uri' => $this->_client->getAuthorizationUrl( array( 'state' => $_state ) ) );
+				}
 			}
 		}
 

@@ -577,4 +577,12 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	{
 		return $this->_originalAction ? : $this->_action;
 	}
+
+	/**
+	 * @return int
+	 */
+	public function getServiceId()
+	{
+		return $this->_serviceId;
+	}
 }

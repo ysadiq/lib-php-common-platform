@@ -69,7 +69,6 @@ class AccountProvider extends BasePlatformSystemModel
 	public function behaviors()
 	{
 		return array_merge(
-			parent::behaviors(),
 			array(
 				 //	Secure JSON
 				 'base_platform_model.secure_json' => array(
@@ -80,7 +79,8 @@ class AccountProvider extends BasePlatformSystemModel
 						 'master_auth_text',
 					 )
 				 ),
-			)
+			),
+			parent::behaviors()
 		);
 	}
 
