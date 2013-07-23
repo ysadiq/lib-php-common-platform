@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace Platform\Services;
+namespace DreamFactory\Platform\Services;
 
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
@@ -36,24 +36,24 @@ use Swagger\Annotations as SWG;
  * )
  *
  * @SWG\Model(id="Email",
- *   @SWG\Property(name="template",type="string",description="Email Template to base email on."),
- *   @SWG\Property(name="to",type="Array",items="$ref:EmailAddress",description="Required single or multiple receiver addresses."),
- *   @SWG\Property(name="cc",type="Array",items="$ref:EmailAddress",description="Optional CC receiver addresses."),
- *   @SWG\Property(name="bcc",type="Array",items="$ref:EmailAddress",description="Optional BCC receiver addresses."),
- *   @SWG\Property(name="subject",type="string",description="Text only subject line."),
- *   @SWG\Property(name="body_text",type="string",description="Text only version of the body."),
- *   @SWG\Property(name="body_html",type="string",description="Escaped HTML version of the body."),
- *   @SWG\Property(name="from_name",type="string",description="Required sender name."),
- *   @SWG\Property(name="from_email",type="string",description="Required sender email."),
- *   @SWG\Property(name="reply_to_name",type="string",description="Optional reply to name."),
- *   @SWG\Property(name="reply_to_email",type="string",description="Optional reply to email.")
+ * @SWG\Property(name="template",type="string",description="Email Template to base email on."),
+ * @SWG\Property(name="to",type="Array",items="$ref:EmailAddress",description="Required single or multiple receiver addresses."),
+ * @SWG\Property(name="cc",type="Array",items="$ref:EmailAddress",description="Optional CC receiver addresses."),
+ * @SWG\Property(name="bcc",type="Array",items="$ref:EmailAddress",description="Optional BCC receiver addresses."),
+ * @SWG\Property(name="subject",type="string",description="Text only subject line."),
+ * @SWG\Property(name="body_text",type="string",description="Text only version of the body."),
+ * @SWG\Property(name="body_html",type="string",description="Escaped HTML version of the body."),
+ * @SWG\Property(name="from_name",type="string",description="Required sender name."),
+ * @SWG\Property(name="from_email",type="string",description="Required sender email."),
+ * @SWG\Property(name="reply_to_name",type="string",description="Optional reply to name."),
+ * @SWG\Property(name="reply_to_email",type="string",description="Optional reply to email.")
  * )
  * @SWG\Model(id="EmailAddress",
- *   @SWG\Property(name="name",type="string",description="Optional name displayed along with the email address."),
- *   @SWG\Property(name="email",type="string",description="Required email address.")
+ * @SWG\Property(name="name",type="string",description="Optional name displayed along with the email address."),
+ * @SWG\Property(name="email",type="string",description="Required email address.")
  * )
  * @SWG\Model(id="EmailResponse",
- *   @SWG\Property(name="count",type="int",description="Number of emails successfully sent.")
+ * @SWG\Property(name="count",type="int",description="Number of emails successfully sent.")
  * )
  *
  */
@@ -127,27 +127,27 @@ class EmailSvc extends RestService
 
 	/**
 	 * @SWG\Api(
-	 *   path="/{email}", description="Operations on a email service.",
-	 *   @SWG\Operations(
-	 *     @SWG\Operation(
-	 *       httpMethod="POST", summary="Send an email created from posted data.",
-	 *       notes="If a template is not used with all required fields, then they must be included in the request. If the 'from' address is not provisioned in the service, then it must be included in the request..",
-	 *       responseClass="EmailResponse", nickname="sendEmail",
-	 *       @SWG\Parameters(
-	 *         @SWG\Parameter(
+	 *           path="/{email}", description="Operations on a email service.",
+	 * @SWG\Operations(
+	 * @SWG\Operation(
+	 *           httpMethod="POST", summary="Send an email created from posted data.",
+	 *           notes="If a template is not used with all required fields, then they must be included in the request. If the 'from' address is not provisioned in the service, then it must be included in the request..",
+	 *           responseClass="EmailResponse", nickname="sendEmail",
+	 * @SWG\Parameters(
+	 * @SWG\Parameter(
 	 *           name="template", description="Optional template to base email on.",
 	 *           paramType="query", required="false", allowMultiple=false, dataType="string"
 	 *         ),
-	 *         @SWG\Parameter(
+	 * @SWG\Parameter(
 	 *           name="data", description="Data containing name-value pairs used for provisioning emails.",
 	 *           paramType="body", required="false", allowMultiple=false, dataType="Email"
 	 *         )
 	 *       ),
-	 *       @SWG\ErrorResponses(
-	 *          @SWG\ErrorResponse(code="400", reason="Bad Request - Request is not complete or valid."),
-	 *          @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 *          @SWG\ErrorResponse(code="404", reason="Not Found - Email template or system resource not found."),
-	 *          @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
+	 * @SWG\ErrorResponses(
+	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request is not complete or valid."),
+	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
+	 * @SWG\ErrorResponse(code="404", reason="Not Found - Email template or system resource not found."),
+	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
 	 *       )
 	 *     )
 	 *   )
@@ -366,127 +366,127 @@ class EmailSvc extends RestService
 
 		return EmailUtilities::sendMessage( $this->_transport, $message );
 	}
-/*
-	public static function sendUserEmail( $template, $data )
-	{
-		$to = Option::get( $data, 'to' );
-		$cc = Option::get( $data, 'cc' );
-		$bcc = Option::get( $data, 'bcc' );
-		$subject = Option::get( $template, 'subject' );
-		$content = Option::get( $template, 'content' );
-		$bodyText = Option::get( $content, 'text' );
-		$bodyHtml = Option::get( $content, 'html' );
-		try
+	/*
+		public static function sendUserEmail( $template, $data )
 		{
-			$svc = ServiceHandler::getServiceObject( 'email' );
-			$result = ( $svc ) ? $svc->sendEmail( $to, $cc, $bcc, $subject, $bodyText, $bodyHtml ) : false;
-			if ( !filter_var( $result, FILTER_VALIDATE_BOOLEAN ) )
+			$to = Option::get( $data, 'to' );
+			$cc = Option::get( $data, 'cc' );
+			$bcc = Option::get( $data, 'bcc' );
+			$subject = Option::get( $template, 'subject' );
+			$content = Option::get( $template, 'content' );
+			$bodyText = Option::get( $content, 'text' );
+			$bodyHtml = Option::get( $content, 'html' );
+			try
 			{
-				$msg = "Error: Failed to send user email.";
-				if ( is_string( $result ) )
+				$svc = ServiceHandler::getServiceObject( 'email' );
+				$result = ( $svc ) ? $svc->sendEmail( $to, $cc, $bcc, $subject, $bodyText, $bodyHtml ) : false;
+				if ( !filter_var( $result, FILTER_VALIDATE_BOOLEAN ) )
 				{
-					$msg .= "\n$result";
+					$msg = "Error: Failed to send user email.";
+					if ( is_string( $result ) )
+					{
+						$msg .= "\n$result";
+					}
+					throw new Exception( $msg );
 				}
-				throw new Exception( $msg );
+			}
+			catch ( Exception $ex )
+			{
+				throw $ex;
 			}
 		}
-		catch ( Exception $ex )
+
+		protected function sendUserWelcomeEmail( $email, $fullname )
 		{
-			throw $ex;
+	//        $to = "$fullname <$email>";
+			$to = $email;
+			$subject = 'Welcome to ' . $this->siteName;
+			$body = 'Hello ' . $fullname . ",\r\n\r\n" .
+					"Welcome! Your registration  with " . $this->siteName . " is complete.\r\n" .
+					"\r\n" .
+					"Regards,\r\n" .
+					"Webmaster\r\n" .
+					$this->siteName;
+
+			$html = str_replace( "\r\n", "<br />", $body );
 		}
-	}
 
-	protected function sendUserWelcomeEmail( $email, $fullname )
-	{
-//        $to = "$fullname <$email>";
-		$to = $email;
-		$subject = 'Welcome to ' . $this->siteName;
-		$body = 'Hello ' . $fullname . ",\r\n\r\n" .
-				"Welcome! Your registration  with " . $this->siteName . " is complete.\r\n" .
-				"\r\n" .
-				"Regards,\r\n" .
-				"Webmaster\r\n" .
-				$this->siteName;
+		protected function sendAdminIntimationOnRegComplete( $email, $fullname )
+		{
+			$subject = "Registration Completed: " . $fullname;
+			$body = "A new user registered at " . $this->siteName . ".\r\n" .
+					"Name: " . $fullname . "\r\n" .
+					"Email address: " . $email . "\r\n";
 
-		$html = str_replace( "\r\n", "<br />", $body );
-	}
+			$html = str_replace( "\r\n", "<br />", $body );
+		}
 
-	protected function sendAdminIntimationOnRegComplete( $email, $fullname )
-	{
-		$subject = "Registration Completed: " . $fullname;
-		$body = "A new user registered at " . $this->siteName . ".\r\n" .
-				"Name: " . $fullname . "\r\n" .
-				"Email address: " . $email . "\r\n";
+		protected function sendResetPasswordLink( $email, $full_name )
+		{
+	//        $to = "$full_name <$email>";
+			$to = $email;
+			$subject = "Your reset password request at " . $this->siteName;
+			$link = Pii::app()->getHomeUrl() . '?code=' . urlencode( $this->getResetPasswordCode( $email ) );
 
-		$html = str_replace( "\r\n", "<br />", $body );
-	}
+			$body = "Hello " . $full_name . ",\r\n\r\n" .
+					"There was a request to reset your password at " . $this->siteName . "\r\n" .
+					"Please click the link below to complete the request: \r\n" . $link . "\r\n" .
+					"Regards,\r\n" .
+					"Webmaster\r\n" .
+					$this->siteName;
 
-	protected function sendResetPasswordLink( $email, $full_name )
-	{
-//        $to = "$full_name <$email>";
-		$to = $email;
-		$subject = "Your reset password request at " . $this->siteName;
-		$link = Pii::app()->getHomeUrl() . '?code=' . urlencode( $this->getResetPasswordCode( $email ) );
+			$html = str_replace( "\r\n", "<br />", $body );
+		}
 
-		$body = "Hello " . $full_name . ",\r\n\r\n" .
-				"There was a request to reset your password at " . $this->siteName . "\r\n" .
-				"Please click the link below to complete the request: \r\n" . $link . "\r\n" .
-				"Regards,\r\n" .
-				"Webmaster\r\n" .
-				$this->siteName;
+		protected function sendNewPassword( $user_rec, $new_password )
+		{
+			$email = $user_rec['email'];
+	//        $to = $user_rec['name'] . ' <' . $email . '>';
+			$to = $email;
+			$subject = "Your new password for " . $this->siteName;
+			$body = "Hello " . $user_rec['name'] . ",\r\n\r\n" .
+					"Your password was reset successfully. " .
+					"Here is your updated login:\r\n" .
+					"email:" . $user_rec['email'] . "\r\n" .
+					"password:$new_password\r\n" .
+					"\r\n" .
+					"Login here: " . Utilities::getAbsoluteURLFolder() . "login.php\r\n" .
+					"\r\n" .
+					"Regards,\r\n" .
+					"Webmaster\r\n" .
+					$this->siteName;
 
-		$html = str_replace( "\r\n", "<br />", $body );
-	}
+			$html = str_replace( "\r\n", "<br />", $body );
+		}
 
-	protected function sendNewPassword( $user_rec, $new_password )
-	{
-		$email = $user_rec['email'];
-//        $to = $user_rec['name'] . ' <' . $email . '>';
-		$to = $email;
-		$subject = "Your new password for " . $this->siteName;
-		$body = "Hello " . $user_rec['name'] . ",\r\n\r\n" .
-				"Your password was reset successfully. " .
-				"Here is your updated login:\r\n" .
-				"email:" . $user_rec['email'] . "\r\n" .
-				"password:$new_password\r\n" .
-				"\r\n" .
-				"Login here: " . Utilities::getAbsoluteURLFolder() . "login.php\r\n" .
-				"\r\n" .
-				"Regards,\r\n" .
-				"Webmaster\r\n" .
-				$this->siteName;
+		protected function sendUserConfirmationEmail( $email, $confirmcode, $fullname )
+		{
+			$confirm_url = Utilities::getAbsoluteURLFolder() . 'confirmreg.php?code=' . $confirmcode;
 
-		$html = str_replace( "\r\n", "<br />", $body );
-	}
+	//        $to = "$fullname <$email>";
+			$to = $email;
+			$subject = "Your registration with " . $this->siteName;
+			$body = "Hello " . $fullname . ",\r\n\r\n" .
+					"Thanks for your registration with " . $this->siteName . "\r\n" .
+					"Please click the link below to confirm your registration.\r\n" .
+					"$confirm_url\r\n" .
+					"\r\n" .
+					"Regards,\r\n" .
+					"Webmaster\r\n" .
+					$this->siteName;
 
-	protected function sendUserConfirmationEmail( $email, $confirmcode, $fullname )
-	{
-		$confirm_url = Utilities::getAbsoluteURLFolder() . 'confirmreg.php?code=' . $confirmcode;
+			$html = str_replace( "\r\n", "<br />", $body );
+		}
 
-//        $to = "$fullname <$email>";
-		$to = $email;
-		$subject = "Your registration with " . $this->siteName;
-		$body = "Hello " . $fullname . ",\r\n\r\n" .
-				"Thanks for your registration with " . $this->siteName . "\r\n" .
-				"Please click the link below to confirm your registration.\r\n" .
-				"$confirm_url\r\n" .
-				"\r\n" .
-				"Regards,\r\n" .
-				"Webmaster\r\n" .
-				$this->siteName;
+		protected function sendAdminIntimationEmail( $email, $fullname )
+		{
+			$subject = "New registration: " . $fullname;
+			$body = "A new user registered at " . $this->siteName . ".\r\n" .
+					"Name: " . $fullname . "\r\n" .
+					"Email address: " . $email;
 
-		$html = str_replace( "\r\n", "<br />", $body );
-	}
+			$html = str_replace( "\r\n", "<br />", $body );
+		}
 
-	protected function sendAdminIntimationEmail( $email, $fullname )
-	{
-		$subject = "New registration: " . $fullname;
-		$body = "A new user registered at " . $this->siteName . ".\r\n" .
-				"Name: " . $fullname . "\r\n" .
-				"Email address: " . $email;
-
-		$html = str_replace( "\r\n", "<br />", $body );
-	}
-
-*/
+	*/
 }
