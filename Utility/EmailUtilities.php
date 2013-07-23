@@ -74,7 +74,7 @@ class EmailUtilities
 				break;
 
 			default: // use local process, i.e. sendmail, exim, postscript, etc
-				$transport = \Swift_SendmailTransport::newInstance();
+				$transport = \Swift_SendmailTransport::newInstance( $type );
 				break;
 		}
 
