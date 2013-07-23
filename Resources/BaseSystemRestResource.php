@@ -20,6 +20,8 @@
 namespace DreamFactory\Platform\Resources;
 
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Components\DataTablesFormatter;
+use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
@@ -29,6 +31,7 @@ use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Option;
+use DreamFactory\Yii\Utility\Pii;
 
 /**
  * BaseSystemRestResource
@@ -73,6 +76,10 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 * @var bool Query option for output format of package
 	 */
 	protected $_exportPackage = false;
+	/**
+	 * @var int
+	 */
+	protected $_responseFormat = OutputFormats::Raw;
 
 	//*************************************************************************
 	//* Methods
@@ -121,6 +128,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 * @param string $fields
 	 * @param bool   $includeSchema
 	 * @param array  $extras
+	 * @param bool   $singleRow
 	 *
 	 * @return array
 	 */
@@ -142,6 +150,14 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		parent::_detectResourceMembers();
 
 		$this->_resourceId = Option::get( $this->_resourceArray, 1 );
+
+		/** @noinspection PhpUndefinedMethodInspection */
+		if ( OutputFormats::DataTables == Pii::controller()->getFormat() )
+		{
+			/** @noinspection PhpUndefinedMethodInspection */
+			Pii::controller()->setFormat( OutputFormats::JSON );
+			$this->_responseFormat = OutputFormats::DataTables;
+		}
 	}
 
 	/**
@@ -322,6 +338,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	/**
 	 * Default PATCH implementation
 	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return bool
 	 */
 	protected function _handlePatch()
@@ -332,6 +349,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	/**
 	 * Default MERGE implementation
 	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return bool
 	 */
 	protected function _handleMerge()
@@ -393,6 +411,23 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		}
 
 		return ResourceStore::delete( $_payload );
+	}
+
+	/**
+	 * Formats the output
+	 */
+	protected function _formatResponse()
+	{
+		$_data = $this->_response;
+
+		switch ( $this->_responseFormat )
+		{
+			case OutputFormats::DataTables:
+				$_data = DataTablesFormatter::format( $_data );
+				break;
+		}
+
+		$this->_response = $_data;
 	}
 
 	/**
@@ -493,5 +528,45 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	public function getFields()
 	{
 		return $this->_fields;
+	}
+
+	/**
+	 * @param int $responseFormat
+	 *
+	 * @return BaseSystemRestResource
+	 */
+	public function setResponseFormat( $responseFormat )
+	{
+		$this->_responseFormat = $responseFormat;
+
+		return $this;
+	}
+
+	/**
+	 * @return int
+	 */
+	public function getResponseFormat()
+	{
+		return $this->_responseFormat;
+	}
+
+	/**
+	 * @param boolean $exportPackage
+	 *
+	 * @return BaseSystemRestResource
+	 */
+	public function setExportPackage( $exportPackage )
+	{
+		$this->_exportPackage = $exportPackage;
+
+		return $this;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function getExportPackage()
+	{
+		return $this->_exportPackage;
 	}
 }

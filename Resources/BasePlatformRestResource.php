@@ -28,7 +28,6 @@ use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Option;
-use DreamFactory\Platform\Resources\User\Session;
 
 /**
  * BasePlatformResource
@@ -75,8 +74,25 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	}
 
 	/**
+	 * A chance to format the response
+	 */
+	protected function _postProcess()
+	{
+		parent::_postProcess();
+
+		$this->_formatResponse();
+	}
+
+	/**
+	 * Format the response if necessary
+	 */
+	protected function _formatResponse()
+	{
+	}
+
+	/**
 	 * @param string $name
-	 * @param array $arguments
+	 * @param array  $arguments
 	 *
 	 * @return mixed
 	 */

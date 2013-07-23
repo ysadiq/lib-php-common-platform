@@ -19,11 +19,14 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
+use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
+use Kisma\Core\Enums\OutputFormat;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 use Swagger\Annotations as SWG;
@@ -126,6 +129,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 	/**
 	 * @param array $settings
+	 *
+	 * @return \DreamFactory\Platform\Services\BasePlatformRestService
 	 */
 	public function __construct( $settings = array() )
 	{
@@ -167,7 +172,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	/**
 	 * @param string $resourceName
 	 *
-	 * @return \DreamFactory\Platform\Resources\BasePlatformRestResource|BasePlatformSystemModel
+	 * @return BasePlatformRestResource
 	 */
 	public static function getNewResource( $resourceName = null )
 	{
@@ -238,11 +243,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	}
 
 	/**
+	 * Handles all processing after a request.
+	 * Calls the default output formatter, which, like the goggles, does nothing.
+	 *
 	 * @return void
 	 */
 	protected function _postProcess()
 	{
-		//	Throw exception here to stop processing
+		// throw exception here to stop processing
 	}
 
 	/**
