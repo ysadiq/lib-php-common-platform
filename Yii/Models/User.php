@@ -85,10 +85,11 @@ class User extends BasePlatformSystemModel
 			array( 'email, display_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
 			array( 'email', 'email' ),
 			array( 'email', 'length', 'max' => 255 ),
-			array( 'is_active, is_sys_admin, default_app_id, role_id', 'numerical', 'integerOnly' => true ),
+			array( 'default_app_id, role_id', 'numerical', 'integerOnly' => true ),
 			array( 'password, first_name, last_name, security_answer', 'length', 'max' => 64 ),
 			array( 'phone', 'length', 'max' => 32 ),
 			array( 'confirm_code, display_name, security_question', 'length', 'max' => 128 ),
+			array( 'is_active, is_sys_admin', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -118,6 +119,8 @@ class User extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @param array $additionalLabels
+	 *
 	 * @return array customized attribute labels (name=>label)
 	 */
 	public function attributeLabels( $additionalLabels = array() )

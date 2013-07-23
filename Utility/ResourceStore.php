@@ -658,7 +658,7 @@ class ResourceStore extends SeedUtility
 		{
 			try
 			{
-				return new $_className( null, $resources );
+				return new $_className( Pii::controller(), $resources );
 			}
 			catch ( \Exception $_ex )
 			{

@@ -771,7 +771,7 @@ class SystemManager extends BaseSystemRestService
 
 		$_resource = ResourceStore::resource( $this->_resource, $this->_resourceArray );
 
-		return $_resource->processRequest( $this->_resource, $this->_action );
+		return $_resource->processRequest( $this->_resourcePath, $this->_action );
 	}
 
 	/**

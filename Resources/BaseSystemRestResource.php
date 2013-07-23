@@ -89,13 +89,13 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	public function __construct( $consumer, $settings = array(), $resourceArray = array() )
 	{
-		$this->_resourceArray = empty( $resourceArray ) ? Option::get( $settings, 'resource_array', array(), true ) : array();
+		$this->_resourceArray = $resourceArray ? : Option::get( $settings, 'resource_array', array(), true );
 
 		//	Default service name if not supplied. Should work for subclasses by defining the constant in your class
-		$settings['service_name'] = Option::get( $settings, 'service_name', static::DEFAULT_SERVICE_NAME, true );
+		$settings['service_name'] = $this->_serviceName ? : Option::get( $settings, 'service_name', static::DEFAULT_SERVICE_NAME, true );
 
 		//	Default verb aliases for all system resources
-		$settings['verb_aliases'] = array_merge(
+		$settings['verb_aliases'] = $this->_verbAliases ? : array_merge(
 			array(
 				 static::Patch => static::Put,
 				 static::Merge => static::Put,

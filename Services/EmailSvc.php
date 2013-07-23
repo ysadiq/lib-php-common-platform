@@ -97,7 +97,7 @@ class EmailSvc extends BaseSystemRestService
 	{
 		parent::__construct( $config );
 
-		$transportType = Option::get( $config, 'storage_type', '' );
+		$transportType = Option::get( $config, 'storage_type' );
 		$credentials = Option::get( $config, 'credentials', array() );
 		// Create the Transport
 		$this->_transport = EmailUtilities::createTransport( $transportType, $credentials );

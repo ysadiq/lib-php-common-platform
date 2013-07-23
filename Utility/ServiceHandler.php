@@ -102,7 +102,7 @@ class ServiceHandler
 		//	Cached?
 		if ( null !== ( $_service = Option::get( static::$_serviceCache, $_tag ) ) )
 		{
-			Log::debug( 'Service cache hit: ' . $api_name );
+			//Log::debug( 'Service cache hit: ' . $api_name );
 
 			return $_service;
 		}
