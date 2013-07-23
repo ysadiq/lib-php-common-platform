@@ -421,6 +421,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		$this->_resourcePath = rtrim( $resourcePath, '/' );
 		$this->_resourceArray = ( !empty( $this->_resourcePath ) ) ? explode( '/', $this->_resourcePath ) : array();
 
+		if ( empty( $this->_resource ) && null !== ( $_resource = Option::get( $this->_resourceArray, 0 ) ) )
+		{
+			$this->_resource = $_resource;
+		}
+
 		return $this;
 	}
 

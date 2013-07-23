@@ -246,6 +246,14 @@ class SecureJson extends BaseModelBehavior
 			$data = $defaultValue;
 		}
 
+		if ( is_string( $data ) )
+		{
+			if ( false !== ( $_decoded = json_decode( $data, true ) ) )
+			{
+				$data = $_decoded;
+			}
+		}
+
 		if ( false === ( $_encoded = json_encode( $data ) ) )
 		{
 			return false;

@@ -302,7 +302,7 @@ MYSQL;
 
 			$_typeId = Option::get( $values, 'type_id', $this->type_id );
 
-			if ( empty( $_typeId ) )
+			if ( empty( $_typeId ) || empty( $this->storage_type_id ) )
 			{
 				$this->type_id = $this->getServiceTypeId();
 			}
@@ -459,8 +459,10 @@ MYSQL;
 					 'is_system',
 					 'storage_name',
 					 'storage_type',
+					 'storage_type_id',
 					 'credentials',
 					 'native_format',
+					 'native_format_id',
 					 'base_url',
 					 'parameters',
 					 'headers',
@@ -482,11 +484,14 @@ MYSQL;
 		$_type = $type ? : $this->type;
 		$_storageType = $storageType ? : $this->storage_type;
 
-		if ( false !== ( $_typeId = PlatformServiceTypes::defines( $_type, true ) ) )
+		try
 		{
-			$this->type_id = $_typeId;
+			if ( false !== ( $_typeId = PlatformServiceTypes::defines( $_type, true ) ) )
+			{
+				$this->type_id = $_typeId;
+			}
 		}
-		else
+		catch ( \Exception $_ex )
 		{
 			switch ( strtolower( $_type ) )
 			{
@@ -547,9 +552,9 @@ MYSQL;
 					break;
 
 				case 'nosql db':
-					$this->type_id = PlatformServiceTypes::LOCAL_NOSQL_DB;
+					$this->type_id = PlatformServiceTypes::NOSQL_DB;
 
-					switch ( strtolower( $storageType ) )
+					switch ( strtolower( $_storageType ) )
 					{
 						case 'azure tables':
 							$this->storage_type_id = PlatformStorageTypes::AZURE_TABLES;

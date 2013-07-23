@@ -1270,7 +1270,7 @@ class SqlDbSvc extends BaseDbSvc
 			}
 			if ( empty( $id_list ) )
 			{
-				throw new BadRequestException( "Identifying values for '$id_field' can not be empty for update request." );
+				throw new BadRequestException( "Identifying values for '$id_field' can not be empty for delete request." );
 			}
 
 			$ids = array_map( 'trim', explode( ',', $id_list ) );

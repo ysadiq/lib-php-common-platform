@@ -136,8 +136,7 @@ class SwaggerUtilities
 					$replacePath = true;
 					break;
 
-				case PlatformServiceTypes::LOCAL_NOSQL_DB:
-				case PlatformServiceTypes::REMOTE_NOSQL_DB:
+				case PlatformServiceTypes::NOSQL_DB:
 					$serviceName = '{nosql_db}';
 					$replacePath = true;
 					break;

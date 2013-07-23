@@ -179,10 +179,8 @@ class ServiceHandler
 		{
 			if ( is_array( $_serviceClass ) )
 			{
-				$_storageType = strtolower( trim( Option::get( $record, 'storage_type' ) ) );
-				$_config = Option::get( $_serviceClass, $_storageType );
+				$_config = Option::get( $_serviceClass, Option::get( $record, 'storage_type_id' ) );
 				$_serviceClass = Option::get( $_config, 'class' );
-				$record['storage_type_id'] = Option::get( $record, 'storage_type_id', PlatformStorageTypes::defines( $_storageType, true ) );
 			}
 
 			$_arguments = array( $record, Option::get( $_config, 'local', true ) );

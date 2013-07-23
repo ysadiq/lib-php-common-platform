@@ -263,10 +263,15 @@ class ResourceStore extends SeedUtility
 		$_records = array();
 		$_pk = static::model()->tableSchema->primaryKey;
 
-		foreach ( $_ids as $_id )
+		foreach ( $record as $_record )
 		{
-			$_record = array_merge( $record, array( $_pk, trim( $_id ) ) );
-			$_records[] = $_record;
+			foreach ( $_ids as $_id )
+			{
+				$_record[$_pk] = trim( $_id );
+				$_records[] = $_record;
+			}
+
+			unset( $_record );
 		}
 
 		return static::bulkUpdate( $_records, $rollback, $fields, $extras );
