@@ -130,6 +130,8 @@ class ServiceHandler
 			static::$_serviceCache[$_tag] = $_service;
 
 			Pii::setState( 'dsp.service_cache', static::$_serviceCache );
+
+			return $_service;
 		}
 		catch ( \Exception $_ex )
 		{

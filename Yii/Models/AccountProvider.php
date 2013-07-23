@@ -84,10 +84,12 @@ class AccountProvider extends BasePlatformSystemModel
 			array(
 				 //	Secure JSON
 				 'base_platform_model.secure_json' => array(
-					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'             => $this->getDb()->password,
-					 'secureAttributes' => array(
+					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					 'salt'               => $this->getDb()->password,
+					 'insecureAttributes' => array(
 						 'provider_options',
+					 ),
+					 'secureAttributes'   => array(
 						 'master_auth_text',
 					 )
 				 ),

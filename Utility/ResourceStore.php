@@ -633,17 +633,18 @@ class ResourceStore extends SeedUtility
 		{
 			$_className = $_name;
 		}
-//		else if ( class_exists( '\\' . $_name, false ) || $_loader->loadClass( '\\' . $_name ) )
-//		{
-//			$_className = '\\' . $_name;
-//		}
 
-		$_namespace = ( false !== $returnResource ? static::DEFAULT_RESOURCE_NAMESPACE : static::DEFAULT_MODEL_NAMESPACE );
-
-		//	Is it in the namespace?
-		if ( class_exists( $_namespace . $_name, false ) || $_loader->loadClass( $_namespace . $_name ) )
+		/** @noinspection PhpUndefinedMethodInspection */
+		foreach ( false !== $returnResource ? Pii::app()->getResourceNamespaces() : Pii::app()->getModelNamespaces() as $_namespace )
 		{
-			$_className = $_namespace . $_name;
+			$_namespace = rtrim( $_namespace, '\\' ) . '\\';
+
+			//	Is it in the namespace?
+			if ( class_exists( $_namespace . $_name, false ) || $_loader->loadClass( $_namespace . $_name ) )
+			{
+				$_className = $_namespace . $_name;
+				break;
+			}
 		}
 
 		//	So, still not found, just let the SPL autoloader have a go and give up.

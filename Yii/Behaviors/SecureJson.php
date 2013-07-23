@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Yii\Behaviors;
 
 use DreamFactory\Yii\Behaviors\BaseModelBehavior;
 use Kisma\Core\Utility\Hasher;
+use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
 
 /**
@@ -132,7 +133,7 @@ class SecureJson extends BaseModelBehavior
 			return;
 		}
 
-		foreach ( $this->_secureAttributes as $_attribute )
+		foreach ( Option::clean( $this->_secureAttributes ) as $_attribute )
 		{
 			if ( $event->sender->hasAttribute( $_attribute ) )
 			{
@@ -147,7 +148,7 @@ class SecureJson extends BaseModelBehavior
 			}
 		}
 
-		foreach ( $this->_insecureAttributes as $_attribute )
+		foreach ( Option::clean( $this->_insecureAttributes ) as $_attribute )
 		{
 			if ( $event->sender->hasAttribute( $_attribute ) )
 			{
@@ -177,7 +178,7 @@ class SecureJson extends BaseModelBehavior
 			return;
 		}
 
-		foreach ( $this->_secureAttributes as $_attribute )
+		foreach ( Option::clean( $this->_secureAttributes ) as $_attribute )
 		{
 			if ( $event->sender->hasAttribute( $_attribute ) )
 			{
@@ -192,7 +193,7 @@ class SecureJson extends BaseModelBehavior
 			}
 		}
 
-		foreach ( $this->_insecureAttributes as $_attribute )
+		foreach ( Option::clean( $this->_insecureAttributes ) as $_attribute )
 		{
 			if ( $event->sender->hasAttribute( $_attribute ) )
 			{
