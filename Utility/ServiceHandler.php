@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Enums\PlatformStorageTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
@@ -115,7 +116,7 @@ class ServiceHandler
 
 		try
 		{
-			if ( null === ( $_config = Service::model()->byServiceId( $_tag )->find( array( 'select' => 'id,name,api_name,type,type_id,description,is_active' ) ) ) )
+			if ( null === ( $_config = Service::model()->byServiceId( $_tag )->find() ) )
 			{
 				throw new NotFoundException( 'Service not found' );
 			}
@@ -181,6 +182,7 @@ class ServiceHandler
 				$_storageType = strtolower( trim( Option::get( $record, 'storage_type' ) ) );
 				$_config = Option::get( $_serviceClass, $_storageType );
 				$_serviceClass = Option::get( $_config, 'class' );
+				$record['storage_type_id'] = Option::get( $record, 'storage_type_id', PlatformStorageTypes::defines( $_storageType, true ) );
 			}
 
 			$_arguments = array( $record, Option::get( $_config, 'local', true ) );

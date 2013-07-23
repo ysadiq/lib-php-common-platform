@@ -19,6 +19,8 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use CEvent;
+
 /**
  * AccountProvider.php
  * Models a provider of service accounts
@@ -27,6 +29,7 @@ namespace DreamFactory\Platform\Yii\Models;
  *
  * @property int     $service_id
  * @property string  $api_name
+ * @property string  $provider_name
  * @property string  $handler_class
  * @property string  $auth_endpoint
  * @property string  $service_endpoint
@@ -38,6 +41,15 @@ namespace DreamFactory\Platform\Yii\Models;
  */
 class AccountProvider extends BasePlatformSystemModel
 {
+	//*************************************************************************
+	//* Members
+	//*************************************************************************
+
+	/**
+	 * @var string
+	 */
+	public $api_name;
+
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
@@ -56,7 +68,7 @@ class AccountProvider extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array( 'service_id, api_name, handler_class, auth_endpoint, service_endpoint, provider_options, master_auth_text, last_use_date', 'safe' ),
+			array( 'service_id, api_name, provider_name, handler_class, auth_endpoint, service_endpoint, provider_options, master_auth_text, last_use_date', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -111,6 +123,7 @@ class AccountProvider extends BasePlatformSystemModel
 				array(
 					 'service_id'       => 'Service Parent',
 					 'api_name'         => 'Portal Endpoint',
+					 'provider_name'    => 'Provider Name',
 					 'handler_class'    => 'Request Handler Class',
 					 'auth_endpoint'    => 'Authorization Endpoint',
 					 'service_endpoint' => 'Service Endpoint',
@@ -120,5 +133,14 @@ class AccountProvider extends BasePlatformSystemModel
 				)
 			)
 		);
+	}
+
+	/**
+	 * Set api_name
+	 */
+	protected function afterFind()
+	{
+		$this->api_name = $this->provider_name;
+		parent::afterFind();
 	}
 }
