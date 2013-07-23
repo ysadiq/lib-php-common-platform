@@ -57,7 +57,7 @@ use Swagger\Annotations as SWG;
  * )
  *
  */
-class EmailSvc extends RestService
+class EmailSvc extends BaseSystemRestService
 {
 	//*************************************************************************
 	//	Members
