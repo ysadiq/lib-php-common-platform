@@ -70,14 +70,6 @@ class Service extends BasePlatformSystemModel
 	/**
 	 * @var array
 	 */
-	protected static $_serviceConfig = array();
-	/**
-	 * @var array
-	 */
-	protected static $_serviceCache = array();
-	/**
-	 * @var array
-	 */
 	protected static $_systemServices
 		= array(
 			'system' => 'DreamFactory\\Platform\\Services\\SystemManager',
@@ -121,7 +113,7 @@ class Service extends BasePlatformSystemModel
 	}
 
 	/**
-	 * Down and dirty service cache which includes the DSP default services.
+	 * Down and dirty service config cache which includes the DSP default services.
 	 * Clears when saves to services are made
 	 *
 	 * @param bool $bust If true, bust the cache
@@ -130,18 +122,15 @@ class Service extends BasePlatformSystemModel
 	 */
 	public static function available( $bust = false )
 	{
-		/** @var array $_serviceCache */
-		if ( false !== $bust || null === ( $_serviceCache = Pii::getState( 'dsp.service_cache' ) ) )
+		if ( false !== $bust || null === ( $_serviceConfig = Pii::getState( 'dsp.service_config' ) ) )
 		{
-			$_serviceCache = Pii::getParam( 'dsp.default_services', array() );
 			$_tableName = static::model()->tableName();
 
 			//	List all available services from db
 			$_sql
 				= <<<MYSQL
 SELECT
-	`api_name`,
-	`name`
+	*
 FROM
 	{$_tableName}
 ORDER BY
@@ -151,16 +140,12 @@ MYSQL;
 			$_pdo = Pii::pdo();
 			$_services = Sql::query( $_sql, null, $_pdo );
 
-			$_serviceCache = array_merge(
-				$_serviceCache,
-				$_services->fetchAll() ? : array()
-			);
+			$_serviceConfig = $_services->fetchAll();
 
-			Pii::setState( 'dsp.service_cache', $_serviceCache );
-//			Log::debug( 'Service cache reloaded: ' . print_r( $_serviceCache, true ) );
+			Pii::setState( 'dsp.service_config', $_serviceConfig );
 		}
 
-		return $_serviceCache;
+		return $_serviceConfig;
 	}
 
 	/**
@@ -471,22 +456,6 @@ MYSQL;
 	}
 
 	/**
-	 * @return array
-	 */
-	public static function getServiceCache()
-	{
-		return self::$_serviceCache;
-	}
-
-	/**
-	 * @return array
-	 */
-	public static function getServiceConfig()
-	{
-		return self::$_serviceConfig;
-	}
-
-	/**
 	 * @param string $type
 	 *
 	 * @return int|false
@@ -494,6 +463,11 @@ MYSQL;
 	public function getServiceTypeId( $type = null )
 	{
 		$_type = $type ? : $this->type;
+
+		if ( empty( $_type ) )
+		{
+			return PlatformServiceTypes::SYSTEM_SERVICE;
+		}
 
 		try
 		{
