@@ -22,7 +22,11 @@ namespace DreamFactory\Platform\Utility;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BaseDbSvc;
+use DreamFactory\Platform\Services\BaseFileSvc;
+use DreamFactory\Platform\Services\SchemaSvc;
 use DreamFactory\Platform\Utility\FileSystem;
+use DreamFactory\Platform\Yii\Models\App;
+use DreamFactory\Platform\Yii\Models\Service;
 use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
@@ -55,19 +59,20 @@ class Packager
 	 */
 	public static function exportAppAsPackage( $app_id, $include_files = false, $include_services = false, $include_schema = false, $include_data = false )
 	{
-		ResourceStore::setResourceName( 'app' );
-		ResourceStore::checkPermission( 'read' );
+		$model = ResourceStore::model( 'app' );
 
-		$model = \App::model();
 		if ( $include_services || $include_schema )
 		{
 			$model->with( 'app_service_relations.service' );
 		}
+
 		$app = $model->findByPk( $app_id );
+
 		if ( null === $app )
 		{
 			throw new \Exception( "No database entry exists for this application with id '$app_id'." );
 		}
+
 		$fields = array(
 			'api_name',
 			'name',
@@ -100,7 +105,7 @@ class Packager
 			if ( $include_services || $include_schema )
 			{
 				/**
-				 * @var \Service[] $serviceRelations
+				 * @var Service[] $serviceRelations
 				 */
 				$serviceRelations = $app->getRelated( 'app_service_relations' );
 				if ( !empty( $serviceRelations ) )
@@ -124,7 +129,7 @@ class Packager
 					);
 					foreach ( $serviceRelations as $relation )
 					{
-						/** @var \Service $service */
+						/** @var Service $service */
 						$service = $relation->getRelated( 'service' );
 						if ( !empty( $service ) )
 						{
@@ -149,7 +154,7 @@ class Packager
 									{
 										case 'local sql db schema':
 										case 'remote sql db schema':
-											/** @var $db \Platform\Services\SchemaSvc */
+											/** @var $db SchemaSvc */
 											$db = ServiceHandler::getServiceObject( $serviceName );
 											$describe = $db->describeTables( implode( ',', $component ) );
 											$temp = array(
@@ -178,7 +183,7 @@ class Packager
 			{
 				// add files
 				$_storageServiceId = Option::get( $record, 'storage_service_id' );
-				/** @var $_service \Platform\Services\BaseFileSvc */
+				/** @var $_service BaseFileSvc */
 				if ( empty( $_storageServiceId ) )
 				{
 					$_service = ServiceHandler::getServiceObject( 'app' );
@@ -241,9 +246,6 @@ class Packager
 	 */
 	public static function importAppFromPackage( $pkg_file, $import_url = '' )
 	{
-		ResourceStore::setResourceName( 'app' );
-		ResourceStore::checkPermission( 'create' );
-
 		$zip = new \ZipArchive();
 		if ( true !== $zip->open( $pkg_file ) )
 		{
@@ -307,7 +309,7 @@ class Packager
 						$tables = Option::get( $schemas, 'table' );
 						if ( !empty( $tables ) )
 						{
-							/** @var $db \Platform\Services\SchemaSvc */
+							/** @var $db SchemaSvc */
 							$result = $db->createTables( $tables, true );
 							if ( isset( $result[0]['error'] ) )
 							{
@@ -328,7 +330,7 @@ class Packager
 						{
 							$serviceName = 'schema'; // for older packages
 						}
-						/** @var $db \Platform\Services\SchemaSvc */
+						/** @var $db SchemaSvc */
 						$db = ServiceHandler::getServiceObject( $serviceName );
 						$result = $db->createTables( $tables, true );
 						if ( isset( $result[0]['error'] ) )
@@ -344,7 +346,7 @@ class Packager
 						if ( !empty( $table ) )
 						{
 							$serviceName = 'schema';
-							/** @var $db \Platform\Services\SchemaSvc */
+							/** @var $db SchemaSvc */
 							$db = ServiceHandler::getServiceObject( $serviceName );
 							$result = $db->createTables( $data, true );
 							if ( isset( $result['error'] ) )
@@ -451,7 +453,7 @@ class Packager
 		$_storageServiceId = Option::get( $record, 'storage_service_id' );
 		$_apiName = Option::get( $record, 'api_name' );
 
-		/** @var $_service \Platform\Services\BaseFileSvc */
+		/** @var $_service BaseFileSvc */
 		if ( empty( $_storageServiceId ) )
 		{
 			$_service = ServiceHandler::getServiceObject( 'app' );
@@ -508,7 +510,7 @@ class Packager
 			$_storageServiceId = Option::get( $record, 'storage_service_id' );
 			$_apiName = Option::get( $record, 'api_name' );
 
-			/** @var $_service \Platform\Services\BaseFileSvc */
+			/** @var $_service BaseFileSvc */
 			if ( empty( $_storageServiceId ) )
 			{
 				$_service = ServiceHandler::getServiceObject( 'app' );

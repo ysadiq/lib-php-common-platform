@@ -673,7 +673,7 @@ class ResourceStore extends SeedUtility
 	 */
 	public static function checkPermission( $operation, $service = null, $resource = null )
 	{
-		Session::checkSessionPermission( $operation, $service ? : static::$_service, $resource ? : static::$_resourceName );
+		Session::checkSessionPermission( $operation, $service ? : static::$_resourceName, $resource );
 
 		return true;
 	}

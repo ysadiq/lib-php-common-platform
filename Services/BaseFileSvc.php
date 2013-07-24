@@ -145,16 +145,16 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 
 	/**
 	 * @SWG\Api(
-	 *   path="/{file}", description="Operations available for File Storage Service.",
+	 *              path="/{file}", description="Operations available for File Storage Service.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="List all containers.",
-	 *       notes="List the names of the available containers in this storage. Use 'include_properties' to include any properties of the containers.",
-	 *       responseClass="Containers", nickname="getContainers",
+	 *              httpMethod="GET", summary="List all containers.",
+	 *              notes="List the names of the available containers in this storage. Use 'include_properties' to include any properties of the containers.",
+	 *              responseClass="Containers", nickname="getContainers",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="include_properties", description="Return all properties of the container, if any.",
-	 *           paramType="query", required=false, allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="include_properties", description="Return all properties of the container, if any.",
+	 *              paramType="query", required=false, allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -164,17 +164,17 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="POST", summary="Create one or more containers.",
-	 *       notes="Post data should be a single container definition or an array of container definitions.",
-	 *       responseClass="Containers", nickname="createContainers",
+	 *              httpMethod="POST", summary="Create one or more containers.",
+	 *              notes="Post data should be a single container definition or an array of container definitions.",
+	 *              responseClass="Containers", nickname="createContainers",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="data", description="Array of containers to create.",
-	 *           paramType="body", required="true", allowMultiple=false, dataType="Containers"
+	 *              name="data", description="Array of containers to create.",
+	 *              paramType="body", required="true", allowMultiple=false, dataType="Containers"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="check_exist", description="If true, the request fails when the container to create already exists.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="check_exist", description="If true, the request fails when the container to create already exists.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -184,13 +184,13 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="DELETE", summary="Delete one or more containers.",
-	 *       notes="Post data should be a single container definition or an array of container definitions.",
-	 *       responseClass="Containers", nickname="deleteContainers",
+	 *              httpMethod="DELETE", summary="Delete one or more containers.",
+	 *              notes="Post data should be a single container definition or an array of container definitions.",
+	 *              responseClass="Containers", nickname="deleteContainers",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="data", description="Array of containers to delete.",
-	 *           paramType="body", required="true", allowMultiple=false, dataType="Containers"
+	 *              name="data", description="Array of containers to delete.",
+	 *              paramType="body", required="true", allowMultiple=false, dataType="Containers"
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -203,36 +203,36 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 * )
 	 *
 	 * @SWG\Api(
-	 *   path="/{file}/{container}/", description="Operations on containers.",
+	 *              path="/{file}/{container}/", description="Operations on containers.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="List the container's properties, including folders and files.",
-	 *       notes="Use 'include_properties' to get properties of the container. Use the 'include_folders' and/or 'include_files' to return a listing.",
-	 *       responseClass="FoldersAndFiles", nickname="getContainer",
+	 *              httpMethod="GET", summary="List the container's properties, including folders and files.",
+	 *              notes="Use 'include_properties' to get properties of the container. Use the 'include_folders' and/or 'include_files' to return a listing.",
+	 *              responseClass="FoldersAndFiles", nickname="getContainer",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="container", description="The name of the container you want to retrieve the contents.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="container", description="The name of the container you want to retrieve the contents.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="include_properties", description="Return all properties of the container, if any.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="include_properties", description="Return all properties of the container, if any.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="include_folders", description="Include folders in the returned listing.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=true
+	 *              name="include_folders", description="Include folders in the returned listing.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=true
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="include_files", description="Include files in the returned listing.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=true
+	 *              name="include_files", description="Include files in the returned listing.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=true
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="full_tree", description="List the contents of all sub-folders as well.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="full_tree", description="List the contents of all sub-folders as well.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="zip", description="Return the zipped content of the folder.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="zip", description="Return the zipped content of the folder.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -243,33 +243,33 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="POST", summary="Add folders and/or files to the container.",
-	 *       notes="Post data as an array of folders and/or files.",
-	 *       responseClass="FoldersAndFiles", nickname="createContainer",
+	 *              httpMethod="POST", summary="Add folders and/or files to the container.",
+	 *              notes="Post data as an array of folders and/or files.",
+	 *              responseClass="FoldersAndFiles", nickname="createContainer",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="container", description="The name of the container you want to put the contents.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="container", description="The name of the container you want to put the contents.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="url", description="The full URL of the file to upload.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="string"
+	 *              name="url", description="The full URL of the file to upload.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="extract", description="Extract an uploaded zip file into the container.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="extract", description="Extract an uploaded zip file into the container.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="clean", description="Option when 'extract' is true, clean the current folder before extracting files and folders.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="clean", description="Option when 'extract' is true, clean the current folder before extracting files and folders.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="check_exist", description="If true, the request fails when the file or folder to create already exists.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="check_exist", description="If true, the request fails when the file or folder to create already exists.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="data", description="Array of folders and/or files.",
-	 *           paramType="body", required="false", allowMultiple=false, dataType="FoldersAndFiles"
+	 *              name="data", description="Array of folders and/or files.",
+	 *              paramType="body", required="false", allowMultiple=false, dataType="FoldersAndFiles"
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -280,17 +280,17 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="PATCH", summary="Update properties of the container.",
-	 *       notes="Post data as an array of container properties.",
-	 *       responseClass="Container", nickname="updateContainerProperties",
+	 *              httpMethod="PATCH", summary="Update properties of the container.",
+	 *              notes="Post data as an array of container properties.",
+	 *              responseClass="Container", nickname="updateContainerProperties",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="container", description="The name of the container you want to put the contents.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="container", description="The name of the container you want to put the contents.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="data", description="An array of container properties.",
-	 *           paramType="body", required="true", allowMultiple=false, dataType="Container"
+	 *              name="data", description="An array of container properties.",
+	 *              paramType="body", required="true", allowMultiple=false, dataType="Container"
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -301,17 +301,17 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="DELETE", summary="Delete the container or folders and/or files from the container.",
-	 *       notes="Careful, this deletes the requested container and all of its contents, unless there are posted specific folders and/or files.",
-	 *       responseClass="FoldersAndFiles", nickname="deleteContainer",
+	 *              httpMethod="DELETE", summary="Delete the container or folders and/or files from the container.",
+	 *              notes="Careful, this deletes the requested container and all of its contents, unless there are posted specific folders and/or files.",
+	 *              responseClass="FoldersAndFiles", nickname="deleteContainer",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="container", description="The name of the container you want to delete from.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="container", description="The name of the container you want to delete from.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="data", description="An array of folders and/or files to delete from the container.",
-	 *           paramType="body", required="true", allowMultiple=false, dataType="FoldersAndFiles"
+	 *              name="data", description="An array of folders and/or files to delete from the container.",
+	 *              paramType="body", required="true", allowMultiple=false, dataType="FoldersAndFiles"
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -325,40 +325,40 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 * )
 	 *
 	 * @SWG\Api(
-	 *   path="/{file}/{container}/{folder_path}/", description="Operations on folders.",
+	 *              path="/{file}/{container}/{folder_path}/", description="Operations on folders.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="List the folder's properties, or sub-folders and files.",
-	 *       notes="Use with no parameters to get properties of the folder or use the 'include_folders' and/or 'include_files' to return a listing.",
-	 *       responseClass="FoldersAndFiles", nickname="getFolder",
+	 *              httpMethod="GET", summary="List the folder's properties, or sub-folders and files.",
+	 *              notes="Use with no parameters to get properties of the folder or use the 'include_folders' and/or 'include_files' to return a listing.",
+	 *              responseClass="FoldersAndFiles", nickname="getFolder",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="container", description="The name of the container from which you want to retrieve contents.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="container", description="The name of the container from which you want to retrieve contents.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="folder_path", description="The path of the folder you want to retrieve. This can be a sub-folder, with each level separated by a '/'",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="folder_path", description="The path of the folder you want to retrieve. This can be a sub-folder, with each level separated by a '/'",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="include_properties", description="Return all properties of the folder, if any.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="include_properties", description="Return all properties of the folder, if any.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="include_folders", description="Include folders in the returned listing.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=true
+	 *              name="include_folders", description="Include folders in the returned listing.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=true
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="include_files", description="Include files in the returned listing.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=true
+	 *              name="include_files", description="Include files in the returned listing.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=true
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="full_tree", description="List the contents of all sub-folders as well.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="full_tree", description="List the contents of all sub-folders as well.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="zip", description="Return the zipped content of the folder.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="zip", description="Return the zipped content of the folder.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -369,37 +369,37 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="POST", summary="Create one or more sub-folders and/or files.",
-	 *       notes="Post data as an array of folders and/or files. Folders are created if they do not exist",
-	 *       responseClass="FoldersAndFiles", nickname="createFolder",
+	 *              httpMethod="POST", summary="Create one or more sub-folders and/or files.",
+	 *              notes="Post data as an array of folders and/or files. Folders are created if they do not exist",
+	 *              responseClass="FoldersAndFiles", nickname="createFolder",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="container", description="The name of the container where you want to put the contents.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="container", description="The name of the container where you want to put the contents.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="folder_path", description="The path of the folder where you want to put the contents. This can be a sub-folder, with each level separated by a '/'",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="folder_path", description="The path of the folder where you want to put the contents. This can be a sub-folder, with each level separated by a '/'",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="url", description="The full URL of the file to upload.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="string"
+	 *              name="url", description="The full URL of the file to upload.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="extract", description="Extract an uploaded zip file into the folder.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="extract", description="Extract an uploaded zip file into the folder.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="clean", description="Option when 'extract' is true, clean the current folder before extracting files and folders.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="clean", description="Option when 'extract' is true, clean the current folder before extracting files and folders.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="check_exist", description="If true, the request fails when the file or folder to create already exists.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="check_exist", description="If true, the request fails when the file or folder to create already exists.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="data", description="Array of folders and/or files.",
-	 *           paramType="body", required="false", allowMultiple=false, dataType="FoldersAndFiles"
+	 *              name="data", description="Array of folders and/or files.",
+	 *              paramType="body", required="false", allowMultiple=false, dataType="FoldersAndFiles"
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -410,21 +410,21 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="PATCH", summary="Update folder properties.",
-	 *       notes="Post data as an array of folder properties.",
-	 *       responseClass="Folder", nickname="updateFolderProperties",
+	 *              httpMethod="PATCH", summary="Update folder properties.",
+	 *              notes="Post data as an array of folder properties.",
+	 *              responseClass="Folder", nickname="updateFolderProperties",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="container", description="The name of the container where you want to put the contents.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="container", description="The name of the container where you want to put the contents.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="folder_path", description="The path of the folder you want to update. This can be a sub-folder, with each level separated by a '/'",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="folder_path", description="The path of the folder you want to update. This can be a sub-folder, with each level separated by a '/'",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="data", description="Array of folder properties.",
-	 *           paramType="body", required="false", allowMultiple=false, dataType="FoldersAndFiles"
+	 *              name="data", description="Array of folder properties.",
+	 *              paramType="body", required="false", allowMultiple=false, dataType="FoldersAndFiles"
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -435,21 +435,21 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="DELETE", summary="Delete one or more sub-folders and/or files.",
-	 *       notes="Careful, this deletes the requested folder and all of its contents, unless there are posted specific sub-folders and/or files.",
-	 *       responseClass="FoldersAndFiles", nickname="deleteFolder",
+	 *              httpMethod="DELETE", summary="Delete one or more sub-folders and/or files.",
+	 *              notes="Careful, this deletes the requested folder and all of its contents, unless there are posted specific sub-folders and/or files.",
+	 *              responseClass="FoldersAndFiles", nickname="deleteFolder",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="container", description="The name of the container where the folder exists.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="container", description="The name of the container where the folder exists.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="folder_path", description="The path of the folder where you want to delete contents. This can be a sub-folder, with each level separated by a '/'",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="folder_path", description="The path of the folder where you want to delete contents. This can be a sub-folder, with each level separated by a '/'",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="data", description="Array of folder and files to delete.",
-	 *           paramType="body", required="false", allowMultiple=false, dataType="FoldersAndFiles"
+	 *              name="data", description="Array of folder and files to delete.",
+	 *              paramType="body", required="false", allowMultiple=false, dataType="FoldersAndFiles"
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -463,33 +463,33 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 * )
 	 *
 	 * @SWG\Api(
-	 *   path="/{file}/{container}/{file_path}", description="Operations on individual files.",
+	 *              path="/{file}/{container}/{file_path}", description="Operations on individual files.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="Download the file contents and/or its properties.",
-	 *       notes="By default, the file is streamed to the browser. Use the 'download' parameter to prompt for download.
+	 *              httpMethod="GET", summary="Download the file contents and/or its properties.",
+	 *              notes="By default, the file is streamed to the browser. Use the 'download' parameter to prompt for download.
 	 *              Use the 'include_properties' parameter (optionally add 'content' to include base64 content) to list properties of the file.",
-	 *       responseClass="File", nickname="getFile",
+	 *              responseClass="File", nickname="getFile",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="container", description="Name of the container where the file exists.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="container", description="Name of the container where the file exists.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="file_path", description="Path and name of the file to retrieve.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="file_path", description="Path and name of the file to retrieve.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="include_properties", description="Return properties of the file.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="include_properties", description="Return properties of the file.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="content", description="Return the content as base64 of the file, only applies when 'include_properties' is true.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="content", description="Return the content as base64 of the file, only applies when 'include_properties' is true.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="download", description="Prompt the user to download the file from the browser.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
+	 *              name="download", description="Prompt the user to download the file from the browser.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean", defaultValue=false
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -500,29 +500,29 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="POST", summary="Create a new file.",
-	 *       notes="Post data should be the contents of the file or an object with file properties.",
-	 *       responseClass="File", nickname="createFile",
+	 *              httpMethod="POST", summary="Create a new file.",
+	 *              notes="Post data should be the contents of the file or an object with file properties.",
+	 *              responseClass="File", nickname="createFile",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="container", description="Name of the container where the file exists.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="container", description="Name of the container where the file exists.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="file_path", description="Path and name of the file to create.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="file_path", description="Path and name of the file to create.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="check_exist", description="If true, the request fails when the file to create already exists.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="boolean"
+	 *              name="check_exist", description="If true, the request fails when the file to create already exists.",
+	 *              paramType="query", required="false", allowMultiple=false, dataType="boolean"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="properties", description="Properties of the file.",
-	 *           paramType="body", required="false", allowMultiple=false, dataType="File"
+	 *              name="properties", description="Properties of the file.",
+	 *              paramType="body", required="false", allowMultiple=false, dataType="File"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="content", description="The content of the file.",
-	 *           paramType="body", required="false", allowMultiple=false, dataType="string"
+	 *              name="content", description="The content of the file.",
+	 *              paramType="body", required="false", allowMultiple=false, dataType="string"
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -533,21 +533,21 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="PUT", summary="Update content of the file.",
-	 *       notes="Post data should be the contents of the file.",
-	 *       responseClass="File", nickname="updateFile",
+	 *              httpMethod="PUT", summary="Update content of the file.",
+	 *              notes="Post data should be the contents of the file.",
+	 *              responseClass="File", nickname="updateFile",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="container", description="Name of the container where the file exists.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="container", description="Name of the container where the file exists.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="file_path", description="Path and name of the file to update.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="file_path", description="Path and name of the file to update.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="content", description="The content of the file.",
-	 *           paramType="body", required="false", allowMultiple=false, dataType="string"
+	 *              name="content", description="The content of the file.",
+	 *              paramType="body", required="false", allowMultiple=false, dataType="string"
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -558,21 +558,21 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="PATCH", summary="Update properties of the file.",
-	 *       notes="Post data should be the file properties.",
-	 *       responseClass="File", nickname="updateFileProperties",
+	 *              httpMethod="PATCH", summary="Update properties of the file.",
+	 *              notes="Post data should be the file properties.",
+	 *              responseClass="File", nickname="updateFileProperties",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="container", description="Name of the container where the file exists.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="container", description="Name of the container where the file exists.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="file_path", description="Path and name of the file to update.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="file_path", description="Path and name of the file to update.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="properties", description="Properties of the file.",
-	 *           paramType="body", required="false", allowMultiple=false, dataType="File"
+	 *              name="properties", description="Properties of the file.",
+	 *              paramType="body", required="false", allowMultiple=false, dataType="File"
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -583,17 +583,17 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 *       )
 	 *     ),
 	 * @SWG\Operation(
-	 *       httpMethod="DELETE", summary="Delete the file.",
-	 *       notes="Careful, this removes the given file from the storage.",
-	 *       responseClass="File", nickname="deleteFile",
+	 *              httpMethod="DELETE", summary="Delete the file.",
+	 *              notes="Careful, this removes the given file from the storage.",
+	 *              responseClass="File", nickname="deleteFile",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
-	 *           name="container", description="Name of the container where the file exists.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="container", description="Name of the container where the file exists.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         ),
 	 * @SWG\Parameter(
-	 *           name="file_path", description="Path and name of the file to delete.",
-	 *           paramType="path", required="true", allowMultiple=false, dataType="string"
+	 *              name="file_path", description="Path and name of the file to delete.",
+	 *              paramType="path", required="true", allowMultiple=false, dataType="string"
 	 *         )
 	 *       ),
 	 * @SWG\ErrorResponses(
@@ -614,7 +614,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 		switch ( $this->_action )
 		{
 			case self::Get:
-				static::checkPermission( 'read', $this->_container );
+				$this->checkPermission( 'read', $this->_container );
 				if ( empty( $this->_container ) )
 				{
 					// no resource
@@ -713,7 +713,8 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				break;
 			case self::Post:
 			case self::Put:
-				static::checkPermission( 'create', $this->_container );
+				$this->checkPermission( 'create', $this->_container );
+
 				if ( empty( $this->_container ) )
 				{
 					// create one or more containers
@@ -866,7 +867,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				break;
 			case self::Patch:
 			case self::Merge:
-				static::checkPermission( 'update', $this->_container );
+				$this->checkPermission( 'update' );
 				if ( empty( $this->_container ) )
 				{
 					// nothing?
@@ -905,7 +906,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				}
 				break;
 			case self::Delete:
-				static::checkPermission( 'delete', $this->_container );
+				$this->checkPermission( 'delete' );
 				$force = FilterInput::request( 'force', false, FILTER_VALIDATE_BOOLEAN );
 				$content = RestData::getPostDataAsArray();
 				if ( empty( $this->_container ) )

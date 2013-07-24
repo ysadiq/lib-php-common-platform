@@ -338,14 +338,13 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 	/**
 	 * @param string $operation
-	 * @param string $service
 	 * @param string $resource
 	 *
 	 * @return bool
 	 */
-	public static function checkPermission( $operation, $service, $resource = null )
+	public function checkPermission( $operation, $resource = null )
 	{
-		return ResourceStore::checkPermission( $operation, $service, $resource );
+		return ResourceStore::checkPermission( $operation, $this->_apiName, $resource );
 	}
 
 	/**

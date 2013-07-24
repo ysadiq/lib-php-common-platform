@@ -319,6 +319,9 @@ class App extends BaseSystemRestResource
 			$_includeSchema = Option::getBool( $_REQUEST, 'include_schema' );
 			$_includeData = Option::getBool( $_REQUEST, 'include_data' );
 
+			//@TODO What permissions to check?
+			//$this->checkPermission( 'read' );
+
 			return Packager::exportAppAsPackage( $this->_resourceId, $_includeFiles, $_includeServices, $_includeSchema, $_includeData );
 		}
 
@@ -331,6 +334,9 @@ class App extends BaseSystemRestResource
 	 */
 	protected function _handlePost()
 	{
+		//@TODO What permissions to check?
+		//$this->checkPermission( 'create' );
+
 		//	You can import an application package file, local or remote, or from zip, but nothing else
 		$_name = FilterInput::request( 'name' );
 		$_importUrl = FilterInput::request( 'url' );
