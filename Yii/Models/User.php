@@ -144,6 +144,26 @@ class User extends BasePlatformSystemModel
 		return parent::attributeLabels( array_merge( $_myLabels, $additionalLabels ) );
 	}
 
+	/**
+	 * @param array $additionalMappings Attributes of the base class to add
+	 *
+	 * @return array An map of attributes to display names
+	 */
+	public function getDisplayMap( array $additionalMappings = array() )
+	{
+		//	My attributes
+		return array_merge(
+			array(
+				 'email'        => 'Email',
+				 'first_name'   => 'First Name',
+				 'last_name'    => 'Last Name',
+				 'is_active'    => 'Is Active',
+				 'is_sys_admin' => 'Is System Admin',
+			),
+			$additionalMappings
+		);
+	}
+
 	/** {@InheritDoc} */
 	public function setAttributes( $values, $safeOnly = true )
 	{

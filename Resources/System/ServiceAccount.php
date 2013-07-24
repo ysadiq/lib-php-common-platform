@@ -77,19 +77,49 @@ class ServiceAccount extends BaseSystemRestResource
 				 'resource_array' => $resourceArray,
 				 'verb_aliases'   => array(
 					 static::Patch => static::Post,
+				 ),
+				 'extra_actions'  => array(
+					 'display' => function ()
+					 {
+						 $this->_handleDisplay();
+					 }
 				 )
 			)
 		);
 	}
+
 	/**
+	 * Handles requests for presentation information
 	 *
+	 * Returns a structure like so:
+	 *
+	 * 'resource' : {
+	 *        'header' : 'List header',
+	 *        'fields' : ['field','field',...],
+	 *        'labels' : ['label', 'label', 'label'],
+	 *        'resource' : $this->_apiName
+	 * }
+	 */
+	protected function _handleDisplay()
+	{
+		$_model = ResourceStore::model( $this->_resource );
+
+		$_labels = $_model->attributeLabels();
+		$_fields = $_model->getDisplayMap();
+
+	}
+	//*************************************************************************
+	//* Doc
+	//*************************************************************************
+
+	/**
 	 * @SWG\Api(
-	 *     path="/system/service_account", description="Operations for service account administration.",
+	 *             path="/system/service_account", description="Operations for service account administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *         httpMethod="GET", summary="Retrieve multiple service accounts.",
-	 *         notes="Use the 'ids' or 'filter' parameter to limit records that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.",
-	 *         responseClass="ServiceAccounts", nickname="getServiceAccounts",
+	 *             httpMethod="GET", summary="Retrieve multiple service accounts.",
+	 *             notes="Use the 'ids' or 'filter' parameter to limit records that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.",
+	 *             responseClass="ServiceAccounts", nickname="getServiceAccounts",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -135,9 +165,9 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *         httpMethod="POST", summary="Create one or more service accounts.",
-	 *         notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *         responseClass="Success", nickname="createServiceAccounts",
+	 *             httpMethod="POST", summary="Create one or more service accounts.",
+	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
+	 *             responseClass="Success", nickname="createServiceAccounts",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to create.",
@@ -159,9 +189,9 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *         httpMethod="PUT", summary="Update one or more service accounts.",
-	 *         notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *         responseClass="Success", nickname="updateServiceAccounts",
+	 *             httpMethod="PUT", summary="Update one or more service accounts.",
+	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
+	 *             responseClass="Success", nickname="updateServiceAccounts",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
@@ -183,9 +213,9 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *         httpMethod="DELETE", summary="Delete one or more service accounts.",
-	 *         notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *         responseClass="Success", nickname="deleteServiceAccounts",
+	 *             httpMethod="DELETE", summary="Delete one or more service accounts.",
+	 *             notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
+	 *             responseClass="Success", nickname="deleteServiceAccounts",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -214,12 +244,12 @@ class ServiceAccount extends BaseSystemRestResource
 	 *   )
 	 *
 	 * @SWG\Api(
-	 *     path="/system/service_account/{id}", description="Operations for individual service account administration.",
+	 *             path="/system/service_account/{id}", description="Operations for individual service account administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *         httpMethod="GET", summary="Retrieve one service account by identifier.",
-	 *         notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
-	 *         responseClass="ServiceAccount", nickname="getServiceAccount",
+	 *             httpMethod="GET", summary="Retrieve one service account by identifier.",
+	 *             notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
+	 *             responseClass="ServiceAccount", nickname="getServiceAccount",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -241,9 +271,9 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *         httpMethod="PUT", summary="Update one service account.",
-	 *         notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
-	 *         responseClass="Success", nickname="updateServiceAccount",
+	 *             httpMethod="PUT", summary="Update one service account.",
+	 *             notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
+	 *             responseClass="Success", nickname="updateServiceAccount",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -269,9 +299,9 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *         httpMethod="DELETE", summary="Delete one service account.",
-	 *         notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
-	 *         responseClass="Success", nickname="deleteServiceAccount",
+	 *             httpMethod="DELETE", summary="Delete one service account.",
+	 *             notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
+	 *             responseClass="Success", nickname="deleteServiceAccount",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",

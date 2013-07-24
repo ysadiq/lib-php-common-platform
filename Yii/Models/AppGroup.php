@@ -89,6 +89,23 @@ class AppGroup extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @param array $additionalMappings Attributes of the base class to add
+	 *
+	 * @return array An map of attributes to display names
+	 */
+	public function getDisplayMap( array $additionalMappings = array() )
+	{
+		//	My attributes
+		return array_merge(
+			array(
+				 'name'        => 'Name',
+				 'description' => 'Description',
+			),
+			$additionalMappings
+		);
+	}
+
+	/**
 	 * @param array $values
 	 * @param int   $id
 	 */
