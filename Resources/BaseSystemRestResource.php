@@ -157,6 +157,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			/** @noinspection PhpUndefinedMethodInspection */
 			Pii::controller()->setFormat( OutputFormats::JSON );
 			$this->_responseFormat = OutputFormats::DataTables;
+			ResourceStore::setFromDatatables( true );
 		}
 	}
 

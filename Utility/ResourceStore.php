@@ -32,6 +32,7 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Seed;
 use Kisma\Core\SeedUtility;
+use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -89,6 +90,10 @@ class ResourceStore extends SeedUtility
 	 * @var string Our service name
 	 */
 	protected static $_service = 'system';
+	/**
+	 * @var bool If true, additional criteria will be retrieved from request
+	 */
+	protected static $_fromDatatables = false;
 
 	//************************************************************************
 	//* Methods
@@ -172,6 +177,11 @@ class ResourceStore extends SeedUtility
 		if ( $criteria && is_string( $criteria ) && $criteria !== '*' )
 		{
 			$criteria = array( 'select' => $criteria );
+		}
+
+		if ( static::$_fromDatatables )
+		{
+			$criteria = static::_buildDataTablesCriteria( explode( ',', static::$_fields ), $criteria );
 		}
 
 		return static::bulkSelectById( null !== $id ? array( $id ) : null, $criteria, $params, $singleRow );
@@ -594,40 +604,6 @@ class ResourceStore extends SeedUtility
 		$_className = \ucwords( $_resourceName );
 		$_name = ucfirst( Inflector::deneutralize( $_resourceName ) );
 
-		if ( !class_exists( $_className, false ) )
-		{
-			$_className = null;
-
-			//	Set KNOWN names...
-			switch ( strtolower( $_resourceName ) )
-			{
-				case 'app':
-					$_name = 'App';
-					break;
-
-				case 'app_group':
-				case 'appgroup':
-					$_name = 'AppGroup';
-					break;
-
-				case 'role':
-					$_name = 'Role';
-					break;
-
-				case 'service':
-					$_name = 'Service';
-					break;
-
-				case 'user':
-					$_name = 'User';
-					break;
-
-				case 'email_template':
-					$_name = 'EmailTemplate';
-					break;
-			}
-		}
-
 		//	Does the resource have a class?
 		if ( class_exists( $_resourceName, false ) || $_loader->loadClass( $_resourceName ) )
 		{
@@ -927,6 +903,57 @@ class ResourceStore extends SeedUtility
 		}
 	}
 
+	/**
+	 * Adds criteria garnered from the query string from DataTables
+	 *
+	 * @param array|\CDbCriteria $criteria
+	 *
+	 * @param array              $columns
+	 *
+	 * @return array|\CDbCriteria
+	 */
+	protected function _buildDataTablesCriteria( $columns, $criteria = null )
+	{
+		$criteria = $criteria ? : array();
+		$_criteria = ( $criteria instanceof \CDbCriteria ? $criteria : new \CDbCriteria( $criteria ) );
+
+		//	Columns
+		$_criteria->select = implode( ',', $columns );
+
+		//	Limits
+		$_limit = FilterInput::get( INPUT_GET, 'iDisplayLength', -1, FILTER_SANITIZE_NUMBER_INT );
+		$_limitStart = FilterInput::get( INPUT_GET, 'iDisplayStart', 0, FILTER_SANITIZE_NUMBER_INT );
+
+		if ( -1 != $_limit )
+		{
+			$_criteria->limit = $_limit;
+			$_criteria->offset = $_limitStart;
+		}
+
+		//	Sort
+		$_order = array();
+
+		if ( isset( $_GET['iSortCol_0'] ) )
+		{
+			for ( $_i = 0, $_count = FilterInput::get( INPUT_GET, 'iSortingCols', 0, FILTER_SANITIZE_NUMBER_INT ); $_i < $_count; $_i++ )
+			{
+				$_column = FilterInput::get( INPUT_GET, 'iSortCol_' . $_i, 0, FILTER_SANITIZE_NUMBER_INT );
+
+				if ( isset( $_GET['bSortable_' . $_column] ) && 'true' == $_GET['bSortable_' . $_column] )
+				{
+					$_order[] = $columns[$_column] . ' ' . FilterInput::get( INPUT_GET, 'sSortDir_' . $_i, null, FILTER_SANITIZE_STRING );
+				}
+			}
+		}
+
+		if ( !empty( $_order ) )
+		{
+			$_criteria->order = implode( ', ', $_order );
+		}
+
+		return $_criteria;
+	}
+
 	//*************************************************************************
 	//	Properties
 	//*************************************************************************
@@ -1041,5 +1068,21 @@ class ResourceStore extends SeedUtility
 	public static function getService()
 	{
 		return self::$_service;
+	}
+
+	/**
+	 * @param boolean $fromDatatables
+	 */
+	public static function setFromDatatables( $fromDatatables )
+	{
+		self::$_fromDatatables = $fromDatatables;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public static function getFromDatatables()
+	{
+		return self::$_fromDatatables;
 	}
 }
