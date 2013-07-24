@@ -912,7 +912,7 @@ class ResourceStore extends SeedUtility
 	 *
 	 * @return array|\CDbCriteria
 	 */
-	protected function _buildDataTablesCriteria( $columns, $criteria = null )
+	protected static function _buildDataTablesCriteria( $columns, $criteria = null )
 	{
 		$criteria = $criteria ? : array();
 		$_criteria = ( $criteria instanceof \CDbCriteria ? $criteria : new \CDbCriteria( $criteria ) );
@@ -942,6 +942,22 @@ class ResourceStore extends SeedUtility
 				if ( isset( $_GET['bSortable_' . $_column] ) && 'true' == $_GET['bSortable_' . $_column] )
 				{
 					$_order[] = $columns[$_column] . ' ' . FilterInput::get( INPUT_GET, 'sSortDir_' . $_i, null, FILTER_SANITIZE_STRING );
+				}
+			}
+		}
+
+		//	Searching...
+		$_filter = FilterInput::get( INPUT_GET, 'sSearch', null, FILTER_SANITIZE_STRING );
+
+		if ( !empty( $_filter ) && isset( $_GET['sColumns'] ) )
+		{
+			$_dtColumns = explode( ',', FilterInput::get( INPUT_GET, 'sColumns', null, FILTER_SANITIZE_STRING ) );
+
+			for ( $_i = 0, $_count = FilterInput::get( INPUT_GET, 'iColumns', 0, FILTER_SANITIZE_NUMBER_INT ); $_i < $_count; $_i++ )
+			{
+				if ( 'true' == Option::get( $_GET, 'bSearchable_' . $_i ) )
+				{
+					$_criteria->addSearchCondition( $_dtColumns[$_i], $_filter, true, 'OR' );
 				}
 			}
 		}
