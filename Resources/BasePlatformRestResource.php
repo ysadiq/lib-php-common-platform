@@ -30,7 +30,7 @@ use Kisma\Core\Seed;
 use Kisma\Core\Utility\Option;
 
 /**
- * BasePlatformResource
+ * BasePlatformRestResource
  * A base service resource class to handle service resources of various kinds.
  */
 abstract class BasePlatformRestResource extends BasePlatformRestService implements RestResourceLike

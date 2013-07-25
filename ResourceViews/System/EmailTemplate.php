@@ -21,79 +21,75 @@ namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
-use DreamFactory\Platform\Utility\ResourceStore;
-use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Sql;
-use DreamFactory\Platform\Services\SystemManager;
-use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\Platform\Utility\SqlDbUtilities;
+use Swagger\Annotations as SWG;
 
 /**
- * ServiceAccount
- * DSP service/provider interface
+ * EmailTemplate
+ * DSP system administration manager
  *
  * @SWG\Resource(
  *   resourcePath="/system"
  * )
  *
- * @SWG\Model(id="ServiceAccounts",
- * @SWG\Property(name="record",type="Array",items="$ref:ServiceAccount",description="Array of system service account records of the given resource.")
+ * @SWG\Model(id="EmailTemplates",
+ * @SWG\Property(name="record",type="Array",items="$ref:EmailTemplate",description="Array of system email template records.")
  * )
- * @SWG\Model(id="ServiceAccount",
- * @SWG\Property(name="id",type="int",description="Identifier of this account."),
- * @SWG\Property(name="user_id",type="int",description="The user who owns this account."),
- * @SWG\Property(name="provider_id",type="int",description="The provider who issued this account."),
- * @SWG\Property(name="account_type",type="int",description="The type of account."),
- * @SWG\Property(name="auth_text",type="string",description="The authorization for this account/provider."),
- * @SWG\Property(name="created_date",type="string",description="Date this application group was created."),
- * @SWG\Property(name="created_by_id",type="int",description="User Id of who created this application group."),
- * @SWG\Property(name="last_modified_date",type="string",description="Date this application group was last modified."),
- * @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this application group.")
+ * @SWG\Model(id="EmailTemplate",
+ * @SWG\Property(name="id",type="int",description="Identifier of this email template."),
+ * @SWG\Property(name="name",type="string",description="Displayable name of this email template."),
+ * @SWG\Property(name="description",type="string",description="Description of this email template."),
+ * @SWG\Property(name="to",type="Array",items="$ref:EmailAddress",description="Single or multiple receiver addresses."),
+ * @SWG\Property(name="cc",type="Array",items="$ref:EmailAddress",description="Optional CC receiver addresses."),
+ * @SWG\Property(name="bcc",type="Array",items="$ref:EmailAddress",description="Optional BCC receiver addresses."),
+ * @SWG\Property(name="subject",type="string",description="Text only subject line."),
+ * @SWG\Property(name="body_text",type="string",description="Text only version of the body."),
+ * @SWG\Property(name="body_html",type="string",description="Escaped HTML version of the body."),
+ * @SWG\Property(name="from",type="EmailAddress",description="Required sender name and email."),
+ * @SWG\Property(name="reply_to",type="EmailAddress",description="Optional reply to name and email."),
+ * @SWG\Property(name="defaults",type="Array",items="$ref:string",description="Array of default name value pairs for template replacement."),
+ * @SWG\Property(name="created_date",type="string",description="Date this email template was created."),
+ * @SWG\Property(name="created_by_id",type="int",description="User Id of who created this email template."),
+ * @SWG\Property(name="last_modified_date",type="string",description="Date this email template was last modified."),
+ * @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this email template.")
+ * )
+ *
  */
-class ServiceAccount extends BaseSystemRestResource
+class EmailTemplate extends BaseSystemRestResource
 {
+	//*************************************************************************
+	//	Methods
+	//*************************************************************************
+
 	/**
-	 * Constructor
-	 *
 	 * @param BasePlatformService $consumer
-	 * @param array               $resourceArray
-	 *
-	 * @return \DreamFactory\Platform\Resources\System\ServiceAccount
+	 * @param array               $resources
 	 */
-	public function __construct( $consumer = null, $resourceArray = array() )
+	public function __construct( $consumer, $resources = array() )
 	{
 		parent::__construct(
 			$consumer,
 			array(
-				 'name'           => 'Service Account',
-				 'type'           => 'Service',
 				 'service_name'   => 'system',
-				 'type_id'        => PlatformServiceTypes::LOCAL_WEB_SERVICE,
-				 'api_name'       => 'service_account',
-				 'description'    => 'Service provider account configuration.',
+				 'name'           => 'Email Template',
+				 'api_name'       => 'email_template',
+				 'type'           => 'System',
+				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				 'description'    => 'System email template administration.',
 				 'is_active'      => true,
-				 'resource_array' => $resourceArray,
-				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-				 ),
+				 'resource_array' => $resources,
 			)
 		);
 	}
-
-	//*************************************************************************
-	//* Doc
-	//*************************************************************************
-
 	/**
+	 *
 	 * @SWG\Api(
-	 *             path="/system/service_account", description="Operations for service account administration.",
+	 *     path="/system/email_template", description="Operations for email template administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve multiple service accounts.",
-	 *             notes="Use the 'ids' or 'filter' parameter to limit records that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.",
-	 *             responseClass="ServiceAccounts", nickname="getServiceAccounts",
+	 *         httpMethod="GET", summary="Retrieve multiple email templates.",
+	 *         notes="Use the 'ids' or 'filter' parameter to limit records that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.",
+	 *         responseClass="EmailTemplates", nickname="getEmailTemplates",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -139,13 +135,13 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="POST", summary="Create one or more service accounts.",
-	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="createServiceAccounts",
+	 *         httpMethod="POST", summary="Create one or more email templates.",
+	 *         notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
+	 *         responseClass="Success", nickname="createEmailTemplates",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to create.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="ServiceAccounts"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="EmailTemplates"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -163,13 +159,13 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one or more service accounts.",
-	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="updateServiceAccounts",
+	 *         httpMethod="PUT", summary="Update one or more email templates.",
+	 *         notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
+	 *         responseClass="Success", nickname="updateEmailTemplates",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="ServiceAccounts"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="EmailTemplates"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -187,9 +183,9 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one or more service accounts.",
-	 *             notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="deleteServiceAccounts",
+	 *         httpMethod="DELETE", summary="Delete one or more email templates.",
+	 *         notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
+	 *         responseClass="Success", nickname="deleteEmailTemplates",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -197,7 +193,7 @@ class ServiceAccount extends BaseSystemRestResource
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to delete.",
-	 *             paramType="body", required="false", allowMultiple=false, dataType="ServiceAccounts"
+	 *             paramType="body", required="false", allowMultiple=false, dataType="EmailTemplates"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -218,12 +214,12 @@ class ServiceAccount extends BaseSystemRestResource
 	 *   )
 	 *
 	 * @SWG\Api(
-	 *             path="/system/service_account/{id}", description="Operations for individual service account administration.",
+	 *     path="/system/email_template/{id}", description="Operations for individual email template administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve one service account by identifier.",
-	 *             notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
-	 *             responseClass="ServiceAccount", nickname="getServiceAccount",
+	 *         httpMethod="GET", summary="Retrieve one application by identifier.",
+	 *         notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
+	 *         responseClass="EmailTemplate", nickname="getEmailTemplate",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -245,9 +241,9 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one service account.",
-	 *             notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
-	 *             responseClass="Success", nickname="updateServiceAccount",
+	 *         httpMethod="PUT", summary="Update one email template.",
+	 *         notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
+	 *         responseClass="Success", nickname="updateEmailTemplate",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -255,7 +251,7 @@ class ServiceAccount extends BaseSystemRestResource
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="ServiceAccount"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="EmailTemplate"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -273,9 +269,9 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one service account.",
-	 *             notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
-	 *             responseClass="Success", nickname="deleteServiceAccount",
+	 *         httpMethod="DELETE", summary="Delete one email template.",
+	 *         notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
+	 *         responseClass="Success", nickname="deleteEmailTemplate",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",

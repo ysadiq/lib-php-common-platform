@@ -20,20 +20,9 @@
 namespace DreamFactory\Platform\Interfaces;
 
 /**
- * RestResourceLike
- * REST resources are just like REST services except they have a direct consumer
+ * ResourceViewLike
+ * Something that acts as a resource view
  */
-interface RestResourceLike extends RestServiceLike
+interface ResourceViewLike
 {
-	/**
-	 * @return BasePlatformService
-	 */
-	public function getConsumer();
-
-	/**
-	 * @param BasePlatformService $consumer
-	 *
-	 * @return mixed
-	 */
-	public function setConsumer( $consumer );
 }

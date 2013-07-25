@@ -105,24 +105,6 @@ class App extends BasePlatformSystemModel
 	}
 
 	/**
-	 * @param array $additionalMappings Attributes of the base class to add
-	 *
-	 * @return array An map of attributes to display names
-	 */
-	public function getDisplayMap( array $additionalMappings = array() )
-	{
-		//	My attributes
-		return array_merge(
-			array(
-				 'api_name'  => 'Name',
-				 'url'       => 'Path',
-				 'is_active' => 'Active',
-			),
-			$additionalMappings
-		);
-	}
-
-	/**
 	 * @return array relational rules.
 	 */
 	public function relations()

@@ -19,81 +19,89 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
-use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Services\BasePlatformRestService;
-use DreamFactory\Platform\Services\BasePlatformService;
-use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\FileSystem;
+use DreamFactory\Platform\Utility\Packager;
+use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Sql;
-use DreamFactory\Platform\Services\SystemManager;
-use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\Platform\Utility\SqlDbUtilities;
+use Kisma\Core\Utility\Option;
+use Swagger\Annotations as SWG;
 
 /**
- * ServiceAccount
- * DSP service/provider interface
+ * App
+ * DSP system administration manager
  *
  * @SWG\Resource(
  *   resourcePath="/system"
  * )
  *
- * @SWG\Model(id="ServiceAccounts",
- * @SWG\Property(name="record",type="Array",items="$ref:ServiceAccount",description="Array of system service account records of the given resource.")
+ * @SWG\Model(id="Apps",
+ * @SWG\Property(name="record",type="Array",items="$ref:App",description="Array of system application records.")
  * )
- * @SWG\Model(id="ServiceAccount",
- * @SWG\Property(name="id",type="int",description="Identifier of this account."),
- * @SWG\Property(name="user_id",type="int",description="The user who owns this account."),
- * @SWG\Property(name="provider_id",type="int",description="The provider who issued this account."),
- * @SWG\Property(name="account_type",type="int",description="The type of account."),
- * @SWG\Property(name="auth_text",type="string",description="The authorization for this account/provider."),
- * @SWG\Property(name="created_date",type="string",description="Date this application group was created."),
- * @SWG\Property(name="created_by_id",type="int",description="User Id of who created this application group."),
- * @SWG\Property(name="last_modified_date",type="string",description="Date this application group was last modified."),
- * @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this application group.")
+ * @SWG\Model(id="App",
+ * @SWG\Property(name="id",type="int",description="Identifier of this application."),
+ * @SWG\Property(name="name",type="string",description="Displayable name of this application."),
+ * @SWG\Property(name="api_name",type="string",description="Name of the application to use in API transactions."),
+ * @SWG\Property(name="description",type="string",description="Description of this application."),
+ * @SWG\Property(name="is_active",type="boolean",description="Is this system application active for use."),
+ * @SWG\Property(name="url",type="string",description="URL for accessing this application."),
+ * @SWG\Property(name="is_url_external",type="boolean",description="True when this application is hosted elsewhere."),
+ * @SWG\Property(name="imported_url",type="string",description="If imported, the url of where the code originated."),
+ * @SWG\Property(name="storage_service_id",type="string",description="If locally stored, the storage service identifier."),
+ * @SWG\Property(name="storage_container",type="string",description="If locally stored, the container of the storage service."),
+ * @SWG\Property(name="requires_fullscreen",type="boolean",description="True when this app needs to hide launchpad."),
+ * @SWG\Property(name="allow_fullscreen_toggle",type="boolean",description="True to allow launchpad access via toggle."),
+ * @SWG\Property(name="toggle_location",type="string",description="Screen location for toggle placement."),
+ * @SWG\Property(name="requires_plugin",type="boolean",description="True when the app relies on a browser plugin."),
+ * @SWG\Property(name="roles_default_app",type="Array",items="$ref:string",description="Related roles by Role.default_app_id."),
+ * @SWG\Property(name="users_default_app",type="Array",items="$ref:string",description="Related users by User.default_app_id."),
+ * @SWG\Property(name="app_groups",type="Array",items="$ref:string",description="Related groups by app to group assignment."),
+ * @SWG\Property(name="roles",type="Array",items="$ref:string",description="Related roles by app to role assignment."),
+ * @SWG\Property(name="services",type="Array",items="$ref:string",description="Related services by app to service assignment."),
+ * @SWG\Property(name="created_date",type="string",description="Date this application was created."),
+ * @SWG\Property(name="created_by_id",type="int",description="User Id of who created this application."),
+ * @SWG\Property(name="last_modified_date",type="string",description="Date this application was last modified."),
+ * @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this application.")
+ * )
+ *
  */
-class ServiceAccount extends BaseSystemRestResource
+class App extends BaseSystemRestResource
 {
+	//*************************************************************************
+	//	Methods
+	//*************************************************************************
+
 	/**
-	 * Constructor
+	 * Creates a new SystemResource instance
 	 *
-	 * @param BasePlatformService $consumer
-	 * @param array               $resourceArray
 	 *
-	 * @return \DreamFactory\Platform\Resources\System\ServiceAccount
 	 */
-	public function __construct( $consumer = null, $resourceArray = array() )
+	public function __construct( $consumer, $resourceArray = array() )
 	{
 		parent::__construct(
 			$consumer,
 			array(
-				 'name'           => 'Service Account',
-				 'type'           => 'Service',
 				 'service_name'   => 'system',
-				 'type_id'        => PlatformServiceTypes::LOCAL_WEB_SERVICE,
-				 'api_name'       => 'service_account',
-				 'description'    => 'Service provider account configuration.',
+				 'name'           => 'Application',
+				 'api_name'       => 'app',
+				 'type'           => 'System',
+				 'description'    => 'System application administration.',
 				 'is_active'      => true,
 				 'resource_array' => $resourceArray,
-				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-				 ),
 			)
 		);
 	}
 
-	//*************************************************************************
-	//* Doc
-	//*************************************************************************
-
 	/**
+	 *
 	 * @SWG\Api(
-	 *             path="/system/service_account", description="Operations for service account administration.",
+	 *             path="/system/app", description="Operations for application administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve multiple service accounts.",
+	 *             httpMethod="GET", summary="Retrieve multiple applications.",
 	 *             notes="Use the 'ids' or 'filter' parameter to limit records that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.",
-	 *             responseClass="ServiceAccounts", nickname="getServiceAccounts",
+	 *             responseClass="Apps", nickname="getApps",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -139,13 +147,13 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="POST", summary="Create one or more service accounts.",
+	 *             httpMethod="POST", summary="Create one or more applications.",
 	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="createServiceAccounts",
+	 *             responseClass="Success", nickname="createApps",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to create.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="ServiceAccounts"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="Apps"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -163,13 +171,13 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one or more service accounts.",
+	 *             httpMethod="PUT", summary="Update one or more applications.",
 	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="updateServiceAccounts",
+	 *             responseClass="Success", nickname="updateApps",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="ServiceAccounts"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="Apps"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -187,9 +195,9 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one or more service accounts.",
+	 *             httpMethod="DELETE", summary="Delete one or more applications.",
 	 *             notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="deleteServiceAccounts",
+	 *             responseClass="Success", nickname="deleteApps",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -197,7 +205,7 @@ class ServiceAccount extends BaseSystemRestResource
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to delete.",
-	 *             paramType="body", required="false", allowMultiple=false, dataType="ServiceAccounts"
+	 *             paramType="body", required="false", allowMultiple=false, dataType="Apps"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -218,12 +226,12 @@ class ServiceAccount extends BaseSystemRestResource
 	 *   )
 	 *
 	 * @SWG\Api(
-	 *             path="/system/service_account/{id}", description="Operations for individual service account administration.",
+	 *             path="/system/app/{id}", description="Operations for individual application administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve one service account by identifier.",
+	 *             httpMethod="GET", summary="Retrieve one application by identifier.",
 	 *             notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
-	 *             responseClass="ServiceAccount", nickname="getServiceAccount",
+	 *             responseClass="App", nickname="getApp",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -245,9 +253,9 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one service account.",
+	 *             httpMethod="PUT", summary="Update one application.",
 	 *             notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
-	 *             responseClass="Success", nickname="updateServiceAccount",
+	 *             responseClass="Success", nickname="updateApp",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -255,7 +263,7 @@ class ServiceAccount extends BaseSystemRestResource
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="ServiceAccount"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="App"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -273,9 +281,9 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one service account.",
+	 *             httpMethod="DELETE", summary="Delete one application.",
 	 *             notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
-	 *             responseClass="Success", nickname="deleteServiceAccount",
+	 *             responseClass="Success", nickname="deleteApp",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -299,6 +307,92 @@ class ServiceAccount extends BaseSystemRestResource
 	 *     )
 	 *   )
 	 *
+	 * @throws \Exception
 	 * @return array|bool
 	 */
+	protected function _handleGet()
+	{
+		if ( false !== $this->_exportPackage && !empty( $this->_resourceId ) )
+		{
+			$_includeFiles = Option::getBool( $_REQUEST, 'include_files' );
+			$_includeServices = Option::getBool( $_REQUEST, 'include_services' );
+			$_includeSchema = Option::getBool( $_REQUEST, 'include_schema' );
+			$_includeData = Option::getBool( $_REQUEST, 'include_data' );
+
+			//@TODO What permissions to check?
+			//$this->checkPermission( 'read' );
+
+			return Packager::exportAppAsPackage( $this->_resourceId, $_includeFiles, $_includeServices, $_includeSchema, $_includeData );
+		}
+
+		return parent::_handleGet();
+	}
+
+	/**
+	 * @return array|bool
+	 * @throws \Exception
+	 */
+	protected function _handlePost()
+	{
+		//@TODO What permissions to check?
+		//$this->checkPermission( 'create' );
+
+		//	You can import an application package file, local or remote, or from zip, but nothing else
+		$_name = FilterInput::request( 'name' );
+		$_importUrl = FilterInput::request( 'url' );
+		$_extension = strtolower( pathinfo( $_importUrl, PATHINFO_EXTENSION ) );
+
+		if ( null !== ( $_files = Option::get( $_FILES, 'files' ) ) )
+		{
+			//	Older html multi-part/form-data post, single or multiple files
+			if ( is_array( $_files['error'] ) )
+			{
+				throw new \Exception( "Only a single application package file is allowed for import." );
+			}
+
+			$_importUrl = 'file://' . $_files['tmp_name'] . '#' . $_files['name'] . '#' . $_files['type'];
+
+			if ( UPLOAD_ERR_OK !== ( $_error = $_files['error'] ) )
+			{
+				throw new \Exception( 'Failed to receive upload of "' . $_files['name'] . '": ' . $_error );
+			}
+		}
+
+		if ( !empty( $_importUrl ) )
+		{
+			if ( 'dfpkg' == $_extension )
+			{
+				// need to download and extract zip file and move contents to storage
+				$_filename = FileSystem::importUrlFileToTemp( $_importUrl );
+
+				try
+				{
+					return Packager::importAppFromPackage( $_filename, $_importUrl );
+				}
+				catch ( \Exception $ex )
+				{
+					throw new \Exception( "Failed to import application package $_importUrl.\n{$ex->getMessage()}" );
+				}
+			}
+
+			// from repo or remote zip file
+			if ( !empty( $_name ) && 'zip' == $_extension )
+			{
+				// need to download and extract zip file and move contents to storage
+				$_filename = FileSystem::importUrlFileToTemp( $_importUrl );
+
+				try
+				{
+					//@todo save url for later updates
+					return Packager::importAppFromZip( $_name, $_filename );
+				}
+				catch ( \Exception $ex )
+				{
+					throw new \Exception( "Failed to import application package $_importUrl.\n{$ex->getMessage()}" );
+				}
+			}
+		}
+
+		return parent::_handlePost();
+	}
 }

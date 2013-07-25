@@ -68,7 +68,10 @@ class AccountProvider extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array( 'service_id, api_name, provider_name, handler_class, auth_endpoint, service_endpoint, provider_options, master_auth_text, last_use_date', 'safe' ),
+			array(
+				'service_id, api_name, provider_name, handler_class, auth_endpoint, service_endpoint, provider_options, master_auth_text, last_use_date',
+				'safe'
+			),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -132,24 +135,6 @@ class AccountProvider extends BasePlatformSystemModel
 					 'last_use_date'    => 'Last Used',
 				)
 			)
-		);
-	}
-
-	/**
-	 * @param array $additionalMappings Attributes of the base class to add
-	 *
-	 * @return array An map of attributes to display names
-	 */
-	public function getDisplayMap( array $additionalMappings = array() )
-	{
-		//	My attributes
-		return array_merge(
-			array(
-				 'provider_name'    => 'Provider',
-				 'service_endpoint' => 'Endpoint',
-				 'last_use_date'    => 'Last Use',
-			),
-			$additionalMappings
 		);
 	}
 
