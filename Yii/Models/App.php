@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Services\BaseFileSvc;
+use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
@@ -90,11 +91,7 @@ class App extends BasePlatformSystemModel
 			array(
 				array( 'name, api_name', 'required' ),
 				array( 'name, api_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
-				array(
-					'is_active, is_url_external, requires_fullscreen, requires_plugin, allow_fullscreen_toggle, storage_service_id',
-					'numerical',
-					'integerOnly' => true
-				),
+				array( 'storage_service_id', 'numerical', 'integerOnly' => true ),
 				array( 'name, api_name', 'length', 'max' => 64 ),
 				array( 'storage_container', 'length', 'max' => 255 ),
 				array(

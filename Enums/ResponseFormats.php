@@ -17,15 +17,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\ResourceViews\System;
+namespace DreamFactory\Platform\Enums;
 
-use DreamFactory\Platform\Resources\BasePlatformResourceView;
-use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use Kisma\Core\Enums\SeedEnum;
 
 /**
- * AccountProvider
- * Resource view
+ * ResponseFormats
+ * Supported DSP response formats
  */
-class AccountProvider extends BasePlatformResourceView
+class ResponseFormats extends SeedEnum
 {
+	//*************************************************************************
+	//* Constants
+	//*************************************************************************
+
+	/**
+	 * @var int
+	 */
+	const DATATABLES = 100;
+	/**
+	 * @var int
+	 */
+	const JTABLE = 101;
 }

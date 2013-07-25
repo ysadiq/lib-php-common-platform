@@ -19,9 +19,11 @@
  */
 namespace DreamFactory\Platform\Resources;
 
+use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
-use DreamFactory\Common\Enums\OutputFormats;
+use DreamFactory\Platform\Components\JTablesFormatter;
+use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
@@ -79,7 +81,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	/**
 	 * @var int
 	 */
-	protected $_responseFormat = OutputFormats::Raw;
+	protected $_responseFormat;
 
 	//*************************************************************************
 	//* Methods
@@ -102,13 +104,14 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		$settings['service_name'] = $this->_serviceName ? : Option::get( $settings, 'service_name', static::DEFAULT_SERVICE_NAME, true );
 
 		//	Default verb aliases for all system resources
-		$settings['verb_aliases'] = $this->_verbAliases ? : array_merge(
-			array(
-				 static::Patch => static::Put,
-				 static::Merge => static::Put,
-			),
-			Option::get( $settings, 'verb_aliases', array(), true )
-		);
+		$settings['verb_aliases'] = $this->_verbAliases
+			? : array_merge(
+				array(
+					 static::Patch => static::Put,
+					 static::Merge => static::Put,
+				),
+				Option::get( $settings, 'verb_aliases', array(), true )
+			);
 
 		parent::__construct( $consumer, $settings );
 	}
@@ -157,12 +160,15 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		 *
 		 * @noinspection PhpUndefinedMethodInspection
 		 */
-		if ( OutputFormats::DataTables == Pii::controller()->getFormat() )
+		/** @noinspection PhpUndefinedMethodInspection */
+		$_format = Pii::controller()->getFormat();
+
+		if ( ResponseFormats::DATATABLES == $_format || ResponseFormats::JTABLE == $_format )
 		{
+			$this->_responseFormat = $_format;
+			ResourceStore::setResponseFormat( $_format );
 			/** @noinspection PhpUndefinedMethodInspection */
 			Pii::controller()->setFormat( OutputFormats::JSON );
-			$this->_responseFormat = OutputFormats::DataTables;
-			ResourceStore::setFromDatatables( true );
 		}
 	}
 
@@ -428,8 +434,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 		switch ( $this->_responseFormat )
 		{
-			case OutputFormats::DataTables:
+			case ResponseFormats::DATATABLES:
 				$_data = DataTablesFormatter::format( $_data );
+				break;
+
+			case ResponseFormats::JTABLE:
+				$_data = JTablesFormatter::format( $_data, array( 'action' => $this->_action ) );
 				break;
 		}
 

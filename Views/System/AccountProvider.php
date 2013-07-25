@@ -17,20 +17,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Interfaces;
+namespace DreamFactory\Platform\ResourceViews\System;
+
+use DreamFactory\Platform\Views\BasePlatformResourceView;
+use DreamFactory\Platform\Resources\BasePlatformRestResource;
 
 /**
- * ResourceViewLike
- * Something that acts as a resource view
+ * AccountProvider
+ * Resource view
  */
-interface ResourceViewLike
+class AccountProvider extends BasePlatformResourceView
 {
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+	protected function _generateJTableSchema()
+	{
 
-	/**
-	 * @return string
-	 */
-	public function getSchema();
+	}
+
 }

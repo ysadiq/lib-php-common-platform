@@ -17,10 +17,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Resources;
+namespace DreamFactory\Platform\Views;
 
+use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Interfaces\ResourceViewLike;
+use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Services\BasePlatformRestService;
+use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Seed;
 
 /**
@@ -41,6 +44,10 @@ abstract class BasePlatformResourceView extends Seed implements ResourceViewLike
 	 * @var array The view structure
 	 */
 	protected $_schema;
+	/**
+	 * @var int The way to format the schema
+	 */
+	protected $_responseFormat = ResponseFormats::JTABLE;
 
 	//*************************************************************************
 	//* Methods
@@ -58,6 +65,53 @@ abstract class BasePlatformResourceView extends Seed implements ResourceViewLike
 	{
 		$this->_resource = $resource;
 		parent::__construct( $settings );
+
+		if ( empty( $this->_resource ) )
+		{
+			throw new \InvalidArgumentException( 'The resource specified is invalid.' );
+		}
+
+		$this->_generateSchema();
+	}
+
+	/**
+	 * @return bool|string
+	 */
+	protected function _generateSchema()
+	{
+		switch ( $this->_responseFormat )
+		{
+			case ResponseFormats::DATATABLES:
+				return $this->_generateDataTablesSchema();
+
+			case ResponseFormats::JTABLE:
+				return $this->_generateJTableSchema();
+
+			default:
+				return false;
+		}
+	}
+
+	/**
+	 * Generates a json schema for jTable
+	 *
+	 * @throws NotImplementedException
+	 * @return string
+	 */
+	protected function _generateJTableSchema()
+	{
+		throw new NotImplementedException();
+	}
+
+	/**
+	 * Generates a json schema for datatables
+	 *
+	 * @throws NotImplementedException
+	 * @return string
+	 */
+	protected function _generateDataTablesSchema()
+	{
+		throw new NotImplementedException();
 	}
 
 	/**
@@ -100,4 +154,23 @@ abstract class BasePlatformResourceView extends Seed implements ResourceViewLike
 		return $this->_schema;
 	}
 
+	/**
+	 * @param int $responseFormat
+	 *
+	 * @return BasePlatformResourceView
+	 */
+	public function setResponseFormat( $responseFormat )
+	{
+		$this->_responseFormat = $responseFormat;
+
+		return $this;
+	}
+
+	/**
+	 * @return int
+	 */
+	public function getResponseFormat()
+	{
+		return $this->_responseFormat;
+	}
 }

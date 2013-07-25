@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Utility;
 
 use Composer\Autoload\ClassLoader;
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
@@ -91,9 +92,9 @@ class ResourceStore extends SeedUtility
 	 */
 	protected static $_service = 'system';
 	/**
-	 * @var bool If true, additional criteria will be retrieved from request
+	 * @var int The response format if not pass-through
 	 */
-	protected static $_fromDatatables = false;
+	protected static $_responseFormat;
 
 	//************************************************************************
 	//* Methods
@@ -179,9 +180,15 @@ class ResourceStore extends SeedUtility
 			$criteria = array( 'select' => $criteria );
 		}
 
-		if ( static::$_fromDatatables )
+		switch ( static::$_responseFormat )
 		{
-			$criteria = static::_buildDataTablesCriteria( explode( ',', static::$_fields ), $criteria );
+			case ResponseFormats::DATATABLES:
+				$criteria = static::_buildDataTablesCriteria( explode( ',', static::$_fields ), $criteria );
+				break;
+
+			case ResponseFormats::JTABLE:
+//				$criteria = static::_buildDataTablesCriteria( explode( ',', static::$_fields ), $criteria );
+				break;
 		}
 
 		return static::bulkSelectById( null !== $id ? array( $id ) : null, $criteria, $params, $singleRow );
@@ -1087,18 +1094,19 @@ class ResourceStore extends SeedUtility
 	}
 
 	/**
-	 * @param boolean $fromDatatables
+	 * @param int $responseFormat
 	 */
-	public static function setFromDatatables( $fromDatatables )
+	public static function setResponseFormat( $responseFormat )
 	{
-		self::$_fromDatatables = $fromDatatables;
+		self::$_responseFormat = $responseFormat;
 	}
 
 	/**
-	 * @return boolean
+	 * @return int
 	 */
-	public static function getFromDatatables()
+	public static function getResponseFormat()
 	{
-		return self::$_fromDatatables;
+		return self::$_responseFormat;
 	}
+
 }
