@@ -28,9 +28,26 @@ use DreamFactory\Platform\Resources\BasePlatformRestResource;
  */
 class AccountProvider extends BasePlatformResourceView
 {
+	//*************************************************************************
+	//	Methods
+	//*************************************************************************
+
+	/**
+	 * @return array
+	 */
 	protected function _generateJTableSchema()
 	{
-
+		return array(
+			'header'   => 'Portal Providers',
+			'resource' => 'account_provider',
+			'fields'   => array(
+				'id'               => array( 'title' => 'ID', 'key' => true, 'list' => false, 'create' => false, 'edit' => false ),
+				'provider_name'    => array( 'title' => 'Name', 'edit' => false ),
+				'service_endpoint' => array( 'title' => 'Endpoint' ),
+				'last_use_date'    => array( 'title' => 'Last Use', 'edit' => false, 'create' => false ),
+			),
+			'labels'   => array( 'ID', 'Name', 'Endpoint', 'Last Used' ),
+		);
 	}
 
 }

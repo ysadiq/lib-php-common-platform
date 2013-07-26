@@ -55,8 +55,6 @@ class JTablesFormatter implements FormatterLike
 
 		$_action = strtoupper( Option::get( $options, 'action' ) );
 
-		Log::debug( 'Formatting for jtables. Action: ' . $_action );
-
 		switch ( $_action )
 		{
 			case HttpMethod::Delete:

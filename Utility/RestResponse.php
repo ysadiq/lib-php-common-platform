@@ -97,11 +97,11 @@ class RestResponse extends HttpResponse
 		{
 			if ( $_status == static::InternalServerError || $_status == static::BadRequest )
 			{
-				Log::error( 'Error ' . $_status . ': ' . $ex->getMessage() );
+//				Log::error( 'Error ' . $_status . ': ' . $ex->getMessage() );
 			}
 			else
 			{
-				Log::info( 'Non-Error ' . $_status . ': ' . $ex->getMessage() );
+//				Log::info( 'Non-Error ' . $_status . ': ' . $ex->getMessage() );
 			}
 		}
 
