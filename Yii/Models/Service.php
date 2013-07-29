@@ -121,7 +121,7 @@ class Service extends BasePlatformSystemModel
 	 *
 	 * @return array
 	 */
-	public static function available( $bust = false )
+	public static function available( $bust = false, $attributes = null )
 	{
 		if ( false !== $bust || null === ( $_serviceConfig = Pii::getState( 'dsp.service_config' ) ) )
 		{
@@ -144,6 +144,26 @@ MYSQL;
 			$_serviceConfig = $_services->fetchAll();
 
 			Pii::setState( 'dsp.service_config', $_serviceConfig );
+		}
+
+		if ( null !== $attributes )
+		{
+			$_services = array();
+
+			foreach ( $_serviceConfig as $_service )
+			{
+				$_temp = array();
+
+				foreach ( $attributes as $_column )
+				{
+					$_temp[$_column] = $_service[$_column];
+				}
+
+				$_services[] = $_temp;
+				unset( $_service );
+			}
+
+			return $_services;
 		}
 
 		return $_serviceConfig;
@@ -470,6 +490,25 @@ MYSQL;
 				$columns
 			),
 			$hidden
+		);
+	}
+
+	/**
+	 * @param array $additionalMappings Attributes of the base class to add
+	 *
+	 * @return array An map of attributes to display names
+	 */
+	public function getDisplayMap( array $additionalMappings = array() )
+	{
+		//	My attributes
+		return array_merge(
+			array(
+				 'api_name'        => 'Name',
+				 'type_id'         => 'Type',
+				 'storage_type_id' => 'Storage Type',
+				 'is_active'       => 'Active',
+			),
+			$additionalMappings
 		);
 	}
 

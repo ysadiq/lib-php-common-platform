@@ -19,8 +19,11 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use Doctrine\Common\Proxy\Exception\InvalidArgumentException;
 use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\MisconfigurationException;
+use DreamFactory\Platform\Exceptions\NoExtraActionsException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
@@ -122,6 +125,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @var int
 	 */
 	protected $_serviceId = null;
+	/**
+	 * @var array Additional actions that this resource will respond to
+	 */
+	protected $_extraActions = null;
 
 	//*************************************************************************
 	//* Methods
@@ -190,11 +197,58 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	}
 
 	/**
+	 * Allows the resource to respond to special actions. Presentation information for instance.
+	 */
+	protected function _handleExtraActions()
+	{
+		if ( !empty( $this->_extraActions ) && is_array( $this->_extraActions ) )
+		{
+			static $_keys;
+
+			if ( null === $_keys )
+			{
+				$_keys = array_keys( $this->_extraActions );
+			}
+
+			//	Does this action have a handler?
+			if ( false !== ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) ) )
+			{
+				$_handler = $this->_extraActions[$_action];
+
+				if ( !is_callable( $_handler ) )
+				{
+					throw new MisconfigurationException( 'The handler specified for extra action "' . $_action . '" is invalid.' );
+				}
+
+				//	Added $this as argument because handler *could* be outside this class
+				return call_user_func( $_handler, $this );
+			}
+		}
+
+		//	Nada
+		throw new NoExtraActionsException();
+	}
+
+	/**
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return bool
 	 */
 	protected function _handleResource()
 	{
+		//	Allow verb sub-actions
+		try
+		{
+			if ( !empty( $this->_extraActions ) )
+			{
+				return $this->_handleExtraActions();
+			}
+		}
+		catch ( NoExtraActionsException $_ex )
+		{
+			//	Safely ignored
+		}
+
+		//	Now all actions must be HTTP verbs
 		if ( !HttpMethod::defines( $this->_action ) )
 		{
 			throw new BadRequestException( 'The action "' . $this->_action . '" is not supported.' );
@@ -594,5 +648,49 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function getServiceId()
 	{
 		return $this->_serviceId;
+	}
+
+	/**
+	 * @param array $extraActions
+	 *
+	 * @return BasePlatformRestService
+	 */
+	public function setExtraActions( array $extraActions )
+	{
+		$this->_extraActions = $extraActions;
+
+		return $this;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getExtraActions()
+	{
+		return $this->_extraActions;
+	}
+
+	/**
+	 * @param string   $action
+	 * @param callable $handler
+	 *
+	 * @throws \InvalidArgumentException
+	 * @return $this
+	 */
+	public function addExtraAction( $action, $handler )
+	{
+		if ( !is_callable( $handler ) )
+		{
+			throw new \InvalidArgumentException( 'The handler specified not callable.' );
+		}
+
+		if ( empty( $this->_extraActions ) )
+		{
+			$this->_extraActions = array();
+		}
+
+		$this->_extraActions[$action] = $handler;
+
+		return $this;
 	}
 }

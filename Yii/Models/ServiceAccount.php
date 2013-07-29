@@ -120,6 +120,24 @@ class ServiceAccount extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @param array $additionalMappings Attributes of the base class to add
+	 *
+	 * @return array An map of attributes to display names
+	 */
+	public function getDisplayMap( array $additionalMappings = array() )
+	{
+		//	My attributes
+		return array_merge(
+			array(
+				 'user_id'       => 'User',
+				 'provider_id'   => 'Provider',
+				 'last_use_date' => 'Last Use',
+			),
+			$additionalMappings
+		);
+	}
+
+	/**
 	 * Named scope that filters by user_id and service_id
 	 *
 	 * @param int $userId

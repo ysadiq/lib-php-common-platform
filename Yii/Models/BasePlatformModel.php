@@ -236,4 +236,20 @@ class BasePlatformModel extends BaseFactoryModel
 		//	Default implementation
 		throw new NotImplementedException( 'This model is not compatible with the REST API.' );
 	}
+
+	/**
+	 * @param array $additionalMappings Attributes of the base class to add
+	 *
+	 * @return array An map of attributes to display names
+	 */
+	public function getDisplayMap( array $additionalMappings = array() )
+	{
+		//	My attributes
+		return array_merge(
+			array(
+				 'id' => 'ID',
+			),
+			$additionalMappings
+		);
+	}
 }

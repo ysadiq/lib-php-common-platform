@@ -151,7 +151,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 		$this->_resourceId = Option::get( $this->_resourceArray, 1 );
 
-		/** @noinspection PhpUndefinedMethodInspection */
+		/**
+		 * If this is a request from datatables, tell the store and set
+		 * the controller to emit JSON
+		 *
+		 * @noinspection PhpUndefinedMethodInspection
+		 */
 		if ( OutputFormats::DataTables == Pii::controller()->getFormat() )
 		{
 			/** @noinspection PhpUndefinedMethodInspection */

@@ -136,6 +136,24 @@ class AccountProvider extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @param array $additionalMappings Attributes of the base class to add
+	 *
+	 * @return array An map of attributes to display names
+	 */
+	public function getDisplayMap( array $additionalMappings = array() )
+	{
+		//	My attributes
+		return array_merge(
+			array(
+				 'provider_name'    => 'Provider',
+				 'service_endpoint' => 'Endpoint',
+				 'last_use_date'    => 'Last Use',
+			),
+			$additionalMappings
+		);
+	}
+
+	/**
 	 * Set api_name
 	 */
 	protected function afterFind()
