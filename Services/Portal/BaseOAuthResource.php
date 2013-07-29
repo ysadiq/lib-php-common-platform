@@ -123,17 +123,17 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	//**************************************************************************
 
 	/**
-	 * @param array|\stdClass $options
+	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+	 * @param array|\stdClass                                     $options
 	 *
-	 * @throws \RuntimeException
 	 * @throws \InvalidArgumentException
 	 * @return \DreamFactory\Platform\Services\Portal\BaseOAuthResource
 	 */
-	public function __construct( $options = array() )
+	public function __construct( $consumer, $options = array() )
 	{
 		$options['redirect_uri'] = $this->_redirectUri ? : Option::get( $options, 'redirect_uri', static::DEFAULT_REDIRECT_URI );
 
-		parent::__construct( $options );
+		parent::__construct( $consumer, $options );
 
 		if ( !empty( $this->_certificateFile ) && ( !is_file( $this->_certificateFile ) || !is_readable( $this->_certificateFile ) ) )
 		{
@@ -353,7 +353,14 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 			switch ( $this->_accessTokenType )
 			{
 				case OAuthTokenTypes::URI:
-					$payload[$this->_accessTokenParamName] = $this->_accessToken;
+					if ( !empty( $this->_authHeaderName ) )
+					{
+						$headers[] = 'Authorization: ' . $this->_authHeaderName . ' ' . $this->_accessToken;
+					}
+					else
+					{
+						$payload[$this->_accessTokenParamName] = $this->_accessToken;
+					}
 					break;
 
 				case OAuthTokenTypes::BEARER:

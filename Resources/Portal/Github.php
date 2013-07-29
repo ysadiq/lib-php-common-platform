@@ -17,6 +17,7 @@
 namespace DreamFactory\Platform\Services\Portal;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Resources\System\AccountProvider;
 use DreamFactory\Platform\Services\Portal\OAuth\Enums\OAuthTokenTypes;
 
 /**
@@ -30,14 +31,16 @@ class Github extends BaseOAuthResource
 	//**************************************************************************
 
 	/**
-	 * @param array|\stdClass $options
+	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+	 * @param array|\stdClass                                     $options
 	 *
 	 * @return \DreamFactory\Platform\Services\Portal\Github
 	 */
-	public function __construct( $options = array() )
+	public function __construct( $consumer, $options = array() )
 	{
 		//	Set default values for this service
 		parent::__construct(
+			$consumer,
 			array_merge(
 				array(
 					 'api_name'          => 'github',

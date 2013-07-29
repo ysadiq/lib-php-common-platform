@@ -17,8 +17,10 @@
 namespace DreamFactory\Platform\Services\Portal;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BaseSystemRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Interfaces\HttpMethod;
@@ -79,13 +81,13 @@ abstract class BasePortalClient extends BaseSystemRestResource implements Consum
 	//**************************************************************************
 
 	/**
-	 * @param array|\stdClass $options
+	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+	 * @param array|\stdClass                                     $options
 	 *
 	 * @throws \RuntimeException
-	 * @throws \InvalidArgumentException
 	 * @return \DreamFactory\Platform\Services\Portal\BasePortalClient
 	 */
-	public function __construct( $options = array() )
+	public function __construct( $consumer, $options = array() )
 	{
 		if ( !extension_loaded( 'curl' ) )
 		{
@@ -104,7 +106,7 @@ abstract class BasePortalClient extends BaseSystemRestResource implements Consum
 		$options['type'] = $this->_type ? : Option::get( $options, 'type', 'Local Portal Service' );
 		$options['type_id'] = $this->_typeId ? : Option::get( $options, 'type_id', PlatformServiceTypes::LOCAL_PORTAL_SERVICE );
 
-		parent::__construct( $options );
+		parent::__construct( $consumer, $options );
 	}
 
 	/**

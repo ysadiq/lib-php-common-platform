@@ -183,6 +183,8 @@ class ServiceHandler
 				$_serviceClass = Option::get( $_config, 'class' );
 			}
 
+			unset( $record['native_format'] );
+
 			$_arguments = array( $record, Option::get( $_config, 'local', true ) );
 
 			$_mirror = new \ReflectionClass( $_serviceClass );

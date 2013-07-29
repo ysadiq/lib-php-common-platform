@@ -90,7 +90,7 @@ class ServiceAccount extends BasePlatformSystemModel
 				 'base_platform_model.secure_json' => array(
 					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
 					 'salt'             => $this->getDb()->password,
-					 'secureAttributes' => array(
+					 'insecureAttributes' => array(
 						 'auth_text',
 					 )
 				 ),

@@ -32,6 +32,7 @@ use DreamFactory\Platform\Yii\Models\ServiceAccount;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Curl;
+use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -67,6 +68,10 @@ class Portal extends BaseSystemRestService
 	 */
 	protected $_client;
 	/**
+	 * @var bool
+	 */
+	protected $_interactive = false;
+	/**
 	 * @var array The parameters we don't want to proxy
 	 */
 	protected $_ignoredParameters
@@ -91,6 +96,7 @@ class Portal extends BaseSystemRestService
 
 		//	Clean up the resource path
 		$this->_resourcePath = trim( str_replace( $this->_apiName, null, $this->_resourcePath ), ' /' );
+		$this->_interactive = Option::getBool( $_REQUEST, 'interactive', false, true );
 	}
 
 	/**
@@ -158,7 +164,7 @@ class Portal extends BaseSystemRestService
 
 		$_mirror = new \ReflectionClass( $provider->handler_class );
 
-		return $_mirror->newInstance( $provider->provider_options );
+		return $_mirror->newInstance( $this, $provider->provider_options );
 	}
 
 	/**
@@ -193,12 +199,12 @@ class Portal extends BaseSystemRestService
 
 		if ( false === $_result || !is_object( $_result ) )
 		{
-			throw new RestException( 'Error registering authorization request.', HttpResponse::InternalServerError );
+			throw new InternalServerErrorException( 'Error registering authorization request.' );
 		}
 
 		if ( !$_result->success || !$_result->details )
 		{
-			throw new RestException( 'Error registering authorization request.', HttpResponse::InternalServerError );
+			throw new InternalServerErrorException( 'Error registering authorization request: ' . print_r( $_result, true ) );
 		}
 
 		Log::info( 'Registering auth request: ' . $state );
@@ -272,12 +278,12 @@ class Portal extends BaseSystemRestService
 		$_provider = $this->_validateProvider();
 
 		$this->_client = $this->_createProviderClient( $_provider );
-		$this->_client->setInteractive( false );
+		$this->_client->setInteractive( $this->_interactive );
 
 		$_state = $this->_currentUserId . '_' . $this->_resource . '_' . $this->_client->getClientId();
 		$_token = $this->_checkPriorAuthorization( $_state, $_provider->id );
 
-		if ( false !== $_token )
+		if ( !empty( $_token ) )
 		{
 			$this->_client->setAccessToken( $_token );
 		}

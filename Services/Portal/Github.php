@@ -30,19 +30,21 @@ class Github extends BaseOAuthResource
 	//**************************************************************************
 
 	/**
-	 * @param array|\stdClass $options
+	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+	 * @param array|\stdClass                                     $options
 	 *
 	 * @return \DreamFactory\Platform\Services\Portal\Github
 	 */
-	public function __construct( $options = array() )
+	public function __construct( $consumer, $options = array() )
 	{
 		//	Set default values for this service
 		parent::__construct(
+			$consumer,
 			array_merge(
 				array(
 					 'api_name'          => 'github',
 					 'auth_header_name'  => 'token',
-					 'access_token_type' => OAuthTokenTypes::BEARER,
+					 'access_token_type' => OAuthTokenTypes::URI,
 					 'resource_endpoint' => 'https://api.github.com',
 					 'scope'             => array( 'user', 'user:email', 'user:follow', 'public_repo', 'repo', 'repo:status', 'notifications', 'gist' ),
 					 'service_endpoint'  => 'https://github.com/login',
