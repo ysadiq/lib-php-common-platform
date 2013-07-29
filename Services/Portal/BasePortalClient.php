@@ -18,10 +18,8 @@ namespace DreamFactory\Platform\Services\Portal;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Services\BaseSystemRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
-use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Exceptions\NotImplementedException;
+use DreamFactory\Platform\Services\Portal\OAuth\Exceptions\AuthenticationException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Interfaces\HttpMethod;
 use Kisma\Core\Utility\Curl;
@@ -53,7 +51,7 @@ abstract class BasePortalClient extends BaseSystemRestResource implements Consum
 	/**
 	 * @const string
 	 */
-	const DEFAULT_REDIRECT_URI = 'http://api.cloud.dreamfactory.com/oauth/authorize';
+	const DEFAULT_REDIRECT_URI = 'https://api.cloud.dreamfactory.com/oauth/authorize';
 
 	//*************************************************************************
 	//	Members
@@ -64,7 +62,11 @@ abstract class BasePortalClient extends BaseSystemRestResource implements Consum
 	 */
 	protected $_userAgent = null;
 	/**
-	 * @var string The base URL for this service (i.e. https://oauth.server.com)
+	 * @var string The base URL for this service's authentication server (i.e. https://oauth.server.com)
+	 */
+	protected $_authEndpoint = null;
+	/**
+	 * @var string The base URL for this service (i.e. https://api.server.com)
 	 */
 	protected $_serviceEndpoint = null;
 	/**
@@ -197,7 +199,12 @@ abstract class BasePortalClient extends BaseSystemRestResource implements Consum
 	 */
 	public function getResourceEndpoint( $path = null )
 	{
-		return rtrim( $this->_resourceEndpoint ? : $this->_serviceEndpoint, '/ ' ) . '/' . ltrim( $path, '/ ' );
+		if ( empty( $this->_resourceEndpoint ) )
+		{
+			return $this->getServiceEndpoint( $path );
+		}
+
+		return rtrim( $this->_resourceEndpoint, '/ ' ) . '/' . ltrim( $path, '/ ' );
 	}
 
 	/**
@@ -250,6 +257,35 @@ abstract class BasePortalClient extends BaseSystemRestResource implements Consum
 	public function getCertificateFile()
 	{
 		return $this->_certificateFile;
+	}
+
+	/**
+	 * @param string $authEndpoint
+	 *
+	 * @return BasePortalClient
+	 */
+	public function setAuthEndpoint( $authEndpoint )
+	{
+		$this->_authEndpoint = $authEndpoint;
+
+		return $this;
+	}
+
+	/**
+	 * Given a path, build a full url
+	 *
+	 * @param string|null $path
+	 *
+	 * @return string
+	 */
+	public function getAuthEndpoint( $path = null )
+	{
+		if ( empty( $this->_authEndpoint ) )
+		{
+			return $this->getServiceEndpoint( $path );
+		}
+
+		return rtrim( $this->_authEndpoint, '/ ' ) . '/' . ltrim( $path, '/ ' );
 	}
 
 }

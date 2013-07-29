@@ -16,13 +16,9 @@
  */
 namespace DreamFactory\Platform\Services\Portal;
 
-use DreamFactory\Platform\Enums\PlatformServiceTypes;
-use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Services\BaseSystemRestService;
 use DreamFactory\Platform\Services\Portal\OAuth\Enums\OAuthTokenTypes;
 use DreamFactory\Platform\Services\Portal\OAuth\Enums\OAuthGrantTypes;
 use DreamFactory\Platform\Services\Portal\OAuth\Enums\OAuthTypes;
-use DreamFactory\Platform\Services\Portal\OAuth\Exceptions\AuthenticationException;
 use DreamFactory\Platform\Services\Portal\OAuth\GrantTypes as GrantTypes;
 use DreamFactory\Platform\Services\Portal\OAuth\Interfaces\OAuthServiceLike;
 use DreamFactory\Platform\Services\BasePlatformService;
@@ -328,7 +324,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 				throw new \InvalidArgumentException( 'The auth type "' . $this->_authType . '" is invalid.' );
 		}
 
-		return $this->_makeRequest( $this->getServiceEndpoint( $this->_tokenEndpoint ), $_payload, static::Post, $_headers, static::ApplicationContent );
+		return $this->_makeRequest( $this->getAuthEndpoint( $this->_tokenEndpoint ), $_payload, static::Post, $_headers, static::ApplicationContent );
 	}
 
 	/**
@@ -364,11 +360,25 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 					break;
 
 				case OAuthTokenTypes::BEARER:
-					$headers[] = 'Authorization: Bearer ' . $this->_accessToken;
+					if ( !empty( $this->_authHeaderName ) )
+					{
+						$headers[] = 'Authorization: ' . $this->_authHeaderName . ' ' . $this->_accessToken;
+					}
+					else
+					{
+						$headers[] = 'Authorization: Bearer ' . $this->_accessToken;
+					}
 					break;
 
 				case OAuthTokenTypes::OAUTH:
-					$headers[] = 'Authorization: OAuth ' . $this->_accessToken;
+					if ( !empty( $this->_authHeaderName ) )
+					{
+						$headers[] = 'Authorization: ' . $this->_authHeaderName . ' ' . $this->_accessToken;
+					}
+					else
+					{
+						$headers[] = 'Authorization: OAuth ' . $this->_accessToken;
+					}
 					break;
 
 				case OAuthTokenTypes::MAC:
