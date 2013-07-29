@@ -146,4 +146,23 @@ class AccountProvider extends BasePlatformSystemModel
 		$this->api_name = $this->provider_name;
 		parent::afterFind();
 	}
+
+	/**
+	 * Named scope that filters by provider_name
+	 *
+	 * @param string $name
+	 *
+	 * @return Service
+	 */
+	public function byApiName( $name )
+	{
+		$this->getDbCriteria()->mergeWith(
+			array(
+				 'condition' => 'provider_name = :provider_name',
+				 'params'    => array( ':provider_name' => $name ),
+			)
+		);
+
+		return $this;
+	}
 }

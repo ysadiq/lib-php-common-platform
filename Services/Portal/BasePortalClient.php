@@ -118,7 +118,7 @@ abstract class BasePortalClient extends BaseSystemRestResource implements Consum
 	 * @param array  $headers Array of HTTP headers to send in array( 'header: value', 'header: value', ... ) format
 	 * @param int    $contentType
 	 *
-	 * @throws \DreamFactory\Platform\Services\Portal\OAuth\Exceptions\AuthenticationException
+	 * @throws AuthenticationException
 	 * @internal param array $_headers HTTP Headers
 	 * @return array
 	 */
