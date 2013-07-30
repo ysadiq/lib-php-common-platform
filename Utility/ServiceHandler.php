@@ -104,8 +104,6 @@ class ServiceHandler
 		//	Cached?
 		if ( null !== ( $_service = Option::get( static::$_serviceCache, $_tag ) ) )
 		{
-			//Log::debug( 'Service cache hit: ' . $api_name );
-
 			return $_service;
 		}
 
@@ -129,7 +127,7 @@ class ServiceHandler
 				throw new BadRequestException( 'Requested service "' . $_tag . '" is not active.' );
 			}
 
-			if ( $_service instanceof BasePlatformService )
+			if ( !property_exists( $_service, '_dbConn' ) )
 			{
 				static::$_serviceCache[$_tag] = $_service;
 				Pii::setState( 'dsp.service_cache', static::$_serviceCache );
