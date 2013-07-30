@@ -26,6 +26,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Services\BasePlatformRestService;
+use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Log;
@@ -128,9 +129,11 @@ class ServiceHandler
 				throw new BadRequestException( 'Requested service "' . $_tag . '" is not active.' );
 			}
 
-			static::$_serviceCache[$_tag] = $_service;
-
-			Pii::setState( 'dsp.service_cache', static::$_serviceCache );
+			if ( $_service instanceof BasePlatformService )
+			{
+				static::$_serviceCache[$_tag] = $_service;
+				Pii::setState( 'dsp.service_cache', static::$_serviceCache );
+			}
 
 			return $_service;
 		}
