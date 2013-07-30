@@ -31,20 +31,20 @@ use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 
 /**
- * ServiceAccount
+ * PortalAccount
  * DSP service/provider interface
  *
  * @SWG\Resource(
  *   resourcePath="/system"
  * )
  *
- * @SWG\Model(id="ServiceAccounts",
- * @SWG\Property(name="record",type="Array",items="$ref:ServiceAccount",description="Array of system service account records of the given resource.")
+ * @SWG\Model(id="PortalAccounts",
+ * @SWG\Property(name="record",type="Array",items="$ref:PortalAccount",description="Array of portal account records of the given resource.")
  * )
- * @SWG\Model(id="ServiceAccount",
+ * @SWG\Model(id="PortalAccount",
  * @SWG\Property(name="id",type="int",description="Identifier of this account."),
  * @SWG\Property(name="user_id",type="int",description="The user who owns this account."),
- * @SWG\Property(name="provider_id",type="int",description="The provider who issued this account."),
+ * @SWG\Property(name="api_name",type="string",description="The portal which issued this account."),
  * @SWG\Property(name="account_type",type="int",description="The type of account."),
  * @SWG\Property(name="auth_text",type="string",description="The authorization for this account/provider."),
  * @SWG\Property(name="created_date",type="string",description="Date this application group was created."),
@@ -52,7 +52,7 @@ use DreamFactory\Platform\Utility\SqlDbUtilities;
  * @SWG\Property(name="last_modified_date",type="string",description="Date this application group was last modified."),
  * @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this application group.")
  */
-class ServiceAccount extends BaseSystemRestResource
+class PortalAccount extends BaseSystemRestResource
 {
 	/**
 	 * Constructor
@@ -60,19 +60,19 @@ class ServiceAccount extends BaseSystemRestResource
 	 * @param BasePlatformService $consumer
 	 * @param array               $resourceArray
 	 *
-	 * @return \DreamFactory\Platform\Resources\System\ServiceAccount
+	 * @return \DreamFactory\Platform\Resources\System\PortalAccount
 	 */
 	public function __construct( $consumer = null, $resourceArray = array() )
 	{
 		parent::__construct(
 			$consumer,
 			array(
-				 'name'           => 'Service Account',
+				 'name'           => 'Portal Account',
 				 'type'           => 'Service',
 				 'service_name'   => 'system',
 				 'type_id'        => PlatformServiceTypes::LOCAL_WEB_SERVICE,
-				 'api_name'       => 'service_account',
-				 'description'    => 'Service provider account configuration.',
+				 'api_name'       => 'portal_account',
+				 'description'    => 'Portal Account Configuration.',
 				 'is_active'      => true,
 				 'resource_array' => $resourceArray,
 				 'verb_aliases'   => array(
@@ -81,19 +81,18 @@ class ServiceAccount extends BaseSystemRestResource
 			)
 		);
 	}
-
 	//*************************************************************************
 	//* Doc
 	//*************************************************************************
 
 	/**
 	 * @SWG\Api(
-	 *             path="/system/service_account", description="Operations for service account administration.",
+	 *             path="/system/portal_account", description="Operations for portal account administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve multiple service accounts.",
+	 *             httpMethod="GET", summary="Retrieve multiple portal accounts.",
 	 *             notes="Use the 'ids' or 'filter' parameter to limit records that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.",
-	 *             responseClass="ServiceAccounts", nickname="getServiceAccounts",
+	 *             responseClass="PortalAccounts", nickname="getPortalAccounts",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -139,13 +138,13 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="POST", summary="Create one or more service accounts.",
+	 *             httpMethod="POST", summary="Create one or more portal accounts.",
 	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="createServiceAccounts",
+	 *             responseClass="Success", nickname="createPortalAccounts",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to create.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="ServiceAccounts"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="PortalAccounts"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -163,13 +162,13 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one or more service accounts.",
+	 *             httpMethod="PUT", summary="Update one or more portal accounts.",
 	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="updateServiceAccounts",
+	 *             responseClass="Success", nickname="updatePortalAccounts",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="ServiceAccounts"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="PortalAccounts"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -187,9 +186,9 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one or more service accounts.",
+	 *             httpMethod="DELETE", summary="Delete one or more portal accounts.",
 	 *             notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="deleteServiceAccounts",
+	 *             responseClass="Success", nickname="deletePortalAccounts",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -197,7 +196,7 @@ class ServiceAccount extends BaseSystemRestResource
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to delete.",
-	 *             paramType="body", required="false", allowMultiple=false, dataType="ServiceAccounts"
+	 *             paramType="body", required="false", allowMultiple=false, dataType="PortalAccounts"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -218,12 +217,12 @@ class ServiceAccount extends BaseSystemRestResource
 	 *   )
 	 *
 	 * @SWG\Api(
-	 *             path="/system/service_account/{id}", description="Operations for individual service account administration.",
+	 *             path="/system/portal_account/{id}", description="Operations for individual portal account administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve one service account by identifier.",
+	 *             httpMethod="GET", summary="Retrieve one portal account by identifier.",
 	 *             notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
-	 *             responseClass="ServiceAccount", nickname="getServiceAccount",
+	 *             responseClass="PortalAccount", nickname="getPortalAccount",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -245,9 +244,9 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one service account.",
+	 *             httpMethod="PUT", summary="Update one portal account.",
 	 *             notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
-	 *             responseClass="Success", nickname="updateServiceAccount",
+	 *             responseClass="Success", nickname="updatePortalAccount",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -255,7 +254,7 @@ class ServiceAccount extends BaseSystemRestResource
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="ServiceAccount"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="PortalAccount"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -273,9 +272,9 @@ class ServiceAccount extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one service account.",
+	 *             httpMethod="DELETE", summary="Delete one portal account.",
 	 *             notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
-	 *             responseClass="Success", nickname="deleteServiceAccount",
+	 *             responseClass="Success", nickname="deletePortalAccount",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",

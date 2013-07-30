@@ -17,37 +17,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\ResourceViews\System;
+namespace DreamFactory\Platform\Enums;
 
-use DreamFactory\Platform\Views\BasePlatformResourceView;
-use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use Kisma\Core\Enums\SeedEnum;
 
 /**
- * AccountProvider
- * Resource view
+ * PortalAccountTypes
  */
-class AccountProvider extends BasePlatformResourceView
+class PortalAccountTypes extends SeedEnum
 {
 	//*************************************************************************
-	//	Methods
+	//* Constants
 	//*************************************************************************
 
 	/**
-	 * @return array
+	 * @var int
 	 */
-	protected function _generateJTableSchema()
-	{
-		return array(
-			'header'   => 'Portal Providers',
-			'resource' => 'account_provider',
-			'fields'   => array(
-				'id'               => array( 'title' => 'ID', 'key' => true, 'list' => false, 'create' => false, 'edit' => false ),
-				'provider_name'    => array( 'title' => 'Name', 'edit' => false ),
-				'service_endpoint' => array( 'title' => 'Endpoint' ),
-				'last_use_date'    => array( 'title' => 'Last Use', 'edit' => false, 'create' => false ),
-			),
-			'labels'   => array( 'ID', 'Name', 'Endpoint', 'Last Used' ),
-		);
-	}
-
+	const INDIVIDUAL_USER = 0;
+	/**
+	 * @var int
+	 */
+	const SINGLE_USER_FOR_ALL = 1;
 }
