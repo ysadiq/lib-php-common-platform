@@ -143,6 +143,27 @@ class PortalAccount extends BasePlatformSystemModel
 	}
 
 	/**
+	 * Override of byApiName to use provider_name instead
+	 *
+	 * @param string $name
+	 *
+	 * @return $this|Service
+	 */
+	public function byApiName( $name )
+	{
+		$this->getDbCriteria()->mergeWith(
+			array(
+				 'condition' => 'provider_name = :provider_name',
+				 'params'    => array(
+					 ':provider_name' => $name
+				 ),
+			)
+		);
+
+		return $this;
+	}
+
+	/**
 	 * @param $providerName
 	 * @param $providerUserId
 	 *
