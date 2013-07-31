@@ -30,9 +30,10 @@ use Kisma\Core\Utility\Sql;
  * Columns:
  *
  * @property int                 $user_id
- * @property int                 $api_name
+ * @property string              $provider_user_id
+ * @property string              $provider_name
  * @property int                 $account_type
- * @property array               $auth_text
+ * @property mixed               $auth_text
  * @property string              $last_use_date
  *
  * @property User                $user
@@ -57,7 +58,7 @@ class PortalAccount extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array( 'user_id, api_name, account_type, auth_text, last_use_date', 'safe' ),
+			array( 'user_id, provider_name, provider_user_id, account_type, auth_text, last_use_date', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -86,9 +87,9 @@ class PortalAccount extends BasePlatformSystemModel
 			array(
 				 //	Secure JSON
 				 'base_platform_model.secure_json' => array(
-					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'               => $this->getDb()->password,
-					 'insecureAttributes' => array(
+					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					 'salt'             => $this->getDb()->password,
+					 'secureAttributes' => array(
 						 'auth_text',
 					 )
 				 ),
@@ -107,23 +108,22 @@ class PortalAccount extends BasePlatformSystemModel
 			array_merge(
 				$additionalLabels,
 				array(
-					 'api_name'      => 'Portal',
-					 'user_id'       => 'User ID',
-					 'account_type'  => 'Account Type',
-					 'auth_text'     => 'Authorization',
-					 'last_use_date' => 'Last Used',
+					 'user_id'          => 'User ID',
+					 'account_type'     => 'Account Type',
+					 'provider_name'    => 'Provider Name',
+					 'provider_user_id' => 'Provider User ID',
+					 'auth_text'        => 'Authorization',
+					 'last_use_date'    => 'Last Used',
 				)
 			)
 		);
 	}
 
 	/**
-	 * Named scope that filters by user_id and api_name
+	 * Named scope that filters by user_id and provider_name
 	 *
-	 * @param int $userId
-	 * @param     $portalName
-	 *
-	 * @internal param int $providerId
+	 * @param int    $userId
+	 * @param string $portalName
 	 *
 	 * @return $this
 	 */
@@ -131,14 +131,70 @@ class PortalAccount extends BasePlatformSystemModel
 	{
 		$this->getDbCriteria()->mergeWith(
 			array(
-				 'condition' => 'user_id = :user_id and api_name = :api_name',
+				 'condition' => 'user_id = :user_id and provider_name = :provider_name',
 				 'params'    => array(
-					 ':user_id'  => $userId,
-					 ':api_name' => $portalName
+					 ':user_id'       => $userId,
+					 ':provider_name' => $portalName
 				 ),
 			)
 		);
 
 		return $this;
+	}
+
+	/**
+	 * @param $providerName
+	 * @param $providerUserId
+	 *
+	 * @return User
+	 */
+	public static function getUser( $providerName, $providerUserId )
+	{
+		$_model = static::model()->find(
+			'provider_name = :provider_name and provider_user_id = :provider_user_id',
+			array(
+				 ':provider_name'    => $providerName,
+				 ':provider_user_id' => $providerUserId,
+			)
+		);
+
+		if ( empty( $_model ) )
+		{
+			return null;
+		}
+
+		return $_model->user;
+	}
+
+	/**
+	 * @param int $userId
+	 *
+	 * @return PortalAccount[]
+	 */
+	public static function getLogins( $userId )
+	{
+		return static::model()->findAll(
+			'user_id = :user_id',
+			array(
+				 ':user_id' => $userId,
+			)
+		);
+	}
+
+	/**
+	 * @param int    $userId
+	 * @param string $providerName
+	 *
+	 * @return PortalAccount
+	 */
+	public static function getLogin( $userId, $providerName )
+	{
+		return static::model()->find(
+			'user_id = :user_id and provider_name = :provider_name',
+			array(
+				 ':user_id'       => $userId,
+				 ':provider_name' => $providerName,
+			)
+		);
 	}
 }
