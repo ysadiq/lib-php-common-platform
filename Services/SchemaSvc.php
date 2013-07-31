@@ -170,7 +170,7 @@ class SchemaSvc extends BasePlatformRestService
 			}
 
 			// 	Create pdo connection, activate later
-			$this->_sqlConn = new \CDbConnection( $dsn, $user, $pwd );
+			$this->_sqlConn = new \CDbConnection( $dsn, $user, $password );
 		}
 
 		switch ( $this->_driverType = SqlDbUtilities::getDbDriverType( $this->_sqlConn ) )
@@ -400,7 +400,7 @@ class SchemaSvc extends BasePlatformRestService
 
 		try
 		{
-			return SqlDbUtilities::describeTables( $this->_sqlConn, $tables );
+			return SqlDbUtilities::describeTables( $this->_sqlConn, $_tables );
 		}
 		catch ( \Exception $ex )
 		{
@@ -520,7 +520,7 @@ class SchemaSvc extends BasePlatformRestService
 			}
 		}
 
-		static::checkPermission( 'create', $this->_apiName );
+		$this->checkPermission( 'create' );
 
 		return SqlDbUtilities::createTables( $this->_sqlConn, $tables, $allow_merge );
 	}
@@ -561,7 +561,7 @@ class SchemaSvc extends BasePlatformRestService
 				throw new NotFoundException( "Table '$table' not found." );
 			}
 		}
-		static::checkPermission( 'create', $table );
+		$this->checkPermission( 'create', $table );
 		try
 		{
 			$names = SqlDbUtilities::createFields( $this->_sqlConn, $table, $fields );
@@ -624,7 +624,7 @@ class SchemaSvc extends BasePlatformRestService
 				}
 			}
 		}
-		static::checkPermissions( 'update', $this->_apiName );
+		$this->checkPermission( 'update' );
 
 		return SqlDbUtilities::createTables( $this->_sqlConn, $tables, true );
 	}
@@ -664,7 +664,7 @@ class SchemaSvc extends BasePlatformRestService
 				throw new NotFoundException( "Table '$table' not found." );
 			}
 		}
-		static::checkPermissions( 'update', $table );
+		$this->checkPermission( 'update', $table );
 		try
 		{
 			$names = SqlDbUtilities::createFields( $this->_sqlConn, $table, $fields, true );
@@ -716,7 +716,7 @@ class SchemaSvc extends BasePlatformRestService
 				throw new NotFoundException( "Table '$table' not found." );
 			}
 		}
-		static::checkPermissions( 'delete', $table );
+		$this->checkPermission( 'delete', $table );
 		SqlDbUtilities::dropTable( $this->_sqlConn, $table );
 	}
 
@@ -741,7 +741,7 @@ class SchemaSvc extends BasePlatformRestService
 				throw new NotFoundException( "Table '$table' not found." );
 			}
 		}
-		static::checkPermissions( 'delete', $table );
+		$this->checkPermission( 'delete', $table );
 		SqlDbUtilities::dropField( $this->_sqlConn, $table, $field );
 	}
 

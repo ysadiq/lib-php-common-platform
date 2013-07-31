@@ -19,89 +19,75 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
-use DreamFactory\Platform\Interfaces\PlatformServiceLike;
+use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Utility\FileSystem;
-use DreamFactory\Platform\Utility\Packager;
-use Kisma\Core\Utility\FilterInput;
-use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
 use Swagger\Annotations as SWG;
 
 /**
- * App
+ * User
  * DSP system administration manager
  *
  * @SWG\Resource(
  *   resourcePath="/system"
  * )
  *
- * @SWG\Model(id="Apps",
- * @SWG\Property(name="record",type="Array",items="$ref:App",description="Array of system application records.")
+ * @SWG\Model(id="Users",
+ * @SWG\Property(name="record",type="Array",items="$ref:User",description="Array of system user records.")
  * )
- * @SWG\Model(id="App",
- * @SWG\Property(name="id",type="int",description="Identifier of this application."),
- * @SWG\Property(name="name",type="string",description="Displayable name of this application."),
- * @SWG\Property(name="api_name",type="string",description="Name of the application to use in API transactions."),
- * @SWG\Property(name="description",type="string",description="Description of this application."),
- * @SWG\Property(name="is_active",type="boolean",description="Is this system application active for use."),
- * @SWG\Property(name="url",type="string",description="URL for accessing this application."),
- * @SWG\Property(name="is_url_external",type="boolean",description="True when this application is hosted elsewhere."),
- * @SWG\Property(name="imported_url",type="string",description="If imported, the url of where the code originated."),
- * @SWG\Property(name="storage_service_id",type="string",description="If locally stored, the storage service identifier."),
- * @SWG\Property(name="storage_container",type="string",description="If locally stored, the container of the storage service."),
- * @SWG\Property(name="requires_fullscreen",type="boolean",description="True when this app needs to hide launchpad."),
- * @SWG\Property(name="allow_fullscreen_toggle",type="boolean",description="True to allow launchpad access via toggle."),
- * @SWG\Property(name="toggle_location",type="string",description="Screen location for toggle placement."),
- * @SWG\Property(name="requires_plugin",type="boolean",description="True when the app relies on a browser plugin."),
- * @SWG\Property(name="roles_default_app",type="Array",items="$ref:string",description="Related roles by Role.default_app_id."),
- * @SWG\Property(name="users_default_app",type="Array",items="$ref:string",description="Related users by User.default_app_id."),
- * @SWG\Property(name="app_groups",type="Array",items="$ref:string",description="Related groups by app to group assignment."),
- * @SWG\Property(name="roles",type="Array",items="$ref:string",description="Related roles by app to role assignment."),
- * @SWG\Property(name="services",type="Array",items="$ref:string",description="Related services by app to service assignment."),
- * @SWG\Property(name="created_date",type="string",description="Date this application was created."),
- * @SWG\Property(name="created_by_id",type="int",description="User Id of who created this application."),
- * @SWG\Property(name="last_modified_date",type="string",description="Date this application was last modified."),
- * @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this application.")
+ * @SWG\Model(id="User",
+ * @SWG\Property(name="id",type="int",description="Identifier of this user."),
+ * @SWG\Property(name="email",type="string",description="The email address required for this user."),
+ * @SWG\Property(name="password",type="string",description="The set-able, but never readable, password."),
+ * @SWG\Property(name="first_name",type="string",description="The first name for this user."),
+ * @SWG\Property(name="last_name",type="string",description="The last name for this user."),
+ * @SWG\Property(name="display_name",type="string",description="Displayable name of this user."),
+ * @SWG\Property(name="phone",type="string",description="Phone number for this user."),
+ * @SWG\Property(name="is_active",type="boolean",description="True if this user is active for use."),
+ * @SWG\Property(name="is_sys_admin",type="boolean",description="True if this user is a system admin."),
+ * @SWG\Property(name="default_app_id",type="string",description="The default launched app for this user."),
+ * @SWG\Property(name="role_id",type="string",description="The role to which this user is assigned."),
+ * @SWG\Property(name="last_login_date",type="string",description="Timestamp of the last login."),
+ * @SWG\Property(name="default_app",type="App",description="Related app by default_app_id."),
+ * @SWG\Property(name="role",type="Role",description="Related role by role_id."),
+ * @SWG\Property(name="created_date",type="string",description="Date this user was created."),
+ * @SWG\Property(name="created_by_id",type="int",description="User Id of who created this user."),
+ * @SWG\Property(name="last_modified_date",type="string",description="Date this user was last modified."),
+ * @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this user.")
  * )
- *
  */
-class App extends BaseSystemRestResource
+class User extends BaseSystemRestResource
 {
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
 
 	/**
-	 * Creates a new SystemResource instance
-	 *
-	 *
+	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+	 * @param array                                               $resources
 	 */
-	public function __construct( $consumer, $resourceArray = array() )
+	public function __construct( $consumer, $resources = array() )
 	{
-		parent::__construct(
-			$consumer,
-			array(
-				 'service_name'   => 'system',
-				 'name'           => 'Application',
-				 'api_name'       => 'app',
-				 'type'           => 'System',
-				 'description'    => 'System application administration.',
-				 'is_active'      => true,
-				 'resource_array' => $resourceArray,
-			)
+		$config = array(
+			'service_name' => 'system',
+			'name'         => 'User',
+			'api_name'     => 'user',
+			'type'         => 'System',
+			'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
+			'description'  => 'System user administration.',
+			'is_active'    => true,
 		);
-	}
 
+		parent::__construct( $consumer, $config, $resources );
+	}
 	/**
 	 *
 	 * @SWG\Api(
-	 *             path="/system/app", description="Operations for application administration.",
+	 *     path="/system/user", description="Operations for user administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve multiple applications.",
-	 *             notes="Use the 'ids' or 'filter' parameter to limit records that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.",
-	 *             responseClass="Apps", nickname="getApps",
+	 *         httpMethod="GET", summary="Retrieve multiple users.",
+	 *         notes="Use the 'ids' or 'filter' parameter to limit records that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.",
+	 *         responseClass="Users", nickname="getUsers",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -147,13 +133,13 @@ class App extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="POST", summary="Create one or more applications.",
-	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="createApps",
+	 *         httpMethod="POST", summary="Create one or more users.",
+	 *         notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
+	 *         responseClass="Success", nickname="createUsers",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to create.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="Apps"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="Users"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -171,13 +157,13 @@ class App extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one or more applications.",
-	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="updateApps",
+	 *         httpMethod="PUT", summary="Update one or more users.",
+	 *         notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
+	 *         responseClass="Success", nickname="updateUsers",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="Apps"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="Users"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -195,9 +181,9 @@ class App extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one or more applications.",
-	 *             notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="deleteApps",
+	 *         httpMethod="DELETE", summary="Delete one or more users.",
+	 *         notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
+	 *         responseClass="Success", nickname="deleteUsers",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -205,7 +191,7 @@ class App extends BaseSystemRestResource
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to delete.",
-	 *             paramType="body", required="false", allowMultiple=false, dataType="Apps"
+	 *             paramType="body", required="false", allowMultiple=false, dataType="Users"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -226,12 +212,12 @@ class App extends BaseSystemRestResource
 	 *   )
 	 *
 	 * @SWG\Api(
-	 *             path="/system/app/{id}", description="Operations for individual application administration.",
+	 *     path="/system/user/{id}", description="Operations for individual user administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve one application by identifier.",
-	 *             notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
-	 *             responseClass="App", nickname="getApp",
+	 *         httpMethod="GET", summary="Retrieve one user by identifier.",
+	 *         notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
+	 *         responseClass="User", nickname="getUser",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -253,9 +239,9 @@ class App extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one application.",
-	 *             notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
-	 *             responseClass="Success", nickname="updateApp",
+	 *         httpMethod="PUT", summary="Update one user.",
+	 *         notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
+	 *         responseClass="Success", nickname="updateUser",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -263,7 +249,7 @@ class App extends BaseSystemRestResource
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="App"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="User"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -281,9 +267,9 @@ class App extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one application.",
-	 *             notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
-	 *             responseClass="Success", nickname="deleteApp",
+	 *         httpMethod="DELETE", summary="Delete one user.",
+	 *         notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
+	 *         responseClass="Success", nickname="deleteUser",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -307,92 +293,6 @@ class App extends BaseSystemRestResource
 	 *     )
 	 *   )
 	 *
-	 * @throws \Exception
 	 * @return array|bool
 	 */
-	protected function _handleGet()
-	{
-		if ( false !== $this->_exportPackage && !empty( $this->_resourceId ) )
-		{
-			$_includeFiles = Option::getBool( $_REQUEST, 'include_files' );
-			$_includeServices = Option::getBool( $_REQUEST, 'include_services' );
-			$_includeSchema = Option::getBool( $_REQUEST, 'include_schema' );
-			$_includeData = Option::getBool( $_REQUEST, 'include_data' );
-
-			//@TODO What permissions to check?
-			//$this->checkPermission( 'read' );
-
-			return Packager::exportAppAsPackage( $this->_resourceId, $_includeFiles, $_includeServices, $_includeSchema, $_includeData );
-		}
-
-		return parent::_handleGet();
-	}
-
-	/**
-	 * @return array|bool
-	 * @throws \Exception
-	 */
-	protected function _handlePost()
-	{
-		//@TODO What permissions to check?
-		//$this->checkPermission( 'create' );
-
-		//	You can import an application package file, local or remote, or from zip, but nothing else
-		$_name = FilterInput::request( 'name' );
-		$_importUrl = FilterInput::request( 'url' );
-		$_extension = strtolower( pathinfo( $_importUrl, PATHINFO_EXTENSION ) );
-
-		if ( null !== ( $_files = Option::get( $_FILES, 'files' ) ) )
-		{
-			//	Older html multi-part/form-data post, single or multiple files
-			if ( is_array( $_files['error'] ) )
-			{
-				throw new \Exception( "Only a single application package file is allowed for import." );
-			}
-
-			$_importUrl = 'file://' . $_files['tmp_name'] . '#' . $_files['name'] . '#' . $_files['type'];
-
-			if ( UPLOAD_ERR_OK !== ( $_error = $_files['error'] ) )
-			{
-				throw new \Exception( 'Failed to receive upload of "' . $_files['name'] . '": ' . $_error );
-			}
-		}
-
-		if ( !empty( $_importUrl ) )
-		{
-			if ( 'dfpkg' == $_extension )
-			{
-				// need to download and extract zip file and move contents to storage
-				$_filename = FileSystem::importUrlFileToTemp( $_importUrl );
-
-				try
-				{
-					return Packager::importAppFromPackage( $_filename, $_importUrl );
-				}
-				catch ( \Exception $ex )
-				{
-					throw new \Exception( "Failed to import application package $_importUrl.\n{$ex->getMessage()}" );
-				}
-			}
-
-			// from repo or remote zip file
-			if ( !empty( $_name ) && 'zip' == $_extension )
-			{
-				// need to download and extract zip file and move contents to storage
-				$_filename = FileSystem::importUrlFileToTemp( $_importUrl );
-
-				try
-				{
-					//@todo save url for later updates
-					return Packager::importAppFromZip( $_name, $_filename );
-				}
-				catch ( \Exception $ex )
-				{
-					throw new \Exception( "Failed to import application package $_importUrl.\n{$ex->getMessage()}" );
-				}
-			}
-		}
-
-		return parent::_handlePost();
-	}
 }

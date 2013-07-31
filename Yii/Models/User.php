@@ -20,7 +20,7 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\Platform\Resources\System\UserSession;
+use DreamFactory\Platform\Resources\User\Session;
 use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Sql;
@@ -85,10 +85,11 @@ class User extends BasePlatformSystemModel
 			array( 'email, display_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
 			array( 'email', 'email' ),
 			array( 'email', 'length', 'max' => 255 ),
-			array( 'is_active, is_sys_admin, default_app_id, role_id', 'numerical', 'integerOnly' => true ),
+			array( 'default_app_id, role_id', 'numerical', 'integerOnly' => true ),
 			array( 'password, first_name, last_name, security_answer', 'length', 'max' => 64 ),
 			array( 'phone', 'length', 'max' => 32 ),
 			array( 'confirm_code, display_name, security_question', 'length', 'max' => 128 ),
+			array( 'is_active, is_sys_admin', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -118,6 +119,8 @@ class User extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @param array $additionalLabels
+	 *
 	 * @return array customized attribute labels (name=>label)
 	 */
 	public function attributeLabels( $additionalLabels = array() )
@@ -197,7 +200,7 @@ class User extends BasePlatformSystemModel
 		$_id = $this->getPrimaryKey();
 
 		//	Make sure you don't delete yourself
-		if ( $_id == UserSession::getCurrentUserId() )
+		if ( $_id == Session::getCurrentUserId() )
 		{
 			throw new StorageException( 'The currently logged in user may not be deleted.' );
 		}
@@ -238,7 +241,7 @@ class User extends BasePlatformSystemModel
 			$columns
 		);
 
-		if ( UserSession::isSystemAdmin() && !in_array( 'confirm_code', $_myColumns ) )
+		if ( Session::isSystemAdmin() && !in_array( 'confirm_code', $_myColumns ) )
 		{
 			$_myColumns[] = 'confirm_code';
 		}
