@@ -362,7 +362,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function createRecords( $table, $records, $fields = '', $extras = array() )
+	public function createRecords( $table, $records, $fields = null, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -403,7 +403,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws BadRequestException
 	 * @return array
 	 */
-	public function createRecord( $table, $record, $fields = '', $extras = array() )
+	public function createRecord( $table, $record, $fields = null, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -437,7 +437,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecords( $table, $records, $fields = '', $extras = array() )
+	public function updateRecords( $table, $records, $fields = null, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -548,7 +548,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecordsByIds( $table, $record, $id_list, $fields = '', $extras = array() )
+	public function updateRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -608,7 +608,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecords( $table, $records, $fields = '', $extras = array() )
+	public function mergeRecords( $table, $records, $fields = null, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -746,7 +746,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordsByIds( $table, $record, $id_list, $fields = '', $extras = array() )
+	public function mergeRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -809,7 +809,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array|string
 	 */
-	public function deleteRecords( $table, $records, $fields = '', $extras = array() )
+	public function deleteRecords( $table, $records, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $records ) || empty( $records ) )
 		{
@@ -854,7 +854,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecord( $table, $record, $fields = '', $extras = array() )
+	public function deleteRecord( $table, $record, $fields = null, $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
@@ -922,7 +922,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecordsByIds( $table, $id_list, $fields = '', $extras = array() )
+	public function deleteRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
 	{
 		if ( empty( $id_list ) )
 		{
@@ -1007,7 +1007,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecords( $table, $records, $fields = '', $extras = array() )
+	public function retrieveRecords( $table, $records, $fields = null, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -1205,37 +1205,5 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 
 		return $_out;
-	}
-
-	protected static function _requireMoreFields( $fields = null )
-	{
-		if ( empty( $fields ) )
-		{
-			return false;
-		}
-		if ( 0 === strcasecmp( static::DEFAULT_ID_FIELD, $fields ) )
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	protected static function recordArrayMerge( $first_array, $second_array )
-	{
-		foreach ( $first_array as $_key => $_first )
-		{
-			$_firstId = Option::get( $_first, static::DEFAULT_ID_FIELD );
-			foreach ( $second_array as $_second )
-			{
-				$_secondId = Option::get( $_second, static::DEFAULT_ID_FIELD );
-				if ( $_firstId == $_secondId )
-				{
-					$first_array[$_key] = array_merge( $_first, $_second );
-				}
-			}
-		}
-
-		return $first_array;
 	}
 }

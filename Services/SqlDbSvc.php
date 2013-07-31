@@ -701,7 +701,7 @@ class SqlDbSvc extends BaseDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function createRecord( $table, $record, $fields = '', $extras = array() )
+	public function createRecord( $table, $record, $fields = null, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -912,7 +912,7 @@ class SqlDbSvc extends BaseDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecordsByFilter( $table, $record, $filter = '', $fields = '', $extras = array() )
+	public function updateRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -960,7 +960,7 @@ class SqlDbSvc extends BaseDbSvc
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
-	public function updateRecordsByIds( $table, $record, $id_list, $fields = '', $extras = array() )
+	public function updateRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -1103,7 +1103,7 @@ class SqlDbSvc extends BaseDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecords( $table, $records, $fields = '', $extras = array() )
+	public function mergeRecords( $table, $records, $fields = null, $extras = array() )
 	{
 		// currently the same as update here
 		return $this->updateRecords( $table, $records, $fields, $extras );
@@ -1134,7 +1134,7 @@ class SqlDbSvc extends BaseDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordsByFilter( $table, $record, $filter = '', $fields = '', $extras = array() )
+	public function mergeRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
 	{
 		// currently the same as update here
 		return $this->updateRecordsByFilter( $table, $record, $filter, $fields, $extras );
@@ -1150,7 +1150,7 @@ class SqlDbSvc extends BaseDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordsByIds( $table, $record, $id_list, $fields = '', $extras = array() )
+	public function mergeRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
 	{
 		// currently the same as update here
 		return $this->updateRecordsByIds( $table, $record, $id_list, $fields, $extras );
@@ -1181,7 +1181,7 @@ class SqlDbSvc extends BaseDbSvc
 	 * @throws \Exception
 	 * @return array|string
 	 */
-	public function deleteRecords( $table, $records, $fields = '', $extras = array() )
+	public function deleteRecords( $table, $records, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $records ) || empty( $records ) )
 		{
