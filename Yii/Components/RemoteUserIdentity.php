@@ -79,7 +79,7 @@ class RemoteUserIdentity extends \CBaseUserIdentity
 	 */
 	public function authenticate()
 	{
-		$_params = array();
+		$_params = null;
 
 		if ( 'openid' == $this->providerName )
 		{
@@ -143,6 +143,38 @@ class RemoteUserIdentity extends \CBaseUserIdentity
 	 */
 	public function getName()
 	{
-		return $this->_userName;
+		return $this->getUserName();
+	}
+
+	/**
+	 * @return \Hybrid_Auth
+	 */
+	public function getAuthClient()
+	{
+		return $this->_authClient;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getProviderName()
+	{
+		return $this->_providerName;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getProviderUserId()
+	{
+		return $this->_providerUserId;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getUserData()
+	{
+		return $this->_userData;
 	}
 }
