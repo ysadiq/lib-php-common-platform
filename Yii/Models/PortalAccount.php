@@ -184,7 +184,7 @@ class PortalAccount extends BasePlatformSystemModel
 			return null;
 		}
 
-		return $_model->user;
+		return $_model->user ? : null;
 	}
 
 	/**
