@@ -16,13 +16,9 @@
  */
 namespace DreamFactory\Platform\Services\Portal;
 
-use DreamFactory\Platform\Enums\PlatformServiceTypes;
-use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Services\BaseSystemRestService;
 use DreamFactory\Platform\Services\Portal\OAuth\Enums\OAuthTokenTypes;
 use DreamFactory\Platform\Services\Portal\OAuth\Enums\OAuthGrantTypes;
 use DreamFactory\Platform\Services\Portal\OAuth\Enums\OAuthTypes;
-use DreamFactory\Platform\Services\Portal\OAuth\Exceptions\AuthenticationException;
 use DreamFactory\Platform\Services\Portal\OAuth\GrantTypes as GrantTypes;
 use DreamFactory\Platform\Services\Portal\OAuth\Interfaces\OAuthServiceLike;
 use DreamFactory\Platform\Services\BasePlatformService;
@@ -34,12 +30,12 @@ use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
 
 /**
- * BaseOAuthResource
+ * OAuthResource
  * An portal client base that knows how to talk OAuth2
  *
  * Subclasses must implement _loadToken and _saveToken methods
  */
-abstract class BaseOAuthResource extends BasePortalClient implements OAuthServiceLike
+class OAuthResource extends BasePortalClient implements OAuthServiceLike
 {
 	//**************************************************************************
 	//* Members
@@ -123,17 +119,17 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	//**************************************************************************
 
 	/**
-	 * @param array|\stdClass $options
+	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+	 * @param array|\stdClass                                     $options
 	 *
-	 * @throws \RuntimeException
 	 * @throws \InvalidArgumentException
-	 * @return \DreamFactory\Platform\Services\Portal\BaseOAuthResource
+	 * @return \DreamFactory\Platform\Services\Portal\OAuthResource
 	 */
-	public function __construct( $options = array() )
+	public function __construct( $consumer, $options = array() )
 	{
 		$options['redirect_uri'] = $this->_redirectUri ? : Option::get( $options, 'redirect_uri', static::DEFAULT_REDIRECT_URI );
 
-		parent::__construct( $options );
+		parent::__construct( $consumer, $options );
 
 		if ( !empty( $this->_certificateFile ) && ( !is_file( $this->_certificateFile ) || !is_readable( $this->_certificateFile ) ) )
 		{
@@ -328,7 +324,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 				throw new \InvalidArgumentException( 'The auth type "' . $this->_authType . '" is invalid.' );
 		}
 
-		return $this->_makeRequest( $this->getServiceEndpoint( $this->_tokenEndpoint ), $_payload, static::Post, $_headers, static::ApplicationContent );
+		return $this->_makeRequest( $this->getAuthEndpoint( $this->_tokenEndpoint ), $_payload, static::Post, $_headers, static::ApplicationContent );
 	}
 
 	/**
@@ -353,15 +349,36 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 			switch ( $this->_accessTokenType )
 			{
 				case OAuthTokenTypes::URI:
-					$payload[$this->_accessTokenParamName] = $this->_accessToken;
+					if ( !empty( $this->_authHeaderName ) )
+					{
+						$headers[] = 'Authorization: ' . $this->_authHeaderName . ' ' . $this->_accessToken;
+					}
+					else
+					{
+						$payload[$this->_accessTokenParamName] = $this->_accessToken;
+					}
 					break;
 
 				case OAuthTokenTypes::BEARER:
-					$headers[] = 'Authorization: Bearer ' . $this->_accessToken;
+					if ( !empty( $this->_authHeaderName ) )
+					{
+						$headers[] = 'Authorization: ' . $this->_authHeaderName . ' ' . $this->_accessToken;
+					}
+					else
+					{
+						$headers[] = 'Authorization: Bearer ' . $this->_accessToken;
+					}
 					break;
 
 				case OAuthTokenTypes::OAUTH:
-					$headers[] = 'Authorization: OAuth ' . $this->_accessToken;
+					if ( !empty( $this->_authHeaderName ) )
+					{
+						$headers[] = 'Authorization: ' . $this->_authHeaderName . ' ' . $this->_accessToken;
+					}
+					else
+					{
+						$headers[] = 'Authorization: OAuth ' . $this->_accessToken;
+					}
 					break;
 
 				case OAuthTokenTypes::MAC:
@@ -418,7 +435,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param string $accessToken
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setAccessToken( $accessToken )
 	{
@@ -438,7 +455,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param string $accessTokenParamName
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setAccessTokenParamName( $accessTokenParamName )
 	{
@@ -458,7 +475,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param string $accessTokenSecret
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setAccessTokenSecret( $accessTokenSecret )
 	{
@@ -483,7 +500,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	 * @param string $algorithm       Algorithm used to encrypt the signature
 	 *
 	 * @return $this
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setAccessTokenType( $accessTokenType, $secret = null, $algorithm = null )
 	{
@@ -505,7 +522,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param int $authType
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setAuthType( $authType )
 	{
@@ -525,7 +542,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param string $authorizeEndpoint
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setAuthorizeEndpoint( $authorizeEndpoint )
 	{
@@ -545,7 +562,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param string $authorizeUrl
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setAuthorizeUrl( $authorizeUrl )
 	{
@@ -565,7 +582,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param string $grantType
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setGrantType( $grantType )
 	{
@@ -585,7 +602,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param string $hashAlgorithm
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setHashAlgorithm( $hashAlgorithm )
 	{
@@ -605,7 +622,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param string $clientSecret
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setClientSecret( $clientSecret )
 	{
@@ -625,7 +642,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param string $clientId
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setClientId( $clientId )
 	{
@@ -645,7 +662,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param string $redirectUri
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setRedirectUri( $redirectUri )
 	{
@@ -665,7 +682,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param string $refreshToken
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setRefreshToken( $refreshToken )
 	{
@@ -685,7 +702,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param string $scope
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setScope( $scope )
 	{
@@ -705,7 +722,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param string $tokenEndpoint
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setTokenEndpoint( $tokenEndpoint )
 	{
@@ -725,7 +742,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param string $authHeaderName
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setAuthHeaderName( $authHeaderName )
 	{
@@ -745,7 +762,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param string $redirectProxyUrl
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setRedirectProxyUrl( $redirectProxyUrl )
 	{
@@ -765,7 +782,7 @@ abstract class BaseOAuthResource extends BasePortalClient implements OAuthServic
 	/**
 	 * @param boolean $interactive
 	 *
-	 * @return BaseOAuthResource
+	 * @return OAuthResource
 	 */
 	public function setInteractive( $interactive )
 	{

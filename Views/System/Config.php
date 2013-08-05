@@ -23,7 +23,6 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Utility\ResourceStore;
-use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -124,24 +123,6 @@ class Config extends BaseSystemRestResource
 		}
 
 		$this->_response['dsp_version'] = DSP_VERSION;
-<<<<<<< HEAD
-		if ( false !== ( $this->_response['allow_remote_logins'] = Pii::getParam( 'dsp.allow_remote_logins' ) ) )
-		{
-			$_rows = Sql::findAll( 'select api_name from df_sys_provider order by 1', array(), Pii::pdo() );
-
-			if ( !empty( $_rows ) )
-			{
-				$this->_response['remote_login_providers'] = array();
-				foreach ( $_rows as $_row )
-				{
-					$this->_response['remote_login_providers'][] = $_row['api_name'];
-				}
-			}
-		}
-=======
-		$this->_response['allow_remote_logins'] = Pii::getParam( 'dsp.allow_remote_logins' );
-		$this->_response['remote_login_providers'] = Pii::getParam( 'dsp.remote_login_providers' );
->>>>>>> parent of 889636b... merge revert #2
 
 		parent::_postProcess();
 	}
