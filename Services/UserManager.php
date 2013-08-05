@@ -31,6 +31,8 @@ use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\HttpMethod;
+use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Sql;
 use Swagger\Annotations as SWG;
@@ -47,34 +49,34 @@ use Swagger\Annotations as SWG;
  * )
  *
  * @SWG\Model(id="Profile",
- *   @SWG\Property(name="email",type="string",description="Email address of the current user."),
- *   @SWG\Property(name="first_name",type="string",description="First name of the current user."),
- *   @SWG\Property(name="last_name",type="string",description="Last name of the current user."),
- *   @SWG\Property(name="display_name",type="string",description="Full display name of the current user."),
- *   @SWG\Property(name="phone",type="string",description="Phone number."),
- *   @SWG\Property(name="security_question",type="string",description="Question to be answered to initiate password reset."),
- *   @SWG\Property(name="default_app_id",type="int",description="Id of the application to be launched at login.")
+ * @SWG\Property(name="email",type="string",description="Email address of the current user."),
+ * @SWG\Property(name="first_name",type="string",description="First name of the current user."),
+ * @SWG\Property(name="last_name",type="string",description="Last name of the current user."),
+ * @SWG\Property(name="display_name",type="string",description="Full display name of the current user."),
+ * @SWG\Property(name="phone",type="string",description="Phone number."),
+ * @SWG\Property(name="security_question",type="string",description="Question to be answered to initiate password reset."),
+ * @SWG\Property(name="default_app_id",type="int",description="Id of the application to be launched at login.")
  * )
  * @SWG\Model(id="Register",
- *   @SWG\Property(name="email",type="string",description="Email address of the current user."),
- *   @SWG\Property(name="first_name",type="string",description="First name of the current user."),
- *   @SWG\Property(name="last_name",type="string",description="Last name of the current user."),
- *   @SWG\Property(name="display_name",type="string",description="Full display name of the current user.")
+ * @SWG\Property(name="email",type="string",description="Email address of the current user."),
+ * @SWG\Property(name="first_name",type="string",description="First name of the current user."),
+ * @SWG\Property(name="last_name",type="string",description="Last name of the current user."),
+ * @SWG\Property(name="display_name",type="string",description="Full display name of the current user.")
  * )
  * @SWG\Model(id="Confirm",
- *   @SWG\Property(name="email",type="string"),
- *   @SWG\Property(name="new_password",type="string")
+ * @SWG\Property(name="email",type="string"),
+ * @SWG\Property(name="new_password",type="string")
  * )
  * @SWG\Model(id="Password",
- *   @SWG\Property(name="old_password",type="string"),
- *   @SWG\Property(name="new_password",type="string")
+ * @SWG\Property(name="old_password",type="string"),
+ * @SWG\Property(name="new_password",type="string")
  * )
  * @SWG\Model(id="Question",
- *   @SWG\Property(name="security_question",type="string")
+ * @SWG\Property(name="security_question",type="string")
  * )
  * @SWG\Model(id="Answer",
- *   @SWG\Property(name="email",type="string"),
- *   @SWG\Property(name="security_answer",type="string")
+ * @SWG\Property(name="email",type="string"),
+ * @SWG\Property(name="security_answer",type="string")
  * )
  *
  */
@@ -150,6 +152,8 @@ class UserManager extends BaseSystemRestService
 	 */
 	protected function _handleResource()
 	{
+		$_authClient = null;
+
 		switch ( $this->_resource )
 		{
 			case '':
@@ -164,8 +168,36 @@ class UserManager extends BaseSystemRestService
 				break;
 
 			case 'session':
-				$obj = new Session( $this );
-				$result = $obj->processRequest( null, $this->_action );
+				//	Handle remote login
+				if ( HttpMethod::Post == $this->_action && Pii::getParam( 'dsp.allow_remote_logins' ) )
+				{
+					$_provider = FilterInput::post( 'provider', 'facebook', FILTER_SANITIZE_STRING );
+
+					if ( !empty( $_provider ) )
+					{
+						if ( null !== ( $_config = Pii::getParam( 'dsp.remote_login_options' ) ) )
+						{
+							$_config['base_url'] = Pii::baseUrl( true ) . Pii::url( $_config['base_url'] );
+							$_authClient = new \Hybrid_Auth( $_config );
+							$_adapter = $_authClient->authenticate( $_provider );
+
+							if ( is_string( $_adapter ) )
+							{
+								//	This is an url...
+							}
+
+							$_profile = $_adapter->getUserProfile();
+
+							Log::debug( 'Profile from "' . $_provider . '": ' . print_r( $_profile, true ) );
+						}
+					}
+				}
+
+				if ( null === $_authClient )
+				{
+					$obj = new Session( $this );
+					$result = $obj->processRequest( null, $this->_action );
+				}
 				break;
 
 			case 'profile':

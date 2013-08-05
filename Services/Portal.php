@@ -19,7 +19,7 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Platform\Enums\PortalAccountTypes;
+use DreamFactory\Platform\Enums\ProviderUserTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
@@ -28,7 +28,7 @@ use DreamFactory\Platform\Services\Portal\BasePortalClient;
 use DreamFactory\Platform\Services\Portal\OAuthResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
-use DreamFactory\Platform\Yii\Models\PortalAccount;
+use DreamFactory\Platform\Yii\Models\ProviderUser;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Curl;
@@ -154,7 +154,7 @@ class Portal extends BaseSystemRestService
 	/**
 	 * @param string $portalName
 	 *
-	 * @return PortalAccount
+	 * @return ProviderUser
 	 */
 	protected function _getAuthorization( $portalName )
 	{
@@ -208,12 +208,12 @@ class Portal extends BaseSystemRestService
 			return false;
 		}
 
-		if ( null === ( $_account = PortalAccount::model()->byUserService( $this->_currentUserId, $providerId )->find() ) )
+		if ( null === ( $_account = ProviderUser::model()->byUserService( $this->_currentUserId, $providerId )->find() ) )
 		{
-			$_account = new PortalAccount();
+			$_account = new ProviderUser();
 			$_account->user_id = $this->_currentUserId;
 			$_account->provider_id = $providerId;
-			$_account->account_type = PortalAccountTypes::INDIVIDUAL_USER;
+			$_account->account_type = ProviderUserTypes::INDIVIDUAL_USER;
 		}
 
 		$_account->auth_text = $_result->details->token;
