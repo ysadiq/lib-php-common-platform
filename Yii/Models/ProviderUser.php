@@ -24,21 +24,21 @@ use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Sql;
 
 /**
- * ServiceAccount.php
+ * ProviderUser.php
  * The user service registry model for the DSP
  *
  * Columns:
  *
  * @property int                 $user_id
  * @property int                 $provider_id
+ * @property string              $provider_user_id
  * @property int                 $account_type
  * @property array               $auth_text
  * @property string              $last_use_date
  *
- * @property AccountProvider     $provider
  * @property User                $user
  */
-class ServiceAccount extends BasePlatformSystemModel
+class ProviderUser extends BasePlatformSystemModel
 {
 	//*************************************************************************
 	//* Methods
@@ -49,7 +49,7 @@ class ServiceAccount extends BasePlatformSystemModel
 	 */
 	public function tableName()
 	{
-		return static::tableNamePrefix() . 'service_account';
+		return static::tableNamePrefix() . 'provider_user';
 	}
 
 	/**
@@ -58,7 +58,7 @@ class ServiceAccount extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array( 'user_id, provider_id, account_type, auth_text, last_use_date', 'safe' ),
+			array( 'provider_id, provider_user_id, user_id, account_type, auth_text, last_use_date', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -72,8 +72,7 @@ class ServiceAccount extends BasePlatformSystemModel
 		return array_merge(
 			parent::relations(),
 			array(
-				 'provider' => array( static::BELONGS_TO, __NAMESPACE__ . '\\AccountProvider', 'provider_id' ),
-				 'user'     => array( static::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id' ),
+				 'user' => array( static::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id' ),
 			)
 		);
 	}
@@ -109,36 +108,14 @@ class ServiceAccount extends BasePlatformSystemModel
 			array_merge(
 				$additionalLabels,
 				array(
-					 'provider_id'   => 'Provider',
-					 'user_id'       => 'User ID',
-					 'account_type'  => 'Account Type',
-					 'auth_text'     => 'Authorization',
-					 'last_use_date' => 'Last Used',
+					 'provider_id'      => 'Provider ID',
+					 'user_id'          => 'User ID',
+					 'provider_user_id' => 'Provider User ID',
+					 'account_type'     => 'Account Type',
+					 'auth_text'        => 'Authorization',
+					 'last_use_date'    => 'Last Used',
 				)
 			)
 		);
-	}
-
-	/**
-	 * Named scope that filters by user_id and service_id
-	 *
-	 * @param int $userId
-	 * @param int $providerId
-	 *
-	 * @return $this
-	 */
-	public function byUserService( $userId, $providerId )
-	{
-		$this->getDbCriteria()->mergeWith(
-			array(
-				 'condition' => 'user_id = :user_id and provider_id = :provider_id',
-				 'params'    => array(
-					 ':user_id'     => $userId,
-					 ':provider_id' => $providerId
-				 ),
-			)
-		);
-
-		return $this;
 	}
 }

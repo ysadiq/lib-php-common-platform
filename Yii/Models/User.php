@@ -20,7 +20,7 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\Platform\Resources\System\UserSession;
+use DreamFactory\Platform\Resources\User\Session;
 use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Sql;
@@ -44,6 +44,7 @@ use Kisma\Core\Utility\Sql;
  * @property integer    $role_id
  * @property string     $security_question
  * @property string     $security_answer
+ * @property int        $user_source
  * @property string     $last_login_date
  *
  * Relations
@@ -85,10 +86,11 @@ class User extends BasePlatformSystemModel
 			array( 'email, display_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
 			array( 'email', 'email' ),
 			array( 'email', 'length', 'max' => 255 ),
-			array( 'is_active, is_sys_admin, default_app_id, role_id', 'numerical', 'integerOnly' => true ),
+			array( 'default_app_id, user_source, role_id', 'numerical', 'integerOnly' => true ),
 			array( 'password, first_name, last_name, security_answer', 'length', 'max' => 64 ),
 			array( 'phone', 'length', 'max' => 32 ),
 			array( 'confirm_code, display_name, security_question', 'length', 'max' => 128 ),
+			array( 'is_active, is_sys_admin, user_source', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -118,6 +120,8 @@ class User extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @param array $additionalLabels
+	 *
 	 * @return array customized attribute labels (name=>label)
 	 */
 	public function attributeLabels( $additionalLabels = array() )
@@ -136,6 +140,7 @@ class User extends BasePlatformSystemModel
 			'role_id'           => 'Role',
 			'security_question' => 'Security Question',
 			'security_answer'   => 'Security Answer',
+			'user_source'       => 'User Source',
 		);
 
 		return parent::attributeLabels( array_merge( $_myLabels, $additionalLabels ) );
@@ -197,7 +202,7 @@ class User extends BasePlatformSystemModel
 		$_id = $this->getPrimaryKey();
 
 		//	Make sure you don't delete yourself
-		if ( $_id == UserSession::getCurrentUserId() )
+		if ( $_id == Session::getCurrentUserId() )
 		{
 			throw new StorageException( 'The currently logged in user may not be deleted.' );
 		}
@@ -234,11 +239,12 @@ class User extends BasePlatformSystemModel
 				 'is_sys_admin',
 				 'role_id',
 				 'default_app_id',
+				 'user_source',
 			),
 			$columns
 		);
 
-		if ( UserSession::isSystemAdmin() && !in_array( 'confirm_code', $_myColumns ) )
+		if ( Session::isSystemAdmin() && !in_array( 'confirm_code', $_myColumns ) )
 		{
 			$_myColumns[] = 'confirm_code';
 		}

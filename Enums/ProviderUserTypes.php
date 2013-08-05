@@ -22,9 +22,9 @@ namespace DreamFactory\Platform\Enums;
 use Kisma\Core\Enums\SeedEnum;
 
 /**
- * ServiceAccountTypes
+ * ProviderUserTypes
  */
-class ServiceAccountTypes extends SeedEnum
+class ProviderUserTypes extends SeedEnum
 {
 	//*************************************************************************
 	//* Constants
