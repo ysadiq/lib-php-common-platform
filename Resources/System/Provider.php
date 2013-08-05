@@ -31,29 +31,27 @@ use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 
 /**
- * ProviderUser
+ * Provider
  * DSP service/provider interface
  *
  * @SWG\Resource(
  *   resourcePath="/system"
  * )
  *
- * @SWG\Model(id="ProviderUsers",
- * @SWG\Property(name="record",type="Array",items="$ref:ProviderUser",description="Array of provider user records of the given resource.")
+ * @SWG\Model(id="Providers",
+ * @SWG\Property(name="record",type="Array",items="$ref:Provider",description="Array of provider records.")
  * )
- * @SWG\Model(id="ProviderUser",
- * @SWG\Property(name="id",type="int",description="Identifier of this account."),
- * @SWG\Property(name="user_id",type="int",description="The user who owns this account."),
- * @SWG\Property(name="api_name",type="string",description="The portal which issued this account."),
- * @SWG\Property(name="account_type",type="int",description="The type of account."),
- * @SWG\Property(name="auth_text",type="string",description="The authorization for this account/provider."),
- * @SWG\Property(name="created_date",type="string",description="Date this application group was created."),
- * @SWG\Property(name="created_by_id",type="int",description="User Id of who created this application group."),
- * @SWG\Property(name="last_modified_date",type="string",description="Date this application group was last modified."),
- * @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this application group.")
+ * @SWG\Model(id="Provider",
+ * @SWG\Property(name="id",type="int",description="Identifier of this provider."),
+ * @SWG\Property(name="api_name",type="string",description="The endpoint for this provider."),
+ * @SWG\Property(name="config_text",type="string",description="The configuration for this provider."),
+ * @SWG\Property(name="created_date",type="string",description="Date this provider was created."),
+ * @SWG\Property(name="created_by_id",type="int",description="User ID of the creator."),
+ * @SWG\Property(name="last_modified_date",type="string",description="Last modified date."),
+ * @SWG\Property(name="last_modified_by_id",type="int",description="User ID of last modifier.")
  *
  */
-class ProviderUser extends BaseSystemRestResource
+class Provider extends BaseSystemRestResource
 {
 	/**
 	 * Constructor
@@ -61,19 +59,19 @@ class ProviderUser extends BaseSystemRestResource
 	 * @param BasePlatformService $consumer
 	 * @param array               $resourceArray
 	 *
-	 * @return \DreamFactory\Platform\Resources\System\ProviderUser
+	 * @return \DreamFactory\Platform\Resources\System\Provider
 	 */
 	public function __construct( $consumer = null, $resourceArray = array() )
 	{
 		parent::__construct(
 			$consumer,
 			array(
-				 'name'           => 'Portal Account',
+				 'name'           => 'Provider',
 				 'type'           => 'Service',
 				 'service_name'   => 'system',
 				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'provider_user',
-				 'description'    => 'Portal Account Configuration.',
+				 'api_name'       => 'provider',
+				 'description'    => 'Provider Configuration.',
 				 'is_active'      => true,
 				 'resource_array' => $resourceArray,
 				 'verb_aliases'   => array(
@@ -88,12 +86,12 @@ class ProviderUser extends BaseSystemRestResource
 
 	/**
 	 * @SWG\Api(
-	 *             path="/system/provider_user", description="Operations for provider user administration.",
+	 *             path="/system/provider", description="Operations for provider administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve multiple provider users.",
+	 *             httpMethod="GET", summary="Retrieve multiple providers.",
 	 *             notes="Use the 'ids' or 'filter' parameter to limit records that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.",
-	 *             responseClass="ProviderUsers", nickname="getProviderUsers",
+	 *             responseClass="Providers", nickname="getProviders",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -139,13 +137,13 @@ class ProviderUser extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="POST", summary="Create one or more provider users.",
+	 *             httpMethod="POST", summary="Create one or more providers.",
 	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="createProviderUsers",
+	 *             responseClass="Success", nickname="createProviders",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to create.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="ProviderUsers"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="Providers"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -163,13 +161,13 @@ class ProviderUser extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one or more provider users.",
+	 *             httpMethod="PUT", summary="Update one or more providers.",
 	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="updateProviderUsers",
+	 *             responseClass="Success", nickname="updateProviders",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="ProviderUsers"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="Providers"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -187,9 +185,9 @@ class ProviderUser extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one or more provider users.",
+	 *             httpMethod="DELETE", summary="Delete one or more providers.",
 	 *             notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="deleteProviderUsers",
+	 *             responseClass="Success", nickname="deleteProviders",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -197,7 +195,7 @@ class ProviderUser extends BaseSystemRestResource
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to delete.",
-	 *             paramType="body", required="false", allowMultiple=false, dataType="ProviderUsers"
+	 *             paramType="body", required="false", allowMultiple=false, dataType="Providers"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -218,12 +216,12 @@ class ProviderUser extends BaseSystemRestResource
 	 *   )
 	 *
 	 * @SWG\Api(
-	 *             path="/system/provider_user/{id}", description="Operations for individual provider user administration.",
+	 *             path="/system/provider/{id}", description="Operations for individual provider administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve one provider user by identifier.",
+	 *             httpMethod="GET", summary="Retrieve one provider by identifier.",
 	 *             notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
-	 *             responseClass="ProviderUser", nickname="getProviderUser",
+	 *             responseClass="Provider", nickname="getProvider",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -245,9 +243,9 @@ class ProviderUser extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one provider user.",
+	 *             httpMethod="PUT", summary="Update one provider.",
 	 *             notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
-	 *             responseClass="Success", nickname="updateProviderUser",
+	 *             responseClass="Success", nickname="updateProvider",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -255,7 +253,7 @@ class ProviderUser extends BaseSystemRestResource
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="ProviderUser"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="Provider"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -273,9 +271,9 @@ class ProviderUser extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one provider user.",
+	 *             httpMethod="DELETE", summary="Delete one provider.",
 	 *             notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
-	 *             responseClass="Success", nickname="deleteProviderUser",
+	 *             responseClass="Success", nickname="deleteProvider",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
