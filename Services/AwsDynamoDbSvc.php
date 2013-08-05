@@ -19,16 +19,9 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Aws\Common\Enum\Region;
 use Aws\DynamoDb\DynamoDbClient;
-use Aws\DynamoDb\Enum\ComparisonOperator;
-use Aws\DynamoDb\Enum\KeyType;
-use Aws\DynamoDb\Enum\ReturnValue;
-use Aws\DynamoDb\Enum\Type;
-use Aws\DynamoDb\Model\Attribute;
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Common\Utility\DataFormat;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -43,7 +36,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	//	Constants
 	//*************************************************************************
 
-	const DEFAULT_REGION = Region::US_WEST_1;
+	const DEFAULT_REGION = 'us-east-1';
 
 	//*************************************************************************
 	//	Members
@@ -56,30 +49,17 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * @var array
 	 */
-	protected $_defaultCreateTable
-		= array(
-			'AttributeDefinitions'  => array(
-				array(
-					'AttributeName' => 'id',
-					'AttributeType' => Type::S
-				)
-			),
-			'KeySchema'             => array(
-				array(
-					'AttributeName' => 'id',
-					'KeyType'       => KeyType::HASH
-				)
-			),
-			'ProvisionedThroughput' => array(
-				'ReadCapacityUnits'  => 10,
-				'WriteCapacityUnits' => 20
-			)
-		);
-
+	protected $_defaultTableKey = array(
+		array(
+			'name'      => 'id',
+			'data_type' => 'S',
+			'key_type'  => 'HASH'
+		)
+	);
 	/**
 	 * @var boolean
 	 */
-	protected $_defaultBlendFormat = true;
+	protected $_defaultSimpleFormat = true;
 
 	//*************************************************************************
 	//	Methods
@@ -100,47 +80,40 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		$_credentials = Option::get( $config, 'credentials' );
 		$_parameters = Option::get( $config, 'parameters' );
 
-		// old way
 		$_accessKey = Option::get( $_credentials, 'access_key' );
 		$_secretKey = Option::get( $_credentials, 'secret_key' );
-		if ( !empty( $_accessKey ) )
-		{
-			// old way, replace with 'key'
-			$_credentials['key'] = $_accessKey;
-		}
+		$_region = Option::get( $_credentials, 'region', static::DEFAULT_REGION );
 
-		if ( !empty( $_secretKey ) )
+		if ( empty( $_accessKey ) || empty( $_secretKey ) )
 		{
-			// old way, replace with 'key'
-			$_credentials['secret'] = $_secretKey;
-		}
-
-		$_region = Option::get( $_credentials, 'region' );
-		if ( empty( $_region ) )
-		{
-			// use a default region if not present
-			$_credentials['region'] = static::DEFAULT_REGION;
+			throw new \InvalidArgumentException( 'AWS access and/or secret key can not be empty.' );
 		}
 
 		// set up a default partition key
-		if ( null !== ( $_table = Option::get( $_parameters, 'default_create_table' ) ) )
+		if ( null !== ( $_key = Option::get( $_parameters, 'default_key' ) ) )
 		{
-			$this->_defaultCreateTable = $_table;
+			$this->_defaultTableKey = $_key;
 		}
 
-		// reply in simplified blend format by default
-		if ( null !== ( $_blendFormat = Option::get( $_parameters, 'blend_format' ) ) )
+		// reply in simple format by default
+		if ( null !== ( $_simpleFormat = Option::get( $_parameters, 'simple_format' ) ) )
 		{
-			$this->_defaultBlendFormat = DataFormat::boolval( $_blendFormat );
+			$this->_defaultSimpleFormat = DataFormat::boolval( $_simpleFormat );
 		}
 
 		try
 		{
-			$this->_dbConn = DynamoDbClient::factory( $_credentials );
+			$this->_dbConn = DynamoDbClient::factory(
+				array(
+					 'key'    => $_accessKey,
+					 'secret' => $_secretKey,
+					 'region' => $_region
+				)
+			);
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Amazon DynamoDb Service Exception:\n{$ex->getMessage()}" );
+			throw new \Exception( "Unexpected Amazon DynamoDb Service Exception:\n{$ex->getMessage()}" );
 		}
 	}
 
@@ -166,7 +139,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	{
 		if ( empty( $this->_dbConn ) )
 		{
-			throw new InternalServerErrorException( 'Database connection has not been initialized.' );
+			throw new \Exception( 'Database connection has not been initialized.' );
 		}
 	}
 
@@ -192,86 +165,29 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	// REST service implementation
-
-	protected function _getTablesAsArray()
-	{
-		$_out = array();
-		do
-		{
-			$_result = $this->_dbConn->listTables(
-				array(
-					 'Limit'                   => 100, // arbitrary limit
-					 'ExclusiveStartTableName' => isset( $_result ) ? $_result['LastEvaluatedTableName'] : null
-				)
-			);
-
-			$_out = array_merge( $_out, $_result['TableNames'] );
-		}
-		while ( $_result['LastEvaluatedTableName'] );
-
-		return $_out;
-	}
-
-	protected function _getKeyInfo( $table, $extras = null )
-	{
-		$_fields = Option::get( $extras, 'id_field' );
-		if ( !empty( $_fields ) )
-		{
-			if ( !is_array( $_fields ) )
-			{
-				$_fields = array_map( 'trim', explode( ',', trim( $_fields, ',' ) ) );
-			}
-			$_types = Option::get( $extras, 'id_type', Type::S );
-			if ( !is_array( $_types ) )
-			{
-				$_types = array_map( 'trim', explode( ',', trim( $_types, ',' ) ) );
-			}
-			$_keyTypes = Option::get( $extras, 'id_key_type', KeyType::HASH );
-			if ( !is_array( $_keyTypes ) )
-			{
-				$_keyTypes = array_map( 'trim', explode( ',', trim( $_keyTypes, ',' ) ) );
-			}
-		}
-		else
-		{
-			$_result = $this->getTable( $table );
-			$_keys = Option::get( $_result, 'KeySchema', array() );
-			$_definitions = Option::get( $_result, 'AttributeDefinitions', array() );
-			$_fields = array();
-			$_types = array();
-			$_keyTypes = array();
-			foreach ( $_keys as $_key )
-			{
-				$_name = Option::get( $_key, 'AttributeName' );
-				$_fields[] = $_name;
-				$_keyTypes[] = Option::get( $_key, 'KeyType' );
-				foreach ( $_definitions as $_type )
-				{
-					if ( 0 == strcmp( $_name, Option::get( $_type, 'AttributeName' ) ) )
-					{
-						$_types[] = Option::get( $_type, 'AttributeType' );
-					}
-				}
-			}
-		}
-
-		return array( 'fields' => $_fields, 'types' => $_types, 'key_type' => $_keyTypes );
-	}
-
 	/**
 	 * @throws \Exception
 	 * @return array
 	 */
 	protected function _listResources()
 	{
-		$_result = $this->_getTablesAsArray();
-		$_out = array();
-		foreach ( $_result as $_table )
+		try
 		{
-			$_out[] = array( 'name' => $_table, 'TableName' => $_table );
-		}
+			$iterator = $this->_dbConn->getIterator( 'ListTables' );
 
-		return array( 'resource' => $_out );
+			$tables = $iterator->toArray();
+			$out = array();
+			foreach ( $tables as $table )
+			{
+				$out[] = array( 'name' => $table );
+			}
+
+			return array( 'resource' => $out );
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Failed to list tables of DynamoDb Tables service.\n" . $ex->getMessage() );
+		}
 	}
 
 	/**
@@ -283,32 +199,23 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	 */
 	public function getTables( $tables = array() )
 	{
-		if ( empty( $tables ) )
+		try
 		{
-			$tables = $this->_getTablesAsArray();
-		}
-		else
-		{
-			if ( !is_array( $tables ) )
-			{
-				$tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
-			}
-		}
+			$iterator = $this->_dbConn->getIterator( 'ListTables' );
 
-		$_out = array();
-		foreach ( $tables as $_table )
-		{
-			try
+			$tables = $iterator->toArray();
+			$out = array();
+			foreach ( $tables as $table )
 			{
-				$_out[] = $this->getTable( $_table );
+				$out[] = array( 'name' => $table );
 			}
-			catch ( \Exception $ex )
-			{
-				throw new InternalServerErrorException( "Failed to list tables of DynamoDb Tables service.\n" . $ex->getMessage() );
-			}
-		}
 
-		return $_out;
+			return $out;
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Failed to list tables of DynamoDb Tables service.\n" . $ex->getMessage() );
+		}
 	}
 
 	/**
@@ -321,103 +228,182 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	 */
 	public function getTable( $table )
 	{
+		$result = $this->_dbConn->describeTable(
+			array(
+				 'TableName' => $table
+			)
+		);
+
+		// The result of an operation can be used like an array
+		return $result['Table'];
+	}
+
+	/**
+	 * @param array $tables
+	 *
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function createTables( $tables = array() )
+	{
 		try
 		{
-			$_result = $this->_dbConn->describeTable(
-				array(
-					 'TableName' => $table
-				)
-			);
+			$_out = array();
+			foreach ( $tables as $table )
+			{
+				$_name = Option::get( $table, 'name' );
+				if ( empty( $_name ) )
+				{
+					throw new \Exception( "No 'name' field in data." );
+				}
+				$this->_dbConn->createTable(
+					array(
+						 'TableName'             => $_name,
+						 'AttributeDefinitions'  => array(
+							 array(
+								 'AttributeName' => 'id',
+								 'AttributeType' => 'N'
+							 )
+						 ),
+						 'KeySchema'             => array(
+							 array(
+								 'AttributeName' => 'id',
+								 'KeyType'       => 'HASH'
+							 )
+						 ),
+						 'ProvisionedThroughput' => array(
+							 'ReadCapacityUnits'  => 10,
+							 'WriteCapacityUnits' => 20
+						 )
+					)
+				);
 
-			// The result of an operation can be used like an array
-			$_out = $_result['Table'];
-			$_out['name'] = $table;
+				// Wait until the table is created and active
+				$this->_dbConn->waitUntilTableExists(
+					array(
+						 'TableName' => $_name
+					)
+				);
+				$_out[] = array( 'name' => $_name );
+			}
 
 			return $_out;
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to list tables of DynamoDb Tables service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to create table on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
-	 * @param array $properties
+	 * @param string $table
+	 * @param array  $properties
 	 *
 	 * @return array
 	 * @throws \Exception
 	 */
-	public function createTable( $properties = array() )
+	public function createTable( $table, $properties = array() )
 	{
-		// generic, then AWS version
-		$_name = Option::get( $properties, 'name', Option::get( $properties, 'TableName' ) );
-		if ( empty( $_name ) )
-		{
-			throw new BadRequestException( "No 'name' field in data." );
-		}
-
 		try
 		{
-			$_properties = array_merge(
-				array( 'TableName' => $_name ),
-				$this->_defaultCreateTable,
-				$properties
+			$this->_dbConn->createTable(
+				array(
+					 'TableName'             => $table,
+					 'AttributeDefinitions'  => array(
+						 array(
+							 'AttributeName' => 'id',
+							 'AttributeType' => 'N'
+						 )
+					 ),
+					 'KeySchema'             => array(
+						 array(
+							 'AttributeName' => 'id',
+							 'KeyType'       => 'HASH'
+						 )
+					 ),
+					 'ProvisionedThroughput' => array(
+						 'ReadCapacityUnits'  => 10,
+						 'WriteCapacityUnits' => 20
+					 )
+				)
 			);
-			$_result = $this->_dbConn->createTable( $_properties );
 
 			// Wait until the table is created and active
 			$this->_dbConn->waitUntilTableExists(
 				array(
-					 'TableName' => $_name
+					 'TableName' => $table
 				)
 			);
 
-			return array_merge( array( 'name' => $_name ), $_result['TableDescription'] );
+			return array( 'name' => $table );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to create table on DynamoDb Tables service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to create table on DynamoDb Tables service.\n" . $ex->getMessage() );
+		}
+	}
+
+	/**
+	 * @param array $tables
+	 *
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function updateTables( $tables = array() )
+	{
+		try
+		{
+			$_out = array();
+			foreach ( $tables as $table )
+			{
+				$_name = Option::get( $table, 'name' );
+				if ( empty( $_name ) )
+				{
+					throw new \Exception( "No 'name' field in data." );
+				}
+//				$this->_dbConn->updateTable( $_name );
+				$_out[] = array( 'name' => $_name );
+			}
+
+			return $_out;
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Failed to update table on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * Get any properties related to the table
 	 *
-	 * @param array $properties
+	 * @param string $table Table name
+	 * @param array  $properties
 	 *
 	 * @return array
 	 * @throws \Exception
 	 */
-	public function updateTable( $properties = array() )
+	public function updateTable( $table, $properties = array() )
 	{
-		$_name = Option::get( $properties, 'name' );
-		if ( empty( $_name ) )
-		{
-			throw new BadRequestException( "No 'name' field in data." );
-		}
+		// Update the provisioned throughput capacity of the table
+		$this->_dbConn->updateTable(
+			array(
+				 'TableName'             => $table,
+				 'ProvisionedThroughput' => array(
+					 'ReadCapacityUnits'  => 15,
+					 'WriteCapacityUnits' => 25
+				 )
+			)
+		);
 
-		try
-		{
-			// Update the provisioned throughput capacity of the table
-			$_properties = array_merge(
-				array( 'TableName' => $_name ),
-				$properties
-			);
-			$_result = $this->_dbConn->updateTable( $_properties );
+		// Wait until the table is active again after updating
+		$this->_dbConn->waitUntilTableExists(
+			array(
+				 'TableName' => $table
+			)
+		);
 
-			// Wait until the table is active again after updating
-			$this->_dbConn->waitUntilTableExists(
-				array(
-					 'TableName' => $_name
-				)
-			);
-
-			return array_merge( array( 'name' => $_name ), $_result['TableDescription'] );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to update table on DynamoDb Tables service.\n" . $ex->getMessage() );
-		}
+//		throw new \Exception( "Failed to update table '$table' on DynamoDb Tables service." );
+		return array( 'name' => $table );
 	}
 
 	/**
@@ -429,37 +415,36 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	 */
 	public function deleteTables( $tables = array(), $check_empty = false )
 	{
-		if ( !is_array( $tables ) )
+		try
 		{
-			// may be comma-delimited list of names
-			$tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
-		}
-		$_out = array();
-		foreach ( $tables as $_table )
-		{
-			if ( is_array( $_table ) )
+			$_out = array();
+			foreach ( $tables as $table )
 			{
-				$_name = Option::get( $_table, 'name', Option::get( $_table, 'TableName' ) );
-			}
-			else
-			{
-				$_name = $_table;
-			}
-			if ( empty( $_name ) )
-			{
-				throw new BadRequestException( "No 'name' field in data." );
-			}
-			try
-			{
-				$_out[] = $this->deleteTable( $_name );
-			}
-			catch ( \Exception $ex )
-			{
-				throw $ex;
-			}
-		}
+				$_name = Option::get( $table, 'name' );
+				if ( empty( $_name ) )
+				{
+					throw new \Exception( "No 'name' field in data." );
+				}
+				$this->_dbConn->deleteTable(
+					array(
+						 'TableName' => $_name
+					)
+				);
 
-		return $_out;
+				$this->_dbConn->waitUntilTableNotExists(
+					array(
+						 'TableName' => $_name
+					)
+				);
+				$_out[] = array( 'name' => $_name );
+			}
+
+			return $_out;
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Failed to delete tables from DynamoDb Tables service.\n" . $ex->getMessage() );
+		}
 	}
 
 	/**
@@ -475,7 +460,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	{
 		try
 		{
-			$_result = $this->_dbConn->deleteTable(
+			$this->_dbConn->deleteTable(
 				array(
 					 'TableName' => $table
 				)
@@ -487,11 +472,11 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 				)
 			);
 
-			return array_merge( array( 'name' => $table ), $_result['TableDescription'] );
+			return array( 'name' => $table );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to delete table '$table' from DynamoDb Tables service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to delete table '$table' from DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -501,13 +486,14 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * @param        $table
 	 * @param        $records
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function createRecords( $table, $records, $fields = null, $extras = array() )
+	public function createRecords( $table, $records, $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -520,47 +506,53 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
-		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-		}
-
-		$_items = array();
-		foreach ( $records as $_record )
-		{
-			if ( !$this->_containsIdFields( $_record, $_idField ) )
-			{
-				throw new BadRequestException( "Identifying field(s) not found in record." );
-			}
-
-			// Add operation to list of batch operations.
-			$_items[] = array(
-				'PutRequest' => array(
-					'Item' => $this->_dbConn->formatAttributes( $_record )
-				)
-			);
-		}
-
 		try
 		{
-			$_result = $this->_dbConn->batchWriteItem(
+			$_out = array();
+			foreach ( $records as $record )
+			{
+				// Add operation to list of batch operations.
+			}
+			$response = $this->_dbConn->batchWriteItem(
 				array(
-					 'RequestItems' => array(
-						 $table => $_items,
+					 "RequestItems" => array(
+						 $table => array(
+							 array(
+								 "PutRequest" => array(
+									 "Item" => array(
+										 "ForumName"   => array( Type::STRING => "S3 Forum" ),
+										 "Subject"     => array( Type::STRING => "My sample question" ),
+										 "Message"     => array( Type::STRING => "Message Text." ),
+										 "KeywordTags" => array( Type::STRING_SET => array( "S3", "Bucket" ) )
+									 )
+								 )
+							 ),
+							 array(
+								 "DeleteRequest" => array(
+									 "Key" => array(
+										 "ForumName" => array( Type::STRING => "Some hash value" ),
+										 "Subject"   => array( Type::STRING => "Some range key" )
+									 )
+								 )
+							 )
+						 )
 					 )
 				)
 			);
 
-			// todo check $_result['UnprocessedItems'] for 'PutRequest'
+			if ( empty( $fields ) || ( 0 === strcasecmp( 'RowKey', $fields ) ) )
+			{
+				return $_out;
+			}
 
-			return static::cleanRecords( $records, $fields, $_idField );
+			return $_out;
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to create items in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
+			if ( $rollback )
+			{
+			}
+			throw new \Exception( "Failed to create items in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -574,7 +566,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	 * @throws BadRequestException
 	 * @return array
 	 */
-	public function createRecord( $table, $record, $fields = null, $extras = array() )
+	public function createRecord( $table, $record, $fields = '', $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -582,48 +574,42 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
-		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-		}
-		if ( !$this->_containsIdFields( $record, $_idField ) )
-		{
-			throw new BadRequestException( "Identifying field(s) not found in record." );
-		}
-
 		try
 		{
 			// simple insert request
-			$_result = $this->_dbConn->putItem(
+			// add id to properties
+
+			$result = $this->_dbConn->putItem(
 				array(
-					 'TableName' => $table,
-					 'Item'      => $this->_dbConn->formatAttributes( $record )
+					 'TableName'              => $table,
+					 'Item'                   => $this->_dbConn->formatAttributes( $record ),
+					 'ReturnConsumedCapacity' => 'TOTAL'
 				)
 			);
 
-			$_out = Option::get( $_result, 'Attributes', array() );
+			// The result will always contain ConsumedCapacityUnits
+//		echo $result->getPath( 'ConsumedCapacity/CapacityUnits' ) . "\n";
 
-			return static::cleanRecord( $record, $fields, $_idField );
+			return array();
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to create item in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to create item in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $records
+	 * @param        $id_field
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecords( $table, $records, $fields = null, $extras = array() )
+	public function updateRecords( $table, $records, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -636,53 +622,38 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
-		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-		}
-
-		$_items = array();
-		foreach ( $records as $_record )
-		{
-			if ( !$this->_containsIdFields( $_record, $_idField ) )
-			{
-				throw new BadRequestException( "Identifying field(s) not found in record." );
-			}
-
-			// Add operation to list of batch operations.
-			$_items[] = array(
-				'PutRequest' => array(
-					'Item' => $this->_dbConn->formatAttributes( $_record )
-				)
-			);
-		}
-
 		try
 		{
-			$_result = $this->_dbConn->batchWriteItem(
-				array(
-					 'RequestItems' => array(
-						 $table => $_items,
-					 )
-				)
-			);
+			$_out = array();
+			foreach ( $records as $key => $record )
+			{
+				$_id = Option::get( $record, 'rowkey' );
+				if ( empty( $_id ) )
+				{
+					throw new BadRequestException( "No identifier 'RowKey' exist in record index '$key'." );
+				}
+			}
 
-			// todo check $_result['UnprocessedItems'] for 'PutRequest'
+			if ( empty( $fields ) || ( 0 === strcasecmp( 'RowKey', $fields ) ) )
+			{
+				return $_out;
+			}
 
-			return static::cleanRecords( $records, $fields, $_idField );
+			return $this->retrieveRecords( $table, $records, $id_field = '', $fields = '', $extras );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update items in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
+			if ( $rollback )
+			{
+			}
+			throw new \Exception( "Failed to update items in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $record
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
@@ -690,44 +661,35 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	 * @throws BadRequestException
 	 * @return array
 	 */
-	public function updateRecord( $table, $record, $fields = null, $extras = array() )
+	public function updateRecord( $table, $record, $id_field = '', $fields = '', $extras = array() )
 	{
-		if ( empty( $record ) || !is_array( $record ) )
+		if ( !isset( $record ) || empty( $record ) )
 		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
+			throw new BadRequestException( 'There are no fields in the record.' );
 		}
 
-		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
+		$_id = Option::get( $record, 'rowkey' );
+		if ( empty( $_id ) )
 		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+			throw new BadRequestException( 'No identifier exist in record.' );
 		}
-		if ( !$this->_containsIdFields( $record, $_idField ) )
-		{
-			throw new BadRequestException( "Identifying field(s) not found in record." );
-		}
-
 		try
 		{
-			// simple insert request
-			$_result = $this->_dbConn->putItem(
+			// add id to properties
+
+			$result = $this->_dbConn->putItem(
 				array(
-					 'TableName'    => $table,
-					 'Item'         => $this->_dbConn->formatAttributes( $record ),
-					 'ReturnValues' => ReturnValue::ALL_NEW
+					 'TableName'              => $table,
+					 'Item'                   => $this->_dbConn->formatAttributes( $record ),
+					 'ReturnConsumedCapacity' => 'TOTAL'
 				)
 			);
 
-			$_out = Option::get( $_result, 'Attributes', array() );
-
-			return static::cleanRecord( $record, $fields, $_idField );
+			return array();
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to update item in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -741,89 +703,78 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
+	public function updateRecordsByFilter( $table, $record, $filter = '', $fields = '', $extras = array() )
 	{
-		if ( empty( $record ) || !is_array( $record ) )
+		if ( !is_array( $record ) || empty( $record ) )
 		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
+			throw new BadRequestException( 'There are no fields in the record.' );
 		}
-
-		// slow, but workable for now, maybe faster than updating individuals
-		$_records = $this->retrieveRecordsByFilter( $table, $filter, '', $extras );
-		foreach ( $_records as $_ndx => $_record )
+		$table = $this->correctTableName( $table );
+		try
 		{
-			$_records[$_ndx] = array_merge( $_record, $record );
-		}
+			// parse filter
+			$rows = $this->_dbConn->updateItem( $table, $record, $filter );
 
-		return $this->updateRecords( $table, $_records, $fields, $extras );
+			$results = array();
+			if ( !empty( $fields ) )
+			{
+				$results = $this->retrieveRecordsByFilter( $table, $filter, $fields, $extras );
+			}
+
+			return $results;
+		}
+		catch ( \Exception $ex )
+		{
+			throw $ex;
+		}
 	}
 
 	/**
 	 * @param string $table
 	 * @param array  $record
 	 * @param string $id_list
+	 * @param string $id_field
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
+	public function updateRecordsByIds( $table, $record, $id_list, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
 			throw new BadRequestException( "No record fields were passed in the request." );
 		}
+		$table = $this->correctTableName( $table );
 
 		if ( empty( $id_list ) )
 		{
-			throw new BadRequestException( "Identifying values for id_field can not be empty for update request." );
+			throw new BadRequestException( "Identifying values for '$id_field' can not be empty for update request." );
 		}
 
-		if ( !is_array( $id_list ) )
-		{
-			$id_list = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
-		}
-		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
-		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-		}
-
-		$_out = array();
-		$_items = array();
-		foreach ( $id_list as $_id )
-		{
-			$record[$_idField[0]] = $_id;
-			// Add operation to list of batch operations.
-			$_items[] = array(
-				'PutRequest' => array(
-					'Item' => $this->_dbConn->formatAttributes( $record )
-				)
-			);
-			$_out[] = static::cleanRecord( $record, $fields, $_idField );
-		}
+		$ids = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
 
 		try
 		{
-			$_result = $this->_dbConn->batchWriteItem(
-				array(
-					 'RequestItems' => array(
-						 $table => $_items,
-					 )
-				)
-			);
+			$_out = array();
+			foreach ( $ids as $key => $_id )
+			{
+				if ( empty( $id ) )
+				{
+					throw new BadRequestException( "No identifier exist in identifier index $key." );
+				}
+			}
 
-			// todo check $_result['UnprocessedItems'] for 'PutRequest'
-
-			return $_out;
+			return $this->retrieveRecordsByIds( $table, $id_list, $id_field = '', $fields = '', $extras );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update items from '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
+			if ( $rollback )
+			{
+			}
+			throw new \Exception( "Failed to update items in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -831,13 +782,14 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	 * @param        $table
 	 * @param        $record
 	 * @param        $id
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecordById( $table, $record, $id, $fields = null, $extras = array() )
+	public function updateRecordById( $table, $record, $id, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
@@ -847,143 +799,48 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			throw new BadRequestException( "No identifier exist in record." );
 		}
-
-		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
-		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-		}
-
 		try
 		{
-			$record[$_idField[0]] = $id;
-			// simple insert request
-			$_result = $this->_dbConn->putItem(
-				array(
-					 'TableName'    => $table,
-					 'Item'         => $this->_dbConn->formatAttributes( $record ),
-					 'ReturnValues' => ReturnValue::ALL_NEW
-				)
-			);
-
-			$_out = Option::get( $_result, 'Attributes', array() );
-
-			return static::cleanRecord( $record, $fields, $_idField );
+			// get a new copy with properties
+			return $this->retrieveRecordById( $table, $id, '', $fields, $extras );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to update item in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $records
+	 * @param        $id_field
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecords( $table, $records, $fields = null, $extras = array() )
+	public function mergeRecords( $table, $records, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
-		if ( empty( $records ) || !is_array( $records ) )
-		{
-			throw new BadRequestException( 'There are no records in the request.' );
-		}
-
-		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
-		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-		}
-
-		$_out = array();
-		foreach ( $records as $_record )
-		{
-			if ( empty( $_record ) || !is_array( $_record ) )
-			{
-				throw new BadRequestException( 'There are no record fields in the request.' );
-			}
-
-			$_keys = static::_buildKey( $_idField, $_idType, $_record, true );
-			try
-			{
-				// simple insert request
-				$_result = $this->_dbConn->updateItem(
-					array(
-						 'TableName'        => $table,
-						 'Key'              => $_keys,
-						 'AttributeUpdates' => $this->_dbConn->formatAttributes( $_record, Attribute::FORMAT_UPDATE ),
-						 'ReturnValues'     => ReturnValue::ALL_NEW
-					)
-				);
-
-				$_temp = Option::get( $_result, 'Attributes', array() );
-
-				$_out[] = static::cleanRecord( static::_unformatAttributes( $_temp ), $fields, $_idField );
-			}
-			catch ( \Exception $ex )
-			{
-				throw new InternalServerErrorException( "Failed to merge item in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
-			}
-		}
-
-		return $_out;
+		// currently the same as update here
+		return $this->updateRecords( $table, $records, $id_field, $rollback, $fields, $extras );
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $record
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecord( $table, $record, $fields = null, $extras = array() )
+	public function mergeRecord( $table, $record, $id_field = '', $fields = '', $extras = array() )
 	{
-		if ( empty( $record ) || !is_array( $record ) )
-		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
-		}
-
-		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
-		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-		}
-
-		$_keys = static::_buildKey( $_idField, $_idType, $record, true );
-		try
-		{
-			// simple insert request
-			$_result = $this->_dbConn->updateItem(
-				array(
-					 'TableName'        => $table,
-					 'Key'              => $_keys,
-					 'AttributeUpdates' => $this->_dbConn->formatAttributes( $record, Attribute::FORMAT_UPDATE ),
-					 'ReturnValues'     => ReturnValue::ALL_NEW
-				)
-			);
-
-			$_out = Option::get( $_result, 'Attributes', array() );
-
-			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields, $_idField );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to merge item in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
-		}
+		// currently the same as update here
+		return $this->updateRecord( $table, $record, $id_field, $fields, $extras );
 	}
 
 	/**
@@ -996,154 +853,59 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
+	public function mergeRecordsByFilter( $table, $record, $filter = '', $fields = '', $extras = array() )
 	{
-		if ( empty( $record ) || !is_array( $record ) )
-		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
-		}
-
-		// slow, but workable for now, maybe faster than merging individuals
-		$_records = $this->retrieveRecordsByFilter( $table, $filter, '*', $extras );
-		foreach ( $_records as $_ndx => $_record )
-		{
-			$_records[$_ndx] = array_merge( $_record, $record );
-		}
-
-		return $this->updateRecords( $table, $_records, $fields, $extras );
+		// currently the same as update here
+		return $this->updateRecordsByFilter( $table, $record, $filter, $fields, $extras );
 	}
 
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $id_list
-	 * @param mixed  $fields
+	 * @param string $id_list
+	 * @param string $id_field
+	 * @param bool   $rollback
+	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
+	public function mergeRecordsByIds( $table, $record, $id_list, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
-		if ( empty( $record ) || !is_array( $record ) )
-		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
-		}
-
-		if ( empty( $id_list ) )
-		{
-			throw new BadRequestException( "Identifying field(s) values can not be empty." );
-		}
-
-		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
-		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-		}
-
-		if ( !is_array( $id_list ) )
-		{
-			$id_list = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
-		}
-		$_out = array();
-		$_updates = $this->_dbConn->formatAttributes( $record, Attribute::FORMAT_UPDATE );
-		foreach ( $id_list as $_id )
-		{
-			$_temp = array( $_idField[0] => $_id );
-			$_keys = static::_buildKey( $_idField, $_idType, $_temp );
-			try
-			{
-				// simple insert request
-				$_result = $this->_dbConn->updateItem(
-					array(
-						 'TableName'        => $table,
-						 'Key'              => $_keys,
-						 'AttributeUpdates' => $_updates,
-						 'ReturnValues'     => ReturnValue::ALL_NEW
-					)
-				);
-
-				$_temp = Option::get( $_result, 'Attributes', array() );
-
-				$_out[] = static::cleanRecord( static::_unformatAttributes( $_temp ), $fields, $_idField );
-			}
-			catch ( \Exception $ex )
-			{
-				throw new InternalServerErrorException( "Failed to merge item in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
-			}
-		}
-
-		return $_out;
+		// currently the same as update here
+		return $this->updateRecordsByIds( $table, $record, $id_list, $id_field, $rollback, $fields, $extras );
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $record
 	 * @param        $id
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordById( $table, $record, $id, $fields = null, $extras = array() )
+	public function mergeRecordById( $table, $record, $id, $id_field = '', $fields = '', $extras = array() )
 	{
-		if ( empty( $record ) || !is_array( $record ) )
-		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
-		}
-
-		if ( empty( $id ) )
-		{
-			throw new BadRequestException( "Identifying field(s) values can not be empty." );
-		}
-
-		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
-		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-		}
-
-		$_temp = array( $_idField[0] => $id );
-		$_keys = static::_buildKey( $_idField, $_idType, $_temp );
-		try
-		{
-			// simple insert request
-			$_result = $this->_dbConn->updateItem(
-				array(
-					 'TableName'        => $table,
-					 'Key'              => $_keys,
-					 'AttributeUpdates' => $this->_dbConn->formatAttributes( $record, Attribute::FORMAT_UPDATE ),
-					 'ReturnValues'     => ReturnValue::ALL_NEW
-				)
-			);
-
-			$_out = Option::get( $_result, 'Attributes', array() );
-
-			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields, $_idField );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to merge item in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
-		}
+		// currently the same as update here
+		return $this->updateRecordById( $table, $record, $id, $id_field, $fields, $extras );
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $records
+	 * @param        $id_field
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array|string
 	 */
-	public function deleteRecords( $table, $records, $fields = null, $extras = array() )
+	public function deleteRecords( $table, $records, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( !is_array( $records ) || empty( $records ) )
 		{
@@ -1156,94 +918,61 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
-		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-		}
-
-		$_out = array();
-		if ( static::_requireMoreFields( $fields, $_idField ) )
-		{
-			$_out = $this->retrieveRecords( $table, $records, $fields, $extras );
-		}
-		$_items = array();
-		$_outIds = array();
-		foreach ( $records as $_record )
-		{
-			// Add operation to list of batch operations.
-			$_items[] = array(
-				'DeleteRequest' => array(
-					'Key' => static::_buildKey( $_idField, $_idType, $_record )
-				)
-			);
-			$_outIds[] = static::recordsAsIds( $_record, $_idField );
-		}
-
 		try
 		{
-			$_result = $this->_dbConn->batchWriteItem(
-				array(
-					 'RequestItems' => array(
-						 $table => $_items,
-					 )
-				)
-			);
+			$_outMore = array();
+			if ( !( empty( $fields ) || ( 0 === strcasecmp( 'RowKey', $fields ) ) ) )
+			{
+				$_outMore = $this->retrieveRecords( $table, $records, $id_field = '', $fields = '', $extras );
+			}
+			$_out = array();
+			foreach ( $records as $key => $record )
+			{
+			}
 
-			// todo check $_result['UnprocessedItems'] for 'DeleteRequest'
-
-			return ( empty( $_out ) ) ? $_outIds : $_out;
+			return $_out;
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to delete items from '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
+			if ( $rollback )
+			{
+			}
+			throw new \Exception( "Failed to delete items from '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $record
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecord( $table, $record, $fields = null, $extras = array() )
+	public function deleteRecord( $table, $record, $id_field = '', $fields = '', $extras = array() )
 	{
-		if ( empty( $record ) || !is_array( $record ) )
+		if ( !isset( $record ) || empty( $record ) )
 		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
+			throw new BadRequestException( 'There are no fields in the record.' );
 		}
 
-		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
+		$_id = Option::get( $record, 'rowkey' );
+		if ( empty( $_id ) )
 		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+			throw new BadRequestException( 'No identifier exist in record.' );
 		}
-		$_keys = static::_buildKey( $_idField, $_idType, $record );
-		$_scanProperties = array(
-			'TableName'    => $table,
-			'Key'          => $_keys,
-			'ReturnValues' => ReturnValue::ALL_OLD,
-		);
-		try
-		{
-			$_result = $this->_dbConn->deleteItem( $_scanProperties );
-			$_out = Option::get( $_result, 'Attributes', array() );
 
-			// Grab value from the result object like an array
-			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields, $_idField );
-		}
-		catch ( \Exception $ex )
+		$result = array( 'RowKey' => $_id );
+		if ( empty( $fields ) || ( 0 === strcasecmp( 'RowKey', $fields ) ) )
 		{
-			throw new InternalServerErrorException( "Failed to delete item in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
+			$result = $this->retrieveRecordById( $table, $_id, $id_field, $fields, $extras );
 		}
+
+		$this->_dbConn->deleteEntity( $table, $this->_partitionKey, $_id );
+
+		return $result;
 	}
 
 	/**
@@ -1255,128 +984,132 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecordsByFilter( $table, $filter, $fields = null, $extras = array() )
+	public function deleteRecordsByFilter( $table, $filter, $fields = '', $extras = array() )
 	{
 		if ( empty( $filter ) )
 		{
 			throw new BadRequestException( "Filter for delete request can not be empty." );
 		}
+		$table = $this->correctTableName( $table );
+		try
+		{
+			$results = array();
+			// get the returnable fields first, then issue delete
+			if ( !empty( $fields ) )
+			{
+				$results = $this->retrieveRecordsByFilter( $table, $filter, $fields, $extras );
+			}
 
-		$_records = $this->retrieveRecordsByFilter( $table, $filter, '', $extras );
+			// parse filter
+			$id = $this->_dbConn->deleteItem( $table, $filter );
 
-		return $this->deleteRecords( $table, $_records, $fields, $extras );
+			return $results;
+		}
+		catch ( \Exception $ex )
+		{
+			throw $ex;
+		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $id_list
+	 * @param        $id_field
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
+	public function deleteRecordsByIds( $table, $id_list, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
+		$table = $this->correctTableName( $table );
+
 		if ( empty( $id_list ) )
 		{
-			throw new BadRequestException( "Identifying values for id_field can not be empty for update request." );
+			throw new BadRequestException( "Identifying values for '$id_field' can not be empty for update request." );
 		}
 
-		if ( !is_array( $id_list ) )
-		{
-			$id_list = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
-		}
-		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
-		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-		}
+		$ids = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
 
-		$_out = array();
-		if ( static::_requireMoreFields( $fields, $_idField ) )
+		// get the returnable fields first, then issue delete
+		$_outMore = array();
+		if ( !( empty( $fields ) || ( 0 === strcasecmp( 'RowKey', $fields ) ) ) )
 		{
-			$_out = $this->retrieveRecordsByIds( $table, $id_list, $fields, $extras );
-		}
-		$_items = array();
-		$_outIds = array();
-		foreach ( $id_list as $_id )
-		{
-			$_record = array( $_idField[0] => $_id );
-			// Add operation to list of batch operations.
-			$_items[] = array(
-				'DeleteRequest' => array(
-					'Key' => static::_buildKey( $_idField, $_idType, $_record )
-				)
-			);
-			$_outIds[] = $_record;
+			$_outMore = $this->retrieveRecordsByIds( $table, $id_list, $id_field = '', $fields = '', $extras );
 		}
 
 		try
 		{
-			$_result = $this->_dbConn->batchWriteItem(
-				array(
-					 'RequestItems' => array(
-						 $table => $_items,
-					 )
-				)
-			);
+			// Create list of batch operation.
+			$operations = new BatchOperations();
 
-			// todo check $_result['UnprocessedItems'] for 'DeleteRequest'
+			$_out = array();
+			foreach ( $ids as $key => $id )
+			{
+				if ( empty( $id ) )
+				{
+					throw new Exception( "No identifier exist in identifier number $key." );
+				}
+				$_out[] = array( 'RowKey' => $id );
 
-			return ( empty( $_out ) ) ? $_outIds : $_out;
+				// Add operation to list of batch operations.
+				$operations->addDeleteEntity( $table, $this->_partitionKey, $id );
+			}
+
+			/** @var BatchResult $results */
+			$results = $this->_dbConn->batch( $operations );
+
+			foreach ( $results->getEntries() as $result )
+			{
+				// not much good in here
+			}
+
+			if ( !empty( $_outMore ) )
+			{
+				return $_outMore;
+			}
+
+			return $_out;
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to delete items from '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
+			if ( $rollback )
+			{
+			}
+			throw new \Exception( "Failed to delete items from '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $id
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecordById( $table, $id, $fields = null, $extras = array() )
+	public function deleteRecordById( $table, $id, $id_field = '', $fields = '', $extras = array() )
 	{
-		if ( empty( $id ) )
-		{
-			throw new BadRequestException( "Identifying field(s) values can not be empty." );
-		}
-
-		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
-		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-		}
-		$_record = array( $_idField[0] => $id );
-		$_keys = static::_buildKey( $_idField, $_idType, $_record );
-		$_scanProperties = array(
-			'TableName'    => $table,
-			'Key'          => $_keys,
-			'ReturnValues' => ReturnValue::ALL_OLD,
-		);
 		try
 		{
-			$_result = $this->_dbConn->deleteItem( $_scanProperties );
-			$_out = Option::get( $_result, 'Attributes', array() );
+			$this->_dbConn->deleteItem(
+				array(
+					 'TableName' => $table,
+					 'Key'       => array(
+						 'id' => array( 'N' => $id )
+					 )
+				)
+			);
 
-			// Grab value from the result object like an array
-			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields, $_idField );
+			return array();
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to delete item '$table/$id' on DynamoDb Tables service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to delete item from '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -1389,54 +1122,61 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecordsByFilter( $table, $filter = null, $fields = null, $extras = array() )
+	public function retrieveRecordsByFilter( $table, $filter = '', $fields = '', $extras = array() )
 	{
-		$this->checkConnection();
 		$table = $this->correctTableName( $table );
 
-		$_scanProperties = array( 'TableName' => $table );
-		$fields = static::_buildAttributesToGet( $fields );
-		if ( !empty( $fields ) )
-		{
-			$_scanProperties['AttributesToGet'] = $fields;
-		}
-		$_limit = Option::get( $extras, 'limit' );
-		if ( $_limit > 0 )
-		{
-			$_scanProperties['Limit'] = $_limit;
-		}
-		if ( !empty( $filter ) )
-		{
-			$_parsedFilter = static::_buildFilterArray( $filter );
-			$_scanProperties['ScanFilter'] = $_parsedFilter;
-		}
+		$this->checkConnection();
+
 		try
 		{
-			$_result = $this->_dbConn->scan( $_scanProperties );
-			$_out = array();
-			foreach ( $_result['Items'] as $_item )
+			$iterator = $this->_dbConn->getIterator(
+				'Scan',
+				array(
+					 'TableName'  => $table,
+					 'ScanFilter' => array(
+						 'error' => array(
+							 'AttributeValueList' => array(
+								 array( 'S' => 'overflow' )
+							 ),
+							 'ComparisonOperator' => 'CONTAINS'
+						 ),
+						 'time'  => array(
+							 'AttributeValueList' => array(
+								 array( 'N' => strtotime( '-15 minutes' ) )
+							 ),
+							 'ComparisonOperator' => 'GT'
+						 )
+					 )
+				)
+			);
+
+			// Each item will contain the attributes we added
+			foreach ( $iterator as $item )
 			{
-				$_out[] = static::_unformatAttributes( $_item );
+				// Grab the time number value
+//				echo $item['time']['N'] . "\n";
 			}
 
-			return $_out;
+			return $iterator->toArray();
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to filter items from '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to filter items from '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param string $table
 	 * @param array  $records
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecords( $table, $records, $fields = null, $extras = array() )
+	public function retrieveRecords( $table, $records, $id_field = 'id', $fields = '', $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -1449,649 +1189,244 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
-		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-		}
-		$_keys = array();
-		foreach ( $records as $_record )
-		{
-			$_keys[] = static::_buildKey(
-				$_idField,
-				$_idType,
-				$_record
-			);
-		}
-		$_scanProperties = array(
-			'Keys'           => $_keys,
-			'ConsistentRead' => true,
-		);
-		$fields = static::_buildAttributesToGet( $fields, $_idField );
-		if ( !empty( $fields ) )
-		{
-			$_scanProperties['AttributesToGet'] = $fields;
-		}
-
 		try
 		{
-			// Get multiple items by key in a BatchGetItem request
-			$_result = $this->_dbConn->batchGetItem(
-				array(
-					 'RequestItems' => array(
-						 $table => $_scanProperties
-					 )
-				)
-			);
-
-			$_items = $_result->getPath( "Responses/{$table}" );
 			$_out = array();
-			foreach ( $_items as $_item )
+			foreach ( $records as $key => $record )
 			{
-				$_out[] = static::_unformatAttributes( $_item );
+				$_id = Option::get( $record, 'rowkey' );
+				if ( empty( $_id ) )
+				{
+					throw new BadRequestException( "Identifying field 'RowKey' can not be empty for retrieve record index '$key' request." );
+				}
+				$ids[] = $_id;
+				$_partKey = Option::get( $record, 'partitionkey' );
+				if ( empty( $_partKey ) )
+				{
+					$_partKey = $this->_partitionKey;
+				}
+				/** @var GetEntityResult $result */
+				$result = $this->_dbConn->getEntity( $table, $_partKey, $_id );
+				$entity = $result->getEntity();
+
+				$_out[] = static::parseEntityToRecord( $entity, array(), $fields );
 			}
 
 			return $_out;
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to get items from '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to get items from '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $record
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecord( $table, $record, $fields = null, $extras = array() )
+	public function retrieveRecord( $table, $record, $id_field = 'id', $fields = '', $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
 			throw new BadRequestException( 'There are no fields in the record.' );
 		}
-
 		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
+		$_id = Option::get( $record, 'rowkey' );
+		if ( empty( $_id ) )
 		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+			throw new BadRequestException( "Identifying field 'RowKey' can not be empty for retrieve record request." );
 		}
-		$_keys = static::_buildKey(
-			$_idField,
-			$_idType,
-			$record
-		);
-		$_scanProperties = array(
-			'TableName'      => $table,
-			'Key'            => $_keys,
-			'ConsistentRead' => true,
-		);
-		$fields = static::_buildAttributesToGet( $fields, $_idField );
-		if ( !empty( $fields ) )
+		$_partKey = Option::get( $record, 'partitionkey' );
+		if ( empty( $_partKey ) )
 		{
-			$_scanProperties['AttributesToGet'] = $fields;
+			$_partKey = $this->_partitionKey;
 		}
-
 		try
 		{
-			$_result = $this->_dbConn->getItem( $_scanProperties );
+			/** @var GetEntityResult $result */
+			$result = $this->_dbConn->getEntity( $table, $_partKey, $_id );
+			$entity = $result->getEntity();
 
-			// Grab value from the result object like an array
-			return static::_unformatAttributes( $_result['Item'] );
+			return static::parseEntityToRecord( $entity, array(), $fields );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to get item from table '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to get item '$table/$_id' on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param string $table
 	 * @param string $id_list - comma delimited list of ids
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
+	public function retrieveRecordsByIds( $table, $id_list, $id_field = 'id', $fields = '', $extras = array() )
 	{
 		if ( empty( $id_list ) )
 		{
 			return array();
 		}
-		if ( !is_array( $id_list ) )
-		{
-			$id_list = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
-		}
+		$ids = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
 		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
-		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-		}
-		$_keys = array();
-		foreach ( $id_list as $id )
-		{
-			$_record = array( $_idField[0] => $id );
-			$_keys[] = static::_buildKey( $_idField, $_idType, $_record );
-		}
-		$_scanProperties = array(
-			'Keys'           => $_keys,
-			'ConsistentRead' => true,
-		);
-		$fields = static::_buildAttributesToGet( $fields, $_idField );
-		if ( !empty( $fields ) )
-		{
-			$_scanProperties['AttributesToGet'] = $fields;
-		}
-
 		try
 		{
+			$_keys = array();
+
+			// Build the array for the "Keys" parameter
+			foreach ( $ids as $id )
+			{
+				$_keys[] = array(
+					'id' => array( 'N' => $id )
+				);
+			}
+
 			// Get multiple items by key in a BatchGetItem request
-			$_result = $this->_dbConn->batchGetItem(
+			$result = $this->_dbConn->batchGetItem(
 				array(
 					 'RequestItems' => array(
-						 $table => $_scanProperties
+						 $table => array(
+							 'Keys'           => $_keys,
+							 'ConsistentRead' => true
+						 )
 					 )
 				)
 			);
 
-			$_items = $_result->getPath( "Responses/{$table}" );
+			$_items = $result->getPath( "Responses/{$table}" );
 			$_out = array();
 			foreach ( $_items as $_item )
 			{
-				$_out[] = static::_unformatAttributes( $_item );
+				$_out[] = $_item['Item'];
 			}
 
 			return $_out;
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to get items from '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to get items from '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $id
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecordById( $table, $id, $fields = null, $extras = array() )
+	public function retrieveRecordById( $table, $id, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( empty( $id ) )
 		{
-			throw new BadRequestException( "Identifying field(s) values can not be empty." );
+			return array();
 		}
-
 		$table = $this->correctTableName( $table );
-		$_info = $this->_getKeyInfo( $table, $extras );
-		$_idField = $_info['fields'];
-		$_idType = $_info['types'];
-		if ( empty( $_idField ) )
-		{
-			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-		}
-		$_record = array( $_idField[0] => $id );
-		$_keys = static::_buildKey( $_idField, $_idType, $_record );
-		$_scanProperties = array(
-			'TableName'      => $table,
-			'Key'            => $_keys,
-			'ConsistentRead' => true,
-		);
-		$fields = static::_buildAttributesToGet( $fields, $_idField );
-		if ( !empty( $fields ) )
-		{
-			$_scanProperties['AttributesToGet'] = $fields;
-		}
-
 		try
 		{
-			$_result = $this->_dbConn->getItem( $_scanProperties );
+			$result = $this->_dbConn->getItem(
+				array(
+					 'ConsistentRead' => true,
+					 'TableName'      => $table,
+					 'Key'            => array(
+						 'id' => array( 'N' => $id )
+					 )
+				)
+			);
 
 			// Grab value from the result object like an array
-			return static::_unformatAttributes( $_result['Item'] );
+			return $result['Item'];
+//		echo $result->getPath( 'Item/id/N' ) . "\n";
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to get item '$table/$id' on DynamoDb Tables service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to get item '$table/$id' on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
-	}
-
-	protected static function _unformatValue( $value )
-	{
-		// represented as arrays, though there is only ever one item present
-		foreach ( $value as $type => $actual )
-		{
-			switch ( $type )
-			{
-				case Type::S:
-				case Type::B:
-					return $actual;
-				case Type::N:
-					if ( intval( $actual ) == $actual )
-					{
-						return intval( $actual );
-					}
-					else
-					{
-						return floatval( $actual );
-					}
-				case Type::SS:
-				case Type::BS:
-					return $actual;
-				case Type::NS:
-					$_out = array();
-					foreach ($actual as $_item)
-					{
-						if ( intval( $_item ) == $_item )
-						{
-							$_out[] = intval( $_item );
-						}
-						else
-						{
-							$_out[] = floatval( $_item );
-						}
-					}
-
-					return $_out;
-			}
-		}
-
-		return $value;
 	}
 
 	/**
-	 * @param array $record
+	 * @param array       $record
+	 * @param null|Entity $entity
+	 * @param array       $exclude List of keys to exclude from adding to Entity
 	 *
-	 * @return array
+	 * @return Entity
 	 */
-	protected static function _unformatAttributes( $record )
+	protected static function parseRecordToEntity( $record = array(), $entity = null, $exclude = array() )
 	{
-		return array_map(
-			array( 'DreamFactory\\Platform\\Services\\AwsDynamoDbSvc', '_unformatValue' ),
-			$record
-		);
-	}
-
-	protected static function _buildAttributesToGet( $fields = null, $id_fields = null )
-	{
-		if ( '*' == $fields )
+		if ( empty( $entity ) )
 		{
-			return null;
+			$entity = new Entity();
 		}
-		if ( empty( $fields ) )
+		foreach ( $record as $key => $value )
 		{
-			if ( empty( $id_fields ) )
+			if ( false === array_search( $key, $exclude ) )
 			{
-				return null;
-			}
-			if ( !is_array( $id_fields ) )
-			{
-				$id_fields = array_map( 'trim', explode( ',', trim( $id_fields, ',' ) ) );
-			}
-
-			return $id_fields;
-		}
-
-		if ( !is_array( $fields ) )
-		{
-			$fields = array_map( 'trim', explode( ',', trim( $fields, ',' ) ) );
-		}
-
-		return $fields;
-	}
-
-	protected static function _buildKey( $fields, $types, &$record, $remove = false )
-	{
-		$_keys = array();
-		foreach ( $fields as $_ndx => $_field )
-		{
-			$_value = Option::get( $record, $_field, null, $remove );
-			if ( empty( $_value ) )
-			{
-				throw new BadRequestException( "Identifying field(s) not found in record." );
-			}
-			switch ( $types[$_ndx] )
-			{
-				case Type::N:
-					$_value = array( Type::N => strval( $_value ) );
-					break;
-				default:
-					$_value = array( Type::S => $_value );
-			}
-			$_keys[$_field] = $_value;
-		}
-
-		return $_keys;
-	}
-
-	/**
-	 * @param string|array $filter Filter for querying records by
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
-	 */
-	protected static function _buildFilterArray( $filter )
-	{
-		if ( empty( $filter ) )
-		{
-			return array();
-		}
-
-		if ( is_array( $filter ) )
-		{
-			return $filter; // assume they know what they are doing
-		}
-
-		$_search = array( ' or ', ' and ', ' nor ' );
-		$_replace = array( ' || ', ' && ', ' NOR ' );
-		$filter = trim( str_ireplace( $_search, $_replace, $filter ) );
-
-		// handle logical operators first
-		$_ops = array_map( 'trim', explode( ' || ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			$_parts = array();
-			foreach ( $_ops as $_op )
-			{
-				$_parts[] = static::_buildFilterArray( $_op );
-			}
-
-			return array( 'split' => $_parts );
-		}
-
-		$_ops = array_map( 'trim', explode( ' && ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			$_parts = array();
-			foreach ( $_ops as $_op )
-			{
-				$_parts[] = static::_buildFilterArray( $_op );
-			}
-
-			return $_parts;
-		}
-
-		$_ops = array_map( 'trim', explode( ' NOR ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			throw new BadRequestException( ' NOR logical comparison not currently supported on DynamoDb.' );
-		}
-
-		// handle negation operator, i.e. starts with NOT?
-		if ( 0 == substr_compare( $filter, 'not ', 0, 4, true ) )
-		{
-			throw new BadRequestException( ' NOT logical comparison not currently supported on DynamoDb.' );
-		}
-
-		// the rest should be comparison operators
-		$_search = array( ' eq ', ' ne ', ' gte ', ' lte ', ' gt ', ' lt ', ' in ', ' between ', ' begins_with ', ' contains ', ' not_contains ', ' like ' );
-		$_replace = array( ' = ', ' != ', ' >= ', ' <= ', ' > ', ' < ', ' IN ', ' BETWEEN ', ' BEGINS_WITH ', ' CONTAINS ', ' NOT_CONTAINS ', ' LIKE ' );
-		$filter = trim( str_ireplace( $_search, $_replace, $filter ) );
-
-		$_ops = array_map( 'trim', explode( ' = ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			if ( 0 == strcasecmp( 'null', $_ops[1] ) )
-			{
-				return array(
-					$_ops[0] => array(
-						'ComparisonOperator' => ComparisonOperator::NULL
-					)
-				);
-			}
-
-			$_val = static::_determineValue( $_ops[1] );
-
-			return array(
-				$_ops[0] => array(
-					'AttributeValueList' => $_val,
-					'ComparisonOperator' => ComparisonOperator::EQ
-				)
-			);
-		}
-
-		$_ops = array_map( 'trim', explode( ' != ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			if ( 0 == strcasecmp( 'null', $_ops[1] ) )
-			{
-				return array(
-					$_ops[0] => array(
-						'ComparisonOperator' => ComparisonOperator::NOT_NULL
-					)
-				);
-			}
-
-			$_val = static::_determineValue( $_ops[1] );
-
-			return array(
-				$_ops[0] => array(
-					'AttributeValueList' => $_val,
-					'ComparisonOperator' => ComparisonOperator::NE
-				)
-			);
-		}
-
-		$_ops = array_map( 'trim', explode( ' >= ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			$_val = static::_determineValue( $_ops[1] );
-
-			return array(
-				$_ops[0] => array(
-					'AttributeValueList' => $_val,
-					'ComparisonOperator' => ComparisonOperator::GE
-				)
-			);
-		}
-
-		$_ops = array_map( 'trim', explode( ' <= ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			$_val = static::_determineValue( $_ops[1] );
-
-			return array(
-				$_ops[0] => array(
-					'AttributeValueList' => $_val,
-					'ComparisonOperator' => ComparisonOperator::LE
-				)
-			);
-		}
-
-		$_ops = array_map( 'trim', explode( ' > ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			$_val = static::_determineValue( $_ops[1] );
-
-			return array(
-				$_ops[0] => array(
-					'AttributeValueList' => $_val,
-					'ComparisonOperator' => ComparisonOperator::GT
-				)
-			);
-		}
-
-		$_ops = array_map( 'trim', explode( ' < ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			$_val = static::_determineValue( $_ops[1] );
-
-			return array(
-				$_ops[0] => array(
-					'AttributeValueList' => $_val,
-					'ComparisonOperator' => ComparisonOperator::LT
-				)
-			);
-		}
-
-		$_ops = array_map( 'trim', explode( ' IN ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			$_val = static::_determineValue( $_ops[1], true );
-
-			return array(
-				$_ops[0] => array(
-					'AttributeValueList' => $_val,
-					'ComparisonOperator' => ComparisonOperator::IN
-				)
-			);
-		}
-
-		$_ops = array_map( 'trim', explode( ' BETWEEN ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			$_val = static::_determineValue( $_ops[1], true );
-
-			return array(
-				$_ops[0] => array(
-					'AttributeValueList' => $_val,
-					'ComparisonOperator' => ComparisonOperator::BETWEEN
-				)
-			);
-		}
-
-		$_ops = array_map( 'trim', explode( ' BEGINS_WITH ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			$_val = static::_determineValue( $_ops[1] );
-
-			return array(
-				$_ops[0] => array(
-					'AttributeValueList' => $_val,
-					'ComparisonOperator' => ComparisonOperator::BEGINS_WITH
-				)
-			);
-		}
-
-		$_ops = array_map( 'trim', explode( ' CONTAINS ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			$_val = static::_determineValue( $_ops[1] );
-
-			return array(
-				$_ops[0] => array(
-					'AttributeValueList' => $_val,
-					'ComparisonOperator' => ComparisonOperator::CONTAINS
-				)
-			);
-		}
-
-		$_ops = array_map( 'trim', explode( ' NOT_CONTAINS ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			$_val = static::_determineValue( $_ops[1] );
-
-			return array(
-				$_ops[0] => array(
-					'AttributeValueList' => $_val,
-					'ComparisonOperator' => ComparisonOperator::NOT_CONTAINS
-				)
-			);
-		}
-
-		$_ops = array_map( 'trim', explode( ' LIKE ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-//			WHERE name LIKE "%Joe%"	use CONTAINS "Joe"
-//			WHERE name LIKE "Joe%"	use BEGINS_WITH "Joe"
-//			WHERE name LIKE "%Joe"	not supported
-			$_val = $_ops[1];
-			$_type = Type::S;
-			if ( trim( $_val, "'\"" ) === $_val )
-			{
-				$_type = Type::N;
-			}
-
-			$_val = trim( $_val, "'\"" );
-			if ( '%' == $_val[strlen( $_val ) - 1] )
-			{
-				if ( '%' == $_val[0] )
+//				$entity->addProperty( $key, EdmType::STRING, $value );
+				if ( $entity->getProperty( $key ) )
 				{
-					return array(
-						$_ops[0] => array(
-							'AttributeValueList' => array( $_type => trim( $_val, '%' ) ),
-							'ComparisonOperator' => ComparisonOperator::CONTAINS
-						)
-					);
+					$entity->setPropertyValue( $key, $value );
 				}
 				else
 				{
-					throw new BadRequestException( 'ENDS_WITH currently not supported in DynamoDb.' );
+					$entity->addProperty( $key, null, $value );
+				}
+			}
+		}
+
+		return $entity;
+	}
+
+	/**
+	 * @param null|Entity  $entity
+	 * @param array        $record
+	 * @param string|array $include List of keys to include in the output record
+	 *
+	 * @return array
+	 */
+	protected static function parseEntityToRecord( $entity = null, $record = array(), $include = '*' )
+	{
+		if ( !empty( $entity ) )
+		{
+			if ( empty( $include ) )
+			{
+				$record['RowKey'] = $entity->getRowKey();
+			}
+			elseif ( '*' == $include )
+			{
+				// return all properties
+				/** @var Property[] $properties */
+				$properties = $entity->getProperties();
+				foreach ( $properties as $key => $property )
+				{
+					$record[$key] = $property->getValue();
 				}
 			}
 			else
 			{
-				if ( '%' == $_val[0] )
+				if ( !is_array( $include ) )
 				{
-					return array(
-						$_ops[0] => array(
-							'AttributeValueList' => array( $_type => trim( $_val, '%' ) ),
-							'ComparisonOperator' => ComparisonOperator::BEGINS_WITH
-						)
-					);
+					$include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
 				}
-				else
+				foreach ( $include as $key )
 				{
-					return array(
-						$_ops[0] => array(
-							'AttributeValueList' => array( $_type => trim( $_val, '%' ) ),
-							'ComparisonOperator' => ComparisonOperator::CONTAINS
-						)
-					);
+					$record[$key] = $entity->getPropertyValue( $key );
 				}
 			}
 		}
 
-		return $filter;
-	}
-
-	/**
-	 * @param string $value
-	 * @param bool   $multiple
-	 *
-	 * @return bool|float|int|string
-	 */
-	private static function _determineValue( $value, $multiple = false )
-	{
-		if ( trim( $value, "'\"" ) !== $value )
-		{
-			return array( array( Type::S => trim( $value, "'\"" ) ) ); // meant to be a string
-		}
-
-		if ( is_numeric( $value ) )
-		{
-			$value = ( $value == strval( intval( $value ) ) ) ? intval( $value ) : floatval( $value );
-
-			return array( array( Type::N => $value ) );
-		}
-
-		if ( 0 == strcasecmp( $value, 'true' ) )
-		{
-			return array( array( Type::N => 1 ) );
-		}
-
-		if ( 0 == strcasecmp( $value, 'false' ) )
-		{
-			return array( array( Type::N => 0 ) );
-		}
-
-		return $value;
+		return $record;
 	}
 }

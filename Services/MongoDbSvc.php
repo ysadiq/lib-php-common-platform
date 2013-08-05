@@ -19,12 +19,11 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Common\Utility\DataFormat;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Common\Utility\DataFormat;
 
 /**
  * MongoDbSvc.php
@@ -51,6 +50,10 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @var \MongoDB
 	 */
 	protected $_dbConn = null;
+	/**
+	 * @var boolean
+	 */
+	protected $_defaultSimpleFormat = true;
 
 	//*************************************************************************
 	//	Methods
@@ -69,38 +72,26 @@ class MongoDbSvc extends NoSqlDbSvc
 		parent::__construct( $config );
 
 		$_credentials = Option::get( $config, 'credentials' );
-		$_dsn = Option::get( $_credentials, 'dsn', '' );
 		$_db = Option::get( $_credentials, 'db' );
+		if ( empty( $_db ) )
+		{
+			throw new \Exception( "No MongoDb database selected in configuration." );
+		}
+
+		$_dsn = Option::get( $_credentials, 'dsn', '' );
 		if ( empty( $_dsn ) )
 		{
 			$_dsn = 'mongodb://localhost:27017';
-			if ( empty( $_db ) )
-			{
-				throw new InternalServerErrorException( "No MongoDb database selected in configuration." );
-			}
 		}
 		else
 		{
-			if ( 0 != substr_compare( $_dsn, 'mongodb://', 0, 10, true ) )
+			if ( 0 == substr_compare( $_dsn, 'mongodb://', 0, 10, true ) )
 			{
 				$_dsn = 'mongodb://' . $_dsn;
 			}
 		}
 
-		$_options = array();
-		if ( !empty( $_db ) )
-		{
-			$_options['db'] = $_db;
-		}
-		else
-		{
-			$_db = trim( strstr( substr( $_dsn, strlen( 'mongodb://' ) ), '/' ), '/' );
-			if ( empty( $_db ) )
-			{
-				throw new InternalServerErrorException( "No MongoDb database selected in configuration." );
-			}
-		}
-
+		$_options = array( 'db' => $_db );
 		$_username = Option::get( $_credentials, 'user' );
 		if ( !empty( $_username ) )
 		{
@@ -119,7 +110,7 @@ class MongoDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Unexpected MongoDb Service Exception:\n{$ex->getMessage()}" );
+			throw new \Exception( "Unexpected MongoDb Service Exception:\n{$ex->getMessage()}" );
 		}
 	}
 
@@ -145,7 +136,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	{
 		if ( !isset( $this->_dbConn ) )
 		{
-			throw new InternalServerErrorException( 'Database connection has not been initialized.' );
+			throw new \Exception( 'Database connection has not been initialized.' );
 		}
 	}
 
@@ -175,30 +166,16 @@ class MongoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param null|array $post_data
-	 *
 	 * @return array
 	 */
-	protected function _gatherExtrasFromRequest( $post_data = null )
+	protected function _gatherExtrasFromRequest()
 	{
-		$_extras = parent::_gatherExtrasFromRequest( $post_data );
+		$_extras = parent::_gatherExtrasFromRequest();
 
 		return $_extras;
 	}
 
 	// REST service implementation
-
-	protected function _getCollectionArray()
-	{
-		try
-		{
-			return $this->_dbConn->getCollectionNames();
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to list collections of MongoDb service.\n" . $ex->getMessage() );
-		}
-	}
 
 	/**
 	 * @throws \Exception
@@ -206,14 +183,16 @@ class MongoDbSvc extends NoSqlDbSvc
 	 */
 	protected function _listResources()
 	{
-		$_out = array();
-		$_result = $this->_getCollectionArray();
-		foreach ( $_result as $_table )
+		try
 		{
-			$_out[] = array( 'name' => $_table );
-		}
+			$_out = $this->_dbConn->getCollectionNames();
 
-		return array( 'resource' => $_out );
+			return array( 'resource' => $_out );
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Failed to list containers of MongoDb service.\n" . $ex->getMessage() );
+		}
 	}
 
 	/**
@@ -225,32 +204,25 @@ class MongoDbSvc extends NoSqlDbSvc
 	 */
 	public function getTables( $tables = array() )
 	{
-		if ( empty( $tables ) )
+		try
 		{
-			$tables = $this->_getCollectionArray();
-		}
-		else
-		{
-			if ( !is_array( $tables ) )
+			if ( empty( $tables ) )
 			{
-				$tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
+				$tables = $this->_dbConn->getCollectionNames();
 			}
-		}
 
-		$_out = array();
-		foreach ( $tables as $table )
-		{
-			try
+			$_out = array();
+			foreach ( $tables as $table )
 			{
 				$_out[] = $this->getTable( $table );
 			}
-			catch ( \Exception $ex )
-			{
-				throw new InternalServerErrorException( "Failed to list containers of MongoDb service.\n" . $ex->getMessage() );
-			}
-		}
 
-		return $_out;
+			return $_out;
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Failed to list containers of MongoDb service.\n" . $ex->getMessage() );
+		}
 	}
 
 	/**
@@ -271,53 +243,101 @@ class MongoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param array $properties
+	 * @param array $tables
 	 *
 	 * @return array
 	 * @throws \Exception
 	 */
-	public function createTable( $properties = array() )
+	public function createTables( $tables = array() )
 	{
-		$_name = Option::get( $properties, 'name' );
-		if ( empty( $_name ) )
-		{
-			throw new BadRequestException( "No 'name' field in data." );
-		}
-
 		try
 		{
-			$_result = $this->_dbConn->createCollection( $_name );
-			$_out = array( 'name' => $_result->getName() );
-			$_out['indexes'] = $_result->getIndexInfo();
+			$_out = array();
+			foreach ( $tables as $table )
+			{
+				$_name = Option::get( $table, 'name' );
+				if ( empty( $_name ) )
+				{
+					throw new \Exception( "No 'name' field in data." );
+				}
+				$_out[] = $this->createTable( $_name, $table );
+			}
 
 			return $_out;
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to create a container on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to create containers on MongoDb service.\n" . $ex->getMessage() );
+		}
+	}
+
+	/**
+	 * @param string $table
+	 * @param array  $properties
+	 *
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function createTable( $table, $properties = array() )
+	{
+		try
+		{
+			$result = $this->_dbConn->createCollection( $table );
+			$_out = array( 'name' => $result->getName() );
+			$_out['indexes'] = $result->getIndexInfo();
+
+			return $_out;
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Failed to create a container on MongoDb service.\n" . $ex->getMessage() );
+		}
+	}
+
+	/**
+	 * @param array $tables
+	 *
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function updateTables( $tables = array() )
+	{
+		try
+		{
+			$_out = array();
+			foreach ( $tables as $table )
+			{
+				$_name = Option::get( $table, 'name' );
+				if ( empty( $_name ) )
+				{
+					throw new \Exception( "No 'name' field in data." );
+				}
+				$_out[] = $this->updateTable( $_name, $table );
+			}
+
+			return $_out;
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Failed to update container on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * Get any properties related to the table
 	 *
-	 * @param array $properties
+	 * @param string $table Table name
+	 * @param array  $properties
 	 *
 	 * @return array
 	 * @throws \Exception
 	 */
-	public function updateTable( $properties = array() )
+	public function updateTable( $table, $properties = array() )
 	{
-		$_name = Option::get( $properties, 'name' );
-		if ( empty( $_name ) )
-		{
-			throw new BadRequestException( "No 'name' field in data." );
-		}
+		$this->selectTable( $table );
 
-		$this->selectTable( $_name );
-
-//		throw new InternalServerErrorException( "Failed to update table '$table' on MongoDb service." );
-		return array( 'name' => $_name );
+//		throw new \Exception( "Failed to update table '$table' on MongoDb service." );
+		return array( 'name' => $table );
 	}
 
 	/**
@@ -329,25 +349,25 @@ class MongoDbSvc extends NoSqlDbSvc
 	 */
 	public function deleteTables( $tables = array(), $check_empty = false )
 	{
-		$_out = array();
-		foreach ( $tables as $table )
+		try
 		{
-			$_name = Option::get( $table, 'name' );
-			if ( empty( $_name ) )
+			$_out = array();
+			foreach ( $tables as $table )
 			{
-				throw new BadRequestException( "No 'name' field in data." );
-			}
-			try
-			{
+				$_name = Option::get( $table, 'name' );
+				if ( empty( $_name ) )
+				{
+					throw new \Exception( "No 'name' field in data." );
+				}
 				$_out[] = $this->deleteTable( $_name, $check_empty );
 			}
-			catch ( \Exception $ex )
-			{
-				throw new $ex;
-			}
-		}
 
-		return $_out;
+			return $_out;
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Failed to delete tables from MongoDb service.\n" . $ex->getMessage() );
+		}
 	}
 
 	/**
@@ -363,13 +383,13 @@ class MongoDbSvc extends NoSqlDbSvc
 	{
 		try
 		{
-			$_result = $this->_dbConn->dropCollection( $table );
+			$result = $this->_dbConn->dropCollection( $table );
 
 			return array( 'name' => $table );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to delete table '$table' from MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to delete table '$table' from MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -379,13 +399,14 @@ class MongoDbSvc extends NoSqlDbSvc
 	/**
 	 * @param        $table
 	 * @param        $records
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function createRecords( $table, $records, $fields = null, $extras = array() )
+	public function createRecords( $table, $records, $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -398,17 +419,16 @@ class MongoDbSvc extends NoSqlDbSvc
 		}
 
 		$_coll = $this->selectTable( $table );
-		$_rollback = Option::get( $extras, 'rollback', false );
 		try
 		{
-			$_result = $_coll->batchInsert( $records, array( 'continueOnError' => !$_rollback ) );
+			$result = $_coll->batchInsert( $records, array( 'continueOnError' => !$rollback ) );
 			$_out = static::cleanRecords( $records, $fields );
 
 			return $_out;
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to create items in '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to create items in '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -422,7 +442,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws BadRequestException
 	 * @return array
 	 */
-	public function createRecord( $table, $record, $fields = null, $extras = array() )
+	public function createRecord( $table, $record, $fields = '', $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -433,20 +453,21 @@ class MongoDbSvc extends NoSqlDbSvc
 		$record = static::idToMongoId( $record );
 		try
 		{
-			$_result = $_coll->save( $record ); // same as insert if no _id
+			$result = $_coll->save( $record ); // same as insert if no _id
 			$_out = static::cleanRecord( $record, $fields );
 
 			return $_out;
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to create item in '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to create item in '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $records
+	 * @param        $id_field
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
@@ -454,7 +475,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecords( $table, $records, $fields = null, $extras = array() )
+	public function updateRecords( $table, $records, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -473,12 +494,17 @@ class MongoDbSvc extends NoSqlDbSvc
 			try
 			{
 				$_record = static::idToMongoId( $_record );
-				$_result = $_coll->save( $_record ); // same as update if _id
+				$result = $_coll->save( $_record ); // same as update if _id
 				$_out[] = static::cleanRecord( $_record, $fields );
 			}
 			catch ( \Exception $ex )
 			{
-				throw new InternalServerErrorException( "Failed to update items in '$table' on MongoDb service.\n" . $ex->getMessage() );
+				if ( $rollback )
+				{
+					throw new \Exception( "Failed to update items in '$table' on MongoDb service.\n" . $ex->getMessage() );
+				}
+
+				$_out[] = $ex->getMessage();
 			}
 		}
 
@@ -488,6 +514,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	/**
 	 * @param        $table
 	 * @param        $record
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
@@ -495,7 +522,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws BadRequestException
 	 * @return array
 	 */
-	public function updateRecord( $table, $record, $fields = null, $extras = array() )
+	public function updateRecord( $table, $record, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -506,13 +533,13 @@ class MongoDbSvc extends NoSqlDbSvc
 		$record = static::idToMongoId( $record );
 		try
 		{
-			$_result = $_coll->save( $record ); // same as update if _id
+			$result = $_coll->save( $record ); // same as update if _id
 
 			return static::cleanRecord( $record, $fields );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -526,7 +553,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
+	public function updateRecordsByFilter( $table, $record, $filter = '', $fields = '', $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -540,16 +567,16 @@ class MongoDbSvc extends NoSqlDbSvc
 		$_fieldArray = static::buildFieldArray( $fields );
 		try
 		{
-			$_result = $_coll->update( $_criteria, $record, array( 'multiple' => true ) );
-			/** @var \MongoCursor $_result */
-			$_result = $_coll->find( $_criteria, $_fieldArray );
-			$_out = iterator_to_array( $_result );
+			$result = $_coll->update( $_criteria, $record, array( 'multiple' => true ) );
+			/** @var \MongoCursor $result */
+			$result = $_coll->find( $_criteria, $_fieldArray );
+			$_out = iterator_to_array( $result );
 
-			return static::mongoIdsToIds( $_out );
+			return static::cleanRecords( $_out );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -557,13 +584,15 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @param string $table
 	 * @param array  $record
 	 * @param string $id_list
+	 * @param string $id_field
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
+	public function updateRecordsByIds( $table, $record, $id_list, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -572,7 +601,7 @@ class MongoDbSvc extends NoSqlDbSvc
 
 		if ( empty( $id_list ) )
 		{
-			throw new BadRequestException( "Identifying values for '_id' can not be empty for update request." );
+			throw new BadRequestException( "Identifying values for '$id_field' can not be empty for update request." );
 		}
 
 		$_coll = $this->selectTable( $table );
@@ -582,7 +611,7 @@ class MongoDbSvc extends NoSqlDbSvc
 		unset( $record[static::DEFAULT_ID_FIELD] ); // make sure the record has no identifier
 		try
 		{
-			$_result = $_coll->update( $_criteria, $record, array( 'multiple' => true ) );
+			$result = $_coll->update( $_criteria, $record, array( 'multiple' => true ) );
 			$_out = array();
 			foreach ( $_ids as $_id )
 			{
@@ -594,7 +623,7 @@ class MongoDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -602,13 +631,14 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @param string $table
 	 * @param array  $record
 	 * @param        $id
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecordById( $table, $record, $id, $fields = null, $extras = array() )
+	public function updateRecordById( $table, $record, $id, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
@@ -629,13 +659,14 @@ class MongoDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $records
+	 * @param        $id_field
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
@@ -643,7 +674,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecords( $table, $records, $fields = null, $extras = array() )
+	public function mergeRecords( $table, $records, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -678,7 +709,12 @@ class MongoDbSvc extends NoSqlDbSvc
 			}
 			catch ( \Exception $ex )
 			{
-				throw new InternalServerErrorException( "Failed to update items in '$table' on MongoDb service.\n" . $ex->getMessage() );
+				if ( $rollback )
+				{
+					throw new \Exception( "Failed to update items in '$table' on MongoDb service.\n" . $ex->getMessage() );
+				}
+
+				$_out[] = $ex->getMessage();
 			}
 		}
 
@@ -688,13 +724,14 @@ class MongoDbSvc extends NoSqlDbSvc
 	/**
 	 * @param        $table
 	 * @param        $record
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecord( $table, $record, $fields = null, $extras = array() )
+	public function mergeRecord( $table, $record, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -723,7 +760,7 @@ class MongoDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -737,7 +774,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
+	public function mergeRecordsByFilter( $table, $record, $filter = '', $fields = '', $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -751,16 +788,16 @@ class MongoDbSvc extends NoSqlDbSvc
 		$_fieldArray = static::buildFieldArray( $fields );
 		try
 		{
-			$_result = $_coll->update( $_criteria, array( '$set' => $record ), array( 'multiple' => true ) );
-			/** @var \MongoCursor $_result */
-			$_result = $_coll->find( $_criteria, $_fieldArray );
-			$_out = iterator_to_array( $_result );
+			$result = $_coll->update( $_criteria, array( '$set' => $record ), array( 'multiple' => true ) );
+			/** @var \MongoCursor $result */
+			$result = $_coll->find( $_criteria, $_fieldArray );
+			$_out = iterator_to_array( $result );
 
-			return static::mongoIdsToIds( $_out );
+			return static::cleanRecords( $_out );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -768,6 +805,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @param string $table
 	 * @param array  $record
 	 * @param string $id_list
+	 * @param string $id_field
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
@@ -775,7 +813,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
+	public function mergeRecordsByIds( $table, $record, $id_list, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -783,7 +821,7 @@ class MongoDbSvc extends NoSqlDbSvc
 		}
 		if ( empty( $id_list ) )
 		{
-			throw new BadRequestException( "Identifying values for '_id' can not be empty for update request." );
+			throw new BadRequestException( "Identifying values for '$id_field' can not be empty for update request." );
 		}
 
 		$_coll = $this->selectTable( $table );
@@ -795,7 +833,7 @@ class MongoDbSvc extends NoSqlDbSvc
 		try
 		{
 			$result = $_coll->update( $_criteria, array( '$set' => $record ), array( 'multiple' => true ) );
-			if ( static::_requireMoreFields( $fields ) )
+			if ( static::requireMoreFields( $fields ) )
 			{
 				/** @var \MongoCursor $result */
 				$result = $_coll->find( $_criteria, $_fieldArray );
@@ -806,11 +844,11 @@ class MongoDbSvc extends NoSqlDbSvc
 				$_out = static::idsAsRecords( $_ids );
 			}
 
-			return static::mongoIdsToIds( $_out );
+			return static::cleanRecords( $_out );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -818,13 +856,14 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @param        $table
 	 * @param        $record
 	 * @param        $id
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordById( $table, $record, $id, $fields = null, $extras = array() )
+	public function mergeRecordById( $table, $record, $id, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
@@ -852,13 +891,14 @@ class MongoDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $records
+	 * @param        $id_field
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
@@ -866,7 +906,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array|string
 	 */
-	public function deleteRecords( $table, $records, $fields = null, $extras = array() )
+	public function deleteRecords( $table, $records, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( !is_array( $records ) || empty( $records ) )
 		{
@@ -884,7 +924,7 @@ class MongoDbSvc extends NoSqlDbSvc
 		$_fieldArray = static::buildFieldArray( $fields );
 		try
 		{
-			if ( static::_requireMoreFields( $fields ) )
+			if ( static::requireMoreFields( $fields ) )
 			{
 				/** @var \MongoCursor $result */
 				$result = $_coll->find( $_criteria, $_fieldArray );
@@ -897,24 +937,25 @@ class MongoDbSvc extends NoSqlDbSvc
 
 			$result = $_coll->remove( $_criteria );
 
-			return static::mongoIdsToIds( $_out );
+			return static::cleanRecords( $_out );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to delete items from '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to delete items from '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $record
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecord( $table, $record, $fields = null, $extras = array() )
+	public function deleteRecord( $table, $record, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
@@ -932,7 +973,7 @@ class MongoDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to delete item from '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to delete item from '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -945,7 +986,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecordsByFilter( $table, $filter, $fields = null, $extras = array() )
+	public function deleteRecordsByFilter( $table, $filter, $fields = '', $extras = array() )
 	{
 		if ( empty( $filter ) )
 		{
@@ -963,17 +1004,18 @@ class MongoDbSvc extends NoSqlDbSvc
 			$_out = iterator_to_array( $result );
 			$result = $_coll->remove( $_criteria );
 
-			return static::mongoIdsToIds( $_out );
+			return static::cleanRecords( $_out );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to update item in '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $id_list
+	 * @param        $id_field
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
@@ -981,20 +1023,21 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
+	public function deleteRecordsByIds( $table, $id_list, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( empty( $id_list ) )
 		{
-			throw new BadRequestException( "Identifying values for '_id' can not be empty for update request." );
+			throw new BadRequestException( "Identifying values for '$id_field' can not be empty for update request." );
 		}
 
+		$id_field = empty( $id_field ) ? static::DEFAULT_ID_FIELD : $id_field;
 		$_coll = $this->selectTable( $table );
 		$_ids = static::idsToMongoIds( $id_list );
 		$_criteria = array( static::DEFAULT_ID_FIELD => array( '$in' => $_ids ) );
 		$_fieldArray = static::buildFieldArray( $fields );
 		try
 		{
-			if ( static::_requireMoreFields( $fields ) )
+			if ( static::requireMoreFields( $fields ) )
 			{
 				/** @var \MongoCursor $result */
 				$result = $_coll->find( $_criteria, $_fieldArray );
@@ -1005,26 +1048,27 @@ class MongoDbSvc extends NoSqlDbSvc
 				$_out = static::idsAsRecords( $_ids );
 			}
 
-			$_result = $_coll->remove( $_criteria );
+			$result = $_coll->remove( $_criteria );
 
-			return static::mongoIdsToIds( $_out );
+			return static::cleanRecords( $_out );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to delete items from '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to delete items from '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $id
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecordById( $table, $id, $fields = null, $extras = array() )
+	public function deleteRecordById( $table, $id, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( empty( $id ) )
 		{
@@ -1043,7 +1087,7 @@ class MongoDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to delete item from '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to delete item from '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -1056,7 +1100,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecordsByFilter( $table, $filter = null, $fields = null, $extras = array() )
+	public function retrieveRecordsByFilter( $table, $filter = '', $fields = '', $extras = array() )
 	{
 		$_coll = $this->selectTable( $table );
 		$_fieldArray = static::buildFieldArray( $fields );
@@ -1082,7 +1126,7 @@ class MongoDbSvc extends NoSqlDbSvc
 				$_result = $_result->limit( $_limit );
 			}
 			$_out = iterator_to_array( $_result );
-			$_out = static::mongoIdsToIds( $_out );
+			$_out = static::cleanRecords( $_out );
 			if ( $_count )
 			{
 				$_out['meta']['count'] = $_result->count();
@@ -1092,20 +1136,21 @@ class MongoDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to filter items from '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to filter items from '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param string $table
 	 * @param array  $records
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecords( $table, $records, $fields = null, $extras = array() )
+	public function retrieveRecords( $table, $records, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -1126,24 +1171,25 @@ class MongoDbSvc extends NoSqlDbSvc
 			$result = $_coll->find( array( '$in' => $_ids ), $_fieldArray );
 			$_out = iterator_to_array( $result );
 
-			return static::mongoIdsToIds( $_out );
+			return static::cleanRecords( $_out );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to get items from '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to get items from '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $record
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecord( $table, $record, $fields = null, $extras = array() )
+	public function retrieveRecord( $table, $record, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -1166,20 +1212,21 @@ class MongoDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to get item '$table/$_id' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to get item '$table/$_id' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param string $table
 	 * @param string $id_list - comma delimited list of ids
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
+	public function retrieveRecordsByIds( $table, $id_list, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( empty( $id_list ) )
 		{
@@ -1195,24 +1242,25 @@ class MongoDbSvc extends NoSqlDbSvc
 			$result = $_coll->find( array( static::DEFAULT_ID_FIELD => array( '$in' => $_ids ) ), $_fieldArray );
 			$_out = iterator_to_array( $result );
 
-			return static::mongoIdsToIds( $_out );
+			return static::cleanRecords( $_out );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to get items from '$table' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to get items from '$table' on MongoDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $id
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecordById( $table, $id, $fields = null, $extras = array() )
+	public function retrieveRecordById( $table, $id, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( empty( $id ) )
 		{
@@ -1233,7 +1281,7 @@ class MongoDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to get item '$table/$id' on MongoDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to get item '$table/$id' on MongoDb service.\n" . $ex->getMessage() );
 		}
 
 		if ( empty( $result ) )
@@ -1246,27 +1294,32 @@ class MongoDbSvc extends NoSqlDbSvc
 
 	/**
 	 * @param string|array $include List of keys to include in the output record
+	 * @param string       $id_field
 	 *
 	 * @return array
 	 */
-	protected static function buildFieldArray( $include = '*' )
+	protected static function buildFieldArray( $include = '*', $id_field = self::DEFAULT_ID_FIELD )
 	{
+		if ( empty( $include ) )
+		{
+			return array( $id_field => true );
+		}
 		if ( '*' == $include )
 		{
 			return array();
 		}
 
-		if ( empty( $include ) )
-		{
-			$include = static::DEFAULT_ID_FIELD;
-		}
 		if ( !is_array( $include ) )
 		{
 			$include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
 		}
-		$_out = array();
+		$_out = array( $id_field => true );
 		foreach ( $include as $key )
 		{
+			if ( 0 == strcasecmp( $key, $id_field ) )
+			{
+				continue;
+			}
 			$_out[$key] = true;
 		}
 
@@ -1537,24 +1590,68 @@ class MongoDbSvc extends NoSqlDbSvc
 	/**
 	 * @param array        $record
 	 * @param string|array $include List of keys to include in the output record
-	 * @param string|array $id_field
+	 * @param string       $id_field
 	 *
 	 * @return array
 	 */
-	protected static function cleanRecord( $record, $include = '*', $id_field = null )
+	protected static function cleanRecord( $record, $include = '*', $id_field = self::DEFAULT_ID_FIELD )
 	{
-		$_out = parent::cleanRecord( $record, $include, $id_field );
+		if ( '*' !== $include )
+		{
+			$_id = Option::get( $record, $id_field );
+			if ( empty( $_id ) )
+			{
+				$_id = Option::get( $record, 'id' ); // returned data drops underscore!
+			}
+			$_out = array( $id_field => static::mongoIdToId( $_id ) );
+
+			if ( !empty( $include ) )
+			{
+				if ( !is_array( $include ) )
+				{
+					$include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
+				}
+				foreach ( $include as $key )
+				{
+					if ( 0 == strcasecmp( $key, $id_field ) )
+					{
+						continue;
+					}
+					$_out[$key] = Option::get( $record, $key );
+				}
+			}
+
+			return $_out;
+		}
 
 		return static::mongoIdToId( $record );
 	}
 
 	/**
-	 * @param array  $records
+	 * @param        $records
+	 * @param string $include
+	 * @param string $id_field
+	 *
+	 * @return array
+	 */
+	protected static function cleanRecords( $records, $include = '*', $id_field = self::DEFAULT_ID_FIELD )
+	{
+		$_out = array();
+		foreach ( $records as $_record )
+		{
+			$_out[] = static::cleanRecord( $_record, $include, $id_field );
+		}
+
+		return $_out;
+	}
+
+	/**
+	 * @param        $records
 	 * @param string $id_field
 	 *
 	 * @return mixed
 	 */
-	protected static function mongoIdsToIds( $records, $id_field = null )
+	protected static function mongoIdsToIds( $records, $id_field = self::DEFAULT_ID_FIELD )
 	{
 		foreach ( $records as $key => $_record )
 		{
@@ -1565,17 +1662,13 @@ class MongoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param mixed  $record
+	 * @param        $record
 	 * @param string $id_field
 	 *
 	 * @return array|string
 	 */
-	protected static function mongoIdToId( $record, $id_field = null )
+	protected static function mongoIdToId( $record, $id_field = self::DEFAULT_ID_FIELD )
 	{
-		if ( empty( $id_field ) )
-		{
-			$id_field = static::DEFAULT_ID_FIELD;
-		}
 		if ( !is_array( $record ) )
 		{
 			if ( is_object( $record ) )
@@ -1586,32 +1679,27 @@ class MongoDbSvc extends NoSqlDbSvc
 		}
 		else
 		{
-			/** @var \MongoId $_id in record as '_id' or 'id' */
-			$_id = Option::get( $record, $id_field, Option::get( $record, 'id', null, true ) );
+			/** @var \MongoId $_id */
+			$_id = Option::get( $record, $id_field );
 			if ( is_object( $_id ) )
 			{
 				/** $_id \MongoId */
-				$_id = (string)$_id;
+				$record[$id_field] = (string)$_id;
 			}
-			$record[$id_field] = $_id;
 		}
 
 		return $record;
 	}
 
 	/**
-	 * @param mixed  $record
+	 * @param        $record
 	 * @param bool   $determine_value
 	 * @param string $id_field
 	 *
 	 * @return array|bool|float|int|\MongoId|string
 	 */
-	protected static function idToMongoId( $record, $determine_value = false, $id_field = null )
+	protected static function idToMongoId( $record, $determine_value = false, $id_field = self::DEFAULT_ID_FIELD )
 	{
-		if ( empty( $id_field ) )
-		{
-			$id_field = static::DEFAULT_ID_FIELD;
-		}
 		if ( !is_array( $record ) )
 		{
 			if ( is_string( $record ) )
@@ -1672,7 +1760,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 *
 	 * @return array
 	 */
-	protected static function idsToMongoIds( $records, $id_field = null )
+	protected static function idsToMongoIds( $records, $id_field = self::DEFAULT_ID_FIELD )
 	{
 		$_determineValue = false;
 		if ( !is_array( $records ) )
@@ -1682,11 +1770,97 @@ class MongoDbSvc extends NoSqlDbSvc
 			$_determineValue = true;
 		}
 
-		return array_map(
-			array( 'DreamFactory\\Platform\\Services\\MongoDbSvc', 'idToMongoId' ),
+		$records = array_map(
+			'\Platform\Services\MongoDbSvc::idToMongoId',
 			$records,
-			array_fill( 0, count( $records ), $_determineValue ),
-			array_fill( 0, count( $records ), $id_field )
+			array_fill( 0, count( $records ), $_determineValue )
 		);
+
+		return $records;
+	}
+
+	/**
+	 * @param array  $records
+	 * @param string $id_field
+	 *
+	 * @return array
+	 * @throws BadRequestException
+	 */
+	protected static function recordsAsIds( $records, $id_field = self::DEFAULT_ID_FIELD )
+	{
+		$_ids = array();
+		foreach ( $records as $_key => $_record )
+		{
+			$_id = Option::get( $_record, $id_field );
+			if ( empty( $_id ) )
+			{
+				throw new BadRequestException( "Identifying field '$id_field' can not be empty for retrieve record index '$_key' request." );
+			}
+			$_ids[] = $_id;
+		}
+
+		return $_ids;
+	}
+
+	/**
+	 * @param        $ids
+	 * @param string $id_field
+	 *
+	 * @return array
+	 */
+	protected static function idsAsRecords( $ids, $id_field = self::DEFAULT_ID_FIELD )
+	{
+		$_out = array();
+		foreach ( $ids as $_id )
+		{
+			$_out[] = array( $id_field => $_id );
+		}
+
+		return $_out;
+	}
+
+	/**
+	 * @param        $fields
+	 * @param string $id_field
+	 *
+	 * @return bool
+	 */
+	protected static function requireMoreFields( $fields, $id_field = self::DEFAULT_ID_FIELD )
+	{
+		if ( empty( $fields ) )
+		{
+			return false;
+		}
+		if ( 0 === strcasecmp( $id_field, $fields ) )
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * @param        $first_array
+	 * @param        $second_array
+	 * @param string $id_field
+	 *
+	 * @return mixed
+	 */
+	protected static function recordArrayMerge( $first_array, $second_array, $id_field = self::DEFAULT_ID_FIELD )
+	{
+		foreach ( $first_array as $_key => $_first )
+		{
+			$_firstId = Option::get( $_first, $id_field );
+			foreach ( $second_array as $_second )
+			{
+				$_secondId = Option::get( $_second, $id_field );
+				if ( $_firstId == $_secondId )
+				{
+					$first_array[$_key] = array_merge( $_first, $_second );
+				}
+			}
+		}
+
+		return $first_array;
 	}
 }

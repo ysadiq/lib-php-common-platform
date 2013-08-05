@@ -20,9 +20,7 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Common\Utility\DataFormat;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -34,19 +32,6 @@ use Kisma\Core\Utility\Option;
 class CouchDbSvc extends NoSqlDbSvc
 {
 	//*************************************************************************
-	//	Constants
-	//*************************************************************************
-
-	/**
-	 * Default record identifier field
-	 */
-	const DEFAULT_ID_FIELD = '_id';
-	/**
-	 * Define record revision field
-	 */
-	const REV_FIELD = '_rev';
-
-	//*************************************************************************
 	//	Members
 	//*************************************************************************
 
@@ -54,6 +39,10 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @var \couchClient|null
 	 */
 	protected $_dbConn = null;
+	/**
+	 * @var boolean
+	 */
+	protected $_defaultSimpleFormat = true;
 
 	//*************************************************************************
 	//	Methods
@@ -139,16 +128,9 @@ class CouchDbSvc extends NoSqlDbSvc
 		parent::validateTableAccess( $table, $access );
 	}
 
-	protected function _gatherExtrasFromRequest( $post_data = null )
+	protected function _gatherExtrasFromRequest()
 	{
-		$_extras = parent::_gatherExtrasFromRequest( $post_data );
-		// rollback all db changes in a transaction, if applicable
-		$_rollback = FilterInput::request( 'rollback', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
-		if ( empty( $_rollback ) && !empty( $post_data ) )
-		{
-			$_rollback = Option::getBool( $post_data, 'rollback' );
-		}
-		$_extras['rollback'] = $_rollback;
+		$_extras = parent::_gatherExtrasFromRequest();
 
 		return $_extras;
 	}
@@ -195,34 +177,26 @@ class CouchDbSvc extends NoSqlDbSvc
 			if ( empty( $tables ) )
 			{
 				$tables = $this->_dbConn->listDatabases();
-				foreach ( $tables as $_key => $_table )
+				foreach ( $tables as $key => $table )
 				{
-					if ( '_' == substr( $_table, 0, 1 ) )
+					if ( '_' == substr( $table, 0, 1 ) )
 					{
-						unset( $tables[$_key] );
+						unset( $tables[$key] );
 					}
 				}
 				$tables = array_values( $tables );
 			}
-			else
+			$out = array();
+			foreach ( $tables as $table )
 			{
-				if ( !is_array( $tables ) )
-				{
-					$tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
-				}
+				$out[] = $this->getTable( $table );
 			}
 
-			$_out = array();
-			foreach ( $tables as $_table )
-			{
-				$_out[] = $this->getTable( $_table );
-			}
-
-			return $_out;
+			return $out;
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to list containers of CouchDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to list containers of CouchDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -237,61 +211,109 @@ class CouchDbSvc extends NoSqlDbSvc
 	public function getTable( $table )
 	{
 		$this->correctTableName( $table );
-		$_result = $this->_dbConn->asArray()->getDatabaseInfos();
-		$_result['name'] = $table;
+		$result = $this->_dbConn->asArray()->getDatabaseInfos();
+		$result['name'] = $table;
 
-		return $_result;
+		return $result;
 	}
 
 	/**
+	 * @param array $tables
+	 *
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function createTables( $tables = array() )
+	{
+		try
+		{
+			$_out = array();
+			foreach ( $tables as $table )
+			{
+				$_name = Option::get( $table, 'name' );
+				if ( empty( $_name ) )
+				{
+					throw new \Exception( "No 'name' field in data." );
+				}
+				$_out[] = $this->createTable( $_name, $table );
+			}
+
+			return $_out;
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Failed to create containers on CouchDb service.\n" . $ex->getMessage() );
+		}
+	}
+
+	/**
+	 * @param string $table
 	 * @param array  $properties
 	 *
 	 * @return array
 	 * @throws \Exception
 	 */
-	public function createTable( $properties = array() )
+	public function createTable( $table, $properties = array() )
 	{
-		$_name = Option::get( $properties, 'name' );
-		if ( empty( $_name ) )
-		{
-			throw new BadRequestException( "No 'name' field in data." );
-		}
-
 		try
 		{
-			$this->correctTableName( $_name );
-			$_result = $this->_dbConn->asArray()->createDatabase();
+			$this->correctTableName( $table );
+			$result = $this->_dbConn->asArray()->createDatabase();
 
-			// $_result['ok'] = true
+			// $result['ok'] = true
 
-			return array( 'name' => $_name );
+			return array( 'name' => $table );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to create a container on CouchDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to create a container on CouchDb service.\n" . $ex->getMessage() );
+		}
+	}
+
+	/**
+	 * @param array $tables
+	 *
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function updateTables( $tables = array() )
+	{
+		try
+		{
+			$_out = array();
+			foreach ( $tables as $table )
+			{
+				$_name = Option::get( $table, 'name' );
+				if ( empty( $_name ) )
+				{
+					throw new \Exception( "No 'name' field in data." );
+				}
+				$_out[] = $this->updateTable( $_name, $table );
+			}
+
+			return $_out;
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Failed to update container on CouchDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * Get any properties related to the table
 	 *
+	 * @param string $table Table name
 	 * @param array  $properties
 	 *
 	 * @return array
 	 * @throws \Exception
 	 */
-	public function updateTable( $properties = array() )
+	public function updateTable( $table, $properties = array() )
 	{
-		$_name = Option::get( $properties, 'name' );
-		if ( empty( $_name ) )
-		{
-			throw new BadRequestException( "No 'name' field in data." );
-		}
+		$this->correctTableName( $table );
 
-		$this->correctTableName( $_name );
-
-//		throw new InternalServerErrorException( "Failed to update table '$_name' on CouchDb service." );
-		return array( 'name' => $_name );
+//		throw new \Exception( "Failed to update table '$table' on CouchDb service." );
+		return array( 'name' => $table );
 	}
 
 	/**
@@ -311,7 +333,7 @@ class CouchDbSvc extends NoSqlDbSvc
 				$_name = Option::get( $table, 'name' );
 				if ( empty( $_name ) )
 				{
-					throw new BadRequestException( "No 'name' field in data." );
+					throw new \Exception( "No 'name' field in data." );
 				}
 				$_out[] = $this->deleteTable( $_name, $check_empty );
 			}
@@ -320,7 +342,7 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to delete tables from CouchDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to delete tables from CouchDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -338,15 +360,15 @@ class CouchDbSvc extends NoSqlDbSvc
 		try
 		{
 			$this->correctTableName( $table );
-			$_result = $this->_dbConn->asArray()->deleteDatabase();
+			$result = $this->_dbConn->asArray()->deleteDatabase();
 
-			// $_result['ok'] = true
+			// $result['ok'] = true
 
 			return array( 'name' => $table );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to delete table '$table' from CouchDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to delete table '$table' from CouchDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -356,13 +378,14 @@ class CouchDbSvc extends NoSqlDbSvc
 	/**
 	 * @param        $table
 	 * @param        $records
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function createRecords( $table, $records, $fields = null, $extras = array() )
+	public function createRecords( $table, $records, $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -375,12 +398,11 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 
 		$this->correctTableName( $table );
-		$_rollback = Option::getBool( $extras, 'rollback', false );
 		try
 		{
-			$result = $this->_dbConn->asArray()->storeDocs( $records, $_rollback );
+			$result = $this->_dbConn->asArray()->storeDocs( $records, $rollback );
 			$_out = static::cleanRecords( $result, $fields );
-			if ( static::_requireMoreFields( $fields ) )
+			if ( static::requireMoreFields( $fields ) )
 			{
 				return $this->retrieveRecords( $table, $_out, '', $fields, $extras );
 			}
@@ -389,7 +411,7 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to create items in '$table' on CouchDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to create items in '$table' on CouchDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -403,7 +425,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws BadRequestException
 	 * @return array
 	 */
-	public function createRecord( $table, $record, $fields = null, $extras = array() )
+	public function createRecord( $table, $record, $fields = '', $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -415,7 +437,7 @@ class CouchDbSvc extends NoSqlDbSvc
 		{
 			$result = $this->_dbConn->asArray()->storeDoc( (object)$record );
 			$_out = static::cleanRecord( $result, $fields );
-			if ( static::_requireMoreFields( $fields ) )
+			if ( static::requireMoreFields( $fields ) )
 			{
 				return $this->retrieveRecord( $table, $_out, '', $fields, $extras );
 			}
@@ -431,13 +453,15 @@ class CouchDbSvc extends NoSqlDbSvc
 	/**
 	 * @param        $table
 	 * @param        $records
+	 * @param        $id_field
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecords( $table, $records, $fields = null, $extras = array() )
+	public function updateRecords( $table, $records, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -450,12 +474,11 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
-		$_rollback = Option::getBool( $extras, 'rollback', false );
 		try
 		{
-			$result = $this->_dbConn->asArray()->storeDocs( $records, $_rollback );
+			$result = $this->_dbConn->asArray()->storeDocs( $records, $rollback );
 			$_out = static::cleanRecords( $result, $fields );
-			if ( static::_requireMoreFields( $fields ) )
+			if ( static::requireMoreFields( $fields ) )
 			{
 				// merge in rev info
 				$_out = static::recordArrayMerge( $records, $_out );
@@ -472,6 +495,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	/**
 	 * @param        $table
 	 * @param        $record
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
@@ -479,7 +503,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws BadRequestException
 	 * @return array
 	 */
-	public function updateRecord( $table, $record, $fields = null, $extras = array() )
+	public function updateRecord( $table, $record, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -491,7 +515,7 @@ class CouchDbSvc extends NoSqlDbSvc
 		{
 			$result = $this->_dbConn->asArray()->storeDoc( (object)$record );
 			$_out = static::cleanRecord( $result, $fields );
-			if ( static::_requireMoreFields( $fields ) )
+			if ( static::requireMoreFields( $fields ) )
 			{
 				$_out = static::recordArrayMerge( $record, $_out );
 			}
@@ -514,7 +538,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
+	public function updateRecordsByFilter( $table, $record, $filter = '', $fields = '', $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -526,8 +550,8 @@ class CouchDbSvc extends NoSqlDbSvc
 		// retrieve records to get latest rev and id
 		$_results = $this->retrieveRecordsByFilter( $table, $filter, '', $extras );
 		// make sure record doesn't contain identifiers
-		unset( $record[static::DEFAULT_ID_FIELD] );
-		unset( $record[static::REV_FIELD] );
+		unset( $record['_id'] );
+		unset( $record['_rev'] );
 
 		$_updates = array();
 		foreach ( $_results as $result )
@@ -535,20 +559,22 @@ class CouchDbSvc extends NoSqlDbSvc
 			$_updates[] = array_merge( $result, $record );
 		}
 
-		return $this->updateRecords( $table, $_updates, $fields, $extras );
+		return $this->updateRecords( $table, $_updates, '', true, $fields, $extras );
 	}
 
 	/**
 	 * @param string $table
 	 * @param array  $record
 	 * @param string $id_list
+	 * @param string $id_field
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
+	public function updateRecordsByIds( $table, $record, $id_list, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -557,10 +583,10 @@ class CouchDbSvc extends NoSqlDbSvc
 		$table = $this->correctTableName( $table );
 
 		// retrieve records to get latest rev and id
-		$_results = $this->retrieveRecordsByIds( $table, $id_list, '', $extras );
+		$_results = $this->retrieveRecordsByIds( $table, $id_list, $id_field, '', $extras );
 		// make sure record doesn't contain identifiers
-		unset( $record[static::DEFAULT_ID_FIELD] );
-		unset( $record[static::REV_FIELD] );
+		unset( $record['_id'] );
+		unset( $record['_rev'] );
 
 		$_updates = array();
 		foreach ( $_results as $_result )
@@ -568,20 +594,21 @@ class CouchDbSvc extends NoSqlDbSvc
 			$_updates[] = array_merge( $_result, $record );
 		}
 
-		return $this->updateRecords( $table, $_updates, $fields, $extras );
+		return $this->updateRecords( $table, $_updates, '', true, $fields, $extras );
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $record
 	 * @param        $id
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecordById( $table, $record, $id, $fields = null, $extras = array() )
+	public function updateRecordById( $table, $record, $id, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
@@ -589,10 +616,10 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 
 		// retrieve record to get latest rev and id
-		$_result = $this->retrieveRecordById( $table, $id, '', $extras );
+		$_result = $this->retrieveRecordById( $table, $id, $id_field, '', $extras );
 		// make sure record doesn't contain identifiers
-		unset( $record[static::DEFAULT_ID_FIELD] );
-		unset( $record[static::REV_FIELD] );
+		unset( $record['_id'] );
+		unset( $record['_rev'] );
 
 		$_update = array_merge( $_result, $record );
 
@@ -602,13 +629,15 @@ class CouchDbSvc extends NoSqlDbSvc
 	/**
 	 * @param        $table
 	 * @param        $records
+	 * @param        $id_field
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecords( $table, $records, $fields = null, $extras = array() )
+	public function mergeRecords( $table, $records, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -621,17 +650,16 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
-		$_rollback = Option::getBool( $extras, 'rollback', false );
 		try
 		{
 			// get all fields of each record
-			$_merges = $this->retrieveRecords( $table, $records, '*', $extras );
+			$_merges = $this->retrieveRecords( $table, $records, $id_field, '*', $extras );
 			// merge in changes from $records to $_merges
 			$_merges = static::recordArrayMerge( $_merges, $records );
 			// write back the changes
-			$_result = $this->_dbConn->asArray()->storeDocs( $_merges, $_rollback );
-			$_out = static::cleanRecords( $_result, $fields );
-			if ( static::_requireMoreFields( $fields ) )
+			$result = $this->_dbConn->asArray()->storeDocs( $_merges, $rollback );
+			$_out = static::cleanRecords( $result, $fields );
+			if ( static::requireMoreFields( $fields ) )
 			{
 				// merge in rev updates
 				$_merges = static::recordArrayMerge( $_merges, $_out );
@@ -642,20 +670,21 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update items in '$table' on CouchDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to update items in '$table' on CouchDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $record
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecord( $table, $record, $fields = null, $extras = array() )
+	public function mergeRecord( $table, $record, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -666,16 +695,16 @@ class CouchDbSvc extends NoSqlDbSvc
 		try
 		{
 			// get all fields of record
-			$_merge = $this->retrieveRecord( $table, $record, '*', $extras );
+			$_merge = $this->retrieveRecord( $table, $record, $id_field, '*', $extras );
 			// merge in changes from $record to $_merge
 			$_merge = array_merge( $_merge, $record );
 			// write back the changes
-			$_result = $this->_dbConn->asArray()->storeDoc( (object)$_merge );
-			$_out = static::cleanRecord( $_result, $fields );
-			if ( static::_requireMoreFields( $fields ) )
+			$result = $this->_dbConn->asArray()->storeDoc( (object)$_merge );
+			$_out = static::cleanRecord( $result, $fields );
+			if ( static::requireMoreFields( $fields ) )
 			{
 				// merge in rev updates
-				$_merge[static::REV_FIELD] = Option::get( $_out, static::REV_FIELD );
+				$_merge['_rev'] = Option::get( $_out, '_rev' );
 
 				return static::cleanRecord( $_merge, $fields );
 			}
@@ -684,7 +713,7 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on CouchDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to update item in '$table' on CouchDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -698,7 +727,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
+	public function mergeRecordsByFilter( $table, $record, $filter = '', $fields = '', $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -711,8 +740,8 @@ class CouchDbSvc extends NoSqlDbSvc
 			// get all fields of each record
 			$_merges = $this->retrieveRecordsByFilter( $table, $filter, '*', $extras );
 			// merge in changes from $records to $_merges
-			unset( $record[static::DEFAULT_ID_FIELD] );
-			unset( $record[static::REV_FIELD] );
+			unset( $record['_id'] );
+			unset( $record['_rev'] );
 			foreach ( $_merges as $_key => $_merge )
 			{
 				$_merges[$_key] = array_merge( $_merge, $record );
@@ -720,7 +749,7 @@ class CouchDbSvc extends NoSqlDbSvc
 			// write back the changes
 			$result = $this->_dbConn->asArray()->storeDocs( $_merges, true );
 			$_out = static::cleanRecords( $result, $fields );
-			if ( static::_requireMoreFields( $fields ) )
+			if ( static::requireMoreFields( $fields ) )
 			{
 				// merge in rev updates
 				$_merges = static::recordArrayMerge( $_merges, $_out );
@@ -740,13 +769,15 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @param string $table
 	 * @param array  $record
 	 * @param string $id_list
+	 * @param string $id_field
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
+	public function mergeRecordsByIds( $table, $record, $id_list, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -756,7 +787,7 @@ class CouchDbSvc extends NoSqlDbSvc
 
 		if ( empty( $id_list ) )
 		{
-			throw new BadRequestException( "Identifying values for 'id_field' can not be empty for update request." );
+			throw new BadRequestException( "Identifying values for '$id_field' can not be empty for update request." );
 		}
 
 		$_ids = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
@@ -768,23 +799,24 @@ class CouchDbSvc extends NoSqlDbSvc
 				throw new BadRequestException( "No identifier exist in identifier index $_key." );
 			}
 
-			$_updates[] = array_merge( $record, array( static::DEFAULT_ID_FIELD => $_id ) );
+			$_updates[] = array_merge( $record, array( '_id' => $_id ) );
 		}
 
-		return $this->mergeRecords( $table, $_updates, $fields, $extras );
+		return $this->mergeRecords( $table, $_updates, $id_field, $rollback, $fields, $extras );
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $record
 	 * @param        $id
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordById( $table, $record, $id, $fields = null, $extras = array() )
+	public function mergeRecordById( $table, $record, $id, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
@@ -794,22 +826,23 @@ class CouchDbSvc extends NoSqlDbSvc
 		{
 			throw new BadRequestException( "No identifier exist in record." );
 		}
+		$_update = array_merge( $record, array( '_id' => $id ) );
 
-		$_update = array_merge( $record, array( static::DEFAULT_ID_FIELD => $id ) );
-
-		return $this->mergeRecord( $table, $_update, $fields, $extras );
+		return $this->mergeRecord( $table, $_update, $id_field, $fields, $extras );
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $records
+	 * @param        $id_field
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array|string
 	 */
-	public function deleteRecords( $table, $records, $fields = null, $extras = array() )
+	public function deleteRecords( $table, $records, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
 		if ( !is_array( $records ) || empty( $records ) )
 		{
@@ -822,16 +855,15 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
-		$_rollback = Option::getBool( $extras, 'rollback', false );
 		try
 		{
 			$_out = array();
-			if ( static::_requireMoreFields( $fields ) )
+			if ( static::requireMoreFields( $fields ) )
 			{
-				$_out = $this->retrieveRecords( $table, $records, $fields, $extras );
+				$_out = $this->retrieveRecords( $table, $records, $id_field, $fields, $extras );
 			}
 
-			$result = $this->_dbConn->asArray()->deleteDocs( $records, $_rollback );
+			$result = $this->_dbConn->asArray()->deleteDocs( $records, $rollback );
 			if ( empty( $_out ) )
 			{
 				$_out = static::cleanRecords( $result, $fields );;
@@ -841,20 +873,21 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to delete items from '$table' on CouchDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to delete items from '$table' on CouchDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $record
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecord( $table, $record, $fields = null, $extras = array() )
+	public function deleteRecord( $table, $record, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
@@ -865,9 +898,9 @@ class CouchDbSvc extends NoSqlDbSvc
 		try
 		{
 			$_out = array();
-			if ( static::_requireMoreFields( $fields ) )
+			if ( static::requireMoreFields( $fields ) )
 			{
-				$_out = $this->retrieveRecord( $table, $record, $fields, $extras );
+				$_out = $this->retrieveRecord( $table, $record, $id_field, $fields, $extras );
 			}
 			$result = $this->_dbConn->asArray()->deleteDoc( (object)$record );
 			if ( empty( $_out ) )
@@ -879,7 +912,7 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to delete items from '$table' on CouchDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to delete items from '$table' on CouchDb service.\n" . $ex->getMessage() );
 		}
 	}
 
@@ -892,7 +925,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecordsByFilter( $table, $filter, $fields = null, $extras = array() )
+	public function deleteRecordsByFilter( $table, $filter, $fields = '', $extras = array() )
 	{
 		if ( empty( $filter ) )
 		{
@@ -903,7 +936,7 @@ class CouchDbSvc extends NoSqlDbSvc
 		try
 		{
 			$_records = $this->retrieveRecordsByFilter( $table, $filter, $fields, $extras );
-			$results = $this->_dbConn->asArray()->deleteDocs( $_records, true );
+			$results = $this->_dbConn->asArray()->deleteDocs( $_records );
 
 			return $_records;
 		}
@@ -916,49 +949,52 @@ class CouchDbSvc extends NoSqlDbSvc
 	/**
 	 * @param        $table
 	 * @param        $id_list
+	 * @param        $id_field
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
+	public function deleteRecordsByIds( $table, $id_list, $id_field = '', $rollback = false, $fields = '', $extras = array() )
 	{
+		$table = $this->correctTableName( $table );
+
 		if ( empty( $id_list ) )
 		{
-			throw new BadRequestException( "Identifying values for 'id_field' can not be empty for update request." );
+			throw new BadRequestException( "Identifying values for '$id_field' can not be empty for update request." );
 		}
 
-		$table = $this->correctTableName( $table );
-		$_rollback = Option::getBool( $extras, 'rollback', false );
 		try
 		{
 			// get the returnable fields first, then issue delete
-			$_records = $this->retrieveRecordsByIds( $table, $id_list, $fields, $extras );
-			$result = $this->_dbConn->deleteDocs( $_records, $_rollback );
+			$_records = $this->retrieveRecordsByIds( $table, $id_list, $id_field, $fields, $extras );
+			$result = $this->_dbConn->deleteDocs( $_records, $rollback );
 
 			return $_records;
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to delete items from '$table' on CouchDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to delete items from '$table' on CouchDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $id
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecordById( $table, $id, $fields = null, $extras = array() )
+	public function deleteRecordById( $table, $id, $id_field = '', $fields = '', $extras = array() )
 	{
 		try
 		{
-			$_record = $this->retrieveRecordById( $table, $id, $fields, $extras );
+			$_record = $this->retrieveRecordById( $table, $id, $id_field, $fields, $extras );
 			$result = $this->_dbConn->asArray()->deleteDoc( (object)$_record );
 
 			return $_record;
@@ -978,11 +1014,11 @@ class CouchDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecordsByFilter( $table, $filter = null, $fields = null, $extras = array() )
+	public function retrieveRecordsByFilter( $table, $filter = '', $fields = '', $extras = array() )
 	{
 		$table = $this->correctTableName( $table );
 
-		$_moreFields = static::_requireMoreFields( $fields );
+		$_moreFields = static::requireMoreFields( $fields );
 		try
 		{
 			// todo how to filter here?
@@ -1001,13 +1037,14 @@ class CouchDbSvc extends NoSqlDbSvc
 	/**
 	 * @param string $table
 	 * @param array  $records
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecords( $table, $records, $fields = null, $extras = array() )
+	public function retrieveRecords( $table, $records, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -1023,7 +1060,7 @@ class CouchDbSvc extends NoSqlDbSvc
 		$ids = array();
 		foreach ( $records as $key => $record )
 		{
-			$_id = Option::get( $record, static::DEFAULT_ID_FIELD );
+			$_id = Option::get( $record, '_id' );
 			if ( empty( $_id ) )
 			{
 				throw new BadRequestException( "Identifying field '_id' can not be empty for retrieve record index '$key' request." );
@@ -1031,7 +1068,7 @@ class CouchDbSvc extends NoSqlDbSvc
 			$ids[] = $_id;
 		}
 
-		$_moreFields = static::_requireMoreFields( $fields );
+		$_moreFields = static::requireMoreFields( $fields );
 		try
 		{
 			$result = $this->_dbConn->asArray()->include_docs( $_moreFields )->keys( $ids )->getAllDocs();
@@ -1042,20 +1079,21 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to get items from '$table' on CouchDb service.\n" . $ex->getMessage() );
+			throw new \Exception( "Failed to get items from '$table' on CouchDb service.\n" . $ex->getMessage() );
 		}
 	}
 
 	/**
 	 * @param        $table
 	 * @param        $record
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecord( $table, $record, $fields = null, $extras = array() )
+	public function retrieveRecord( $table, $record, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -1063,7 +1101,7 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
-		$_id = Option::get( $record, static::DEFAULT_ID_FIELD );
+		$_id = Option::get( $record, '_id' );
 		if ( empty( $_id ) )
 		{
 			throw new BadRequestException( "Identifying field '_id' can not be empty for retrieve record request." );
@@ -1084,13 +1122,14 @@ class CouchDbSvc extends NoSqlDbSvc
 	/**
 	 * @param string $table
 	 * @param string $id_list - comma delimited list of ids
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
+	public function retrieveRecordsByIds( $table, $id_list, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( empty( $id_list ) )
 		{
@@ -1099,7 +1138,7 @@ class CouchDbSvc extends NoSqlDbSvc
 		$ids = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
 		$table = $this->correctTableName( $table );
 
-		$_moreFields = static::_requireMoreFields( $fields );
+		$_moreFields = static::requireMoreFields( $fields );
 		try
 		{
 			$result = $this->_dbConn->asArray()->include_docs( $_moreFields )->keys( $ids )->getAllDocs();
@@ -1117,13 +1156,14 @@ class CouchDbSvc extends NoSqlDbSvc
 	/**
 	 * @param        $table
 	 * @param        $id
+	 * @param string $id_field
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecordById( $table, $id, $fields = null, $extras = array() )
+	public function retrieveRecordById( $table, $id, $id_field = '', $fields = '', $extras = array() )
 	{
 		if ( empty( $id ) )
 		{
@@ -1153,12 +1193,12 @@ class CouchDbSvc extends NoSqlDbSvc
 	{
 		if ( '*' !== $include )
 		{
-			$_id = Option::get( $record, static::DEFAULT_ID_FIELD );
+			$_id = Option::get( $record, '_id' );
 			if ( empty( $_id ) )
 			{
 				$_id = Option::get( $record, 'id' );
 			}
-			$_rev = Option::get( $record, static::REV_FIELD );
+			$_rev = Option::get( $record, '_rev' );
 			if ( empty( $_rev ) )
 			{
 				$_rev = Option::get( $record, 'rev' );
@@ -1167,7 +1207,7 @@ class CouchDbSvc extends NoSqlDbSvc
 					$_rev = Option::getDeep( $record, 'value', 'rev' );
 				}
 			}
-			$_out = array( static::DEFAULT_ID_FIELD => $_id, static::REV_FIELD => $_rev );
+			$_out = array( '_id' => $_id, '_rev' => $_rev );
 
 			if ( empty( $include ) )
 			{
@@ -1179,7 +1219,7 @@ class CouchDbSvc extends NoSqlDbSvc
 			}
 			foreach ( $include as $key )
 			{
-				if ( 0 == strcasecmp( $key, static::DEFAULT_ID_FIELD ) || 0 == strcasecmp( $key, static::REV_FIELD ) )
+				if ( 0 == strcasecmp( $key, '_id' ) || 0 == strcasecmp( $key, '_rev' ) )
 				{
 					continue;
 				}
@@ -1205,5 +1245,37 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 
 		return $_out;
+	}
+
+	protected static function requireMoreFields( $fields = null )
+	{
+		if ( empty( $fields ) )
+		{
+			return false;
+		}
+		if ( 0 === strcasecmp( '_id', $fields ) )
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	protected static function recordArrayMerge( $first_array, $second_array )
+	{
+		foreach ( $first_array as $_key => $_first )
+		{
+			$_firstId = Option::get( $_first, '_id' );
+			foreach ( $second_array as $_second )
+			{
+				$_secondId = Option::get( $_second, '_id' );
+				if ( $_firstId == $_secondId )
+				{
+					$first_array[$_key] = array_merge( $_first, $_second );
+				}
+			}
+		}
+
+		return $first_array;
 	}
 }
