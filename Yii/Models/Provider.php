@@ -19,14 +19,18 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use Kisma\Core\Utility\Hasher;
+use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Sql;
+
 /**
- * Provider.php
- * Models a provider of remote accounts
+ * Provider
+ * Authentication provider model
  *
- * Our columns are:
+ * Columns:
  *
- * @property string  $provider_name
- * @property array   $config_text
+ * @property string              $provider_name
+ * @property array               $config_text
  */
 class Provider extends BasePlatformSystemModel
 {
@@ -43,11 +47,26 @@ class Provider extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @return array validation rules for model attributes.
+	 * @return array
+	 */
+	public function rules()
+	{
+		$_rules = array(
+			array( 'provider_name, config_text', 'safe' ),
+		);
+
+		return array_merge( parent::rules(), $_rules );
+	}
+
+	/**
+	 * @return array
 	 * @return array
 	 */
 	public function behaviors()
 	{
 		return array_merge(
+			parent::behaviors(),
 			array(
 				 //	Secure JSON
 				 'base_platform_model.secure_json' => array(
@@ -57,8 +76,7 @@ class Provider extends BasePlatformSystemModel
 						 'config_text',
 					 )
 				 ),
-			),
-			parent::behaviors()
+			)
 		);
 	}
 
@@ -73,8 +91,8 @@ class Provider extends BasePlatformSystemModel
 			array_merge(
 				$additionalLabels,
 				array(
-					 'provider_name' => 'Provider',
-					 'config_text'   => 'Provider Configuration',
+					 'provider_name' => 'Name',
+					 'config_text'   => 'Configuration',
 				)
 			)
 		);

@@ -72,7 +72,8 @@ class ProviderUser extends BasePlatformSystemModel
 		return array_merge(
 			parent::relations(),
 			array(
-				 'user' => array( static::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id' ),
+				 'user'     => array( static::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id' ),
+				 'provider' => array( static::BELONGS_TO, __NAMESPACE__ . '\\Provider', 'provider_id' ),
 			)
 		);
 	}
