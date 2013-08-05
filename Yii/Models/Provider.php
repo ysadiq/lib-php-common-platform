@@ -20,23 +20,15 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 /**
- * AccountProvider.php
- * Models a provider of service accounts
+ * Provider.php
+ * Models a provider of remote accounts
  *
  * Our columns are:
  *
- * @property int     $service_id
- * @property string  $api_name
- * @property string  $handler_class
- * @property string  $auth_endpoint
- * @property string  $service_endpoint
- * @property array   $provider_options
- * @property array   $master_auth_text
- * @property string  $last_use_date
- *
- * @property Service $service
+ * @property string  $provider_name
+ * @property array   $config_text
  */
-class AccountProvider extends BasePlatformSystemModel
+class Provider extends BasePlatformSystemModel
 {
 	//*************************************************************************
 	//* Methods
@@ -47,20 +39,7 @@ class AccountProvider extends BasePlatformSystemModel
 	 */
 	public function tableName()
 	{
-		return static::tableNamePrefix() . 'account_provider';
-	}
-
-	/**
-	 * @return array
-	 */
-	public function relations()
-	{
-		return array_merge(
-			parent::relations(),
-			array(
-				 'service' => array( static::BELONGS_TO, __NAMESPACE__ . '\\Service', 'service_id' ),
-			)
-		);
+		return static::tableNamePrefix() . 'provider';
 	}
 
 	/**
@@ -75,8 +54,7 @@ class AccountProvider extends BasePlatformSystemModel
 					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
 					 'salt'             => $this->getDb()->password,
 					 'secureAttributes' => array(
-						 'provider_options',
-						 'master_auth_text',
+						 'config_text',
 					 )
 				 ),
 			),
@@ -95,14 +73,8 @@ class AccountProvider extends BasePlatformSystemModel
 			array_merge(
 				$additionalLabels,
 				array(
-					 'service_id'       => 'Service Parent',
-					 'api_name'         => 'Portal Endpoint',
-					 'handler_class'    => 'Request Handler Class',
-					 'auth_endpoint'    => 'Authorization Endpoint',
-					 'service_endpoint' => 'Service Endpoint',
-					 'provider_options' => 'Provider Options',
-					 'master_auth_text' => 'Tokens',
-					 'last_use_date'    => 'Last Used',
+					 'provider_name' => 'Provider',
+					 'config_text'   => 'Provider Configuration',
 				)
 			)
 		);
