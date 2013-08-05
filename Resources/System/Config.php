@@ -124,24 +124,28 @@ class Config extends BaseSystemRestResource
 		}
 
 		$this->_response['dsp_version'] = DSP_VERSION;
-<<<<<<< HEAD
-		if ( false !== ( $this->_response['allow_remote_logins'] = Pii::getParam( 'dsp.allow_remote_logins' ) ) )
+
+		$this->_response['allow_remote_logins'] = ( Pii::getParam( 'dsp.allow_remote_logins', false ) && $this->_response['allow_open_registration'] );
+
+		if ( false !== $this->_response['allow_remote_logins'] )
 		{
-			$_rows = Sql::findAll( 'select api_name from df_sys_provider order by 1', array(), Pii::pdo() );
+			$_rows = Sql::findAll( 'select provider_name from df_sys_provider order by 1', array(), Pii::pdo() );
 
 			if ( !empty( $_rows ) )
 			{
 				$this->_response['remote_login_providers'] = array();
+
 				foreach ( $_rows as $_row )
 				{
 					$this->_response['remote_login_providers'][] = $_row['api_name'];
 				}
 			}
+			else
+			{
+				//	No providers, no remote logins
+				$this->_response['allow_remote_logins'] = false;
+			}
 		}
-=======
-		$this->_response['allow_remote_logins'] = Pii::getParam( 'dsp.allow_remote_logins' );
-		$this->_response['remote_login_providers'] = Pii::getParam( 'dsp.remote_login_providers' );
->>>>>>> parent of 889636b... merge revert #2
 
 		parent::_postProcess();
 	}
