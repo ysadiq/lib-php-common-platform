@@ -21,7 +21,6 @@ namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Services\BaseFileSvc;
-use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
@@ -43,7 +42,7 @@ use Kisma\Core\Utility\Sql;
  * @property string               $import_url
  * @property string               $storage_service_id
  * @property string               $storage_container
- * @property string               $launch_url
+ * @property string               $_launchUrl
  * @property boolean              $requires_fullscreen
  * @property boolean              $allow_fullscreen_toggle
  * @property boolean              $toggle_location
@@ -68,7 +67,7 @@ class App extends BasePlatformSystemModel
 	/**
 	 * @var string The url to launch the app from, comprised of its storage and starting file.
 	 */
-	public $launch_url;
+	protected $_launchUrl;
 
 	//*************************************************************************
 	//* Methods
@@ -91,11 +90,15 @@ class App extends BasePlatformSystemModel
 			array(
 				array( 'name, api_name', 'required' ),
 				array( 'name, api_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
-				array( 'storage_service_id', 'numerical', 'integerOnly' => true ),
+				array(
+					'is_active, is_url_external, requires_fullscreen, requires_plugin, allow_fullscreen_toggle, storage_service_id',
+					'numerical',
+					'integerOnly' => true
+				),
 				array( 'name, api_name', 'length', 'max' => 64 ),
 				array( 'storage_container', 'length', 'max' => 255 ),
 				array(
-					'name, api_name, description, is_active, url, is_url_external, import_url, storage_service_id, storage_container, launch_url, requires_fullscreen, allow_fullscreen_toggle, toggle_location, requires_plugin',
+					'name, api_name, description, is_active, url, is_url_external, import_url, storage_service_id, storage_container, _launchUrl, requires_fullscreen, allow_fullscreen_toggle, toggle_location, requires_plugin',
 					'safe'
 				),
 			);
@@ -244,7 +247,7 @@ class App extends BasePlatformSystemModel
 		if ( !$this->is_url_external )
 		{
 			$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
-			$this->launch_url = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' ) . '/';
+			$this->_launchUrl = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' ) . '/';
 
 			if ( !empty( $this->storage_service_id ) )
 			{
@@ -253,24 +256,24 @@ class App extends BasePlatformSystemModel
 
 				if ( !empty( $_service ) )
 				{
-					$this->launch_url .= $_service->api_name . '/';
+					$this->_launchUrl .= $_service->api_name . '/';
 				}
 
 				if ( !empty( $this->storage_container ) )
 				{
-					$this->launch_url .= $this->storage_container . '/';
+					$this->_launchUrl .= $this->storage_container . '/';
 				}
 			}
 			else
 			{
-				$this->launch_url .= 'app/applications/';
+				$this->_launchUrl .= 'app/applications/';
 			}
 
-			$this->launch_url .= $this->api_name . $this->url;
+			$this->_launchUrl .= $this->api_name . $this->url;
 		}
 		else
 		{
-			$this->launch_url = $this->url;
+			$this->_launchUrl = $this->url;
 		}
 	}
 
@@ -296,7 +299,7 @@ class App extends BasePlatformSystemModel
 					 'import_url',
 					 'storage_service_id',
 					 'storage_container',
-					 'launch_url',
+					 '_launchUrl',
 					 'requires_fullscreen',
 					 'allow_fullscreen_toggle',
 					 'toggle_location',

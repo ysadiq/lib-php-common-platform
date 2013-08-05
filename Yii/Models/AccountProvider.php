@@ -19,25 +19,24 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
-use Kisma\Core\Utility\Hasher;
-use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Sql;
-
 /**
- * PortalAccount.php
- * The user service registry model for the DSP
+ * AccountProvider.php
+ * Models a provider of service accounts
  *
- * Columns:
+ * Our columns are:
  *
- * @property int                 $user_id
- * @property int                 $api_name
- * @property int                 $account_type
- * @property array               $auth_text
- * @property string              $last_use_date
+ * @property int     $service_id
+ * @property string  $api_name
+ * @property string  $handler_class
+ * @property string  $auth_endpoint
+ * @property string  $service_endpoint
+ * @property array   $provider_options
+ * @property array   $master_auth_text
+ * @property string  $last_use_date
  *
- * @property User                $user
+ * @property Service $service
  */
-class PortalAccount extends BasePlatformSystemModel
+class AccountProvider extends BasePlatformSystemModel
 {
 	//*************************************************************************
 	//* Methods
@@ -48,7 +47,7 @@ class PortalAccount extends BasePlatformSystemModel
 	 */
 	public function tableName()
 	{
-		return static::tableNamePrefix() . 'portal_account';
+		return static::tableNamePrefix() . 'account_provider';
 	}
 
 	/**
@@ -57,7 +56,7 @@ class PortalAccount extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array( 'user_id, api_name, account_type, auth_text, last_use_date', 'safe' ),
+			array( 'service_id, api_name, handler_class, auth_endpoint, service_endpoint, provider_options, master_auth_text, last_use_date', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -71,7 +70,7 @@ class PortalAccount extends BasePlatformSystemModel
 		return array_merge(
 			parent::relations(),
 			array(
-				 'user' => array( static::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id' ),
+				 'service' => array( static::BELONGS_TO, __NAMESPACE__ . '\\Service', 'service_id' ),
 			)
 		);
 	}
@@ -82,17 +81,18 @@ class PortalAccount extends BasePlatformSystemModel
 	public function behaviors()
 	{
 		return array_merge(
-			parent::behaviors(),
 			array(
 				 //	Secure JSON
 				 'base_platform_model.secure_json' => array(
-					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'               => $this->getDb()->password,
-					 'insecureAttributes' => array(
-						 'auth_text',
+					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					 'salt'             => $this->getDb()->password,
+					 'secureAttributes' => array(
+						 'provider_options',
+						 'master_auth_text',
 					 )
 				 ),
-			)
+			),
+			parent::behaviors()
 		);
 	}
 
@@ -107,38 +107,16 @@ class PortalAccount extends BasePlatformSystemModel
 			array_merge(
 				$additionalLabels,
 				array(
-					 'api_name'      => 'Portal',
-					 'user_id'       => 'User ID',
-					 'account_type'  => 'Account Type',
-					 'auth_text'     => 'Authorization',
-					 'last_use_date' => 'Last Used',
+					 'service_id'       => 'Service Parent',
+					 'api_name'         => 'Portal Endpoint',
+					 'handler_class'    => 'Request Handler Class',
+					 'auth_endpoint'    => 'Authorization Endpoint',
+					 'service_endpoint' => 'Service Endpoint',
+					 'provider_options' => 'Provider Options',
+					 'master_auth_text' => 'Tokens',
+					 'last_use_date'    => 'Last Used',
 				)
 			)
 		);
-	}
-
-	/**
-	 * Named scope that filters by user_id and api_name
-	 *
-	 * @param int $userId
-	 * @param     $portalName
-	 *
-	 * @internal param int $providerId
-	 *
-	 * @return $this
-	 */
-	public function byUserPortal( $userId, $portalName )
-	{
-		$this->getDbCriteria()->mergeWith(
-			array(
-				 'condition' => 'user_id = :user_id and api_name = :api_name',
-				 'params'    => array(
-					 ':user_id'  => $userId,
-					 ':api_name' => $portalName
-				 ),
-			)
-		);
-
-		return $this;
 	}
 }

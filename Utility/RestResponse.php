@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
@@ -97,11 +96,11 @@ class RestResponse extends HttpResponse
 		{
 			if ( $_status == static::InternalServerError || $_status == static::BadRequest )
 			{
-//				Log::error( 'Error ' . $_status . ': ' . $ex->getMessage() );
+				Log::error( 'Error ' . $_status . ': ' . $ex->getMessage() );
 			}
 			else
 			{
-//				Log::info( 'Non-Error ' . $_status . ': ' . $ex->getMessage() );
+				Log::info( 'Non-Error ' . $_status . ': ' . $ex->getMessage() );
 			}
 		}
 
@@ -122,17 +121,13 @@ class RestResponse extends HttpResponse
 			$code = static::getHttpStatusCode( $code );
 			$title = static::getHttpStatusCodeTitle( $code );
 			header( "HTTP/1.1 $code $title" );
-
 			$result = DataFormat::reformatData( $result, $result_format, $desired_format );
-
 			switch ( $desired_format )
 			{
-				case OutputFormats::JSON:
 				case 'json':
 					static::sendJsonResponse( $result );
 					break;
 
-				case OutputFormats::XML:
 				case 'xml':
 					static::sendXmlResponse( $result );
 					break;
@@ -190,7 +185,6 @@ class RestResponse extends HttpResponse
 
 		header( 'Content-type: application/xml' );
 		echo "<?xml version=\"1.0\" ?>\n<dfapi>\n" . $data . "</dfapi>";
-
 		self::sendResponse();
 	}
 
@@ -219,7 +213,6 @@ class RestResponse extends HttpResponse
 				header( 'status: 400 Bad Request', true, static::BadRequest );
 			}
 		}
-
 		echo $data;
 	}
 
@@ -283,15 +276,5 @@ class RestResponse extends HttpResponse
 
 		return preg_match( $identifier_syntax, $subject )
 			   && !in_array( mb_strtolower( $subject, 'UTF-8' ), $reserved_words );
-	}
-
-	/**
-	 * @param array $data
-	 *
-	 * @return mixed
-	 */
-	public static function sendDataTablesResponse( $data )
-	{
-		return DataTablesFormatter::format( $data );
 	}
 }

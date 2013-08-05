@@ -17,12 +17,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Exceptions;
+namespace DreamFactory\Platform\Enums;
+
+use Kisma\Core\Enums\SeedEnum;
 
 /**
- * MisconfigurationException
- * Throw when sh*t gets f*cked up
+ * ServiceAccountTypes
  */
-class MisconfigurationException extends InternalServerErrorException
+class ServiceAccountTypes extends SeedEnum
 {
+	//*************************************************************************
+	//* Constants
+	//*************************************************************************
+
+	/**
+	 * @var int
+	 */
+	const INDIVIDUAL_USER = 0;
+	/**
+	 * @var int
+	 */
+	const SINGLE_USER_FOR_ALL = 1;
 }

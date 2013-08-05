@@ -19,10 +19,8 @@
  */
 namespace DreamFactory\Platform\Yii\Behaviors;
 
-use CModelEvent;
 use DreamFactory\Yii\Behaviors\BaseModelBehavior;
 use Kisma\Core\Utility\Hasher;
-use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
 
 /**
@@ -134,7 +132,7 @@ class SecureJson extends BaseModelBehavior
 			return;
 		}
 
-		foreach ( Option::clean( $this->_secureAttributes ) as $_attribute )
+		foreach ( $this->_secureAttributes as $_attribute )
 		{
 			if ( $event->sender->hasAttribute( $_attribute ) )
 			{
@@ -149,7 +147,7 @@ class SecureJson extends BaseModelBehavior
 			}
 		}
 
-		foreach ( Option::clean( $this->_insecureAttributes ) as $_attribute )
+		foreach ( $this->_insecureAttributes as $_attribute )
 		{
 			if ( $event->sender->hasAttribute( $_attribute ) )
 			{
@@ -179,7 +177,7 @@ class SecureJson extends BaseModelBehavior
 			return;
 		}
 
-		foreach ( Option::clean( $this->_secureAttributes ) as $_attribute )
+		foreach ( $this->_secureAttributes as $_attribute )
 		{
 			if ( $event->sender->hasAttribute( $_attribute ) )
 			{
@@ -194,7 +192,7 @@ class SecureJson extends BaseModelBehavior
 			}
 		}
 
-		foreach ( Option::clean( $this->_insecureAttributes ) as $_attribute )
+		foreach ( $this->_insecureAttributes as $_attribute )
 		{
 			if ( $event->sender->hasAttribute( $_attribute ) )
 			{
@@ -245,14 +243,6 @@ class SecureJson extends BaseModelBehavior
 		if ( empty( $data ) )
 		{
 			$data = $defaultValue;
-		}
-
-		if ( is_string( $data ) )
-		{
-			if ( false !== ( $_decoded = json_decode( $data, true ) ) )
-			{
-				$data = $_decoded;
-			}
 		}
 
 		if ( false === ( $_encoded = json_encode( $data ) ) )

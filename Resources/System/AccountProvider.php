@@ -21,84 +21,81 @@ namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Utility\SwaggerUtilities;
-use Swagger\Annotations as SWG;
+use DreamFactory\Platform\Services\BasePlatformRestService;
+use DreamFactory\Platform\Services\BasePlatformService;
+use DreamFactory\Platform\Utility\ResourceStore;
+use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Sql;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Services\SystemManager;
+use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Utility\SqlDbUtilities;
+use DreamFactory\Platform\Utility\Utilities;
+use DreamFactory\Yii\Utility\Pii;
+use Platform\Utility\RestData;
 
 /**
- * Service
- * DSP system administration manager
+ * AccountProvider
+ * DSP service/provider interface
  *
  * @SWG\Resource(
  *   resourcePath="/system"
  * )
  *
- * @SWG\Model(id="Services",
- * @SWG\Property(name="record",type="Array",items="$ref:Service",description="Array of system service records.")
+ * @SWG\Model(id="AccountProviders",
+ * @SWG\Property(name="record",type="Array",items="$ref:AccountProvider",description="Array of system account provider records of the given resource.")
  * )
- * @SWG\Model(id="Service",
- * @SWG\Property(name="id",type="int",description="Identifier of this service."),
- * @SWG\Property(name="name",type="string",description="Displayable name of this service."),
- * @SWG\Property(name="api_name",type="string",description="Name of the service to use in API transactions."),
- * @SWG\Property(name="description",type="string",description="Description of this service."),
- * @SWG\Property(name="is_active",type="boolean",description="True if this service is active for use."),
- * @SWG\Property(name="is_system",type="boolean",description="True if this service is a default system service."),
- * @SWG\Property(name="type",type="string",description="One of the supported service types."),
- * @SWG\Property(name="storage_name",type="string",description="The local or remote storage name (i.e. root folder)."),
- * @SWG\Property(name="storage_type",type="string",description="They supported storage service type."),
- * @SWG\Property(name="credentials",type="string",description="Any credentials data required by the service."),
- * @SWG\Property(name="native_format",type="string",description="The format of the returned data of the service."),
- * @SWG\Property(name="base_url",type="string",description="The base URL for remote web services."),
- * @SWG\Property(name="parameters",type="string",description="Additional URL parameters required by the service."),
- * @SWG\Property(name="headers",type="string",description="Additional headers required by the service."),
- * @SWG\Property(name="apps",type="Array",items="$ref:App",description="Related apps by app to service assignment."),
- * @SWG\Property(name="roles",type="Array",items="$ref:Role",description="Related roles by service to role assignment."),
- * @SWG\Property(name="created_date",type="string",description="Date this service was created."),
- * @SWG\Property(name="created_by_id",type="int",description="User Id of who created this service."),
- * @SWG\Property(name="last_modified_date",type="string",description="Date this service was last modified."),
- * @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this service.")
- * )
- *
+ * @SWG\Model(id="AccountProvider",
+ * @SWG\Property(name="id",type="int",description="Identifier of this provider."),
+ * @SWG\Property(name="service_id",type="int",description="The service which owns this account provider."),
+ * @SWG\Property(name="auth_endpoint",type="string",description="The endpoint for authentication, if different from service_endpoint."),
+ * @SWG\Property(name="service_endpoint",type="string",description="The endpoint for this service."),
+ * @SWG\Property(name="created_date",type="string",description="Date this application group was created."),
+ * @SWG\Property(name="created_by_id",type="int",description="User Id of who created this application group."),
+ * @SWG\Property(name="last_modified_date",type="string",description="Date this application group was last modified."),
+ * @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this application group.")
  */
-class Service extends BaseSystemRestResource
+class AccountProvider extends BaseSystemRestResource
 {
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
-
 	/**
-	 * Creates a new Service
+	 * Constructor
 	 *
-	 * @param array $resources
+	 * @param BasePlatformService $consumer
+	 * @param array               $resourceArray
+	 *
+	 * @return \DreamFactory\Platform\Resources\System\AccountProvider
 	 */
-	public function __construct( $consumer, $resources = array() )
+	public function __construct( $consumer = null, $resourceArray = array() )
 	{
-		return parent::__construct(
+		parent::__construct(
 			$consumer,
 			array(
+				 'name'           => 'Account Provider',
+				 'type'           => 'Service',
 				 'service_name'   => 'system',
-				 'name'           => 'Service',
-				 'api_name'       => 'service',
-				 'type'           => 'System',
-				 'description'    => 'System service administration.',
+				 'type_id'        => PlatformServiceTypes::LOCAL_WEB_SERVICE,
+				 'api_name'       => 'account_provider',
+				 'description'    => 'Service account provider configuration',
 				 'is_active'      => true,
-				 'resource_array' => $resources,
+				 'resource_array' => $resourceArray,
+				 'verb_aliases'   => array(
+					 static::Put => static::Post,
+				 )
 			)
 		);
 	}
-
-	// Resource interface implementation
-
-	// REST interface implementation
-
 	/**
 	 *
 	 * @SWG\Api(
-	 *             path="/system/service", description="Operations for service administration.",
+	 *     path="/system/account_provider", description="Operations for account provider administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve multiple services.",
-	 *             notes="Use the 'ids' or 'filter' parameter to limit records that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.",
-	 *             responseClass="Services", nickname="getServices",
+	 *         httpMethod="GET", summary="Retrieve multiple account providers.",
+	 *         notes="Use the 'ids' or 'filter' parameter to limit records that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.",
+	 *         responseClass="AccountProviders", nickname="getAccountProviders",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -144,13 +141,13 @@ class Service extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="POST", summary="Create one or more services.",
-	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="createServices",
+	 *         httpMethod="POST", summary="Create one or more account providers.",
+	 *         notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
+	 *         responseClass="Success", nickname="createAccountProviders",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to create.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="Services"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="AccountProviders"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -168,13 +165,13 @@ class Service extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one or more services.",
-	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="updateServices",
+	 *         httpMethod="PUT", summary="Update one or more account providers.",
+	 *         notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
+	 *         responseClass="Success", nickname="updateAccountProviders",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="Services"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="AccountProviders"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -192,9 +189,9 @@ class Service extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one or more services.",
-	 *             notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="deleteServices",
+	 *         httpMethod="DELETE", summary="Delete one or more account providers.",
+	 *         notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
+	 *         responseClass="Success", nickname="deleteAccountProviders",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -202,7 +199,7 @@ class Service extends BaseSystemRestResource
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to delete.",
-	 *             paramType="body", required="false", allowMultiple=false, dataType="Services"
+	 *             paramType="body", required="false", allowMultiple=false, dataType="AccountProviders"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -223,12 +220,12 @@ class Service extends BaseSystemRestResource
 	 *   )
 	 *
 	 * @SWG\Api(
-	 *             path="/system/service/{id}", description="Operations for individual service administration.",
+	 *     path="/system/account_provider/{id}", description="Operations for individual account provider administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve one service by identifier.",
-	 *             notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
-	 *             responseClass="Service", nickname="getService",
+	 *         httpMethod="GET", summary="Retrieve one account provider by identifier.",
+	 *         notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
+	 *         responseClass="AccountProvider", nickname="getAccountProvider",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -250,9 +247,9 @@ class Service extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one service.",
-	 *             notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
-	 *             responseClass="Success", nickname="updateService",
+	 *         httpMethod="PUT", summary="Update one account provider.",
+	 *         notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
+	 *         responseClass="Success", nickname="updateAccountProvider",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -260,7 +257,7 @@ class Service extends BaseSystemRestResource
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="Service"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="AccountProvider"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -278,9 +275,9 @@ class Service extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one service.",
-	 *             notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
-	 *             responseClass="Success", nickname="deleteService",
+	 *         httpMethod="DELETE", summary="Delete one account provider.",
+	 *         notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
+	 *         responseClass="Success", nickname="deleteAccountProvider",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -306,17 +303,4 @@ class Service extends BaseSystemRestResource
 	 *
 	 * @return array|bool
 	 */
-	/**
-	 * @param mixed $results
-	 */
-	protected function _postProcess( $results = null )
-	{
-		if ( static::Get != $this->_action )
-		{
-			// clear swagger cache upon any service changes.
-			SwaggerUtilities::clearCache();
-		}
-
-		parent::_postProcess( $results );
-	}
 }
