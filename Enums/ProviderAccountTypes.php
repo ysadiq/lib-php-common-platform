@@ -22,9 +22,9 @@ namespace DreamFactory\Platform\Enums;
 use Kisma\Core\Enums\SeedEnum;
 
 /**
- * PortalAccountTypes
+ * ProviderUserTypes
  */
-class PortalAccountTypes extends SeedEnum
+class ProviderUserTypes extends SeedEnum
 {
 	//*************************************************************************
 	//* Constants

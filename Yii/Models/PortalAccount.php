@@ -24,20 +24,21 @@ use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Sql;
 
 /**
- * PortalAccount.php
+ * ProviderUser.php
  * The user service registry model for the DSP
  *
  * Columns:
  *
  * @property int                 $user_id
- * @property int                 $api_name
+ * @property int                 $provider_id
+ * @property string              $provider_user_id
  * @property int                 $account_type
  * @property array               $auth_text
  * @property string              $last_use_date
  *
  * @property User                $user
  */
-class PortalAccount extends BasePlatformSystemModel
+class ProviderUser extends BasePlatformSystemModel
 {
 	//*************************************************************************
 	//* Methods
@@ -48,7 +49,7 @@ class PortalAccount extends BasePlatformSystemModel
 	 */
 	public function tableName()
 	{
-		return static::tableNamePrefix() . 'portal_account';
+		return static::tableNamePrefix() . 'provider_user';
 	}
 
 	/**
@@ -57,7 +58,7 @@ class PortalAccount extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array( 'user_id, api_name, account_type, auth_text, last_use_date', 'safe' ),
+			array( 'provider_id, provider_user_id, user_id, account_type, auth_text, last_use_date', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -86,9 +87,9 @@ class PortalAccount extends BasePlatformSystemModel
 			array(
 				 //	Secure JSON
 				 'base_platform_model.secure_json' => array(
-					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'               => $this->getDb()->password,
-					 'insecureAttributes' => array(
+					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					 'salt'             => $this->getDb()->password,
+					 'secureAttributes' => array(
 						 'auth_text',
 					 )
 				 ),
@@ -107,38 +108,14 @@ class PortalAccount extends BasePlatformSystemModel
 			array_merge(
 				$additionalLabels,
 				array(
-					 'api_name'      => 'Portal',
-					 'user_id'       => 'User ID',
-					 'account_type'  => 'Account Type',
-					 'auth_text'     => 'Authorization',
-					 'last_use_date' => 'Last Used',
+					 'provider_id'      => 'Provider ID',
+					 'user_id'          => 'User ID',
+					 'provider_user_id' => 'Provider User ID',
+					 'account_type'     => 'Account Type',
+					 'auth_text'        => 'Authorization',
+					 'last_use_date'    => 'Last Used',
 				)
 			)
 		);
-	}
-
-	/**
-	 * Named scope that filters by user_id and api_name
-	 *
-	 * @param int $userId
-	 * @param     $portalName
-	 *
-	 * @internal param int $providerId
-	 *
-	 * @return $this
-	 */
-	public function byUserPortal( $userId, $portalName )
-	{
-		$this->getDbCriteria()->mergeWith(
-			array(
-				 'condition' => 'user_id = :user_id and api_name = :api_name',
-				 'params'    => array(
-					 ':user_id'  => $userId,
-					 ':api_name' => $portalName
-				 ),
-			)
-		);
-
-		return $this;
 	}
 }
