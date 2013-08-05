@@ -82,9 +82,8 @@ class Config extends BaseSystemRestResource
 				 'is_active'      => true,
 				 'resource_array' => $resourceArray,
 				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-					 static::Put   => static::Post,
-					 static::Merge => static::Post,
+					 static::Patch => static::Put,
+					 static::Merge => static::Put,
 				 )
 			)
 		);
@@ -129,7 +128,7 @@ class Config extends BaseSystemRestResource
 
 		if ( false !== $this->_response['allow_remote_logins'] )
 		{
-			$_rows = Sql::findAll( 'select provider_name from df_sys_provider order by 1', array(), Pii::pdo() );
+			$_rows = Sql::findAll( 'select id, api_name, provider_name from df_sys_provider order by 1', array(), Pii::pdo() );
 
 			if ( !empty( $_rows ) )
 			{
@@ -137,7 +136,7 @@ class Config extends BaseSystemRestResource
 
 				foreach ( $_rows as $_row )
 				{
-					$this->_response['remote_login_providers'][] = $_row['api_name'];
+					$this->_response['remote_login_providers'][] = $_row['provider_name'];
 				}
 			}
 			else
