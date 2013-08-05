@@ -29,7 +29,7 @@ use Kisma\Core\Utility\Sql;
  *
  * Columns:
  *
- * @property string              $api_name
+ * @property string              $provider_name
  * @property array               $config_text
  */
 class Provider extends BasePlatformSystemModel
@@ -53,7 +53,7 @@ class Provider extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array( 'api_name, config_text', 'safe' ),
+			array( 'provider_name, config_text', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -91,8 +91,8 @@ class Provider extends BasePlatformSystemModel
 			array_merge(
 				$additionalLabels,
 				array(
-					 'api_name'    => 'Name',
-					 'config_text' => 'Configuration',
+					 'provider_name' => 'Name',
+					 'config_text'   => 'Configuration',
 				)
 			)
 		);

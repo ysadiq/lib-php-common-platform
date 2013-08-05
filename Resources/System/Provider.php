@@ -66,7 +66,7 @@ class Provider extends BaseSystemRestResource
 		parent::__construct(
 			$consumer,
 			array(
-				 'name'           => 'Portal Account',
+				 'name'           => 'Provider',
 				 'type'           => 'Service',
 				 'service_name'   => 'system',
 				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,

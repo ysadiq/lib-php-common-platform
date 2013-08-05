@@ -20,7 +20,7 @@
 namespace DreamFactory\Platform\Yii\Components;
 
 use DreamFactory\Platform\Services\Portal\OAuth\Exceptions\AuthenticationException;
-use DreamFactory\Platform\Yii\Models\PortalAccount;
+use DreamFactory\Platform\Yii\Models\ProviderUser;
 use Kisma\Core\Utility\FilterInput;
 
 /**
@@ -98,7 +98,7 @@ class RemoteUserIdentity extends \CBaseUserIdentity
 			$this->_adapter = $_adapter;
 			$this->_providerUserId = $this->_adapter->getUserProfile()->identifier;
 
-			if ( null === ( $_user = PortalAccount::getUser( $this->providerName, $this->providerUserId ) ) )
+			if ( null === ( $_user = ProviderUser::getUser( $this->providerName, $this->providerUserId ) ) )
 			{
 				$this->errorCode = self::ERROR_USERNAME_INVALID;
 
