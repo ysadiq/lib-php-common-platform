@@ -136,7 +136,12 @@ class Config extends BaseSystemRestResource
 
 				foreach ( $_rows as $_row )
 				{
-					$this->_response['remote_login_providers'][] = $_row['provider_name'];
+					$_name = $_row['provider_name'];
+					if ( empty( $_name ) )
+					{
+						$_name = $_row['api_name'];
+					}
+					$this->_response['remote_login_providers'][] = $_name;
 				}
 			}
 			else

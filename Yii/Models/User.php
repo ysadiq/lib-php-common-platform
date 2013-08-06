@@ -45,6 +45,7 @@ use Kisma\Core\Utility\Sql;
  * @property string     $security_question
  * @property string     $security_answer
  * @property int        $user_source
+ * @property array      $user_data
  * @property string     $last_login_date
  *
  * Relations
@@ -77,6 +78,26 @@ class User extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @return array
+	 */
+	public function behaviors()
+	{
+		return array_merge(
+			parent::behaviors(),
+			array(
+				 //	Secure JSON
+				 'base_platform_model.secure_json' => array(
+					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					 'salt'             => $this->getDb()->password,
+					 'insecureAttributes' => array(
+						 'user_data',
+					 )
+				 ),
+			)
+		);
+	}
+
+	/**
 	 * @return array validation rules for model attributes.
 	 */
 	public function rules()
@@ -90,7 +111,7 @@ class User extends BasePlatformSystemModel
 			array( 'password, first_name, last_name, security_answer', 'length', 'max' => 64 ),
 			array( 'phone', 'length', 'max' => 32 ),
 			array( 'confirm_code, display_name, security_question', 'length', 'max' => 128 ),
-			array( 'is_active, is_sys_admin, user_source', 'safe' ),
+			array( 'user_source, user_data, is_active, is_sys_admin, user_source', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -141,6 +162,7 @@ class User extends BasePlatformSystemModel
 			'security_question' => 'Security Question',
 			'security_answer'   => 'Security Answer',
 			'user_source'       => 'User Source',
+			'user_data'         => 'User Data',
 		);
 
 		return parent::attributeLabels( array_merge( $_myLabels, $additionalLabels ) );
@@ -240,6 +262,7 @@ class User extends BasePlatformSystemModel
 				 'role_id',
 				 'default_app_id',
 				 'user_source',
+				 'user_data',
 			),
 			$columns
 		);

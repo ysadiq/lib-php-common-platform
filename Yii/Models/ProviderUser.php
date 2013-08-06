@@ -119,4 +119,60 @@ class ProviderUser extends BasePlatformSystemModel
 			)
 		);
 	}
+
+	/**
+	 * @param int    $providerId
+	 * @param string $providerUserId
+	 *
+	 * @return User
+	 */
+	public static function getUser( $providerId, $providerUserId )
+	{
+		$_model = static::model()->find(
+			'provider_id = :provider_id and provider_user_id = :provider_user_id',
+			array(
+				 ':provider_id'      => $providerId,
+				 ':provider_user_id' => $providerUserId,
+			)
+		);
+
+		if ( empty( $_model ) )
+		{
+			return null;
+		}
+
+		return $_model->user;
+	}
+
+	/**
+	 * @param int $userId
+	 *
+	 * @return Provider[]
+	 */
+	public static function getLogins( $userId )
+	{
+		return static::model()->findAll(
+			'user_id = :user_id',
+			array(
+				 ':user_id' => $userId,
+			)
+		);
+	}
+
+	/**
+	 * @param int    $userId
+	 * @param string $providerName
+	 *
+	 * @return Provider
+	 */
+	public static function getLogin( $userId, $providerName )
+	{
+		return static::model()->find(
+			'user_id = :user_id and provider_name = :provider_name',
+			array(
+				 ':user_id'       => $userId,
+				 ':provider_name' => $providerName,
+			)
+		);
+	}
 }
