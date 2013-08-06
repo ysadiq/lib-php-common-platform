@@ -22,7 +22,7 @@ namespace DreamFactory\Platform\Yii\Models;
 use Kisma\Core\Exceptions\StorageException;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Utility\Utilities;
-use DreamFactory\Platform\Utility\Pii;
+use DreamFactory\Yii\Utility\Pii;
 
 /**
  * Role.php
