@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Services;
+namespace Platform\Services;
 
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
@@ -57,7 +57,7 @@ use Swagger\Annotations as SWG;
  * )
  *
  */
-class EmailSvc extends BaseSystemRestService
+class EmailSvc extends RestService
 {
 	//*************************************************************************
 	//	Members
@@ -97,7 +97,7 @@ class EmailSvc extends BaseSystemRestService
 	{
 		parent::__construct( $config );
 
-		$transportType = Option::get( $config, 'storage_type' );
+		$transportType = Option::get( $config, 'storage_type', '' );
 		$credentials = Option::get( $config, 'credentials', array() );
 		// Create the Transport
 		$this->_transport = EmailUtilities::createTransport( $transportType, $credentials );
@@ -164,7 +164,7 @@ class EmailSvc extends BaseSystemRestService
 				switch ( $this->_action )
 				{
 					case self::Post:
-						$data = RestData::getPostDataAsArray();
+						$data = RestRequest::getPostDataAsArray();
 
 						// build email from posted data
 						$template = FilterInput::request( 'template' );

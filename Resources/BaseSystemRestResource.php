@@ -19,21 +19,17 @@
  */
 namespace DreamFactory\Platform\Resources;
 
-use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\Platform\Components\DataTablesFormatter;
-use DreamFactory\Platform\Components\JTablesFormatter;
-use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Utility\ResourceStore;
-use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Option;
-use DreamFactory\Yii\Utility\Pii;
+use Platform\Resources\UserSession;
+use DreamFactory\Platform\Utility\RestData;
 
 /**
  * BaseSystemRestResource
@@ -78,10 +74,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 * @var bool Query option for output format of package
 	 */
 	protected $_exportPackage = false;
-	/**
-	 * @var int
-	 */
-	protected $_responseFormat;
 
 	//*************************************************************************
 	//* Methods
@@ -98,20 +90,19 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	public function __construct( $consumer, $settings = array(), $resourceArray = array() )
 	{
-		$this->_resourceArray = $resourceArray ? : Option::get( $settings, 'resource_array', array(), true );
+		$this->_resourceArray = empty( $resourceArray ) ? Option::get( $settings, 'resource_array', array(), true ) : array();
 
 		//	Default service name if not supplied. Should work for subclasses by defining the constant in your class
-		$settings['service_name'] = $this->_serviceName ? : Option::get( $settings, 'service_name', static::DEFAULT_SERVICE_NAME, true );
+		$settings['service_name'] = Option::get( $settings, 'service_name', static::DEFAULT_SERVICE_NAME, true );
 
 		//	Default verb aliases for all system resources
-		$settings['verb_aliases'] = $this->_verbAliases
-			? : array_merge(
-				array(
-					 static::Patch => static::Put,
-					 static::Merge => static::Put,
-				),
-				Option::get( $settings, 'verb_aliases', array(), true )
-			);
+		$settings['verb_aliases'] = array_merge(
+			array(
+				 static::Patch => static::Put,
+				 static::Merge => static::Put,
+			),
+			Option::get( $settings, 'verb_aliases', array(), true )
+		);
 
 		parent::__construct( $consumer, $settings );
 	}
@@ -131,7 +122,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 * @param string $fields
 	 * @param bool   $includeSchema
 	 * @param array  $extras
-	 * @param bool   $singleRow
 	 *
 	 * @return array
 	 */
@@ -153,23 +143,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		parent::_detectResourceMembers();
 
 		$this->_resourceId = Option::get( $this->_resourceArray, 1 );
-
-		/**
-		 * If this is a request from datatables, tell the store and set
-		 * the controller to emit JSON
-		 *
-		 * @noinspection PhpUndefinedMethodInspection
-		 */
-		/** @noinspection PhpUndefinedMethodInspection */
-		$_format = Pii::controller()->getFormat();
-
-		if ( ResponseFormats::DATATABLES == $_format || ResponseFormats::JTABLE == $_format )
-		{
-			$this->_responseFormat = $_format;
-			ResourceStore::setResponseFormat( $_format );
-			/** @noinspection PhpUndefinedMethodInspection */
-			Pii::controller()->setFormat( OutputFormats::JSON );
-		}
 	}
 
 	/**
@@ -350,7 +323,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	/**
 	 * Default PATCH implementation
 	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return bool
 	 */
 	protected function _handlePatch()
@@ -361,7 +333,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	/**
 	 * Default MERGE implementation
 	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return bool
 	 */
 	protected function _handleMerge()
@@ -423,27 +394,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		}
 
 		return ResourceStore::delete( $_payload );
-	}
-
-	/**
-	 * Formats the output
-	 */
-	protected function _formatResponse()
-	{
-		$_data = $this->_response;
-
-		switch ( $this->_responseFormat )
-		{
-			case ResponseFormats::DATATABLES:
-				$_data = DataTablesFormatter::format( $_data );
-				break;
-
-			case ResponseFormats::JTABLE:
-				$_data = JTablesFormatter::format( $_data, array( 'action' => $this->_action ) );
-				break;
-		}
-
-		$this->_response = $_data;
 	}
 
 	/**
@@ -544,45 +494,5 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	public function getFields()
 	{
 		return $this->_fields;
-	}
-
-	/**
-	 * @param int $responseFormat
-	 *
-	 * @return BaseSystemRestResource
-	 */
-	public function setResponseFormat( $responseFormat )
-	{
-		$this->_responseFormat = $responseFormat;
-
-		return $this;
-	}
-
-	/**
-	 * @return int
-	 */
-	public function getResponseFormat()
-	{
-		return $this->_responseFormat;
-	}
-
-	/**
-	 * @param boolean $exportPackage
-	 *
-	 * @return BaseSystemRestResource
-	 */
-	public function setExportPackage( $exportPackage )
-	{
-		$this->_exportPackage = $exportPackage;
-
-		return $this;
-	}
-
-	/**
-	 * @return boolean
-	 */
-	public function getExportPackage()
-	{
-		return $this->_exportPackage;
 	}
 }

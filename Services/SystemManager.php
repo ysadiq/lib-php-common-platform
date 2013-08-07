@@ -312,20 +312,6 @@ class SystemManager extends BaseSystemRestService
 				Log::error( 'Exception saving database version: ' . $_ex->getMessage() );
 			}
 
-			//	Any scripts to run?
-			if ( null !== ( $_scripts = Option::get( $contents, 'scripts' ) ) )
-			{
-				if ( $init && isset( $_scripts['install'] ) )
-				{
-					static::_runScript( static::$_configPath . '/schema/' . $_scripts['install'] );
-				}
-
-				if ( !$init && isset( $_scripts['update'] ) )
-				{
-					static::_runScript( static::$_configPath . '/schema/' . $_scripts['update'] );
-				}
-			}
-
 			//	Refresh the schema that we just added
 			\Yii::app()->getCache()->flush();
 			$_db->getSchema()->refresh();
@@ -340,63 +326,6 @@ class SystemManager extends BaseSystemRestService
 			// clean up session
 			static::initAdmin();
 		}
-	}
-
-	/**
-	 * @param string $script
-	 *
-	 * @return array|bool
-	 */
-	protected static function _runScript( $script )
-	{
-		Log::info( 'Running database script: ' . $script );
-
-		$_commands = @file_get_contents( $script );
-
-		if ( empty( $_commands ) )
-		{
-			Log::error( '  * Script empty or not found!' );
-
-			return false;
-		}
-
-		Sql::setConnection( Pii::pdo() );
-
-		//	Delete comments
-		$_lines = explode( PHP_EOL, $_commands );
-		$_commands = null;
-
-		foreach ( $_lines as $_line )
-		{
-			$_line = trim( $_line );
-
-			if ( $_line && '--' != trim( substr( $_line, 0, 2 ) ) )
-			{
-				$_commands .= $_line . PHP_EOL;
-			}
-		}
-
-		$_commands = explode( ';', $_commands );
-
-		//	Run!
-		$_total = $_success = 0;
-
-		foreach ( $_commands as $_command )
-		{
-			if ( trim( $_command ) )
-			{
-				$_success += ( false === Sql::execute( $_command ) ? 0 : 1 );
-				$_total += 1;
-			}
-		}
-
-		Log::info( '  * Results: ' . $_success . ' of ' . $_total . ' lines successful.' );
-
-		//	Return number of successful queries and total number of queries found
-		return array(
-			'success' => $_success,
-			'total'   => $_total
-		);
 	}
 
 	/**
@@ -495,14 +424,12 @@ class SystemManager extends BaseSystemRestService
 			{
 				case 'df_sys_service':
 					$result = Service::model()->findAll();
-
 					if ( empty( $result ) )
 					{
 						if ( empty( $content ) )
 						{
 							throw new \Exception( "No default system services found." );
 						}
-
 						foreach ( $content as $service )
 						{
 							try
@@ -738,9 +665,6 @@ class SystemManager extends BaseSystemRestService
 		return Pii::getParam( 'dsp.version' );
 	}
 
-	/**
-	 * @return array|mixed
-	 */
 	public static function getAllowedHosts()
 	{
 		$_allowedHosts = array();
@@ -762,15 +686,9 @@ class SystemManager extends BaseSystemRestService
 		return $_allowedHosts;
 	}
 
-	/**
-	 * @param array $allowed_hosts
-	 *
-	 * @throws \Exception
-	 */
 	public static function setAllowedHosts( $allowed_hosts = array() )
 	{
 		static::validateHosts( $allowed_hosts );
-
 		$allowed_hosts = DataFormat::jsonEncode( $allowed_hosts, true );
 		$_path = Pii::getParam( 'storage_base_path' );
 		$_config = $_path . static::CORS_DEFAULT_CONFIG_FILE;
@@ -787,26 +705,23 @@ class SystemManager extends BaseSystemRestService
 	}
 
 	/**
-	 * @param array $allowed_hosts
+	 * @param $allowed_hosts
 	 *
 	 * @throws BadRequestException
 	 */
 	protected static function validateHosts( $allowed_hosts )
 	{
-		foreach ( Option::clean( $allowed_hosts ) as $_hostInfo )
+		foreach ( $allowed_hosts as $_hostInfo )
 		{
-			$_host = Option::get( $_hostInfo, 'host' );
-
+			$_host = Option::get( $_hostInfo, 'host', '' );
 			if ( empty( $_host ) )
 			{
-				throw new BadRequestException( 'Allowed hosts contains an empty host name.' );
+				throw new BadRequestException( "Allowed hosts contains an empty host name." );
 			}
 		}
 	}
 
-	//.........................................................................
-	//. REST interface implementation
-	//.........................................................................
+	// REST interface implementation
 
 	/**
 	 * @SWG\Api(
@@ -856,7 +771,7 @@ class SystemManager extends BaseSystemRestService
 
 		$_resource = ResourceStore::resource( $this->_resource, $this->_resourceArray );
 
-		return $_resource->processRequest( $this->_resourcePath, $this->_action );
+		return $_resource->processRequest( $this->_resource, $this->_action );
 	}
 
 	/**
@@ -1000,7 +915,7 @@ class SystemManager extends BaseSystemRestService
 	/**
 	 * @param string $apiName
 	 *
-	 * @return BasePlatformService|void
+	 * @return \Platform\Services\BaseService|void
 	 * @throws \Exception
 	 */
 	public function setApiName( $apiName )
@@ -1011,7 +926,7 @@ class SystemManager extends BaseSystemRestService
 	/**
 	 * @param string $type
 	 *
-	 * @return BasePlatformService|void
+	 * @return \Platform\Services\BaseService|void
 	 * @throws \Exception
 	 */
 	public function setType( $type )
@@ -1033,7 +948,7 @@ class SystemManager extends BaseSystemRestService
 	/**
 	 * @param boolean $isActive
 	 *
-	 * @return BasePlatformService|void
+	 * @return \Platform\Services\BaseService|void
 	 * @throws \Exception
 	 */
 	public function setIsActive( $isActive = false )
@@ -1052,7 +967,7 @@ class SystemManager extends BaseSystemRestService
 	/**
 	 * @param string $name
 	 *
-	 * @return BasePlatformService|void
+	 * @return \Platform\Services\BaseService|void
 	 * @throws \Exception
 	 */
 	public function setName( $name )
@@ -1063,7 +978,7 @@ class SystemManager extends BaseSystemRestService
 	/**
 	 * @param string $nativeFormat
 	 *
-	 * @return BasePlatformService|void
+	 * @return \Platform\Services\BaseService|void
 	 * @throws \Exception
 	 */
 	public function setNativeFormat( $nativeFormat )

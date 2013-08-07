@@ -19,17 +19,11 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Doctrine\Common\Proxy\Exception\InvalidArgumentException;
-use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Exceptions\MisconfigurationException;
-use DreamFactory\Platform\Exceptions\NoExtraActionsException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
-use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Enums\OutputFormat;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 use Swagger\Annotations as SWG;
@@ -125,10 +119,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @var int
 	 */
 	protected $_serviceId = null;
-	/**
-	 * @var array Additional actions that this resource will respond to
-	 */
-	protected $_extraActions = null;
 
 	//*************************************************************************
 	//* Methods
@@ -136,8 +126,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 	/**
 	 * @param array $settings
-	 *
-	 * @return \DreamFactory\Platform\Services\BasePlatformRestService
 	 */
 	public function __construct( $settings = array() )
 	{
@@ -155,6 +143,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	public function processRequest( $resource = null, $action = self::Get )
 	{
+		$resource = trim( $resource, '/ ' );
+
 		$this->_setResource( $resource );
 		$this->_setAction( $action );
 		$this->_detectResourceMembers();
@@ -179,7 +169,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	/**
 	 * @param string $resourceName
 	 *
-	 * @return BasePlatformRestResource
+	 * @return \DreamFactory\Platform\Resources\BasePlatformRestResource|BasePlatformSystemModel
 	 */
 	public static function getNewResource( $resourceName = null )
 	{
@@ -197,58 +187,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	}
 
 	/**
-	 * Allows the resource to respond to special actions. Presentation information for instance.
-	 */
-	protected function _handleExtraActions()
-	{
-		if ( !empty( $this->_extraActions ) && is_array( $this->_extraActions ) )
-		{
-			static $_keys;
-
-			if ( null === $_keys )
-			{
-				$_keys = array_keys( $this->_extraActions );
-			}
-
-			//	Does this action have a handler?
-			if ( false !== ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) ) )
-			{
-				$_handler = $this->_extraActions[$_action];
-
-				if ( !is_callable( $_handler ) )
-				{
-					throw new MisconfigurationException( 'The handler specified for extra action "' . $_action . '" is invalid.' );
-				}
-
-				//	Added $this as argument because handler *could* be outside this class
-				return call_user_func( $_handler, $this );
-			}
-		}
-
-		//	Nada
-		throw new NoExtraActionsException();
-	}
-
-	/**
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return bool
 	 */
 	protected function _handleResource()
 	{
-		//	Allow verb sub-actions
-		try
-		{
-			if ( !empty( $this->_extraActions ) )
-			{
-				return $this->_handleExtraActions();
-			}
-		}
-		catch ( NoExtraActionsException $_ex )
-		{
-			//	Safely ignored
-		}
-
-		//	Now all actions must be HTTP verbs
 		if ( !HttpMethod::defines( $this->_action ) )
 		{
 			throw new BadRequestException( 'The action "' . $this->_action . '" is not supported.' );
@@ -297,14 +240,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	}
 
 	/**
-	 * Handles all processing after a request.
-	 * Calls the default output formatter, which, like the goggles, does nothing.
-	 *
 	 * @return void
 	 */
 	protected function _postProcess()
 	{
-		// throw exception here to stop processing
+		//	Throw exception here to stop processing
 	}
 
 	/**
@@ -392,13 +332,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 	/**
 	 * @param string $operation
+	 * @param string $service
 	 * @param string $resource
 	 *
 	 * @return bool
 	 */
-	public function checkPermission( $operation, $resource = null )
+	public static function checkPermission( $operation, $service, $resource = null )
 	{
-		return ResourceStore::checkPermission( $operation, $this->_apiName, $resource );
+		return ResourceStore::checkPermission( $operation, $service, $resource );
 	}
 
 	/**
@@ -479,13 +420,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _setResource( $resourcePath = null )
 	{
-		$this->_resourcePath = rtrim( $resourcePath, '/' );
+		$this->_resourcePath = $resourcePath;
 		$this->_resourceArray = ( !empty( $this->_resourcePath ) ) ? explode( '/', $this->_resourcePath ) : array();
-
-		if ( empty( $this->_resource ) && null !== ( $_resource = Option::get( $this->_resourceArray, 0 ) ) )
-		{
-			$this->_resource = $_resource;
-		}
 
 		return $this;
 	}
@@ -648,49 +584,5 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function getServiceId()
 	{
 		return $this->_serviceId;
-	}
-
-	/**
-	 * @param array $extraActions
-	 *
-	 * @return BasePlatformRestService
-	 */
-	public function setExtraActions( array $extraActions )
-	{
-		$this->_extraActions = $extraActions;
-
-		return $this;
-	}
-
-	/**
-	 * @return array
-	 */
-	public function getExtraActions()
-	{
-		return $this->_extraActions;
-	}
-
-	/**
-	 * @param string   $action
-	 * @param callable $handler
-	 *
-	 * @throws \InvalidArgumentException
-	 * @return $this
-	 */
-	public function addExtraAction( $action, $handler )
-	{
-		if ( !is_callable( $handler ) )
-		{
-			throw new \InvalidArgumentException( 'The handler specified not callable.' );
-		}
-
-		if ( empty( $this->_extraActions ) )
-		{
-			$this->_extraActions = array();
-		}
-
-		$this->_extraActions[$action] = $handler;
-
-		return $this;
 	}
 }

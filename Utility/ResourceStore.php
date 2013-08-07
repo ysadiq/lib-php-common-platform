@@ -21,22 +21,20 @@ namespace DreamFactory\Platform\Utility;
 
 use Composer\Autoload\ClassLoader;
 use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
-use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Seed;
 use Kisma\Core\SeedUtility;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use DreamFactory\Platform\Resources\System\UserSession;
 
 /**
  * ResourceStore
@@ -91,10 +89,6 @@ class ResourceStore extends SeedUtility
 	 * @var string Our service name
 	 */
 	protected static $_service = 'system';
-	/**
-	 * @var int The response format if not pass-through
-	 */
-	protected static $_responseFormat;
 
 	//************************************************************************
 	//* Methods
@@ -178,17 +172,6 @@ class ResourceStore extends SeedUtility
 		if ( $criteria && is_string( $criteria ) && $criteria !== '*' )
 		{
 			$criteria = array( 'select' => $criteria );
-		}
-
-		switch ( static::$_responseFormat )
-		{
-			case ResponseFormats::DATATABLES:
-				$criteria = static::_buildDataTablesCriteria( explode( ',', static::$_fields ), $criteria );
-				break;
-
-			case ResponseFormats::JTABLE:
-//				$criteria = static::_buildDataTablesCriteria( explode( ',', static::$_fields ), $criteria );
-				break;
 		}
 
 		return static::bulkSelectById( null !== $id ? array( $id ) : null, $criteria, $params, $singleRow );
@@ -280,15 +263,10 @@ class ResourceStore extends SeedUtility
 		$_records = array();
 		$_pk = static::model()->tableSchema->primaryKey;
 
-		foreach ( $record as $_record )
+		foreach ( $_ids as $_id )
 		{
-			foreach ( $_ids as $_id )
-			{
-				$_record[$_pk] = trim( $_id );
-				$_records[] = $_record;
-			}
-
-			unset( $_record );
+			$_record = array_merge( $record, array( $_pk, trim( $_id ) ) );
+			$_records[] = $_record;
 		}
 
 		return static::bulkUpdate( $_records, $rollback, $fields, $extras );
@@ -584,7 +562,6 @@ class ResourceStore extends SeedUtility
 	 * @param array  $resources
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 *
 	 * @return BasePlatformSystemModel
 	 */
 	public static function model( $resourceName = null, $returnResource = false, $resources = array() )
@@ -592,24 +569,50 @@ class ResourceStore extends SeedUtility
 		/** @var ClassLoader $_loader */
 		static $_loader;
 
-		$_returnClass = false;
-
 		if ( !$_loader )
 		{
 			$_loader = \Kisma::get( 'app.autoloader' );
 		};
-
-		if ( true === $resourceName && false === $returnResource )
-		{
-			$resourceName = null;
-			$_returnClass = true;
-		}
 
 		$_resourceName = $resourceName ? : static::$_resourceName;
 
 		//	Try dynamic system models first
 		$_className = \ucwords( $_resourceName );
 		$_name = ucfirst( Inflector::deneutralize( $_resourceName ) );
+
+		if ( !class_exists( $_className, false ) )
+		{
+			$_className = null;
+
+			//	Set KNOWN names...
+			switch ( strtolower( $_resourceName ) )
+			{
+				case 'app':
+					$_name = 'App';
+					break;
+
+				case 'app_group':
+				case 'appgroup':
+					$_name = 'AppGroup';
+					break;
+
+				case 'role':
+					$_name = 'Role';
+					break;
+
+				case 'service':
+					$_name = 'Service';
+					break;
+
+				case 'user':
+					$_name = 'User';
+					break;
+
+				case 'email_template':
+					$_name = 'EmailTemplate';
+					break;
+			}
+		}
 
 		//	Does the resource have a class?
 		if ( class_exists( $_resourceName, false ) || $_loader->loadClass( $_resourceName ) )
@@ -621,18 +624,17 @@ class ResourceStore extends SeedUtility
 		{
 			$_className = $_name;
 		}
+//		else if ( class_exists( '\\' . $_name, false ) || $_loader->loadClass( '\\' . $_name ) )
+//		{
+//			$_className = '\\' . $_name;
+//		}
 
-		/** @noinspection PhpUndefinedMethodInspection */
-		foreach ( false !== $returnResource ? Pii::app()->getResourceNamespaces() : Pii::app()->getModelNamespaces() as $_namespace )
+		$_namespace = ( false !== $returnResource ? static::DEFAULT_RESOURCE_NAMESPACE : static::DEFAULT_MODEL_NAMESPACE );
+
+		//	Is it in the namespace?
+		if ( class_exists( $_namespace . $_name, false ) || $_loader->loadClass( $_namespace . $_name ) )
 		{
-			$_namespace = rtrim( $_namespace, '\\' ) . '\\';
-
-			//	Is it in the namespace?
-			if ( class_exists( $_namespace . $_name, false ) || $_loader->loadClass( $_namespace . $_name ) )
-			{
-				$_className = $_namespace . $_name;
-				break;
-			}
+			$_className = $_namespace . $_name;
 		}
 
 		//	So, still not found, just let the SPL autoloader have a go and give up.
@@ -646,7 +648,7 @@ class ResourceStore extends SeedUtility
 		{
 			try
 			{
-				return new $_className( Pii::controller(), $resources );
+				return new $_className( null, $resources );
 			}
 			catch ( \Exception $_ex )
 			{
@@ -656,11 +658,6 @@ class ResourceStore extends SeedUtility
 
 		try
 		{
-			if ( false !== $_returnClass )
-			{
-				return new $_className();
-			}
-
 			return call_user_func( array( $_className, 'model' ) );
 		}
 		catch ( \Exception $_ex )
@@ -680,7 +677,7 @@ class ResourceStore extends SeedUtility
 	 */
 	public static function checkPermission( $operation, $service = null, $resource = null )
 	{
-		Session::checkSessionPermission( $operation, $service ? : static::$_resourceName, $resource );
+		UserSession::checkSessionPermission( $operation, $service ? : static::$_service, $resource ? : static::$_resourceName );
 
 		return true;
 	}
@@ -796,7 +793,7 @@ class ResourceStore extends SeedUtility
 		}
 
 		//	Create record
-		$_resource = static::model( true );
+		$_resource = static::model();
 		$_resource->setAttributes( $record );
 
 		try
@@ -908,73 +905,6 @@ class ResourceStore extends SeedUtility
 		{
 			throw new InternalServerErrorException( 'Failed to delete "' . static::$_resourceName . '" record:' . $_ex->getMessage() );
 		}
-	}
-
-	/**
-	 * Adds criteria garnered from the query string from DataTables
-	 *
-	 * @param array|\CDbCriteria $criteria
-	 *
-	 * @param array              $columns
-	 *
-	 * @return array|\CDbCriteria
-	 */
-	protected static function _buildDataTablesCriteria( $columns, $criteria = null )
-	{
-		$criteria = $criteria ? : array();
-		$_criteria = ( $criteria instanceof \CDbCriteria ? $criteria : new \CDbCriteria( $criteria ) );
-
-		//	Columns
-		$_criteria->select = implode( ',', $columns );
-
-		//	Limits
-		$_limit = FilterInput::get( INPUT_GET, 'iDisplayLength', -1, FILTER_SANITIZE_NUMBER_INT );
-		$_limitStart = FilterInput::get( INPUT_GET, 'iDisplayStart', 0, FILTER_SANITIZE_NUMBER_INT );
-
-		if ( -1 != $_limit )
-		{
-			$_criteria->limit = $_limit;
-			$_criteria->offset = $_limitStart;
-		}
-
-		//	Sort
-		$_order = array();
-
-		if ( isset( $_GET['iSortCol_0'] ) )
-		{
-			for ( $_i = 0, $_count = FilterInput::get( INPUT_GET, 'iSortingCols', 0, FILTER_SANITIZE_NUMBER_INT ); $_i < $_count; $_i++ )
-			{
-				$_column = FilterInput::get( INPUT_GET, 'iSortCol_' . $_i, 0, FILTER_SANITIZE_NUMBER_INT );
-
-				if ( isset( $_GET['bSortable_' . $_column] ) && 'true' == $_GET['bSortable_' . $_column] )
-				{
-					$_order[] = $columns[$_column] . ' ' . FilterInput::get( INPUT_GET, 'sSortDir_' . $_i, null, FILTER_SANITIZE_STRING );
-				}
-			}
-		}
-
-		//	Searching...
-		$_filter = FilterInput::get( INPUT_GET, 'sSearch', null, FILTER_SANITIZE_STRING );
-
-		if ( !empty( $_filter ) && isset( $_GET['sColumns'] ) )
-		{
-			$_dtColumns = explode( ',', FilterInput::get( INPUT_GET, 'sColumns', null, FILTER_SANITIZE_STRING ) );
-
-			for ( $_i = 0, $_count = FilterInput::get( INPUT_GET, 'iColumns', 0, FILTER_SANITIZE_NUMBER_INT ); $_i < $_count; $_i++ )
-			{
-				if ( 'true' == Option::get( $_GET, 'bSearchable_' . $_i ) )
-				{
-					$_criteria->addSearchCondition( $_dtColumns[$_i], $_filter, true, 'OR' );
-				}
-			}
-		}
-
-		if ( !empty( $_order ) )
-		{
-			$_criteria->order = implode( ', ', $_order );
-		}
-
-		return $_criteria;
 	}
 
 	//*************************************************************************
@@ -1092,21 +1022,4 @@ class ResourceStore extends SeedUtility
 	{
 		return self::$_service;
 	}
-
-	/**
-	 * @param int $responseFormat
-	 */
-	public static function setResponseFormat( $responseFormat )
-	{
-		self::$_responseFormat = $responseFormat;
-	}
-
-	/**
-	 * @return int
-	 */
-	public static function getResponseFormat()
-	{
-		return self::$_responseFormat;
-	}
-
 }

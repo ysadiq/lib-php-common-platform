@@ -116,7 +116,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 			}
 		}
 
-//		Log::debug( 'Unknown table "' . $name . '" requested.' );
+		Log::debug( 'Unknown table "' . $name . '" requested.' );
 
 		return false;
 	}

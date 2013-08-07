@@ -17,13 +17,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Services;
+namespace Platform\Services;
 
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\FilterInput;
-use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Common\Utility\DataFormat;
+use Platform\Exceptions\BadRequestException;
+use Platform\Exceptions\InternalServerErrorException;
+use Platform\Utility\DataFormat;
 use WindowsAzure\Table\Models\BatchError;
 use WindowsAzure\Table\TableRestProxy;
 use WindowsAzure\Common\ServicesBuilder;
@@ -653,7 +653,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 			$filter = static::parseFilter( $filter );
 			/** @var Entity[] $_entities */
 			$_entities = $this->queryEntities( $table, $filter, $fields, $extras );
-			foreach ( $_entities as $_entity )
+			foreach( $_entities as $_entity )
 			{
 				$_entity = static::parseRecordToEntity( $record, $_entity );
 				$this->_dbConn->updateEntity( $table, $_entity );
@@ -1008,7 +1008,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 			$filter = static::parseFilter( $filter );
 			/** @var Entity[] $_entities */
 			$_entities = $this->queryEntities( $table, $filter, $fields, $extras );
-			foreach ( $_entities as $_entity )
+			foreach( $_entities as $_entity )
 			{
 				$_partitionKey = $_entity->getPartitionKey();
 				$_rowKey = $_entity->getRowKey();
@@ -1050,7 +1050,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 
 		// get the returnable fields first, then issue delete
 		$_outMore = array();
-		if ( !empty( $fields ) )
+		if ( !empty( $fields ))
 		{
 			$_outMore = $this->retrieveRecordsByIds( $table, $id_list, $id_field = '', $fields = '', $extras );
 		}

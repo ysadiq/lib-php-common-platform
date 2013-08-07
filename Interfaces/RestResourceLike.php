@@ -1,5 +1,8 @@
 <?php
 /**
+ * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ *
+ * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
  * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,19 +19,21 @@
  */
 namespace DreamFactory\Platform\Interfaces;
 
-use Kisma\Core\Interfaces\HttpMethod;
-
 /**
  * RestResourceLike
+ * REST resources are just like REST services except they have a direct consumer
  */
-interface RestResourceLike extends HttpMethod
+interface RestResourceLike extends RestServiceLike
 {
 	/**
-	 * Process the request
-	 *
-	 * @param string $action
+	 * @return BasePlatformService
+	 */
+	public function getConsumer();
+
+	/**
+	 * @param BasePlatformService $consumer
 	 *
 	 * @return mixed
 	 */
-	public function processRequest( $action = self::Get );
+	public function setConsumer( $consumer );
 }
