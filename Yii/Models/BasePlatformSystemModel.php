@@ -130,7 +130,7 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 					 'last_modified_date',
 					 'last_modified_by_id'
 				),
-				!empty( $columns ) ? $columns : $this->getSafeAttributeNames()
+				$columns
 			);
 		}
 

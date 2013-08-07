@@ -53,7 +53,7 @@ class PlatformServiceTypes extends SeedEnum
 	/**
 	 * @var int
 	 */
-	const NOSQL_DB = 0x0010;
+	const LOCAL_NOSQL_DB = 0x0010;
 	/**
 	 * @var int
 	 */
@@ -78,6 +78,10 @@ class PlatformServiceTypes extends SeedEnum
 	 * @var int
 	 */
 	const REMOTE_SQL_DB_SCHEMA = 0x1008;
+	/**
+	 * @var int
+	 */
+	const REMOTE_NOSQL_DB = 0x1010;
 	/**
 	 * @var int
 	 */

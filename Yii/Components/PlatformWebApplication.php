@@ -60,11 +60,7 @@ class PlatformWebApplication extends \CWebApplication
 	/**
 	 * @var The default DSP resource namespace
 	 */
-	const DEFAULT_RESOURCE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Resource';
-	/**
-	 * @var The default DSP model namespace
-	 */
-	const DEFAULT_MODEL_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Yii\\Models';
+	const DEFAULT_RESOURCE_NAMESPACE = 'DreamFactory\\Platform\\Resource';
 
 	//*************************************************************************
 	//	Members
@@ -86,11 +82,9 @@ class PlatformWebApplication extends \CWebApplication
 	/**
 	 * @var array The namespaces that contain resources. Used by the routing engine
 	 */
-	protected $_resourceNamespaces = array();
-	/**
-	 * @var array The namespaces that contain models. Used by the resource manager
-	 */
-	protected $_modelNamespaces = array();
+	protected $_resourceNamespaces = array(
+		self::DEFAULT_RESOURCE_NAMESPACE,
+	);
 
 	//*************************************************************************
 	//	Methods
@@ -126,7 +120,7 @@ class PlatformWebApplication extends \CWebApplication
 		}
 
 		// setup the request handler
-		$this->onBeginRequest = array( $this, 'checkRequestMethod' );
+		Pii::app()->onBeginRequest = array( $this, 'checkRequestMethod' );
 	}
 
 	/**
@@ -479,44 +473,6 @@ class PlatformWebApplication extends \CWebApplication
 			if ( !in_array( $_entry, $this->_resourceNamespaces ) )
 			{
 				$this->_resourceNamespaces[] = $_entry;
-			}
-		}
-
-		return $this;
-	}
-
-	/**
-	 * @param array $modelNamespaces
-	 *
-	 * @return PlatformWebApplication
-	 */
-	public function setModelNamespaces( $modelNamespaces )
-	{
-		$this->_modelNamespaces = $modelNamespaces;
-
-		return $this;
-	}
-
-	/**
-	 * @return array
-	 */
-	public function getModelNamespaces()
-	{
-		return $this->_modelNamespaces;
-	}
-
-	/**
-	 * @param string|array $namespace
-	 *
-	 * @return PlatformWebApplication
-	 */
-	public function addModelNamespace( $namespace )
-	{
-		foreach ( Option::clean( $namespace ) as $_entry )
-		{
-			if ( !in_array( $_entry, $this->_modelNamespaces ) )
-			{
-				$this->_modelNamespaces[] = $_entry;
 			}
 		}
 

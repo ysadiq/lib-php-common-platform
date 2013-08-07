@@ -15,7 +15,6 @@
       <excludeFolder url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common-yii" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/dreamfactory/yii" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/guzzle/guzzle" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/hybridauth/hybridauth" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/kisma/kisma" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/microsoft/windowsazure" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Archive_Tar" />

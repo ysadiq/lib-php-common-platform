@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
-use DreamFactory\Platform\Enums\PlatformStorageTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
@@ -114,7 +113,7 @@ class ServiceHandler
 
 		try
 		{
-			if ( null === ( $_config = Service::model()->byServiceId( $_tag )->find() ) )
+			if ( null === ( $_config = Service::model()->byServiceId( $_tag )->find( array( 'select' => 'id,name,api_name,type,type_id,description,is_active' ) ) ) )
 			{
 				throw new NotFoundException( 'Service not found' );
 			}
@@ -126,11 +125,7 @@ class ServiceHandler
 				throw new BadRequestException( 'Requested service "' . $_tag . '" is not active.' );
 			}
 
-			static::$_serviceCache[$_tag] = $_service;
-
-			Pii::setState( 'dsp.service_cache', static::$_serviceCache );
-
-			return $_service;
+			return static::$_serviceCache[$_tag] = $_service;
 		}
 		catch ( \Exception $_ex )
 		{
@@ -177,11 +172,10 @@ class ServiceHandler
 		{
 			if ( is_array( $_serviceClass ) )
 			{
-				$_config = Option::get( $_serviceClass, Option::get( $record, 'storage_type_id' ) );
+				$_storageType = strtolower( trim( Option::get( $record, 'storage_type' ) ) );
+				$_config = Option::get( $_serviceClass, $_storageType );
 				$_serviceClass = Option::get( $_config, 'class' );
 			}
-
-			unset( $record['native_format'] );
 
 			$_arguments = array( $record, Option::get( $_config, 'local', true ) );
 

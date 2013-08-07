@@ -21,74 +21,75 @@ namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
+use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
-use Swagger\Annotations as SWG;
+use DreamFactory\Platform\Utility\ResourceStore;
+use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Sql;
+use DreamFactory\Platform\Services\SystemManager;
+use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Utility\SqlDbUtilities;
 
 /**
- * AppGroup
- * DSP system administration manager
+ * ServiceAccount
+ * DSP service/provider interface
  *
  * @SWG\Resource(
  *   resourcePath="/system"
  * )
  *
- * @SWG\Model(id="AppGroups",
- * @SWG\Property(name="record",type="Array",items="$ref:AppGroup",description="Array of system application group records of the given resource.")
+ * @SWG\Model(id="ServiceAccounts",
+ * @SWG\Property(name="record",type="Array",items="$ref:ServiceAccount",description="Array of system service account records of the given resource.")
  * )
- * @SWG\Model(id="AppGroup",
- * @SWG\Property(name="id",type="int",description="Identifier of this application grouping."),
- * @SWG\Property(name="name",type="string",description="Displayable name of this application group."),
- * @SWG\Property(name="description",type="string",description="Description of this application group."),
- * @SWG\Property(name="apps",type="Array",items="$ref:App",description="Related apps by app to group assignment."),
+ * @SWG\Model(id="ServiceAccount",
+ * @SWG\Property(name="id",type="int",description="Identifier of this account."),
+ * @SWG\Property(name="user_id",type="int",description="The user who owns this account."),
+ * @SWG\Property(name="provider_id",type="int",description="The provider who issued this account."),
+ * @SWG\Property(name="account_type",type="int",description="The type of account."),
+ * @SWG\Property(name="auth_text",type="string",description="The authorization for this account/provider."),
  * @SWG\Property(name="created_date",type="string",description="Date this application group was created."),
  * @SWG\Property(name="created_by_id",type="int",description="User Id of who created this application group."),
  * @SWG\Property(name="last_modified_date",type="string",description="Date this application group was last modified."),
  * @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this application group.")
- * )
- *
  */
-class AppGroup extends BaseSystemRestResource
+class ServiceAccount extends BaseSystemRestResource
 {
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
-
 	/**
 	 * Constructor
 	 *
 	 * @param BasePlatformService $consumer
 	 * @param array               $resourceArray
 	 *
-	 * @return \DreamFactory\Platform\Resources\System\AppGroup
+	 * @return \DreamFactory\Platform\Resources\System\ServiceAccount
 	 */
-	public function __construct( $consumer, $resourceArray = array() )
+	public function __construct( $consumer = null, $resourceArray = array() )
 	{
-		$_config = array(
-			'service_name'   => 'system',
-			'name'           => 'App Group',
-			'api_name'       => 'app_group',
-			'type'           => 'System',
-			'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-			'description'    => 'System application grouping administration.',
-			'is_active'      => true,
-			'resource_array' => $resourceArray,
-			'verb_aliases'   => array(
-				static::Put => static::Post,
+		parent::__construct(
+			$consumer,
+			array(
+				 'name'           => 'Service Account',
+				 'type'           => 'Service',
+				 'service_name'   => 'system',
+				 'type_id'        => PlatformServiceTypes::LOCAL_WEB_SERVICE,
+				 'api_name'       => 'service_account',
+				 'description'    => 'Service provider account configuration.',
+				 'is_active'      => true,
+				 'resource_array' => $resourceArray,
+				 'verb_aliases'   => array(
+					 static::Patch => static::Post,
+				 )
 			)
-
 		);
-
-		parent::__construct( $consumer, $_config );
 	}
 	/**
 	 *
 	 * @SWG\Api(
-	 *     path="/system/app_group", description="Operations for application group administration.",
+	 *     path="/system/service_account", description="Operations for service account administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *         httpMethod="GET", summary="Retrieve multiple application groups.",
+	 *         httpMethod="GET", summary="Retrieve multiple service accounts.",
 	 *         notes="Use the 'ids' or 'filter' parameter to limit records that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.",
-	 *         responseClass="AppGroups", nickname="getAppGroups",
+	 *         responseClass="ServiceAccounts", nickname="getServiceAccounts",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -134,13 +135,13 @@ class AppGroup extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *         httpMethod="POST", summary="Create one or more application groups.",
+	 *         httpMethod="POST", summary="Create one or more service accounts.",
 	 *         notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *         responseClass="Success", nickname="createAppGroups",
+	 *         responseClass="Success", nickname="createServiceAccounts",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to create.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="AppGroups"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="ServiceAccounts"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -158,13 +159,13 @@ class AppGroup extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *         httpMethod="PUT", summary="Update one or more application groups.",
+	 *         httpMethod="PUT", summary="Update one or more service accounts.",
 	 *         notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *         responseClass="Success", nickname="updateAppGroups",
+	 *         responseClass="Success", nickname="updateServiceAccounts",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="AppGroups"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="ServiceAccounts"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -182,9 +183,9 @@ class AppGroup extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *         httpMethod="DELETE", summary="Delete one or more application groups.",
+	 *         httpMethod="DELETE", summary="Delete one or more service accounts.",
 	 *         notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *         responseClass="Success", nickname="deleteAppGroups",
+	 *         responseClass="Success", nickname="deleteServiceAccounts",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
@@ -192,7 +193,7 @@ class AppGroup extends BaseSystemRestResource
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to delete.",
-	 *             paramType="body", required="false", allowMultiple=false, dataType="AppGroups"
+	 *             paramType="body", required="false", allowMultiple=false, dataType="ServiceAccounts"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -213,12 +214,12 @@ class AppGroup extends BaseSystemRestResource
 	 *   )
 	 *
 	 * @SWG\Api(
-	 *     path="/system/app_group/{id}", description="Operations for individual application group administration.",
+	 *     path="/system/service_account/{id}", description="Operations for individual service account administration.",
 	 * @SWG\Operations(
 	 * @SWG\Operation(
-	 *         httpMethod="GET", summary="Retrieve one application group by identifier.",
+	 *         httpMethod="GET", summary="Retrieve one service account by identifier.",
 	 *         notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
-	 *         responseClass="AppGroup", nickname="getAppGroup",
+	 *         responseClass="ServiceAccount", nickname="getServiceAccount",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -240,9 +241,9 @@ class AppGroup extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *         httpMethod="PUT", summary="Update one application group.",
+	 *         httpMethod="PUT", summary="Update one service account.",
 	 *         notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
-	 *         responseClass="Success", nickname="updateAppGroup",
+	 *         responseClass="Success", nickname="updateServiceAccount",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",
@@ -250,7 +251,7 @@ class AppGroup extends BaseSystemRestResource
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="AppGroup"
+	 *             paramType="body", required="true", allowMultiple=false, dataType="ServiceAccount"
 	 *           ),
 	 * @SWG\Parameter(
 	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
@@ -268,9 +269,9 @@ class AppGroup extends BaseSystemRestResource
 	 *         )
 	 *       ),
 	 * @SWG\Operation(
-	 *         httpMethod="DELETE", summary="Delete one application group.",
+	 *         httpMethod="DELETE", summary="Delete one service account.",
 	 *         notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
-	 *         responseClass="Success", nickname="deleteAppGroup",
+	 *         responseClass="Success", nickname="deleteServiceAccount",
 	 * @SWG\Parameters(
 	 * @SWG\Parameter(
 	 *             name="id", description="Identifier of the record to retrieve.",

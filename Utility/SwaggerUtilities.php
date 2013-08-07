@@ -19,12 +19,10 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Log;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Yii\Utility\Pii;
-use DreamFactory\Platform\Yii\Models\Service;
 use Swagger\Swagger;
 
 /**
@@ -71,10 +69,8 @@ class SwaggerUtilities
 		}
 
 		// generate swagger output from file annotations
-		$_scanPath = Pii::getParam( 'base_path' ) . '/vendor/dreamfactory/lib-php-common-platform/DreamFactory/Platform';
-
+		$_scanPath = Pii::getParam( 'base_path' ) . '/src/';
 		$_swagger = Swagger::discover( $_scanPath );
-
 		$_swagger->setDefaultBasePath( $_basePath );
 		$_swagger->setDefaultApiVersion( \Versions::API_VERSION );
 		$_swagger->setDefaultSwaggerVersion( '1.1' );
@@ -96,54 +92,48 @@ class SwaggerUtilities
 
 		// gather the services
 		$services = array();
-
 		foreach ( $result as $service )
 		{
+			$serviceName = $apiName = Option::get( $service, 'api_name', '' );
 			$replacePath = false;
-			$serviceName = $apiName = Option::get( $service, 'api_name' );
-			$_typeId = Option::get( $service, 'type_id' );
-
-			switch ( $_typeId )
+			$_type = Option::get( $service, 'type', '' );
+			switch ( $_type )
 			{
-				case PlatformServiceTypes::LOCAL_PORTAL_SERVICE:
-				case PlatformServiceTypes::REMOTE_WEB_SERVICE:
+				case 'Remote Web Service':
 					$serviceName = '{service_api_name}';
 					$replacePath = true;
 					// look up definition file and return it
 					break;
-
-				case PlatformServiceTypes::LOCAL_FILE_STORAGE:
-				case PlatformServiceTypes::REMOTE_FILE_STORAGE:
+				case 'Local File Storage':
+				case 'Remote File Storage':
 					$serviceName = '{file}';
 					$replacePath = true;
 					break;
-
-				case PlatformServiceTypes::LOCAL_SQL_DB:
-				case PlatformServiceTypes::REMOTE_SQL_DB:
+				case 'Local SQL DB':
+				case 'Remote SQL DB':
 					$serviceName = '{sql_db}';
 					$replacePath = true;
 					break;
-
-				case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
-				case PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA:
+				case 'Local SQL DB Schema':
+				case 'Remote SQL DB Schema':
 					$serviceName = '{sql_schema}';
 					$replacePath = true;
 					break;
-
-				case PlatformServiceTypes::LOCAL_EMAIL_SERVICE:
-				case PlatformServiceTypes::REMOTE_EMAIL_SERVICE:
+				case 'Email Service':
+				case 'Local Email Service':
+				case 'Remote Email Service':
 					$serviceName = '{email}';
 					$replacePath = true;
 					break;
-
-				case PlatformServiceTypes::NOSQL_DB:
+				case 'NoSQL DB':
 					$serviceName = '{nosql_db}';
 					$replacePath = true;
+					break;
+				default:
 					break;
 			}
 
 			$_content = null;
-
 			if ( !array_key_exists( '/' . $serviceName, $_swagger->registry ) )
 			{
 				$_storePath = Pii::getParam( 'storage_base_path' ) . static::SWAGGER_STORE_DIR;
