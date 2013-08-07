@@ -23,7 +23,6 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Utility\ResourceStore;
-use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -84,6 +83,7 @@ class Config extends BaseSystemRestResource
 				 'resource_array' => $resourceArray,
 				 'verb_aliases'   => array(
 					 static::Patch => static::Post,
+					 static::Put   => static::Post,
 					 static::Merge => static::Post,
 				 )
 			)
@@ -124,33 +124,24 @@ class Config extends BaseSystemRestResource
 		}
 
 		$this->_response['dsp_version'] = DSP_VERSION;
-
-		$this->_response['allow_remote_logins'] = ( Pii::getParam( 'dsp.allow_remote_logins', false ) && $this->_response['allow_open_registration'] );
-
-		if ( false !== $this->_response['allow_remote_logins'] )
+<<<<<<< HEAD
+		if ( false !== ( $this->_response['allow_remote_logins'] = Pii::getParam( 'dsp.allow_remote_logins' ) ) )
 		{
-			$_rows = Sql::findAll( 'select id, api_name, provider_name from df_sys_provider order by 1', array(), Pii::pdo() );
+			$_rows = Sql::findAll( 'select api_name from df_sys_provider order by 1', array(), Pii::pdo() );
 
 			if ( !empty( $_rows ) )
 			{
 				$this->_response['remote_login_providers'] = array();
-
 				foreach ( $_rows as $_row )
 				{
-					$_name = $_row['provider_name'];
-					if ( empty( $_name ) )
-					{
-						$_name = $_row['api_name'];
-					}
-					$this->_response['remote_login_providers'][] = $_name;
+					$this->_response['remote_login_providers'][] = $_row['api_name'];
 				}
 			}
-			else
-			{
-				//	No providers, no remote logins
-				$this->_response['allow_remote_logins'] = false;
-			}
 		}
+=======
+		$this->_response['allow_remote_logins'] = Pii::getParam( 'dsp.allow_remote_logins' );
+		$this->_response['remote_login_providers'] = Pii::getParam( 'dsp.remote_login_providers' );
+>>>>>>> parent of 889636b... merge revert #2
 
 		parent::_postProcess();
 	}

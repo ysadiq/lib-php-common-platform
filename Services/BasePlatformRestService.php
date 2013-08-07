@@ -416,7 +416,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		$_criteria = ( !( $criteria instanceof \CDbCriteria ) ? new \CDbCriteria( $criteria ) : $criteria );
 
 		//	Columns
-		$_criteria->select = ( !empty( $_columns ) ? implode( ', ', $_columns ) : array_keys( \Registry::model()->restMap() ) );
+		$_criteria->select = ( !empty( $_columns ) ? implode( ', ', $_columns ) : '*' );
 
 		//	Limits
 		$_limit = FilterInput::get( INPUT_GET, 'iDisplayLength', -1, FILTER_SANITIZE_NUMBER_INT );
