@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Platform\Enums\ProviderUserTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
@@ -28,6 +27,7 @@ use DreamFactory\Platform\Services\Portal\BasePortalClient;
 use DreamFactory\Platform\Services\Portal\OAuthResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Platform\Yii\Models\ProviderUser;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
@@ -36,6 +36,8 @@ use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+
+require_once \Kisma::get( 'app.vendor_path' ) . '/hybridauth/hybridauth/hybridauth/Hybrid/Auth.php';
 
 /**
  * Portal
@@ -82,6 +84,18 @@ class Portal extends BaseSystemRestService
 			'format',
 			'path',
 		);
+	/**
+	 * @var bool
+	 */
+	protected $_useHybridProviders = false;
+	/**
+	 * @var array The paths under HybridAuth in vendor directory to search for providers
+	 */
+	protected $_hybridProviderPaths = array( 'Hybrid/Providers', 'additional-providers' );
+	/**
+	 * @var \Hybrid_Auth
+	 */
+	protected $_hybrid = null;
 
 	//*************************************************************************
 	//* Methods
@@ -97,6 +111,11 @@ class Portal extends BaseSystemRestService
 		//	Clean up the resource path
 		$this->_resourcePath = trim( str_replace( $this->_apiName, null, $this->_resourcePath ), ' /' );
 		$this->_interactive = Option::getBool( $_REQUEST, 'interactive', false, true );
+
+		if ( $this->_useHybridProviders )
+		{
+			$this->_hybrid = new \Hybrid_Auth( Provider::getHybridAuthConfig() );
+		}
 	}
 
 	/**
@@ -137,18 +156,16 @@ class Portal extends BaseSystemRestService
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
 	 *
-	 * @return array
+	 * @return Provider
 	 */
 	protected function _validateProvider( $portalName = null )
 	{
-		$_config = \Kisma::get( 'app.config_path' ) . '/portals/' . $portalName . '.php';
-
-		if ( !file_exists( $_config ) || !is_readable( $_config ) )
+		if ( null === ( $_provider = Provider::model()->byPortal( $portalName )->find() ) )
 		{
 			throw new NotFoundException( 'Invalid portal' );
 		}
 
-		return require $_config;
+		return $_provider;
 	}
 
 	/**
@@ -158,7 +175,7 @@ class Portal extends BaseSystemRestService
 	 */
 	protected function _getAuthorization( $portalName )
 	{
-		return ResourceStore::model( 'portal_account' )->byUserPortal( $this->_currentUserId, $portalName )->find();
+		return ProviderUser::model()->byUserPortal( $this->_currentUserId, $portalName )->find();
 	}
 
 	/**
@@ -208,12 +225,12 @@ class Portal extends BaseSystemRestService
 			return false;
 		}
 
-		if ( null === ( $_account = ProviderUser::model()->byUserService( $this->_currentUserId, $providerId )->find() ) )
+		if ( null === ( $_account = PortalAccount::model()->byUserService( $this->_currentUserId, $providerId )->find() ) )
 		{
-			$_account = new ProviderUser();
+			$_account = new PortalAccount();
 			$_account->user_id = $this->_currentUserId;
 			$_account->provider_id = $providerId;
-			$_account->account_type = ProviderUserTypes::INDIVIDUAL_USER;
+			$_account->account_type = PortalAccountTypes::INDIVIDUAL_USER;
 		}
 
 		$_account->auth_text = $_result->details->token;
@@ -259,9 +276,18 @@ class Portal extends BaseSystemRestService
 		$_host = \Kisma::get( 'app.host_name' );
 
 		//	Find service auth record
-		$_provider = $this->_validateProvider();
+		$_provider = $this->_validateProvider( $this->_resource );
 
-		$this->_client = new OAuthResource( $this, $_provider );
+		//	Build a config...
+		$_config = $_provider->getMergedAttributes();
+
+		if ( $this->_useHybridProviders && null !== $this->_hybrid )
+		{
+			$_adapter = $this->_hybrid->getAdapter( $_provider->provider_name );
+			$_config['service_endpoint'] = $_adapter->adapter->endpoint ?: 'https://graph.facebook.com';
+		}
+
+		$this->_client = new OAuthResource( $this, $_config );
 		$this->_client->setInteractive( $this->_interactive );
 		$_state = sha1( $this->_currentUserId . '_' . $this->_resource . '_' . $this->_client->getClientId() );
 
