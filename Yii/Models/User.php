@@ -86,11 +86,19 @@ class User extends BasePlatformSystemModel
 			array( 'email, display_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
 			array( 'email', 'email' ),
 			array( 'email', 'length', 'max' => 255 ),
+<<<<<<< HEAD
 			array( 'default_app_id, user_source, role_id', 'numerical', 'integerOnly' => true ),
 			array( 'password, first_name, last_name, security_answer', 'length', 'max' => 64 ),
 			array( 'phone', 'length', 'max' => 32 ),
 			array( 'confirm_code, display_name, security_question', 'length', 'max' => 128 ),
 			array( 'is_active, is_sys_admin, user_source', 'safe' ),
+=======
+			array( 'default_app_id, role_id', 'numerical', 'integerOnly' => true ),
+			array( 'password, first_name, last_name, security_answer', 'length', 'max' => 64 ),
+			array( 'phone', 'length', 'max' => 32 ),
+			array( 'confirm_code, display_name, security_question', 'length', 'max' => 128 ),
+			array( 'is_active, is_sys_admin', 'safe' ),
+>>>>>>> parent of 889636b... merge revert #2
 		);
 
 		return array_merge( parent::rules(), $_rules );

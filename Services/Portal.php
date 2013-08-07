@@ -19,19 +19,20 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Platform\Enums\ServiceAccountTypes;
+use DreamFactory\Platform\Enums\PortalAccountTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Services\Portal\BasePortalClient;
+use DreamFactory\Platform\Services\Portal\OAuthResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
-use DreamFactory\Platform\Yii\Models\AccountProvider;
-use DreamFactory\Platform\Yii\Models\ServiceAccount;
+use DreamFactory\Platform\Yii\Models\PortalAccount;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Curl;
+use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -67,15 +68,20 @@ class Portal extends BaseSystemRestService
 	 */
 	protected $_client;
 	/**
+	 * @var bool
+	 */
+	protected $_interactive = false;
+	/**
 	 * @var array The parameters we don't want to proxy
 	 */
-	protected $_ignoredParameters = array(
-		'_', // timestamp added by jquery
-		'app_name', // app_name required by our api
-		'method', // method option for our api
-		'format',
-		'path',
-	);
+	protected $_ignoredParameters
+		= array(
+			'_', // timestamp added by jquery
+			'app_name', // app_name required by our api
+			'method', // method option for our api
+			'format',
+			'path',
+		);
 
 	//*************************************************************************
 	//* Methods
@@ -90,6 +96,7 @@ class Portal extends BaseSystemRestService
 
 		//	Clean up the resource path
 		$this->_resourcePath = trim( str_replace( $this->_apiName, null, $this->_resourcePath ), ' /' );
+		$this->_interactive = Option::getBool( $_REQUEST, 'interactive', false, true );
 	}
 
 	/**
@@ -126,48 +133,32 @@ class Portal extends BaseSystemRestService
 	}
 
 	/**
-	 * @param string $providerName
+	 * @param string $portalName
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
 	 *
-	 * @return ServiceAccount
+	 * @return array
 	 */
-	protected function _validateProvider( $providerName = null )
+	protected function _validateProvider( $portalName = null )
 	{
-		if ( null === ( $_provider = ResourceStore::model( 'account_provider' )->byApiName( $providerName ? : $this->_resource )->find() ) )
+		$_config = \Kisma::get( 'app.config_path' ) . '/portals/' . $portalName . '.php';
+
+		if ( !file_exists( $_config ) || !is_readable( $_config ) )
 		{
-			throw new NotFoundException( 'Invalid account provider' );
+			throw new NotFoundException( 'Invalid portal' );
 		}
 
-		return $_provider;
+		return require $_config;
 	}
 
 	/**
-	 * @param AccountProvider $provider
+	 * @param string $portalName
 	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return BaseClient
+	 * @return PortalAccount
 	 */
-	protected function _createProviderClient( $provider )
+	protected function _getAuthorization( $portalName )
 	{
-		if ( !class_exists( $provider->handler_class, false ) && !\Kisma::get( 'app.autoloader' )->loadClass( $provider->handler_class ) )
-		{
-			Log::error( 'Cannot find handler class: ' . $provider->handler_class );
-		}
-
-		$_mirror = new \ReflectionClass( $provider->handler_class );
-
-		return $_mirror->newInstance( $provider->provider_options );
-	}
-
-	/**
-	 * @param int $providerId
-	 *
-	 * @return ServiceAccount
-	 */
-	protected function _getAuthorization( $providerId )
-	{
-		return ResourceStore::model( 'service_account' )->byUserService( $this->_currentUserId, $providerId )->find();
+		return ResourceStore::model( 'portal_account' )->byUserPortal( $this->_currentUserId, $portalName )->find();
 	}
 
 	/**
@@ -192,12 +183,12 @@ class Portal extends BaseSystemRestService
 
 		if ( false === $_result || !is_object( $_result ) )
 		{
-			throw new RestException( 'Error registering authorization request.', HttpResponse::InternalServerError );
+			throw new InternalServerErrorException( 'Error registering authorization request.' );
 		}
 
 		if ( !$_result->success || !$_result->details )
 		{
-			throw new RestException( 'Error registering authorization request.', HttpResponse::InternalServerError );
+			throw new InternalServerErrorException( 'Error registering authorization request: ' . print_r( $_result, true ) );
 		}
 
 		Log::info( 'Registering auth request: ' . $state );
@@ -217,12 +208,12 @@ class Portal extends BaseSystemRestService
 			return false;
 		}
 
-		if ( null === ( $_account = ServiceAccount::model()->byUserService( $this->_currentUserId, $providerId )->find() ) )
+		if ( null === ( $_account = PortalAccount::model()->byUserService( $this->_currentUserId, $providerId )->find() ) )
 		{
-			$_account = new ServiceAccount();
+			$_account = new PortalAccount();
 			$_account->user_id = $this->_currentUserId;
 			$_account->provider_id = $providerId;
-			$_account->account_type = ServiceAccountTypes::INDIVIDUAL_USER;
+			$_account->account_type = PortalAccountTypes::INDIVIDUAL_USER;
 		}
 
 		$_account->auth_text = $_result->details->token;
@@ -233,14 +224,14 @@ class Portal extends BaseSystemRestService
 
 	/**
 	 * @param string $state
-	 * @param int    $providerId
+	 * @param string $portalName
 	 *
 	 * @return string
 	 */
-	protected function _checkPriorAuthorization( $state, $providerId )
+	protected function _checkPriorAuthorization( $state, $portalName )
 	{
 		//	See if there's an entry in the service auth table...
-		$_account = $this->_getAuthorization( $providerId );
+		$_account = $this->_getAuthorization( $portalName );
 
 		if ( empty( $_account ) )
 		{
@@ -270,13 +261,13 @@ class Portal extends BaseSystemRestService
 		//	Find service auth record
 		$_provider = $this->_validateProvider();
 
-		$this->_client = $this->_createProviderClient( $_provider );
-		$this->_client->setInteractive( false );
+		$this->_client = new OAuthResource( $this, $_provider );
+		$this->_client->setInteractive( $this->_interactive );
+		$_state = sha1( $this->_currentUserId . '_' . $this->_resource . '_' . $this->_client->getClientId() );
 
-		$_state = $this->_currentUserId . '_' . $this->_resource . '_' . $this->_client->getClientId();
-		$_token = $this->_checkPriorAuthorization( $_state, $_provider->id );
+		$_token = $this->_checkPriorAuthorization( $_state, $_provider['api_name'] );
 
-		if ( false !== $_token )
+		if ( !empty( $_token ) )
 		{
 			$this->_client->setAccessToken( $_token );
 		}
@@ -284,15 +275,15 @@ class Portal extends BaseSystemRestService
 		{
 			if ( !$this->_client->authorized( false ) )
 			{
-				$_config =
-					array(
-						'provider_id'            => $_provider->id,
-						'user_id'                => $this->_currentUserId,
-						'host_name'              => $_host,
-						'client'                 => serialize( $this->_client ),
-						'resource'               => $this->_resourcePath,
-						'authorize_redirect_uri' => 'http://' . Option::server( 'HTTP_HOST', $_host ) . Option::server( 'REQUEST_URI', '/' ),
-					);
+				$_config
+					= array(
+					'api_name'               => $_provider,
+					'user_id'                => $this->_currentUserId,
+					'host_name'              => $_host,
+					'client'                 => serialize( $this->_client ),
+					'resource'               => $this->_resourcePath,
+					'authorize_redirect_uri' => 'http://' . Option::server( 'HTTP_HOST', $_host ) . Option::server( 'REQUEST_URI', '/' ),
+				);
 
 				if ( false !== ( $_redirectUri = $this->_registerAuthorization( $_state, $_config, $_provider->id ) ) )
 				{

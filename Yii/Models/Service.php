@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Yii\Models;
 use CModelEvent;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Enums\PlatformStorageTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Hasher;
@@ -70,14 +71,6 @@ class Service extends BasePlatformSystemModel
 	/**
 	 * @var array
 	 */
-	protected static $_serviceConfig = array();
-	/**
-	 * @var array
-	 */
-	protected static $_serviceCache = array();
-	/**
-	 * @var array
-	 */
 	protected static $_systemServices
 		= array(
 			'system' => 'DreamFactory\\Platform\\Services\\SystemManager',
@@ -121,27 +114,24 @@ class Service extends BasePlatformSystemModel
 	}
 
 	/**
-	 * Down and dirty service cache which includes the DSP default services.
+	 * Down and dirty service config cache which includes the DSP default services.
 	 * Clears when saves to services are made
 	 *
 	 * @param bool $bust If true, bust the cache
 	 *
 	 * @return array
 	 */
-	public static function available( $bust = false )
+	public static function available( $bust = false, $attributes = null )
 	{
-		/** @var array $_serviceCache */
-		if ( false !== $bust || null === ( $_serviceCache = Pii::getState( 'dsp.service_cache' ) ) )
+		if ( false !== $bust || null === ( $_serviceConfig = Pii::getState( 'dsp.service_config' ) ) )
 		{
-			$_serviceCache = Pii::getParam( 'dsp.default_services', array() );
 			$_tableName = static::model()->tableName();
 
 			//	List all available services from db
 			$_sql
 				= <<<MYSQL
 SELECT
-	`api_name`,
-	`name`
+	*
 FROM
 	{$_tableName}
 ORDER BY
@@ -151,16 +141,32 @@ MYSQL;
 			$_pdo = Pii::pdo();
 			$_services = Sql::query( $_sql, null, $_pdo );
 
-			$_serviceCache = array_merge(
-				$_serviceCache,
-				$_services->fetchAll() ? : array()
-			);
+			$_serviceConfig = $_services->fetchAll();
 
-			Pii::setState( 'dsp.service_cache', $_serviceCache );
-//			Log::debug( 'Service cache reloaded: ' . print_r( $_serviceCache, true ) );
+			Pii::setState( 'dsp.service_config', $_serviceConfig );
 		}
 
-		return $_serviceCache;
+		if ( null !== $attributes )
+		{
+			$_services = array();
+
+			foreach ( $_serviceConfig as $_service )
+			{
+				$_temp = array();
+
+				foreach ( $attributes as $_column )
+				{
+					$_temp[$_column] = $_service[$_column];
+				}
+
+				$_services[] = $_temp;
+				unset( $_service );
+			}
+
+			return $_services;
+		}
+
+		return $_serviceConfig;
 	}
 
 	/**
@@ -314,7 +320,9 @@ MYSQL;
 				throw new BadRequestException( 'Service type cannot be changed after creation.' );
 			}
 
-			if ( null === ( $_typeId = Option::get( $values, 'type_id', $this->type_id ) ) )
+			$_typeId = Option::get( $values, 'type_id', $this->type_id );
+
+			if ( empty( $_typeId ) || empty( $this->storage_type_id ) )
 			{
 				$this->type_id = $this->getServiceTypeId();
 			}
@@ -370,6 +378,19 @@ MYSQL;
 	}
 
 	/**
+	 * @return bool
+	 */
+	protected function beforeSave()
+	{
+		if ( empty( $this->type_id ) || empty( $this->storage_type_id ) )
+		{
+			$this->type_id = $this->getServiceTypeId();
+		}
+
+		return parent::beforeSave();
+	}
+
+	/**
 	 * {@InheritDoc}
 	 */
 	protected function beforeDelete()
@@ -397,11 +418,11 @@ MYSQL;
 	 */
 	public function afterFind()
 	{
-		if ( empty( $this->type_id ) )
+		if ( !empty( $this->type ) && empty( $this->type_id ) )
 		{
 			if ( false === ( $_typeId = $this->getServiceTypeId() ) )
 			{
-				Log::error( 'Invalid service type "' . $this->type . '" found in row id#' . $this->id );
+				Log::error( 'Invalid service type "' . $this->type . '" found in row: ' . print_r( $this->getAttributes(), true ) );
 			}
 			else
 			{
@@ -458,8 +479,10 @@ MYSQL;
 					 'is_system',
 					 'storage_name',
 					 'storage_type',
+					 'storage_type_id',
 					 'credentials',
 					 'native_format',
+					 'native_format_id',
 					 'base_url',
 					 'parameters',
 					 'headers',
@@ -471,43 +494,117 @@ MYSQL;
 	}
 
 	/**
-	 * @return array
-	 */
-	public static function getServiceCache()
-	{
-		return self::$_serviceCache;
-	}
-
-	/**
-	 * @return array
-	 */
-	public static function getServiceConfig()
-	{
-		return self::$_serviceConfig;
-	}
-
-	/**
 	 * @param string $type
+	 * @param string $storageType
 	 *
 	 * @return int|false
 	 */
-	public function getServiceTypeId( $type = null )
+	public function getServiceTypeId( $type = null, $storageType = null )
 	{
 		$_type = $type ? : $this->type;
+		$_storageType = $storageType ? : $this->storage_type;
 
 		try
 		{
 			if ( false !== ( $_typeId = PlatformServiceTypes::defines( $_type, true ) ) )
 			{
-				return $_typeId;
+				$this->type_id = $_typeId;
 			}
 		}
 		catch ( \Exception $_ex )
 		{
-			return false;
+			switch ( strtolower( $_type ) )
+			{
+				case 'remote web service':
+					$this->type_id = PlatformServiceTypes::REMOTE_WEB_SERVICE;
+					break;
+
+				case 'local file storage':
+					$this->type_id = PlatformServiceTypes::LOCAL_FILE_STORAGE;
+					break;
+
+				case 'remote file storage':
+					$this->type_id = PlatformServiceTypes::REMOTE_FILE_STORAGE;
+
+					switch ( strtolower( $_storageType ) )
+					{
+						case 'azure blob':
+							$this->storage_type_id = PlatformStorageTypes::AZURE_BLOB;
+							break;
+
+						case 'aws s3':
+							$this->storage_type_id = PlatformStorageTypes::AWS_S3;
+							break;
+
+						case 'rackspace cloudfiles':
+							$this->storage_type_id = PlatformStorageTypes::RACKSPACE_CLOUDFILES;
+							break;
+
+						case 'openstack object storage':
+							$this->storage_type_id = PlatformStorageTypes::OPENSTACK_OBJECT_STORAGE;
+							break;
+					}
+					break;
+
+				case 'local sql db':
+					$this->type_id = PlatformServiceTypes::LOCAL_SQL_DB;
+					break;
+
+				case 'remote sql db':
+					$this->type_id = PlatformServiceTypes::REMOTE_SQL_DB;
+					break;
+
+				case 'local sql db schema':
+					$this->type_id = PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA;
+					break;
+
+				case 'remote sql db schema':
+					$this->type_id = PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA;
+					break;
+
+				case 'email service':
+				case 'local email service':
+					$this->type_id = PlatformServiceTypes::LOCAL_EMAIL_SERVICE;
+					break;
+
+				case 'remote email service':
+					$this->type_id = PlatformServiceTypes::REMOTE_EMAIL_SERVICE;
+					break;
+
+				case 'nosql db':
+					$this->type_id = PlatformServiceTypes::NOSQL_DB;
+
+					switch ( strtolower( $_storageType ) )
+					{
+						case 'azure tables':
+							$this->storage_type_id = PlatformStorageTypes::AZURE_TABLES;
+							break;
+						case 'aws dynamodb':
+							$this->storage_type_id = PlatformStorageTypes::AWS_DYNAMODB;
+							break;
+						case 'aws simpledb':
+							$this->storage_type_id = PlatformStorageTypes::AWS_SIMPLEDB;
+							break;
+						case 'mongodb':
+							$this->storage_type_id = PlatformStorageTypes::MONGODB;
+							break;
+						case 'couchdb':
+							$this->storage_type_id = PlatformStorageTypes::COUCHDB;
+							break;
+					}
+					break;
+
+				case 'local portal service':
+					$this->type_id = PlatformServiceTypes::LOCAL_PORTAL_SERVICE;
+					break;
+
+				default:
+					//	Giving up...
+					return false;
+			}
 		}
 
-		return false;
+		return $this->type_id;
 	}
 
 	/**
@@ -523,12 +620,12 @@ MYSQL;
 		{
 			if ( false === strpos( $_criteria->select, 'type' ) )
 			{
-				$_criteria->select += ', type';
+				$_criteria->select .= ',type';
 			}
 
 			if ( false === strpos( $_criteria->select, 'type_id' ) )
 			{
-				$_criteria->select += ', type_id';
+				$_criteria->select .= ',type_id';
 			}
 
 			$this->getDbCriteria()->mergeWith( $_criteria );

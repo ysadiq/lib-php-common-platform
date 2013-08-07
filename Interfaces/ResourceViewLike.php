@@ -17,69 +17,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Enums;
-
-use Kisma\Core\Enums\SeedEnum;
+namespace DreamFactory\Platform\Interfaces;
 
 /**
- * PlatformServiceTypes
+ * ResourceViewLike
+ * Something that acts as a resource view
  */
-class PlatformServiceTypes extends SeedEnum
+interface ResourceViewLike
 {
 	//*************************************************************************
-	//* Constants
+	//	Methods
 	//*************************************************************************
 
 	/**
-	 * @var int
+	 * @return string
 	 */
-	const SYSTEM_SERVICE = 0x0000;
-	/**
-	 * @var int
-	 */
-	const LOCAL_EMAIL_SERVICE = 0x0001;
-	/**
-	 * @var int
-	 */
-	const LOCAL_FILE_STORAGE = 0x0002;
-	/**
-	 * @var int
-	 */
-	const LOCAL_SQL_DB = 0x0004;
-	/**
-	 * @var int
-	 */
-	const LOCAL_SQL_DB_SCHEMA = 0x0008;
-	/**
-	 * @var int
-	 */
-	const NOSQL_DB = 0x0010;
-	/**
-	 * @var int
-	 */
-	const LOCAL_WEB_SERVICE = 0x0020;
-	/**
-	 * @var int
-	 */
-	const LOCAL_PORTAL_SERVICE = 0x0040;
-	/**
-	 * @var int
-	 */
-	const REMOTE_EMAIL_SERVICE = 0x1001;
-	/**
-	 * @var int
-	 */
-	const REMOTE_FILE_STORAGE = 0x1002;
-	/**
-	 * @var int
-	 */
-	const REMOTE_SQL_DB = 0x1004;
-	/**
-	 * @var int
-	 */
-	const REMOTE_SQL_DB_SCHEMA = 0x1008;
-	/**
-	 * @var int
-	 */
-	const REMOTE_WEB_SERVICE = 0x1020;
+	public function getSchema();
 }

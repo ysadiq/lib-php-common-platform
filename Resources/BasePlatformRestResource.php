@@ -28,14 +28,22 @@ use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Option;
-use DreamFactory\Platform\Resources\User\Session;
 
 /**
- * BasePlatformResource
+ * BasePlatformRestResource
  * A base service resource class to handle service resources of various kinds.
  */
 abstract class BasePlatformRestResource extends BasePlatformRestService implements RestResourceLike
 {
+	//*************************************************************************
+	//* Constants
+	//*************************************************************************
+
+	/**
+	 * @var string
+	 */
+	const DEFAULT_PASSTHRU_CLASS = 'DreamFactory\\Platform\\Utility\\ResourceStore';
+
 	//*************************************************************************
 	//* Members
 	//*************************************************************************
@@ -48,6 +56,10 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	 * @var string The name of this service
 	 */
 	protected $_serviceName;
+	/**
+	 * @var string The class to pass to from __callStatic()
+	 */
+	protected static $_passthruClass = self::DEFAULT_PASSTHRU_CLASS;
 
 	//*************************************************************************
 	//* Methods
@@ -68,22 +80,39 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 
 		if ( empty( $this->_serviceName ) )
 		{
-			throw new \InvalidArgumentException( 'You must supply a value for "$serviceName".' );
+			throw new \InvalidArgumentException( 'You must supply a value for "service_name".' );
 		}
 
 		parent::__construct( $settings );
 	}
 
 	/**
+	 * A chance to format the response
+	 */
+	protected function _postProcess()
+	{
+		parent::_postProcess();
+
+		$this->_formatResponse();
+	}
+
+	/**
+	 * Format the response if necessary
+	 */
+	protected function _formatResponse()
+	{
+	}
+
+	/**
 	 * @param string $name
-	 * @param array $arguments
+	 * @param array  $arguments
 	 *
 	 * @return mixed
 	 */
 	public static function __callStatic( $name, $arguments )
 	{
-		//	Pass-thru to store
-		return ResourceStore::__callStatic( $name, $arguments );
+		//	Passthru to store
+		return call_user_func_array( array( static::$_passthruClass, $name ), $arguments );
 	}
 
 	/**
@@ -134,5 +163,21 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	public function getServiceName()
 	{
 		return $this->_serviceName;
+	}
+
+	/**
+	 * @param string $passthruClass
+	 */
+	public static function setPassthruClass( $passthruClass )
+	{
+		self::$_passthruClass = $passthruClass;
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function getPassthruClass()
+	{
+		return self::$_passthruClass;
 	}
 }

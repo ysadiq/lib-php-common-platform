@@ -20,7 +20,7 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
-use DreamFactory\Platform\Resources\System\UserSession;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Models\BaseFactoryModel;
 use Kisma\Core\Exceptions\NotImplementedException;
@@ -70,7 +70,7 @@ class BasePlatformModel extends BaseFactoryModel
 					 'lastModifiedByColumn' => array( 'lmod_user_id', 'last_modified_by_id' ),
 					 'currentUserId'        => function ()
 					 {
-						 return UserSession::getCurrentUserId();
+						 return Session::getCurrentUserId();
 					 }
 				 ),
 			)
@@ -236,4 +236,5 @@ class BasePlatformModel extends BaseFactoryModel
 		//	Default implementation
 		throw new NotImplementedException( 'This model is not compatible with the REST API.' );
 	}
+
 }

@@ -18,7 +18,7 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
-use DreamFactory\Platform\Resources\System\UserSession;
+use DreamFactory\Platform\Resources\User\Session;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Seed;
@@ -93,7 +93,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 			throw new \InvalidArgumentException( '"type" can not be empty.' );
 		}
 
-		$this->_currentUserId = $this->_currentUserId ? : UserSession::getCurrentUserId();
+		$this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
 	}
 
 	/**
