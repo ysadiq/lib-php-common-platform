@@ -385,8 +385,15 @@ class SystemManager extends BaseSystemRestService
 		{
 			if ( trim( $_command ) )
 			{
-				$_success += ( false === Sql::execute( $_command ) ? 0 : 1 );
-				$_total += 1;
+				try
+				{
+					$_success += ( false === Sql::execute( $_command ) ? 0 : 1 );
+					$_total += 1;
+				}
+				catch ( \Exception $_ex )
+				{
+					Log::error( 'Exception executing script: ' . $_ex->getMessage() );
+				}
 			}
 		}
 

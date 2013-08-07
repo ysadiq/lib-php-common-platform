@@ -83,8 +83,8 @@ class Config extends BaseSystemRestResource
 				 'is_active'      => true,
 				 'resource_array' => $resourceArray,
 				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-					 static::Merge => static::Post,
+					 static::Patch => static::Put,
+					 static::Merge => static::Put,
 				 )
 			)
 		);
@@ -124,10 +124,14 @@ class Config extends BaseSystemRestResource
 		}
 
 		$this->_response['dsp_version'] = DSP_VERSION;
+<<<<<<< HEAD
+		if ( false !== ( $this->_response['allow_remote_logins'] = Pii::getParam( 'dsp.allow_remote_logins' ) ) )
+=======
 
 		$this->_response['allow_remote_logins'] = ( Pii::getParam( 'dsp.allow_remote_logins', false ) && $this->_response['allow_open_registration'] );
 
 		if ( false !== $this->_response['allow_remote_logins'] )
+>>>>>>> feature/remote-login
 		{
 			$_rows = Sql::findAll( 'select id, api_name, provider_name from df_sys_provider order by 1', array(), Pii::pdo() );
 

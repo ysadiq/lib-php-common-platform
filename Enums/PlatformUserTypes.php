@@ -22,9 +22,10 @@ namespace DreamFactory\Platform\Enums;
 use Kisma\Core\Enums\SeedEnum;
 
 /**
- * ProviderUserTypes
+ * PlatformUserSources
+ * Non-dynamic constants for the User.user_source field
  */
-class ProviderUserTypes extends SeedEnum
+class PlatformUserSources extends SeedEnum
 {
 	//*************************************************************************
 	//* Constants
@@ -33,9 +34,5 @@ class ProviderUserTypes extends SeedEnum
 	/**
 	 * @var int
 	 */
-	const INDIVIDUAL_USER = 0;
-	/**
-	 * @var int
-	 */
-	const SINGLE_USER_FOR_ALL = 1;
+	const LOCAL_USER = 0;
 }

@@ -23,7 +23,6 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Utility\ResourceStore;
-use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -83,8 +82,8 @@ class Config extends BaseSystemRestResource
 				 'is_active'      => true,
 				 'resource_array' => $resourceArray,
 				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-					 static::Merge => static::Post,
+					 static::Patch => static::Put,
+					 static::Merge => static::Put,
 				 )
 			)
 		);
