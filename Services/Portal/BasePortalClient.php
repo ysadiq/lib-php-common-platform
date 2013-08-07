@@ -17,9 +17,9 @@
 namespace DreamFactory\Platform\Services\Portal;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
-use DreamFactory\Platform\Services\BaseSystemRestService;
+use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BasePlatformService;
-use Kisma\Core\Exceptions\NotImplementedException;
+use DreamFactory\Platform\Services\Portal\OAuth\Exceptions\AuthenticationException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Interfaces\HttpMethod;
 use Kisma\Core\Utility\Curl;
@@ -51,7 +51,7 @@ abstract class BasePortalClient extends BaseSystemRestResource implements Consum
 	/**
 	 * @const string
 	 */
-	const DEFAULT_REDIRECT_URI = 'http://api.cloud.dreamfactory.com/oauth/authorize';
+	const DEFAULT_REDIRECT_URI = 'https://api.cloud.dreamfactory.com/oauth/authorize';
 
 	//*************************************************************************
 	//	Members
@@ -62,7 +62,11 @@ abstract class BasePortalClient extends BaseSystemRestResource implements Consum
 	 */
 	protected $_userAgent = null;
 	/**
-	 * @var string The base URL for this service (i.e. https://oauth.server.com)
+	 * @var string The base URL for this service's authentication server (i.e. https://oauth.server.com)
+	 */
+	protected $_authEndpoint = null;
+	/**
+	 * @var string The base URL for this service (i.e. https://api.server.com)
 	 */
 	protected $_serviceEndpoint = null;
 	/**
@@ -79,13 +83,13 @@ abstract class BasePortalClient extends BaseSystemRestResource implements Consum
 	//**************************************************************************
 
 	/**
-	 * @param array|\stdClass $options
+	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+	 * @param array|\stdClass                                     $options
 	 *
 	 * @throws \RuntimeException
-	 * @throws \InvalidArgumentException
 	 * @return \DreamFactory\Platform\Services\Portal\BasePortalClient
 	 */
-	public function __construct( $options = array() )
+	public function __construct( $consumer, $options = array() )
 	{
 		if ( !extension_loaded( 'curl' ) )
 		{
@@ -104,7 +108,7 @@ abstract class BasePortalClient extends BaseSystemRestResource implements Consum
 		$options['type'] = $this->_type ? : Option::get( $options, 'type', 'Local Portal Service' );
 		$options['type_id'] = $this->_typeId ? : Option::get( $options, 'type_id', PlatformServiceTypes::LOCAL_PORTAL_SERVICE );
 
-		parent::__construct( $options );
+		parent::__construct( $consumer, $options );
 	}
 
 	/**
@@ -116,7 +120,7 @@ abstract class BasePortalClient extends BaseSystemRestResource implements Consum
 	 * @param array  $headers Array of HTTP headers to send in array( 'header: value', 'header: value', ... ) format
 	 * @param int    $contentType
 	 *
-	 * @throws \DreamFactory\Platform\Services\Portal\OAuth\Exceptions\AuthenticationException
+	 * @throws AuthenticationException
 	 * @internal param array $_headers HTTP Headers
 	 * @return array
 	 */
@@ -195,7 +199,12 @@ abstract class BasePortalClient extends BaseSystemRestResource implements Consum
 	 */
 	public function getResourceEndpoint( $path = null )
 	{
-		return rtrim( $this->_resourceEndpoint ? : $this->_serviceEndpoint, '/ ' ) . '/' . ltrim( $path, '/ ' );
+		if ( empty( $this->_resourceEndpoint ) )
+		{
+			return $this->getServiceEndpoint( $path );
+		}
+
+		return rtrim( $this->_resourceEndpoint, '/ ' ) . '/' . ltrim( $path, '/ ' );
 	}
 
 	/**
@@ -248,6 +257,35 @@ abstract class BasePortalClient extends BaseSystemRestResource implements Consum
 	public function getCertificateFile()
 	{
 		return $this->_certificateFile;
+	}
+
+	/**
+	 * @param string $authEndpoint
+	 *
+	 * @return BasePortalClient
+	 */
+	public function setAuthEndpoint( $authEndpoint )
+	{
+		$this->_authEndpoint = $authEndpoint;
+
+		return $this;
+	}
+
+	/**
+	 * Given a path, build a full url
+	 *
+	 * @param string|null $path
+	 *
+	 * @return string
+	 */
+	public function getAuthEndpoint( $path = null )
+	{
+		if ( empty( $this->_authEndpoint ) )
+		{
+			return $this->getServiceEndpoint( $path );
+		}
+
+		return rtrim( $this->_authEndpoint, '/ ' ) . '/' . ltrim( $path, '/ ' );
 	}
 
 }

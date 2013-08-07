@@ -657,28 +657,21 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	}
 
 	/**
-	 * @param        $records
-	 * @param string $include
-	 * @param string $id_field
+	 * @param array $records
+	 * @param mixed $include
+	 * @param mixed $id_field
 	 *
 	 * @return array
 	 */
-	protected static function cleanRecords( $records, $include = '*' )
+	protected static function cleanRecords( $records, $include = '*', $id_field = null )
 	{
 		$_out = array();
 		foreach ( $records as $_record )
 		{
-			$_out[] = static::cleanRecord( $_record, $include );
+			$_out[] = static::cleanRecord( $_record, $include, $id_field );
 		}
 
 		return $_out;
-//		$_count = count( $records );
-//		return array_map(
-//			array( 'DreamFactory\\Platform\\Services\\BaseDbSvc', 'cleanRecord' ),
-//			$records,
-//			array_fill( 0, $_count, $include )
-//			array_fill( 0, $_count, $id_field )
-//		);
 	}
 
 	/**
@@ -779,9 +772,10 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		{
 			if ( false !== array_search( $_name, $fields ) )
 			{
-				unset($fields[$_key]);
+				unset( $fields[$_key] );
 			}
 		}
+
 		return !empty( $fields );
 	}
 

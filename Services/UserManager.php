@@ -20,20 +20,21 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
-use DreamFactory\Platform\Services\BasePlatformRestService;
-use DreamFactory\Platform\Services\BaseSystemRestService;
-use DreamFactory\Platform\Yii\Models\Config;
-use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Hasher;
-use Kisma\Core\Utility\Sql;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\UnauthorizedException;
-use DreamFactory\Platform\Resources\System\UserSession;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
+use DreamFactory\Platform\Yii\Models\Config;
+use DreamFactory\Platform\Yii\Models\User;
+use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\HttpMethod;
+use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Hasher;
+use Kisma\Core\Utility\Sql;
 use Swagger\Annotations as SWG;
 
 /**
@@ -151,6 +152,8 @@ class UserManager extends BaseSystemRestService
 	 */
 	protected function _handleResource()
 	{
+		$_authClient = null;
+
 		switch ( $this->_resource )
 		{
 			case '':
@@ -165,8 +168,36 @@ class UserManager extends BaseSystemRestService
 				break;
 
 			case 'session':
-				$obj = new UserSession( $this );
-				$result = $obj->processRequest( null, $this->_action );
+				//	Handle remote login
+				if ( HttpMethod::Post == $this->_action && Pii::getParam( 'dsp.allow_remote_logins' ) )
+				{
+					$_provider = FilterInput::post( 'provider', 'facebook', FILTER_SANITIZE_STRING );
+
+					if ( !empty( $_provider ) )
+					{
+						if ( null !== ( $_config = Pii::getParam( 'dsp.remote_login_options' ) ) )
+						{
+							$_config['base_url'] = Pii::baseUrl( true ) . Pii::url( $_config['base_url'] );
+							$_authClient = new \Hybrid_Auth( $_config );
+							$_adapter = $_authClient->authenticate( $_provider );
+
+							if ( is_string( $_adapter ) )
+							{
+								//	This is an url...
+							}
+
+							$_profile = $_adapter->getUserProfile();
+
+							Log::debug( 'Profile from "' . $_provider . '": ' . print_r( $_profile, true ) );
+						}
+					}
+				}
+
+				if ( null === $_authClient )
+				{
+					$obj = new Session( $this );
+					$result = $obj->processRequest( null, $this->_action );
+				}
 				break;
 
 			case 'profile':
@@ -323,7 +354,7 @@ class UserManager extends BaseSystemRestService
 		{
 			throw new BadRequestException( "The email field for invitation can not be empty." );
 		}
-		$theUser = \User::model()->find( 'email=:email', array( ':email' => $email ) );
+		$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
 		if ( empty( $theUser ) )
 		{
 			throw new BadRequestException( "No user currently exists with the email '$email'." );
@@ -393,7 +424,7 @@ class UserManager extends BaseSystemRestService
 			throw new BadRequestException( "The email field for User can not be empty." );
 		}
 
-		$theUser = \User::model()->find( 'email=:email', array( ':email' => $email ) );
+		$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
 
 		if ( null !== $theUser )
 		{
@@ -471,7 +502,7 @@ class UserManager extends BaseSystemRestService
 	{
 		try
 		{
-			$theUser = \User::model()->find( 'confirm_code=:cc', array( ':cc' => $code ) );
+			$theUser = User::model()->find( 'confirm_code=:cc', array( ':cc' => $code ) );
 			if ( null === $theUser )
 			{
 				throw new BadRequestException( "Invalid confirm code." );
@@ -522,7 +553,7 @@ class UserManager extends BaseSystemRestService
 	 */
 	public static function getChallenge( $email )
 	{
-		$theUser = \User::model()->find( 'email=:email', array( ':email' => $email ) );
+		$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
 		if ( null === $theUser )
 		{
 			// bad email
@@ -553,11 +584,11 @@ class UserManager extends BaseSystemRestService
 	{
 		try
 		{
-			$userId = UserSession::validateSession();
+			$userId = Session::validateSession();
 		}
 		catch ( \Exception $ex )
 		{
-			UserSession::userLogout();
+			Session::userLogout();
 			throw $ex;
 		}
 		// regenerate new timed ticket
@@ -578,7 +609,7 @@ class UserManager extends BaseSystemRestService
 	{
 		try
 		{
-			$theUser = \User::model()->find( 'email=:email', array( ':email' => $email ) );
+			$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
 			if ( null === $theUser )
 			{
 				// bad email
@@ -655,7 +686,7 @@ class UserManager extends BaseSystemRestService
 	{
 		try
 		{
-			$theUser = \User::model()->find( 'email=:email', array( ':email' => $email ) );
+			$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
 			if ( null === $theUser )
 			{
 				// bad email
@@ -673,16 +704,16 @@ class UserManager extends BaseSystemRestService
 
 			Pii::user()->setId( $theUser->id );
 			$isSysAdmin = $theUser->is_sys_admin;
-			$result = UserSession::generateSessionDataFromUser( null, $theUser );
+			$result = Session::generateSessionDataFromUser( null, $theUser );
 
 			// write back login datetime
 			$theUser->last_login_date = date( 'c' );
 			$theUser->save();
 
-			UserSession::setCurrentUserId( $theUser->id );
+			Session::setCurrentUserId( $theUser->id );
 
 			// additional stuff for session - launchpad mainly
-			return UserSession::addSessionExtras( $result, $isSysAdmin, true );
+			return Session::addSessionExtras( $result, $isSysAdmin, true );
 		}
 		catch ( \Exception $ex )
 		{
@@ -701,7 +732,7 @@ class UserManager extends BaseSystemRestService
 	{
 		try
 		{
-			$theUser = \User::model()->find( 'confirm_code=:cc', array( ':cc' => $code ) );
+			$theUser = User::model()->find( 'confirm_code=:cc', array( ':cc' => $code ) );
 			if ( null === $theUser )
 			{
 				// bad code
@@ -718,7 +749,7 @@ class UserManager extends BaseSystemRestService
 
 		try
 		{
-			return UserSession::userLogin( $theUser->email, $new_password );
+			return Session::userLogin( $theUser->email, $new_password );
 		}
 		catch ( \Exception $ex )
 		{
@@ -737,7 +768,7 @@ class UserManager extends BaseSystemRestService
 	{
 		try
 		{
-			$theUser = \User::model()->find( 'email=:email', array( ':email' => $email ) );
+			$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
 			if ( null === $theUser )
 			{
 				// bad code
@@ -759,7 +790,7 @@ class UserManager extends BaseSystemRestService
 
 		try
 		{
-			return UserSession::userLogin( $email, $new_password );
+			return Session::userLogin( $email, $new_password );
 		}
 		catch ( \Exception $ex )
 		{
@@ -801,11 +832,11 @@ class UserManager extends BaseSystemRestService
 		// check valid session,
 		// using userId from session, query with check for old password
 		// then update with new password
-		$userId = UserSession::validateSession();
+		$userId = Session::validateSession();
 
 		try
 		{
-			$theUser = \User::model()->findByPk( $userId );
+			$theUser = User::model()->findByPk( $userId );
 			if ( null === $theUser )
 			{
 				// bad session
@@ -850,11 +881,11 @@ class UserManager extends BaseSystemRestService
 	{
 		// check valid session,
 		// using userId from session, update with new profile elements
-		$userId = UserSession::validateSession();
+		$userId = Session::validateSession();
 
 		try
 		{
-			$theUser = \User::model()->findByPk( $userId );
+			$theUser = User::model()->findByPk( $userId );
 			if ( null === $theUser )
 			{
 				// bad session
@@ -913,11 +944,11 @@ class UserManager extends BaseSystemRestService
 	{
 		// check valid session,
 		// using userId from session, update with new profile elements
-		$userId = UserSession::validateSession();
+		$userId = Session::validateSession();
 
 		try
 		{
-			$theUser = \User::model()->findByPk( $userId );
+			$theUser = User::model()->findByPk( $userId );
 			if ( null === $theUser )
 			{
 				// bad session

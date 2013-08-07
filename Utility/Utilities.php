@@ -67,10 +67,8 @@ class Utilities
 	{
 		if ( is_array( $array ) )
 		{
-			if ( !empty( $array ) )
-			{
-				return ( 0 === count( array_filter( array_keys( $array ), 'is_string' ) ) );
-			}
+			for ($k = 0, reset($array) ; $k === key($array) ; next($array)) ++$k;
+			return is_null(key($array));
 		}
 
 		return false;

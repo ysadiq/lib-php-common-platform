@@ -30,10 +30,10 @@ use Kisma\Core\Utility\Sql;
  * Columns:
  *
  * @property int                 $user_id
- * @property int                 $provider_id
  * @property string              $provider_user_id
+ * @property int                 $provider_id
  * @property int                 $account_type
- * @property array               $auth_text
+ * @property mixed               $auth_text
  * @property string              $last_use_date
  *
  * @property User                $user
@@ -58,7 +58,7 @@ class ProviderUser extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array( 'provider_id, provider_user_id, user_id, account_type, auth_text, last_use_date', 'safe' ),
+			array( 'user_id, provider_id, provider_user_id, account_type, auth_text, last_use_date', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -109,13 +109,92 @@ class ProviderUser extends BasePlatformSystemModel
 			array_merge(
 				$additionalLabels,
 				array(
-					 'provider_id'      => 'Provider ID',
 					 'user_id'          => 'User ID',
-					 'provider_user_id' => 'Provider User ID',
 					 'account_type'     => 'Account Type',
+					 'provider_id'      => 'Provider ID',
+					 'provider_user_id' => 'Provider User ID',
 					 'auth_text'        => 'Authorization',
 					 'last_use_date'    => 'Last Used',
 				)
+			)
+		);
+	}
+
+	/**
+	 * Named scope that filters by user_id and provider_name
+	 *
+	 * @param int        $userId
+	 * @param int|string $providerId
+	 *
+	 * @return $this
+	 */
+	public function byUserPortal( $userId, $providerId )
+	{
+		$this->getDbCriteria()->mergeWith(
+			array(
+				 'condition' => 'user_id = :user_id and provider_id = :provider_id',
+				 'params'    => array(
+					 ':user_id'     => $userId,
+					 ':provider_id' => $providerId
+				 ),
+			)
+		);
+
+		return $this;
+	}
+
+	/**
+	 * @param $providerName
+	 * @param $providerUserId
+	 *
+	 * @return User
+	 */
+	public static function getUser( $providerName, $providerUserId )
+	{
+		$_model = static::model()->find(
+			'provider_name = :provider_name and provider_user_id = :provider_user_id',
+			array(
+				 ':provider_name'    => $providerName,
+				 ':provider_user_id' => $providerUserId,
+			)
+		);
+
+		if ( empty( $_model ) )
+		{
+			return null;
+		}
+
+		return $_model->user ? : null;
+	}
+
+	/**
+	 * @param int $userId
+	 *
+	 * @return ProviderUser[]
+	 */
+	public static function getLogins( $userId )
+	{
+		return static::model()->findAll(
+			'user_id = :user_id',
+			array(
+				 ':user_id' => $userId,
+			)
+		);
+	}
+
+	/**
+	 * @param int    $userId
+	 * @param string $providerName
+	 *
+	 * @return ProviderUser
+	 */
+	public static function getLogin( $userId, $providerName )
+	{
+		return static::model()->find(
+			'user_id = :user_id and provider_name = :provider_name',
+			array(
+				 ':user_id'       => $userId,
+				 ':provider_name' => $providerName,
 			)
 		);
 	}

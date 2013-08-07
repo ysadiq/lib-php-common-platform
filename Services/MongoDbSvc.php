@@ -385,7 +385,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function createRecords( $table, $records, $fields = '', $extras = array() )
+	public function createRecords( $table, $records, $fields = null, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -422,7 +422,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws BadRequestException
 	 * @return array
 	 */
-	public function createRecord( $table, $record, $fields = '', $extras = array() )
+	public function createRecord( $table, $record, $fields = null, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -454,7 +454,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecords( $table, $records, $fields = '', $extras = array() )
+	public function updateRecords( $table, $records, $fields = null, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -495,7 +495,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws BadRequestException
 	 * @return array
 	 */
-	public function updateRecord( $table, $record, $fields = '', $extras = array() )
+	public function updateRecord( $table, $record, $fields = null, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -526,7 +526,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecordsByFilter( $table, $record, $filter = '', $fields = '', $extras = array() )
+	public function updateRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -545,7 +545,7 @@ class MongoDbSvc extends NoSqlDbSvc
 			$_result = $_coll->find( $_criteria, $_fieldArray );
 			$_out = iterator_to_array( $_result );
 
-			return static::cleanRecords( $_out );
+			return static::mongoIdsToIds( $_out );
 		}
 		catch ( \Exception $ex )
 		{
@@ -563,7 +563,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecordsByIds( $table, $record, $id_list, $fields = '', $extras = array() )
+	public function updateRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -608,7 +608,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecordById( $table, $record, $id, $fields = '', $extras = array() )
+	public function updateRecordById( $table, $record, $id, $fields = null, $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
@@ -643,7 +643,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecords( $table, $records, $fields = '', $extras = array() )
+	public function mergeRecords( $table, $records, $fields = null, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -694,7 +694,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecord( $table, $record, $fields = '', $extras = array() )
+	public function mergeRecord( $table, $record, $fields = null, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -737,7 +737,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordsByFilter( $table, $record, $filter = '', $fields = '', $extras = array() )
+	public function mergeRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -751,12 +751,12 @@ class MongoDbSvc extends NoSqlDbSvc
 		$_fieldArray = static::buildFieldArray( $fields );
 		try
 		{
-			$result = $_coll->update( $_criteria, array( '$set' => $record ), array( 'multiple' => true ) );
-			/** @var \MongoCursor $result */
-			$result = $_coll->find( $_criteria, $_fieldArray );
-			$_out = iterator_to_array( $result );
+			$_result = $_coll->update( $_criteria, array( '$set' => $record ), array( 'multiple' => true ) );
+			/** @var \MongoCursor $_result */
+			$_result = $_coll->find( $_criteria, $_fieldArray );
+			$_out = iterator_to_array( $_result );
 
-			return static::cleanRecords( $_out );
+			return static::mongoIdsToIds( $_out );
 		}
 		catch ( \Exception $ex )
 		{
@@ -775,7 +775,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordsByIds( $table, $record, $id_list, $fields = '', $extras = array() )
+	public function mergeRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -806,7 +806,7 @@ class MongoDbSvc extends NoSqlDbSvc
 				$_out = static::idsAsRecords( $_ids );
 			}
 
-			return static::cleanRecords( $_out );
+			return static::mongoIdsToIds( $_out );
 		}
 		catch ( \Exception $ex )
 		{
@@ -824,7 +824,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordById( $table, $record, $id, $fields = '', $extras = array() )
+	public function mergeRecordById( $table, $record, $id, $fields = null, $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
@@ -866,7 +866,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array|string
 	 */
-	public function deleteRecords( $table, $records, $fields = '', $extras = array() )
+	public function deleteRecords( $table, $records, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $records ) || empty( $records ) )
 		{
@@ -897,7 +897,7 @@ class MongoDbSvc extends NoSqlDbSvc
 
 			$result = $_coll->remove( $_criteria );
 
-			return static::cleanRecords( $_out );
+			return static::mongoIdsToIds( $_out );
 		}
 		catch ( \Exception $ex )
 		{
@@ -914,7 +914,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecord( $table, $record, $fields = '', $extras = array() )
+	public function deleteRecord( $table, $record, $fields = null, $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
@@ -945,7 +945,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecordsByFilter( $table, $filter, $fields = '', $extras = array() )
+	public function deleteRecordsByFilter( $table, $filter, $fields = null, $extras = array() )
 	{
 		if ( empty( $filter ) )
 		{
@@ -963,7 +963,7 @@ class MongoDbSvc extends NoSqlDbSvc
 			$_out = iterator_to_array( $result );
 			$result = $_coll->remove( $_criteria );
 
-			return static::cleanRecords( $_out );
+			return static::mongoIdsToIds( $_out );
 		}
 		catch ( \Exception $ex )
 		{
@@ -981,7 +981,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecordsByIds( $table, $id_list, $fields = '', $extras = array() )
+	public function deleteRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
 	{
 		if ( empty( $id_list ) )
 		{
@@ -1007,7 +1007,7 @@ class MongoDbSvc extends NoSqlDbSvc
 
 			$_result = $_coll->remove( $_criteria );
 
-			return static::cleanRecords( $_out );
+			return static::mongoIdsToIds( $_out );
 		}
 		catch ( \Exception $ex )
 		{
@@ -1024,7 +1024,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecordById( $table, $id, $fields = '', $extras = array() )
+	public function deleteRecordById( $table, $id, $fields = null, $extras = array() )
 	{
 		if ( empty( $id ) )
 		{
@@ -1056,7 +1056,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecordsByFilter( $table, $filter = '', $fields = '', $extras = array() )
+	public function retrieveRecordsByFilter( $table, $filter = null, $fields = null, $extras = array() )
 	{
 		$_coll = $this->selectTable( $table );
 		$_fieldArray = static::buildFieldArray( $fields );
@@ -1082,7 +1082,7 @@ class MongoDbSvc extends NoSqlDbSvc
 				$_result = $_result->limit( $_limit );
 			}
 			$_out = iterator_to_array( $_result );
-			$_out = static::cleanRecords( $_out );
+			$_out = static::mongoIdsToIds( $_out );
 			if ( $_count )
 			{
 				$_out['meta']['count'] = $_result->count();
@@ -1105,7 +1105,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecords( $table, $records, $fields = '', $extras = array() )
+	public function retrieveRecords( $table, $records, $fields = null, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -1126,7 +1126,7 @@ class MongoDbSvc extends NoSqlDbSvc
 			$result = $_coll->find( array( '$in' => $_ids ), $_fieldArray );
 			$_out = iterator_to_array( $result );
 
-			return static::cleanRecords( $_out );
+			return static::mongoIdsToIds( $_out );
 		}
 		catch ( \Exception $ex )
 		{
@@ -1143,7 +1143,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecord( $table, $record, $fields = '', $extras = array() )
+	public function retrieveRecord( $table, $record, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -1179,7 +1179,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecordsByIds( $table, $id_list, $fields = '', $extras = array() )
+	public function retrieveRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
 	{
 		if ( empty( $id_list ) )
 		{
@@ -1195,7 +1195,7 @@ class MongoDbSvc extends NoSqlDbSvc
 			$result = $_coll->find( array( static::DEFAULT_ID_FIELD => array( '$in' => $_ids ) ), $_fieldArray );
 			$_out = iterator_to_array( $result );
 
-			return static::cleanRecords( $_out );
+			return static::mongoIdsToIds( $_out );
 		}
 		catch ( \Exception $ex )
 		{
@@ -1212,7 +1212,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecordById( $table, $id, $fields = '', $extras = array() )
+	public function retrieveRecordById( $table, $id, $fields = null, $extras = array() )
 	{
 		if ( empty( $id ) )
 		{
@@ -1246,32 +1246,27 @@ class MongoDbSvc extends NoSqlDbSvc
 
 	/**
 	 * @param string|array $include List of keys to include in the output record
-	 * @param string $id_field
 	 *
 	 * @return array
 	 */
-	protected static function buildFieldArray( $include = '*', $id_field = self::DEFAULT_ID_FIELD )
+	protected static function buildFieldArray( $include = '*' )
 	{
-		if ( empty( $include ) )
-		{
-			return array( $id_field => true );
-		}
 		if ( '*' == $include )
 		{
 			return array();
 		}
 
+		if ( empty( $include ) )
+		{
+			$include = static::DEFAULT_ID_FIELD;
+		}
 		if ( !is_array( $include ) )
 		{
 			$include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
 		}
-		$_out = array( $id_field => true );
+		$_out = array();
 		foreach ( $include as $key )
 		{
-			if ( 0 == strcasecmp( $key, $id_field ) )
-			{
-				continue;
-			}
 			$_out[$key] = true;
 		}
 
@@ -1542,68 +1537,24 @@ class MongoDbSvc extends NoSqlDbSvc
 	/**
 	 * @param array        $record
 	 * @param string|array $include List of keys to include in the output record
-	 * @param string       $id_field
+	 * @param string|array $id_field
 	 *
 	 * @return array
 	 */
-	protected static function cleanRecord( $record, $include = '*', $id_field = self::DEFAULT_ID_FIELD )
+	protected static function cleanRecord( $record, $include = '*', $id_field = null )
 	{
-		if ( '*' !== $include )
-		{
-			$_id = Option::get( $record, $id_field );
-			if ( empty( $_id ) )
-			{
-				$_id = Option::get( $record, 'id' ); // returned data drops underscore!
-			}
-			$_out = array( $id_field => static::mongoIdToId( $_id ) );
-
-			if ( !empty( $include ) )
-			{
-				if ( !is_array( $include ) )
-				{
-					$include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
-				}
-				foreach ( $include as $key )
-				{
-					if ( 0 == strcasecmp( $key, $id_field ) )
-					{
-						continue;
-					}
-					$_out[$key] = Option::get( $record, $key );
-				}
-			}
-
-			return $_out;
-		}
+		$_out = parent::cleanRecord( $record, $include, $id_field );
 
 		return static::mongoIdToId( $record );
 	}
 
 	/**
-	 * @param        $records
-	 * @param string $include
-	 * @param string $id_field
-	 *
-	 * @return array
-	 */
-	protected static function cleanRecords( $records, $include = '*', $id_field = self::DEFAULT_ID_FIELD )
-	{
-		$_out = array();
-		foreach ( $records as $_record )
-		{
-			$_out[] = static::cleanRecord( $_record, $include, $id_field );
-		}
-
-		return $_out;
-	}
-
-	/**
-	 * @param        $records
+	 * @param array  $records
 	 * @param string $id_field
 	 *
 	 * @return mixed
 	 */
-	protected static function mongoIdsToIds( $records, $id_field = self::DEFAULT_ID_FIELD )
+	protected static function mongoIdsToIds( $records, $id_field = null )
 	{
 		foreach ( $records as $key => $_record )
 		{
@@ -1614,13 +1565,17 @@ class MongoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $record
+	 * @param mixed  $record
 	 * @param string $id_field
 	 *
 	 * @return array|string
 	 */
-	protected static function mongoIdToId( $record, $id_field = self::DEFAULT_ID_FIELD )
+	protected static function mongoIdToId( $record, $id_field = null )
 	{
+		if ( empty( $id_field ) )
+		{
+			$id_field = static::DEFAULT_ID_FIELD;
+		}
 		if ( !is_array( $record ) )
 		{
 			if ( is_object( $record ) )
@@ -1631,27 +1586,32 @@ class MongoDbSvc extends NoSqlDbSvc
 		}
 		else
 		{
-			/** @var \MongoId $_id */
-			$_id = Option::get( $record, $id_field );
+			/** @var \MongoId $_id in record as '_id' or 'id' */
+			$_id = Option::get( $record, $id_field, Option::get( $record, 'id', null, true ) );
 			if ( is_object( $_id ) )
 			{
 				/** $_id \MongoId */
-				$record[$id_field] = (string)$_id;
+				$_id = (string)$_id;
 			}
+			$record[$id_field] = $_id;
 		}
 
 		return $record;
 	}
 
 	/**
-	 * @param        $record
+	 * @param mixed  $record
 	 * @param bool   $determine_value
 	 * @param string $id_field
 	 *
 	 * @return array|bool|float|int|\MongoId|string
 	 */
-	protected static function idToMongoId( $record, $determine_value = false, $id_field = self::DEFAULT_ID_FIELD )
+	protected static function idToMongoId( $record, $determine_value = false, $id_field = null )
 	{
+		if ( empty( $id_field ) )
+		{
+			$id_field = static::DEFAULT_ID_FIELD;
+		}
 		if ( !is_array( $record ) )
 		{
 			if ( is_string( $record ) )
@@ -1712,7 +1672,7 @@ class MongoDbSvc extends NoSqlDbSvc
 	 *
 	 * @return array
 	 */
-	protected static function idsToMongoIds( $records, $id_field = self::DEFAULT_ID_FIELD )
+	protected static function idsToMongoIds( $records, $id_field = null )
 	{
 		$_determineValue = false;
 		if ( !is_array( $records ) )
@@ -1725,7 +1685,8 @@ class MongoDbSvc extends NoSqlDbSvc
 		return array_map(
 			array( 'DreamFactory\\Platform\\Services\\MongoDbSvc', 'idToMongoId' ),
 			$records,
-			array_fill( 0, count( $records ), $_determineValue )
+			array_fill( 0, count( $records ), $_determineValue ),
+			array_fill( 0, count( $records ), $id_field )
 		);
 	}
 }

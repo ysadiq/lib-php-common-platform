@@ -527,10 +527,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
 		}
-		if ( empty( $fields ) )
-		{
-			$fields = $_idField; // always return ids
-		}
+
 		$_items = array();
 		foreach ( $records as $_record )
 		{
@@ -541,8 +538,8 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 			// Add operation to list of batch operations.
 			$_items[] = array(
-				"PutRequest" => array(
-					"Item" => $this->_dbConn->formatAttributes( $_record )
+				'PutRequest' => array(
+					'Item' => $this->_dbConn->formatAttributes( $_record )
 				)
 			);
 		}
@@ -551,7 +548,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			$_result = $this->_dbConn->batchWriteItem(
 				array(
-					 "RequestItems" => array(
+					 'RequestItems' => array(
 						 $table => $_items,
 					 )
 				)
@@ -559,7 +556,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 			// todo check $_result['UnprocessedItems'] for 'PutRequest'
 
-			return static::cleanRecords( $records, $fields );
+			return static::cleanRecords( $records, $fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -596,10 +593,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			throw new BadRequestException( "Identifying field(s) not found in record." );
 		}
-		if ( empty( $fields ) )
-		{
-			$fields = $_idField; // always return ids
-		}
+
 		try
 		{
 			// simple insert request
@@ -612,7 +606,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 			$_out = Option::get( $_result, 'Attributes', array() );
 
-			return static::cleanRecord( $record, $fields );
+			return static::cleanRecord( $record, $fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -650,10 +644,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
 		}
 
-		if ( empty( $fields ) )
-		{
-			$fields = $_idField; // always return ids
-		}
 		$_items = array();
 		foreach ( $records as $_record )
 		{
@@ -664,8 +654,8 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 			// Add operation to list of batch operations.
 			$_items[] = array(
-				"PutRequest" => array(
-					"Item" => $this->_dbConn->formatAttributes( $_record )
+				'PutRequest' => array(
+					'Item' => $this->_dbConn->formatAttributes( $_record )
 				)
 			);
 		}
@@ -674,7 +664,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			$_result = $this->_dbConn->batchWriteItem(
 				array(
-					 "RequestItems" => array(
+					 'RequestItems' => array(
 						 $table => $_items,
 					 )
 				)
@@ -682,7 +672,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 			// todo check $_result['UnprocessedItems'] for 'PutRequest'
 
-			return static::cleanRecords( $records, $fields );
+			return static::cleanRecords( $records, $fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -719,10 +709,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			throw new BadRequestException( "Identifying field(s) not found in record." );
 		}
-		if ( empty( $fields ) )
-		{
-			$fields = $_idField; // always return ids
-		}
+
 		try
 		{
 			// simple insert request
@@ -736,7 +723,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 			$_out = Option::get( $_result, 'Attributes', array() );
 
-			return static::cleanRecord( $record, $fields );
+			return static::cleanRecord( $record, $fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -806,10 +793,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
 		}
 
-		if ( empty( $fields ) )
-		{
-			$fields = $_idField; // always return ids
-		}
 		$_out = array();
 		$_items = array();
 		foreach ( $id_list as $_id )
@@ -817,18 +800,18 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			$record[$_idField[0]] = $_id;
 			// Add operation to list of batch operations.
 			$_items[] = array(
-				"PutRequest" => array(
-					"Item" => $this->_dbConn->formatAttributes( $record )
+				'PutRequest' => array(
+					'Item' => $this->_dbConn->formatAttributes( $record )
 				)
 			);
-			$_out[] = static::cleanRecord( $record, $fields );
+			$_out[] = static::cleanRecord( $record, $fields, $_idField );
 		}
 
 		try
 		{
 			$_result = $this->_dbConn->batchWriteItem(
 				array(
-					 "RequestItems" => array(
+					 'RequestItems' => array(
 						 $table => $_items,
 					 )
 				)
@@ -874,10 +857,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
 		}
 
-		if ( empty( $fields ) )
-		{
-			$fields = $_idField; // always return ids
-		}
 		try
 		{
 			$record[$_idField[0]] = $id;
@@ -892,7 +871,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 			$_out = Option::get( $_result, 'Attributes', array() );
 
-			return static::cleanRecord( $record, $fields );
+			return static::cleanRecord( $record, $fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -925,10 +904,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
 		}
 
-		if ( empty( $fields ) )
-		{
-			$fields = $_idField; // todo always return ids
-		}
 		$_out = array();
 		foreach ( $records as $_record )
 		{
@@ -944,15 +919,15 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 				$_result = $this->_dbConn->updateItem(
 					array(
 						 'TableName'        => $table,
-						 "Key"              => $_keys,
-						 "AttributeUpdates" => $this->_dbConn->formatAttributes( $_record, Attribute::FORMAT_UPDATE ),
+						 'Key'              => $_keys,
+						 'AttributeUpdates' => $this->_dbConn->formatAttributes( $_record, Attribute::FORMAT_UPDATE ),
 						 'ReturnValues'     => ReturnValue::ALL_NEW
 					)
 				);
 
 				$_temp = Option::get( $_result, 'Attributes', array() );
 
-				$_out[] = static::cleanRecord( static::_unformatAttributes( $_temp ), $fields );
+				$_out[] = static::cleanRecord( static::_unformatAttributes( $_temp ), $fields, $_idField );
 			}
 			catch ( \Exception $ex )
 			{
@@ -988,10 +963,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
 		}
 
-		if ( empty( $fields ) )
-		{
-			$fields = $_idField; // todo always return ids
-		}
 		$_keys = static::_buildKey( $_idField, $_idType, $record, true );
 		try
 		{
@@ -999,15 +970,15 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			$_result = $this->_dbConn->updateItem(
 				array(
 					 'TableName'        => $table,
-					 "Key"              => $_keys,
-					 "AttributeUpdates" => $this->_dbConn->formatAttributes( $record, Attribute::FORMAT_UPDATE ),
+					 'Key'              => $_keys,
+					 'AttributeUpdates' => $this->_dbConn->formatAttributes( $record, Attribute::FORMAT_UPDATE ),
 					 'ReturnValues'     => ReturnValue::ALL_NEW
 				)
 			);
 
 			$_out = Option::get( $_result, 'Attributes', array() );
 
-			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields );
+			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -1073,10 +1044,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
 		}
 
-		if ( empty( $fields ) )
-		{
-			$fields = $_idField; // always return ids
-		}
 		if ( !is_array( $id_list ) )
 		{
 			$id_list = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
@@ -1093,15 +1060,15 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 				$_result = $this->_dbConn->updateItem(
 					array(
 						 'TableName'        => $table,
-						 "Key"              => $_keys,
-						 "AttributeUpdates" => $_updates,
+						 'Key'              => $_keys,
+						 'AttributeUpdates' => $_updates,
 						 'ReturnValues'     => ReturnValue::ALL_NEW
 					)
 				);
 
 				$_temp = Option::get( $_result, 'Attributes', array() );
 
-				$_out[] = static::cleanRecord( static::_unformatAttributes( $_temp ), $fields );
+				$_out[] = static::cleanRecord( static::_unformatAttributes( $_temp ), $fields, $_idField );
 			}
 			catch ( \Exception $ex )
 			{
@@ -1143,10 +1110,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
 		}
 
-		if ( empty( $fields ) )
-		{
-			$fields = $_idField; // always return ids
-		}
 		$_temp = array( $_idField[0] => $id );
 		$_keys = static::_buildKey( $_idField, $_idType, $_temp );
 		try
@@ -1155,15 +1118,15 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			$_result = $this->_dbConn->updateItem(
 				array(
 					 'TableName'        => $table,
-					 "Key"              => $_keys,
-					 "AttributeUpdates" => $this->_dbConn->formatAttributes( $record, Attribute::FORMAT_UPDATE ),
+					 'Key'              => $_keys,
+					 'AttributeUpdates' => $this->_dbConn->formatAttributes( $record, Attribute::FORMAT_UPDATE ),
 					 'ReturnValues'     => ReturnValue::ALL_NEW
 				)
 			);
 
 			$_out = Option::get( $_result, 'Attributes', array() );
 
-			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields );
+			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -1212,8 +1175,8 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			// Add operation to list of batch operations.
 			$_items[] = array(
-				"DeleteRequest" => array(
-					"Key" => static::_buildKey( $_idField, $_idType, $_record )
+				'DeleteRequest' => array(
+					'Key' => static::_buildKey( $_idField, $_idType, $_record )
 				)
 			);
 			$_outIds[] = static::recordsAsIds( $_record, $_idField );
@@ -1223,7 +1186,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			$_result = $this->_dbConn->batchWriteItem(
 				array(
-					 "RequestItems" => array(
+					 'RequestItems' => array(
 						 $table => $_items,
 					 )
 				)
@@ -1269,17 +1232,13 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			'Key'          => $_keys,
 			'ReturnValues' => ReturnValue::ALL_OLD,
 		);
-		if ( empty( $fields ) )
-		{
-			$fields = $_idField;
-		}
 		try
 		{
 			$_result = $this->_dbConn->deleteItem( $_scanProperties );
 			$_out = Option::get( $_result, 'Attributes', array() );
 
 			// Grab value from the result object like an array
-			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields );
+			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -1349,8 +1308,8 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			$_record = array( $_idField[0] => $_id );
 			// Add operation to list of batch operations.
 			$_items[] = array(
-				"DeleteRequest" => array(
-					"Key" => static::_buildKey( $_idField, $_idType, $_record )
+				'DeleteRequest' => array(
+					'Key' => static::_buildKey( $_idField, $_idType, $_record )
 				)
 			);
 			$_outIds[] = $_record;
@@ -1360,7 +1319,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			$_result = $this->_dbConn->batchWriteItem(
 				array(
-					 "RequestItems" => array(
+					 'RequestItems' => array(
 						 $table => $_items,
 					 )
 				)
@@ -1407,17 +1366,13 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			'Key'          => $_keys,
 			'ReturnValues' => ReturnValue::ALL_OLD,
 		);
-		if ( empty( $fields ) )
-		{
-			$fields = $_idField;
-		}
 		try
 		{
 			$_result = $this->_dbConn->deleteItem( $_scanProperties );
 			$_out = Option::get( $_result, 'Attributes', array() );
 
 			// Grab value from the result object like an array
-			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields );
+			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -1737,6 +1692,24 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 					{
 						return floatval( $actual );
 					}
+				case Type::SS:
+				case Type::BS:
+					return $actual;
+				case Type::NS:
+					$_out = array();
+					foreach ($actual as $_item)
+					{
+						if ( intval( $_item ) == $_item )
+						{
+							$_out[] = intval( $_item );
+						}
+						else
+						{
+							$_out[] = floatval( $_item );
+						}
+					}
+
+					return $_out;
 			}
 		}
 

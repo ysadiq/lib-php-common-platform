@@ -19,14 +19,13 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Platform\Exceptions\BadRequestException;
-use Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 
 //	Load up SwiftMailer
 \Yii::registerAutoloader( array( 'Swift', 'autoload' ) );
-//require_once '../../../vendor/swiftmailer/swiftmailer/lib/swift_required.php';
-// or require_once '../../../vendor/swiftmailer/swiftmailer/lib/swift_init.php';
 
 /**
  * EmailUtilities
@@ -43,7 +42,7 @@ class EmailUtilities
 	 * @throws \InvalidArgumentException
 	 * @return \Swift_MailTransport|\Swift_SendmailTransport|\Swift_SmtpTransport
 	 */
-	public static function createTransport( $type = '', $credentials = array() )
+	public static function createTransport( $type = null, $credentials = array() )
 	{
 		switch ( $type )
 		{
@@ -52,28 +51,29 @@ class EmailUtilities
 				// mail()
 				$transport = \Swift_MailTransport::newInstance();
 				break;
-			case 'smtp':
-			case 'SMTP':
-				// SMTP
-				$host = Option::get( $credentials, 'host', 'localhost' );
-				if ( empty( $host ) )
+
+			case 'smtp': // SMTP
+			case 'SMTP': // SMTP
+				if ( null === ( $host = Option::get( $credentials, 'host', 'localhost' ) ) )
 				{
 					throw new \InvalidArgumentException( 'SMTP host name can not be empty.' );
 				}
-				$port = Option::get( $credentials, 'port', 25 );
-				$security = Option::get( $credentials, 'security', null );
-				$security = ( !empty( $security ) ) ? strtolower($security) : null;
-				$transport = \Swift_SmtpTransport::newInstance( $host, $port, $security );
+
 				$user = Option::get( $credentials, 'user', '' );
 				$pwd = Option::get( $credentials, 'pwd', '' );
+				$port = Option::get( $credentials, 'port', 25 );
+				$security = strtolower( Option::get( $credentials, 'security', null ) );
+
+				$transport = \Swift_SmtpTransport::newInstance( $host, $port, $security );
+
 				if ( !empty( $user ) && !empty( $pwd ) )
 				{
 					$transport->setUsername( $user );
 					$transport->setPassword( $pwd );
 				}
 				break;
-			default:
-				// use local process, i.e. sendmail, exim, postscript, etc
+
+			default: // use local process, i.e. sendmail, exim, postscript, etc
 				$transport = \Swift_SendmailTransport::newInstance( $type );
 				break;
 		}
@@ -103,9 +103,9 @@ class EmailUtilities
 	{
 		// Create the message
 		$message = \Swift_Message::newInstance()
-			->setSubject( $subject )
-			->setTo( $to_emails ) // array('receiver@domain.org', 'other@domain.org' => 'A name')
-			->setFrom( $from_email, $from_name ); // can be multiple
+				   ->setSubject( $subject )
+				   ->setTo( $to_emails ) // array('receiver@domain.org', 'other@domain.org' => 'A name')
+				   ->setFrom( $from_email, $from_name ); // can be multiple
 		if ( !empty( $reply_email ) )
 		{
 			$message->setReplyTo( $reply_email, $reply_name ); // single address
@@ -168,7 +168,7 @@ class EmailUtilities
 			if ( isset( $emails[0] ) ) // multiple
 			{
 				$out = array();
-				foreach ($emails as $info)
+				foreach ( $emails as $info )
 				{
 					if ( is_array( $info ) )
 					{
@@ -178,24 +178,24 @@ class EmailUtilities
 						{
 							throw new BadRequestException( "Invalid email - '$email'." );
 						}
-						if (empty($email))
+						if ( empty( $email ) )
 						{
-							throw new BadRequestException('Email can not be empty.' );
+							throw new BadRequestException( 'Email can not be empty.' );
 						}
 						$name = Option::get( $info, 'name' );
-						if ( empty($name))
+						if ( empty( $name ) )
 						{
 							$out[] = $email;
 						}
 						else
 						{
-							switch ($return_format)
+							switch ( $return_format )
 							{
 								case 'swift':
 									$out[$email] = $name;
 									break;
 								case 'wrapped': // rfc2822
-									$out[] = $name . '<' . $email .'>';
+									$out[] = $name . '<' . $email . '>';
 									break;
 								default:
 									$out[] = $info;
@@ -221,24 +221,24 @@ class EmailUtilities
 				{
 					throw new BadRequestException( "Invalid email - '$email'." );
 				}
-				if (empty($email))
+				if ( empty( $email ) )
 				{
-					throw new BadRequestException('Email can not be empty.' );
+					throw new BadRequestException( 'Email can not be empty.' );
 				}
 				$name = Option::get( $emails, 'name' );
-				if ( empty($name))
+				if ( empty( $name ) )
 				{
 					$out = $email;
 				}
 				else
 				{
-					switch ($return_format)
+					switch ( $return_format )
 					{
 						case 'swift':
-							$out = array($email => $name);
+							$out = array( $email => $name );
 							break;
 						case 'wrapped': // rfc2822
-							$out = $name . '<' . $email .'>';
+							$out = $name . '<' . $email . '>';
 							break;
 						default:
 							$out = $emails;
