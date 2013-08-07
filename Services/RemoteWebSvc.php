@@ -176,7 +176,7 @@ class RemoteWebSvc extends BasePlatformRestService
 		parent::_preProcess();
 
 		$this->_query = $this->buildParameterString( $this->_action );
-		$this->_url = $this->_baseUrl . $this->_resourcePath . '?' . $this->_query;
+		$this->_url = rtrim( $this->_baseUrl, '/') . '/' . $this->_resourcePath . '?' . $this->_query;
 
 		//	set additional headers
 		$this->_curlOptions = $this->addHeaders( $this->_action, $this->_curlOptions );
