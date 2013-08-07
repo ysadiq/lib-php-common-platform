@@ -121,6 +121,48 @@ class ProviderUser extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @param int    $userId
+	 * @param string $portal
+	 *
+	 * @return $this
+	 */
+	public function byUserPortal( $userId, $portal )
+	{
+		$this->getDbCriteria()->mergeWith(
+			array(
+				 'condition' => 'user_id = :user_id and provider_id = ( select p.id from df_sys_provider p where p.api_name = :api_name limit 1 order by id )',
+				 'params'    => array(
+					 ':user_id'  => $userId,
+					 ':api_name' => trim( strtolower( $portal ) ),
+				 ),
+			)
+		);
+
+		return $this;
+	}
+
+	/**
+	 * @param int $userId
+	 * @param int $portalId
+	 *
+	 * @return $this
+	 */
+	public function byUserPortalId( $userId, $portalId )
+	{
+		$this->getDbCriteria()->mergeWith(
+			array(
+				 'condition' => 'user_id = :user_id and provider_id = :portal_id',
+				 'params'    => array(
+					 ':user_id'   => $userId,
+					 ':portal_id' => $portalId,
+				 ),
+			)
+		);
+
+		return $this;
+	}
+
+	/**
 	 * @param int    $providerId
 	 * @param string $providerUserId
 	 *
