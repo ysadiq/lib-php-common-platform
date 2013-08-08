@@ -111,11 +111,7 @@ class Portal extends BaseSystemRestService
 		//	Clean up the resource path
 		$this->_resourcePath = trim( str_replace( $this->_apiName, null, $this->_resourcePath ), ' /' );
 		$this->_interactive = Option::getBool( $_REQUEST, 'interactive', false, true );
-
-		if ( $this->_useHybridProviders )
-		{
-			$this->_hybrid = new \Hybrid_Auth( Provider::getHybridAuthConfig() );
-		}
+		$this->_hybrid = new \Hybrid_Auth( Provider::getHybridAuthConfig() );
 	}
 
 	/**
@@ -281,10 +277,10 @@ class Portal extends BaseSystemRestService
 		//	Build a config...
 		$_config = $_provider->getMergedAttributes();
 
-		if ( $this->_useHybridProviders && null !== $this->_hybrid )
+		if ( null !== $this->_hybrid )
 		{
 			$_adapter = $this->_hybrid->getAdapter( $_provider->provider_name );
-			$_config['service_endpoint'] = $_adapter->adapter->endpoint ?: 'https://graph.facebook.com';
+			$_hybridConfig = $_adapter->config;
 		}
 
 		$this->_client = new OAuthResource( $this, $_config );
