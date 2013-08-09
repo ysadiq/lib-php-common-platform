@@ -213,15 +213,7 @@ class Provider extends BasePlatformSystemModel
 			return array();
 		}
 
-		$_auth = array(
-			'base_url'  => 'http://dsp.local/web/authorize',
-			'providers' => array(),
-
-//	Uncomment these to turn on HybridAuth debug logging
-//			'debug_mode' => true,
-//			'debug_file' => \Kisma::get( 'app.log_file' ),
-
-		);
+		$_auth = array();
 
 		foreach ( $_providers as $_provider )
 		{
@@ -255,5 +247,4 @@ class Provider extends BasePlatformSystemModel
 
 		return $_auth;
 	}
-
 }
