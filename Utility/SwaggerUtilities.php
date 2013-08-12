@@ -76,7 +76,7 @@ class SwaggerUtilities
 		$_swagger = Swagger::discover( $_scanPath );
 
 		$_swagger->setDefaultBasePath( $_basePath );
-		$_swagger->setDefaultApiVersion( \Versions::API_VERSION );
+		$_swagger->setDefaultApiVersion( API_VERSION );
 		$_swagger->setDefaultSwaggerVersion( '1.1' );
 
 		// build services from database
@@ -84,7 +84,6 @@ class SwaggerUtilities
 		$result = $command->select( 'api_name,type,description' )
 				  ->from( 'df_sys_service' )
 				  ->order( 'api_name' )
-//				  ->where( 'type != :t', array( ':t' => 'Remote Web Service' ) )
 				  ->queryAll();
 
 		// add static services
@@ -130,8 +129,7 @@ class SwaggerUtilities
 					$replacePath = true;
 					break;
 
-				case PlatformServiceTypes::LOCAL_EMAIL_SERVICE:
-				case PlatformServiceTypes::REMOTE_EMAIL_SERVICE:
+				case PlatformServiceTypes::EMAIL_SERVICE:
 					$serviceName = '{email}';
 					$replacePath = true;
 					break;
@@ -204,7 +202,7 @@ class SwaggerUtilities
 
 		// cache main api listing file
 		$_out = array(
-			'apiVersion'     => \Versions::API_VERSION,
+			'apiVersion'     => API_VERSION,
 			'swaggerVersion' => '1.1',
 			'basePath'       => $_basePath,
 			'apis'           => $services

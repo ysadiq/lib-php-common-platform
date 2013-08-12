@@ -31,6 +31,7 @@ use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Platform\Yii\Models\App;
+use DreamFactory\Platform\Yii\Models\AppGroup;
 use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\Role;
 use DreamFactory\Platform\Yii\Models\User;
@@ -426,7 +427,7 @@ class Session extends BaseSystemRestResource
 			$_role = $_user->role->attributes;
 
 			/**
-			 * @var \App[] $_apps
+			 * @var App[] $_apps
 			 */
 			if ( $_user->role->apps )
 			{
@@ -484,7 +485,7 @@ class Session extends BaseSystemRestResource
 		$_roleData = $role->attributes;
 
 		/**
-		 * @var \App[] $_apps
+		 * @var App[] $_apps
 		 */
 		if ( $_role->apps )
 		{
@@ -829,7 +830,7 @@ class Session extends BaseSystemRestResource
 		{
 			$appFields = 'id,api_name,name,description,is_url_external,launch_url,requires_fullscreen,allow_fullscreen_toggle,toggle_location';
 			/**
-			 * @var \App[] $_apps
+			 * @var App[] $_apps
 			 */
 			$_apps = Option::get( $session, 'allowed_apps', array() );
 			if ( $is_sys_admin )
@@ -837,7 +838,7 @@ class Session extends BaseSystemRestResource
 				$_apps = ResourceStore::model( 'app' )->findAll( 'is_active = :ia', array( ':ia' => 1 ) );
 			}
 			/**
-			 * @var \AppGroup[] $theGroups
+			 * @var AppGroup[] $theGroups
 			 */
 			$theGroups = ResourceStore::model( 'app_group' )->with( 'apps' )->findAll();
 			$appGroups = array();
