@@ -24,7 +24,7 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Interfaces\PlatformStates;
-use DreamFactory\Platform\Utility\Curl;
+use Kisma\Core\Utility\Curl;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\Packager;
 use DreamFactory\Platform\Utility\ResourceStore;
@@ -41,15 +41,10 @@ use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
-use Swagger\Annotations as SWG;
 
 /**
  * SystemManager
  * DSP system administration manager
- *
- * @SWG\Resource(
- *   resourcePath="/system"
- * )
  *
  */
 class SystemManager extends BaseSystemRestService
@@ -845,17 +840,6 @@ class SystemManager extends BaseSystemRestService
 	//.........................................................................
 
 	/**
-	 * @SWG\Api(
-	 *       path="/system", description="Operations available for system management.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="List resources available for system management.",
-	 *       notes="See listed operations for each resource available.",
-	 *       responseClass="Resources", nickname="getResources"
-	 *     )
-	 *   )
-	 * )
-	 *
 	 * @return array
 	 */
 	protected function _listResources()

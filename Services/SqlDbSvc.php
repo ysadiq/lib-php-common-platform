@@ -29,24 +29,10 @@ use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
-use Swagger\Annotations as SWG;
 
 /**
  * SqlDbSvc.php
  * A service to handle SQL database services accessed through the REST API.
- *
- * @SWG\Resource(
- *   resourcePath="/{sql_db}"
- * )
- *
- * @SWG\Model(id="Records",
- * @SWG\Property(name="record",type="Array",items="$ref:Record",description="Array of records of the given resource."),
- * @SWG\Property(name="meta",type="MetaData",description="Available meta data for the response.")
- * )
- * @SWG\Model(id="Record",
- * @SWG\Property(name="field",type="Array",items="$ref:string",description="Example field name-value pairs."),
- * @SWG\Property(name="related",type="Array",items="$ref:string",description="Example related records.")
- * )
  *
  */
 class SqlDbSvc extends BaseDbSvc
@@ -177,7 +163,7 @@ class SqlDbSvc extends BaseDbSvc
 	{
 		if ( !isset( $this->_sqlConn ) )
 		{
-			throw new \Exception( 'Database driver has not been initialized.' );
+			throw new InternalServerErrorException( 'Database driver has not been initialized.' );
 		}
 		try
 		{
@@ -188,11 +174,11 @@ class SqlDbSvc extends BaseDbSvc
 		}
 		catch ( \PDOException $ex )
 		{
-			throw new \Exception( "Failed to connect to database.\n{$ex->getMessage()}" );
+			throw new InternalServerErrorException( "Failed to connect to database.\n{$ex->getMessage()}" );
 		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Failed to connect to database.\n{$ex->getMessage()}" );
+			throw new InternalServerErrorException( "Failed to connect to database.\n{$ex->getMessage()}" );
 		}
 	}
 
@@ -289,17 +275,6 @@ class SqlDbSvc extends BaseDbSvc
 	// REST service implementation
 
 	/**
-	 * @SWG\Api(
-	 *       path="/{sql_db}", description="Operations available for SQL database tables.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="List resources available for database schema.",
-	 *       notes="See listed operations for each resource available.",
-	 *       responseClass="Resources", nickname="getResources"
-	 *     )
-	 *   )
-	 * )
-	 *
 	 * @throws \Exception
 	 * @return array
 	 */
@@ -319,7 +294,7 @@ class SqlDbSvc extends BaseDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error describing database tables.\n{$ex->getMessage()}" );
+			throw new InternalServerErrorException( "Error describing database tables.\n{$ex->getMessage()}" );
 		}
 	}
 
@@ -327,253 +302,6 @@ class SqlDbSvc extends BaseDbSvc
 	// records is an array of field arrays
 
 	/**
-	 * @SWG\Api(
-	 *             path="/{sql_db}/{table_name}", description="Operations for table records administration.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve multiple records.",
-	 *             notes="Use the 'ids' or 'filter' parameter to limit resources that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each resource. By default, all fields and no relations are returned for all resources.",
-	 *             responseClass="Records", nickname="getRecords",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *             name="table_name", description="Name of the table to perform operations on.",
-	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="ids", description="Comma-delimited list of the identifiers of the resources to retrieve.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="filter", description="SQL-like filter to limit the resources to retrieve.",
-	 *             paramType="query", required="false", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="limit", description="Set to limit the filter results.",
-	 *             paramType="query", required="false", allowMultiple=false, dataType="int"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="order", description="SQL-like order containing field and direction for filter results.",
-	 *             paramType="query", required="false", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="offset", description="Set to offset the filter results to a particular record count.",
-	 *             paramType="query", required="false", allowMultiple=false, dataType="int"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="include_count", description="Include the total number of filter results.",
-	 *             paramType="query", required="false", allowMultiple=false, dataType="boolean"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="include_schema", description="Include the schema of the table queried.",
-	 *             paramType="query", required="false", allowMultiple=false, dataType="boolean"
-	 *           )
-	 *       ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="404", reason="Not Found - Requested table does not exist."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *       )
-	 *     ),
-	 * @SWG\Operation(
-	 *             httpMethod="POST", summary="Create one or more records.",
-	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Records", nickname="createRecords",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *             name="table_name", description="Name of the table to perform operations on.",
-	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="record", description="Data containing name-value pairs of records to create.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="Records"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           )
-	 *       ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="404", reason="Not Found - Requested table does not exist."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *       )
-	 *     ),
-	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one or more records.",
-	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="updateRecords",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *             name="table_name", description="Name of the table to perform operations on.",
-	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="Records"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           )
-	 *       ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="404", reason="Not Found - Requested table does not exist."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *       )
-	 *     ),
-	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one or more records.",
-	 *             notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Records", nickname="deleteRecords",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *             name="table_name", description="Name of the table to perform operations on.",
-	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="ids", description="Comma-delimited list of the identifiers of the resources to delete.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="record", description="Data containing name-value pairs of records to delete.",
-	 *             paramType="body", required="false", allowMultiple=false, dataType="Records"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           )
-	 *       ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="404", reason="Not Found - Requested table does not exist."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *       )
-	 *     )
-	 *   )
-	 * )
-	 *
-	 * @SWG\Api(
-	 *             path="/{sql_db}/{table_name}/{id}", description="Operations for single record administration.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve one record by identifier.",
-	 *             notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
-	 *             responseClass="Record", nickname="getRecord",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *             name="table_name", description="Name of the table to perform operations on.",
-	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="id", description="Identifier of the resource to retrieve.",
-	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           )
-	 *       ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="404", reason="Not Found - Requested table does not exist."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *       )
-	 *     ),
-	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one record by identifier.",
-	 *             notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
-	 *             responseClass="Record", nickname="updateRecord",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *             name="table_name", description="Name of the table to perform operations on.",
-	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="id", description="Identifier of the resource to update.",
-	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="Record"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           )
-	 *       ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="404", reason="Not Found - Requested table or record does not exist."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *       )
-	 *     ),
-	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one record by identifier.",
-	 *             notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
-	 *             responseClass="Record", nickname="deleteRecord",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *             name="table_name", description="Name of the table to perform operations on.",
-	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="id", description="Identifier of the resource to delete.",
-	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           )
-	 *       ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="404", reason="Not Found - Requested table or record does not exist."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *       )
-	 *     )
-	 *   )
-	 * )
-	 *
 	 * @param        $table
 	 * @param        $records
 	 * @param string $fields
@@ -632,7 +360,7 @@ class SqlDbSvc extends BaseDbSvc
 					$rows = $command->insert( $table, $parsed );
 					if ( 0 >= $rows )
 					{
-						throw new \Exception( "Record insert failed for table '$table'." );
+						throw new InternalServerErrorException( "Record insert failed for table '$table'." );
 					}
 					$id = $this->_sqlConn->lastInsertID;
 					$this->updateRelations( $table, $record, $id, $relatedInfo );
@@ -673,7 +401,7 @@ class SqlDbSvc extends BaseDbSvc
 				{
 					$fields = Utilities::addOnceToList( $fields, $_idField );
 				}
-				$temp = $this->retrieveRecordsByIds( $table, implode( ',', $ids ), $_idField, $fields, $extras );
+				$temp = $this->retrieveRecordsByIds( $table, implode( ',', $ids ), $fields, $extras );
 				for ( $i = 0; $i < $count; $i++ )
 				{
 					$results[$i] = ( isset( $ids[$i] )
@@ -734,7 +462,7 @@ class SqlDbSvc extends BaseDbSvc
 			$rows = $command->insert( $table, $parsed );
 			if ( 0 >= $rows )
 			{
-				throw new \Exception( "Record insert failed for table '$table'." );
+				throw new InternalServerErrorException( "Record insert failed for table '$table'." );
 			}
 			$id = $this->_sqlConn->lastInsertID;
 			$this->updateRelations( $table, $record, $id, $relatedInfo );
@@ -838,7 +566,7 @@ class SqlDbSvc extends BaseDbSvc
 			if ( $_rollback )
 			{
 //                if (!$this->_sqlConn->commit()) {
-//                    throw new \Exception("Transaction failed.");
+//                    throw new InternalServerErrorException("Transaction failed.");
 //                }
 			}
 
@@ -927,7 +655,7 @@ class SqlDbSvc extends BaseDbSvc
 			$parsed = $this->parseRecord( $record, $fieldInfo, true );
 			if ( empty( $parsed ) )
 			{
-				throw new \Exception( "No valid field values were passed in the request." );
+				throw new BadRequestException( "No valid field values were passed in the request." );
 			}
 			// parse filter
 			/** @var \CDbCommand $command */
@@ -1032,7 +760,7 @@ class SqlDbSvc extends BaseDbSvc
 			if ( $_rollback )
 			{
 //                if (!$this->_sqlConn->commit()) {
-//                    throw new \Exception("Transaction failed.");
+//                    throw new InternalServerErrorException("Transaction failed.");
 //                }
 			}
 			$results = array();
@@ -1362,7 +1090,7 @@ class SqlDbSvc extends BaseDbSvc
 			if ( $_rollback )
 			{
 //                if (!$this->_sqlConn->commit()) {
-//                    throw new \Exception("Transaction failed.");
+//                    throw new InternalServerErrorException("Transaction failed.");
 //                }
 			}
 			$results = array();
@@ -2392,7 +2120,7 @@ class SqlDbSvc extends BaseDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error updating many to one assignment.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new BadRequestException( "Error updating many to one assignment.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -2461,7 +2189,7 @@ class SqlDbSvc extends BaseDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error updating many to one map assignment.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error updating many to one map assignment.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -2472,7 +2200,7 @@ class SqlDbSvc extends BaseDbSvc
 	{
 		if ( empty( $query ) )
 		{
-			throw new \Exception( '[NOQUERY]: No query string present in request.' );
+			throw new BadRequestException( '[NOQUERY]: No query string present in request.' );
 		}
 		$this->checkConnection();
 		try
@@ -2540,7 +2268,7 @@ class SqlDbSvc extends BaseDbSvc
 	{
 		if ( empty( $query ) )
 		{
-			throw new \Exception( '[NOQUERY]: No query string present in request.' );
+			throw new BadRequestException( '[NOQUERY]: No query string present in request.' );
 		}
 		$this->checkConnection();
 		try
@@ -2583,7 +2311,7 @@ class SqlDbSvc extends BaseDbSvc
 	{
 		if ( empty( $query ) )
 		{
-			throw new \Exception( '[NOQUERY]: No query string present in request.' );
+			throw new BadRequestException( '[NOQUERY]: No query string present in request.' );
 		}
 		$this->checkConnection();
 		try
