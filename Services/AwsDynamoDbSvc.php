@@ -1838,31 +1838,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		// the rest should be comparison operators
-		$_search = array( ' eq ', ' ne ', ' gte ', ' lte ', ' gt ', ' lt ', ' in ', ' between ', ' begins_with ', ' contains ', ' not_contains ', ' like ' );
-		$_replace = array( ' = ', ' != ', ' >= ', ' <= ', ' > ', ' < ', ' IN ', ' BETWEEN ', ' BEGINS_WITH ', ' CONTAINS ', ' NOT_CONTAINS ', ' LIKE ' );
+		$_search = array( ' eq ', ' ne ', ' <> ', ' gte ', ' lte ', ' gt ', ' lt ', ' in ', ' between ', ' begins_with ', ' contains ', ' not_contains ', ' like ' );
+		$_replace = array( ' = ', ' != ', ' != ', ' >= ', ' <= ', ' > ', ' < ', ' IN ', ' BETWEEN ', ' BEGINS_WITH ', ' CONTAINS ', ' NOT_CONTAINS ', ' LIKE ' );
 		$filter = trim( str_ireplace( $_search, $_replace, $filter ) );
-
-		$_ops = array_map( 'trim', explode( ' = ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			if ( 0 == strcasecmp( 'null', $_ops[1] ) )
-			{
-				return array(
-					$_ops[0] => array(
-						'ComparisonOperator' => ComparisonOperator::NULL
-					)
-				);
-			}
-
-			$_val = static::_determineValue( $_ops[1] );
-
-			return array(
-				$_ops[0] => array(
-					'AttributeValueList' => $_val,
-					'ComparisonOperator' => ComparisonOperator::EQ
-				)
-			);
-		}
 
 		$_ops = array_map( 'trim', explode( ' != ', $filter ) );
 		if ( count( $_ops ) > 1 )
@@ -1908,6 +1886,28 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 				$_ops[0] => array(
 					'AttributeValueList' => $_val,
 					'ComparisonOperator' => ComparisonOperator::LE
+				)
+			);
+		}
+
+		$_ops = array_map( 'trim', explode( ' = ', $filter ) );
+		if ( count( $_ops ) > 1 )
+		{
+			if ( 0 == strcasecmp( 'null', $_ops[1] ) )
+			{
+				return array(
+					$_ops[0] => array(
+						'ComparisonOperator' => ComparisonOperator::NULL
+					)
+				);
+			}
+
+			$_val = static::_determineValue( $_ops[1] );
+
+			return array(
+				$_ops[0] => array(
+					'AttributeValueList' => $_val,
+					'ComparisonOperator' => ComparisonOperator::EQ
 				)
 			);
 		}

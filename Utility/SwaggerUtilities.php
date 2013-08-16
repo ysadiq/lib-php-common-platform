@@ -74,17 +74,19 @@ class SwaggerUtilities
 		$_scanPath = Pii::getParam( 'base_path' ) . '/vendor/dreamfactory/lib-php-common-platform/DreamFactory/Platform/Services/';
 
 		$_baseSwagger = array(
-			'basePath' => $_basePath,
-			'swaggerVersion' => '1.1',
-			'apiVersion' => API_VERSION,
+			'swaggerVersion' => '1.2',
+			'apiVersion'     => API_VERSION,
+			'basePath'       => $_basePath,
+			'produces' => array( 'application/json', 'application/xml' ),
+			'consumes' => array( 'application/json', 'application/xml' )
 		);
 
 		// build services from database
 		$_command = Pii::db()->createCommand();
 		$_result = $_command->select( 'api_name,type_id,storage_type_id,description' )
-				  ->from( 'df_sys_service' )
-				  ->order( 'api_name' )
-				  ->queryAll();
+				   ->from( 'df_sys_service' )
+				   ->order( 'api_name' )
+				   ->queryAll();
 
 		// add static services
 		$_other = array(
@@ -105,10 +107,14 @@ class SwaggerUtilities
 			switch ( $_typeId )
 			{
 				case PlatformServiceTypes::SYSTEM_SERVICE:
-					if (0 == strcasecmp( $_apiName, 'system' ) )
+					if ( 0 == strcasecmp( $_apiName, 'system' ) )
+					{
 						$_fileName = 'SystemManager';
+					}
 					else
+					{
 						$_fileName = 'UserManager';
+					}
 					break;
 				case PlatformServiceTypes::LOCAL_PORTAL_SERVICE:
 					$_fileName = 'Portal';
@@ -201,7 +207,20 @@ class SwaggerUtilities
 		}
 
 		// cache main api listing file
-		$_out = array_merge( $_baseSwagger,	array( 'apis' => $_services ) );
+		$_resourceListing = array(
+			'swaggerVersion' => '1.2',
+			'apiVersion'     => API_VERSION,
+			'authorizations' => array( "apiKey" => array( "type" => "apiKey", "passAs" => "header" ) ),
+			'info'           => array(
+				"title"             => "DreamFactory Live API Documentation",
+				"description"       => "This is <a href=\"http://swagger.wordnik.com\">Swagger</a>-built documentation detailing the DreamFactory DSP API.\nMore info can be found <a href=\"http://www.dreamfactory.com/df_developers/docs\">here</a>.",
+				"termsOfServiceUrl" => "http://www.dreamfactory.com/terms/",
+				"contact"           => "support@dreamfactory.com",
+				"license"           => "Apache 2.0",
+				"licenseUrl"        => "http://www.apache.org/licenses/LICENSE-2.0.html"
+			)
+		);
+		$_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
 		$_filePath = $_swaggerPath . '_.json';
 		if ( false === file_put_contents( $_filePath, json_encode( $_out ) ) )
 		{
