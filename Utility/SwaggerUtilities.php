@@ -130,8 +130,7 @@ class SwaggerUtilities
 					$replacePath = true;
 					break;
 
-				case PlatformServiceTypes::LOCAL_EMAIL_SERVICE:
-				case PlatformServiceTypes::REMOTE_EMAIL_SERVICE:
+				case PlatformServiceTypes::EMAIL_SERVICE:
 					$serviceName = '{email}';
 					$replacePath = true;
 					break;

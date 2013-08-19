@@ -163,27 +163,39 @@ class ProviderUser extends BasePlatformSystemModel
 	}
 
 	/**
-	 * @param int    $providerId
-	 * @param string $providerUserId
+	 * @param int $userId
+	 * @param int $providerUserId
 	 *
-	 * @return User
+	 * @return $this
 	 */
-	public static function getUser( $providerId, $providerUserId )
+	public function byUserProviderUserId( $userId, $providerUserId )
 	{
-		$_model = static::model()->find(
-			'provider_id = :provider_id and provider_user_id = :provider_user_id',
+		$this->getDbCriteria()->mergeWith(
 			array(
-				 ':provider_id'      => $providerId,
-				 ':provider_user_id' => $providerUserId,
+				 'condition' => 'user_id = :user_id and provider_user_id = :provider_user_id',
+				 'params'    => array(
+					 ':user_id'          => $userId,
+					 ':provider_user_id' => $providerUserId,
+				 ),
 			)
 		);
 
-		if ( empty( $_model ) )
-		{
-			return null;
-		}
+		return $this;
+	}
 
-		return $_model->user;
+	/**
+	 * @param string $email
+	 *
+	 * @return User
+	 */
+	public static function getByEmail( $email )
+	{
+		return User::model()->find(
+			'email = :email',
+			array(
+				 ':email' => $email,
+			)
+		);
 	}
 
 	/**
