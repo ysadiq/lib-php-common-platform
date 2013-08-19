@@ -68,12 +68,12 @@ class ProviderUser extends BaseSystemRestResource
 		parent::__construct(
 			$consumer,
 			array(
-				 'name'           => 'Portal Account',
+				 'name'           => 'Provider User',
 				 'type'           => 'Service',
 				 'service_name'   => 'system',
 				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
 				 'api_name'       => 'provider_user',
-				 'description'    => 'Portal Account Configuration.',
+				 'description'    => 'Provider User Configuration.',
 				 'is_active'      => true,
 				 'resource_array' => $resourceArray,
 				 'verb_aliases'   => array(

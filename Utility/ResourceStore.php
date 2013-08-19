@@ -444,7 +444,8 @@ class ResourceStore extends SeedUtility
 			$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
 		}
 
-		$_pk = static::model()->tableSchema->primaryKey;
+		$_model = static::model();
+		$_pk = $_model->tableSchema->primaryKey;
 
 		$_criteria = new \CDbCriteria( $criteria );
 

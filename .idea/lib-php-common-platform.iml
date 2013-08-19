@@ -106,9 +106,11 @@
       <library name="PHARS">
         <CLASSES>
           <root url="phar://$MODULE_DIR$/vendor/zircote/swagger-php/swagger.phar" />
+          <root url="phar:///usr/local/bin/composer.phar" />
         </CLASSES>
         <SOURCES>
           <root url="phar://$MODULE_DIR$/vendor/zircote/swagger-php/swagger.phar" />
+          <root url="phar:///usr/local/bin/composer.phar" />
         </SOURCES>
       </library>
     </orderEntry>
