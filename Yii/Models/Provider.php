@@ -54,7 +54,7 @@ class Provider extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array( 'provider_name, config_text', 'safe' ),
+			array( 'api_name, provider_name, config_text', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -93,6 +93,7 @@ class Provider extends BasePlatformSystemModel
 				$additionalLabels,
 				array(
 					 'provider_name' => 'Name',
+					 'api_name'      => 'API Name',
 					 'config_text'   => 'Configuration',
 				)
 			)
