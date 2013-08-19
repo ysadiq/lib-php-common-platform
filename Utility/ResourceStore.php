@@ -511,9 +511,9 @@ class ResourceStore extends SeedUtility
 
 		if ( !empty( static::$_extras ) )
 		{
-			$_relations = $resource->relations();
+			$_availableRelations = array_keys( $resource->relations() );
 
-			if ( !empty( $_relations ) )
+			if ( !empty( $_availableRelations ) )
 			{
 				$_relatedData = array();
 
@@ -524,9 +524,10 @@ class ResourceStore extends SeedUtility
 				{
 					$_extraName = $_extra['name'];
 
-					if ( !isset( $_relations[$_extraName] ) )
+					if ( !in_array( $_extraName, $_availableRelations ) )
 					{
-						throw new BadRequestException( 'Invalid relation "' . $_extraName . '" requested . ' );
+						Log::error( 'Invalid relation "' . $_extraName . '" requested. Available are: ' . implode( ', ', $_availableRelations ) );
+						continue;
 					}
 
 					$_extraFields = $_extra['fields'];
@@ -556,6 +557,8 @@ class ResourceStore extends SeedUtility
 
 					unset( $_extra, $_relations, $_relative, $_extraFields );
 				}
+
+				unset( $_availableRelations );
 
 				if ( !empty( $_relatedData ) )
 				{
@@ -1108,5 +1111,4 @@ class ResourceStore extends SeedUtility
 	{
 		return self::$_responseFormat;
 	}
-
 }

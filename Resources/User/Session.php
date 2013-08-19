@@ -425,12 +425,12 @@ class Session extends BaseSystemRestResource
 
 			$_role = $_user->role->attributes;
 
-			/**
-			 * @var \App[] $_apps
-			 */
 			if ( $_user->role->apps )
 			{
-				foreach ( $_apps as $_app )
+				/**
+				 * @var App $_app
+				 */
+				foreach ( $_user->role->apps as $_app )
 				{
 					$_roleApps[] = $_app->getAttributes( $_appFields );
 
