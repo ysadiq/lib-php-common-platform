@@ -19,6 +19,9 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Oasys\Oasys;
+use DreamFactory\Oasys\Providers\BaseOAuthProvider;
+use DreamFactory\Oasys\Providers\BaseProvider;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
@@ -66,7 +69,7 @@ class Portal extends BaseSystemRestService
 	 */
 	protected $_parameters;
 	/**
-	 * @var BasePortalClient
+	 * @var BaseOAuthProvider
 	 */
 	protected $_client;
 	/**
@@ -84,18 +87,6 @@ class Portal extends BaseSystemRestService
 			'format',
 			'path',
 		);
-	/**
-	 * @var bool
-	 */
-	protected $_useHybridProviders = false;
-	/**
-	 * @var array The paths under HybridAuth in vendor directory to search for providers
-	 */
-	protected $_hybridProviderPaths = array( 'Hybrid/Providers', 'additional-providers' );
-	/**
-	 * @var \Hybrid_Auth
-	 */
-	protected $_hybrid = null;
 
 	//*************************************************************************
 	//* Methods
@@ -111,7 +102,6 @@ class Portal extends BaseSystemRestService
 		//	Clean up the resource path
 		$this->_resourcePath = trim( str_replace( $this->_apiName, null, $this->_resourcePath ), ' /' );
 		$this->_interactive = Option::getBool( $_REQUEST, 'interactive', false, true );
-		$this->_hybrid = new \Hybrid_Auth( Provider::getHybridAuthConfig() );
 	}
 
 	/**
@@ -221,15 +211,29 @@ class Portal extends BaseSystemRestService
 			return false;
 		}
 
-		if ( null === ( $_account = PortalAccount::model()->byUserService( $this->_currentUserId, $providerId )->find() ) )
+		if ( null === ( $_account = ProviderUser::model()->byUserPortal( $this->_currentUserId, $providerId )->find() ) )
 		{
-			$_account = new PortalAccount();
+			$_account = new ProviderUser();
 			$_account->user_id = $this->_currentUserId;
 			$_account->provider_id = $providerId;
-			$_account->account_type = PortalAccountTypes::INDIVIDUAL_USER;
+			$_account->account_type = ProviderUserTypes::INDIVIDUAL_USER;
 		}
 
-		$_account->auth_text = $_result->details->token;
+		$_data = $_account->auth_text;
+
+		if ( empty( $_data ) )
+		{
+			$_data = array();
+		}
+
+		if ( !isset( $_data[$providerId] ) )
+		{
+			$_data[$providerId] = array();
+		}
+
+		$_data[$providerId]['registered_auth_token'] = $_result->details->token;
+
+		$_account->auth_text = $_data;
 		$_account->save();
 
 		return $_redirectUri;
@@ -251,7 +255,9 @@ class Portal extends BaseSystemRestService
 			return false;
 		}
 
-		return $_account->auth_text;
+		$_data = $_account->auth_text;
+
+		return Option::getDeep( $_data, $portalName, 'register_auth_token' );
 	}
 
 	/**
@@ -273,21 +279,34 @@ class Portal extends BaseSystemRestService
 
 		//	Find service auth record
 		$_provider = $this->_validateProvider( $this->_resource );
+		$_providerId = $_provider->api_name;
 
 		//	Build a config...
-		$_config = $_provider->getMergedAttributes();
+		$_baseConfig = array(
+			'flow_type' => Flows::CLIENT_SIDE,
+		);
 
-		if ( null !== $this->_hybrid )
+		$_stateConfig = array();
+
+		if ( null !== ( $_json = Pii::getState( $_providerId . '.config' ) ) )
 		{
-			$_adapter = $this->_hybrid->getAdapter( $_provider->provider_name );
-			$_hybridConfig = $_adapter->config;
+			$_stateConfig = json_decode( $_json, true );
+			unset( $_json );
 		}
 
-		$this->_client = new OAuthResource( $this, $_config );
-		$this->_client->setInteractive( $this->_interactive );
-		$_state = sha1( $this->_currentUserId . '_' . $this->_resource . '_' . $this->_client->getClientId() );
+		$_fullConfig = array_merge(
+			$_provider->config_text,
+			$_baseConfig,
+			$_stateConfig
+		);
 
-		$_token = $this->_checkPriorAuthorization( $_state, $_provider['api_name'] );
+		$this->_client = Oasys::getProvider( $_providerId, $_fullConfig );
+		$this->_client->setInteractive( $this->_interactive );
+
+		$_state = sha1( $this->_currentUserId . '_' . $this->_resource . '_' . $this->_client->getClientId() );
+		$this->_client->setPayload( array( 'state' => $_state ) );
+
+		$_token = $this->_checkPriorAuthorization( $_state, $_providerId );
 
 		if ( !empty( $_token ) )
 		{
@@ -295,7 +314,7 @@ class Portal extends BaseSystemRestService
 		}
 		else
 		{
-			if ( !$this->_client->authorized( false ) )
+			if ( !$this->_client->authorized() )
 			{
 				$_config
 					= array(
@@ -309,17 +328,14 @@ class Portal extends BaseSystemRestService
 
 				if ( false !== ( $_redirectUri = $this->_registerAuthorization( $_state, $_config, $_provider->id ) ) )
 				{
-					$this->_client->setRedirectUri( $_redirectUri );
+					$this->_client->getConfig()->setRedirectUri( $_redirectUri );
 				}
 
-				if ( !$this->_client->getInteractive() )
-				{
-					return array( 'redirect_uri' => $this->_client->getAuthorizationUrl( array( 'state' => $_state ) ) );
-				}
+				return $this->_client->authorized( true );
 			}
 		}
 
-		if ( $this->_client->authorized( true, array( 'state' => $_state ) ) )
+		if ( $this->_client->authorized( true ) )
 		{
 			//	Recreate the request...
 			$_params = $this->_resourceArray;
