@@ -24,7 +24,7 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Interfaces\PlatformStates;
-use DreamFactory\Platform\Utility\Curl;
+use Kisma\Core\Utility\Curl;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\Packager;
 use DreamFactory\Platform\Utility\ResourceStore;
@@ -41,15 +41,10 @@ use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
-use Swagger\Annotations as SWG;
 
 /**
  * SystemManager
  * DSP system administration manager
- *
- * @SWG\Resource(
- *   resourcePath="/system"
- * )
  *
  */
 class SystemManager extends BaseSystemRestService
@@ -282,6 +277,35 @@ class SystemManager extends BaseSystemRestService
 				catch ( \Exception $_ex )
 				{
 					Log::error( 'Exception removing prior indexes: ' . $_ex->getMessage() );
+				}
+
+				// Need upgrade path from <1.0.6 for apps
+				if ( version_compare( $oldVersion, '1.0.6', '<' ) )
+				{
+					try
+					{
+						$command->reset();
+						$serviceId = $command
+									 ->select( 'id' )
+									 ->from( 'df_sys_service' )
+									 ->where( 'api_name = :name', array( ':name' => 'app' ) )
+									 ->queryScalar();
+						if ( false === $serviceId )
+						{
+							throw new \Exception( 'Could not find local app storage service id.' );
+						}
+
+						$command->reset();
+						$attributes = array( 'storage_service_id' => $serviceId, 'storage_container' => 'applications' );
+						$condition = 'is_url_external = :external and storage_service_id is null';
+						$params = array( ':external' => 0 );
+						$rows = $command->update( 'df_sys_app', $attributes, $condition, $params );
+					}
+					catch ( \Exception $_ex )
+					{
+						Log::error( 'Exception upgrading apps to 1.0.6+ version: ' . $_ex->getMessage() );
+					}
+
 				}
 			}
 
@@ -816,17 +840,6 @@ class SystemManager extends BaseSystemRestService
 	//.........................................................................
 
 	/**
-	 * @SWG\Api(
-	 *       path="/system", description="Operations available for system management.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="List resources available for system management.",
-	 *       notes="See listed operations for each resource available.",
-	 *       responseClass="Resources", nickname="getResources"
-	 *     )
-	 *   )
-	 * )
-	 *
 	 * @return array
 	 */
 	protected function _listResources()

@@ -76,11 +76,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			)
 		);
 
-	/**
-	 * @var boolean
-	 */
-	protected $_defaultBlendFormat = true;
-
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
@@ -126,12 +121,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		if ( null !== ( $_table = Option::get( $_parameters, 'default_create_table' ) ) )
 		{
 			$this->_defaultCreateTable = $_table;
-		}
-
-		// reply in simplified blend format by default
-		if ( null !== ( $_blendFormat = Option::get( $_parameters, 'blend_format' ) ) )
-		{
-			$this->_defaultBlendFormat = DataFormat::boolval( $_blendFormat );
 		}
 
 		try
@@ -298,6 +287,14 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		$_out = array();
 		foreach ( $tables as $_table )
 		{
+			if ( is_array( $_table ) )
+			{
+				$_table = Option::get( $_table, 'name' );
+			}
+			if ( empty( $_table ) )
+			{
+				throw new BadRequestException( "No 'name' field in data." );
+			}
 			try
 			{
 				$_out[] = $this->getTable( $_table );
@@ -439,19 +436,15 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			if ( is_array( $_table ) )
 			{
-				$_name = Option::get( $_table, 'name', Option::get( $_table, 'TableName' ) );
+				$_table = Option::get( $_table, 'name', Option::get( $_table, 'TableName' ) );
 			}
-			else
-			{
-				$_name = $_table;
-			}
-			if ( empty( $_name ) )
+			if ( empty( $_table ) )
 			{
 				throw new BadRequestException( "No 'name' field in data." );
 			}
 			try
 			{
-				$_out[] = $this->deleteTable( $_name );
+				$_out[] = $this->deleteTable( $_table );
 			}
 			catch ( \Exception $ex )
 			{
@@ -533,6 +526,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			if ( !$this->_containsIdFields( $_record, $_idField ) )
 			{
+				// can we auto create an id here?
 				throw new BadRequestException( "Identifying field(s) not found in record." );
 			}
 
@@ -1723,10 +1717,13 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	 */
 	protected static function _unformatAttributes( $record )
 	{
-		return array_map(
-			array( 'DreamFactory\\Platform\\Services\\AwsDynamoDbSvc', '_unformatValue' ),
-			$record
-		);
+		$_out = array();
+		foreach( $record as $_key => $_value )
+		{
+			$_out[$_key] = static::_unformatValue( $_value );
+		}
+
+		return $_out;
 	}
 
 	protected static function _buildAttributesToGet( $fields = null, $id_fields = null )
@@ -1841,31 +1838,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		// the rest should be comparison operators
-		$_search = array( ' eq ', ' ne ', ' gte ', ' lte ', ' gt ', ' lt ', ' in ', ' between ', ' begins_with ', ' contains ', ' not_contains ', ' like ' );
-		$_replace = array( ' = ', ' != ', ' >= ', ' <= ', ' > ', ' < ', ' IN ', ' BETWEEN ', ' BEGINS_WITH ', ' CONTAINS ', ' NOT_CONTAINS ', ' LIKE ' );
+		$_search = array( ' eq ', ' ne ', ' <> ', ' gte ', ' lte ', ' gt ', ' lt ', ' in ', ' between ', ' begins_with ', ' contains ', ' not_contains ', ' like ' );
+		$_replace = array( ' = ', ' != ', ' != ', ' >= ', ' <= ', ' > ', ' < ', ' IN ', ' BETWEEN ', ' BEGINS_WITH ', ' CONTAINS ', ' NOT_CONTAINS ', ' LIKE ' );
 		$filter = trim( str_ireplace( $_search, $_replace, $filter ) );
-
-		$_ops = array_map( 'trim', explode( ' = ', $filter ) );
-		if ( count( $_ops ) > 1 )
-		{
-			if ( 0 == strcasecmp( 'null', $_ops[1] ) )
-			{
-				return array(
-					$_ops[0] => array(
-						'ComparisonOperator' => ComparisonOperator::NULL
-					)
-				);
-			}
-
-			$_val = static::_determineValue( $_ops[1] );
-
-			return array(
-				$_ops[0] => array(
-					'AttributeValueList' => $_val,
-					'ComparisonOperator' => ComparisonOperator::EQ
-				)
-			);
-		}
 
 		$_ops = array_map( 'trim', explode( ' != ', $filter ) );
 		if ( count( $_ops ) > 1 )
@@ -1911,6 +1886,28 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 				$_ops[0] => array(
 					'AttributeValueList' => $_val,
 					'ComparisonOperator' => ComparisonOperator::LE
+				)
+			);
+		}
+
+		$_ops = array_map( 'trim', explode( ' = ', $filter ) );
+		if ( count( $_ops ) > 1 )
+		{
+			if ( 0 == strcasecmp( 'null', $_ops[1] ) )
+			{
+				return array(
+					$_ops[0] => array(
+						'ComparisonOperator' => ComparisonOperator::NULL
+					)
+				);
+			}
+
+			$_val = static::_determineValue( $_ops[1] );
+
+			return array(
+				$_ops[0] => array(
+					'AttributeValueList' => $_val,
+					'ComparisonOperator' => ComparisonOperator::EQ
 				)
 			);
 		}

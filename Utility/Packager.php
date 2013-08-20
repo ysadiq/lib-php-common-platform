@@ -24,6 +24,7 @@ use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BaseDbSvc;
 use DreamFactory\Platform\Services\BaseFileSvc;
 use DreamFactory\Platform\Services\SchemaSvc;
+use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\FileSystem;
 use DreamFactory\Platform\Yii\Models\App;
 use DreamFactory\Platform\Yii\Models\Service;
@@ -34,8 +35,6 @@ use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\ServiceHandler;
-use DreamFactory\Platform\Utility\SwaggerUtilities;
-use DreamFactory\Platform\Utility\Utilities;
 
 /**
  * Packager
@@ -287,7 +286,7 @@ class Packager
 					ResourceStore::setResourceName( 'service' );
 					$result = ResourceStore::insert( $data );
 					// clear swagger cache upon any service changes.
-					SwaggerUtilities::clearCache();
+					SwaggerManager::clearCache();
 				}
 				catch ( \Exception $ex )
 				{

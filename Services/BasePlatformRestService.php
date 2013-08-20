@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Services;
 
 use Doctrine\Common\Proxy\Exception\InvalidArgumentException;
-use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
@@ -32,23 +31,10 @@ use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\OutputFormat;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
-use Swagger\Annotations as SWG;
 
 /**
  * BasePlatformRestService
  * A base class for all DSP reset services
- *
- * Some basic models used in REST interfaces
- *
- * @SWG\Model(id="Resources",
- * @SWG\Property(name="resource",type="Array", items="$ref:Resource")
- * )
- * @SWG\Model(id="Resource",
- * @SWG\Property(name="name",type="string")
- * )
- * @SWG\Model(id="Success",
- * @SWG\Property(name="success",type="boolean")
- * )
  *
  */
 abstract class BasePlatformRestService extends BasePlatformService implements RestServiceLike
