@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Oasys\Enums\Flows;
 use DreamFactory\Oasys\Oasys;
 use DreamFactory\Oasys\Providers\BaseOAuthProvider;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
