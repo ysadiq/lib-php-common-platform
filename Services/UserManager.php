@@ -78,17 +78,6 @@ class UserManager extends BaseSystemRestService
 	}
 
 	/**
-	 * @SWG\Api(
-	 *       path="/user", description="Operations available for user session management.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="List resources available for user session management.",
-	 *       notes="See listed operations for each resource available.",
-	 *       responseClass="Resources", nickname="getResources"
-	 *     )
-	 *   )
-	 * )
-	 *
 	 * @return array
 	 */
 	protected function _listResources()

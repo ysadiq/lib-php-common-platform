@@ -29,27 +29,27 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'    => 'GET',
-					'summary'       => 'List resources available for database schema.',
-					'nickname'      => 'getResources',
-					'responseClass' => 'Resources',
-					'notes'         => 'See listed operations for each resource available.',
+					'method'   => 'GET',
+					'summary'  => 'List resources available for database schema.',
+					'nickname' => 'getResources',
+					'type'     => 'Resources',
+					'notes'    => 'See listed operations for each resource available.',
 				),
 				1 =>
 				array(
-					'httpMethod'    => 'POST',
-					'summary'       => 'Create one or more tables.',
-					'nickname'      => 'createTables',
-					'responseClass' => 'Resources',
-					'notes'         => 'Post data should be a single table definition or an array of table definitions.',
+					'method'   => 'POST',
+					'summary'  => 'Create one or more tables.',
+					'nickname' => 'createTables',
+					'type'     => 'Resources',
+					'notes'    => 'Post data should be a single table definition or an array of table definitions.',
 				),
 				2 =>
 				array(
-					'httpMethod'    => 'PUT',
-					'summary'       => 'Update one or more tables.',
-					'nickname'      => 'updateTables',
-					'responseClass' => 'Resources',
-					'notes'         => 'Post data should be a single table definition or an array of table definitions.',
+					'method'   => 'PUT',
+					'summary'  => 'Update one or more tables.',
+					'nickname' => 'updateTables',
+					'type'     => 'Resources',
+					'notes'    => 'Post data should be a single table definition or an array of table definitions.',
 				),
 			),
 			'description' => 'Operations available for SQL DB Schemas.',
@@ -61,56 +61,56 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve table definition for the given table.',
-					'nickname'       => 'describeTable',
-					'responseClass'  => 'TableSchema',
-					'parameters'     =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve table definition for the given table.',
+					'nickname'         => 'describeTable',
+					'type'             => 'TableSchema',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'table_name',
 							'description'   => 'Name of the table to perform operations on.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'This describes the table, its fields and relations to other tables.',
+					'notes'            => 'This describes the table, its fields and relations to other tables.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'POST',
-					'summary'        => 'Create one or more fields in the given table.',
-					'nickname'       => 'createFields',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'POST',
+					'summary'          => 'Create one or more fields in the given table.',
+					'nickname'         => 'createFields',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'table_name',
 							'description'   => 'Name of the table to perform operations on.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -119,45 +119,45 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Array of field definitions.',
 							'allowMultiple' => false,
-							'dataType'      => 'Fields',
+							'type'          => 'Fields',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be an array of field properties for a single record or an array of fields.',
+					'notes'            => 'Post data should be an array of field properties for a single record or an array of fields.',
 				),
 				2 =>
 				array(
-					'httpMethod'     => 'PUT',
-					'summary'        => 'Update one or more fields in the given table.',
-					'nickname'       => 'updateFields',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'PUT',
+					'summary'          => 'Update one or more fields in the given table.',
+					'nickname'         => 'updateFields',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'table_name',
 							'description'   => 'Name of the table to perform operations on.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -166,68 +166,68 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Array of field definitions.',
 							'allowMultiple' => false,
-							'dataType'      => 'Fields',
+							'type'          => 'Fields',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be an array of field properties for a single record or an array of fields.',
+					'notes'            => 'Post data should be an array of field properties for a single record or an array of fields.',
 				),
 				3 =>
 				array(
-					'httpMethod'     => 'DELETE',
-					'summary'        => 'Delete (aka drop) the given table.',
-					'nickname'       => 'deleteTable',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'DELETE',
+					'summary'          => 'Delete (aka drop) the given table.',
+					'nickname'         => 'deleteTable',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'table_name',
 							'description'   => 'Name of the table to perform operations on.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Careful, this drops the database table and all of its contents.',
+					'notes'            => 'Careful, this drops the database table and all of its contents.',
 				),
 			),
 			'description' => 'Operations for per table administration.',
@@ -239,18 +239,18 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve the definition of the given field for the given table.',
-					'nickname'       => 'describeField',
-					'responseClass'  => 'FieldSchema',
-					'parameters'     =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve the definition of the given field for the given table.',
+					'nickname'         => 'describeField',
+					'type'             => 'FieldSchema',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'table_name',
 							'description'   => 'Name of the table to perform operations on.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -259,45 +259,45 @@ return array(
 							'name'          => 'field_name',
 							'description'   => 'Name of the field to perform operations on.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'This describes the field and its properties.',
+					'notes'            => 'This describes the field and its properties.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'PUT',
-					'summary'        => 'Update one record by identifier.',
-					'nickname'       => 'updateField',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'PUT',
+					'summary'          => 'Update one record by identifier.',
+					'nickname'         => 'updateField',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'table_name',
 							'description'   => 'Name of the table to perform operations on.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -306,7 +306,7 @@ return array(
 							'name'          => 'field_name',
 							'description'   => 'Name of the field to perform operations on.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -315,45 +315,45 @@ return array(
 							'name'          => 'field_props',
 							'description'   => 'Array of field properties.',
 							'allowMultiple' => false,
-							'dataType'      => 'FieldSchema',
+							'type'          => 'FieldSchema',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be an array of field properties for the given field.',
+					'notes'            => 'Post data should be an array of field properties for the given field.',
 				),
 				2 =>
 				array(
-					'httpMethod'     => 'DELETE',
-					'summary'        => 'DELETE (aka DROP) the given field FROM the given TABLE.',
-					'nickname'       => 'deleteField',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'DELETE',
+					'summary'          => 'DELETE (aka DROP) the given field FROM the given TABLE.',
+					'nickname'         => 'deleteField',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'table_name',
 							'description'   => 'Name of the table to perform operations on.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -362,30 +362,30 @@ return array(
 							'name'          => 'field_name',
 							'description'   => 'Name of the field to perform operations on.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Careful, this drops the database table field/column and all of its contents.',
+					'notes'            => 'Careful, this drops the database table field/column and all of its contents.',
 				),
 			),
 			'description' => 'Operations for single field administration.',
@@ -548,17 +548,17 @@ return array(
 				),
 				'length'             =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'The maximum length allowed (in characters for string, displayed for numbers).',
 				),
 				'precision'          =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'Total number of places for numbers.',
 				),
 				'scale'              =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'Number of decimal places allowed for numbers.',
 				),
 				'default'            =>

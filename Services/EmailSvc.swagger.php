@@ -29,18 +29,18 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'POST',
-					'summary'        => 'Send an email created from posted data.',
-					'nickname'       => 'sendEmail',
-					'responseClass'  => 'EmailResponse',
-					'parameters'     =>
+					'method'           => 'POST',
+					'summary'          => 'Send an email created from posted data.',
+					'nickname'         => 'sendEmail',
+					'type'             => 'EmailResponse',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'template',
 							'description'   => 'Optional template to base email on.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -49,35 +49,35 @@ return array(
 							'name'          => 'data',
 							'description'   => 'Data containing name-value pairs used for provisioning emails.',
 							'allowMultiple' => false,
-							'dataType'      => 'Email',
+							'type'          => 'Email',
 							'paramType'     => 'body',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request is not complete or valid.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request is not complete or valid.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'Not Found - Email template or system resource not found.',
-							'code'   => 404,
+							'message' => 'Not Found - Email template or system resource not found.',
+							'code'    => 404,
 						),
 						3 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'If a template is not used with all required fields, then they must be included in the request. If the \'from\' address is not provisioned in the service, then it must be included in the request..',
+					'notes'            => 'If a template is not used with all required fields, then they must be included in the request. If the \'from\' address is not provisioned in the service, then it must be included in the request..',
 				),
 			),
 			'description' => 'Operations on a email service.',
@@ -92,7 +92,7 @@ return array(
 			array(
 				'count' =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'Number of emails successfully sent.',
 				),
 			),

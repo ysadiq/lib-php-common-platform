@@ -20,7 +20,7 @@
 namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Utility\SwaggerUtilities;
+use DreamFactory\Platform\Services\SwaggerManager;
 
 /**
  * Service
@@ -62,7 +62,7 @@ class Service extends BaseSystemRestResource
 		if ( static::Get != $this->_action )
 		{
 			// clear swagger cache upon any service changes.
-			SwaggerUtilities::clearCache();
+			SwaggerManager::clearCache();
 		}
 
 		parent::_postProcess( $results );

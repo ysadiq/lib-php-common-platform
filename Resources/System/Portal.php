@@ -20,7 +20,7 @@
 namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Utility\SwaggerUtilities;
+use DreamFactory\Platform\Services\SwaggerManager;
 
 /**
  * Portal
@@ -63,7 +63,7 @@ class Portal extends BaseSystemRestResource
 		if ( static::Get != $this->_action )
 		{
 			// clear swagger cache upon any portal changes.
-			SwaggerUtilities::clearCache();
+			SwaggerManager::clearCache();
 		}
 
 		parent::_postProcess( $results );

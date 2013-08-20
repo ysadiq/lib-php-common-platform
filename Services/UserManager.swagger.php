@@ -29,11 +29,11 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'    => 'GET',
-					'summary'       => 'List resources available for user session management.',
-					'nickname'      => 'getResources',
-					'responseClass' => 'Resources',
-					'notes'         => 'See listed operations for each resource available.',
+					'method'   => 'GET',
+					'summary'  => 'List resources available for user session management.',
+					'nickname' => 'getResources',
+					'type'     => 'Resources',
+					'notes'    => 'See listed operations for each resource available.',
 				),
 			),
 			'description' => 'Operations available for user session management.',
@@ -45,70 +45,70 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve the security challenge question for the given user.',
-					'nickname'       => 'getChallenge',
-					'responseClass'  => 'Question',
-					'parameters'     =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve the security challenge question for the given user.',
+					'nickname'         => 'getChallenge',
+					'type'             => 'Question',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'email',
 							'description'   => 'User email used to request security question.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => true,
 							'defaultValue'  => 'user@mycompany.com',
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						1 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use this question to challenge the user..',
+					'notes'            => 'Use this question to challenge the user..',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'POST',
-					'summary'        => 'Answer the security challenge question for the given user.',
-					'nickname'       => 'answerChallenge',
-					'responseClass'  => 'Session',
-					'parameters'     =>
+					'method'           => 'POST',
+					'summary'          => 'Answer the security challenge question for the given user.',
+					'nickname'         => 'answerChallenge',
+					'type'             => 'Session',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'answer',
 							'description'   => 'Answer to the security question.',
 							'allowMultiple' => false,
-							'dataType'      => 'Answer',
+							'type'          => 'Answer',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						1 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use this to gain temporary access to change password.',
+					'notes'            => 'Use this to gain temporary access to change password.',
 				),
 			),
 			'description' => 'Operations on a user\'s security challenge.',
@@ -120,36 +120,36 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'POST',
-					'summary'        => 'Confirm a new user registration or password change request.',
-					'nickname'       => 'confirmUser',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'POST',
+					'summary'          => 'Confirm a new user registration or password change request.',
+					'nickname'         => 'confirmUser',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'confirmation',
 							'description'   => 'Data containing name-value pairs for new user confirmation.',
 							'allowMultiple' => false,
-							'dataType'      => 'Confirm',
+							'type'          => 'Confirm',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						1 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'The new user is confirmed and assumes the role given by system admin.',
+					'notes'            => 'The new user is confirmed and assumes the role given by system admin.',
 				),
 			),
 			'description' => 'Operations on a user\'s confirmation.',
@@ -161,36 +161,36 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'POST',
-					'summary'        => 'Update the current user\'s password.',
-					'nickname'       => 'changePassword',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'POST',
+					'summary'          => 'Update the current user\'s password.',
+					'nickname'         => 'changePassword',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'credentials',
 							'description'   => 'Data containing name-value pairs for password change.',
 							'allowMultiple' => false,
-							'dataType'      => 'Password',
+							'type'          => 'Password',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						1 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'A valid session is required to change the password through this API.',
+					'notes'            => 'A valid session is required to change the password through this API.',
 				),
 			),
 			'description' => 'Operations on a user\'s password.',
@@ -202,57 +202,57 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve the current user\'s profile information.',
-					'nickname'       => 'getProfile',
-					'responseClass'  => 'Profile',
-					'errorResponses' =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve the current user\'s profile information.',
+					'nickname'         => 'getProfile',
+					'type'             => 'Profile',
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						1 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'This profile, along with password, is the only things that the user can directly change.',
+					'notes'            => 'This profile, along with password, is the only things that the user can directly change.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'POST',
-					'summary'        => 'Update the current user\'s profile information.',
-					'nickname'       => 'changeProfile',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'POST',
+					'summary'          => 'Update the current user\'s profile information.',
+					'nickname'         => 'changeProfile',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'profile',
 							'description'   => 'Data containing name-value pairs for the user profile.',
 							'allowMultiple' => false,
-							'dataType'      => 'Profile',
+							'type'          => 'Profile',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						1 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Update the security question and answer through this api, as well as, display name, email, etc.',
+					'notes'            => 'Update the security question and answer through this api, as well as, display name, email, etc.',
 				),
 			),
 			'description' => 'Operations on a user\'s profile.',
@@ -264,36 +264,36 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'POST',
-					'summary'        => 'Register a new user in the system.',
-					'nickname'       => 'registerUser',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'POST',
+					'summary'          => 'Register a new user in the system.',
+					'nickname'         => 'registerUser',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'registration',
 							'description'   => 'Data containing name-value pairs for new user registration.',
 							'allowMultiple' => false,
-							'dataType'      => 'Register',
+							'type'          => 'Register',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						1 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'The new user is created and sent an email for confirmation.',
+					'notes'            => 'The new user is created and sent an email for confirmation.',
 				),
 			),
 			'description' => 'Operations on a user\'s security challenge.',
@@ -305,83 +305,83 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve the current user session information.',
-					'nickname'       => 'getSession',
-					'responseClass'  => 'Session',
-					'errorResponses' =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve the current user session information.',
+					'nickname'         => 'getSession',
+					'type'             => 'Session',
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						1 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Calling this refreshes the current session, or returns an error for timed-out or invalid sessions.',
+					'notes'            => 'Calling this refreshes the current session, or returns an error for timed-out or invalid sessions.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'POST',
-					'summary'        => 'Login and create a new user session.',
-					'nickname'       => 'login',
-					'responseClass'  => 'Session',
-					'parameters'     =>
+					'method'           => 'POST',
+					'summary'          => 'Login and create a new user session.',
+					'nickname'         => 'login',
+					'type'             => 'Session',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'credentials',
 							'description'   => 'Data containing name-value pairs used for logging into the system.',
 							'allowMultiple' => false,
-							'dataType'      => 'Login',
+							'type'          => 'Login',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Calling this creates a new session and logs in the user.',
+					'notes'            => 'Calling this creates a new session and logs in the user.',
 				),
 				2 =>
 				array(
-					'httpMethod'     => 'DELETE',
-					'summary'        => 'Logout and destroy the current user session.',
-					'nickname'       => 'logout',
-					'responseClass'  => 'Success',
-					'errorResponses' =>
+					'method'           => 'DELETE',
+					'summary'          => 'Logout and destroy the current user session.',
+					'nickname'         => 'logout',
+					'type'             => 'Success',
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						1 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Calling this deletes the current session and logs out the user.',
+					'notes'            => 'Calling this deletes the current session and logs out the user.',
 				),
 			),
 			'description' => 'Operations on a user\'s session.',
@@ -623,7 +623,7 @@ return array(
 				),
 				'default_app_id'    =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'Id of the application to be launched at login.',
 				),
 			),

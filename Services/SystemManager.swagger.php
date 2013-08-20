@@ -29,11 +29,11 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'    => 'GET',
-					'summary'       => 'List resources available for system management.',
-					'nickname'      => 'getResources',
-					'responseClass' => 'Resources',
-					'notes'         => 'See listed operations for each resource available.',
+					'method'   => 'GET',
+					'summary'  => 'List resources available for system management.',
+					'nickname' => 'getResources',
+					'type'     => 'Resources',
+					'notes'    => 'See listed operations for each resource available.',
 				),
 			),
 			'description' => 'Operations available for system management.',
@@ -45,18 +45,18 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve multiple applications.',
-					'nickname'       => 'getApps',
-					'responseClass'  => 'Apps',
-					'parameters'     =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve multiple applications.',
+					'nickname'         => 'getApps',
+					'type'             => 'Apps',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'ids',
 							'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -65,7 +65,7 @@ return array(
 							'name'          => 'filter',
 							'description'   => 'SQL-like filter to limit the records to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -74,7 +74,7 @@ return array(
 							'name'          => 'limit',
 							'description'   => 'Set to limit the filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'int',
+							'type'          => 'integer',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -83,7 +83,7 @@ return array(
 							'name'          => 'order',
 							'description'   => 'SQL-like order containing field and direction for filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -92,7 +92,7 @@ return array(
 							'name'          => 'offset',
 							'description'   => 'Set to offset the filter results to a particular record count.',
 							'allowMultiple' => false,
-							'dataType'      => 'int',
+							'type'          => 'integer',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -101,7 +101,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -110,7 +110,7 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -119,7 +119,7 @@ return array(
 							'name'          => 'include_count',
 							'description'   => 'Include the total number of filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'boolean',
+							'type'          => 'boolean',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -128,45 +128,45 @@ return array(
 							'name'          => 'include_schema',
 							'description'   => 'Include the schema of the table queried.',
 							'allowMultiple' => false,
-							'dataType'      => 'boolean',
+							'type'          => 'boolean',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. Use the \'fields\' and \'related\' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.',
+					'notes'            => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. Use the \'fields\' and \'related\' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'POST',
-					'summary'        => 'Create one or more applications.',
-					'nickname'       => 'createApps',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'POST',
+					'summary'          => 'Create one or more applications.',
+					'nickname'         => 'createApps',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to create.',
 							'allowMultiple' => false,
-							'dataType'      => 'Apps',
+							'type'          => 'Apps',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -175,7 +175,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -184,45 +184,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 				2 =>
 				array(
-					'httpMethod'     => 'PUT',
-					'summary'        => 'Update one or more applications.',
-					'nickname'       => 'updateApps',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'PUT',
+					'summary'          => 'Update one or more applications.',
+					'nickname'         => 'updateApps',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to update.',
 							'allowMultiple' => false,
-							'dataType'      => 'Apps',
+							'type'          => 'Apps',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -231,7 +231,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -240,45 +240,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 				3 =>
 				array(
-					'httpMethod'     => 'DELETE',
-					'summary'        => 'Delete one or more applications.',
-					'nickname'       => 'deleteApps',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'DELETE',
+					'summary'          => 'Delete one or more applications.',
+					'nickname'         => 'deleteApps',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'ids',
 							'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -287,7 +287,7 @@ return array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to delete.',
 							'allowMultiple' => false,
-							'dataType'      => 'Apps',
+							'type'          => 'Apps',
 							'paramType'     => 'body',
 							'required'      => false,
 						),
@@ -296,7 +296,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -305,30 +305,30 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use \'ids\' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Use \'ids\' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 			),
 			'description' => 'Operations for application administration.',
@@ -340,18 +340,18 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve one application by identifier.',
-					'nickname'       => 'getApp',
-					'responseClass'  => 'App',
-					'parameters'     =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve one application by identifier.',
+					'nickname'         => 'getApp',
+					'type'             => 'App',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -360,7 +360,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -369,45 +369,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
+					'notes'            => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'PUT',
-					'summary'        => 'Update one application.',
-					'nickname'       => 'updateApp',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'PUT',
+					'summary'          => 'Update one application.',
+					'nickname'         => 'updateApp',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -416,7 +416,7 @@ return array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to update.',
 							'allowMultiple' => false,
-							'dataType'      => 'App',
+							'type'          => 'App',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -425,7 +425,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -434,45 +434,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be an array of fields for a single record. Use the \'fields\' and/or \'related\' parameter to return more properties. By default, the id is returned.',
+					'notes'            => 'Post data should be an array of fields for a single record. Use the \'fields\' and/or \'related\' parameter to return more properties. By default, the id is returned.',
 				),
 				2 =>
 				array(
-					'httpMethod'     => 'DELETE',
-					'summary'        => 'Delete one application.',
-					'nickname'       => 'deleteApp',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'DELETE',
+					'summary'          => 'Delete one application.',
+					'nickname'         => 'deleteApp',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -481,7 +481,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -490,30 +490,30 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'fields\' and/or \'related\' parameter to return deleted properties. By default, the id is returned.',
+					'notes'            => 'Use the \'fields\' and/or \'related\' parameter to return deleted properties. By default, the id is returned.',
 				),
 			),
 			'description' => 'Operations for individual application administration.',
@@ -525,18 +525,18 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve multiple application groups.',
-					'nickname'       => 'getAppGroups',
-					'responseClass'  => 'AppGroups',
-					'parameters'     =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve multiple application groups.',
+					'nickname'         => 'getAppGroups',
+					'type'             => 'AppGroups',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'ids',
 							'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -545,7 +545,7 @@ return array(
 							'name'          => 'filter',
 							'description'   => 'SQL-like filter to limit the records to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -554,7 +554,7 @@ return array(
 							'name'          => 'limit',
 							'description'   => 'Set to limit the filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'int',
+							'type'          => 'integer',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -563,7 +563,7 @@ return array(
 							'name'          => 'order',
 							'description'   => 'SQL-like order containing field and direction for filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -572,7 +572,7 @@ return array(
 							'name'          => 'offset',
 							'description'   => 'Set to offset the filter results to a particular record count.',
 							'allowMultiple' => false,
-							'dataType'      => 'int',
+							'type'          => 'integer',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -581,7 +581,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -590,7 +590,7 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -599,7 +599,7 @@ return array(
 							'name'          => 'include_count',
 							'description'   => 'Include the total number of filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'boolean',
+							'type'          => 'boolean',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -608,45 +608,45 @@ return array(
 							'name'          => 'include_schema',
 							'description'   => 'Include the schema of the table queried.',
 							'allowMultiple' => false,
-							'dataType'      => 'boolean',
+							'type'          => 'boolean',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. Use the \'fields\' and \'related\' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.',
+					'notes'            => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. Use the \'fields\' and \'related\' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'POST',
-					'summary'        => 'Create one or more application groups.',
-					'nickname'       => 'createAppGroups',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'POST',
+					'summary'          => 'Create one or more application groups.',
+					'nickname'         => 'createAppGroups',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to create.',
 							'allowMultiple' => false,
-							'dataType'      => 'AppGroups',
+							'type'          => 'AppGroups',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -655,7 +655,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -664,45 +664,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 				2 =>
 				array(
-					'httpMethod'     => 'PUT',
-					'summary'        => 'Update one or more application groups.',
-					'nickname'       => 'updateAppGroups',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'PUT',
+					'summary'          => 'Update one or more application groups.',
+					'nickname'         => 'updateAppGroups',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to update.',
 							'allowMultiple' => false,
-							'dataType'      => 'AppGroups',
+							'type'          => 'AppGroups',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -711,7 +711,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -720,45 +720,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 				3 =>
 				array(
-					'httpMethod'     => 'DELETE',
-					'summary'        => 'Delete one or more application groups.',
-					'nickname'       => 'deleteAppGroups',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'DELETE',
+					'summary'          => 'Delete one or more application groups.',
+					'nickname'         => 'deleteAppGroups',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'ids',
 							'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -767,7 +767,7 @@ return array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to delete.',
 							'allowMultiple' => false,
-							'dataType'      => 'AppGroups',
+							'type'          => 'AppGroups',
 							'paramType'     => 'body',
 							'required'      => false,
 						),
@@ -776,7 +776,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -785,30 +785,30 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use \'ids\' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Use \'ids\' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 			),
 			'description' => 'Operations for application group administration.',
@@ -820,18 +820,18 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve one application group by identifier.',
-					'nickname'       => 'getAppGroup',
-					'responseClass'  => 'AppGroup',
-					'parameters'     =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve one application group by identifier.',
+					'nickname'         => 'getAppGroup',
+					'type'             => 'AppGroup',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -840,7 +840,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -849,45 +849,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
+					'notes'            => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'PUT',
-					'summary'        => 'Update one application group.',
-					'nickname'       => 'updateAppGroup',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'PUT',
+					'summary'          => 'Update one application group.',
+					'nickname'         => 'updateAppGroup',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -896,7 +896,7 @@ return array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to update.',
 							'allowMultiple' => false,
-							'dataType'      => 'AppGroup',
+							'type'          => 'AppGroup',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -905,7 +905,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -914,45 +914,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be an array of fields for a single record. Use the \'fields\' and/or \'related\' parameter to return more properties. By default, the id is returned.',
+					'notes'            => 'Post data should be an array of fields for a single record. Use the \'fields\' and/or \'related\' parameter to return more properties. By default, the id is returned.',
 				),
 				2 =>
 				array(
-					'httpMethod'     => 'DELETE',
-					'summary'        => 'Delete one application group.',
-					'nickname'       => 'deleteAppGroup',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'DELETE',
+					'summary'          => 'Delete one application group.',
+					'nickname'         => 'deleteAppGroup',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -961,7 +961,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -970,30 +970,30 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'fields\' and/or \'related\' parameter to return deleted properties. By default, the id is returned.',
+					'notes'            => 'Use the \'fields\' and/or \'related\' parameter to return deleted properties. By default, the id is returned.',
 				),
 			),
 			'description' => 'Operations for individual application group administration.',
@@ -1005,49 +1005,49 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'    => 'GET',
-					'summary'       => 'Retrieve system configuration options.',
-					'nickname'      => 'getConfig',
-					'responseClass' => 'Config',
-					'notes'         => 'The retrieved properties control how the system behaves.',
+					'method'   => 'GET',
+					'summary'  => 'Retrieve system configuration options.',
+					'nickname' => 'getConfig',
+					'type'     => 'Config',
+					'notes'    => 'The retrieved properties control how the system behaves.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'POST',
-					'summary'        => 'Update one or more system configuration properties.',
-					'nickname'       => 'setConfig',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'POST',
+					'summary'          => 'Update one or more system configuration properties.',
+					'nickname'         => 'setConfig',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'config',
 							'description'   => 'Data containing name-value pairs of properties to set.',
 							'allowMultiple' => false,
-							'dataType'      => 'Config',
+							'type'          => 'Config',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be an array of properties.',
+					'notes'            => 'Post data should be an array of properties.',
 				),
 			),
 			'description' => 'Operations for system configuration options.',
@@ -1059,18 +1059,18 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve multiple email templates.',
-					'nickname'       => 'getEmailTemplates',
-					'responseClass'  => 'EmailTemplates',
-					'parameters'     =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve multiple email templates.',
+					'nickname'         => 'getEmailTemplates',
+					'type'             => 'EmailTemplates',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'ids',
 							'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1079,7 +1079,7 @@ return array(
 							'name'          => 'filter',
 							'description'   => 'SQL-like filter to limit the records to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1088,7 +1088,7 @@ return array(
 							'name'          => 'limit',
 							'description'   => 'Set to limit the filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'int',
+							'type'          => 'integer',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1097,7 +1097,7 @@ return array(
 							'name'          => 'order',
 							'description'   => 'SQL-like order containing field and direction for filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1106,7 +1106,7 @@ return array(
 							'name'          => 'offset',
 							'description'   => 'Set to offset the filter results to a particular record count.',
 							'allowMultiple' => false,
-							'dataType'      => 'int',
+							'type'          => 'integer',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1115,7 +1115,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1124,7 +1124,7 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1133,7 +1133,7 @@ return array(
 							'name'          => 'include_count',
 							'description'   => 'Include the total number of filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'boolean',
+							'type'          => 'boolean',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1142,45 +1142,45 @@ return array(
 							'name'          => 'include_schema',
 							'description'   => 'Include the schema of the table queried.',
 							'allowMultiple' => false,
-							'dataType'      => 'boolean',
+							'type'          => 'boolean',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. Use the \'fields\' and \'related\' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.',
+					'notes'            => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. Use the \'fields\' and \'related\' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'POST',
-					'summary'        => 'Create one or more email templates.',
-					'nickname'       => 'createEmailTemplates',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'POST',
+					'summary'          => 'Create one or more email templates.',
+					'nickname'         => 'createEmailTemplates',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to create.',
 							'allowMultiple' => false,
-							'dataType'      => 'EmailTemplates',
+							'type'          => 'EmailTemplates',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -1189,7 +1189,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1198,45 +1198,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 				2 =>
 				array(
-					'httpMethod'     => 'PUT',
-					'summary'        => 'Update one or more email templates.',
-					'nickname'       => 'updateEmailTemplates',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'PUT',
+					'summary'          => 'Update one or more email templates.',
+					'nickname'         => 'updateEmailTemplates',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to update.',
 							'allowMultiple' => false,
-							'dataType'      => 'EmailTemplates',
+							'type'          => 'EmailTemplates',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -1245,7 +1245,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1254,45 +1254,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 				3 =>
 				array(
-					'httpMethod'     => 'DELETE',
-					'summary'        => 'Delete one or more email templates.',
-					'nickname'       => 'deleteEmailTemplates',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'DELETE',
+					'summary'          => 'Delete one or more email templates.',
+					'nickname'         => 'deleteEmailTemplates',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'ids',
 							'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1301,7 +1301,7 @@ return array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to delete.',
 							'allowMultiple' => false,
-							'dataType'      => 'EmailTemplates',
+							'type'          => 'EmailTemplates',
 							'paramType'     => 'body',
 							'required'      => false,
 						),
@@ -1310,7 +1310,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1319,30 +1319,30 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use \'ids\' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Use \'ids\' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 			),
 			'description' => 'Operations for email template administration.',
@@ -1354,18 +1354,18 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve one application by identifier.',
-					'nickname'       => 'getEmailTemplate',
-					'responseClass'  => 'EmailTemplate',
-					'parameters'     =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve one application by identifier.',
+					'nickname'         => 'getEmailTemplate',
+					'type'             => 'EmailTemplate',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -1374,7 +1374,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1383,45 +1383,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
+					'notes'            => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'PUT',
-					'summary'        => 'Update one email template.',
-					'nickname'       => 'updateEmailTemplate',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'PUT',
+					'summary'          => 'Update one email template.',
+					'nickname'         => 'updateEmailTemplate',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -1430,7 +1430,7 @@ return array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to update.',
 							'allowMultiple' => false,
-							'dataType'      => 'EmailTemplate',
+							'type'          => 'EmailTemplate',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -1439,7 +1439,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1448,45 +1448,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be an array of fields for a single record. Use the \'fields\' and/or \'related\' parameter to return more properties. By default, the id is returned.',
+					'notes'            => 'Post data should be an array of fields for a single record. Use the \'fields\' and/or \'related\' parameter to return more properties. By default, the id is returned.',
 				),
 				2 =>
 				array(
-					'httpMethod'     => 'DELETE',
-					'summary'        => 'Delete one email template.',
-					'nickname'       => 'deleteEmailTemplate',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'DELETE',
+					'summary'          => 'Delete one email template.',
+					'nickname'         => 'deleteEmailTemplate',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -1495,7 +1495,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1504,30 +1504,30 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'fields\' and/or \'related\' parameter to return deleted properties. By default, the id is returned.',
+					'notes'            => 'Use the \'fields\' and/or \'related\' parameter to return deleted properties. By default, the id is returned.',
 				),
 			),
 			'description' => 'Operations for individual email template administration.',
@@ -1539,18 +1539,18 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve multiple roles.',
-					'nickname'       => 'getRoles',
-					'responseClass'  => 'Roles',
-					'parameters'     =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve multiple roles.',
+					'nickname'         => 'getRoles',
+					'type'             => 'Roles',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'ids',
 							'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1559,7 +1559,7 @@ return array(
 							'name'          => 'filter',
 							'description'   => 'SQL-like filter to limit the records to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1568,7 +1568,7 @@ return array(
 							'name'          => 'limit',
 							'description'   => 'Set to limit the filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'int',
+							'type'          => 'integer',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1577,7 +1577,7 @@ return array(
 							'name'          => 'order',
 							'description'   => 'SQL-like order containing field and direction for filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1586,7 +1586,7 @@ return array(
 							'name'          => 'offset',
 							'description'   => 'Set to offset the filter results to a particular record count.',
 							'allowMultiple' => false,
-							'dataType'      => 'int',
+							'type'          => 'integer',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1595,7 +1595,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1604,7 +1604,7 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1613,7 +1613,7 @@ return array(
 							'name'          => 'include_count',
 							'description'   => 'Include the total number of filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'boolean',
+							'type'          => 'boolean',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1622,45 +1622,45 @@ return array(
 							'name'          => 'include_schema',
 							'description'   => 'Include the schema of the table queried.',
 							'allowMultiple' => false,
-							'dataType'      => 'boolean',
+							'type'          => 'boolean',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. Use the \'fields\' and \'related\' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.',
+					'notes'            => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. Use the \'fields\' and \'related\' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'POST',
-					'summary'        => 'Create one or more roles.',
-					'nickname'       => 'createRoles',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'POST',
+					'summary'          => 'Create one or more roles.',
+					'nickname'         => 'createRoles',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to create.',
 							'allowMultiple' => false,
-							'dataType'      => 'Roles',
+							'type'          => 'Roles',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -1669,7 +1669,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1678,45 +1678,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 				2 =>
 				array(
-					'httpMethod'     => 'PUT',
-					'summary'        => 'Update one or more roles.',
-					'nickname'       => 'updateRoles',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'PUT',
+					'summary'          => 'Update one or more roles.',
+					'nickname'         => 'updateRoles',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to update.',
 							'allowMultiple' => false,
-							'dataType'      => 'Roles',
+							'type'          => 'Roles',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -1725,7 +1725,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1734,45 +1734,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 				3 =>
 				array(
-					'httpMethod'     => 'DELETE',
-					'summary'        => 'Delete one or more roles.',
-					'nickname'       => 'deleteRoles',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'DELETE',
+					'summary'          => 'Delete one or more roles.',
+					'nickname'         => 'deleteRoles',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'ids',
 							'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1781,7 +1781,7 @@ return array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to delete.',
 							'allowMultiple' => false,
-							'dataType'      => 'Roles',
+							'type'          => 'Roles',
 							'paramType'     => 'body',
 							'required'      => false,
 						),
@@ -1790,7 +1790,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1799,30 +1799,30 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use \'ids\' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Use \'ids\' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 			),
 			'description' => 'Operations for role administration.',
@@ -1834,18 +1834,18 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve one role by identifier.',
-					'nickname'       => 'getRole',
-					'responseClass'  => 'Role',
-					'parameters'     =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve one role by identifier.',
+					'nickname'         => 'getRole',
+					'type'             => 'Role',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -1854,7 +1854,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1863,45 +1863,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
+					'notes'            => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'PUT',
-					'summary'        => 'Update one role.',
-					'nickname'       => 'updateRole',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'PUT',
+					'summary'          => 'Update one role.',
+					'nickname'         => 'updateRole',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -1910,7 +1910,7 @@ return array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to update.',
 							'allowMultiple' => false,
-							'dataType'      => 'Role',
+							'type'          => 'Role',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -1919,7 +1919,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1928,45 +1928,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be an array of fields for a single record. Use the \'fields\' and/or \'related\' parameter to return more properties. By default, the id is returned.',
+					'notes'            => 'Post data should be an array of fields for a single record. Use the \'fields\' and/or \'related\' parameter to return more properties. By default, the id is returned.',
 				),
 				2 =>
 				array(
-					'httpMethod'     => 'DELETE',
-					'summary'        => 'Update one role.',
-					'nickname'       => 'deleteRole',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'DELETE',
+					'summary'          => 'Update one role.',
+					'nickname'         => 'deleteRole',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -1975,7 +1975,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -1984,30 +1984,30 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'fields\' and/or \'related\' parameter to return deleted properties. By default, the id is returned.',
+					'notes'            => 'Use the \'fields\' and/or \'related\' parameter to return deleted properties. By default, the id is returned.',
 				),
 			),
 			'description' => 'Operations for individual role administration.',
@@ -2019,18 +2019,18 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve multiple services.',
-					'nickname'       => 'getServices',
-					'responseClass'  => 'Services',
-					'parameters'     =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve multiple services.',
+					'nickname'         => 'getServices',
+					'type'             => 'Services',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'ids',
 							'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2039,7 +2039,7 @@ return array(
 							'name'          => 'filter',
 							'description'   => 'SQL-like filter to limit the records to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2048,7 +2048,7 @@ return array(
 							'name'          => 'limit',
 							'description'   => 'Set to limit the filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'int',
+							'type'          => 'integer',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2057,7 +2057,7 @@ return array(
 							'name'          => 'order',
 							'description'   => 'SQL-like order containing field and direction for filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2066,7 +2066,7 @@ return array(
 							'name'          => 'offset',
 							'description'   => 'Set to offset the filter results to a particular record count.',
 							'allowMultiple' => false,
-							'dataType'      => 'int',
+							'type'          => 'integer',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2075,7 +2075,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2084,7 +2084,7 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2093,7 +2093,7 @@ return array(
 							'name'          => 'include_count',
 							'description'   => 'Include the total number of filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'boolean',
+							'type'          => 'boolean',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2102,45 +2102,45 @@ return array(
 							'name'          => 'include_schema',
 							'description'   => 'Include the schema of the table queried.',
 							'allowMultiple' => false,
-							'dataType'      => 'boolean',
+							'type'          => 'boolean',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. Use the \'fields\' and \'related\' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.',
+					'notes'            => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. Use the \'fields\' and \'related\' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'POST',
-					'summary'        => 'Create one or more services.',
-					'nickname'       => 'createServices',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'POST',
+					'summary'          => 'Create one or more services.',
+					'nickname'         => 'createServices',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to create.',
 							'allowMultiple' => false,
-							'dataType'      => 'Services',
+							'type'          => 'Services',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -2149,7 +2149,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2158,45 +2158,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 				2 =>
 				array(
-					'httpMethod'     => 'PUT',
-					'summary'        => 'Update one or more services.',
-					'nickname'       => 'updateServices',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'PUT',
+					'summary'          => 'Update one or more services.',
+					'nickname'         => 'updateServices',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to update.',
 							'allowMultiple' => false,
-							'dataType'      => 'Services',
+							'type'          => 'Services',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -2205,7 +2205,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2214,45 +2214,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 				3 =>
 				array(
-					'httpMethod'     => 'DELETE',
-					'summary'        => 'Delete one or more services.',
-					'nickname'       => 'deleteServices',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'DELETE',
+					'summary'          => 'Delete one or more services.',
+					'nickname'         => 'deleteServices',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'ids',
 							'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2261,7 +2261,7 @@ return array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to delete.',
 							'allowMultiple' => false,
-							'dataType'      => 'Services',
+							'type'          => 'Services',
 							'paramType'     => 'body',
 							'required'      => false,
 						),
@@ -2270,7 +2270,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2279,30 +2279,30 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use \'ids\' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Use \'ids\' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 			),
 			'description' => 'Operations for service administration.',
@@ -2314,18 +2314,18 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve one service by identifier.',
-					'nickname'       => 'getService',
-					'responseClass'  => 'Service',
-					'parameters'     =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve one service by identifier.',
+					'nickname'         => 'getService',
+					'type'             => 'Service',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -2334,7 +2334,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2343,45 +2343,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
+					'notes'            => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'PUT',
-					'summary'        => 'Update one service.',
-					'nickname'       => 'updateService',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'PUT',
+					'summary'          => 'Update one service.',
+					'nickname'         => 'updateService',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -2390,7 +2390,7 @@ return array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to update.',
 							'allowMultiple' => false,
-							'dataType'      => 'Service',
+							'type'          => 'Service',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -2399,7 +2399,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2408,45 +2408,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be an array of fields for a single record. Use the \'fields\' and/or \'related\' parameter to return more properties. By default, the id is returned.',
+					'notes'            => 'Post data should be an array of fields for a single record. Use the \'fields\' and/or \'related\' parameter to return more properties. By default, the id is returned.',
 				),
 				2 =>
 				array(
-					'httpMethod'     => 'DELETE',
-					'summary'        => 'Delete one service.',
-					'nickname'       => 'deleteService',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'DELETE',
+					'summary'          => 'Delete one service.',
+					'nickname'         => 'deleteService',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -2455,7 +2455,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2464,30 +2464,30 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'fields\' and/or \'related\' parameter to return deleted properties. By default, the id is returned.',
+					'notes'            => 'Use the \'fields\' and/or \'related\' parameter to return deleted properties. By default, the id is returned.',
 				),
 			),
 			'description' => 'Operations for individual service administration.',
@@ -2499,18 +2499,18 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve multiple users.',
-					'nickname'       => 'getUsers',
-					'responseClass'  => 'Users',
-					'parameters'     =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve multiple users.',
+					'nickname'         => 'getUsers',
+					'type'             => 'Users',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'ids',
 							'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2519,7 +2519,7 @@ return array(
 							'name'          => 'filter',
 							'description'   => 'SQL-like filter to limit the records to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2528,7 +2528,7 @@ return array(
 							'name'          => 'limit',
 							'description'   => 'Set to limit the filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'int',
+							'type'          => 'integer',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2537,7 +2537,7 @@ return array(
 							'name'          => 'order',
 							'description'   => 'SQL-like order containing field and direction for filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2546,7 +2546,7 @@ return array(
 							'name'          => 'offset',
 							'description'   => 'Set to offset the filter results to a particular record count.',
 							'allowMultiple' => false,
-							'dataType'      => 'int',
+							'type'          => 'integer',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2555,7 +2555,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2564,7 +2564,7 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2573,7 +2573,7 @@ return array(
 							'name'          => 'include_count',
 							'description'   => 'Include the total number of filter results.',
 							'allowMultiple' => false,
-							'dataType'      => 'boolean',
+							'type'          => 'boolean',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2582,45 +2582,45 @@ return array(
 							'name'          => 'include_schema',
 							'description'   => 'Include the schema of the table queried.',
 							'allowMultiple' => false,
-							'dataType'      => 'boolean',
+							'type'          => 'boolean',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. Use the \'fields\' and \'related\' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.',
+					'notes'            => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. Use the \'fields\' and \'related\' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'POST',
-					'summary'        => 'Create one or more users.',
-					'nickname'       => 'createUsers',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'POST',
+					'summary'          => 'Create one or more users.',
+					'nickname'         => 'createUsers',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to create.',
 							'allowMultiple' => false,
-							'dataType'      => 'Users',
+							'type'          => 'Users',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -2629,7 +2629,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2638,45 +2638,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 				2 =>
 				array(
-					'httpMethod'     => 'PUT',
-					'summary'        => 'Update one or more users.',
-					'nickname'       => 'updateUsers',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'PUT',
+					'summary'          => 'Update one or more users.',
+					'nickname'         => 'updateUsers',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to update.',
 							'allowMultiple' => false,
-							'dataType'      => 'Users',
+							'type'          => 'Users',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -2685,7 +2685,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2694,45 +2694,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 				3 =>
 				array(
-					'httpMethod'     => 'DELETE',
-					'summary'        => 'Delete one or more users.',
-					'nickname'       => 'deleteUsers',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'DELETE',
+					'summary'          => 'Delete one or more users.',
+					'nickname'         => 'deleteUsers',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'ids',
 							'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2741,7 +2741,7 @@ return array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to delete.',
 							'allowMultiple' => false,
-							'dataType'      => 'Users',
+							'type'          => 'Users',
 							'paramType'     => 'body',
 							'required'      => false,
 						),
@@ -2750,7 +2750,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2759,30 +2759,30 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use \'ids\' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+					'notes'            => 'Use \'ids\' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
 				),
 			),
 			'description' => 'Operations for user administration.',
@@ -2794,18 +2794,18 @@ return array(
 			array(
 				0 =>
 				array(
-					'httpMethod'     => 'GET',
-					'summary'        => 'Retrieve one user by identifier.',
-					'nickname'       => 'getUser',
-					'responseClass'  => 'User',
-					'parameters'     =>
+					'method'           => 'GET',
+					'summary'          => 'Retrieve one user by identifier.',
+					'nickname'         => 'getUser',
+					'type'             => 'User',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -2814,7 +2814,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2823,45 +2823,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
+					'notes'            => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
 				),
 				1 =>
 				array(
-					'httpMethod'     => 'PUT',
-					'summary'        => 'Update one user.',
-					'nickname'       => 'updateUser',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'PUT',
+					'summary'          => 'Update one user.',
+					'nickname'         => 'updateUser',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -2870,7 +2870,7 @@ return array(
 							'name'          => 'record',
 							'description'   => 'Data containing name-value pairs of records to update.',
 							'allowMultiple' => false,
-							'dataType'      => 'User',
+							'type'          => 'User',
 							'paramType'     => 'body',
 							'required'      => true,
 						),
@@ -2879,7 +2879,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2888,45 +2888,45 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Post data should be an array of fields for a single record. Use the \'fields\' and/or \'related\' parameter to return more properties. By default, the id is returned.',
+					'notes'            => 'Post data should be an array of fields for a single record. Use the \'fields\' and/or \'related\' parameter to return more properties. By default, the id is returned.',
 				),
 				2 =>
 				array(
-					'httpMethod'     => 'DELETE',
-					'summary'        => 'Delete one user.',
-					'nickname'       => 'deleteUser',
-					'responseClass'  => 'Success',
-					'parameters'     =>
+					'method'           => 'DELETE',
+					'summary'          => 'Delete one user.',
+					'nickname'         => 'deleteUser',
+					'type'             => 'Success',
+					'parameters'       =>
 					array(
 						0 =>
 						array(
 							'name'          => 'id',
 							'description'   => 'Identifier of the record to retrieve.',
 							'allowMultiple' => false,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'path',
 							'required'      => true,
 						),
@@ -2935,7 +2935,7 @@ return array(
 							'name'          => 'fields',
 							'description'   => 'Comma-delimited list of field names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
@@ -2944,30 +2944,30 @@ return array(
 							'name'          => 'related',
 							'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 							'allowMultiple' => true,
-							'dataType'      => 'string',
+							'type'          => 'string',
 							'paramType'     => 'query',
 							'required'      => false,
 						),
 					),
-					'errorResponses' =>
+					'responseMessages' =>
 					array(
 						0 =>
 						array(
-							'reason' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-							'code'   => 400,
+							'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+							'code'    => 400,
 						),
 						1 =>
 						array(
-							'reason' => 'Unauthorized Access - No currently valid session available.',
-							'code'   => 401,
+							'message' => 'Unauthorized Access - No currently valid session available.',
+							'code'    => 401,
 						),
 						2 =>
 						array(
-							'reason' => 'System Error - Specific reason is included in the error message.',
-							'code'   => 500,
+							'message' => 'System Error - Specific reason is included in the error message.',
+							'code'    => 500,
 						),
 					),
-					'notes'          => 'Use the \'fields\' and/or \'related\' parameter to return deleted properties. By default, the id is returned.',
+					'notes'            => 'Use the \'fields\' and/or \'related\' parameter to return deleted properties. By default, the id is returned.',
 				),
 			),
 			'description' => 'Operations for individual user administration.',
@@ -3009,7 +3009,7 @@ return array(
 			array(
 				'id'                  =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'Identifier of this user.',
 				),
 				'email'               =>
@@ -3084,7 +3084,7 @@ return array(
 				),
 				'created_by_id'       =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'User Id of who created this user.',
 				),
 				'last_modified_date'  =>
@@ -3094,7 +3094,7 @@ return array(
 				),
 				'last_modified_by_id' =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'User Id of who last modified this user.',
 				),
 			),
@@ -3106,7 +3106,7 @@ return array(
 			array(
 				'id'                      =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'Identifier of this application.',
 				),
 				'name'                    =>
@@ -3226,7 +3226,7 @@ return array(
 				),
 				'created_by_id'           =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'User Id of who created this application.',
 				),
 				'last_modified_date'      =>
@@ -3236,7 +3236,7 @@ return array(
 				),
 				'last_modified_by_id'     =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'User Id of who last modified this application.',
 				),
 			),
@@ -3248,7 +3248,7 @@ return array(
 			array(
 				'id'                  =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'Identifier of this role.',
 				),
 				'name'                =>
@@ -3268,7 +3268,7 @@ return array(
 				),
 				'default_app_id'      =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'Default launched app for this role.',
 				),
 				'default_app'         =>
@@ -3310,7 +3310,7 @@ return array(
 				),
 				'created_by_id'       =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'User Id of who created this role.',
 				),
 				'last_modified_date'  =>
@@ -3320,7 +3320,7 @@ return array(
 				),
 				'last_modified_by_id' =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'User Id of who last modified this role.',
 				),
 			),
@@ -3364,7 +3364,7 @@ return array(
 			array(
 				'id'                  =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'Identifier of this application grouping.',
 				),
 				'name'                =>
@@ -3393,7 +3393,7 @@ return array(
 				),
 				'created_by_id'       =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'User Id of who created this application group.',
 				),
 				'last_modified_date'  =>
@@ -3403,7 +3403,7 @@ return array(
 				),
 				'last_modified_by_id' =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'User Id of who last modified this application group.',
 				),
 			),
@@ -3431,7 +3431,7 @@ return array(
 			array(
 				'id'                  =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'Identifier of this service.',
 				),
 				'name'                =>
@@ -3524,7 +3524,7 @@ return array(
 				),
 				'created_by_id'       =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'User Id of who created this service.',
 				),
 				'last_modified_date'  =>
@@ -3534,7 +3534,7 @@ return array(
 				),
 				'last_modified_by_id' =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'User Id of who last modified this service.',
 				),
 			),
@@ -3562,7 +3562,7 @@ return array(
 			array(
 				'id'                  =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'Identifier of this email template.',
 				),
 				'name'                =>
@@ -3643,7 +3643,7 @@ return array(
 				),
 				'created_by_id'       =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'User Id of who created this email template.',
 				),
 				'last_modified_date'  =>
@@ -3653,7 +3653,7 @@ return array(
 				),
 				'last_modified_by_id' =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'User Id of who last modified this email template.',
 				),
 			),
@@ -3697,7 +3697,7 @@ return array(
 				),
 				'open_reg_role_id'        =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'Default Role Id assigned to newly registered users.',
 				),
 				'allow_guest_user'        =>
@@ -3707,7 +3707,7 @@ return array(
 				),
 				'guest_role_id'           =>
 				array(
-					'type'        => 'int',
+					'type'        => 'integer',
 					'description' => 'Role Id assigned for all guest sessions.',
 				),
 				'editable_profile_fields' =>

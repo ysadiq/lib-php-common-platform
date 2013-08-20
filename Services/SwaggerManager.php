@@ -17,21 +17,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Utility;
+namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Utility\RestResponse;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Log;
-use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Yii\Utility\Pii;
-use DreamFactory\Platform\Yii\Models\Service;
-use Swagger\Swagger;
 
 /**
- * SwaggerUtilities
- * A utilities class to handle swagger documentation of the REST API.
+ * SwaggerManager
+ * DSP API Documentation manager
+ *
  */
-class SwaggerUtilities
+class SwaggerManager extends BaseSystemRestService
 {
 	//*************************************************************************
 	//	Constants
@@ -50,6 +50,55 @@ class SwaggerUtilities
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
+
+	/**
+	 * Create a new SwaggerManager
+	 *
+	 */
+	public function __construct()
+	{
+		parent::__construct(
+			array(
+				 'name'          => 'Swagger Documentation Management',
+				 'apiName'       => 'api_docs',
+				 'type'          => 'Swagger',
+				 'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
+				 'description'   => 'Service for a user to see the API documentation provided via Swagger.',
+				 'is_active'     => true,
+				 'native_format' => 'json',
+			)
+		);
+	}
+
+	/**
+	 * @return array
+	 */
+	protected function _listResources()
+	{
+		return static::getSwagger();
+	}
+
+	/**
+	 * @return array|string|bool
+	 */
+	protected function _handleResource()
+	{
+		if ( self::Get == $this->_action )
+		{
+			switch ( $this->_resource )
+			{
+				case '':
+					return static::getSwagger();
+					break;
+
+				default:
+					return static::getSwaggerForService( $this->_resource );
+					break;
+			}
+		}
+
+		return false;
+	}
 
 	/**
 	 * Internal building method builds all static services and some dynamic
@@ -77,8 +126,8 @@ class SwaggerUtilities
 			'swaggerVersion' => '1.2',
 			'apiVersion'     => API_VERSION,
 			'basePath'       => $_basePath,
-			'produces' => array( 'application/json', 'application/xml' ),
-			'consumes' => array( 'application/json', 'application/xml' )
+			'produces'       => array( 'application/json', 'application/xml' ),
+			'consumes'       => array( 'application/json', 'application/xml' )
 		);
 
 		// build services from database
@@ -201,7 +250,7 @@ class SwaggerUtilities
 
 			// build main services list
 			$_services[] = array(
-				'path'        => '/' . $_service['api_name'],
+				'path'        => '/' . $_apiName,
 				'description' => $_service['description']
 			);
 		}
@@ -275,7 +324,7 @@ class SwaggerUtilities
 			static::buildSwagger();
 			if ( !file_exists( $_filePath ) )
 			{
-				throw new InternalServerErrorException( "Failed to create swagger cache." );
+				throw new InternalServerErrorException( "Failed to create swagger cache for service '$service''." );
 			}
 		}
 
