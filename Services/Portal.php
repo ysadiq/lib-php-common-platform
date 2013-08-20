@@ -21,8 +21,6 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Oasys\Oasys;
 use DreamFactory\Oasys\Providers\BaseOAuthProvider;
-use DreamFactory\Oasys\Providers\BaseProvider;
-use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
@@ -39,8 +37,6 @@ use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-
-require_once \Kisma::get( 'app.vendor_path' ) . '/hybridauth/hybridauth/hybridauth/Hybrid/Auth.php';
 
 /**
  * Portal
