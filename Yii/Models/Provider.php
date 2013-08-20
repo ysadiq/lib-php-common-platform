@@ -118,6 +118,29 @@ class Provider extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @param string $requested
+	 * @param array  $columns
+	 * @param array  $hidden
+	 *
+	 * @return array
+	 */
+	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
+	{
+		return parent::getRetrievableAttributes(
+			$requested,
+			array_merge(
+				array(
+					 'api_name',
+					 'provider_name',
+					 'config_text',
+				),
+				$columns
+			),
+			$hidden
+		);
+	}
+
+	/**
 	 * Returns an array of the row attributes merged with the config array
 	 *
 	 * @param string $columnName
@@ -135,5 +158,4 @@ class Provider extends BasePlatformSystemModel
 
 		return $_merge;
 	}
-
 }

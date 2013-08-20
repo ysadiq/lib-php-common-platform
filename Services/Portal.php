@@ -31,6 +31,7 @@ use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Platform\Yii\Models\ProviderUser;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
@@ -271,6 +272,27 @@ class Portal extends BaseSystemRestService
 	 */
 	protected function _handleResource()
 	{
+		if ( empty( $this->_resource ) && $this->_action == HttpMethod::Get )
+		{
+			$_providers = array();
+
+			if ( null !== ( $_models = Provider::model()->findAll( array( 'select' => 'id,api_name,provider_name' ) ) ) )
+			{
+				/** @var Provider $_row */
+				foreach ( $_models as $_row )
+				{
+					$_providers[] = array(
+						'id'            => $_row->id,
+						'api_name'      => $_row->api_name,
+						'provider_name' => $_row->provider_name,
+						'config_text'   => $_row->config_text
+					);
+				}
+			}
+
+			return array( 'resource' => $_providers );
+		}
+
 		$_host = \Kisma::get( 'app.host_name' );
 
 		//	Find service auth record

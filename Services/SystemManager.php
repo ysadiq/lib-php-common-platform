@@ -837,6 +837,7 @@ class SystemManager extends BaseSystemRestService
 			array( 'name' => 'config', 'label' => 'Configuration' ),
 			array( 'name' => 'role', 'label' => 'Role' ),
 			array( 'name' => 'service', 'label' => 'Service' ),
+			array( 'name' => 'portal', 'label' => 'Portal' ),
 			array( 'name' => 'user', 'label' => 'User' ),
 			array( 'name' => 'email_template', 'label' => 'Email Template' )
 		);
