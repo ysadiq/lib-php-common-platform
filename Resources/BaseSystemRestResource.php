@@ -140,7 +140,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		return ResourceStore::bulkSelectById(
 			$ids,
 			empty( $fields ) ? null : array( 'select' => $fields ),
-			array(),
+			$extras,
 			$singleRow,
 			$includeSchema,
 			$includeCount
