@@ -191,7 +191,7 @@ class ResourceStore implements UtilityLike
 	}
 
 	/**
-	 * @param array  $record
+	 * @param mixed  $record
 	 * @param string $fields
 	 * @param array  $extras
 	 *
@@ -339,7 +339,7 @@ class ResourceStore implements UtilityLike
 				//	Rollback
 				$_transaction->rollback();
 
-				return $singleRow ? $_response : array( 'record' => $_response );
+				return $singleRow ? current($_response) : array( 'record' => $_response );
 			}
 		}
 
@@ -349,7 +349,7 @@ class ResourceStore implements UtilityLike
 			$_transaction->commit();
 		}
 
-		return $singleRow ? $_response : array( 'record' => $_response );
+		return $singleRow ? current( $_response ) : array( 'record' => $_response );
 	}
 
 	/**
@@ -429,7 +429,7 @@ class ResourceStore implements UtilityLike
 					//	Rollback
 					$_transaction->rollback();
 
-					return $singleRow ? $_response : array( 'record' => $_response );
+					return $singleRow ? current( $_response ) : array( 'record' => $_response );
 				}
 			}
 		}
@@ -440,7 +440,7 @@ class ResourceStore implements UtilityLike
 			$_transaction->commit();
 		}
 
-		return $singleRow ? $_response : array( 'record' => $_response );
+		return $singleRow ? current( $_response ) : array( 'record' => $_response );
 	}
 
 	/**
@@ -506,7 +506,7 @@ class ResourceStore implements UtilityLike
 					//	Rollback
 					$_transaction->rollback();
 
-					return $singleRow ? $_response : array( 'record' => $_response );
+					return $singleRow ? current( $_response ) : array( 'record' => $_response );
 				}
 			}
 		}
@@ -517,7 +517,7 @@ class ResourceStore implements UtilityLike
 			$_transaction->commit();
 		}
 
-		return $singleRow ? $_response : array( 'record' => $_response );
+		return $singleRow ? current( $_response ) : array( 'record' => $_response );
 	}
 
 	/**
