@@ -245,7 +245,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		//	Single resource by ID
 		if ( !empty( $this->_resourceId ) )
 		{
-			return ResourceStore::select( $this->_resourceId );
+			return ResourceStore::select( $this->_resourceId, null, array(), true );
 		}
 
 		$_singleRow = false;
@@ -268,7 +268,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 				$_ids[] = Option::get( $_record, $_pk );
 			}
 
-			return ResourceStore::bulkSelectById( $_ids  );
+			return ResourceStore::bulkSelectById( $_ids );
 		}
 
 		$_criteria = null;
@@ -304,9 +304,9 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 				null,
 				$_criteria,
 				array(),
+				$_singleRow,
 				Option::getBool( $_payload, 'include_count' ),
-				Option::getBool( $_payload, 'include_schema' ),
-				$_singleRow
+				Option::getBool( $_payload, 'include_schema' )
 			)
 		);
 	}
@@ -342,7 +342,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			throw new BadRequestException( 'No record in PUT update request.' );
 		}
 
-		return ResourceStore::update( $_payload,false, null, null, true );
+		return ResourceStore::update( $_payload, false, null, null, true );
 	}
 
 	/**
