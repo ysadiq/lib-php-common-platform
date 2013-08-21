@@ -258,7 +258,7 @@ class ResourceStore implements UtilityLike
 		$_model = static::model();
 		$_pk = $_model->tableSchema->primaryKey;
 
-		$_criteria = new \CDbCriteria( empty( $criteria ) ? null : array() );
+		$_criteria = static::_buildCriteria( $criteria );
 
 		if ( !empty( $_ids ) )
 		{
@@ -339,7 +339,7 @@ class ResourceStore implements UtilityLike
 				//	Rollback
 				$_transaction->rollback();
 
-				return $singleRow ? current($_response) : array( 'record' => $_response );
+				return $singleRow ? current( $_response ) : array( 'record' => $_response );
 			}
 		}
 
@@ -954,6 +954,21 @@ class ResourceStore implements UtilityLike
 	}
 
 	/**
+	 * @param array|\CDbCriteria $criteria
+	 *
+	 * @return \CDbCriteria
+	 */
+	protected static function _buildCriteria( $criteria = null )
+	{
+		if ( empty( $criteria ) )
+		{
+			$criteria = array();
+		}
+
+		return new \CDbCriteria( $criteria );
+	}
+
+	/**
 	 * Adds criteria garnered from the query string from DataTables
 	 *
 	 * @param array|\CDbCriteria $criteria
@@ -964,7 +979,7 @@ class ResourceStore implements UtilityLike
 	 */
 	protected static function _buildDataTablesCriteria( $columns, $criteria = null )
 	{
-		$criteria = $criteria ? : array();
+		$criteria = static::_buildCriteria($criteria);
 		$_criteria = ( $criteria instanceof \CDbCriteria ? $criteria : new \CDbCriteria( $criteria ) );
 
 		//	Columns
