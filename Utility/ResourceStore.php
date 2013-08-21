@@ -31,6 +31,7 @@ use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
+use Kisma\Core\Interfaces\UtilityLike;
 use Kisma\Core\Seed;
 use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\FilterInput;
@@ -44,7 +45,7 @@ use Kisma\Core\Utility\Option;
  *
  * This object DOES NOT check permissions.
  */
-class ResourceStore extends SeedUtility
+class ResourceStore implements UtilityLike
 {
 	//*************************************************************************
 	//* Constants
@@ -126,17 +127,16 @@ class ResourceStore extends SeedUtility
 	 */
 
 	/**
-	 * @param array  $record
+	 * @param array  $records
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
-	 * @param bool   $singleRow
 	 *
 	 * @return array
 	 */
-	public static function insert( $record, $rollback = false, $fields = null, $extras = null, $singleRow = false )
+	public static function insert( $records, $rollback = false, $fields = null, $extras = null )
 	{
-		return static::bulkInsert( array( $record ), $rollback, $fields, $extras, $singleRow );
+		return static::bulkInsert( $records, $rollback, $fields, $extras );
 	}
 
 	/**
@@ -144,28 +144,62 @@ class ResourceStore extends SeedUtility
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
-	 * @param bool   $singleRow
 	 *
 	 * @return array
 	 */
-	public static function update( $record, $rollback = false, $fields = null, $extras = null, $singleRow = false )
+	public static function insertOne( $record, $rollback = false, $fields = null, $extras = null )
 	{
-		return static::bulkUpdate( array( $record ), $rollback, $fields, $extras, $singleRow );
+		return static::bulkInsert( array( $record ), $rollback, $fields, $extras, true );
 	}
 
 	/**
-	 * @param array $record
-	 *
-	 * @param null  $fields
-	 * @param null  $extras
-	 *
-	 * @param bool  $singleRow
+	 * @param array  $records
+	 * @param bool   $rollback
+	 * @param string $fields
+	 * @param array  $extras
 	 *
 	 * @return array
 	 */
-	public static function delete( $record, $fields = null, $extras = null, $singleRow = false )
+	public static function update( $records, $rollback = false, $fields = null, $extras = null )
 	{
-		return static::bulkDelete( array( $record ), true, $fields, $extras, $singleRow );
+		return static::bulkUpdate( $records, $rollback, $fields, $extras );
+	}
+
+	/**
+	 * @param array  $record
+	 * @param bool   $rollback
+	 * @param string $fields
+	 * @param array  $extras
+	 *
+	 * @return array
+	 */
+	public static function updateOne( $record, $rollback = false, $fields = null, $extras = null )
+	{
+		return static::bulkUpdate( array( $record ), $rollback, $fields, $extras, true );
+	}
+
+	/**
+	 * @param array  $records
+	 * @param string $fields
+	 * @param array  $extras
+	 *
+	 * @return array
+	 */
+	public static function delete( $records, $fields = null, $extras = null )
+	{
+		return static::bulkDelete( $records, true, $fields, $extras );
+	}
+
+	/**
+	 * @param array  $record
+	 * @param string $fields
+	 * @param array  $extras
+	 *
+	 * @return array
+	 */
+	public static function deleteOne( $record, $fields = null, $extras = null )
+	{
+		return static::bulkDelete( array( $record ), true, $fields, $extras, true );
 	}
 
 	/**
@@ -201,6 +235,64 @@ class ResourceStore extends SeedUtility
 	/**
 	 * BULK Methods
 	 */
+
+	/**
+	 * @param string $ids
+	 * @param mixed  $criteria
+	 * @param array  $params
+	 * @param bool   $single If true, will return a single array instead of an array of one row
+	 *
+	 * @return array|array[]
+	 */
+	public static function bulkSelectById( $ids, $criteria = null, $params = array(), $single = false )
+	{
+		if ( empty( $ids ) || array( null ) == $ids )
+		{
+			$ids = null;
+		}
+		else
+		{
+			$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
+		}
+
+		$_model = static::model();
+		$_pk = $_model->tableSchema->primaryKey;
+
+		$_criteria = new \CDbCriteria( empty( $criteria ) ? null : array() );
+
+		if ( !empty( $_ids ) )
+		{
+			$_criteria->addInCondition( $_pk, $_ids );
+		}
+
+		$_response = array();
+
+		//	Only one row
+		if ( false !== $single )
+		{
+			if ( null !== ( $_model = static::_find( $_criteria, $params ) ) )
+			{
+				$_response = static::buildResponsePayload( $_model, false );
+			}
+		}
+		//	Multiple rows
+		else
+		{
+			$_models = static::_findAll( $_criteria, $params );
+
+			if ( !empty( $_models ) )
+			{
+				foreach ( $_models as $_model )
+				{
+					$_response[] = static::buildResponsePayload( $_model, false );
+				}
+
+				$_response = array( 'record' => $_response );
+			}
+		}
+
+		return $_response;
+	}
 
 	/**
 	 * @param array  $records
@@ -247,7 +339,7 @@ class ResourceStore extends SeedUtility
 				//	Rollback
 				$_transaction->rollback();
 
-				return array( 'record' => $_response );
+				return $singleRow ? $_response : array( 'record' => $_response );
 			}
 		}
 
@@ -337,7 +429,7 @@ class ResourceStore extends SeedUtility
 					//	Rollback
 					$_transaction->rollback();
 
-					return array( 'record' => $_response );
+					return $singleRow ? $_response : array( 'record' => $_response );
 				}
 			}
 		}
@@ -414,7 +506,7 @@ class ResourceStore extends SeedUtility
 					//	Rollback
 					$_transaction->rollback();
 
-					return array( 'record' => $_response );
+					return $singleRow ? $_response : array( 'record' => $_response );
 				}
 			}
 		}
@@ -426,62 +518,6 @@ class ResourceStore extends SeedUtility
 		}
 
 		return $singleRow ? $_response : array( 'record' => $_response );
-	}
-
-	/**
-	 * @param string $ids
-	 * @param mixed  $criteria
-	 * @param array  $params
-	 * @param bool   $single If true, will return a single array instead of an array of one row
-	 *
-	 * @return array|array[]
-	 */
-	public static function bulkSelectById( $ids, $criteria = null, $params = array(), $single = false )
-	{
-		if ( empty( $ids ) || array( null ) == $ids )
-		{
-			$ids = null;
-		}
-		else
-		{
-			$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
-		}
-
-		$_model = static::model();
-		$_pk = $_model->tableSchema->primaryKey;
-
-		$_criteria = new \CDbCriteria( empty( $criteria ) ? null : array() );
-
-		if ( !empty( $_ids ) )
-		{
-			$_criteria->addInCondition( $_pk, $_ids );
-		}
-
-		$_response = array();
-
-		//	Only one row
-		if ( false !== $single )
-		{
-			if ( null !== ( $_model = static::_find( $_criteria, $params ) ) )
-			{
-				$_response = static::buildResponsePayload( $_model, false );
-			}
-		}
-		//	Multiple rows
-		else
-		{
-			$_models = static::_findAll( $_criteria, $params );
-
-			if ( !empty( $_models ) )
-			{
-				foreach ( $_models as $_model )
-				{
-					$_response[] = static::buildResponsePayload( $_model, false );
-				}
-			}
-		}
-
-		return $_response;
 	}
 
 	/**

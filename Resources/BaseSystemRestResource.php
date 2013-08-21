@@ -427,6 +427,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	protected function _formatResponse()
 	{
+		parent::_formatResponse();
+
 		$_data = $this->_response;
 
 		switch ( $this->_responseFormat )
