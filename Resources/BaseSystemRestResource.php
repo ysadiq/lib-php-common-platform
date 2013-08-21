@@ -268,9 +268,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 				$_ids[] = Option::get( $_record, $_pk );
 			}
 
-			$_singleRow = ( 1 == sizeof( $_ids ) );
-
-			return ResourceStore::bulkSelectById( $_ids );
+			return ResourceStore::bulkSelectById( $_ids  );
 		}
 
 		$_criteria = null;
@@ -344,7 +342,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			throw new BadRequestException( 'No record in PUT update request.' );
 		}
 
-		return ResourceStore::update( $_payload );
+		return ResourceStore::update( $_payload,false, null, null, true );
 	}
 
 	/**
@@ -389,7 +387,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			throw new BadRequestException( 'No record in POST create request.' );
 		}
 
-		return ResourceStore::insert( $_payload );
+		return ResourceStore::insert( $_payload, false, null, null, true );
 	}
 
 	/**
@@ -422,7 +420,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			throw new BadRequestException( "Id list or record containing Id field required to delete $this->_apiName records." );
 		}
 
-		return ResourceStore::delete( $_payload );
+		return ResourceStore::delete( $_payload, null, null, true );
 	}
 
 	/**

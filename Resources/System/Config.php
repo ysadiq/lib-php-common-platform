@@ -90,13 +90,12 @@ class Config extends BaseSystemRestResource
 			}
 		}
 
-		$this->_response['dsp_version'] = DSP_VERSION;
-
+		$this->_response['dsp_version'] = defined( 'DSP_VERSION' ) ? DSP_VERSION : 'Unknown';
 		$this->_response['allow_remote_logins'] = ( Pii::getParam( 'dsp.allow_remote_logins', false ) && $this->_response['allow_open_registration'] );
 
 		if ( false !== $this->_response['allow_remote_logins'] )
 		{
-			$_rows = Sql::findAll( 'select id, api_name, provider_name from df_sys_provider order by 1', array(), Pii::pdo() );
+			$_rows = Sql::findAll( 'SELECT id, api_name, provider_name FROM df_sys_provider ORDER BY 1', array(), Pii::pdo() );
 
 			if ( !empty( $_rows ) )
 			{

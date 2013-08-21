@@ -564,11 +564,11 @@ MYSQL;
 
 				case 'email service':
 				case 'local email service':
-					$this->type_id = PlatformServiceTypes::LOCAL_EMAIL_SERVICE;
+					$this->type_id = PlatformServiceTypes::EMAIL_SERVICE;
 					break;
 
 				case 'remote email service':
-					$this->type_id = PlatformServiceTypes::REMOTE_EMAIL_SERVICE;
+					$this->type_id = PlatformServiceTypes::EMAIL_SERVICE;
 					break;
 
 				case 'nosql db':

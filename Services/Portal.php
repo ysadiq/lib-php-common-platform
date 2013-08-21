@@ -19,8 +19,9 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Platform\Enums\ProviderUserTypes;
-use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Oasys\Enums\Flows;
+use DreamFactory\Oasys\Oasys;
+use DreamFactory\Oasys\Providers\BaseOAuthProvider;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
@@ -28,8 +29,10 @@ use DreamFactory\Platform\Services\Portal\BasePortalClient;
 use DreamFactory\Platform\Services\Portal\OAuthResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Platform\Yii\Models\ProviderUser;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
@@ -64,7 +67,7 @@ class Portal extends BaseSystemRestService
 	 */
 	protected $_parameters;
 	/**
-	 * @var BasePortalClient
+	 * @var BaseOAuthProvider
 	 */
 	protected $_client;
 	/**
@@ -137,18 +140,16 @@ class Portal extends BaseSystemRestService
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
 	 *
-	 * @return array
+	 * @return Provider
 	 */
 	protected function _validateProvider( $portalName = null )
 	{
-		$_config = \Kisma::get( 'app.config_path' ) . '/portals/' . $portalName . '.php';
-
-		if ( !file_exists( $_config ) || !is_readable( $_config ) )
+		if ( null === ( $_provider = Provider::model()->byPortal( $portalName )->find() ) )
 		{
 			throw new NotFoundException( 'Invalid portal' );
 		}
 
-		return require $_config;
+		return $_provider;
 	}
 
 	/**
@@ -158,7 +159,7 @@ class Portal extends BaseSystemRestService
 	 */
 	protected function _getAuthorization( $portalName )
 	{
-		return ResourceStore::model( 'portal_account' )->byUserPortal( $this->_currentUserId, $portalName )->find();
+		return ProviderUser::model()->byUserPortal( $this->_currentUserId, $portalName )->find();
 	}
 
 	/**
@@ -208,7 +209,7 @@ class Portal extends BaseSystemRestService
 			return false;
 		}
 
-		if ( null === ( $_account = ProviderUser::model()->byUserService( $this->_currentUserId, $providerId )->find() ) )
+		if ( null === ( $_account = ProviderUser::model()->byUserPortal( $this->_currentUserId, $providerId )->find() ) )
 		{
 			$_account = new ProviderUser();
 			$_account->user_id = $this->_currentUserId;
@@ -216,7 +217,21 @@ class Portal extends BaseSystemRestService
 			$_account->account_type = ProviderUserTypes::INDIVIDUAL_USER;
 		}
 
-		$_account->auth_text = $_result->details->token;
+		$_data = $_account->auth_text;
+
+		if ( empty( $_data ) )
+		{
+			$_data = array();
+		}
+
+		if ( !isset( $_data[$providerId] ) )
+		{
+			$_data[$providerId] = array();
+		}
+
+		$_data[$providerId]['registered_auth_token'] = $_result->details->token;
+
+		$_account->auth_text = $_data;
 		$_account->save();
 
 		return $_redirectUri;
@@ -238,7 +253,9 @@ class Portal extends BaseSystemRestService
 			return false;
 		}
 
-		return $_account->auth_text;
+		$_data = $_account->auth_text;
+
+		return Option::getDeep( $_data, $portalName, 'register_auth_token' );
 	}
 
 	/**
@@ -256,16 +273,59 @@ class Portal extends BaseSystemRestService
 	 */
 	protected function _handleResource()
 	{
+		if ( empty( $this->_resource ) && $this->_action == HttpMethod::Get )
+		{
+			$_providers = array();
+
+			if ( null !== ( $_models = Provider::model()->findAll( array( 'select' => 'id,api_name,provider_name' ) ) ) )
+			{
+				/** @var Provider $_row */
+				foreach ( $_models as $_row )
+				{
+					$_providers[] = array(
+						'id'            => $_row->id,
+						'api_name'      => $_row->api_name,
+						'provider_name' => $_row->provider_name,
+						'config_text'   => $_row->config_text
+					);
+				}
+			}
+
+			return array( 'resource' => $_providers );
+		}
+
 		$_host = \Kisma::get( 'app.host_name' );
 
 		//	Find service auth record
-		$_provider = $this->_validateProvider();
+		$_provider = $this->_validateProvider( $this->_resource );
+		$_providerId = $_provider->api_name;
 
-		$this->_client = new OAuthResource( $this, $_provider );
+		//	Build a config...
+		$_baseConfig = array(
+			'flow_type' => Flows::CLIENT_SIDE,
+		);
+
+		$_stateConfig = array();
+
+		if ( null !== ( $_json = Pii::getState( $_providerId . '.config' ) ) )
+		{
+			$_stateConfig = json_decode( $_json, true );
+			unset( $_json );
+		}
+
+		$_fullConfig = array_merge(
+			$_provider->config_text,
+			$_baseConfig,
+			$_stateConfig
+		);
+
+		$this->_client = Oasys::getProvider( $_providerId, $_fullConfig );
 		$this->_client->setInteractive( $this->_interactive );
-		$_state = sha1( $this->_currentUserId . '_' . $this->_resource . '_' . $this->_client->getClientId() );
 
-		$_token = $this->_checkPriorAuthorization( $_state, $_provider['api_name'] );
+		$_state = sha1( $this->_currentUserId . '_' . $this->_resource . '_' . $this->_client->getClientId() );
+		$this->_client->setPayload( array( 'state' => $_state ) );
+
+		$_token = $this->_checkPriorAuthorization( $_state, $_providerId );
 
 		if ( !empty( $_token ) )
 		{
@@ -273,7 +333,7 @@ class Portal extends BaseSystemRestService
 		}
 		else
 		{
-			if ( !$this->_client->authorized( false ) )
+			if ( !$this->_client->authorized() )
 			{
 				$_config
 					= array(
@@ -287,17 +347,14 @@ class Portal extends BaseSystemRestService
 
 				if ( false !== ( $_redirectUri = $this->_registerAuthorization( $_state, $_config, $_provider->id ) ) )
 				{
-					$this->_client->setRedirectUri( $_redirectUri );
+					$this->_client->getConfig()->setRedirectUri( $_redirectUri );
 				}
 
-				if ( !$this->_client->getInteractive() )
-				{
-					return array( 'redirect_uri' => $this->_client->getAuthorizationUrl( array( 'state' => $_state ) ) );
-				}
+				return $this->_client->authorized( true );
 			}
 		}
 
-		if ( $this->_client->authorized( true, array( 'state' => $_state ) ) )
+		if ( $this->_client->authorized( true ) )
 		{
 			//	Recreate the request...
 			$_params = $this->_resourceArray;

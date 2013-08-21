@@ -105,6 +105,7 @@ class Fabric extends SeedUtility
 		= array(
 			'launchpad-dev.dreamfactory.com',
 			'launchpad-demo.dreamfactory.com',
+			'next.cloud.dreamfactory.com',
 		);
 
 		$_host = static::getHostName();
