@@ -135,13 +135,15 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 *
 	 * @return array
 	 */
-	public static function select( $ids = null, $fields = null, $includeSchema = false, $extras = array(), $singleRow = false )
+	public static function select( $ids = null, $fields = null, $extras = array(), $singleRow = false, $includeSchema = false, $includeCount = false )
 	{
 		return ResourceStore::bulkSelectById(
 			$ids,
 			empty( $fields ) ? null : array( 'select' => $fields ),
 			array(),
-			$singleRow
+			$singleRow,
+			$includeSchema,
+			$includeCount
 		);
 	}
 
@@ -298,16 +300,13 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			$_criteria['order'] = $_value;
 		}
 
-		//	Otherwise return the resources
-		return array(
-			'record' => ResourceStore::select(
-				null,
-				$_criteria,
-				array(),
-				$_singleRow,
-				Option::getBool( $_payload, 'include_count' ),
-				Option::getBool( $_payload, 'include_schema' )
-			)
+		return ResourceStore::select(
+			null,
+			$_criteria,
+			array(),
+			$_singleRow,
+			Option::getBool( $_payload, 'include_count' ),
+			Option::getBool( $_payload, 'include_schema' )
 		);
 	}
 

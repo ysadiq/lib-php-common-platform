@@ -144,6 +144,7 @@ class ResourceStore extends SeedUtility
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
+	 * @param bool   $singleRow
 	 *
 	 * @return array
 	 */
@@ -157,6 +158,8 @@ class ResourceStore extends SeedUtility
 	 *
 	 * @param null  $fields
 	 * @param null  $extras
+	 *
+	 * @param bool  $singleRow
 	 *
 	 * @return array
 	 */
@@ -373,11 +376,11 @@ class ResourceStore extends SeedUtility
 	}
 
 	/**
-	 * @param array $records
-	 * @param bool  $rollback
+	 * @param array  $records
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param string $extras
-	 * @param bool  $singleRow
+	 * @param bool   $singleRow
 	 *
 	 * @return array
 	 */
