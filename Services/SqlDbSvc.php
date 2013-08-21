@@ -1075,7 +1075,6 @@ class SqlDbSvc extends BaseDbSvc
 					{
 						throw new NotFoundException( "Record with $_idField '$id' not found in table '$table'." );
 					}
-					$ids[$key] = $id;
 				}
 				catch ( \Exception $ex )
 				{
@@ -1098,22 +1097,22 @@ class SqlDbSvc extends BaseDbSvc
 			{
 				for ( $i = 0; $i < $count; $i++ )
 				{
-					$results[$i] = ( isset( $ids[$i] )
+					$results[$i] = ( isset( $errors[$i] )
 						?
-						array( $_idField => $ids[$i] )
+						$errors[$i]
 						:
-						( isset( $errors[$i] ) ? $errors[$i] : null ) );
+						array( $_idField => $ids[$i] ) );
 				}
 			}
 			else
 			{
 				for ( $i = 0; $i < $count; $i++ )
 				{
-					$results[$i] = ( isset( $ids[$i] )
+					$results[$i] = ( isset( $errors[$i] )
 						?
-						$outResults[$i]
-						: // todo bad assumption
-						( isset( $errors[$i] ) ? $errors[$i] : null ) );
+						$errors[$i]
+						:
+						$outResults[$i] );
 				}
 			}
 
