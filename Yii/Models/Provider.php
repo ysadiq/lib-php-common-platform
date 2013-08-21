@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Yii\Models;
 
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
 
 /**
@@ -53,7 +54,7 @@ class Provider extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array( 'provider_name, config_text', 'safe' ),
+			array( 'api_name, provider_name, config_text', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -92,9 +93,69 @@ class Provider extends BasePlatformSystemModel
 				$additionalLabels,
 				array(
 					 'provider_name' => 'Name',
+					 'api_name'      => 'API Name',
 					 'config_text'   => 'Configuration',
 				)
 			)
 		);
+	}
+
+	/**
+	 * @param string $portal
+	 *
+	 * @return $this
+	 */
+	public function byPortal( $portal )
+	{
+		$this->getDbCriteria()->mergeWith(
+			array(
+				 'condition' => 'provider_name = :provider_name',
+				 'params'    => array( ':provider_name' => $portal ),
+			)
+		);
+
+		return $this;
+	}
+
+	/**
+	 * @param string $requested
+	 * @param array  $columns
+	 * @param array  $hidden
+	 *
+	 * @return array
+	 */
+	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
+	{
+		return parent::getRetrievableAttributes(
+			$requested,
+			array_merge(
+				array(
+					 'api_name',
+					 'provider_name',
+					 'config_text',
+				),
+				$columns
+			),
+			$hidden
+		);
+	}
+
+	/**
+	 * Returns an array of the row attributes merged with the config array
+	 *
+	 * @param string $columnName
+	 *
+	 * @return array
+	 */
+	public function getMergedAttributes( $columnName = 'config_text' )
+	{
+		$_merge = array_merge(
+			$this->getAttributes(),
+			Option::clean( $this->getAttribute( $columnName ) )
+		);
+
+		unset( $_merge[$columnName] );
+
+		return $_merge;
 	}
 }

@@ -62,7 +62,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	protected $_proxyClient;
 	/**
-	 * @var The current user ID
+	 * @var int current user ID
 	 */
 	protected $_currentUserId;
 
@@ -248,7 +248,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	}
 
 	/**
-	 * @return \DreamFactory\Platform\Services\The
+	 * @return int
 	 */
 	public function getUserId()
 	{

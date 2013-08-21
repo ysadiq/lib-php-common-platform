@@ -33,7 +33,7 @@ use Kisma\Core\Utility\Sql;
  * @property string              $provider_user_id
  * @property int                 $provider_id
  * @property int                 $account_type
- * @property mixed               $auth_text
+ * @property array               $auth_text
  * @property string              $last_use_date
  *
  * @property User                $user
@@ -58,7 +58,7 @@ class ProviderUser extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array( 'user_id, provider_id, provider_user_id, account_type, auth_text, last_use_date', 'safe' ),
+			array( 'provider_id, provider_user_id, user_id, account_type, auth_text, last_use_date', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -109,10 +109,10 @@ class ProviderUser extends BasePlatformSystemModel
 			array_merge(
 				$additionalLabels,
 				array(
-					 'user_id'          => 'User ID',
-					 'account_type'     => 'Account Type',
 					 'provider_id'      => 'Provider ID',
+					 'user_id'          => 'User ID',
 					 'provider_user_id' => 'Provider User ID',
+					 'account_type'     => 'Account Type',
 					 'auth_text'        => 'Authorization',
 					 'last_use_date'    => 'Last Used',
 				)
@@ -121,21 +121,19 @@ class ProviderUser extends BasePlatformSystemModel
 	}
 
 	/**
-	 * Named scope that filters by user_id and provider_name
-	 *
-	 * @param int        $userId
-	 * @param int|string $providerId
+	 * @param int    $userId
+	 * @param string $portal
 	 *
 	 * @return $this
 	 */
-	public function byUserPortal( $userId, $providerId )
+	public function byUserPortal( $userId, $portal )
 	{
 		$this->getDbCriteria()->mergeWith(
 			array(
-				 'condition' => 'user_id = :user_id and provider_id = :provider_id',
+				 'condition' => 'user_id = :user_id and provider_id = ( select p.id from df_sys_provider p where p.api_name = :api_name limit 1 order by id )',
 				 'params'    => array(
-					 ':user_id'     => $userId,
-					 ':provider_id' => $providerId
+					 ':user_id'  => $userId,
+					 ':api_name' => trim( strtolower( $portal ) ),
 				 ),
 			)
 		);
@@ -144,33 +142,66 @@ class ProviderUser extends BasePlatformSystemModel
 	}
 
 	/**
-	 * @param $providerName
-	 * @param $providerUserId
+	 * @param int $userId
+	 * @param int $portalId
 	 *
-	 * @return User
+	 * @return $this
 	 */
-	public static function getUser( $providerName, $providerUserId )
+	public function byUserPortalId( $userId, $portalId )
 	{
-		$_model = static::model()->find(
-			'provider_name = :provider_name and provider_user_id = :provider_user_id',
+		$this->getDbCriteria()->mergeWith(
 			array(
-				 ':provider_name'    => $providerName,
-				 ':provider_user_id' => $providerUserId,
+				 'condition' => 'user_id = :user_id and provider_id = :portal_id',
+				 'params'    => array(
+					 ':user_id'   => $userId,
+					 ':portal_id' => $portalId,
+				 ),
 			)
 		);
 
-		if ( empty( $_model ) )
-		{
-			return null;
-		}
+		return $this;
+	}
 
-		return $_model->user ? : null;
+	/**
+	 * @param int $userId
+	 * @param int $providerUserId
+	 *
+	 * @return $this
+	 */
+	public function byUserProviderUserId( $userId, $providerUserId )
+	{
+		$this->getDbCriteria()->mergeWith(
+			array(
+				 'condition' => 'user_id = :user_id and provider_user_id = :provider_user_id',
+				 'params'    => array(
+					 ':user_id'          => $userId,
+					 ':provider_user_id' => $providerUserId,
+				 ),
+			)
+		);
+
+		return $this;
+	}
+
+	/**
+	 * @param string $email
+	 *
+	 * @return User
+	 */
+	public static function getByEmail( $email )
+	{
+		return User::model()->find(
+			'email = :email',
+			array(
+				 ':email' => $email,
+			)
+		);
 	}
 
 	/**
 	 * @param int $userId
 	 *
-	 * @return ProviderUser[]
+	 * @return Provider[]
 	 */
 	public static function getLogins( $userId )
 	{
@@ -186,7 +217,7 @@ class ProviderUser extends BasePlatformSystemModel
 	 * @param int    $userId
 	 * @param string $providerName
 	 *
-	 * @return ProviderUser
+	 * @return Provider
 	 */
 	public static function getLogin( $userId, $providerName )
 	{

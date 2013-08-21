@@ -23,36 +23,14 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Utility\ResourceStore;
-use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
-use Swagger\Annotations as SWG;
 
 /**
  * Config
  * DSP system administration manager
- *
- * @SWG\Resource(
- *   resourcePath="/system"
- * )
- *
- * @SWG\Model(id="Config",
- * @SWG\Property(name="dsp_version",type="string",description="Version of the DSP software."),
- * @SWG\Property(name="db_version",type="string",description="Version of the database schema."),
- * @SWG\Property(name="allow_open_registration",type="boolean",description="Allow guests to register for a user account."),
- * @SWG\Property(name="open_reg_role_id",type="int",description="Default Role Id assigned to newly registered users."),
- * @SWG\Property(name="allow_guest_user",type="boolean",description="Allow app access for non-authenticated users."),
- * @SWG\Property(name="guest_role_id",type="int",description="Role Id assigned for all guest sessions."),
- * @SWG\Property(name="editable_profile_fields",type="string",description="Comma-delimited list of fields the user is allowed to edit."),
- * @SWG\Property(name="allowed_hosts",type="Array",items="$ref:HostInfo",description="CORS whitelist of allowed remote hosts.")
- * )
- * @SWG\Model(id="HostInfo",
- * @SWG\Property(name="host",type="string",description="URL, server name, or * to define the CORS host."),
- * @SWG\Property(name="is_enabled",type="boolean",description="Allow this host's configuration to be used by CORS."),
- * @SWG\Property(name="verbs",type="Array",items="$ref:string",description="Allowed HTTP verbs for this host.")
- * )
  *
  */
 class Config extends BaseSystemRestResource
@@ -84,7 +62,6 @@ class Config extends BaseSystemRestResource
 				 'resource_array' => $resourceArray,
 				 'verb_aliases'   => array(
 					 static::Patch => static::Post,
-					 static::Put   => static::Post,
 					 static::Merge => static::Post,
 				 )
 			)
@@ -92,17 +69,6 @@ class Config extends BaseSystemRestResource
 	}
 
 	/**
-	 * @SWG\Api(
-	 *       path="/system/config", description="Operations for system configuration options.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="Retrieve system configuration options.",
-	 *       notes="The retrieved properties control how the system behaves.",
-	 *       responseClass="Config", nickname="getConfig"
-	 *     )
-	 *   )
-	 * )
-	 *
 	 * @param string $fields
 	 * @param bool   $includeSchema
 	 * @param array  $extras
@@ -124,18 +90,31 @@ class Config extends BaseSystemRestResource
 			}
 		}
 
-		$this->_response['dsp_version'] = DSP_VERSION;
-		if ( false !== ( $this->_response['allow_remote_logins'] = Pii::getParam( 'dsp.allow_remote_logins' ) ) )
+		$this->_response['dsp_version'] = defined( 'DSP_VERSION' ) ? DSP_VERSION : 'Unknown';
+		$this->_response['allow_remote_logins'] = ( Pii::getParam( 'dsp.allow_remote_logins', false ) && $this->_response['allow_open_registration'] );
+
+		if ( false !== $this->_response['allow_remote_logins'] )
 		{
-			$_rows = Sql::findAll( 'select api_name from df_sys_provider order by 1', array(), Pii::pdo() );
+			$_rows = Sql::findAll( 'SELECT id, api_name, provider_name FROM df_sys_provider ORDER BY 1', array(), Pii::pdo() );
 
 			if ( !empty( $_rows ) )
 			{
 				$this->_response['remote_login_providers'] = array();
+
 				foreach ( $_rows as $_row )
 				{
-					$this->_response['remote_login_providers'][] = $_row['api_name'];
+					$_name = $_row['provider_name'];
+					if ( empty( $_name ) )
+					{
+						$_name = $_row['api_name'];
+					}
+					$this->_response['remote_login_providers'][] = $_name;
 				}
+			}
+			else
+			{
+				//	No providers, no remote logins
+				$this->_response['allow_remote_logins'] = false;
 			}
 		}
 

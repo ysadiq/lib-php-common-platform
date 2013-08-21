@@ -45,6 +45,7 @@ abstract class BaseSystemRestService extends BasePlatformRestService
 		$this->_typeId = $this->_typeId ? : Option::get( $settings, 'type_id', PlatformServiceTypes::SYSTEM_SERVICE, true );
 		$this->_description = $this->_description ? : Option::get( $settings, 'description', null, true );
 		$this->_isActive = $this->_isActive ? : Option::getBool( $settings, 'is_active', true, true );
+		$this->_nativeFormat = $this->_nativeFormat ? : Option::get( $settings, 'native_format', null, true );
 
 		parent::__construct( $settings );
 	}

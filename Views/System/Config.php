@@ -26,31 +26,10 @@ use DreamFactory\Platform\Utility\ResourceStore;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
-use Swagger\Annotations as SWG;
 
 /**
  * Config
  * DSP system administration manager
- *
- * @SWG\Resource(
- *   resourcePath="/system"
- * )
- *
- * @SWG\Model(id="Config",
- * @SWG\Property(name="dsp_version",type="string",description="Version of the DSP software."),
- * @SWG\Property(name="db_version",type="string",description="Version of the database schema."),
- * @SWG\Property(name="allow_open_registration",type="boolean",description="Allow guests to register for a user account."),
- * @SWG\Property(name="open_reg_role_id",type="int",description="Default Role Id assigned to newly registered users."),
- * @SWG\Property(name="allow_guest_user",type="boolean",description="Allow app access for non-authenticated users."),
- * @SWG\Property(name="guest_role_id",type="int",description="Role Id assigned for all guest sessions."),
- * @SWG\Property(name="editable_profile_fields",type="string",description="Comma-delimited list of fields the user is allowed to edit."),
- * @SWG\Property(name="allowed_hosts",type="Array",items="$ref:HostInfo",description="CORS whitelist of allowed remote hosts.")
- * )
- * @SWG\Model(id="HostInfo",
- * @SWG\Property(name="host",type="string",description="URL, server name, or * to define the CORS host."),
- * @SWG\Property(name="is_enabled",type="boolean",description="Allow this host's configuration to be used by CORS."),
- * @SWG\Property(name="verbs",type="Array",items="$ref:string",description="Allowed HTTP verbs for this host.")
- * )
  *
  */
 class Config extends BaseSystemRestResource
@@ -88,25 +67,6 @@ class Config extends BaseSystemRestResource
 			)
 		);
 	}
-
-	/**
-	 * @SWG\Api(
-	 *       path="/system/config", description="Operations for system configuration options.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="Retrieve system configuration options.",
-	 *       notes="The retrieved properties control how the system behaves.",
-	 *       responseClass="Config", nickname="getConfig"
-	 *     )
-	 *   )
-	 * )
-	 *
-	 * @param string $fields
-	 * @param bool   $includeSchema
-	 * @param array  $extras
-	 *
-	 * @return array
-	 */
 
 	/**
 	 * {@InheritDoc}

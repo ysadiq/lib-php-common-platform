@@ -55,8 +55,9 @@ class ServiceHandler
 	 */
 	protected static $_baseServices
 		= array(
-			'system' => 'DreamFactory\\Platform\\Services\\SystemManager',
-			'user'   => 'DreamFactory\\Platform\\Services\\UserManager',
+			'system'   => 'DreamFactory\\Platform\\Services\\SystemManager',
+			'user'     => 'DreamFactory\\Platform\\Services\\UserManager',
+			'api_docs' => 'DreamFactory\\Platform\\Services\\SwaggerManager',
 		);
 
 	//*************************************************************************

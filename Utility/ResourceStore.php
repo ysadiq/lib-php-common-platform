@@ -130,12 +130,13 @@ class ResourceStore extends SeedUtility
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
+	 * @param bool   $singleRow
 	 *
 	 * @return array
 	 */
-	public static function insert( $record, $rollback = false, $fields = null, $extras = null )
+	public static function insert( $record, $rollback = false, $fields = null, $extras = null, $singleRow = false )
 	{
-		return static::bulkInsert( array( $record ), $rollback, $fields, $extras );
+		return static::bulkInsert( array( $record ), $rollback, $fields, $extras, $singleRow );
 	}
 
 	/**
@@ -146,9 +147,9 @@ class ResourceStore extends SeedUtility
 	 *
 	 * @return array
 	 */
-	public static function update( $record, $rollback = false, $fields = null, $extras = null )
+	public static function update( $record, $rollback = false, $fields = null, $extras = null, $singleRow = false )
 	{
-		return static::bulkUpdate( array( $record ), $rollback, $fields, $extras );
+		return static::bulkUpdate( array( $record ), $rollback, $fields, $extras, $singleRow );
 	}
 
 	/**
@@ -159,9 +160,9 @@ class ResourceStore extends SeedUtility
 	 *
 	 * @return array
 	 */
-	public static function delete( $record, $fields = null, $extras = null )
+	public static function delete( $record, $fields = null, $extras = null, $singleRow = false )
 	{
-		return static::bulkDelete( array( $record ) );
+		return static::bulkDelete( array( $record ), true, $fields, $extras, $singleRow );
 	}
 
 	/**
@@ -203,11 +204,11 @@ class ResourceStore extends SeedUtility
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
+	 * @param bool   $singleRow
 	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
-	public static function bulkInsert( $records, $rollback = false, $fields = null, $extras = null )
+	public static function bulkInsert( $records, $rollback = false, $fields = null, $extras = null, $singleRow = false )
 	{
 		static::_validateRecords( $records );
 
@@ -253,7 +254,7 @@ class ResourceStore extends SeedUtility
 			$_transaction->commit();
 		}
 
-		return array( 'record' => $_response );
+		return $singleRow ? $_response : array( 'record' => $_response );
 	}
 
 	/**
@@ -295,16 +296,15 @@ class ResourceStore extends SeedUtility
 	}
 
 	/**
-	 * @param array $records
-	 * @param bool  $rollback
+	 * @param array  $records
+	 * @param bool   $rollback
+	 * @param string $fields
+	 * @param string $extras
+	 * @param bool   $singleRow
 	 *
-	 * @param null  $fields
-	 * @param null  $extras
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
-	public static function bulkUpdate( $records, $rollback = false, $fields = null, $extras = null )
+	public static function bulkUpdate( $records, $rollback = false, $fields = null, $extras = null, $singleRow = false )
 	{
 		static::_validateRecords( $records );
 
@@ -345,18 +345,19 @@ class ResourceStore extends SeedUtility
 			$_transaction->commit();
 		}
 
-		return array( 'record' => $_response );
+		return $singleRow ? $_response : array( 'record' => $_response );
 	}
 
 	/**
 	 * @param string $ids
 	 * @param bool   $rollback
 	 * @param string $fields
-	 * @param array  $extras
+	 * @param string $extras
+	 * @param bool   $singleRow
 	 *
 	 * @return array
 	 */
-	public static function bulkDeleteById( $ids, $rollback = false, $fields = null, $extras = null )
+	public static function bulkDeleteById( $ids, $rollback = false, $fields = null, $extras = null, $singleRow = false )
 	{
 		$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
 
@@ -368,20 +369,19 @@ class ResourceStore extends SeedUtility
 			$_records[] = array( $_pk => $_id );
 		}
 
-		return static::bulkDelete( $_records, $rollback, $fields, $extras );
+		return static::bulkDelete( $_records, $rollback, $fields, $extras, $singleRow );
 	}
 
 	/**
 	 * @param array $records
 	 * @param bool  $rollback
+	 * @param string $fields
+	 * @param string $extras
+	 * @param bool  $singleRow
 	 *
-	 * @param null  $fields
-	 * @param null  $extras
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
-	public static function bulkDelete( $records, $rollback = false, $fields = null, $extras = null )
+	public static function bulkDelete( $records, $rollback = false, $fields = null, $extras = null, $singleRow = false )
 	{
 		static::_validateRecords( $records );
 
@@ -422,7 +422,7 @@ class ResourceStore extends SeedUtility
 			$_transaction->commit();
 		}
 
-		return array( 'record' => $_response );
+		return $singleRow ? $_response : array( 'record' => $_response );
 	}
 
 	/**
@@ -444,9 +444,10 @@ class ResourceStore extends SeedUtility
 			$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
 		}
 
-		$_pk = static::model()->tableSchema->primaryKey;
+		$_model = static::model();
+		$_pk = $_model->tableSchema->primaryKey;
 
-		$_criteria = new \CDbCriteria( $criteria );
+		$_criteria = new \CDbCriteria( empty( $criteria ) ? null : array() );
 
 		if ( !empty( $_ids ) )
 		{
@@ -511,9 +512,9 @@ class ResourceStore extends SeedUtility
 
 		if ( !empty( static::$_extras ) )
 		{
-			$_relations = $resource->relations();
+			$_availableRelations = array_keys( $resource->relations() );
 
-			if ( !empty( $_relations ) )
+			if ( !empty( $_availableRelations ) )
 			{
 				$_relatedData = array();
 
@@ -524,9 +525,10 @@ class ResourceStore extends SeedUtility
 				{
 					$_extraName = $_extra['name'];
 
-					if ( !isset( $_relations[$_extraName] ) )
+					if ( !in_array( $_extraName, $_availableRelations ) )
 					{
-						throw new BadRequestException( 'Invalid relation "' . $_extraName . '" requested . ' );
+						Log::error( 'Invalid relation "' . $_extraName . '" requested. Available are: ' . implode( ', ', $_availableRelations ) );
+						continue;
 					}
 
 					$_extraFields = $_extra['fields'];
@@ -556,6 +558,8 @@ class ResourceStore extends SeedUtility
 
 					unset( $_extra, $_relations, $_relative, $_extraFields );
 				}
+
+				unset( $_availableRelations );
 
 				if ( !empty( $_relatedData ) )
 				{
@@ -1108,5 +1112,4 @@ class ResourceStore extends SeedUtility
 	{
 		return self::$_responseFormat;
 	}
-
 }

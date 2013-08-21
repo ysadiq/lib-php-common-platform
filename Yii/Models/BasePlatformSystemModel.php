@@ -18,6 +18,7 @@ namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
 
