@@ -582,14 +582,15 @@ class ResourceStore implements UtilityLike
 						if ( !empty( $_relative ) )
 						{
 							$_relatedFields = $_relative->getRetrievableAttributes( $_extraFields );
+							$_relatedPayload = array();
 
 							foreach ( $_relations as $_relation )
 							{
-								$_payload[] = $_relation->getAttributes( $_relatedFields );
+								$_relatedPayload[] = $_relation->getAttributes( $_relatedFields );
 								unset( $_relation );
 							}
 
-							$_relatedData[$_extraName] = $_payload;
+							$_relatedData[$_extraName] = $_relatedPayload;
 						}
 
 						unset( $_relatedFields );
