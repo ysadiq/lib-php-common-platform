@@ -400,14 +400,14 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	{
 		if ( !empty( $this->_resourceId ) )
 		{
-			return ResourceStore::deleteOne( $this->_resourceId );
+			return ResourceStore::bulkDeleteById( $this->_resourceId, false, null, null, true );
 		}
 
 		$_payload = $this->_determineRequestedResource( $_ids, $_records );
 
 		if ( !empty( $_ids ) )
 		{
-			return ResourceStore::delete( $_ids );
+			return ResourceStore::bulkDeleteById( $_ids );
 		}
 
 		if ( !empty( $_records ) )

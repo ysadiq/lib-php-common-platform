@@ -455,16 +455,43 @@ class ResourceStore implements UtilityLike
 	public static function bulkDeleteById( $ids, $rollback = false, $fields = null, $extras = null, $singleRow = false )
 	{
 		$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
+		$_response = array();
+		$_transaction = null;
 
-		$_records = array();
-		$_pk = static::model()->tableSchema->primaryKey;
+		//	Start a transaction
+		if ( false !== $rollback )
+		{
+			$_transaction = Pii::db()->beginTransaction();
+		}
 
 		foreach ( $_ids as $_id )
 		{
-			$_records[] = array( $_pk => $_id );
+			// records could be an array of ids or records containing an id field-value
+			try
+			{
+				$_response[] = static::_deleteInternal( $_id, $fields, $extras );
+			}
+			catch ( \CDbException $_ex )
+			{
+				$_response[] = array( 'error' => array( 'message' => $_ex->getMessage(), 'code' => $_ex->getCode() ) );
+
+				if ( false !== $rollback && $_transaction )
+				{
+					//	Rollback
+					$_transaction->rollback();
+
+					return $singleRow ? current( $_response ) : array( 'record' => $_response );
+				}
+			}
 		}
 
-		return static::bulkDelete( $_records, $rollback, $fields, $extras, $singleRow );
+		//	Commit
+		if ( $_transaction )
+		{
+			$_transaction->commit();
+		}
+
+		return $singleRow ? current( $_response ) : array( 'record' => $_response );
 	}
 
 	/**
@@ -493,9 +520,19 @@ class ResourceStore implements UtilityLike
 
 		foreach ( $records as $_record )
 		{
+			// records could be an array of ids or records containing an id field-value
+
+			if ( is_array( $_record ) )
+			{
+				$_id = Option::get( $_record, $_pk );
+			}
+			else
+			{
+				$_id = $_record;
+			}
 			try
 			{
-				$_response[] = static::_deleteInternal( Option::get( $_record, $_pk ), $fields, $extras );
+				$_response[] = static::_deleteInternal( $_id, $fields, $extras );
 			}
 			catch ( \CDbException $_ex )
 			{
@@ -572,6 +609,7 @@ class ResourceStore implements UtilityLike
 
 					$_extraFields = $_extra['fields'];
 					$_relations = $resource->getRelated( $_extraName, true );
+					$_relatedPayload = array();
 
 					//	Got relations?
 					if ( !empty( $_relations ) )
@@ -582,7 +620,6 @@ class ResourceStore implements UtilityLike
 						if ( !empty( $_relative ) )
 						{
 							$_relatedFields = $_relative->getRetrievableAttributes( $_extraFields );
-							$_relatedPayload = array();
 
 							foreach ( $_relations as $_relation )
 							{
@@ -590,12 +627,12 @@ class ResourceStore implements UtilityLike
 								unset( $_relation );
 							}
 
-							$_relatedData[$_extraName] = $_relatedPayload;
 						}
 
 						unset( $_relatedFields );
 					}
 
+					$_relatedData[$_extraName] = $_relatedPayload;
 					unset( $_extra, $_relations, $_relative, $_extraFields );
 				}
 
