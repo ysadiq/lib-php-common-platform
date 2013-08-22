@@ -129,9 +129,10 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	/**
 	 * @param string $ids
 	 * @param string $fields
-	 * @param bool   $includeSchema
 	 * @param array  $extras
 	 * @param bool   $singleRow
+	 * @param bool   $includeSchema
+	 * @param bool   $includeCount
 	 *
 	 * @return array
 	 */
@@ -341,7 +342,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			throw new BadRequestException( 'No record in PUT update request.' );
 		}
 
-		return ResourceStore::update( $_payload, false, null, null, true );
+		return ResourceStore::updateOne( $_payload );
 	}
 
 	/**
@@ -378,7 +379,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 		if ( !empty( $_records ) )
 		{
-			return ResourceStore::bulkInsert( $_records, Option::getBool( $_payload, 'rollback' ) );
+			return ResourceStore::insert( $_records, Option::getBool( $_payload, 'rollback' ) );
 		}
 
 		if ( empty( $_payload ) )
@@ -386,7 +387,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			throw new BadRequestException( 'No record in POST create request.' );
 		}
 
-		return ResourceStore::insert( $_payload, false, null, null, true );
+		return ResourceStore::insertOne( $_payload );
 	}
 
 	/**
@@ -399,19 +400,19 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	{
 		if ( !empty( $this->_resourceId ) )
 		{
-			return ResourceStore::bulkDeleteById( $this->_resourceId );
+			return ResourceStore::deleteOne( $this->_resourceId );
 		}
 
 		$_payload = $this->_determineRequestedResource( $_ids, $_records );
 
 		if ( !empty( $_ids ) )
 		{
-			return ResourceStore::bulkDeleteById( $_ids );
+			return ResourceStore::delete( $_ids );
 		}
 
 		if ( !empty( $_records ) )
 		{
-			return ResourceStore::bulkDelete( $_records );
+			return ResourceStore::delete( $_records );
 		}
 
 		if ( empty( $_payload ) )
@@ -419,7 +420,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			throw new BadRequestException( "Id list or record containing Id field required to delete $this->_apiName records." );
 		}
 
-		return ResourceStore::delete( $_payload, null, null, true );
+		return ResourceStore::deleteOne( $_payload );
 	}
 
 	/**
@@ -427,6 +428,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	protected function _formatResponse()
 	{
+		parent::_formatResponse();
+
 		$_data = $this->_response;
 
 		switch ( $this->_responseFormat )

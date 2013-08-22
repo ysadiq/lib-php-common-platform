@@ -160,7 +160,7 @@ class SystemManager extends BaseSystemRestService
 				}
 
 				$_version = Option::get( $contents, 'version' );
-				$_oldVersion = Sql::scalar( 'select db_version from df_sys_config order by id desc' );
+				$_oldVersion = Sql::scalar( 'SELECT db_version FROM df_sys_config ORDER BY id DESC' );
 
 				if ( static::doesDbVersionRequireUpgrade( $_oldVersion, $_version ) )
 				{
@@ -972,7 +972,7 @@ class SystemManager extends BaseSystemRestService
 	{
 		try
 		{
-			$_admins = Sql::scalar( 'SELECT count(id) from df_sys_user where is_sys_admin = 1 and is_deleted = 0', 0, array(), Pii::pdo() );
+			$_admins = Sql::scalar( 'SELECT count(id) FROM df_sys_user WHERE is_sys_admin = 1 AND is_deleted = 0', 0, array(), Pii::pdo() );
 
 			return ( 0 == $_admins ? false : ( $_admins > 1 ? $_admins : true ) );
 		}
