@@ -1017,7 +1017,7 @@ class ResourceStore implements UtilityLike
 	 */
 	protected static function _buildDataTablesCriteria( $columns, $criteria = null )
 	{
-		$criteria = static::_buildCriteria($criteria);
+		$criteria = static::_buildCriteria( $criteria );
 		$_criteria = ( $criteria instanceof \CDbCriteria ? $criteria : new \CDbCriteria( $criteria ) );
 
 		//	Columns
