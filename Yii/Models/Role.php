@@ -19,10 +19,10 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
-use Kisma\Core\Exceptions\StorageException;
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Option;
+use Kisma\Core\Exceptions\StorageException;
 
 /**
  * Role.php
@@ -39,6 +39,7 @@ use DreamFactory\Yii\Utility\Pii;
  *
  * @property App                 $default_app
  * @property RoleServiceAccess[] $role_service_accesses
+ * @property RoleSystemAccess[]  $role_system_accesses
  * @property User[]              $users
  * @property App[]               $apps
  * @property Service[]           $services
@@ -80,6 +81,7 @@ class Role extends BasePlatformSystemModel
 		$_relations = array(
 			'default_app'           => array( self::BELONGS_TO, __NAMESPACE__ . '\\App', 'default_app_id' ),
 			'role_service_accesses' => array( self::HAS_MANY, __NAMESPACE__ . '\\RoleServiceAccess', 'role_id' ),
+			'role_system_accesses'  => array( self::HAS_MANY, __NAMESPACE__ . '\\RoleSystemAccess', 'role_id' ),
 			'users'                 => array( self::HAS_MANY, __NAMESPACE__ . '\\User', 'role_id' ),
 			'apps'                  => array( self::MANY_MANY, __NAMESPACE__ . '\\App', 'df_sys_app_to_role(app_id, role_id)' ),
 			'services'              => array( self::MANY_MANY, __NAMESPACE__ . '\\Service', 'df_sys_role_service_access(role_id, service_id)' ),
@@ -114,6 +116,11 @@ class Role extends BasePlatformSystemModel
 		if ( isset( $values['role_service_accesses'] ) )
 		{
 			$this->assignRoleServiceAccesses( $id, $values['role_service_accesses'] );
+		}
+
+		if ( isset( $values['role_system_accesses'] ) )
+		{
+			$this->assignRoleSystemAccesses( $id, $values['role_system_accesses'] );
 		}
 
 		if ( isset( $values['apps'] ) )
@@ -195,14 +202,14 @@ class Role extends BasePlatformSystemModel
 			for ( $key1 = 0; $key1 < $count; $key1++ )
 			{
 				$access = $accesses[$key1];
-				$serviceId = Utilities::getArrayValue( 'service_id', $access, null );
-				$component = Utilities::getArrayValue( 'component', $access, '' );
+				$serviceId = Option::get( $access, 'service_id' );
+				$component = Option::get( $access, 'component', '' );
 
 				for ( $key2 = $key1 + 1; $key2 < $count; $key2++ )
 				{
 					$access2 = $accesses[$key2];
-					$serviceId2 = Utilities::getArrayValue( 'service_id', $access2, null );
-					$component2 = Utilities::getArrayValue( 'component', $access2, '' );
+					$serviceId2 = Option::get( $access2, 'service_id' );
+					$component2 = Option::get( $access2, 'component', '' );
 					if ( ( $serviceId == $serviceId2 ) && ( $component == $component2 ) )
 					{
 						throw new BadRequestException( "Duplicated service and component combination '$serviceId $component' in role service access." );
@@ -222,19 +229,19 @@ class Role extends BasePlatformSystemModel
 			$toUpdate = array();
 			foreach ( $maps as $map )
 			{
-				$manyId = Utilities::getArrayValue( 'service_id', $map, null );
-				$manyComponent = Utilities::getArrayValue( 'component', $map, '' );
-				$id = Utilities::getArrayValue( $pkMapField, $map, '' );
+				$manyId = Option::get( $map, 'service_id' );
+				$manyComponent = Option::get( $map, 'component', '' );
+				$id = Option::get( $map, $pkMapField, '' );
 				$found = false;
 				foreach ( $accesses as $key => $item )
 				{
-					$assignId = Utilities::getArrayValue( 'service_id', $item, null );
-					$assignComponent = Utilities::getArrayValue( 'component', $item, '' );
+					$assignId = Option::get( $item, 'service_id' );
+					$assignComponent = Option::get( $item, 'component', '' );
 					if ( ( $assignId == $manyId ) && ( $assignComponent == $manyComponent ) )
 					{
 						// found it, make sure nothing needs to be updated
-						$oldAccess = Utilities::getArrayValue( 'access', $map, '' );
-						$newAccess = Utilities::getArrayValue( 'access', $item, '' );
+						$oldAccess = Option::get( $map, 'access', '' );
+						$newAccess = Option::get( $item, 'access', '' );
 						if ( ( $oldAccess != $newAccess ) )
 						{
 							$map['access'] = $newAccess;
@@ -262,8 +269,7 @@ class Role extends BasePlatformSystemModel
 			{
 				foreach ( $toUpdate as $item )
 				{
-					$itemId = Utilities::getArrayValue( 'id', $item, '' );
-					unset( $item['id'] );
+					$itemId = Option::get( $item, 'id', '', true );
 					// simple update request
 					$command->reset();
 					$rows = $command->update( $map_table, $item, 'id = :id', array( ':id' => $itemId ) );
@@ -280,9 +286,130 @@ class Role extends BasePlatformSystemModel
 					// simple insert request
 					$record = array(
 						'role_id'    => $role_id,
-						'service_id' => Utilities::getArrayValue( 'service_id', $item, null ),
-						'component'  => Utilities::getArrayValue( 'component', $item, '' ),
-						'access'     => Utilities::getArrayValue( 'access', $item, '' )
+						'service_id' => Option::get( $item, 'service_id' ),
+						'component'  => Option::get( $item, 'component', '' ),
+						'access'     => Option::get( $item, 'access', '' )
+					);
+					$command->reset();
+					$rows = $command->insert( $map_table, $record );
+					if ( 0 >= $rows )
+					{
+						throw new Exception( "Record insert failed." );
+					}
+				}
+			}
+		}
+		catch ( Exception $ex )
+		{
+			throw new Exception( "Error updating accesses to role assignment.\n{$ex->getMessage()}" );
+		}
+	}
+
+	/**
+	 * @param       $role_id
+	 * @param array $accesses
+	 *
+	 * @throws Exception
+	 * @return void
+	 */
+	protected function assignRoleSystemAccesses( $role_id, $accesses = array() )
+	{
+		if ( empty( $role_id ) )
+		{
+			throw new BadRequestException( 'Role ID can not be empty.' );
+		}
+
+		try
+		{
+			$accesses = array_values( $accesses ); // reset indices if needed
+			$count = count( $accesses );
+
+			// check for dupes before processing
+			for ( $key1 = 0; $key1 < $count; $key1++ )
+			{
+				$access = $accesses[$key1];
+				$component = Option::get( $access, 'component', '' );
+
+				for ( $key2 = $key1 + 1; $key2 < $count; $key2++ )
+				{
+					$access2 = $accesses[$key2];
+					$component2 = Option::get( $access2, 'component', '' );
+					if ( $component == $component2 )
+					{
+						throw new BadRequestException( "Duplicated system component '$component' in role system access." );
+					}
+				}
+			}
+
+			$map_table = static::tableNamePrefix() . 'role_system_access';
+			$pkMapField = 'id';
+			// use query builder
+			$command = Pii::db()->createCommand();
+			$command->select( 'id,component,access' );
+			$command->from( $map_table );
+			$command->where( 'role_id = :id' );
+			$maps = $command->queryAll( true, array( ':id' => $role_id ) );
+			$toDelete = array();
+			$toUpdate = array();
+			foreach ( $maps as $map )
+			{
+				$manyComponent = Option::get( $map, 'component', '' );
+				$id = Option::get( $map, $pkMapField, '' );
+				$found = false;
+				foreach ( $accesses as $key => $item )
+				{
+					$assignComponent = Option::get( $item, 'component', '' );
+					if ( $assignComponent == $manyComponent )
+					{
+						// found it, make sure nothing needs to be updated
+						$oldAccess = Option::get( $map, 'access', '' );
+						$newAccess = Option::get( $item, 'access', '' );
+						if ( ( $oldAccess != $newAccess ) )
+						{
+							$map['access'] = $newAccess;
+							$toUpdate[] = $map;
+						}
+						// otherwise throw it out
+						unset( $accesses[$key] );
+						$found = true;
+						continue;
+					}
+				}
+				if ( !$found )
+				{
+					$toDelete[] = $id;
+					continue;
+				}
+			}
+			if ( !empty( $toDelete ) )
+			{
+				// simple delete request
+				$command->reset();
+				$rows = $command->delete( $map_table, array( 'in', $pkMapField, $toDelete ) );
+			}
+			if ( !empty( $toUpdate ) )
+			{
+				foreach ( $toUpdate as $item )
+				{
+					$itemId = Option::get( $item, 'id', '', true );
+					// simple update request
+					$command->reset();
+					$rows = $command->update( $map_table, $item, 'id = :id', array( ':id' => $itemId ) );
+					if ( 0 >= $rows )
+					{
+						throw new Exception( "Record update failed." );
+					}
+				}
+			}
+			if ( !empty( $accesses ) )
+			{
+				foreach ( $accesses as $item )
+				{
+					// simple insert request
+					$record = array(
+						'role_id'    => $role_id,
+						'component'  => Option::get( $item, 'component', '' ),
+						'access'     => Option::get( $item, 'access', '' )
 					);
 					$command->reset();
 					$rows = $command->insert( $map_table, $record );
