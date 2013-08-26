@@ -109,7 +109,7 @@ class Provider extends BasePlatformSystemModel
 	{
 		$this->getDbCriteria()->mergeWith(
 			array(
-				 'condition' => 'provider_name = :provider_name',
+				 'condition' => 'provider_name = :provider_name or api_name = :provider_name',
 				 'params'    => array( ':provider_name' => $portal ),
 			)
 		);

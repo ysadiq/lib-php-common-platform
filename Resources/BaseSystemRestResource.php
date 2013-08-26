@@ -129,19 +129,22 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	/**
 	 * @param string $ids
 	 * @param string $fields
-	 * @param bool   $includeSchema
 	 * @param array  $extras
 	 * @param bool   $singleRow
+	 * @param bool   $includeSchema
+	 * @param bool   $includeCount
 	 *
 	 * @return array
 	 */
-	public static function select( $ids = null, $fields = null, $includeSchema = false, $extras = array(), $singleRow = false )
+	public static function select( $ids = null, $fields = null, $extras = array(), $singleRow = false, $includeSchema = false, $includeCount = false )
 	{
 		return ResourceStore::bulkSelectById(
 			$ids,
 			empty( $fields ) ? null : array( 'select' => $fields ),
-			array(),
-			$singleRow
+			$extras,
+			$singleRow,
+			$includeSchema,
+			$includeCount
 		);
 	}
 
@@ -298,16 +301,13 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			$_criteria['order'] = $_value;
 		}
 
-		//	Otherwise return the resources
-		return array(
-			'record' => ResourceStore::select(
-				null,
-				$_criteria,
-				array(),
-				$_singleRow,
-				Option::getBool( $_payload, 'include_count' ),
-				Option::getBool( $_payload, 'include_schema' )
-			)
+		return ResourceStore::select(
+			null,
+			$_criteria,
+			array(),
+			$_singleRow,
+			Option::getBool( $_payload, 'include_count' ),
+			Option::getBool( $_payload, 'include_schema' )
 		);
 	}
 
@@ -342,7 +342,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			throw new BadRequestException( 'No record in PUT update request.' );
 		}
 
-		return ResourceStore::update( $_payload, false, null, null, true );
+		return ResourceStore::updateOne( $_payload );
 	}
 
 	/**
@@ -379,7 +379,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 		if ( !empty( $_records ) )
 		{
-			return ResourceStore::bulkInsert( $_records, Option::getBool( $_payload, 'rollback' ) );
+			return ResourceStore::insert( $_records, Option::getBool( $_payload, 'rollback' ) );
 		}
 
 		if ( empty( $_payload ) )
@@ -387,7 +387,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			throw new BadRequestException( 'No record in POST create request.' );
 		}
 
-		return ResourceStore::insert( $_payload, false, null, null, true );
+		return ResourceStore::insertOne( $_payload );
 	}
 
 	/**
@@ -400,7 +400,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	{
 		if ( !empty( $this->_resourceId ) )
 		{
-			return ResourceStore::bulkDeleteById( $this->_resourceId );
+			return ResourceStore::bulkDeleteById( $this->_resourceId, false, null, null, true );
 		}
 
 		$_payload = $this->_determineRequestedResource( $_ids, $_records );
@@ -412,7 +412,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 		if ( !empty( $_records ) )
 		{
-			return ResourceStore::bulkDelete( $_records );
+			return ResourceStore::delete( $_records );
 		}
 
 		if ( empty( $_payload ) )
@@ -420,7 +420,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			throw new BadRequestException( "Id list or record containing Id field required to delete $this->_apiName records." );
 		}
 
-		return ResourceStore::delete( $_payload, null, null, true );
+		return ResourceStore::deleteOne( $_payload );
 	}
 
 	/**
@@ -428,6 +428,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	protected function _formatResponse()
 	{
+		parent::_formatResponse();
+
 		$_data = $this->_response;
 
 		switch ( $this->_responseFormat )

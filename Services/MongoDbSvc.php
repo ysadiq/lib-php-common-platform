@@ -674,16 +674,17 @@ class MongoDbSvc extends NoSqlDbSvc
 		$_out = array();
 		foreach ( $records as $_record )
 		{
-			if ( !static::doesRecordContainModifier( $_record ) )
+			$_id = Option::get( $_record, static::DEFAULT_ID_FIELD, null, true );
+			if ( empty( $_id ) )
 			{
-				$_record = array( '$set' => $_record );
+				throw new BadRequestException( "Identifying field '_id' can not be empty for merge record request." );
 			}
+
 			try
 			{
-				$_id = Option::get( $_record, static::DEFAULT_ID_FIELD, null, true );
-				if ( empty( $_id ) )
+				if ( !static::doesRecordContainModifier( $_record ) )
 				{
-					throw new BadRequestException( "Identifying field '_id' can not be empty for merge record request." );
+					$_record = array( '$set' => $_record );
 				}
 				$result = $_coll->findAndModify(
 					array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) ),

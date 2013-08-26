@@ -89,6 +89,10 @@ class Config extends BaseSystemRestResource
 				$this->_response = $_record;
 			}
 		}
+		else if ( is_array( $this->_response ) && isset( $this->_response[0] ) && sizeof( $this->_response ) == 1 )
+		{
+			$this->_response = $this->_response[0];
+		}
 
 		$this->_response['dsp_version'] = defined( 'DSP_VERSION' ) ? DSP_VERSION : 'Unknown';
 		$this->_response['allow_remote_logins'] = ( Pii::getParam( 'dsp.allow_remote_logins', false ) && $this->_response['allow_open_registration'] );
@@ -103,12 +107,7 @@ class Config extends BaseSystemRestResource
 
 				foreach ( $_rows as $_row )
 				{
-					$_name = $_row['provider_name'];
-					if ( empty( $_name ) )
-					{
-						$_name = $_row['api_name'];
-					}
-					$this->_response['remote_login_providers'][] = $_name;
+					$this->_response['remote_login_providers'][] = $_row['api_name'];
 				}
 			}
 			else
