@@ -264,11 +264,11 @@ class Packager
 		}
 		$_storageServiceId = Option::get( $record, 'storage_service_id' );
 		$_container = Option::get( $record, 'storage_container' );
-		if ( empty( $_storageServiceId ))
+		if ( empty( $_storageServiceId ) )
 		{
 			// must be set or defaulted to local
 			$_model = Service::model()->find( 'api_name = :api_name', array( ':api_name' => 'app' ) );
-			$_storageServiceId = ($_model) ? $_model->getPrimaryKey() : null;
+			$_storageServiceId = ( $_model ) ? $_model->getPrimaryKey() : null;
 			$record['storage_service_id'] = $_storageServiceId;
 			if ( empty( $_container ) )
 			{

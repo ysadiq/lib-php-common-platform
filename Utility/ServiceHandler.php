@@ -105,7 +105,7 @@ class ServiceHandler
 		//	Cached?
 		if ( null !== ( $_service = Option::get( static::$_serviceCache, $_tag ) ) )
 		{
-			return $_service;
+//			return $_service;
 		}
 
 		//	A base service?
