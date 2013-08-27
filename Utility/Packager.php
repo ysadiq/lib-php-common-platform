@@ -258,11 +258,24 @@ class Packager
 		}
 
 		$record = DataFormat::jsonToArray( $data );
-		if ( !empty( $import_url ) )
+		if ( !empty( $import_url ) && !isset( $record['import_url'] ) )
 		{
 			$record['import_url'] = $import_url;
 		}
-
+		$_storageServiceId = Option::get( $record, 'storage_service_id' );
+		$_container = Option::get( $record, 'storage_container' );
+		if ( empty( $_storageServiceId ) )
+		{
+			// must be set or defaulted to local
+			$_model = Service::model()->find( 'api_name = :api_name', array( ':api_name' => 'app' ) );
+			$_storageServiceId = ( $_model ) ? $_model->getPrimaryKey() : null;
+			$record['storage_service_id'] = $_storageServiceId;
+			if ( empty( $_container ) )
+			{
+				$_container = 'applications';
+				$record['storage_container'] = $_container;
+			}
+		}
 		try
 		{
 			ResourceStore::setResourceName( 'app' );
@@ -449,19 +462,12 @@ class Packager
 		}
 
 		// extract the rest of the zip file into storage
-		$_storageServiceId = Option::get( $record, 'storage_service_id' );
 		$_apiName = Option::get( $record, 'api_name' );
-
 		/** @var $_service BaseFileSvc */
-		if ( empty( $_storageServiceId ) )
+		$_service = ServiceHandler::getServiceObjectById( $_storageServiceId );
+		if ( empty( $_service ) )
 		{
-			$_service = ServiceHandler::getServiceObject( 'app' );
-			$_container = 'applications';
-		}
-		else
-		{
-			$_service = ServiceHandler::getServiceObjectById( $_storageServiceId );
-			$_container = Option::get( $record, 'storage_container' );
+			throw new \Exception( "App record created, but failed to import files due to unknown storage service with id '$_storageServiceId'." );
 		}
 		if ( empty( $_container ) )
 		{
@@ -482,10 +488,9 @@ class Packager
 	 * @return array
 	 * @throws \Exception
 	 */
-	public static function importAppFromZip( $_name, $zip_file )
+	public static function importAppFromZip( $name, $zip_file )
 	{
-		$record = array( 'api_name' => $_name, 'name' => $_name, 'is_url_external' => 0, 'url' => '/index.html' );
-
+		$record = array( 'api_name' => $name, 'name' => $name, 'is_url_external' => 0, 'url' => '/index.html' );
 		try
 		{
 			ResourceStore::setResourceName( 'app' );

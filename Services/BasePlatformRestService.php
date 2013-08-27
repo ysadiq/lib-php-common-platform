@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Doctrine\Common\Proxy\Exception\InvalidArgumentException;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
@@ -465,7 +464,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _setResource( $resourcePath = null )
 	{
-		$this->_resourcePath = rtrim( $resourcePath, '/' );
+		$this->_resourcePath = $resourcePath;
 		$this->_resourceArray = ( !empty( $this->_resourcePath ) ) ? explode( '/', $this->_resourcePath ) : array();
 
 		if ( empty( $this->_resource ) && null !== ( $_resource = Option::get( $this->_resourceArray, 0 ) ) )

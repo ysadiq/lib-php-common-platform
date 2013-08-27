@@ -387,13 +387,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		}
 		else
 		{
-			$_result = $this->updateRecordById(
-				$this->_resource,
-				$_data,
-				$this->_resourceId,
-				$_fields,
-				$_extras
-			);
+			$_result = $this->updateRecordById( $this->_resource, $_data, $this->_resourceId, $_fields, $_extras );
 		}
 
 		return $_result;
@@ -460,13 +454,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		}
 		else
 		{
-			$_result = $this->mergeRecordById(
-				$this->_resource,
-				$_data,
-				$this->_resourceId,
-				$_fields,
-				$_extras
-			);
+			$_result = $this->mergeRecordById( $this->_resource, $_data, $this->_resourceId, $_fields, $_extras );
 		}
 
 		return $_result;
@@ -818,7 +806,28 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 * @return array
 	 * @throws \Exception
 	 */
-	abstract public function getTables( $tables = array() );
+	public function getTables( $tables = array() )
+	{
+		if ( !is_array( $tables ) )
+		{
+			// may be comma-delimited list of names
+			$tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
+		}
+		$_out = array();
+		foreach ( $tables as $_table )
+		{
+			try
+			{
+				$_out[] = $this->getTable( $_table );
+			}
+			catch ( \Exception $ex )
+			{
+				throw $ex;
+			}
+		}
+
+		return $_out;
+	}
 
 	/**
 	 * Get any properties related to the table
@@ -910,7 +919,28 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 * @return array
 	 * @throws \Exception
 	 */
-	abstract public function deleteTables( $tables = array(), $check_empty = false );
+	public function deleteTables( $tables = array(), $check_empty = false )
+	{
+		if ( !is_array( $tables ) )
+		{
+			// may be comma-delimited list of names
+			$tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
+		}
+		$_out = array();
+		foreach ( $tables as $_table )
+		{
+			try
+			{
+				$_out[] = $this->deleteTable( $_table, $check_empty );
+			}
+			catch ( \Exception $ex )
+			{
+				throw new $ex;
+			}
+		}
+
+		return $_out;
+	}
 
 	/**
 	 * Delete a table and all of its contents by name
@@ -928,7 +958,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	/**
 	 * @param string $table
 	 * @param array  $records
-	 * @param mixed  $fields
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
@@ -939,18 +969,28 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $fields
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function createRecord( $table, $record, $fields = null, $extras = array() );
+	public function createRecord( $table, $record, $fields = null, $extras = array() )
+	{
+		if ( !isset( $record ) || empty( $record ) )
+		{
+			throw new BadRequestException( 'There are no fields in the record.' );
+		}
+
+		$results = $this->createRecords( $table, array( $record ), $fields, $extras );
+
+		return $results[0];
+	}
 
 	/**
 	 * @param string $table
 	 * @param array  $records
-	 * @param mixed  $fields
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
@@ -961,19 +1001,29 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $fields
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function updateRecord( $table, $record, $fields = null, $extras = array() );
+	public function updateRecord( $table, $record, $fields = null, $extras = array() )
+	{
+		if ( !isset( $record ) || empty( $record ) )
+		{
+			throw new BadRequestException( 'There are no fields in the record.' );
+		}
+
+		$results = $this->updateRecords( $table, array( $record ), $fields, $extras );
+
+		return $results[0];
+	}
 
 	/**
 	 * @param string $table
 	 * @param array  $record
 	 * @param mixed  $filter
-	 * @param mixed  $fields
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
@@ -984,30 +1034,35 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $id_list
-	 * @param mixed  $fields
+	 * @param mixed  $ids    - array or comma-delimited list of record identifiers
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @return array
 	 */
-	abstract public function updateRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() );
+	abstract public function updateRecordsByIds( $table, $record, $ids, $fields = null, $extras = array() );
 
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $id
-	 * @param mixed  $fields
+	 * @param string $id
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function updateRecordById( $table, $record, $id, $fields = null, $extras = array() );
+	public function updateRecordById( $table, $record, $id, $fields = null, $extras = array() )
+	{
+		$results = $this->updateRecordsByIds( $table, $record, $id, $fields, $extras );
+
+		return $results[0];
+	}
 
 	/**
 	 * @param string $table
 	 * @param array  $records
-	 * @param mixed  $fields
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
@@ -1018,19 +1073,29 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $fields
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function mergeRecord( $table, $record, $fields = null, $extras = array() );
+	public function mergeRecord( $table, $record, $fields = null, $extras = array() )
+	{
+		if ( !isset( $record ) || empty( $record ) )
+		{
+			throw new BadRequestException( 'There are no fields in the record.' );
+		}
+
+		$results = $this->mergeRecords( $table, array( $record ), $fields, $extras );
+
+		return $results[0];
+	}
 
 	/**
 	 * @param string $table
 	 * @param  array $record
 	 * @param mixed  $filter
-	 * @param mixed  $fields
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
@@ -1041,31 +1106,36 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $id_list
-	 * @param mixed  $fields
+	 * @param mixed  $ids    - array or comma-delimited list of record identifiers
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function mergeRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() );
+	abstract public function mergeRecordsByIds( $table, $record, $ids, $fields = null, $extras = array() );
 
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $id
-	 * @param mixed  $fields
+	 * @param string $id
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function mergeRecordById( $table, $record, $id, $fields = null, $extras = array() );
+	public function mergeRecordById( $table, $record, $id, $fields = null, $extras = array() )
+	{
+		$results = $this->mergeRecordsByIds( $table, $record, $id, $fields, $extras );
+
+		return $results[0];
+	}
 
 	/**
 	 * @param string $table
 	 * @param array  $records
-	 * @param mixed  $fields
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
@@ -1076,18 +1146,28 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $fields
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function deleteRecord( $table, $record, $fields = null, $extras = array() );
+	public function deleteRecord( $table, $record, $fields = null, $extras = array() )
+	{
+		if ( !isset( $record ) || empty( $record ) )
+		{
+			throw new BadRequestException( 'There are no fields in the record.' );
+		}
+
+		$results = $this->deleteRecords( $table, array( $record ), $fields, $extras );
+
+		return $results[0];
+	}
 
 	/**
 	 * @param string $table
 	 * @param mixed  $filter
-	 * @param mixed  $fields
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
@@ -1097,30 +1177,35 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
 	/**
 	 * @param string $table
-	 * @param mixed  $id_list
-	 * @param mixed  $fields
+	 * @param mixed  $ids    - array or comma-delimited list of record identifiers
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function deleteRecordsByIds( $table, $id_list, $fields = null, $extras = array() );
+	abstract public function deleteRecordsByIds( $table, $ids, $fields = null, $extras = array() );
 
 	/**
 	 * @param string $table
-	 * @param mixed  $id
-	 * @param mixed  $fields
+	 * @param string $id
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function deleteRecordById( $table, $id, $fields = null, $extras = array() );
+	public function deleteRecordById( $table, $id, $fields = null, $extras = array() )
+	{
+		$results = $this->deleteRecordsByIds( $table, $id, $fields, $extras );
+
+		return $results[0];
+	}
 
 	/**
 	 * @param string $table
 	 * @param mixed  $filter
-	 * @param mixed  $fields
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
@@ -1131,7 +1216,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	/**
 	 * @param string $table
 	 * @param array  $records
-	 * @param mixed  $fields
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
@@ -1142,33 +1227,49 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $fields
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function retrieveRecord( $table, $record, $fields = null, $extras = array() );
+	public function retrieveRecord( $table, $record, $fields = null, $extras = array() )
+	{
+		if ( !isset( $record ) || empty( $record ) )
+		{
+			throw new BadRequestException( 'There are no fields in the record.' );
+		}
+
+		$results = $this->retrieveRecords( $table, array( $record ), $fields, $extras );
+
+		return $results[0];
+	}
 
 	/**
 	 * @param string $table
-	 * @param mixed  $id_list
-	 * @param mixed  $fields
+	 * @param mixed  $ids    - array or comma-delimited list of record identifiers
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function retrieveRecordsByIds( $table, $id_list, $fields = null, $extras = array() );
+	abstract public function retrieveRecordsByIds( $table, $ids, $fields = null, $extras = array() );
 
 	/**
 	 * @param string $table
 	 * @param mixed  $id
-	 * @param mixed  $fields
+	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function retrieveRecordById( $table, $id, $fields = null, $extras = array() );
+	public function retrieveRecordById( $table, $id, $fields = null, $extras = array() )
+	{
+		$results = $this->retrieveRecordsByIds( $table, $id, $fields, $extras );
+
+		return $results[0];
+	}
+
 }

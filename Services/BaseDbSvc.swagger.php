@@ -323,15 +323,6 @@ $_base['apis'] = array(
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					9 =>
-					array(
-						'name'          => 'record',
-						'description'   => 'Data containing records to retrieve by identifying fields.',
-						'allowMultiple' => false,
-						'type'          => 'Records',
-						'paramType'     => 'body',
-						'required'      => false,
-					),
 				),
 				'responseMessages' =>
 				array(
@@ -356,7 +347,11 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Use the \'ids\' or \'filter\' parameter to limit resources that are returned. Use the \'fields\' parameter to limit properties returned for each resource. By default, all fields are returned for all resources.',
+				'notes'            =>
+				'Use the \'ids\' or \'filter\' parameter to limit resources that are returned. ' .
+				'Use the \'fields\' parameter to limit properties returned for each resource. ' .
+				'By default, all fields are returned for all resources. ' .
+				'To send the \'ids\' or \'filter\' as posted data, use the POST command and set \'method\' parameter to \'GET\'. ',
 			),
 			1 =>
 			array(
@@ -401,6 +396,16 @@ $_base['apis'] = array(
 						'type'          => 'string',
 						'paramType'     => 'query',
 						'required'      => false,
+					),
+					4 =>
+					array(
+						'name'          => 'method',
+						'description'   => 'HTTP verb override allows posting data for GET or use of other verbs not allowed by server',
+						'allowMultiple' => false,
+						'type'          => 'string',
+						'paramType'     => 'query',
+						'required'      => false,
+						'enum'          => [ 'GET', 'PUT', 'PATCH', 'DELETE' ]
 					),
 				),
 				'responseMessages' =>
@@ -831,6 +836,16 @@ $_base['apis'] = array(
 						'type'          => 'string',
 						'paramType'     => 'query',
 						'required'      => false,
+					),
+					5 =>
+					array(
+						'name'          => 'method',
+						'description'   => 'HTTP verb override, allows posting data for GET or use of other verbs not allowed by server',
+						'allowMultiple' => false,
+						'type'          => 'string',
+						'paramType'     => 'query',
+						'required'      => false,
+						'enum'          => [ 'GET', 'PUT', 'PATCH', 'DELETE' ]
 					),
 				),
 				'responseMessages' =>

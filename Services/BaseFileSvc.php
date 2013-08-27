@@ -19,13 +19,14 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Interfaces\FileServiceLike;
 use DreamFactory\Platform\Services\BasePlatformRestService;
-use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\FilterInput;
-use DreamFactory\Platform\Utility\DataFormat;
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\RestData;
+use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Option;
 
 /**
  * BaseFileSvc
