@@ -748,6 +748,8 @@ class ResourceStore implements UtilityLike
 		{
 			Log::error( 'Invalid model class identified: ' . $_className . ' Error: ' . $_ex->getMessage() );
 		}
+
+		return null;
 	}
 
 	/**

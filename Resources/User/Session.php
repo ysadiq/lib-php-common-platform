@@ -31,6 +31,7 @@ use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Platform\Yii\Models\App;
+use DreamFactory\Platform\Yii\Models\AppGroup;
 use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\Role;
 use DreamFactory\Platform\Yii\Models\User;
@@ -40,37 +41,11 @@ use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
 use Kisma\Core\Utility\Sql;
-use Swagger\Annotations as SWG;
 
 /**
  * Session
  * DSP user session
  *
- * @package
- * @category
- *
- * @SWG\Resource(
- *   resourcePath="/user"
- * )
- *
- * @SWG\Model(id="Session",
- * @SWG\Property(name="id",type="string",description="Identifier for the current user."),
- * @SWG\Property(name="email",type="string",description="Email address of the current user."),
- * @SWG\Property(name="first_name",type="string",description="First name of the current user."),
- * @SWG\Property(name="last_name",type="string",description="Last name of the current user."),
- * @SWG\Property(name="display_name",type="string",description="Full display name of the current user."),
- * @SWG\Property(name="is_sys_admin",type="boolean",description="Is the current user a system administrator."),
- * @SWG\Property(name="last_login_date",type="string",description="Date and time of the last login for the current user."),
- * @SWG\Property(name="app_groups",type="Array",description="App groups and the containing apps."),
- * @SWG\Property(name="no_group_apps",type="Array",description="Apps that are not in any app groups."),
- * @SWG\Property(name="ticket",type="string",description="Timed ticket that can be used to start a separate session."),
- * @SWG\Property(name="ticket_expiry",type="string",description="Expiration time for the given ticket.")
- * )
- *
- * @SWG\Model(id="Login",
- * @SWG\Property(name="email",type="string"),
- * @SWG\Property(name="password",type="string")
- * )
  */
 class Session extends BaseSystemRestResource
 {
@@ -156,21 +131,6 @@ class Session extends BaseSystemRestResource
 
 	/**
 	 * Refreshes an existing session or allows the SSO creation of a new session for external apps via timed ticket
-	 *
-	 * @SWG\Api(
-	 *       path="/user/session", description="Operations on a user's session.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="Retrieve the current user session information.",
-	 *       notes="Calling this refreshes the current session, or returns an error for timed-out or invalid sessions.",
-	 *       responseClass="Session", nickname="getSession",
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *       )
-	 *     )
-	 *   )
-	 * )
 	 *
 	 * @param string $ticket
 	 *
@@ -273,30 +233,6 @@ class Session extends BaseSystemRestResource
 	}
 
 	/**
-	 *
-	 * @SWG\Api(
-	 *           path="/user/session", description="Operations on a user's session.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *           httpMethod="POST", summary="Login and create a new user session.",
-	 *           notes="Calling this creates a new session and logs in the user.",
-	 *           responseClass="Session", nickname="login",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *           name="credentials", description="Data containing name-value pairs used for logging into the system.",
-	 *           paramType="body", required="true", allowMultiple=false, dataType="Login"
-	 *         )
-	 *       ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *       )
-	 *     )
-	 *   )
-	 * )
-	 *
-	 *
 	 * @param string $email
 	 * @param string $password
 	 *
@@ -350,20 +286,6 @@ class Session extends BaseSystemRestResource
 	}
 
 	/**
-	 * @SWG\Api(
-	 *       path="/user/session", description="Operations on a user's session.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *       httpMethod="DELETE", summary="Logout and destroy the current user session.",
-	 *       notes="Calling this deletes the current session and logs out the user.",
-	 *       responseClass="Success", nickname="logout",
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *       )
-	 *     )
-	 *   )
-	 * )
 	 *
 	 */
 	public static function userLogout()
@@ -484,7 +406,7 @@ class Session extends BaseSystemRestResource
 		$_roleData = $role->attributes;
 
 		/**
-		 * @var \App[] $_apps
+		 * @var App[] $_apps
 		 */
 		if ( $_role->apps )
 		{
@@ -829,7 +751,7 @@ class Session extends BaseSystemRestResource
 		{
 			$appFields = 'id,api_name,name,description,is_url_external,launch_url,requires_fullscreen,allow_fullscreen_toggle,toggle_location';
 			/**
-			 * @var \App[] $_apps
+			 * @var App[] $_apps
 			 */
 			$_apps = Option::get( $session, 'allowed_apps', array() );
 			if ( $is_sys_admin )
@@ -837,7 +759,7 @@ class Session extends BaseSystemRestResource
 				$_apps = ResourceStore::model( 'app' )->findAll( 'is_active = :ia', array( ':ia' => 1 ) );
 			}
 			/**
-			 * @var \AppGroup[] $theGroups
+			 * @var AppGroup[] $theGroups
 			 */
 			$theGroups = ResourceStore::model( 'app_group' )->with( 'apps' )->findAll();
 			$appGroups = array();
