@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Doctrine\Common\Proxy\Exception\InvalidArgumentException;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
