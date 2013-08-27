@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use Kisma\Core\Utility\Hasher;
+use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -109,8 +110,8 @@ class Provider extends BasePlatformSystemModel
 	{
 		$this->getDbCriteria()->mergeWith(
 			array(
-				 'condition' => 'provider_name = :provider_name or api_name = :provider_name',
-				 'params'    => array( ':provider_name' => $portal ),
+				 'condition' => 'provider_name = :provider_name or api_name = :api_name',
+				 'params'    => array( ':provider_name' => $portal, ':api_name' => Inflector::neutralize( $portal ) ),
 			)
 		);
 
