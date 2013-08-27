@@ -76,6 +76,15 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function __construct( $config, $native = false )
 	{
+		if ( null === Option::get( $config, 'verb_aliases' ) )
+		{
+			//	Default verb aliases
+			$config['verb_aliases'] = array(
+				static::Patch => static::Put,
+				static::Merge => static::Put,
+			);
+		}
+
 		parent::__construct( $config );
 
 		$this->_fieldCache = array();
@@ -302,14 +311,7 @@ class SqlDbSvc extends BaseDbSvc
 	// records is an array of field arrays
 
 	/**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws BadRequestException
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function createRecords( $table, $records, $fields = null, $extras = array() )
 	{
@@ -384,7 +386,7 @@ class SqlDbSvc extends BaseDbSvc
 
 			$results = array();
 
-			if ( empty( $fields ) || ( 0 === strcasecmp( $_idField, $fields ) ) )
+			if ( static::_requireMoreFields( $fields, $_idField ) )
 			{
 				for ( $i = 0; $i < $count; $i++ )
 				{
@@ -421,79 +423,7 @@ class SqlDbSvc extends BaseDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public function createRecord( $table, $record, $fields = null, $extras = array() )
-	{
-		if ( empty( $record ) || !is_array( $record ) )
-		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
-		}
-
-		$table = $this->correctTableName( $table );
-		$_idField = Option::get( $extras, 'id_field' );
-		try
-		{
-			$fieldInfo = $this->describeTableFields( $table );
-			$relatedInfo = $this->describeTableRelated( $table );
-			if (empty($_idField))
-			{
-				$_idField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $fieldInfo );
-				if ( empty( $_idField ) )
-				{
-					throw new BadRequestException( "Identifying field can not be empty." );
-				}
-			}
-			$parsed = $this->parseRecord( $record, $fieldInfo );
-			if ( 0 >= count( $parsed ) )
-			{
-				throw new BadRequestException( "No valid fields were passed in the record request." );
-			}
-
-			// simple insert request
-			/** @var \CDbCommand $command */
-			$command = $this->_sqlConn->createCommand();
-			$rows = $command->insert( $table, $parsed );
-			if ( 0 >= $rows )
-			{
-				throw new InternalServerErrorException( "Record insert failed for table '$table'." );
-			}
-			$id = $this->_sqlConn->lastInsertID;
-			$this->updateRelations( $table, $record, $id, $relatedInfo );
-			if ( empty( $fields ) || ( 0 === strcasecmp( $_idField, $fields ) ) )
-			{
-				return array( array( $_idField => $id ) );
-			}
-			else
-			{
-				if ( '*' !== $fields )
-				{
-					$fields = Utilities::addOnceToList( $fields, $_idField );
-				}
-
-				return $this->retrieveRecordById( $table, $id, $fields, $extras );
-			}
-		}
-		catch ( \Exception $ex )
-		{
-			throw $ex;
-		}
-	}
-
-	/**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function updateRecords( $table, $records, $fields = null, $extras = array() )
 	{
@@ -571,8 +501,8 @@ class SqlDbSvc extends BaseDbSvc
 			}
 
 			$results = array();
-			// todo figure out primary key
-			if ( empty( $fields ) || ( 0 === strcasecmp( $_idField, $fields ) ) )
+
+			if ( static::_requireMoreFields( $fields, $_idField ) )
 			{
 				for ( $i = 0; $i < $count; $i++ )
 				{
@@ -589,7 +519,7 @@ class SqlDbSvc extends BaseDbSvc
 				{
 					$fields = Utilities::addOnceToList( $fields, $_idField );
 				}
-				$temp = $this->retrieveRecordsByIds( $table, implode( ',', $ids ), $_idField, $fields, $extras );
+				$temp = $this->retrieveRecordsByIds( $table, implode( ',', $ids ), $fields, $extras );
 				for ( $i = 0; $i < $count; $i++ )
 				{
 					$results[$i] = ( isset( $ids[$i] )
@@ -609,36 +539,7 @@ class SqlDbSvc extends BaseDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws BadRequestException
-	 * @return array
-	 */
-	public function updateRecord( $table, $record, $fields = null, $extras = array() )
-	{
-		if ( !isset( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( 'There are no fields in the record.' );
-		}
-
-		$records = array( $record );
-		$results = $this->updateRecords( $table, $records, $fields, $extras );
-
-		return $results[0];
-	}
-
-	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function updateRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
 	{
@@ -678,17 +579,9 @@ class SqlDbSvc extends BaseDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $record
-	 * @param string $id_list
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function updateRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
+	public function updateRecordsByIds( $table, $record, $ids, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -710,10 +603,11 @@ class SqlDbSvc extends BaseDbSvc
 					throw new BadRequestException( "Identifying field can not be empty." );
 				}
 			}
-			if ( empty( $id_list ) )
+			if ( empty( $ids ) )
 			{
 				throw new BadRequestException( "Identifying values for '$_idField' can not be empty for update request." );
 			}
+
 			$record = Utilities::removeOneFromArray( $_idField, $record );
 			// simple update request
 			$parsed = $this->parseRecord( $record, $fieldInfo, true );
@@ -721,7 +615,11 @@ class SqlDbSvc extends BaseDbSvc
 			{
 				throw new BadRequestException( "No valid field values were passed in the request." );
 			}
-			$ids = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
+
+			if ( !is_array( $ids ) )
+			{
+				$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
+			}
 			$outIds = array();
 			$errors = array();
 			$count = count( $ids );
@@ -764,8 +662,8 @@ class SqlDbSvc extends BaseDbSvc
 //                }
 			}
 			$results = array();
-			// todo figure out primary key
-			if ( empty( $fields ) || ( 0 === strcasecmp( $_idField, $fields ) ) )
+
+			if ( static::_requireMoreFields( $fields, $_idField ) )
 			{
 				for ( $i = 0; $i < $count; $i++ )
 				{
@@ -782,7 +680,7 @@ class SqlDbSvc extends BaseDbSvc
 				{
 					$fields = Utilities::addOnceToList( $fields, $_idField );
 				}
-				$temp = $this->retrieveRecordsByIds( $table, implode( ',', $ids ), $_idField, $fields, $extras );
+				$temp = $this->retrieveRecordsByIds( $table, implode( ',', $ids ), $fields, $extras );
 				for ( $i = 0; $i < $count; $i++ )
 				{
 					$results[$i] = ( isset( $outIds[$i] )
@@ -802,34 +700,7 @@ class SqlDbSvc extends BaseDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public function updateRecordById( $table, $record, $id, $fields = null, $extras = array() )
-	{
-		if ( !isset( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( 'There are no fields in the record.' );
-		}
-		$results = $this->updateRecordsByIds( $table, $record, $id, $fields, $extras );
-
-		return $results[0];
-	}
-
-	/**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function mergeRecords( $table, $records, $fields = null, $extras = array() )
 	{
@@ -838,29 +709,7 @@ class SqlDbSvc extends BaseDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public function mergeRecord( $table, $record, $fields = null, $extras = array() )
-	{
-		// currently the same as update here
-		return $this->updateRecord( $table, $record, $fields, $extras );
-	}
-
-	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function mergeRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
 	{
@@ -869,45 +718,16 @@ class SqlDbSvc extends BaseDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $record
-	 * @param string $id_list
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function mergeRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
+	public function mergeRecordsByIds( $table, $record, $ids, $fields = null, $extras = array() )
 	{
 		// currently the same as update here
-		return $this->updateRecordsByIds( $table, $record, $id_list, $fields, $extras );
+		return $this->updateRecordsByIds( $table, $record, $ids, $fields, $extras );
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public function mergeRecordById( $table, $record, $id, $fields = null, $extras = array() )
-	{
-		// currently the same as update here
-		return $this->updateRecordById( $table, $record, $id, $fields, $extras );
-	}
-
-	/**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array|string
+	 * {@inheritdoc}
 	 */
 	public function deleteRecords( $table, $records, $fields = null, $extras = array() )
 	{
@@ -948,34 +768,7 @@ class SqlDbSvc extends BaseDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws BadRequestException
-	 * @return array
-	 */
-	public function deleteRecord( $table, $record, $fields = null, $extras = array() )
-	{
-		if ( !isset( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( 'There are no fields in the record.' );
-		}
-		$records = array( $record );
-		$results = $this->deleteRecords( $table, $records, $fields, $extras );
-
-		return $results[0];
-	}
-
-	/**
-	 * @param        $table
-	 * @param        $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function deleteRecordsByFilter( $table, $filter, $fields = null, $extras = array() )
 	{
@@ -1008,17 +801,9 @@ class SqlDbSvc extends BaseDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $id_list
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function deleteRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
+	public function deleteRecordsByIds( $table, $ids, $fields = null, $extras = array() )
 	{
 		$table = $this->correctTableName( $table );
 		$_rollback = Option::getBool( $extras, 'rollback', false );
@@ -1034,12 +819,15 @@ class SqlDbSvc extends BaseDbSvc
 					throw new BadRequestException( "Identifying field can not be empty." );
 				}
 			}
-			if ( empty( $id_list ) )
+			if ( empty( $ids ) )
 			{
 				throw new BadRequestException( "Identifying values for '$_idField' can not be empty for delete request." );
 			}
 
-			$ids = array_map( 'trim', explode( ',', $id_list ) );
+			if ( !is_array( $ids ) )
+			{
+				$ids = array_map( 'trim', explode( ',', $ids ) );
+			}
 			$errors = array();
 			$count = count( $ids );
 			/** @var \CDbCommand $command */
@@ -1047,13 +835,13 @@ class SqlDbSvc extends BaseDbSvc
 
 			// get the returnable fields first, then issue delete
 			$outResults = array();
-			if ( !( empty( $fields ) || ( 0 === strcasecmp( $_idField, $fields ) ) ) )
+			if ( static::_requireMoreFields( $fields, $_idField ) )
 			{
 				if ( '*' !== $fields )
 				{
 					$fields = Utilities::addOnceToList( $fields, $_idField );
 				}
-				$outResults = $this->retrieveRecordsByIds( $table, implode( ',', $ids ), $_idField, $fields, $extras );
+				$outResults = $this->retrieveRecordsByIds( $table, implode( ',', $ids ), $fields, $extras );
 			}
 
 			if ( $_rollback )
@@ -1125,29 +913,7 @@ class SqlDbSvc extends BaseDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public function deleteRecordById( $table, $id, $fields = null, $extras = array() )
-	{
-		$results = $this->deleteRecordsByIds( $table, $id, $fields, $extras );
-
-		return $results[0];
-	}
-
-	/**
-	 * @param        $table
-	 * @param string $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function retrieveRecordsByFilter( $table, $filter = null, $fields = null, $extras = array() )
 	{
@@ -1260,13 +1026,7 @@ class SqlDbSvc extends BaseDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function retrieveRecords( $table, $records, $fields = null, $extras = array() )
 	{
@@ -1303,45 +1063,22 @@ class SqlDbSvc extends BaseDbSvc
 		}
 		$idList = implode( ',', $ids );
 
-		return $this->retrieveRecordsByIds( $table, $idList, $_idField, $fields, $extras );
+		return $this->retrieveRecordsByIds( $table, $idList, $fields, $extras );
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function retrieveRecord( $table, $record, $fields = null, $extras = array() )
+	public function retrieveRecordsByIds( $table, $ids, $fields = null, $extras = array() )
 	{
-		if ( !isset( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( 'There are no fields in the record.' );
-		}
-		$results = $this->retrieveRecords( $table, $record, $fields, $extras );
-
-		return $results[0];
-	}
-
-	/**
-	 * @param string $table
-	 * @param string $id_list - comma delimited list of ids
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public function retrieveRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
-	{
-		if ( empty( $id_list ) )
+		if ( empty( $ids ) )
 		{
 			return array();
 		}
-		$ids = array_map( 'trim', explode( ',', $id_list ) );
+		if ( !is_array( $ids ) )
+		{
+			$ids = array_map( 'trim', explode( ',', $ids ) );
+		}
 		$table = $this->correctTableName( $table );
 		$_idField = Option::get( $extras, 'id_field' );
 		try
@@ -1416,90 +1153,6 @@ class SqlDbSvc extends BaseDbSvc
 			}
 
 			return $results;
-		}
-		catch ( \Exception $ex )
-		{
-			/*
-            $msg = '[QUERYFAILED]: ' . implode(':', $this->_sqlConn->errorInfo()) . "\n";
-            if (isset($GLOBALS['DB_DEBUG'])) {
-                error_log($msg . "\n$query");
-            }
-            */
-			throw $ex;
-		}
-	}
-
-	/**
-	 * @param        $table
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public function retrieveRecordById( $table, $id, $fields = null, $extras = array() )
-	{
-		if ( empty( $id ) )
-		{
-			return array();
-		}
-		$table = $this->correctTableName( $table );
-		$_idField = Option::get( $extras, 'id_field' );
-		try
-		{
-			$availFields = $this->describeTableFields( $table );
-			$relations = $this->describeTableRelated( $table );
-			$related = Option::get( $extras, 'related' );
-			if ( empty( $_idField ) )
-			{
-				$_idField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $availFields );
-				if ( empty( $_idField ) )
-				{
-					throw new BadRequestException( 'Identifying field can not be empty.' );
-				}
-			}
-			if ( !empty( $fields ) && ( '*' !== $fields ) )
-			{
-				// add id field to field list
-				$fields = Utilities::addOnceToList( $fields, $_idField, ',' );
-			}
-			$result = $this->parseFieldsForSqlSelect( $fields, $availFields );
-			$bindings = $result['bindings'];
-			$fields = $result['fields'];
-			// use query builder
-			/** @var \CDbCommand $command */
-			$command = $this->_sqlConn->createCommand();
-			$command->select( $fields );
-			$command->from( $table );
-			$command->where( "$_idField = :id", array( ':id' => $id ) );
-
-			$this->checkConnection();
-			$reader = $command->query();
-			$data = array();
-			$dummy = array();
-			foreach ( $bindings as $binding )
-			{
-				$reader->bindColumn( $binding['name'], $dummy[$binding['name']], $binding['type'] );
-			}
-			$reader->setFetchMode( \PDO::FETCH_BOUND );
-			if ( false !== $reader->read() )
-			{
-				foreach ( $bindings as $binding )
-				{
-					$data[$binding['name']] = $dummy[$binding['name']];
-				}
-				if ( !empty( $related ) )
-				{
-					$data = $this->retrieveRelatedRecords( $relations, $data, $related );
-				}
-			}
-			else
-			{
-				throw new NotFoundException( "Could not find record for id = '$id'" );
-			}
-
-			return $data;
 		}
 		catch ( \Exception $ex )
 		{

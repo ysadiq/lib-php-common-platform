@@ -214,36 +214,8 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		{
 			$tables = $this->_getTablesAsArray();
 		}
-		else
-		{
-			if ( !is_array( $tables ) )
-			{
-				$tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
-			}
-		}
 
-		$_out = array();
-		foreach ( $tables as $_table )
-		{
-			if ( is_array( $_table ) )
-			{
-				$_table = Option::get( $_table, 'name' );
-			}
-			if ( empty( $_table ) )
-			{
-				throw new BadRequestException( "No 'name' field in data." );
-			}
-			try
-			{
-				$_out[] = $this->getTable( $_table );
-			}
-			catch ( \Exception $ex )
-			{
-				throw new InternalServerErrorException( "Failed to list tables of SimpleDb Tables service.\n" . $ex->getMessage() );
-			}
-		}
-
-		return $_out;
+		return parent::getTables( $tables );
 	}
 
 	/**
@@ -256,6 +228,15 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	 */
 	public function getTable( $table )
 	{
+		if ( is_array( $table ) )
+		{
+			$table = Option::get( $table, 'name', Option::get( $table, 'DomainName' ) );
+		}
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( "No 'name' field in data." );
+		}
+
 		try
 		{
 			$_result = $this->_dbConn->domainMetadata(
@@ -317,51 +298,13 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	 */
 	public function updateTable( $properties = array() )
 	{
-		$_name = Option::get( $properties, 'name' );
+		$_name = Option::get( $properties, 'name', Option::get( $properties, 'DomainName' ) );
 		if ( empty( $_name ) )
 		{
 			throw new BadRequestException( "No 'name' field in data." );
 		}
 
 		throw new BadRequestException( "Update table operation is not supported on SimpleDb." );
-	}
-
-	/**
-	 * @param array $tables
-	 * @param bool  $check_empty
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public function deleteTables( $tables = array(), $check_empty = false )
-	{
-		if ( !is_array( $tables ) )
-		{
-			// may be comma-delimited list of names
-			$tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
-		}
-		$_out = array();
-		foreach ( $tables as $_table )
-		{
-			if ( is_array( $_table ) )
-			{
-				$_table = Option::get( $_table, 'name', Option::get( $_table, 'DomainName' ) );
-			}
-			if ( empty( $_table ) )
-			{
-				throw new BadRequestException( "No 'name' field in data." );
-			}
-			try
-			{
-				$_out[] = $this->deleteTable( $_table );
-			}
-			catch ( \Exception $ex )
-			{
-				throw $ex;
-			}
-		}
-
-		return $_out;
 	}
 
 	/**
@@ -375,6 +318,15 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	 */
 	public function deleteTable( $table, $check_empty = false )
 	{
+		if ( is_array( $table ) )
+		{
+			$table = Option::get( $table, 'name', Option::get( $table, 'DomainName' ) );
+		}
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( "No 'name' field in data." );
+		}
+
 		try
 		{
 			$_result = $this->_dbConn->deleteDomain(
