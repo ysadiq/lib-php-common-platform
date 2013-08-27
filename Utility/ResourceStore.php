@@ -286,9 +286,9 @@ class ResourceStore implements UtilityLike
 				{
 					$_response[] = static::buildResponsePayload( $_model, false );
 				}
-
-				$_response = array( 'record' => $_response );
 			}
+
+			$_response = array( 'record' => $_response );
 		}
 
 		return $_response;
