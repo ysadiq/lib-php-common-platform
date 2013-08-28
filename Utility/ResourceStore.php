@@ -25,6 +25,7 @@ use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Services\BasePlatformRestService;
@@ -313,7 +314,7 @@ class ResourceStore implements UtilityLike
 		try
 		{
 			//	Start a transaction
-			if ( false !== $rollback )
+			if ( !$singleRow && $rollback )
 			{
 				$_transaction = Pii::db()->beginTransaction();
 			}
@@ -326,21 +327,27 @@ class ResourceStore implements UtilityLike
 				}
 				catch ( \Exception $_ex )
 				{
+					if ( $singleRow )
+					{
+						throw $_ex;
+					}
+					if ( $rollback && $_transaction )
+					{
+						$_transaction->rollBack();
+						throw $_ex;
+					}
+
 					$_response[] = array( 'error' => array( 'message' => $_ex->getMessage(), 'code' => $_ex->getCode() ) );
 				}
 			}
 		}
+		catch ( RestException $_ex )
+		{
+			throw $_ex;
+		}
 		catch ( \Exception $_ex )
 		{
-			$_response[] = array( 'error' => array( 'message' => $_ex->getMessage(), 'code' => $_ex->getCode() ) );
-
-			if ( false !== $rollback && $_transaction )
-			{
-				//	Rollback
-				$_transaction->rollback();
-
-				return $singleRow ? current( $_response ) : array( 'record' => $_response );
-			}
+			throw new InternalServerErrorException( $_ex->getMessage(), $_ex->getCode() );
 		}
 
 		//	Commit
@@ -358,11 +365,12 @@ class ResourceStore implements UtilityLike
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
+	 * @param bool   $singleRow
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
-	public static function bulkUpdateById( $ids, $record, $rollback = false, $fields = null, $extras = null )
+	public static function bulkUpdateById( $ids, $record, $rollback = false, $fields = null, $extras = null, $singleRow = false  )
 	{
 		static::_validateRecords( $record );
 
@@ -387,7 +395,7 @@ class ResourceStore implements UtilityLike
 			unset( $_record );
 		}
 
-		return static::bulkUpdate( $_records, $rollback, $fields, $extras );
+		return static::bulkUpdate( $_records, $rollback, $fields, $extras, $singleRow );
 	}
 
 	/**

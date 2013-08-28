@@ -324,7 +324,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 		if ( !empty( $this->_resourceId ) )
 		{
-			return ResourceStore::bulkUpdateById( $this->_resourceId, $_payload, $_rollback );
+			return ResourceStore::bulkUpdateById( $this->_resourceId, $_payload, $_rollback, null, null, true );
 		}
 
 		if ( !empty( $_ids ) )

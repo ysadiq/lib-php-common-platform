@@ -203,7 +203,7 @@ MYSQL;
 	/**
 	 * Retrieves the record of the particular service
 	 *
-	 * @param id|string $serviceId
+	 * @param int|string $serviceId
 	 *
 	 * @return array The service record array
 	 * @throws \Exception if retrieving of service is not possible
@@ -497,7 +497,7 @@ MYSQL;
 	 * @param string $type
 	 * @param string $storageType
 	 *
-	 * @return int|false
+	 * @return int|boolean
 	 */
 	public function getServiceTypeId( $type = null, $storageType = null )
 	{

@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
+use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Utility\FileSystem;
 use DreamFactory\Platform\Utility\Packager;
@@ -42,20 +43,19 @@ class App extends BaseSystemRestResource
 	 *
 	 *
 	 */
-	public function __construct( $consumer, $resourceArray = array() )
+	public function __construct( $consumer, $resources = array() )
 	{
-		parent::__construct(
-			$consumer,
-			array(
-				 'service_name'   => 'system',
-				 'name'           => 'Application',
-				 'api_name'       => 'app',
-				 'type'           => 'System',
-				 'description'    => 'System application administration.',
-				 'is_active'      => true,
-				 'resource_array' => $resourceArray,
-			)
+		$_config = array(
+			'service_name'   => 'system',
+			'name'           => 'Application',
+			'api_name'       => 'app',
+			'type'           => 'System',
+			'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+			'description'    => 'System application administration.',
+			'is_active'      => true,
 		);
+
+		parent::__construct( $consumer, $_config, $resources );
 	}
 
 	/**
