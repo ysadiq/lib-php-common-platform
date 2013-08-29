@@ -532,7 +532,7 @@ class Session extends BaseSystemRestResource
 
 		$_services = Option::clean( Option::get( $_roleInfo, 'services' ) );
 
-		if ( !is_array( $_services ) || empty( $services ) )
+		if ( !is_array( $_services ) || empty( $_services ) )
 		{
 			throw new ForbiddenException( "Access to service '$service' is not provisioned for this user's role." );
 		}
@@ -630,6 +630,9 @@ class Session extends BaseSystemRestResource
 			case 'read':
 				switch ( $access )
 				{
+					case 'Read Only':
+					case 'Read and Write':
+					case 'Full Access':
 					case PermissionTypes::READ_ONLY:
 					case PermissionTypes::READ_WRITE:
 					case PermissionTypes::FULL_ACCESS:
@@ -641,6 +644,9 @@ class Session extends BaseSystemRestResource
 			case 'update':
 				switch ( $access )
 				{
+					case 'Write Only':
+					case 'Read and Write':
+					case 'Full Access':
 					case PermissionTypes::WRITE_ONLY:
 					case PermissionTypes::READ_WRITE:
 					case PermissionTypes::FULL_ACCESS:
@@ -651,6 +657,7 @@ class Session extends BaseSystemRestResource
 			case 'delete':
 				switch ( $access )
 				{
+					case 'Full Access':
 					case PermissionTypes::FULL_ACCESS:
 						return true;
 				}
