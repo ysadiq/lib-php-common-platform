@@ -128,7 +128,7 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	/**
 	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
 	 *
-	 * @return BasePlatformResource
+	 * @return BasePlatformRestResource
 	 */
 	public function setConsumer( $consumer )
 	{
@@ -148,7 +148,7 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	/**
 	 * @param mixed $serviceName
 	 *
-	 * @return BasePlatformRestService
+	 * @return BasePlatformRestResource
 	 */
 	public function setServiceName( $serviceName )
 	{

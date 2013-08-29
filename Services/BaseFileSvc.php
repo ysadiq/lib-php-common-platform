@@ -365,7 +365,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				break;
 			case self::Patch:
 			case self::Merge:
-				$this->checkPermission( 'update' );
+				$this->checkPermission( 'update', $this->_container );
 				if ( empty( $this->_container ) )
 				{
 					// nothing?
@@ -404,7 +404,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				}
 				break;
 			case self::Delete:
-				$this->checkPermission( 'delete' );
+				$this->checkPermission( 'delete', $this->_container );
 				$force = FilterInput::request( 'force', false, FILTER_VALIDATE_BOOLEAN );
 				$content = RestData::getPostDataAsArray();
 				if ( empty( $this->_container ) )

@@ -508,7 +508,7 @@ class Session extends BaseSystemRestResource
 		}
 
 		// check if app allowed in role
-		if ( null !== ( $_appName = Option::get( $GLOBALS, 'app_name' ) ) )
+		if ( null === ( $_appName = Option::get( $GLOBALS, 'app_name' ) ) )
 		{
 			throw new BadRequestException( 'A valid application name is required to access services.' );
 		}
