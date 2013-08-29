@@ -39,18 +39,16 @@ class Role extends BaseSystemRestResource
 	 */
 	public function __construct( $consumer, $resources = array() )
 	{
-		return parent::__construct(
-			$consumer,
-			array(
-				 'service_name' => 'system',
-				 'name'         => 'Role',
-				 'api_name'     => 'role',
-				 'type'         => 'System',
-				 'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'description'  => 'System role administration.',
-				 'is_active'    => true,
-			),
-			$resources
+		$_config = array(
+			'service_name'   => 'system',
+			'name'           => 'Role',
+			'api_name'       => 'role',
+			'type'           => 'System',
+			'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+			'description'    => 'System role administration.',
+			'is_active'      => true,
 		);
+
+		parent::__construct( $consumer, $_config, $resources );
 	}
 }
