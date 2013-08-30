@@ -31,7 +31,7 @@ use Kisma\Core\Utility\Log;
  * DSP API Documentation manager
  *
  */
-class SwaggerManager extends BaseSystemRestService
+class SwaggerManager extends BasePlatformRestService
 {
 	//*************************************************************************
 	//	Constants
@@ -324,7 +324,7 @@ class SwaggerManager extends BaseSystemRestService
 			static::buildSwagger();
 			if ( !file_exists( $_filePath ) )
 			{
-				throw new InternalServerErrorException( "Failed to create swagger cache for service '$service''." );
+				throw new InternalServerErrorException( "Failed to create swagger cache for service '$service'." );
 			}
 		}
 
