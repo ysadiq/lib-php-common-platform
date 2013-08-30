@@ -71,7 +71,7 @@ class App extends BaseSystemRestResource
 			$_includeSchema = Option::getBool( $_REQUEST, 'include_schema' );
 			$_includeData = Option::getBool( $_REQUEST, 'include_data' );
 
-			$this->checkPermission( 'admin' );
+			$this->checkPermission( 'admin', $this->_resource );
 
 			return Packager::exportAppAsPackage( $this->_resourceId, $_includeFiles, $_includeServices, $_includeSchema, $_includeData );
 		}
@@ -108,7 +108,7 @@ class App extends BaseSystemRestResource
 
 		if ( !empty( $_importUrl ) )
 		{
-			$this->checkPermission( 'admin' );
+			$this->checkPermission( 'admin', $this->_resource );
 
 			if ( 'dfpkg' == $_extension )
 			{

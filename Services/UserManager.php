@@ -41,7 +41,7 @@ use Kisma\Core\Utility\Sql;
  * DSP user manager
  *
  */
-class UserManager extends BaseSystemRestService
+class UserManager extends BasePlatformRestService
 {
 	//*************************************************************************
 	//	Members
