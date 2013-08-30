@@ -177,7 +177,7 @@ class ServiceHandler
 	 */
 	public static function cacheService( $tag, &$service )
 	{
-		$_cache = Pii::getState( 'dsp.service_cache' );
+		$_cache = Pii::getState( 'dsp.service_cache', array() );
 		Option::set( $_cache, $tag, $service );
 		Pii::setState( 'dsp.service_cache', $_cache );
 	}

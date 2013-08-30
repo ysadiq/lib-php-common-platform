@@ -64,7 +64,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	/**
 	 * @var int current user ID
 	 */
-	protected $_userId;
+	protected $_currentUserId;
 
 	//*************************************************************************
 	//* Methods
@@ -93,7 +93,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 			throw new \InvalidArgumentException( '"type" can not be empty.' );
 		}
 
-		$this->_userId = $this->_userId ? : Session::getCurrentUserId();
+		$this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
 	}
 
 	/**
@@ -263,6 +263,6 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	public function getUserId()
 	{
-		return $this->_userId;
+		return $this->_currentUserId;
 	}
 }
