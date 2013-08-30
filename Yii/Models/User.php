@@ -87,8 +87,8 @@ class User extends BasePlatformSystemModel
 			array(
 				 //	Secure JSON
 				 'base_platform_model.secure_json' => array(
-					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'             => $this->getDb()->password,
+					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					 'salt'               => $this->getDb()->password,
 					 'insecureAttributes' => array(
 						 'user_data',
 					 )
@@ -162,7 +162,7 @@ class User extends BasePlatformSystemModel
 			'security_question' => 'Security Question',
 			'security_answer'   => 'Security Answer',
 			'user_source'       => 'User Source',
-			'user_data' => 'User Data',
+			'user_data'         => 'User Data',
 		);
 
 		return parent::attributeLabels( array_merge( $_myLabels, $additionalLabels ) );

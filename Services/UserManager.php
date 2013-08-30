@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Oasys\Enums\Flows;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
@@ -102,8 +103,6 @@ class UserManager extends BaseSystemRestService
 	 */
 	protected function _handleResource()
 	{
-		$_authClient = null;
-
 		switch ( $this->_resource )
 		{
 			case '':
@@ -121,33 +120,16 @@ class UserManager extends BaseSystemRestService
 				//	Handle remote login
 				if ( HttpMethod::Post == $this->_action && Pii::getParam( 'dsp.allow_remote_logins' ) )
 				{
-					$_provider = FilterInput::post( 'provider', 'facebook', FILTER_SANITIZE_STRING );
+					$_provider = FilterInput::post( 'provider', null, FILTER_SANITIZE_STRING );
 
 					if ( !empty( $_provider ) )
 					{
-						if ( null !== ( $_config = Pii::getParam( 'dsp.remote_login_options' ) ) )
-						{
-							$_config['base_url'] = Pii::baseUrl( true ) . Pii::url( $_config['base_url'] );
-							$_authClient = new \Hybrid_Auth( $_config );
-							$_adapter = $_authClient->authenticate( $_provider );
-
-							if ( is_string( $_adapter ) )
-							{
-								//	This is an url...
-							}
-
-							$_profile = $_adapter->getUserProfile();
-
-							Log::debug( 'Profile from "' . $_provider . '": ' . print_r( $_profile, true ) );
-						}
+						Pii::redirect( '/web/remoteLogin?pid=' . $_provider . '&flow=' . Flows::SERVER_SIDE );
 					}
 				}
 
-				if ( null === $_authClient )
-				{
-					$obj = new Session( $this );
-					$result = $obj->processRequest( null, $this->_action );
-				}
+				$obj = new Session( $this );
+				$result = $obj->processRequest( null, $this->_action );
 				break;
 
 			case 'profile':
@@ -282,9 +264,9 @@ class UserManager extends BaseSystemRestService
 						return false;
 				}
 				break;
+
 			default:
 				return false;
-				break;
 		}
 
 		return $result;
@@ -330,9 +312,13 @@ class UserManager extends BaseSystemRestService
 
 			return $link;
 		}
+		catch ( \CDbException $ex )
+		{
+			throw new InternalServerErrorException( "Failed to store generated user invite!" );
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Failed to generate user invite!\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Failed to generate user invite!\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -363,7 +349,7 @@ class UserManager extends BaseSystemRestService
 		/** @var $config Config */
 		if ( null === ( $config = Config::model()->find( array( 'select' => 'allow_open_registration, open_reg_role_id' ) ) ) )
 		{
-			throw new \DreamFactory\Platform\Exceptions\InternalServerErrorException( 'Unable to load configuration.' );
+			throw new InternalServerErrorException( 'Unable to load configuration.' );
 		}
 
 		if ( $config->allow_open_registration )
@@ -373,6 +359,7 @@ class UserManager extends BaseSystemRestService
 
 		$roleId = $config->open_reg_role_id;
 		$confirmCode = static::_makeConfirmationMd5( $email );
+
 		// fill out the user fields for creation
 		$temp = substr( $email, 0, strrpos( $email, '@' ) );
 		$fields = array(
@@ -387,13 +374,17 @@ class UserManager extends BaseSystemRestService
 		);
 		try
 		{
-			$user = new \User();
+			$user = new User();
 			$user->setAttributes( $fields );
 			$user->save();
 		}
+		catch ( \CDbException $ex )
+		{
+			throw new InternalServerErrorException( "Failed to store new user!" );
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Failed to register new user!\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Failed to register new user!\n{$ex->getMessage()}", $ex->getCode() );
 		}
 
 		return array( 'success' => true );
@@ -408,19 +399,20 @@ class UserManager extends BaseSystemRestService
 	 */
 	public static function userConfirm( $code )
 	{
+		$theUser = User::model()->find( 'confirm_code=:cc', array( ':cc' => $code ) );
+		if ( null === $theUser )
+		{
+			throw new BadRequestException( "Invalid confirm code." );
+		}
+
 		try
 		{
-			$theUser = User::model()->find( 'confirm_code=:cc', array( ':cc' => $code ) );
-			if ( null === $theUser )
-			{
-				throw new BadRequestException( "Invalid confirm code." );
-			}
 			$theUser->setAttribute( 'confirm_code', 'y' );
 			$theUser->save();
 		}
-		catch ( \Exception $ex )
+		catch ( \CDbException $ex )
 		{
-			throw new \Exception( "Error validating confirmation.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Failed to update user storage!" );
 		}
 
 		return array( 'success' => true );
@@ -489,49 +481,42 @@ class UserManager extends BaseSystemRestService
 	 */
 	public static function forgotPassword( $email, $send_email = false )
 	{
-		try
+		$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
+		if ( null === $theUser )
 		{
-			$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
-			if ( null === $theUser )
+			// bad email
+			throw new NotFoundException( "The supplied email was not found in the system." );
+		}
+		if ( 'y' !== $theUser->confirm_code )
+		{
+			throw new BadRequestException( "Login registration has not been confirmed." );
+		}
+		if ( $send_email )
+		{
+			$email = $theUser->email;
+			$fullName = $theUser->display_name;
+			if ( !empty( $email ) && !empty( $fullName ) )
 			{
-				// bad email
-				throw new \Exception( "The supplied email was not found in the system." );
-			}
-			if ( 'y' !== $theUser->confirm_code )
-			{
-				throw new \Exception( "Login registration has not been confirmed." );
-			}
-			if ( $send_email )
-			{
-				$email = $theUser->email;
-				$fullName = $theUser->display_name;
-				if ( !empty( $email ) && !empty( $fullName ) )
-				{
 //					static::sendResetPasswordLink( $email, $fullName );
 
-					return array( 'success' => true );
-				}
-				else
-				{
-					throw new \Exception( 'No valid email provisioned for this user.' );
-				}
+				return array( 'success' => true );
 			}
 			else
 			{
-				$question = $theUser->security_question;
-				if ( !empty( $question ) )
-				{
-					return array( 'security_question' => $question );
-				}
-				else
-				{
-					throw new \Exception( 'No valid security question provisioned for this user.' );
-				}
+				throw new InternalServerErrorException( 'No valid email provisioned for this user.' );
 			}
 		}
-		catch ( \Exception $ex )
+		else
 		{
-			throw new \Exception( "Error with password challenge.\n{$ex->getMessage()}", $ex->getCode() );
+			$question = $theUser->security_question;
+			if ( !empty( $question ) )
+			{
+				return array( 'security_question' => $question );
+			}
+			else
+			{
+				throw new InternalServerErrorException( 'No valid security question provisioned for this user.' );
+			}
 		}
 	}
 
@@ -545,41 +530,34 @@ class UserManager extends BaseSystemRestService
 	 */
 	public static function userSecurityAnswer( $email, $answer )
 	{
-		try
+		$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
+		if ( null === $theUser )
 		{
-			$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
-			if ( null === $theUser )
-			{
-				// bad email
-				throw new \Exception( "The supplied email was not found in the system." );
-			}
-			if ( 'y' !== $theUser->confirm_code )
-			{
-				throw new \Exception( "Login registration has not been confirmed." );
-			}
-			// validate answer
-			if ( !\CPasswordHelper::verifyPassword( $answer, $theUser->security_answer ) )
-			{
-				throw new UnauthorizedException( "The challenge response supplied does not match system records." );
-			}
-
-			Pii::user()->setId( $theUser->id );
-			$isSysAdmin = $theUser->is_sys_admin;
-			$result = Session::generateSessionDataFromUser( null, $theUser );
-
-			// write back login datetime
-			$theUser->last_login_date = date( 'c' );
-			$theUser->save();
-
-			Session::setCurrentUserId( $theUser->id );
-
-			// additional stuff for session - launchpad mainly
-			return Session::addSessionExtras( $result, $isSysAdmin, true );
+			// bad email
+			throw new NotFoundException( "The supplied email was not found in the system." );
 		}
-		catch ( \Exception $ex )
+		if ( 'y' !== $theUser->confirm_code )
 		{
-			throw new \Exception( "Error processing security answer.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new BadRequestException( "Login registration has not been confirmed." );
 		}
+		// validate answer
+		if ( !\CPasswordHelper::verifyPassword( $answer, $theUser->security_answer ) )
+		{
+			throw new UnauthorizedException( "The challenge response supplied does not match system records." );
+		}
+
+		Pii::user()->setId( $theUser->id );
+		$isSysAdmin = $theUser->is_sys_admin;
+		$result = Session::generateSessionDataFromUser( null, $theUser );
+
+		// write back login datetime
+		$theUser->last_login_date = date( 'c' );
+		$theUser->save();
+
+		Session::setCurrentUserId( $theUser->id );
+
+		// additional stuff for session - launchpad mainly
+		return Session::addSessionExtras( $result, $isSysAdmin, true );
 	}
 
 	/**
@@ -591,21 +569,26 @@ class UserManager extends BaseSystemRestService
 	 */
 	public static function passwordResetByCode( $code, $new_password )
 	{
+		$theUser = User::model()->find( 'confirm_code=:cc', array( ':cc' => $code ) );
+		if ( null === $theUser )
+		{
+			// bad code
+			throw new \Exception( "The supplied confirmation was not found in the system." );
+		}
+
 		try
 		{
-			$theUser = User::model()->find( 'confirm_code=:cc', array( ':cc' => $code ) );
-			if ( null === $theUser )
-			{
-				// bad code
-				throw new \Exception( "The supplied confirmation was not found in the system." );
-			}
 			$theUser->setAttribute( 'confirm_code', 'y' );
 			$theUser->setAttribute( 'password', \CPasswordHelper::hashPassword( $new_password ) );
 			$theUser->save();
 		}
+		catch ( \CDbException $ex )
+		{
+			throw new InternalServerErrorException( "Error storing new password." );
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error processing password reset.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error processing password reset.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 
 		try
@@ -614,7 +597,7 @@ class UserManager extends BaseSystemRestService
 		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Password set, but failed to create a session.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Password set, but failed to create a session.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -627,26 +610,32 @@ class UserManager extends BaseSystemRestService
 	 */
 	public static function passwordResetByEmail( $email, $new_password )
 	{
+		$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
+		if ( null === $theUser )
+		{
+			// bad code
+			throw new NotFoundException( "The supplied email was not found in the system." );
+		}
+
+		$confirmCode = $theUser->confirm_code;
+		if ( empty( $confirmCode ) || ( 'y' == $confirmCode ) )
+		{
+			throw new NotFoundException( "No invitation was found for the supplied email." );
+		}
+
 		try
 		{
-			$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
-			if ( null === $theUser )
-			{
-				// bad code
-				throw new \Exception( "The supplied email was not found in the system." );
-			}
-			$confirmCode = $theUser->confirm_code;
-			if ( empty( $confirmCode ) || ( 'y' == $confirmCode ) )
-			{
-				throw new \Exception( "No invitation was found for the supplied email." );
-			}
 			$theUser->setAttribute( 'confirm_code', 'y' );
 			$theUser->setAttribute( 'password', \CPasswordHelper::hashPassword( $new_password ) );
 			$theUser->save();
 		}
+		catch ( \CDbException $ex )
+		{
+			throw new InternalServerErrorException( "Error storing new password." );
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error processing password reset.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error processing password reset.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 
 		try
@@ -655,7 +644,7 @@ class UserManager extends BaseSystemRestService
 		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Password set, but failed to create a session.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Password set, but failed to create a session.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -674,27 +663,32 @@ class UserManager extends BaseSystemRestService
 		// then update with new password
 		$userId = Session::validateSession();
 
+		$theUser = User::model()->findByPk( $userId );
+		if ( null === $theUser )
+		{
+			// bad session
+			throw new NotFoundException( "The user for the current session was not found in the system." );
+		}
+		// validate answer
+		if ( !\CPasswordHelper::verifyPassword( $old_password, $theUser->password ) )
+		{
+			throw new BadRequestException( "The password supplied does not match." );
+		}
+
 		try
 		{
-			$theUser = User::model()->findByPk( $userId );
-			if ( null === $theUser )
-			{
-				// bad session
-				throw new \Exception( "The user for the current session was not found in the system." );
-			}
-			// validate answer
-			if ( !\CPasswordHelper::verifyPassword( $old_password, $theUser->password ) )
-			{
-				throw new BadRequestException( "The password supplied does not match." );
-			}
 			$theUser->setAttribute( 'password', \CPasswordHelper::hashPassword( $new_password ) );
 			$theUser->save();
 
 			return array( 'success' => true );
 		}
+		catch ( \CDbException $ex )
+		{
+			throw new InternalServerErrorException( "Error storing new password." );
+		}
 		catch ( \Exception $ex )
 		{
-			throw $ex;
+			throw new InternalServerErrorException( "Error changing password.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -708,14 +702,15 @@ class UserManager extends BaseSystemRestService
 		// using userId from session, update with new profile elements
 		$userId = Session::validateSession();
 
+		$theUser = User::model()->findByPk( $userId );
+		if ( null === $theUser )
+		{
+			// bad session
+			throw new NotFoundException( "The user for the current session was not found in the system." );
+		}
+
 		try
 		{
-			$theUser = User::model()->findByPk( $userId );
-			if ( null === $theUser )
-			{
-				// bad session
-				throw new \Exception( "The user for the current session was not found in the system." );
-			}
 			// todo protect certain attributes here
 			$fields = $theUser->getAttributes(
 				array(
@@ -725,15 +720,20 @@ class UserManager extends BaseSystemRestService
 					 'email',
 					 'phone',
 					 'security_question',
-					 'default_app_id'
+					 'default_app_id',
+					 'user_data',
 				)
 			);
 
 			return $fields;
 		}
+		catch ( \CDbException $ex )
+		{
+			throw new InternalServerErrorException( "Error retrieving profile." );
+		}
 		catch ( \Exception $ex )
 		{
-			throw $ex;
+			throw new InternalServerErrorException( "Error retrieving profile.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -750,39 +750,46 @@ class UserManager extends BaseSystemRestService
 		// using userId from session, update with new profile elements
 		$userId = Session::validateSession();
 
+		$theUser = User::model()->findByPk( $userId );
+		if ( null === $theUser )
+		{
+			// bad session
+			throw new InternalServerErrorException( "The user for the current session was not found in the system." );
+		}
+		$allow = array(
+			'first_name',
+			'last_name',
+			'display_name',
+			'email',
+			'phone',
+			'security_question',
+			'security_answer',
+			'default_app_id',
+			'user_data',
+		);
+
+		foreach ( $record as $key => $value )
+		{
+			if ( false === array_search( $key, $allow ) )
+			{
+				throw new InternalServerErrorException( "Attribute '$key' can not be updated through profile change." );
+			}
+		}
+
 		try
 		{
-			$theUser = User::model()->findByPk( $userId );
-			if ( null === $theUser )
-			{
-				// bad session
-				throw new \Exception( "The user for the current session was not found in the system." );
-			}
-			$allow = array(
-				'first_name',
-				'last_name',
-				'display_name',
-				'email',
-				'phone',
-				'security_question',
-				'security_answer',
-				'default_app_id'
-			);
-			foreach ( $record as $key => $value )
-			{
-				if ( false === array_search( $key, $allow ) )
-				{
-					throw new InternalServerErrorException( "Attribute '$key' can not be updated through profile change." );
-				}
-			}
 			$theUser->setAttributes( $record );
 			$theUser->save();
 
 			return array( 'success' => true );
 		}
+		catch ( \CDbException $ex )
+		{
+			throw new InternalServerErrorException( "Error updating user profile." );
+		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Failed to update the user profile." );
+			throw new InternalServerErrorException( "Error updating user profile.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 

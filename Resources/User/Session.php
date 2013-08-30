@@ -263,6 +263,7 @@ class Session extends BaseSystemRestResource
 			throw new UnauthorizedException( 'The credentials supplied do not match system records.' );
 		}
 
+		/** @var User $_user */
 		if ( null === ( $_user = $_model->getIdentity()->getUser() ) )
 		{
 			// bad user object
@@ -304,7 +305,7 @@ class Session extends BaseSystemRestResource
 	 */
 	public static function generateSessionDataFromUser( $userId, $user = null )
 	{
-		static $_fields = array( 'id', 'display_name', 'first_name', 'last_name', 'email', 'is_sys_admin', 'last_login_date' );
+		static $_fields = array( 'id', 'display_name', 'first_name', 'last_name', 'email', 'is_sys_admin', 'last_login_date', 'user_data', 'user_source' );
 		static $_appFields = array( 'id', 'api_name', 'is_active' );
 
 		/** @var User $_user */
@@ -313,6 +314,11 @@ class Session extends BaseSystemRestResource
 		if ( empty( $_user ) )
 		{
 			throw new UnauthorizedException( 'The user with id ' . $userId . ' is invalid.' );
+		}
+
+		if ( null !== $userId && $_user->id != $userId )
+		{
+			throw new ForbiddenException( 'Naughty, naughty... Not yours.' . $_user->id . ' != ' . print_r( $userId, true ) );
 		}
 
 		$_email = $_user->email;
@@ -508,7 +514,7 @@ class Session extends BaseSystemRestResource
 		}
 
 		// check if app allowed in role
-		if ( null !== ( $_appName = Option::get( $GLOBALS, 'app_name' ) ) )
+		if ( null === ( $_appName = Option::get( $GLOBALS, 'app_name' ) ) )
 		{
 			throw new BadRequestException( 'A valid application name is required to access services.' );
 		}
@@ -532,7 +538,7 @@ class Session extends BaseSystemRestResource
 
 		$_services = Option::clean( Option::get( $_roleInfo, 'services' ) );
 
-		if ( !is_array( $_services ) || empty( $services ) )
+		if ( !is_array( $_services ) || empty( $_services ) )
 		{
 			throw new ForbiddenException( "Access to service '$service' is not provisioned for this user's role." );
 		}
@@ -630,6 +636,9 @@ class Session extends BaseSystemRestResource
 			case 'read':
 				switch ( $access )
 				{
+					case 'Read Only':
+					case 'Read and Write':
+					case 'Full Access':
 					case PermissionTypes::READ_ONLY:
 					case PermissionTypes::READ_WRITE:
 					case PermissionTypes::FULL_ACCESS:
@@ -641,6 +650,9 @@ class Session extends BaseSystemRestResource
 			case 'update':
 				switch ( $access )
 				{
+					case 'Write Only':
+					case 'Read and Write':
+					case 'Full Access':
 					case PermissionTypes::WRITE_ONLY:
 					case PermissionTypes::READ_WRITE:
 					case PermissionTypes::FULL_ACCESS:
@@ -651,6 +663,7 @@ class Session extends BaseSystemRestResource
 			case 'delete':
 				switch ( $access )
 				{
+					case 'Full Access':
 					case PermissionTypes::FULL_ACCESS:
 						return true;
 				}
@@ -663,22 +676,23 @@ class Session extends BaseSystemRestResource
 	/**
 	 * @param $_userId
 	 */
-	public static function setCurrentUserId( $_userId )
+	public static function setCurrentUserId( $userId )
 	{
 		if ( !Pii::guest() && false === Pii::getState( 'df_authenticated' ) )
 		{
-			static::$_userId = $_userId;
+			static::$_userId = $userId;
 		}
 
-		return $_userId;
+		return $userId;
 	}
 
 	/**
-	 * @param mixed $inquirer For future use
+	 * @param int   $setToIfNull If not null, static::$_userId will be set to this value
+	 * @param mixed $inquirer    For future use
 	 *
 	 * @return int|null
 	 */
-	public static function getCurrentUserId( $inquirer = null )
+	public static function getCurrentUserId( $setToIfNull = null, $inquirer = null )
 	{
 		if ( !empty( static::$_userId ) )
 		{
@@ -690,7 +704,7 @@ class Session extends BaseSystemRestResource
 			return static::$_userId = Pii::user()->getId();
 		}
 
-		return static::$_userId = null;
+		return static::$_userId = $setToIfNull ? : null;
 	}
 
 	/**

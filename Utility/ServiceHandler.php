@@ -24,11 +24,14 @@ use DreamFactory\Platform\Enums\PlatformStorageTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Exceptions\PlatformServiceException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Components\Map;
+use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
@@ -43,13 +46,13 @@ class ServiceHandler
 	//*************************************************************************
 
 	/**
-	 * @var array Created services
-	 */
-	protected static $_serviceCache = array();
-	/**
 	 * @var array The services available
 	 */
 	protected static $_serviceConfig = array();
+	/**
+	 * @var Map
+	 */
+	protected static $_locationMap;
 	/**
 	 * @var array
 	 */
@@ -82,6 +85,24 @@ class ServiceHandler
 	 * member that holds the pointer, otherwise it calls the constructor for
 	 * the new service, passing in parameters based on the stored configuration settings.
 	 *
+	 * @param int     $id
+	 * @param boolean $check_active Throws an exception if true and the service is not active.
+	 *
+	 * @return BasePlatformRestService The new or previously constructed XXXSvc
+	 * @throws \Exception if construction of service is not possible
+	 */
+	public static function getServiceObjectById( $id, $check_active = false )
+	{
+		return static::getServiceObject( $id, $check_active );
+	}
+
+	/**
+	 * Retrieves the pointer to the particular service handler
+	 *
+	 * If the service is already created, it just returns the private class
+	 * member that holds the pointer, otherwise it calls the constructor for
+	 * the new service, passing in parameters based on the stored configuration settings.
+	 *
 	 * @param int|string $api_name
 	 * @param boolean    $check_active Throws an exception if true and the service is not active.
 	 *
@@ -95,17 +116,12 @@ class ServiceHandler
 			static::$_serviceConfig = Pii::getParam( 'dsp.service_config', array() );
 		}
 
-		if ( empty( static::$_serviceCache ) )
-		{
-			static::$_serviceCache = Pii::getState( 'dsp.service_cache' );
-		}
-
 		$_tag = strtolower( trim( $api_name ) );
 
 		//	Cached?
-		if ( null !== ( $_service = Option::get( static::$_serviceCache, $_tag ) ) )
+		if ( null !== ( $_service = static::_getCachedService( $_tag ) ) )
 		{
-//			return $_service;
+			return $_service;
 		}
 
 		//	A base service?
@@ -130,8 +146,7 @@ class ServiceHandler
 
 			if ( !property_exists( $_service, '_dbConn' ) )
 			{
-				static::$_serviceCache[$_tag] = $_service;
-				Pii::setState( 'dsp.service_cache', static::$_serviceCache );
+				static::cacheService( $_tag, $_service );
 			}
 
 			return $_service;
@@ -143,21 +158,28 @@ class ServiceHandler
 	}
 
 	/**
-	 * Retrieves the pointer to the particular service handler
+	 * @param string $tag
 	 *
-	 * If the service is already created, it just returns the private class
-	 * member that holds the pointer, otherwise it calls the constructor for
-	 * the new service, passing in parameters based on the stored configuration settings.
-	 *
-	 * @param int     $id
-	 * @param boolean $check_active Throws an exception if true and the service is not active.
-	 *
-	 * @return BasePlatformRestService The new or previously constructed XXXSvc
-	 * @throws \Exception if construction of service is not possible
+	 * @return BasePlatformService
 	 */
-	public static function getServiceObjectById( $id, $check_active = false )
+	protected static function _getCachedService( $tag )
 	{
-		return static::getServiceObject( $id, $check_active );
+		$_cache = Pii::getState( 'dsp.service_cache' );
+
+		return Option::get( $_cache, $tag );
+	}
+
+	/**
+	 * Updates the service cache
+	 *
+	 * @param string              $tag
+	 * @param BasePlatformService $service
+	 */
+	public static function cacheService( $tag, &$service )
+	{
+		$_cache = Pii::getState( 'dsp.service_cache' );
+		Option::set( $_cache, $tag, $service );
+		Pii::setState( 'dsp.service_cache', $_cache );
 	}
 
 	/**
@@ -165,8 +187,9 @@ class ServiceHandler
 	 *
 	 * @param array $record
 	 *
-	 * @return BasePlatformRestService
+	 * @throws \DreamFactory\Platform\Exceptions\PlatformServiceException
 	 * @throws \InvalidArgumentException
+	 * @return BasePlatformRestService
 	 */
 	protected static function _createService( $record )
 	{
@@ -177,23 +200,52 @@ class ServiceHandler
 			throw new \InvalidArgumentException( 'Service type "' . Option::get( $record, 'type' ) . '" is invalid.' );
 		}
 
-		if ( null !== ( $_serviceClass = Option::get( $_config, 'class' ) ) )
+		if ( null === ( $_serviceClass = Option::get( $_config, 'class' ) ) )
 		{
-			if ( is_array( $_serviceClass ) )
+			if ( empty( static::$_locationMap ) )
 			{
-				$_config = Option::get( $_serviceClass, Option::get( $record, 'storage_type_id' ) );
-				$_serviceClass = Option::get( $_config, 'class' );
+				//	Initialize our location map
+				static::$_locationMap = new Map( Pii::getParam( 'dsp.service_location_map', array() ) );
 			}
 
-			unset( $record['native_format'] );
+			//	If the location map has alternative locations, search them too
+			foreach ( static::$_locationMap as $_namespace => $_path )
+			{
+				$_class = Inflector::deneutralize( $record['name'], true );
 
-			$_arguments = array( $record, Option::get( $_config, 'local', true ) );
+				if ( class_exists( $_namespace . '\\' . $_class, false ) )
+				{
+					$_serviceClass = $_namespace . '\\' . $_class;
+					break;
+				}
 
-			$_mirror = new \ReflectionClass( $_serviceClass );
+				if ( file_exists( $_path . DIRECTORY_SEPARATOR . $_class . '.php' ) )
+				{
+					/** @noinspection PhpIncludeInspection */
+					require $_path . DIRECTORY_SEPARATOR . $_class . '.php';
+					$_serviceClass = $_namespace . '\\' . $_class;
+					break;
+				}
+			}
 
-			return $_mirror->newInstanceArgs( $_arguments );
+			if ( null === $_serviceClass )
+			{
+				throw new PlatformServiceException( 'The service requested is invalid.' );
+			}
 		}
 
-		throw new \InvalidArgumentException( 'The service requested is invalid.' );
+		if ( is_array( $_serviceClass ) )
+		{
+			$_config = Option::get( $_serviceClass, Option::get( $record, 'storage_type_id' ) );
+			$_serviceClass = Option::get( $_config, 'class' );
+		}
+
+		unset( $record['native_format'] );
+
+		$_arguments = array( $record, Option::get( $_config, 'local', true ) );
+
+		$_mirror = new \ReflectionClass( $_serviceClass );
+
+		return $_mirror->newInstanceArgs( $_arguments );
 	}
 }
