@@ -118,6 +118,14 @@ class ServiceHandler
 
 		$_tag = strtolower( trim( $api_name ) );
 
+		//	Remap if an alias
+		$_aliases = Option::get( static::$_serviceConfig, 'aliases', array() );
+
+		if ( in_array( $_tag, array_keys( $_aliases ) ) )
+		{
+			$_tag = $_aliases[$_tag];
+		}
+
 		//	Cached?
 		if ( null !== ( $_service = static::_getCachedService( $_tag ) ) )
 		{
