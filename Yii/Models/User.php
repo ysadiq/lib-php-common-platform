@@ -288,7 +288,7 @@ class User extends BasePlatformSystemModel
 	public static function authenticate( $userName, $password )
 	{
 		$_user = static::model()
-				 ->with( 'role.role_service_accesses', 'role.apps', 'role.services' )
+				 ->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
 				 ->findByAttributes( array( 'email' => $userName ) );
 
 		if ( empty( $_user ) || !\CPasswordHelper::verifyPassword( $password, $_user->password ) )
@@ -299,5 +299,60 @@ class User extends BasePlatformSystemModel
 		Log::debug( 'Platform user auth: ' . $userName );
 
 		return $_user;
+	}
+	/**
+	 * @param array $columns The columns to return in the permissions array
+	 *
+	 * @return array|null
+	 */
+	public function getRoleServicePermissions( $columns = null )
+	{
+		$_perms = null;
+
+		if ( $this->hasRelated( 'role' ) && $this->role )
+		{
+			/**
+			 * @var RoleServiceAccess[] $_permissions
+			 * @var Service[]           $_services
+			 */
+			if ( $this->role->role_service_accesses )
+			{
+				/** @var Role $_perm */
+				foreach ( $this->role->role_service_accesses as $_perm )
+				{
+					$_permServiceId = $_perm->service_id;
+					$_temp = $_perm->getAttributes( $columns ? : array( 'service_id', 'component', 'access' ) );
+
+					if ( $this->role->services )
+					{
+						foreach ( $this->role->services as $_service )
+						{
+							if ( $_permServiceId == $_service->id )
+							{
+								$_temp['service'] = $_service->api_name;
+							}
+						}
+					}
+
+					$_perms[] = $_temp;
+				}
+			}
+
+			/**
+			 * @var RoleSystemAccess[] $_permissions
+			 */
+			if ( $this->role->role_system_accesses )
+			{
+				/** @var Role $_perm */
+				foreach ( $this->role->role_system_accesses as $_perm )
+				{
+					$_temp = $_perm->getAttributes( $columns ? : array( 'component', 'access' ) );
+					$_temp['service'] = 'system';
+					$_perms[] = $_temp;
+				}
+			}
+		}
+
+		return $_perms;
 	}
 }

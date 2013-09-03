@@ -182,7 +182,7 @@ class Role extends BasePlatformSystemModel
 	 * @param       $role_id
 	 * @param array $accesses
 	 *
-	 * @throws Exception
+	 * @throws \Exception
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
@@ -275,7 +275,7 @@ class Role extends BasePlatformSystemModel
 					$rows = $command->update( $map_table, $item, 'id = :id', array( ':id' => $itemId ) );
 					if ( 0 >= $rows )
 					{
-						throw new Exception( "Record update failed." );
+						throw new \Exception( "Record update failed." );
 					}
 				}
 			}
@@ -294,14 +294,14 @@ class Role extends BasePlatformSystemModel
 					$rows = $command->insert( $map_table, $record );
 					if ( 0 >= $rows )
 					{
-						throw new Exception( "Record insert failed." );
+						throw new \Exception( "Record insert failed." );
 					}
 				}
 			}
 		}
-		catch ( Exception $ex )
+		catch ( \Exception $ex )
 		{
-			throw new Exception( "Error updating accesses to role assignment.\n{$ex->getMessage()}" );
+			throw new \Exception( "Error updating accesses to role assignment.\n{$ex->getMessage()}" );
 		}
 	}
 
@@ -309,7 +309,8 @@ class Role extends BasePlatformSystemModel
 	 * @param       $role_id
 	 * @param array $accesses
 	 *
-	 * @throws Exception
+	 * @throws \Exception
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
 	protected function assignRoleSystemAccesses( $role_id, $accesses = array() )
@@ -397,7 +398,7 @@ class Role extends BasePlatformSystemModel
 					$rows = $command->update( $map_table, $item, 'id = :id', array( ':id' => $itemId ) );
 					if ( 0 >= $rows )
 					{
-						throw new Exception( "Record update failed." );
+						throw new \Exception( "Record update failed." );
 					}
 				}
 			}
@@ -415,14 +416,67 @@ class Role extends BasePlatformSystemModel
 					$rows = $command->insert( $map_table, $record );
 					if ( 0 >= $rows )
 					{
-						throw new Exception( "Record insert failed." );
+						throw new \Exception( "Record insert failed." );
 					}
 				}
 			}
 		}
-		catch ( Exception $ex )
+		catch ( \Exception $ex )
 		{
-			throw new Exception( "Error updating accesses to role assignment.\n{$ex->getMessage()}" );
+			throw new \Exception( "Error updating accesses to role assignment.\n{$ex->getMessage()}" );
 		}
+	}
+
+	/**
+	 * @param array $columns The columns to return in the permissions array
+	 *
+	 * @return array|null
+	 */
+	public function getRoleServicePermissions( $columns = null )
+	{
+		$_perms = null;
+
+		/**
+		 * @var RoleServiceAccess[] $_permissions
+		 * @var Service[]           $_services
+		 */
+		if ( $this->role_service_accesses )
+		{
+			/** @var Role $_perm */
+			foreach ( $this->role_service_accesses as $_perm )
+			{
+				$_permServiceId = $_perm->service_id;
+				$_temp = $_perm->getAttributes( $columns ? : array( 'service_id', 'component', 'access' ) );
+
+				if ( $this->services )
+				{
+					foreach ( $this->services as $_service )
+					{
+						if ( $_permServiceId == $_service->id )
+						{
+							$_temp['service'] = $_service->api_name;
+						}
+					}
+				}
+
+				$_perms[] = $_temp;
+			}
+		}
+
+		/**
+		 * @var RoleSystemAccess[] $_permissions
+		 */
+		if ( $this->role_system_accesses )
+		{
+			/** @var Role $_perm */
+			foreach ( $this->role_system_accesses as $_perm )
+			{
+				$_temp = $_perm->getAttributes( $columns ? : array( 'component', 'access' ) );
+				$_temp['service'] = 'system';
+				$_perms[] = $_temp;
+			}
+		}
+
+		return $_perms;
 	}
 }

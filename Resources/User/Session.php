@@ -26,7 +26,7 @@ use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\UnauthorizedException;
 use DreamFactory\Platform\Interfaces\PermissionTypes;
-use DreamFactory\Platform\Resources\BaseSystemRestResource;
+use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
@@ -47,7 +47,7 @@ use Kisma\Core\Utility\Sql;
  * DSP user session
  *
  */
-class Session extends BaseSystemRestResource
+class Session extends BasePlatformRestResource
 {
 	//*************************************************************************
 	//* Members
@@ -178,6 +178,7 @@ class Session extends BaseSystemRestResource
 				//	Special case for guest user
 				$_config = ResourceStore::model( 'config' )->with(
 							   'guest_role.role_service_accesses',
+							   'guest_role.role_system_accesses',
 							   'guest_role.apps',
 							   'guest_role.services'
 						   )->find();
@@ -217,7 +218,12 @@ class Session extends BaseSystemRestResource
 		//	Load user...
 		try
 		{
-			$_user = ResourceStore::model( 'user' )->with( 'role.role_service_accesses', 'role.apps', 'role.services' )->findByPk( $_userId );
+			$_user = ResourceStore::model( 'user' )->with(
+						 'role.role_service_accesses',
+						 'role.role_system_accesses',
+						 'role.apps',
+						 'role.services'
+					 )->findByPk( $_userId );
 
 			if ( empty( $_user ) )
 			{
@@ -309,7 +315,12 @@ class Session extends BaseSystemRestResource
 		static $_appFields = array( 'id', 'api_name', 'is_active' );
 
 		/** @var User $_user */
-		$_user = $user ? : ResourceStore::model( 'user' )->with( 'role.role_service_accesses', 'role.apps', 'role.services' )->findByPk( $userId );
+		$_user = $user ? : ResourceStore::model( 'user' )->with(
+							   'role.role_service_accesses',
+							   'role.role_system_accesses',
+							   'role.apps',
+							   'role.services'
+						   )->findByPk( $userId );
 
 		if ( empty( $_user ) )
 		{
@@ -395,7 +406,12 @@ class Session extends BaseSystemRestResource
 		static $_appFields = array( 'id', 'api_name', 'is_active' );
 
 		/** @var Role $_role */
-		$_role = $role ? : ResourceStore::model( 'role' )->with( 'role_service_accesses', 'apps', 'services' )->findByPk( $roleId );
+		$_role = $role ? : ResourceStore::model( 'role' )->with(
+							   'role_service_accesses',
+							   'role_system_accesses',
+							   'apps',
+							   'services'
+						   )->findByPk( $roleId );
 
 		if ( empty( $_role ) )
 		{
@@ -724,6 +740,7 @@ class Session extends BaseSystemRestResource
 				// special case for possible guest user
 				$_config = ResourceStore::model( 'config' )->with(
 							   'guest_role.role_service_accesses',
+							   'guest_role.role_system_accesses',
 							   'guest_role.apps',
 							   'guest_role.services'
 						   )->find();

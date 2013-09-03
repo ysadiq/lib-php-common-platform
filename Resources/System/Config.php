@@ -69,6 +69,24 @@ class Config extends BaseSystemRestResource
 	}
 
 	/**
+	 * Override for GET of public info
+	 *
+	 * @param string $operation
+	 * @param null   $resource
+	 *
+	 * @return bool
+	 */
+	public function checkPermission( $operation, $resource = null )
+	{
+		if ( 'read' == $operation )
+		{
+			return true;
+		}
+
+		return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource );
+	}
+
+	/**
 	 * @param string $fields
 	 * @param bool   $includeSchema
 	 * @param array  $extras

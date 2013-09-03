@@ -23,6 +23,7 @@ use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Components\JTablesFormatter;
+use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Services\BasePlatformRestService;
@@ -180,6 +181,9 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	protected function _preProcess()
 	{
+		//	Do validation here
+		$this->checkPermission( PermissionMap::fromMethod( $this->getRequestedAction() ), $this->_resource );
+
 		//	Most requests contain 'returned fields' parameter, all by default
 		$this->_extras = array();
 		$this->_fields = Option::get( $_REQUEST, 'fields', '*' );
@@ -212,6 +216,17 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 				 'extras'           => $this->_extras,
 			)
 		);
+	}
+
+	/**
+	 * @param string $operation
+	 * @param string $resource
+	 *
+	 * @return bool
+	 */
+	public function checkPermission( $operation, $resource = null )
+	{
+		return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource );
 	}
 
 	/**

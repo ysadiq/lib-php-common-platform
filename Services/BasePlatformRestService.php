@@ -270,7 +270,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _detectResourceMembers()
 	{
-		$this->_resource = strtolower( Option::get( $this->_resourceArray, 0 ) );
+		$this->_resource = Option::get( $this->_resourceArray, 0 );
 	}
 
 	/**
