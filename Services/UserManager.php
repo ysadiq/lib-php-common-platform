@@ -611,6 +611,7 @@ class UserManager extends BaseSystemRestService
 	 */
 	public static function passwordResetByEmail( $email, $new_password )
 	{
+		/** @var User $theUser */
 		$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
 		if ( null === $theUser )
 		{
