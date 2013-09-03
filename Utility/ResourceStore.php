@@ -31,6 +31,7 @@ use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Components\Map;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Interfaces\UtilityLike;
 use Kisma\Core\Seed;
@@ -370,7 +371,7 @@ class ResourceStore implements UtilityLike
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
-	public static function bulkUpdateById( $ids, $record, $rollback = false, $fields = null, $extras = null, $singleRow = false  )
+	public static function bulkUpdateById( $ids, $record, $rollback = false, $fields = null, $extras = null, $singleRow = false )
 	{
 		static::_validateRecords( $record );
 
@@ -634,7 +635,6 @@ class ResourceStore implements UtilityLike
 								$_relatedPayload[] = $_relation->getAttributes( $_relatedFields );
 								unset( $_relation );
 							}
-
 						}
 
 						unset( $_relatedFields );

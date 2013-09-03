@@ -269,6 +269,7 @@ class Session extends BasePlatformRestResource
 			throw new UnauthorizedException( 'The credentials supplied do not match system records.' );
 		}
 
+		/** @var User $_user */
 		if ( null === ( $_user = $_model->getIdentity()->getUser() ) )
 		{
 			// bad user object
@@ -310,7 +311,7 @@ class Session extends BasePlatformRestResource
 	 */
 	public static function generateSessionDataFromUser( $userId, $user = null )
 	{
-		static $_fields = array( 'id', 'display_name', 'first_name', 'last_name', 'email', 'is_sys_admin', 'last_login_date' );
+		static $_fields = array( 'id', 'display_name', 'first_name', 'last_name', 'email', 'is_sys_admin', 'last_login_date', 'user_data', 'user_source' );
 		static $_appFields = array( 'id', 'api_name', 'is_active' );
 
 		/** @var User $_user */
@@ -324,6 +325,11 @@ class Session extends BasePlatformRestResource
 		if ( empty( $_user ) )
 		{
 			throw new UnauthorizedException( 'The user with id ' . $userId . ' is invalid.' );
+		}
+
+		if ( null !== $userId && $_user->id != $userId )
+		{
+			throw new ForbiddenException( 'Naughty, naughty... Not yours.' . $_user->id . ' != ' . print_r( $userId, true ) );
 		}
 
 		$_email = $_user->email;
@@ -686,22 +692,23 @@ class Session extends BasePlatformRestResource
 	/**
 	 * @param $_userId
 	 */
-	public static function setCurrentUserId( $_userId )
+	public static function setCurrentUserId( $userId )
 	{
 		if ( !Pii::guest() && false === Pii::getState( 'df_authenticated' ) )
 		{
-			static::$_userId = $_userId;
+			static::$_userId = $userId;
 		}
 
-		return $_userId;
+		return $userId;
 	}
 
 	/**
-	 * @param mixed $inquirer For future use
+	 * @param int   $setToIfNull If not null, static::$_userId will be set to this value
+	 * @param mixed $inquirer    For future use
 	 *
 	 * @return int|null
 	 */
-	public static function getCurrentUserId( $inquirer = null )
+	public static function getCurrentUserId( $setToIfNull = null, $inquirer = null )
 	{
 		if ( !empty( static::$_userId ) )
 		{
@@ -713,7 +720,7 @@ class Session extends BasePlatformRestResource
 			return static::$_userId = Pii::user()->getId();
 		}
 
-		return static::$_userId = null;
+		return static::$_userId = $setToIfNull ? : null;
 	}
 
 	/**
