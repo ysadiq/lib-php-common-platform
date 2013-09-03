@@ -50,6 +50,10 @@ class ServiceHandler
 	 */
 	protected static $_serviceConfig = array();
 	/**
+	 * @var bool Turn on/off service caching
+	 */
+	protected static $_useServiceCache = false;
+	/**
 	 * @var Map
 	 */
 	protected static $_locationMap;
@@ -118,14 +122,6 @@ class ServiceHandler
 
 		$_tag = strtolower( trim( $api_name ) );
 
-		//	Remap if an alias
-		$_aliases = Option::get( static::$_serviceConfig, 'aliases', array() );
-
-		if ( in_array( $_tag, array_keys( $_aliases ) ) )
-		{
-			$_tag = $_aliases[$_tag];
-		}
-
 		//	Cached?
 		if ( null !== ( $_service = static::_getCachedService( $_tag ) ) )
 		{
@@ -172,6 +168,11 @@ class ServiceHandler
 	 */
 	protected static function _getCachedService( $tag )
 	{
+		if ( false === static::$_useServiceCache )
+		{
+			return null;
+		}
+
 		$_cache = Pii::getState( 'dsp.service_cache' );
 
 		return Option::get( $_cache, $tag );
@@ -185,6 +186,11 @@ class ServiceHandler
 	 */
 	public static function cacheService( $tag, &$service )
 	{
+		if ( false === static::$_useServiceCache )
+		{
+			return;
+		}
+
 		$_cache = Pii::getState( 'dsp.service_cache', array() );
 		Option::set( $_cache, $tag, $service );
 		Pii::setState( 'dsp.service_cache', $_cache );
