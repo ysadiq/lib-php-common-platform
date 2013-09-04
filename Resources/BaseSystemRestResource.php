@@ -19,22 +19,16 @@
  */
 namespace DreamFactory\Platform\Resources;
 
-use DreamFactory\Common\Enums\OutputFormats;
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Components\JTablesFormatter;
 use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
-use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Seed;
 use Kisma\Core\Utility\Option;
-use DreamFactory\Yii\Utility\Pii;
 
 /**
  * BaseSystemRestResource
@@ -147,12 +141,18 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 	/**
 	 * Apply the commonly used REST path members to the class
+	 *
+	 * @param string $resourcePath
+	 *
+	 * @return $this|void
 	 */
-	protected function _detectResourceMembers()
+	protected function _detectResourceMembers( $resourcePath = null )
 	{
-		parent::_detectResourceMembers();
+		parent::_detectResourceMembers( $resourcePath );
 
 		$this->_resourceId = Option::get( $this->_resourceArray, 1 );
+
+		return $this;
 	}
 
 	/**

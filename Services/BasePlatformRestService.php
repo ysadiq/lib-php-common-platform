@@ -266,6 +266,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 	/**
 	 * Apply the commonly used REST path members to the class
+	 *
+	 * @param string $resourcePath
+	 *
+	 * @return $this
 	 */
 	protected function _detectResourceMembers( $resourcePath = null )
 	{
