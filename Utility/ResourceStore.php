@@ -117,6 +117,7 @@ class ResourceStore implements UtilityLike
 		static::$_service = Option::get( $settings, 'service' );
 		static::$_fields = Option::get( $settings, 'fields' );
 		static::$_extras = Option::get( $settings, 'extras' );
+		static::$_responseFormat = ResponseFormats::RAW;
 
 		if ( empty( static::$_resourceName ) )
 		{
@@ -220,6 +221,7 @@ class ResourceStore implements UtilityLike
 			$criteria = array( 'select' => $criteria );
 		}
 
+		//	Extract proper criteria from third-party library AJAX calls/parameters
 		switch ( static::$_responseFormat )
 		{
 			case ResponseFormats::DATATABLES:
@@ -227,7 +229,7 @@ class ResourceStore implements UtilityLike
 				break;
 
 			case ResponseFormats::JTABLE:
-//				$criteria = static::_buildDataTablesCriteria( explode( ',', static::$_fields ), $criteria );
+				$criteria = static::_buildDataTablesCriteria( explode( ',', static::$_fields ), $criteria );
 				break;
 		}
 
@@ -735,7 +737,11 @@ class ResourceStore implements UtilityLike
 		{
 			try
 			{
-				return new $_className( Pii::controller(), $resources );
+				/** @var BasePlatformRestResource $_resource */
+				$_resource = new $_className( Pii::controller(), $resources );
+				$_resource->setResponseFormat( static::$_responseFormat );
+
+				return $_resource;
 			}
 			catch ( \Exception $_ex )
 			{

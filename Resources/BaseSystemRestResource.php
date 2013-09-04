@@ -79,10 +79,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 * @var bool Query option for output format of package
 	 */
 	protected $_exportPackage = false;
-	/**
-	 * @var int
-	 */
-	protected $_responseFormat;
 
 	//*************************************************************************
 	//* Methods
@@ -157,23 +153,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		parent::_detectResourceMembers();
 
 		$this->_resourceId = Option::get( $this->_resourceArray, 1 );
-
-		/**
-		 * If this is a request from datatables, tell the store and set
-		 * the controller to emit JSON
-		 *
-		 * @noinspection PhpUndefinedMethodInspection
-		 */
-		/** @noinspection PhpUndefinedMethodInspection */
-		$_format = Pii::controller()->getFormat();
-
-		if ( ResponseFormats::DATATABLES == $_format || ResponseFormats::JTABLE == $_format )
-		{
-			$this->_responseFormat = $_format;
-			ResourceStore::setResponseFormat( $_format );
-			/** @noinspection PhpUndefinedMethodInspection */
-			Pii::controller()->setFormat( OutputFormats::JSON );
-		}
 	}
 
 	/**

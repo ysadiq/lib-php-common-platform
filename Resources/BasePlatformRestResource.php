@@ -19,14 +19,13 @@
  */
 namespace DreamFactory\Platform\Resources;
 
-use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Interfaces\RestResourceLike;
+use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Services\BasePlatformRestService;
-use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
-use Kisma\Core\Seed;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -49,13 +48,17 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	//*************************************************************************
 
 	/**
-	 * @var BasePlatformService
+	 * @var RestServiceLike
 	 */
 	protected $_consumer;
 	/**
 	 * @var string The name of this service
 	 */
 	protected $_serviceName;
+	/**
+	 * @var int The way to format the response data, not the envelope.
+	 */
+	protected $_responseFormat = ResponseFormats::RAW;
 	/**
 	 * @var string The class to pass to from __callStatic()
 	 */
@@ -101,6 +104,7 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	 */
 	protected function _formatResponse()
 	{
+		//	Default implementation does nothing. Like the goggles.
 	}
 
 	/**
@@ -179,5 +183,25 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	public static function getPassthruClass()
 	{
 		return self::$_passthruClass;
+	}
+
+	/**
+	 * @param int $responseFormat
+	 *
+	 * @return BasePlatformRestResource
+	 */
+	public function setResponseFormat( $responseFormat )
+	{
+		$this->_responseFormat = $responseFormat;
+
+		return $this;
+	}
+
+	/**
+	 * @return int
+	 */
+	public function getResponseFormat()
+	{
+		return $this->_responseFormat;
 	}
 }
