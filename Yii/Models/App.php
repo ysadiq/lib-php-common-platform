@@ -171,7 +171,7 @@ class App extends BasePlatformSystemModel
 	 */
 	protected function beforeSave()
 	{
-		if ( empty( $this->url ) && !$this->is_url_external && !empty($this->storage_service_id) )
+		if ( empty( $this->url ) && !$this->is_url_external && !empty( $this->storage_service_id ) )
 		{
 			$this->url = '/index.html';
 		}
@@ -186,7 +186,7 @@ class App extends BasePlatformSystemModel
 	{
 		if ( !$this->is_url_external )
 		{
-			if ( !empty($this->storage_service_id) )
+			if ( !empty( $this->storage_service_id ) )
 			{
 				// make sure we have an app in the folder
 				$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
@@ -280,7 +280,7 @@ class App extends BasePlatformSystemModel
 
 		if ( !$this->is_url_external )
 		{
-			if ( !empty($this->storage_service_id) )
+			if ( !empty( $this->storage_service_id ) )
 			{
 				$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
 				$this->launch_url = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' ) . '/';
@@ -338,67 +338,107 @@ class App extends BasePlatformSystemModel
 	}
 
 	/**
-	 * @param  int  $id The row ID
+	 * @param int   $appId The row ID
 	 * @param array $relations
 	 *
-	 * @throws \Exception
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \CDbException
 	 * @return void
 	 */
-	protected function assignAppServiceRelations( $id, $relations = array() )
+	protected function assignAppServiceRelations( $appId, $relations = array() )
 	{
-		if ( empty( $app_id ) )
+		if ( empty( $appId ) )
 		{
-			throw new BadRequestException( 'App id can not be empty.' );
+			throw new BadRequestException( 'No application ID specified.' );
 		}
+
+		$_id = $appId;
 
 		try
 		{
-			$relations = array_values( $relations ); // reset indices if needed
-			$_count = count( $relations );
+			$_relations = array_values( $relations ); // reset indices if needed
+			$_count = count( $_relations );
 
 			// check for dupes before processing
 			for ( $_key1 = 0; $_key1 < $_count; $_key1++ )
 			{
-				$access = $relations[$_key1];
+				$access = $_relations[$_key1];
 				$_serviceId = Option::get( $access, 'service_id' );
+
 				for ( $key2 = $_key1 + 1; $key2 < $_count; $key2++ )
 				{
-					$access2 = $relations[$key2];
+					$access2 = $_relations[$key2];
 					$_serviceId2 = Option::get( $access2, 'service_id' );
+
 					if ( $_serviceId == $_serviceId2 )
 					{
 						throw new BadRequestException( "Duplicated service in app service relation." );
 					}
 				}
 			}
+
 			$_mapTable = static::tableNamePrefix() . 'app_to_service';
 			$_mapPrimaryKey = 'id';
-			// use query builder
-			/** @var \CDbCommand $_command */
-			$_command = Pii::db()->createCommand();
-			$_command->select( 'id,service_id,component' );
-			$_command->from( $_mapTable );
-			$_command->where( 'app_id = :aid' );
-			$maps = $_command->queryAll( true, array( ':aid' => $app_id ) );
-			$_deletes = array();
-			$_updates = array();
-			foreach ( $maps as $map )
+
+			$_mappings = Sql::findAll( <<<MYSQL
+SELECT
+	`id`,
+	`service_id`,
+	`component`
+FROM
+	{$_mapTable}
+WHERE
+	`app_id` = :app_id
+MYSQL
+				,
+				array( ':app_id' => $_id ),
+				Pii::pdo()
+			);
+
+			$_deletes = $_updates = array();
+
+			foreach ( $_mappings as $_map )
 			{
-				$manyId = Option::get( $map, 'service_id' );
-				$id = Option::get( $map, $_mapPrimaryKey, '' );
-				$found = false;
-				foreach ( $relations as $_key => $item )
+				$_manyId = Option::get( $_map, 'service_id' );
+				$_mapId = Option::get( $_map, $_mapPrimaryKey );
+
+				foreach ( $_relations as $_name => $_relation )
 				{
-					$assignId = Option::get( $item, 'service_id' );
+					if ( $_manyId == ( $_assignId = Option::get( $_relation, 'service_id' ) ) )
+					{
+						// Found! Remove it from the list, as this becomes adds update if need be
+						$_old = Option::get( $_map, 'component' );
+						$_new = Option::get( $_relation, 'component' );
+						$_new = !empty( $_new ) ? json_encode( $_new ) : null;
+
+						// old should be encoded in the db
+						if ( $_old != $_new )
+						{
+							$_map['component'] = $_new;
+							$_updates[] = $_map;
+						}
+						// otherwise throw it out
+						unset( $relations[$_name] );
+
+						$_found = true;
+						continue;
+					}
+
+				}
+
+				$_mapId = Option::get( $map, $_mapPrimaryKey );
+				$found = false;
+				foreach ( $relations as $_key => $_relation )
+				{
+					$assignId = Option::get( $_relation, 'service_id' );
 					if ( $assignId == $manyId )
 					{
 						// found it, keeping it, so remove it from the list, as this becomes adds
 						// update if need be
 						$oldComponent = Option::get( $map, 'component' );
-						$newComponent = Option::get( $item, 'component' );
-						if ( !empty( $newComponent ) )
+						$newComponent = Option::get( $_relation, 'component' );
+
+						if ( !empty( $_new ) )
 						{
 							$newComponent = json_encode( $newComponent );
 						}
