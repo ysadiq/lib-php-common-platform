@@ -61,9 +61,9 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	/**
 	 * Setup container and paths
 	 */
-	protected function _detectResourceMembers()
+	protected function _detectResourceMembers( $resourcePath = null )
 	{
-		parent::_detectResourceMembers();
+		parent::_detectResourceMembers( $resourcePath );
 
 		$this->_container = Option::get( $this->_resourceArray, 0 );
 
@@ -745,8 +745,8 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	}
 
 	/**
-	 * @param array  $data    Array of sub-folder and file paths that are relative to the root folder
-	 * @param string $root    root folder from which to delete
+	 * @param array  $data Array of sub-folder and file paths that are relative to the root folder
+	 * @param string $root root folder from which to delete
 	 * @param  bool  $force
 	 *
 	 * @return array

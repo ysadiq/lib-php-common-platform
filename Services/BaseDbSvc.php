@@ -529,9 +529,9 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	/**
 	 *
 	 */
-	protected function _detectResourceMembers()
+	protected function _detectResourceMembers( $resourcePath = null )
 	{
-		parent::_detectResourceMembers();
+		parent::_detectResourceMembers( $resourcePath );
 
 		$this->_resourceId = ( isset( $this->_resourceArray, $this->_resourceArray[1] ) ) ? $this->_resourceArray[1] : '';
 	}

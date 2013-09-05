@@ -291,8 +291,10 @@ class SchemaSvc extends BasePlatformRestService
 	/**
 	 * {@InheritDoc}
 	 */
-	protected function _detectResourceMembers()
+	protected function _detectResourceMembers( $resourcePath = null )
 	{
+		parent::_detectResourceMembers( $resourcePath );
+
 		$this->_tableName = Option::get( $this->_resourceArray, 0 );
 		$this->_fieldName = Option::get( $this->_resourceArray, 1 );
 	}
