@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\Option;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
@@ -188,6 +189,28 @@ class SchemaSvc extends BasePlatformRestService
 				throw new BadRequestException( 'No new field resources currently supported.' );
 			}
 		}
+	}
+
+	/**
+	 * After a successful schema call, refresh the database cache
+	 *
+	 * @return bool|void
+	 */
+	protected function _handleResource()
+	{
+		if ( false !== ( $_result = parent::_handleResource() ) )
+		{
+			//	Clear the DB cache if enabled...
+
+			/** @var \CDbCache $_cache */
+			if ( null !== ( $_cache = Pii::component( 'cache' ) ) )
+			{
+				$_cache->flush();
+			}
+
+		}
+
+		return $_result;
 	}
 
 	/**
