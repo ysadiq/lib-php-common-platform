@@ -405,4 +405,47 @@ MYSQL;
 
 		return $this;
 	}
+
+	/**
+	 * Checks a relationship request for duplicates
+	 *
+	 * @param int    $id
+	 * @param string $mapColumn
+	 * @param array  $relations
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \InvalidArgumentException
+	 */
+	protected function _checkForRequestDuplicates( $id, $mapColumn, $relations = array() )
+	{
+		if ( empty( $id ) )
+		{
+			throw new \InvalidArgumentException( 'No ID specified.' );
+		}
+
+		//	Reset indices if needed
+		$_relations = array_values( $relations );
+
+		//	Check for dupes before processing
+		foreach ( $_relations as $_relation )
+		{
+			$_checkId = Option::get( $_relation, $mapColumn );
+
+			if ( empty( $_checkId ) )
+			{
+				continue;
+			}
+
+			foreach ( $_relations as $_checkRelation )
+			{
+				if ( $_checkId != ( $_id = Option::get( $_checkRelation, $mapColumn ) ) )
+				{
+					continue;
+				}
+			}
+
+			throw new BadRequestException( 'Duplicate mapping found in app-service relation.' );
+		}
+	}
+
 }

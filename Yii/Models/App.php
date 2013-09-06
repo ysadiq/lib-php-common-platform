@@ -339,148 +339,119 @@ class App extends BasePlatformSystemModel
 	}
 
 	/**
-	 * @param int   $appId The row ID
+	 * @param int    $id          The row ID
 	 * @param array $relations
 	 *
+	 * @throws Exception
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \CDbException
 	 * @return void
 	 */
-	protected function assignAppServiceRelations( $appId, $relations = array() )
+	protected function assignAppServiceRelations( $id, $relations = array() )
 	{
-		if ( empty( $appId ) )
+		if ( empty( $id ) )
 		{
-			throw new BadRequestException( 'No application ID specified.' );
+			throw new BadRequestException( 'App id can not be empty.' );
 		}
-
-		$_appId = $appId;
-		Sql::setConnection( Pii::pdo() );
 
 		try
 		{
-			// reset indices if needed
-			$_relations = array_values( $relations );
-			$_count = count( $_relations );
+			$relations = array_values( $relations ); // reset indices if needed
+			$_count = count( $relations );
 
 			// check for dupes before processing
 			for ( $_key1 = 0; $_key1 < $_count; $_key1++ )
 			{
-				$access = $_relations[$_key1];
-				$_serviceId = Option::get( $access, 'service_id' );
-
+				$access = $relations[$_key1];
+				$_serviceId = Utilities::getArrayValue( 'service_id', $access, null );
 				for ( $key2 = $_key1 + 1; $key2 < $_count; $key2++ )
 				{
-					$access2 = $_relations[$key2];
-					$_serviceId2 = Option::get( $access2, 'service_id' );
-
+					$access2 = $relations[$key2];
+					$_serviceId2 = Utilities::getArrayValue( 'service_id', $access2, null );
 					if ( $_serviceId == $_serviceId2 )
 					{
-						throw new BadRequestException( 'Duplicated service in app service relation.' );
+						throw new BadRequestException( "Duplicated service in app service relation." );
 					}
 				}
 			}
-
 			$_mapTable = static::tableNamePrefix() . 'app_to_service';
-			$_mapPrimaryKey = AppServiceRelation::model()->primaryKey;
-
-			$_mappings = Sql::findAll( <<<MYSQL
-SELECT
-	{$_mapPrimaryKey},
-	service_id,
-	component
-FROM
-	{$_mapTable}
-WHERE
-	app_id = :app_id
-MYSQL
-				,
-				array( ':app_id' => $_appId )
-			);
-
-			$_deletes = $_updates = array();
-
-			//	Update Mappings
-			foreach ( $_mappings as $_map )
+			$_mapPrimaryKey = 'id';
+			// use query builder
+			/** @var \CDbCommand $_command */
+			$_command = Pii::db()->createCommand();
+			$_command->select( 'id,service_id,component' );
+			$_command->from( $_mapTable );
+			$_command->where( 'app_id = :aid' );
+			$maps = $_command->queryAll( true, array( ':aid' => $id ) );
+			$toDelete = array();
+			$_updates = array();
+			foreach ( $maps as $map )
 			{
-				$_serviceId = Option::get( $_map, 'service_id' );
-
-				foreach ( $_relations as $_name => $_relation )
+				$manyId = Utilities::getArrayValue( 'service_id', $map, null );
+				$id = Utilities::getArrayValue( $_mapPrimaryKey, $map, '' );
+				$found = false;
+				foreach ( $relations as $_key => $item )
 				{
-					$_assignedId = Option::get( $_relation, 'service_id' );
-
-					if ( $_serviceId == $_assignedId )
+					$assignId = Utilities::getArrayValue( 'service_id', $item, null );
+					if ( $assignId == $manyId )
 					{
-						// Found! Remove it from the list, as this becomes adds update if need be
-						$_new = Option::get( $_relation, 'component' );
-
-						$_map['component'] = !empty( $_new ) ? json_encode( $_new ) : null;
-						$_updates[] = $_map;
-
-						unset( $_relations[$_name] );
+						// found it, keeping it, so remove it from the list, as this becomes adds
+						// update if need be
+						$oldComponent = Utilities::getArrayValue( 'component', $map, null );
+						$newComponent = Utilities::getArrayValue( 'component', $item, null );
+						if ( !empty( $newComponent ) )
+						{
+							$newComponent = json_encode( $newComponent );
+						}
+						else
+						{
+							$newComponent = null; // no empty arrays here
+						}
+						// old should be encoded in the db
+						if ( $oldComponent != $newComponent )
+						{
+							$map['component'] = $newComponent;
+							$_updates[] = $map;
+						}
+						// otherwise throw it out
+						unset( $relations[$_key] );
+						$found = true;
 						continue;
 					}
-
 				}
-
-				//	Not found, delete it.
-				$_deletes[] = Option::get( $_map, 'service_id' );
-			}
-
-			//	Delete mappings
-			if ( !empty( $_deletes ) )
-			{
-				$_idList = implode( ',', $_deletes );
-
-				if ( !empty( $_idList ) )
+				if ( !$found )
 				{
-					$_count = Sql::execute( <<<SQL
-DELETE FROM
-	{$_mapTable}
-WHERE
-	{$_mapPrimaryKey} in ($_idList)
-SQL
-					);
-
-					if ( false === $_count )
-					{
-						throw new DataStoreException( 'Error removing orphan relationships: ' . print_r( Sql::getStatement()->errorInfo(), true ) );
-					}
-
-					Log::debug( 'Deleted ' . $_count . ' orphan app-service mappings.' );
+					$toDelete[] = $id;
+					continue;
 				}
 			}
-
+			if ( !empty( $toDelete ) )
+			{
+				// simple delete request
+				$_command->reset();
+				$rows = $_command->delete( $_mapTable, array( 'in', $_mapPrimaryKey, $toDelete ) );
+			}
 			if ( !empty( $_updates ) )
 			{
-				$_command = Sql::createStatement( <<<SQL
-UPDATE {$_mapTable} SET
-	service_id = :service_id,
-	component = :component
-WHERE
-	id = :id
-SQL
-				);
-
-				foreach ( $_updates as $_map )
+				foreach ( $_updates as $item )
 				{
-					if ( null !== ( $_id = Option::get( $_map, 'id', null, true ) ) )
+					$itemId = Utilities::getArrayValue( 'id', $item, '' );
+					unset( $item['id'] );
+					// simple update request
+					$_command->reset();
+					$rows = $_command->update( $_mapTable, $item, 'id = :id', array( ':id' => $itemId ) );
+					if ( 0 >= $rows )
 					{
-						$_count = $_command->execute( array( ':service_id' => $_map['service_id'], ':component' => $_map['component'], ':id' => $_id ) );
-
-						if ( !$_count )
-						{
-							throw new DataStoreException( 'Unable to update relationship: ' . print_r( $_command->errorInfo(), true ) );
-						}
+						throw new \CDbException( "Record update failed." );
 					}
 				}
 			}
-
-			if ( !empty( $_relations ) )
+			if ( !empty( $relations ) )
 			{
-				foreach ( $_relations as $item )
+				foreach ( $relations as $item )
 				{
 					// simple insert request
-					$newComponent = Option::get( $item, 'component' );
+					$newComponent = Utilities::getArrayValue( 'component', $item, null );
 					if ( !empty( $newComponent ) )
 					{
 						$newComponent = json_encode( $newComponent );
@@ -489,198 +460,21 @@ SQL
 					{
 						$newComponent = null; // no empty arrays here
 					}
-
 					$record = array(
-						'app_id'     => $_appId,
-						'service_id' => Option::get( $item, 'service_id' ),
+						'app_id'     => $id,
+						'service_id' => Utilities::getArrayValue( 'service_id', $item, null ),
 						'component'  => $newComponent
 					);
-
-//					$_command->reset();
-//					$rows = $_command->insert( $_mapTable, $record );
-//					if ( 0 >= $rows )
+					$_command->reset();
+					$rows = $_command->insert( $_mapTable, $record );
+					if ( 0 >= $rows )
 					{
-						throw new \Exception( "Record insert failed." );
+						throw new Exception( "Record insert failed." );
 					}
 				}
 			}
 		}
-		catch
-		( \Exception $_ex )
-		{
-			throw new \CDbException( 'Error updating application service assignment: ' . $_ex->getMessage(), $_ex->getCode() );
-		}
-	}
-
-	/**
-	 * @param int   $appId The row ID
-	 * @param array $relations
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @throws \CDbException
-	 * @return void
-	 */
-	protected function _mapRelation( $appId, $relations = array() )
-	{
-		if ( empty( $appId ) )
-		{
-			throw new BadRequestException( 'No application ID specified.' );
-		}
-
-		$_appId = $appId;
-		Sql::setConnection( Pii::pdo() );
-
-		try
-		{
-			// reset indices if needed
-			$_relations = array_values( $relations );
-			$_count = count( $_relations );
-
-			// check for dupes before processing
-			for ( $_key1 = 0; $_key1 < $_count; $_key1++ )
-			{
-				$access = $_relations[$_key1];
-				$_serviceId = Option::get( $access, 'service_id' );
-
-				for ( $key2 = $_key1 + 1; $key2 < $_count; $key2++ )
-				{
-					$access2 = $_relations[$key2];
-					$_serviceId2 = Option::get( $access2, 'service_id' );
-
-					if ( $_serviceId == $_serviceId2 )
-					{
-						throw new BadRequestException( 'Duplicated service in app service relation.' );
-					}
-				}
-			}
-
-			$_mapTable = static::tableNamePrefix() . 'app_to_service';
-			$_mapPrimaryKey = AppServiceRelation::model()->primaryKey;
-
-			$_mappings = Sql::findAll( <<<MYSQL
-SELECT
-	{$_mapPrimaryKey},
-	service_id,
-	component
-FROM
-	{$_mapTable}
-WHERE
-	app_id = :app_id
-MYSQL
-				,
-				array( ':app_id' => $_appId )
-			);
-
-			$_deletes = $_updates = array();
-
-			//	Update Mappings
-			foreach ( $_mappings as $_map )
-			{
-				$_serviceId = Option::get( $_map, 'service_id' );
-
-				foreach ( $_relations as $_name => $_relation )
-				{
-					$_assignedId = Option::get( $_relation, 'service_id' );
-
-					if ( $_serviceId == $_assignedId )
-					{
-						// Found! Remove it from the list, as this becomes adds update if need be
-						$_new = Option::get( $_relation, 'component' );
-
-						$_map['component'] = !empty( $_new ) ? json_encode( $_new ) : null;
-						$_updates[] = $_map;
-
-						unset( $_relations[$_name] );
-						continue;
-					}
-
-				}
-
-				//	Not found, delete it.
-				$_deletes[] = Option::get( $_map, 'service_id' );
-			}
-
-			//	Delete mappings
-			if ( !empty( $_deletes ) )
-			{
-				$_idList = implode( ',', $_deletes );
-
-				if ( !empty( $_idList ) )
-				{
-					$_count = Sql::execute( <<<SQL
-DELETE FROM
-	{$_mapTable}
-WHERE
-	{$_mapPrimaryKey} in ($_idList)
-SQL
-					);
-
-					if ( false === $_count )
-					{
-						throw new DataStoreException( 'Error removing orphan relationships: ' . print_r( Sql::getStatement()->errorInfo(), true ) );
-					}
-
-					Log::debug( 'Deleted ' . $_count . ' orphan app-service mappings.' );
-				}
-			}
-
-			if ( !empty( $_updates ) )
-			{
-				$_command = Sql::createStatement( <<<SQL
-UPDATE {$_mapTable} SET
-	service_id = :service_id,
-	component = :component
-WHERE
-	id = :id
-SQL
-				);
-
-				foreach ( $_updates as $_map )
-				{
-					if ( null !== ( $_id = Option::get( $_map, 'id', null, true ) ) )
-					{
-						$_count = $_command->execute( array( ':service_id' => $_map['service_id'], ':component' => $_map['component'], ':id' => $_id ) );
-
-						if ( !$_count )
-						{
-							throw new DataStoreException( 'Unable to update relationship: ' . print_r( $_command->errorInfo(), true ) );
-						}
-					}
-				}
-			}
-
-			if ( !empty( $_relations ) )
-			{
-				foreach ( $_relations as $item )
-				{
-					// simple insert request
-					$newComponent = Option::get( $item, 'component' );
-					if ( !empty( $newComponent ) )
-					{
-						$newComponent = json_encode( $newComponent );
-					}
-					else
-					{
-						$newComponent = null; // no empty arrays here
-					}
-
-					$record = array(
-						'app_id'     => $_appId,
-						'service_id' => Option::get( $item, 'service_id' ),
-						'component'  => $newComponent
-					);
-
-//					$_command->reset();
-//					$rows = $_command->insert( $_mapTable, $record );
-//					if ( 0 >= $rows )
-					{
-						throw new \Exception( "Record insert failed." );
-					}
-				}
-			}
-		}
-		catch
-		( \Exception $_ex )
+		catch ( \Exception $_ex )
 		{
 			throw new \CDbException( 'Error updating application service assignment: ' . $_ex->getMessage(), $_ex->getCode() );
 		}
@@ -696,7 +490,7 @@ SQL
 	 *
 	 * @return void
 	 */
-	protected function _mapRelations( $id, $relations = array(), $relationKey = null )
+	protected function _mapRelations( $id, $relations = array(), $relationKey = 'service_id' )
 	{
 		if ( empty( $id ) )
 		{
@@ -721,14 +515,13 @@ SQL
 			$_model = static::model();
 			$_mapTable = $_model->tableName();
 			$_mapPrimaryKey = 'id';
-			$_relationKey = $relationKey ? : 'service_id';
 
 			/** @var \CDbCommand $_command */
 			$_mapRows = Sql::findAll(
 				<<<MYSQL
 SELECT
 	id,
-	{$_relationKey},
+	{$relationKey},
 	component
 FROM
 	{$_mapTable}
@@ -747,7 +540,7 @@ MYSQL
 
 			foreach ( $_mapRows as $_mapping )
 			{
-				$_serviceId = Option::get( $_mapping, $_relationKey );
+				$_serviceId = Option::get( $_mapping, $relationKey );
 				$_id = Option::get( $_mapping, $_mapPrimaryKey );
 
 				$_found = false;
@@ -755,7 +548,7 @@ MYSQL
 				foreach ( $relations as $_key => $_item )
 				{
 					// Found it, keeping it, so remove it from the list, as this becomes adds update if need be
-					if ( $_serviceId == ( $_assignId = Option::get( $_item, $_relationKey ) ) )
+					if ( $_serviceId == ( $_assignId = Option::get( $_item, $relationKey ) ) )
 					{
 						// old should be encoded in the db
 						if ( Option::get( $_mapping, 'component' ) != ( $_newComponent = json_encode( Option::get( $_item, 'component' ) ) ) )
@@ -833,4 +626,5 @@ MYSQL
 			throw new \CDbException( 'Error updating application service assignment: ' . $_ex->getMessage(), $_ex->getCode() );
 		}
 	}
+
 }

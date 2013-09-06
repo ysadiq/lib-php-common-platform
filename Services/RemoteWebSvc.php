@@ -198,15 +198,14 @@ class RemoteWebSvc extends BasePlatformRestService
 	{
 //		Log::debug( 'Outbound HTTP request: ' . $this->_action . ': ' . $this->_url );
 
-		if ( false ===
-			 ( $this->_response = Curl::request(
-				 $this->_action,
-				 $this->_url,
-				 RestData::getPostData() ? : array(),
-				 $this->_curlOptions
-			 )
-			 )
-		)
+		$this->_response = Curl::request(
+			$this->_action,
+			$this->_url,
+			RestData::getPostData() ? : array(),
+			$this->_curlOptions
+		);
+
+		if ( false === $this->_response )
 		{
 			$_error = Curl::getError();
 			throw new RestException( Option::get( $_error, 'code', 500 ), Option::get( $_error, 'message' ) );
