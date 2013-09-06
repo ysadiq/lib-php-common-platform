@@ -973,7 +973,7 @@ class ResourceStore implements UtilityLike
 		}
 		catch ( \Exception $_ex )
 		{
-			throw new InternalServerErrorException( 'Failed	to update resource: ' . $_ex->getMessage() );
+			throw new InternalServerErrorException( 'Failed to update resource: ' . $_ex->getMessage() );
 		}
 	}
 

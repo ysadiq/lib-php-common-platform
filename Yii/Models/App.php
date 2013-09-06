@@ -24,6 +24,7 @@ use DreamFactory\Platform\Services\BaseFileSvc;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Exceptions\DataStoreException;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -352,11 +353,13 @@ class App extends BasePlatformSystemModel
 			throw new BadRequestException( 'No application ID specified.' );
 		}
 
-		$_id = $appId;
+		$_appId = $appId;
+		Sql::setConnection( Pii::pdo() );
 
 		try
 		{
-			$_relations = array_values( $relations ); // reset indices if needed
+			// reset indices if needed
+			$_relations = array_values( $relations );
 			$_count = count( $_relations );
 
 			// check for dupes before processing
@@ -372,121 +375,109 @@ class App extends BasePlatformSystemModel
 
 					if ( $_serviceId == $_serviceId2 )
 					{
-						throw new BadRequestException( "Duplicated service in app service relation." );
+						throw new BadRequestException( 'Duplicated service in app service relation.' );
 					}
 				}
 			}
 
 			$_mapTable = static::tableNamePrefix() . 'app_to_service';
-			$_mapPrimaryKey = 'id';
+			$_mapPrimaryKey = AppServiceRelation::model()->primaryKey;
 
 			$_mappings = Sql::findAll( <<<MYSQL
 SELECT
-	`id`,
-	`service_id`,
-	`component`
+	{$_mapPrimaryKey},
+	service_id,
+	component
 FROM
 	{$_mapTable}
 WHERE
-	`app_id` = :app_id
+	app_id = :app_id
 MYSQL
 				,
-				array( ':app_id' => $_id ),
-				Pii::pdo()
+				array( ':app_id' => $_appId )
 			);
 
 			$_deletes = $_updates = array();
 
+			//	Update Mappings
 			foreach ( $_mappings as $_map )
 			{
-				$_manyId = Option::get( $_map, 'service_id' );
-				$_mapId = Option::get( $_map, $_mapPrimaryKey );
+				$_serviceId = Option::get( $_map, 'service_id' );
 
 				foreach ( $_relations as $_name => $_relation )
 				{
-					if ( $_manyId == ( $_assignId = Option::get( $_relation, 'service_id' ) ) )
+					$_assignedId = Option::get( $_relation, 'service_id' );
+
+					if ( $_serviceId == $_assignedId )
 					{
 						// Found! Remove it from the list, as this becomes adds update if need be
-						$_old = Option::get( $_map, 'component' );
 						$_new = Option::get( $_relation, 'component' );
-						$_new = !empty( $_new ) ? json_encode( $_new ) : null;
 
-						// old should be encoded in the db
-						if ( $_old != $_new )
-						{
-							$_map['component'] = $_new;
-							$_updates[] = $_map;
-						}
-						// otherwise throw it out
-						unset( $relations[$_name] );
+						$_map['component'] = !empty( $_new ) ? json_encode( $_new ) : null;
+						$_updates[] = $_map;
 
-						$_found = true;
+						unset( $_relations[$_name] );
 						continue;
 					}
 
 				}
 
-				$_mapId = Option::get( $map, $_mapPrimaryKey );
-				$found = false;
-				foreach ( $relations as $_key => $_relation )
-				{
-					$assignId = Option::get( $_relation, 'service_id' );
-					if ( $assignId == $manyId )
-					{
-						// found it, keeping it, so remove it from the list, as this becomes adds
-						// update if need be
-						$oldComponent = Option::get( $map, 'component' );
-						$newComponent = Option::get( $_relation, 'component' );
-
-						if ( !empty( $_new ) )
-						{
-							$newComponent = json_encode( $newComponent );
-						}
-						else
-						{
-							$newComponent = null; // no empty arrays here
-						}
-						// old should be encoded in the db
-						if ( $oldComponent != $newComponent )
-						{
-							$map['component'] = $newComponent;
-							$_updates[] = $map;
-						}
-						// otherwise throw it out
-						unset( $relations[$_key] );
-						$found = true;
-						continue;
-					}
-				}
-				if ( !$found )
-				{
-					$_deletes[] = $id;
-					continue;
-				}
+				//	Not found, delete it.
+				$_deletes[] = Option::get( $_map, 'service_id' );
 			}
+
+			//	Delete mappings
 			if ( !empty( $_deletes ) )
 			{
-				// simple delete request
-				$_command->reset();
-				$rows = $_command->delete( $_mapTable, array( 'in', $_mapPrimaryKey, $_deletes ) );
+				$_idList = implode( ',', $_deletes );
+
+				if ( !empty( $_idList ) )
+				{
+					$_count = Sql::execute( <<<SQL
+DELETE FROM
+	{$_mapTable}
+WHERE
+	{$_mapPrimaryKey} in ($_idList)
+SQL
+					);
+
+					if ( false === $_count )
+					{
+						throw new DataStoreException( 'Error removing orphan relationships: ' . print_r( Sql::getStatement()->errorInfo(), true ) );
+					}
+
+					Log::debug( 'Deleted ' . $_count . ' orphan app-service mappings.' );
+				}
 			}
+
 			if ( !empty( $_updates ) )
 			{
-				foreach ( $_updates as $item )
+				$_command = Sql::createStatement( <<<SQL
+UPDATE {$_mapTable} SET
+	service_id = :service_id,
+	component = :component
+WHERE
+	id = :id
+SQL
+				);
+
+				foreach ( $_updates as $_map )
 				{
-					$itemId = Option::get( $item, 'id', '', true );
-					// simple update request
-					$_command->reset();
-					$rows = $_command->update( $_mapTable, $item, 'id = :id', array( ':id' => $itemId ) );
-					if ( 0 >= $rows )
+					if ( null !== ( $_id = Option::get( $_map, 'id', null, true ) ) )
 					{
-						throw new \CDbException( "Record update failed." );
+						$_count = $_command->execute( array( ':service_id' => $_map['service_id'], ':component' => $_map['component'], ':id' => $_id ) );
+
+						if ( !$_count )
+						{
+							throw new DataStoreException( 'Unable to update relationship: ' . print_r( $_command->errorInfo(), true ) );
+						}
 					}
 				}
 			}
-			if ( !empty( $relations ) )
+
+			if ( !empty( $_relations ) )
 			{
-				foreach ( $relations as $item )
+				foreach ( $_relations as $item )
 				{
 					// simple insert request
 					$newComponent = Option::get( $item, 'component' );
@@ -498,21 +489,198 @@ MYSQL
 					{
 						$newComponent = null; // no empty arrays here
 					}
+
 					$record = array(
-						'app_id'     => $app_id,
+						'app_id'     => $_appId,
 						'service_id' => Option::get( $item, 'service_id' ),
 						'component'  => $newComponent
 					);
-					$_command->reset();
-					$rows = $_command->insert( $_mapTable, $record );
-					if ( 0 >= $rows )
+
+//					$_command->reset();
+//					$rows = $_command->insert( $_mapTable, $record );
+//					if ( 0 >= $rows )
 					{
 						throw new \Exception( "Record insert failed." );
 					}
 				}
 			}
 		}
-		catch ( \Exception $_ex )
+		catch
+		( \Exception $_ex )
+		{
+			throw new \CDbException( 'Error updating application service assignment: ' . $_ex->getMessage(), $_ex->getCode() );
+		}
+	}
+
+	/**
+	 * @param int   $appId The row ID
+	 * @param array $relations
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \CDbException
+	 * @return void
+	 */
+	protected function _mapRelation( $appId, $relations = array() )
+	{
+		if ( empty( $appId ) )
+		{
+			throw new BadRequestException( 'No application ID specified.' );
+		}
+
+		$_appId = $appId;
+		Sql::setConnection( Pii::pdo() );
+
+		try
+		{
+			// reset indices if needed
+			$_relations = array_values( $relations );
+			$_count = count( $_relations );
+
+			// check for dupes before processing
+			for ( $_key1 = 0; $_key1 < $_count; $_key1++ )
+			{
+				$access = $_relations[$_key1];
+				$_serviceId = Option::get( $access, 'service_id' );
+
+				for ( $key2 = $_key1 + 1; $key2 < $_count; $key2++ )
+				{
+					$access2 = $_relations[$key2];
+					$_serviceId2 = Option::get( $access2, 'service_id' );
+
+					if ( $_serviceId == $_serviceId2 )
+					{
+						throw new BadRequestException( 'Duplicated service in app service relation.' );
+					}
+				}
+			}
+
+			$_mapTable = static::tableNamePrefix() . 'app_to_service';
+			$_mapPrimaryKey = AppServiceRelation::model()->primaryKey;
+
+			$_mappings = Sql::findAll( <<<MYSQL
+SELECT
+	{$_mapPrimaryKey},
+	service_id,
+	component
+FROM
+	{$_mapTable}
+WHERE
+	app_id = :app_id
+MYSQL
+				,
+				array( ':app_id' => $_appId )
+			);
+
+			$_deletes = $_updates = array();
+
+			//	Update Mappings
+			foreach ( $_mappings as $_map )
+			{
+				$_serviceId = Option::get( $_map, 'service_id' );
+
+				foreach ( $_relations as $_name => $_relation )
+				{
+					$_assignedId = Option::get( $_relation, 'service_id' );
+
+					if ( $_serviceId == $_assignedId )
+					{
+						// Found! Remove it from the list, as this becomes adds update if need be
+						$_new = Option::get( $_relation, 'component' );
+
+						$_map['component'] = !empty( $_new ) ? json_encode( $_new ) : null;
+						$_updates[] = $_map;
+
+						unset( $_relations[$_name] );
+						continue;
+					}
+
+				}
+
+				//	Not found, delete it.
+				$_deletes[] = Option::get( $_map, 'service_id' );
+			}
+
+			//	Delete mappings
+			if ( !empty( $_deletes ) )
+			{
+				$_idList = implode( ',', $_deletes );
+
+				if ( !empty( $_idList ) )
+				{
+					$_count = Sql::execute( <<<SQL
+DELETE FROM
+	{$_mapTable}
+WHERE
+	{$_mapPrimaryKey} in ($_idList)
+SQL
+					);
+
+					if ( false === $_count )
+					{
+						throw new DataStoreException( 'Error removing orphan relationships: ' . print_r( Sql::getStatement()->errorInfo(), true ) );
+					}
+
+					Log::debug( 'Deleted ' . $_count . ' orphan app-service mappings.' );
+				}
+			}
+
+			if ( !empty( $_updates ) )
+			{
+				$_command = Sql::createStatement( <<<SQL
+UPDATE {$_mapTable} SET
+	service_id = :service_id,
+	component = :component
+WHERE
+	id = :id
+SQL
+				);
+
+				foreach ( $_updates as $_map )
+				{
+					if ( null !== ( $_id = Option::get( $_map, 'id', null, true ) ) )
+					{
+						$_count = $_command->execute( array( ':service_id' => $_map['service_id'], ':component' => $_map['component'], ':id' => $_id ) );
+
+						if ( !$_count )
+						{
+							throw new DataStoreException( 'Unable to update relationship: ' . print_r( $_command->errorInfo(), true ) );
+						}
+					}
+				}
+			}
+
+			if ( !empty( $_relations ) )
+			{
+				foreach ( $_relations as $item )
+				{
+					// simple insert request
+					$newComponent = Option::get( $item, 'component' );
+					if ( !empty( $newComponent ) )
+					{
+						$newComponent = json_encode( $newComponent );
+					}
+					else
+					{
+						$newComponent = null; // no empty arrays here
+					}
+
+					$record = array(
+						'app_id'     => $_appId,
+						'service_id' => Option::get( $item, 'service_id' ),
+						'component'  => $newComponent
+					);
+
+//					$_command->reset();
+//					$rows = $_command->insert( $_mapTable, $record );
+//					if ( 0 >= $rows )
+					{
+						throw new \Exception( "Record insert failed." );
+					}
+				}
+			}
+		}
+		catch
+		( \Exception $_ex )
 		{
 			throw new \CDbException( 'Error updating application service assignment: ' . $_ex->getMessage(), $_ex->getCode() );
 		}
