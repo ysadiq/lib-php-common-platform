@@ -31,6 +31,7 @@ use Kisma\Core\Utility\Sql;
  *
  * Columns:
  *
+ * @property string              $api_name
  * @property string              $provider_name
  * @property array               $config_text
  */
