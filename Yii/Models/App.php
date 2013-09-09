@@ -339,10 +339,10 @@ class App extends BasePlatformSystemModel
 	}
 
 	/**
-	 * @param int    $id          The row ID
+	 * @param int   $id          The row ID
 	 * @param array $relations
 	 *
-	 * @throws Exception
+	 * @throws \Exception
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \CDbException
 	 * @return void
@@ -362,12 +362,12 @@ class App extends BasePlatformSystemModel
 			// check for dupes before processing
 			for ( $_key1 = 0; $_key1 < $_count; $_key1++ )
 			{
-				$access = $relations[$_key1];
-				$_serviceId = Utilities::getArrayValue( 'service_id', $access, null );
-				for ( $key2 = $_key1 + 1; $key2 < $_count; $key2++ )
+				$_access = $relations[$_key1];
+				$_serviceId = Option::get( $_access, 'service_id' );
+				for ( $_key2 = $_key1 + 1; $_key2 < $_count; $_key2++ )
 				{
-					$access2 = $relations[$key2];
-					$_serviceId2 = Utilities::getArrayValue( 'service_id', $access2, null );
+					$_access2 = $relations[$_key2];
+					$_serviceId2 = Option::get( $_access2, 'service_id' );
 					if ( $_serviceId == $_serviceId2 )
 					{
 						throw new BadRequestException( "Duplicated service in app service relation." );
@@ -382,64 +382,64 @@ class App extends BasePlatformSystemModel
 			$_command->select( 'id,service_id,component' );
 			$_command->from( $_mapTable );
 			$_command->where( 'app_id = :aid' );
-			$maps = $_command->queryAll( true, array( ':aid' => $id ) );
-			$toDelete = array();
+			$_maps = $_command->queryAll( true, array( ':aid' => $id ) );
+			$_deletes = array();
 			$_updates = array();
-			foreach ( $maps as $map )
+			foreach ( $_maps as $_map )
 			{
-				$manyId = Utilities::getArrayValue( 'service_id', $map, null );
-				$id = Utilities::getArrayValue( $_mapPrimaryKey, $map, '' );
-				$found = false;
-				foreach ( $relations as $_key => $item )
+				$_manyId = Option::get( $_map, 'service_id' );
+				$id = Option::get( $_mapPrimaryKey, $_map, '' );
+				$_found = false;
+				foreach ( $relations as $_key => $_item )
 				{
-					$assignId = Utilities::getArrayValue( 'service_id', $item, null );
-					if ( $assignId == $manyId )
+					$_assignId = Option::get( $_item, 'service_id' );
+					if ( $_assignId == $_manyId )
 					{
 						// found it, keeping it, so remove it from the list, as this becomes adds
 						// update if need be
-						$oldComponent = Utilities::getArrayValue( 'component', $map, null );
-						$newComponent = Utilities::getArrayValue( 'component', $item, null );
-						if ( !empty( $newComponent ) )
+						$_oldComponent = Option::get( $_map, 'component' );
+						$_newComponent = Option::get( $_item, 'component' );
+						if ( !empty( $_newComponent ) )
 						{
-							$newComponent = json_encode( $newComponent );
+							$_newComponent = json_encode( $_newComponent );
 						}
 						else
 						{
-							$newComponent = null; // no empty arrays here
+							$_newComponent = null; // no empty arrays here
 						}
 						// old should be encoded in the db
-						if ( $oldComponent != $newComponent )
+						if ( $_oldComponent != $_newComponent )
 						{
-							$map['component'] = $newComponent;
-							$_updates[] = $map;
+							$_map['component'] = $_newComponent;
+							$_updates[] = $_map;
 						}
 						// otherwise throw it out
 						unset( $relations[$_key] );
-						$found = true;
+						$_found = true;
 						continue;
 					}
 				}
-				if ( !$found )
+				if ( !$_found )
 				{
-					$toDelete[] = $id;
+					$_deletes[] = $id;
 					continue;
 				}
 			}
-			if ( !empty( $toDelete ) )
+			if ( !empty( $_deletes ) )
 			{
 				// simple delete request
 				$_command->reset();
-				$rows = $_command->delete( $_mapTable, array( 'in', $_mapPrimaryKey, $toDelete ) );
+				$rows = $_command->delete( $_mapTable, array( 'in', $_mapPrimaryKey, $_deletes ) );
 			}
 			if ( !empty( $_updates ) )
 			{
-				foreach ( $_updates as $item )
+				foreach ( $_updates as $_item )
 				{
-					$itemId = Utilities::getArrayValue( 'id', $item, '' );
-					unset( $item['id'] );
+					$_itemId = Option::get( $_item, 'id' );
+					unset( $_item['id'] );
 					// simple update request
 					$_command->reset();
-					$rows = $_command->update( $_mapTable, $item, 'id = :id', array( ':id' => $itemId ) );
+					$rows = $_command->update( $_mapTable, $_item, 'id = :id', array( ':id' => $_itemId ) );
 					if ( 0 >= $rows )
 					{
 						throw new \CDbException( "Record update failed." );
@@ -448,28 +448,28 @@ class App extends BasePlatformSystemModel
 			}
 			if ( !empty( $relations ) )
 			{
-				foreach ( $relations as $item )
+				foreach ( $relations as $_item )
 				{
 					// simple insert request
-					$newComponent = Utilities::getArrayValue( 'component', $item, null );
-					if ( !empty( $newComponent ) )
+					$_newComponent = Option::get( $_item, 'component' );
+					if ( !empty( $_newComponent ) )
 					{
-						$newComponent = json_encode( $newComponent );
+						$_newComponent = json_encode( $_newComponent );
 					}
 					else
 					{
-						$newComponent = null; // no empty arrays here
+						$_newComponent = null; // no empty arrays here
 					}
-					$record = array(
+					$_record = array(
 						'app_id'     => $id,
-						'service_id' => Utilities::getArrayValue( 'service_id', $item, null ),
-						'component'  => $newComponent
+						'service_id' => Option::get( $_item, 'service_id' ),
+						'component'  => $_newComponent
 					);
 					$_command->reset();
-					$rows = $_command->insert( $_mapTable, $record );
+					$rows = $_command->insert( $_mapTable, $_record );
 					if ( 0 >= $rows )
 					{
-						throw new Exception( "Record insert failed." );
+						throw new \Exception( "Record insert failed." );
 					}
 				}
 			}

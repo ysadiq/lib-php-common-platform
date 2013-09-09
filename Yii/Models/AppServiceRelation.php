@@ -73,26 +73,6 @@ class AppServiceRelation extends BasePlatformSystemModel
 	}
 
 	/**
-	 * @return array
-	 */
-	public function behaviors()
-	{
-		return array_merge(
-			parent::behaviors(),
-			array(
-				 //	Secure JSON
-				 'base_platform_model.secure_json' => array(
-					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'             => $this->getDb()->password,
-					 'secureAttributes' => array(
-						 'component',
-					 )
-				 ),
-			)
-		);
-	}
-
-	/**
 	 * @param array $additionalLabels
 	 *
 	 * @return array customized attribute labels (name=>label)
