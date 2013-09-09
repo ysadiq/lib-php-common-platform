@@ -29,7 +29,7 @@
 		"dreamfactory/oasys":              "dev-master",
 		"swiftmailer/swiftmailer":         "4.3.*",
 		"aws/aws-sdk-php":                 "2.*",
-		"rackspace/php-opencloud":         "dev-master",
+		"rackspace/php-opencloud":         "1.*",
 		"dready92/php-on-couch":           "dev-master",
 		"microsoft/windowsazure":          "*"
 	},
