@@ -70,8 +70,8 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	/**
 	 * Create a new service
 	 *
-	 * @param BasePlatformService $consumer
-	 * @param array               $settings configuration array
+	 * @param BasePlatformRestService $consumer
+	 * @param array                   $settings configuration array
 	 *
 	 * @throws \InvalidArgumentException
 	 */

@@ -280,7 +280,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		{
 			if ( null !== ( $_resource = Option::get( $this->_resourceArray, 0 ) ) )
 			{
-				$this->_resource = lcfirst( $_resource );
+				$this->_resource = $_resource;
 			}
 		}
 
