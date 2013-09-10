@@ -19,6 +19,8 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use Kisma\Core\Utility\Option;
+
 /**
  * AppServiceRelation.php
  * The system application to service relationship model for the DSP
@@ -114,5 +116,23 @@ class AppServiceRelation extends BasePlatformSystemModel
 			),
 			$hidden
 		);
+	}
+
+	/**
+	 * @param bool $names
+	 *
+	 * @return array
+	 */
+	public function getAttributes( $names = true )
+	{
+		$_record =  parent::getAttributes( $names );
+
+		$_component = Option::get( $_record, 'component' );
+		if ( !empty( $_component ) )
+		{
+			$_record['component'] = json_decode( $_component, true );
+		}
+
+		return $_record;
 	}
 }

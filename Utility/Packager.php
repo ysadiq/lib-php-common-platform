@@ -146,6 +146,7 @@ class Packager
 								$component = $relation->getAttribute( 'component' );
 								if ( !empty( $component ) )
 								{
+									$component = json_decode( $component, true );
 									// service is probably a db, export table schema if possible
 									$serviceName = $service->getAttribute( 'api_name' );
 									$serviceType = $service->getAttribute( 'type' );

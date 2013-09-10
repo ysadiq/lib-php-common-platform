@@ -57,7 +57,7 @@ use Kisma\Core\Utility\Sql;
  * @property User[]               $users_default_app
  * @property AppGroup[]           $app_groups
  * @property Role[]               $roles
- * @property AppServiceRelation[] $app_service_relation
+ * @property AppServiceRelation[] $app_service_relations
  * @property Service[]            $services
  * @property Service              $storage_service
  */
@@ -388,7 +388,7 @@ class App extends BasePlatformSystemModel
 			foreach ( $_maps as $_map )
 			{
 				$_manyId = Option::get( $_map, 'service_id' );
-				$id = Option::get( $_mapPrimaryKey, $_map, '' );
+				$id = Option::get( $_map, $_mapPrimaryKey, '' );
 				$_found = false;
 				foreach ( $relations as $_key => $_item )
 				{
