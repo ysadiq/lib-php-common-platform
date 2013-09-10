@@ -161,27 +161,27 @@ class SchemaSvc extends BasePlatformRestService
 		parent::_preProcess();
 
 		$this->_payload = RestData::getPostDataAsArray();
-		$this->_tables = Option::get( $_payload, 'table', $_payload );
+		$this->_tables = Option::get( $this->_payload, 'table', $this->_payload );
 
 		if ( empty( $this->_tables ) )
 		{
-			$this->_tables = Option::getDeep( $_payload, 'tables', 'table' );
+			$this->_tables = Option::getDeep( $this->_payload, 'tables', 'table' );
 		}
 
 		if ( static::Get != ( $_action = $this->getRequestedAction() ) && empty( $this->_tableName ) )
 		{
-			throw new BadRequestException();
+//			throw new BadRequestException();
 		}
 
 		//	Create fields in existing table
 		if ( !empty( $this->_tableName ) )
 		{
-			$this->_fields = Option::get( $_payload, 'field', $_payload );
+			$this->_fields = Option::get( $this->_payload, 'field', $this->_payload );
 
 			if ( empty( $this->_fields ) )
 			{
 				// temporary, layer created from xml to array conversion
-				$this->_fields = Option::getDeep( $_payload, 'fields', 'field' );
+				$this->_fields = Option::getDeep( $this->_payload, 'fields', 'field' );
 			}
 
 			if ( static::Post == $_action && empty( $this->_fieldName ) )
