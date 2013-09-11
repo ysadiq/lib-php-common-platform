@@ -32,7 +32,7 @@
 		"rackspace/php-opencloud":         "1.5.*",
 		"dready92/php-on-couch":           "dev-master",
 		"microsoft/windowsazure":          "*",
-	 	"phpforce/rest-client":            "dev-master"
+	 	"phpforce/soap-client":            "dev-master"
 	},
 	"repositories":      [
 		{

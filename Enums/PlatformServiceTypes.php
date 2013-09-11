@@ -57,6 +57,10 @@ class PlatformServiceTypes extends SeedEnum
 	/**
 	 * @var int
 	 */
+	const SALESFORCE_SERVICE = 0x0020;
+	/**
+	 * @var int
+	 */
 	const LOCAL_PORTAL_SERVICE = 0x0040;
 	/**
 	 * @var int
