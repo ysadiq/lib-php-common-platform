@@ -123,4 +123,18 @@ class Config extends BasePlatformSystemModel
 			$hidden
 		);
 	}
+
+	/**
+	 * @throws InternalServerErrorException
+	 * @returns $this
+	 */
+	public static function load()
+	{
+		if ( null === ( $_config = Config::model()->find() ) )
+		{
+			throw new InternalServerErrorException( 'Unable to locate DSP configuration. Bailing ...' );
+		}
+
+		return $_config;
+	}
 }

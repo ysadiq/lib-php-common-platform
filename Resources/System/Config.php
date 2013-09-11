@@ -117,6 +117,8 @@ class Config extends BaseSystemRestResource
 
 		if ( false !== $this->_response['allow_remote_logins'] )
 		{
+			$this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
+
 			$_rows = Sql::findAll( 'SELECT id, api_name, provider_name FROM df_sys_provider ORDER BY 1', array(), Pii::pdo() );
 
 			if ( !empty( $_rows ) )
@@ -132,6 +134,7 @@ class Config extends BaseSystemRestResource
 			{
 				//	No providers, no remote logins
 				$this->_response['allow_remote_logins'] = false;
+				$this->_response['allow_admin_remote_logins'] = false;
 			}
 		}
 
