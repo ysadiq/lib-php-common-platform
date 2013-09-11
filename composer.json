@@ -31,7 +31,8 @@
 		"aws/aws-sdk-php":                 "2.*",
 		"rackspace/php-opencloud":         "1.5.*",
 		"dready92/php-on-couch":           "dev-master",
-		"microsoft/windowsazure":          "*"
+		"microsoft/windowsazure":          "*",
+	 	"phpforce/rest-client":            "dev-master"
 	},
 	"repositories":      [
 		{
