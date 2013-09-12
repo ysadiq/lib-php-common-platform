@@ -22,9 +22,7 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Services\BaseDbSvc;
-use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
@@ -52,14 +50,6 @@ class SalesforceDbSvc extends BaseDbSvc
 	 * @var array
 	 */
 	protected $_fieldCache;
-	/**
-	 * @var array
-	 */
-	protected $_relatedCache;
-	/**
-	 * @var integer
-	 */
-	protected $_driverType = SqlDbUtilities::DRV_OTHER;
 
 	//*************************************************************************
 	//	Methods
@@ -71,6 +61,7 @@ class SalesforceDbSvc extends BaseDbSvc
 	 * @param array $config
 	 *
 	 * @throws \InvalidArgumentException
+	 * @return \DreamFactory\Platform\Services\SalesforceDbSvc
 	 */
 	public function __construct( $config )
 	{
@@ -89,12 +80,7 @@ class SalesforceDbSvc extends BaseDbSvc
 		$this->_relatedCache = array();
 
 		$_credentials = Option::get( $config, 'credentials' );
-		$_credentials = array( 'username' => 'dreamfactorytest12@gmail.com', 'password' => 'joshh123', 'security_token' => 'XhJn1WFFFbxHUk4AdnNwgxU4m' );
-
-		if ( null === ( $dsn = Option::get( $_credentials, 'dsn' ) ) )
-		{
-//			throw new \InvalidArgumentException( 'DB connection string (DSN) can not be empty.' );
-		}
+//		$_credentials = array( 'username' => 'dreamfactorytest12@gmail.com', 'password' => 'joshh123', 'security_token' => 'XhJn1WFFFbxHUk4AdnNwgxU4m' );
 
 		if ( null === ( $user = Option::get( $_credentials, 'username' ) ) )
 		{
@@ -197,29 +183,6 @@ class SalesforceDbSvc extends BaseDbSvc
 	}
 
 	/**
-	 * @param $name
-	 *
-	 * @return string
-	 * @throws \InvalidArgumentException
-	 * @throws \Exception
-	 */
-	public function correctTableName( $name )
-	{
-		return SqlDbUtilities::correctTableName( $this->_soapClient, $name );
-	}
-
-	/**
-	 * @param string $table
-	 * @param string $access
-	 *
-	 * @throws \Exception
-	 */
-	protected function validateTableAccess( $table, $access = 'read' )
-	{
-		parent::validateTableAccess( $table, $access );
-	}
-
-	/**
 	 * @param null|array $post_data
 	 *
 	 * @return array
@@ -228,21 +191,6 @@ class SalesforceDbSvc extends BaseDbSvc
 	{
 		$_extras = parent::_gatherExtrasFromRequest( $post_data );
 
-		$_relations = array();
-		$_related = FilterInput::request( 'related' );
-
-		if ( !empty( $_related ) )
-		{
-			$_related = array_map( 'trim', explode( ',', $_related ) );
-			foreach ( $_related as $_relative )
-			{
-				$_extraFields = FilterInput::request( $_relative . '_fields', '*' );
-				$_extraOrder = FilterInput::request( $_relative . '_order', '' );
-				$_relations[] = array( 'name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder );
-			}
-		}
-
-		$_extras['related'] = $_relations;
 		$_extras['include_schema'] = FilterInput::request( 'include_schema', false, FILTER_VALIDATE_BOOLEAN );
 
 		// rollback all db changes in a transaction, if applicable
@@ -411,7 +359,7 @@ class SalesforceDbSvc extends BaseDbSvc
 
 			$results = array();
 
-			if ( static::_requireMoreFields( $fields, $_idField ) )
+			if ( !static::_requireMoreFields( $fields, $_idField ) )
 			{
 				for ( $i = 0; $i < $count; $i++ )
 				{
@@ -527,7 +475,7 @@ class SalesforceDbSvc extends BaseDbSvc
 
 			$results = array();
 
-			if ( static::_requireMoreFields( $fields, $_idField ) )
+			if ( !static::_requireMoreFields( $fields, $_idField ) )
 			{
 				for ( $i = 0; $i < $count; $i++ )
 				{
@@ -688,7 +636,7 @@ class SalesforceDbSvc extends BaseDbSvc
 			}
 			$results = array();
 
-			if ( static::_requireMoreFields( $fields, $_idField ) )
+			if ( !static::_requireMoreFields( $fields, $_idField ) )
 			{
 				for ( $i = 0; $i < $count; $i++ )
 				{
@@ -946,12 +894,11 @@ class SalesforceDbSvc extends BaseDbSvc
 		try
 		{
 			// parse filter
-//			$availFields = $this->describeTableFields( $table );
+			$availFields = $this->describeTableFields( $table );
 //			$relations = $this->describeTableRelated( $table );
 //			$related = Option::get( $extras, 'related' );
-//			$result = $this->parseFieldsForSqlSelect( $fields, $availFields );
-//			$bindings = $result['bindings'];
-//			$fields = $result['fields'];
+			$result = $this->parseFieldsForSqlSelect( $fields, $availFields );
+			$fields = $result['fields'];
 			$limit = intval( Option::get( $extras, 'limit', 0 ) );
 			$offset = intval( Option::get( $extras, 'offset', 0 ) );
 
@@ -959,7 +906,7 @@ class SalesforceDbSvc extends BaseDbSvc
 			$_query = 'SELECT ';
 			if ( empty( $fields ) )
 			{
-				$_query .= '*';
+				throw new BadRequestException( 'There are no fields specified in the request.' );
 			}
 			elseif ( is_array( $fields ) )
 			{
@@ -973,19 +920,19 @@ class SalesforceDbSvc extends BaseDbSvc
 			$_query .= 'FROM ' . $table . ' ';
 			if ( !empty( $filter ) )
 			{
-				$_query .= 'WHERE ' . $filter . ' ';
+				$_query .= ' WHERE ' . $filter;
 			}
-//			if ( !empty( $order ) )
-//			{
-//				$command->order( $order );
-//			}
-//			if ( $offset > 0 )
-//			{
-//				$command->offset( $offset );
-//			}
+			if ( !empty( $order ) )
+			{
+				$_query .= ' ORDER BY' . $order;
+			}
+			if ( $offset > 0 )
+			{
+				$_query .= ' OFFSET ' . $offset;
+			}
 			if ( $limit > 0 )
 			{
-				$_query .= 'LIMIT ' . $limit . ' ';
+				$_query .= ' LIMIT ' . $limit;
 			}
 			else
 			{
@@ -1074,12 +1021,47 @@ class SalesforceDbSvc extends BaseDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
+	public function retrieveRecord( $table, $record, $fields = null, $extras = array() )
+	{
+		if ( !is_array( $record ) || empty( $record ) )
+		{
+			throw new BadRequestException( 'There are no fields in the record.' );
+		}
+
+		$_id = Option::get( $record, static::DEFAULT_ID_FIELD );
+		if ( empty( $_id ) )
+		{
+			throw new BadRequestException( "Identifying field '_id' can not be empty for retrieve record request." );
+		}
+
+		try
+		{
+			$this->checkConnection();
+			$_result = $this->callGuzzle( 'GET', 'sobjects/' . $table . '/' . $_id );
+		}
+		catch ( \Exception $ex )
+		{
+			throw new InternalServerErrorException( "Failed to get item '$table/$_id' on Salesforce service.\n" . $ex->getMessage() );
+		}
+
+		if ( empty( $_result ) )
+		{
+			throw new NotFoundException( "Record with id '$_id' was not found." );
+		}
+
+		return $_result;
+	}
+
+	/**
+	 * {@inheritdoc}
+	 */
 	public function retrieveRecordsByIds( $table, $ids, $fields = null, $extras = array() )
 	{
 		if ( empty( $ids ) )
 		{
 			return array();
 		}
+
 		if ( !is_array( $ids ) )
 		{
 			$ids = array_map( 'trim', explode( ',', $ids ) );

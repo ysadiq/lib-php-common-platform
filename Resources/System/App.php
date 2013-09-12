@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Utility\FileSystem;
 use DreamFactory\Platform\Utility\Packager;
@@ -85,31 +86,13 @@ class App extends BaseSystemRestResource
 	 */
 	protected function _handlePost()
 	{
-		//	You can import an application package file, local or remote, or from zip, but nothing else
-		$_name = FilterInput::request( 'name' );
+		//	You can import an application package file, local or remote, but nothing else
 		$_importUrl = FilterInput::request( 'url' );
-		$_extension = strtolower( pathinfo( $_importUrl, PATHINFO_EXTENSION ) );
-
-		if ( null !== ( $_files = Option::get( $_FILES, 'files' ) ) )
-		{
-			//	Older html multi-part/form-data post, single or multiple files
-			if ( is_array( $_files['error'] ) )
-			{
-				throw new \Exception( "Only a single application package file is allowed for import." );
-			}
-
-			$_importUrl = 'file://' . $_files['tmp_name'] . '#' . $_files['name'] . '#' . $_files['type'];
-
-			if ( UPLOAD_ERR_OK !== ( $_error = $_files['error'] ) )
-			{
-				throw new \Exception( 'Failed to receive upload of "' . $_files['name'] . '": ' . $_error );
-			}
-		}
-
 		if ( !empty( $_importUrl ) )
 		{
 			$this->checkPermission( 'admin', $this->_resource );
 
+			$_extension = strtolower( pathinfo( $_importUrl, PATHINFO_EXTENSION ) );
 			if ( 'dfpkg' == $_extension )
 			{
 				// need to download and extract zip file and move contents to storage
@@ -125,22 +108,39 @@ class App extends BaseSystemRestResource
 				}
 			}
 
-			// from repo or remote zip file
-			if ( !empty( $_name ) && 'zip' == $_extension )
-			{
-				// need to download and extract zip file and move contents to storage
-				$_filename = FileSystem::importUrlFileToTemp( $_importUrl );
+			throw new BadRequestException( "Only application package files ending with 'dfpkg' are allowed for import." );
+		}
 
+		if ( null !== ( $_files = Option::get( $_FILES, 'files' ) ) )
+		{
+			//	Older html multi-part/form-data post, single or multiple files
+			if ( is_array( $_files['error'] ) )
+			{
+				throw new \Exception( "Only a single application package file is allowed for import." );
+			}
+
+			if ( UPLOAD_ERR_OK !== ( $_error = $_files['error'] ) )
+			{
+				throw new \Exception( 'Failed to receive upload of "' . $_files['name'] . '": ' . $_error );
+			}
+
+			$this->checkPermission( 'admin', $this->_resource );
+
+			$_filename = $_files['tmp_name'];
+			$_extension = strtolower( pathinfo( $_files['name'], PATHINFO_EXTENSION ) );
+			if ( 'dfpkg' == $_extension )
+			{
 				try
 				{
-					//@todo save url for later updates
-					return Packager::importAppFromZip( $_name, $_filename );
+					return Packager::importAppFromPackage( $_filename );
 				}
 				catch ( \Exception $ex )
 				{
-					throw new \Exception( "Failed to import application package $_importUrl.\n{$ex->getMessage()}" );
+					throw new \Exception( "Failed to import application package " . $_files['name'] . "\n{$ex->getMessage()}" );
 				}
 			}
+
+			throw new BadRequestException( "Only application package files ending with 'dfpkg' are allowed for import." );
 		}
 
 		return parent::_handlePost();
