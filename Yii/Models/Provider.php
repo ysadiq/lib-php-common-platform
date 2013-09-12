@@ -19,6 +19,8 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use DreamFactory\Oasys\Oasys;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
@@ -159,5 +161,63 @@ class Provider extends BasePlatformSystemModel
 		unset( $_merge[$columnName] );
 
 		return $_merge;
+	}
+
+	/**
+	 * Retrieves the complete configuration for this provider merging user credentials with the defaults and stored stuff.
+	 *
+	 * @param array $baseConfig
+	 * @param array $stateConfig
+	 *
+	 * @return array
+	 */
+	public function buildConfig( $baseConfig = array(), $stateConfig = array() )
+	{
+		$_userConfig = array();
+
+		if ( !Pii::guest() )
+		{
+			if ( null !== ( $_auth = ProviderUser::model()->byUserProviderUserId( Pii::user()->getId(), $this->id ) ) )
+			{
+				$_userConfig = $_auth->auth_text;
+			}
+		}
+
+		//	If the user config is empty and there is no passed in state config, check the store...
+		if ( empty( $stateConfig ) )
+		{
+			$stateConfig = array();
+
+			//	See if we have any data to merge
+			$_temp = Oasys::getStore()->get( $this->api_name, array() );
+
+			if ( null !== ( $_json = Option::get( $_temp, 'config', array() ) ) )
+			{
+				if ( is_array( $_json ) )
+				{
+					$stateConfig = $_json;
+				}
+				else if ( false === ( $stateConfig = json_decode( $_json, true ) ) )
+				{
+					$stateConfig = array();
+				}
+
+				unset( $_json );
+			}
+
+			unset( $_temp );
+		}
+
+		//	Now simmer...
+		return array_merge(
+		//	My configuration
+			$this->config_text,
+			//	Then base from consumer
+			Option::clean( $baseConfig ),
+			//	User creds
+			Option::clean( $_userConfig ),
+			//	Then state/stored user creds
+			Option::clean( $stateConfig )
+		);
 	}
 }

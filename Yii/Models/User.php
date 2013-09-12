@@ -1,4 +1,6 @@
 <?php
+use DreamFactory\Platform\Yii\Models\ProviderUser;
+
 /**
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
@@ -22,6 +24,7 @@ namespace DreamFactory\Platform\Yii\Models;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Oasys\Components\GenericUser;
 use DreamFactory\Oasys\Interfaces\ProviderLike;
+use DreamFactory\Oasys\Oasys;
 use DreamFactory\Platform\Enums\ProviderUserTypes;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Resources\User\Session;
@@ -311,14 +314,28 @@ class User extends BasePlatformSystemModel
 				 ->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
 				 ->findByAttributes( array( 'email' => $userName ) );
 
-		if ( empty( $_user ) || !\CPasswordHelper::verifyPassword( $password, $_user->password ) )
+		if ( empty( $_user ) )
 		{
-			Log::error( 'Platform login fail: ' . $userName . ' (' . $password . ')' );
+			Log::error( 'Platform login fail: ' . $userName . ' NOT FOUND' );
 
 			return false;
 		}
 
-		Log::debug( 'Platform user auth: ' . $userName );
+		if ( !\CPasswordHelper::verifyPassword( $password, $_user->password ) )
+		{
+			if ( $password == sha1( $_user->email ) )
+			{
+				Log::info( 'Platform remote user auth (via email): ' . $userName );
+
+				return $_user;
+			}
+
+			Log::error( 'Platform password verify fail: ' . $userName );
+
+			return false;
+		}
+
+		Log::info( 'Platform local user auth (via password): ' . $userName );
 
 		return $_user;
 	}
@@ -538,39 +555,34 @@ class User extends BasePlatformSystemModel
 		}
 
 		//	Let's get retarded!
+		$_user = $_providerUser = null;
+
 		try
 		{
-			try
-			{
-				//	Step 1: Create new user or load existing
-				$_user = static::_createRemoteLoginUser( $_email, $_profile, $providerId, $provider, $providerModel );
+			//	Step 1: Create new user or load existing
+			$_user = static::_createRemoteLoginUser( $_email, $_profile, $providerId, $provider, $providerModel );
 
-				//	Step 2: Create new authorization or update existing
-				$_providerUser = static::_createRemoteLoginAuthorization( $_user, $_profile, $provider, $providerModel );
-			}
-			catch ( \Exception $_ex )
-			{
-				//	Delete the authorization, but keep the user I guess...
-				if ( isset( $_providerUser ) )
-				{
-					$_providerUser->delete();
-				}
-
-				Log::error( 'Authorization exception > ' . $_ex->getMessage() );
-				throw $_ex;
-			}
+			/**
+			 * Step 2: Create new authorization or update existing
+			 *
+			 * @var ProviderUser $_providerUser
+			 */
+			$_providerUser = static::_createRemoteLoginAuthorization( $_user, $_profile, $provider, $providerModel );
 		}
 		catch ( \Exception $_ex )
 		{
+			Log::error( 'Authorization exception > ' . $_ex->getMessage() );
 			throw $_ex;
 		}
 
 		//	Step 3: Do the doo
-		Pii::setstate( $providerId . '.config', $_providerUser->auth_text );
+		$_data = Oasys::getStore()->get( $providerId, array() );
+		$_data['config'] = json_encode( $_providerUser->auth_text );
+		Oasys::getStore()->set( $providerId, $_data );
 
 		$_identity = new PlatformUserIdentity( $_user->email, sha1( $_user->email ) );
 
-		if ( false === ( $_authUser = $_identity->authenticate() ) )
+		if ( !$_identity->authenticate() )
 		{
 			throw new ForbiddenException( 'Invalid credentials' );
 		}
@@ -579,5 +591,10 @@ class User extends BasePlatformSystemModel
 		{
 			throw new ForbiddenException( 'User login failed.' );
 		}
+
+		//	Save the state!
+		Pii::setState( $providerId . '.user_config', $_providerUser->auth_text );
+
+		return $_user;
 	}
 }
