@@ -43,6 +43,11 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 */
 	const DEFAULT_ID_FIELD = 'id';
 
+	/**
+	 * Default maximum records returned on filter request
+	 */
+	const DEFAULT_MAX_RECORDS_RETURNED = 1000;
+
 	//*************************************************************************
 	//	Members
 	//*************************************************************************

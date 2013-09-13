@@ -598,6 +598,10 @@ MYSQL;
 					$this->type_id = PlatformServiceTypes::LOCAL_PORTAL_SERVICE;
 					break;
 
+				case 'salesforce':
+					$this->type_id = PlatformServiceTypes::SALESFORCE_SERVICE;
+					break;
+
 				default:
 					//	Giving up...
 					return false;

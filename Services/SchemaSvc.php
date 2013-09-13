@@ -168,11 +168,6 @@ class SchemaSvc extends BasePlatformRestService
 			$this->_tables = Option::getDeep( $this->_payload, 'tables', 'table' );
 		}
 
-		if ( static::Get != ( $_action = $this->getRequestedAction() ) && empty( $this->_tableName ) )
-		{
-//			throw new BadRequestException();
-		}
-
 		//	Create fields in existing table
 		if ( !empty( $this->_tableName ) )
 		{
@@ -182,11 +177,6 @@ class SchemaSvc extends BasePlatformRestService
 			{
 				// temporary, layer created from xml to array conversion
 				$this->_fields = Option::getDeep( $this->_payload, 'fields', 'field' );
-			}
-
-			if ( static::Post == $_action && empty( $this->_fieldName ) )
-			{
-				throw new BadRequestException( 'No new field resources currently supported.' );
 			}
 		}
 	}
