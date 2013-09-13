@@ -100,17 +100,17 @@ class SqlDbSvc extends BaseDbSvc
 
 			if ( null === ( $dsn = Option::get( $_credentials, 'dsn' ) ) )
 			{
-				throw new \InvalidArgumentException( 'DB connection string (DSN) can not be empty.' );
+				throw new InternalServerErrorException( 'DB connection string (DSN) can not be empty.' );
 			}
 
 			if ( null === ( $user = Option::get( $_credentials, 'user' ) ) )
 			{
-				throw new \InvalidArgumentException( 'DB admin name can not be empty.' );
+				throw new InternalServerErrorException( 'DB admin name can not be empty.' );
 			}
 
 			if ( null === ( $password = Option::get( $_credentials, 'pwd' ) ) )
 			{
-				throw new \InvalidArgumentException( 'DB admin password can not be empty.' );
+				throw new InternalServerErrorException( 'DB admin password can not be empty.' );
 			}
 
 			// 	Create pdo connection, activate later
@@ -278,6 +278,14 @@ class SqlDbSvc extends BaseDbSvc
 		}
 		$_extras['rollback'] = $_rollback;
 
+		// continue batch processing if an error occurs, if applicable
+		$_continue = FilterInput::request( 'continue', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+		if ( empty( $_continue ) && !empty( $post_data ) )
+		{
+			$_continue = Option::getBool( $post_data, 'continue' );
+		}
+		$_extras['continue'] = $_continue;
+
 		return $_extras;
 	}
 
@@ -289,17 +297,17 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	protected function _listResources()
 	{
-		$exclude = '';
+		$_exclude = '';
 		if ( $this->_isNative )
 		{
 			// check for system tables
-			$exclude = SystemManager::SYSTEM_TABLE_PREFIX;
+			$_exclude = SystemManager::SYSTEM_TABLE_PREFIX;
 		}
 		try
 		{
-			$result = SqlDbUtilities::describeDatabase( $this->_sqlConn, '', $exclude );
+			$_result = SqlDbUtilities::describeDatabase( $this->_sqlConn, '', $_exclude );
 
-			return array( 'resource' => $result );
+			return array( 'resource' => $_result );
 		}
 		catch ( \Exception $ex )
 		{

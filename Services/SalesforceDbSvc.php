@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Services\BaseDbSvc;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
@@ -30,7 +31,6 @@ use Kisma\Core\Utility\Option;
 use Phpforce\SoapClient as SoapClient;
 use Guzzle\Http\Client as GuzzleClient;
 
-
 /**
  * SalesforceDbSvc.php
  * A service to handle SQL database services accessed through the REST API.
@@ -38,6 +38,15 @@ use Guzzle\Http\Client as GuzzleClient;
  */
 class SalesforceDbSvc extends BaseDbSvc
 {
+	//*************************************************************************
+	//	Constants
+	//*************************************************************************
+
+	/**
+	 * Default record identifier field
+	 */
+	const DEFAULT_ID_FIELD = 'Id';
+
 	//*************************************************************************
 	//	Members
 	//*************************************************************************
@@ -121,11 +130,15 @@ class SalesforceDbSvc extends BaseDbSvc
 	 *
 	 * @return array The JSON response as an array
 	 */
-	protected function callGuzzle( $method = 'GET', $uri = null, $parameters = array(), $body = null )
+	protected function callGuzzle( $method = 'GET', $uri = null, $parameters = array(), $body = null, $client = null )
 	{
 		$_options = array();
-		$request = $this->getGuzzleClient()->createRequest( $method, $uri, null, $body, $_options );
-		$request->setHeader('Authorization', 'Bearer ' . $this->getLoginResult()->getSessionId());
+		if ( !isset( $client ) )
+		{
+			$client = $this->getGuzzleClient();
+		}
+		$request = $client->createRequest( $method, $uri, null, $body, $_options );
+		$request->setHeader( 'Authorization', 'Bearer ' . $this->getLoginResult()->getSessionId() );
 		if ( !empty( $parameters ) )
 		{
 			$request->getQuery()->merge( $parameters );
@@ -191,15 +204,13 @@ class SalesforceDbSvc extends BaseDbSvc
 	{
 		$_extras = parent::_gatherExtrasFromRequest( $post_data );
 
-		$_extras['include_schema'] = FilterInput::request( 'include_schema', false, FILTER_VALIDATE_BOOLEAN );
-
-		// rollback all db changes in a transaction, if applicable
-		$_rollback = FilterInput::request( 'rollback', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
-		if ( empty( $_rollback ) && !empty( $post_data ) )
+		// continue batch processing if an error occurs, if applicable
+		$_continue = FilterInput::request( 'continue', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+		if ( empty( $_continue ) && !empty( $post_data ) )
 		{
-			$_rollback = Option::getBool( $post_data, 'rollback' );
+			$_continue = Option::getBool( $post_data, 'continue' );
 		}
-		$_extras['rollback'] = $_rollback;
+		$_extras['continue'] = $_continue;
 
 		return $_extras;
 	}
@@ -298,96 +309,67 @@ class SalesforceDbSvc extends BaseDbSvc
 			$records = array( $records );
 		}
 
-		$table = $this->correctTableName( $table );
-		$_rollback = Option::getBool( $extras, 'rollback', false );
+		$_client = $this->getGuzzleClient();
+		$_isSingle = ( 1 == count( $records ) );
+		$_continue = Option::getBool( $extras, 'continue', false );
 		$_idField = Option::get( $extras, 'id_field' );
+		if ( empty( $_idField ) )
+		{
+			$_idField = static::DEFAULT_ID_FIELD;
+		}
+
 		try
 		{
-			$fieldInfo = $this->describeTableFields( $table );
-			$relatedInfo = $this->describeTableRelated( $table );
-			if ( empty( $_idField ) )
-			{
-				$_idField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $fieldInfo );
-			}
+			$_ids = array();
+			$_errors = array();
 
-			/** @var \CDbCommand $command */
-			$command = $this->_soapClient->createCommand();
-			$ids = $errors = array();
-			$_transaction = null;
-
-			if ( $_rollback )
-			{
-				$_transaction = $this->_soapClient->beginTransaction();
-			}
-
-			$count = count( $records );
-			foreach ( $records as $key => $record )
+			foreach ( $records as $_key => $_record )
 			{
 				try
 				{
-					$parsed = $this->parseRecord( $record, $fieldInfo );
-					if ( 0 >= count( $parsed ) )
+					$_result = $this->callGuzzle( 'POST', 'sobjects/' . $table . '/', null, json_encode( $_record ), $_client );
+					if ( Option::getBool( $_result, 'success', false ) )
 					{
-						throw new BadRequestException( "No valid fields were passed in the record [$key] request." );
+						$_msg = json_encode( Option::get( $_result, 'errors' ) );
+						throw new InternalServerErrorException( "Record insert failed for table '$table'.\n" . $_msg );
 					}
-					// simple insert request
-					$command->reset();
-					$rows = $command->insert( $table, $parsed );
-					if ( 0 >= $rows )
-					{
-						throw new InternalServerErrorException( "Record insert failed for table '$table'." );
-					}
-					$id = $this->_soapClient->lastInsertID;
-					$this->updateRelations( $table, $record, $id, $relatedInfo );
-					$ids[$key] = $id;
+					$_ids[$_key] = Option::get( $_result, 'id' );
 				}
 				catch ( \Exception $ex )
 				{
-					if ( $_rollback && $_transaction )
+					if ( $_isSingle )
 					{
-						$_transaction->rollBack();
 						throw $ex;
 					}
-					$errors[$key] = $ex->getMessage();
+
+					$_errors[$_key] = $ex->getMessage();
+					if ( !$_continue )
+					{
+						break;
+					}
 				}
 			}
 
-			if ( $_rollback && $_transaction )
+			if ( !empty( $_errors ) )
 			{
-				$_transaction->commit();
+				$_msg = array( 'errors' => $_errors, 'ids' => $_ids );
+				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
 			}
 
-			$results = array();
-
+			$_results = array();
 			if ( !static::_requireMoreFields( $fields, $_idField ) )
 			{
-				for ( $i = 0; $i < $count; $i++ )
+				foreach ( $_ids as $_id )
 				{
-					$results[$i] = ( isset( $ids[$i] )
-						?
-						array( $_idField => $ids[$i] )
-						:
-						( isset( $errors[$i] ) ? $errors[$i] : null ) );
+					$_results[] = array( $_idField => $_id );
 				}
 			}
 			else
 			{
-				if ( '*' !== $fields )
-				{
-					$fields = Utilities::addOnceToList( $fields, $_idField );
-				}
-				$temp = $this->retrieveRecordsByIds( $table, implode( ',', $ids ), $fields, $extras );
-				for ( $i = 0; $i < $count; $i++ )
-				{
-					$results[$i] = ( isset( $ids[$i] )
-						?
-						$temp[$i]
-						: // todo bad assumption
-						( isset( $errors[$i] ) ? $errors[$i] : null ) );
-				}
+				$_results = $this->retrieveRecordsByIds( $table, $_ids, $fields, $extras );
 			}
 
-			return $results;
+			return $_results;
 		}
 		catch ( \Exception $ex )
 		{
@@ -410,100 +392,75 @@ class SalesforceDbSvc extends BaseDbSvc
 			$records = array( $records );
 		}
 
-		$table = $this->correctTableName( $table );
-		$_rollback = Option::getBool( $extras, 'rollback', false );
+		$_client = $this->getGuzzleClient();
+		$_isSingle = ( 1 == count( $records ) );
+		$_continue = Option::getBool( $extras, 'continue', false );
 		$_idField = Option::get( $extras, 'id_field' );
+		if ( empty( $_idField ) )
+		{
+			$_idField = static::DEFAULT_ID_FIELD;
+		}
+
 		try
 		{
-			$fieldInfo = $this->describeTableFields( $table );
-			$relatedInfo = $this->describeTableRelated( $table );
+			$_ids = array();
+			$_errors = array();
 
-			if ( empty( $_idField ) )
-			{
-				$_idField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $fieldInfo );
-				if ( empty( $_idField ) )
-				{
-					throw new BadRequestException( "Identifying field can not be empty." );
-				}
-			}
-			/** @var \CDbCommand $command */
-			$command = $this->_soapClient->createCommand();
-			$ids = array();
-			$errors = array();
-			if ( $_rollback )
-			{
-//                $this->_sqlConn->beginTransaction();
-			}
-			$count = count( $records );
-			foreach ( $records as $key => $record )
+			foreach ( $records as $_key => $_record )
 			{
 				try
 				{
-					$id = Option::get( $record, $_idField );
-					if ( empty( $id ) )
+					$_id = Option::get( $_record, $_idField );
+					if ( empty( $_id ) )
 					{
-						throw new BadRequestException( "Identifying field '$_idField' can not be empty for update record [$key] request." );
+						throw new BadRequestException( "Identifying field '$_idField' can not be empty for update record [$_key] request." );
 					}
-					$record = Utilities::removeOneFromArray( $_idField, $record );
-					$parsed = $this->parseRecord( $record, $fieldInfo, true );
-					if ( 0 >= count( $parsed ) )
+
+					$_record = Utilities::removeOneFromArray( $_idField, $_record );
+
+					$_result = $this->callGuzzle( 'PATCH', 'sobjects/' . $table . '/' . $_id, null, json_encode( $_record ), $_client );
+					if ( Option::getBool( $_result, 'success', false ) )
 					{
-						throw new BadRequestException( "No valid fields were passed in the record [$key] request." );
+						$msg = Option::get( $_result, 'errors' );
+						throw new InternalServerErrorException( "Record update failed for table '$table'.\n" . $msg );
 					}
-					// simple update request
-					$command->reset();
-					$rows = $command->update( $table, $parsed, array( 'in', $_idField, $id ) );
-					$ids[$key] = $id;
-					$this->updateRelations( $table, $record, $id, $relatedInfo );
+					$_ids[$_key] = $_id;
 				}
 				catch ( \Exception $ex )
 				{
-					if ( $_rollback )
+					if ( $_isSingle )
 					{
-//                        $this->_sqlConn->rollBack();
 						throw $ex;
 					}
-					$errors[$key] = $ex->getMessage();
+
+					$_errors[$_key] = $ex->getMessage();
+					if ( !$_continue )
+					{
+						break;
+					}
 				}
 			}
-			if ( $_rollback )
+
+			if ( !empty( $_errors ) )
 			{
-//                if (!$this->_sqlConn->commit()) {
-//                    throw new InternalServerErrorException("Transaction failed.");
-//                }
+				$_msg = array( 'errors' => $_errors, 'ids' => $_ids );
+				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
 			}
 
-			$results = array();
-
+			$_results = array();
 			if ( !static::_requireMoreFields( $fields, $_idField ) )
 			{
-				for ( $i = 0; $i < $count; $i++ )
+				foreach ( $_ids as $_id )
 				{
-					$results[$i] = ( isset( $ids[$i] )
-						?
-						array( $_idField => $ids[$i] )
-						:
-						( isset( $errors[$i] ) ? $errors[$i] : null ) );
+					$_results[] = array( $_idField => $_id );
 				}
 			}
 			else
 			{
-				if ( '*' !== $fields )
-				{
-					$fields = Utilities::addOnceToList( $fields, $_idField );
-				}
-				$temp = $this->retrieveRecordsByIds( $table, implode( ',', $ids ), $fields, $extras );
-				for ( $i = 0; $i < $count; $i++ )
-				{
-					$results[$i] = ( isset( $ids[$i] )
-						?
-						$temp[$i]
-						: // todo bad assumption
-						( isset( $errors[$i] ) ? $errors[$i] : null ) );
-				}
+				$_results = $this->retrieveRecordsByIds( $table, $_ids, $fields, $extras );
 			}
 
-			return $results;
+			return $_results;
 		}
 		catch ( \Exception $ex )
 		{
@@ -520,35 +477,33 @@ class SalesforceDbSvc extends BaseDbSvc
 		{
 			throw new BadRequestException( 'There are no fields in the record.' );
 		}
-		$table = $this->correctTableName( $table );
-		try
-		{
-			$fieldInfo = $this->describeTableFields( $table );
-			$relatedInfo = $this->describeTableRelated( $table );
-			// simple update request
-			$parsed = $this->parseRecord( $record, $fieldInfo, true );
-			if ( empty( $parsed ) )
-			{
-				throw new BadRequestException( "No valid field values were passed in the request." );
-			}
-			// parse filter
-			/** @var \CDbCommand $command */
-			$command = $this->_soapClient->createCommand();
-			$rows = $command->update( $table, $parsed, $filter );
-			// todo how to update relations here?
 
-			$results = array();
-			if ( !empty( $fields ) )
+		if ( empty( $filter ) )
+		{
+			throw new BadRequestException( "Filter for delete request can not be empty." );
+		}
+
+		$_records = $this->retrieveRecordsByFilter( $table, $filter, null, $extras );
+
+		$_idField = Option::get( $extras, 'id_field' );
+		if ( empty( $_idField ) )
+		{
+			$_idField = static::DEFAULT_ID_FIELD;
+		}
+		$_ids = array();
+
+		foreach ( $_records as $_key => $_record )
+		{
+			$_id = Option::get( $_record, $_idField );
+			if ( empty( $_id ) )
 			{
-				$results = $this->retrieveRecordsByFilter( $table, $filter, $fields, $extras );
+				throw new BadRequestException( "Identifying field '$_idField' can not be empty for update record [$_key] request." );
 			}
 
-			return $results;
+			$_ids[$_key] = $_id;
 		}
-		catch ( \Exception $ex )
-		{
-			throw $ex;
-		}
+
+		return $this->updateRecordsByIds( $table, $record, $_ids, $fields, $extras );
 	}
 
 	/**
@@ -561,110 +516,82 @@ class SalesforceDbSvc extends BaseDbSvc
 			throw new BadRequestException( "No record fields were passed in the request." );
 		}
 
-		$table = $this->correctTableName( $table );
-		$_rollback = Option::getBool( $extras, 'rollback', false );
+		$_client = $this->getGuzzleClient();
+		$_continue = Option::getBool( $extras, 'continue', false );
 		$_idField = Option::get( $extras, 'id_field' );
+		if ( empty( $_idField ) )
+		{
+			$_idField = static::DEFAULT_ID_FIELD;
+		}
+
+		if ( !is_array( $ids ) )
+		{
+			$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
+		}
+		if ( empty( $ids ) )
+		{
+			throw new BadRequestException( "Identifying values for '$_idField' can not be empty for update request." );
+		}
+
+		$_isSingle = ( 1 == count( $ids ) );
+
 		try
 		{
-			$fieldInfo = $this->describeTableFields( $table );
-			$relatedInfo = $this->describeTableRelated( $table );
-			if ( empty( $_idField ) )
-			{
-				$_idField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $fieldInfo );
-				if ( empty( $_idField ) )
-				{
-					throw new BadRequestException( "Identifying field can not be empty." );
-				}
-			}
-			if ( empty( $ids ) )
-			{
-				throw new BadRequestException( "Identifying values for '$_idField' can not be empty for update request." );
-			}
-
 			$record = Utilities::removeOneFromArray( $_idField, $record );
-			// simple update request
-			$parsed = $this->parseRecord( $record, $fieldInfo, true );
-			if ( empty( $parsed ) )
-			{
-				throw new BadRequestException( "No valid field values were passed in the request." );
-			}
 
-			if ( !is_array( $ids ) )
-			{
-				$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
-			}
-			$outIds = array();
-			$errors = array();
-			$count = count( $ids );
-			/** @var \CDbCommand $command */
-			$command = $this->_soapClient->createCommand();
+			$_errors = array();
 
-			if ( $_rollback )
-			{
-//                $this->_sqlConn->beginTransaction();
-			}
-			foreach ( $ids as $key => $id )
+			foreach ( $ids as $_key => $_id )
 			{
 				try
 				{
-					if ( empty( $id ) )
+					if ( empty( $_id ) )
 					{
-						throw new BadRequestException( "Identifying field '$_idField' can not be empty for update record request." );
+						throw new BadRequestException( "Identifying field '$_idField' can not be empty for update record [$_key] request." );
 					}
-					// simple update request
-					$command->reset();
-					$rows = $command->update( $table, $parsed, array( 'in', $_idField, $id ) );
-					$this->updateRelations( $table, $record, $id, $relatedInfo );
-					$outIds[$key] = $id;
+
+					$_result = $this->callGuzzle( 'PATCH', 'sobjects/' . $table . '/' . $_id, null, json_encode( $record ), $_client );
+					if ( Option::getBool( $_result, 'success', false ) )
+					{
+						$msg = Option::get( $_result, 'errors' );
+						throw new InternalServerErrorException( "Record update failed for table '$table'.\n" . $msg );
+					}
 				}
 				catch ( \Exception $ex )
 				{
-					error_log( $ex->getMessage() );
-					if ( $_rollback )
+					if ( $_isSingle )
 					{
-//                        $this->_sqlConn->rollBack();
 						throw $ex;
 					}
-					$errors[$key] = $ex->getMessage();
+
+					$_errors[$_key] = $ex->getMessage();
+					if ( !$_continue )
+					{
+						break;
+					}
 				}
 			}
-			if ( $_rollback )
-			{
-//                if (!$this->_sqlConn->commit()) {
-//                    throw new InternalServerErrorException("Transaction failed.");
-//                }
-			}
-			$results = array();
 
+			if ( !empty( $_errors ) )
+			{
+				$_msg = array( 'errors' => $_errors, 'ids' => $ids );
+				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+			}
+
+			$_results = array();
 			if ( !static::_requireMoreFields( $fields, $_idField ) )
 			{
-				for ( $i = 0; $i < $count; $i++ )
+				foreach ( $ids as $_id )
 				{
-					$results[$i] = ( isset( $outIds[$i] )
-						?
-						array( $_idField => $outIds[$i] )
-						:
-						( isset( $errors[$i] ) ? $errors[$i] : null ) );
+					$_results[] = array( $_idField => $_id );
 				}
 			}
 			else
 			{
-				if ( '*' !== $fields )
-				{
-					$fields = Utilities::addOnceToList( $fields, $_idField );
+				$_results = $this->retrieveRecordsByIds( $table, $ids, $fields, $extras );
 				}
-				$temp = $this->retrieveRecordsByIds( $table, implode( ',', $ids ), $fields, $extras );
-				for ( $i = 0; $i < $count; $i++ )
-				{
-					$results[$i] = ( isset( $outIds[$i] )
-						?
-						$temp[$i]
-						: // todo bad assumption
-						( isset( $errors[$i] ) ? $errors[$i] : null ) );
-				}
-			}
 
-			return $results;
+			return $_results;
 		}
 		catch ( \Exception $ex )
 		{
@@ -710,34 +637,28 @@ class SalesforceDbSvc extends BaseDbSvc
 		}
 		if ( !isset( $records[0] ) )
 		{
-			// single record
+			// single record possibly passed in without wrapper array
 			$records = array( $records );
 		}
 
-		$table = $this->correctTableName( $table );
 		$_idField = Option::get( $extras, 'id_field' );
-		$ids = array();
 		if ( empty( $_idField ) )
 		{
-			$field_info = $this->describeTableFields( $table );
-			$_idField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $field_info );
-			if ( empty( $_idField ) )
-			{
-				throw new BadRequestException( "Identifying field can not be empty." );
-			}
+			$_idField = static::DEFAULT_ID_FIELD;
 		}
-		foreach ( $records as $key => $record )
-		{
-			$id = Option::get( $record, $_idField );
-			if ( empty( $id ) )
-			{
-				throw new BadRequestException( "Identifying field '$_idField' can not be empty for retrieve record [$key] request." );
-			}
-			$ids[] = $id;
-		}
-		$idList = implode( ',', $ids );
 
-		return $this->deleteRecordsByIds( $table, $idList, $fields, $extras );
+		$_ids = array();
+		foreach ( $records as $_key => $_record )
+		{
+			$_id = Option::get( $_record, $_idField );
+			if ( empty( $_id ) )
+			{
+				throw new BadRequestException( "Identifying field '$_idField' can not be empty for delete record [$_key] request." );
+			}
+			$_ids[$_key] = $_id;
+		}
+
+		return $this->deleteRecordsByIds( $table, $_ids, $fields, $extras );
 	}
 
 	/**
@@ -749,28 +670,10 @@ class SalesforceDbSvc extends BaseDbSvc
 		{
 			throw new BadRequestException( "Filter for delete request can not be empty." );
 		}
-		$table = $this->correctTableName( $table );
-		try
-		{
-			/** @var \CDbCommand $command */
-			$command = $this->_soapClient->createCommand();
-			$results = array();
-			// get the returnable fields first, then issue delete
-			if ( !empty( $fields ) )
-			{
-				$results = $this->retrieveRecordsByFilter( $table, $filter, $fields, $extras );
-			}
 
-			// parse filter
-			$command->reset();
-			$rows = $command->delete( $table, $filter );
+		$_records = $this->retrieveRecordsByFilter( $table, $filter, null, $extras );
 
-			return $results;
-		}
-		catch ( \Exception $ex )
-		{
-			throw $ex;
-		}
+		return $this->deleteRecords( $table, $_records, $fields, $extras );
 	}
 
 	/**
@@ -778,106 +681,87 @@ class SalesforceDbSvc extends BaseDbSvc
 	 */
 	public function deleteRecordsByIds( $table, $ids, $fields = null, $extras = array() )
 	{
-		$table = $this->correctTableName( $table );
-		$_rollback = Option::getBool( $extras, 'rollback', false );
+		$_client = $this->getGuzzleClient();
+		$_continue = Option::getBool( $extras, 'continue', false );
 		$_idField = Option::get( $extras, 'id_field' );
+		if ( empty( $_idField ) )
+		{
+			$_idField = static::DEFAULT_ID_FIELD;
+		}
+
+		if ( !is_array( $ids ) )
+		{
+			$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
+		}
+		if ( empty( $ids ) )
+		{
+			throw new BadRequestException( "Identifying values for '$_idField' can not be empty for delete request." );
+		}
+
+		$_isSingle = ( 1 == count( $ids ) );
+
 		try
 		{
-			if ( empty( $_idField ) )
-			{
-				$field_info = $this->describeTableFields( $table );
-				$_idField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $field_info );
-				if ( empty( $_idField ) )
-				{
-					throw new BadRequestException( "Identifying field can not be empty." );
-				}
-			}
-			if ( empty( $ids ) )
-			{
-				throw new BadRequestException( "Identifying values for '$_idField' can not be empty for delete request." );
-			}
-
-			if ( !is_array( $ids ) )
-			{
-				$ids = array_map( 'trim', explode( ',', $ids ) );
-			}
-			$errors = array();
-			$count = count( $ids );
-			/** @var \CDbCommand $command */
-			$command = $this->_soapClient->createCommand();
+			$_errors = array();
 
 			// get the returnable fields first, then issue delete
-			$outResults = array();
+			$_outResults = array();
 			if ( static::_requireMoreFields( $fields, $_idField ) )
 			{
-				if ( '*' !== $fields )
-				{
-					$fields = Utilities::addOnceToList( $fields, $_idField );
-				}
-				$outResults = $this->retrieveRecordsByIds( $table, implode( ',', $ids ), $fields, $extras );
+				$_outResults = $this->retrieveRecordsByIds( $table, $ids, $fields, $extras );
 			}
 
-			if ( $_rollback )
-			{
-//                $this->_sqlConn->beginTransaction();
-			}
-			foreach ( $ids as $key => $id )
+			foreach ( $ids as $_key => $_id )
 			{
 				try
 				{
-					if ( empty( $id ) )
+					if ( empty( $_id ) )
 					{
-						throw new BadRequestException( "Identifying field '$_idField' can not be empty for delete record request." );
+						throw new BadRequestException( "Identifying field '$_idField' can not be empty for delete record [$_key] request." );
 					}
-					// simple delete request
-					$command->reset();
-					$rows = $command->delete( $table, array( 'in', $_idField, $id ) );
-					if ( 0 >= $rows )
+
+					$_result = $this->callGuzzle( 'DELETE', 'sobjects/' . $table . '/' . $_id, null, $_client );
+					if ( Option::getBool( $_result, 'success', false ) )
 					{
-						throw new NotFoundException( "Record with $_idField '$id' not found in table '$table'." );
+						$msg = Option::get( $_result, 'errors' );
+						throw new InternalServerErrorException( "Record update failed for table '$table'.\n" . $msg );
 					}
 				}
 				catch ( \Exception $ex )
 				{
-					if ( $_rollback )
+					if ( $_isSingle )
 					{
-//                        $this->_sqlConn->rollBack();
 						throw $ex;
 					}
-					$errors[$key] = $ex->getMessage();
+
+					$_errors[$_key] = $ex->getMessage();
+					if ( !$_continue )
+					{
+						break;
+					}
 				}
 			}
-			if ( $_rollback )
+
+			if ( !empty( $_errors ) )
 			{
-//                if (!$this->_sqlConn->commit()) {
-//                    throw new InternalServerErrorException("Transaction failed.");
-//                }
+				$_msg = array( 'errors' => $_errors, 'ids' => $ids );
+				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
 			}
-			$results = array();
-			if ( empty( $fields ) || ( 0 === strcasecmp( $_idField, $fields ) ) )
+
+			$_results = array();
+			if ( !static::_requireMoreFields( $fields, $_idField ) )
 			{
-				for ( $i = 0; $i < $count; $i++ )
+				foreach ( $ids as $_id )
 				{
-					$results[$i] = ( isset( $errors[$i] )
-						?
-						$errors[$i]
-						:
-						array( $_idField => $ids[$i] ) );
+					$_results[] = array( $_idField => $_id );
 				}
 			}
 			else
 			{
-				for ( $i = 0; $i < $count; $i++ )
-				{
-					$results[$i] = ( isset( $errors[$i] )
-						?
-						$errors[$i]
-						:
-						$outResults[$i] );
-				}
+				$_results = $_outResults;
 			}
 
-			return $results;
+			return $_results;
 		}
 		catch ( \Exception $ex )
 		{
@@ -890,89 +774,69 @@ class SalesforceDbSvc extends BaseDbSvc
 	 */
 	public function retrieveRecordsByFilter( $table, $filter = null, $fields = null, $extras = array() )
 	{
-//		$table = $this->correctTableName( $table );
+		// build query string
+		if ( empty( $fields ) )
+		{
+			throw new BadRequestException( 'There are no fields specified in the request.' );
+		}
+		elseif ( '*' == $fields )
+		{
+			throw new BadRequestException( "The '*' option for 'fields' parameter is not currently supported, please include list of desired fields." );
+		}
+		elseif ( is_array( $fields ) )
+		{
+			$fields .= implode( ',', $fields );
+		}
+
+		$_query = 'SELECT ' . $fields . ' FROM ' . $table;
+
+		if ( !empty( $filter ) )
+		{
+			$_query .= ' WHERE ' . $filter;
+		}
+
+		$_order = Option::get( $extras, 'order' );
+		if ( !empty( $_order ) )
+		{
+			$_query .= ' ORDER BY ' . $_order;
+		}
+
+		$_offset = intval( Option::get( $extras, 'offset', 0 ) );
+		if ( $_offset > 0 )
+		{
+			$_query .= ' OFFSET ' . $_offset;
+		}
+
+		$_limit = intval( Option::get( $extras, 'limit', 0 ) );
+		if ( $_limit > 0 )
+		{
+			$_query .= ' LIMIT ' . $_limit;
+		}
+
+		$this->checkConnection();
+
 		try
 		{
-			// parse filter
-			$availFields = $this->describeTableFields( $table );
-//			$relations = $this->describeTableRelated( $table );
-//			$related = Option::get( $extras, 'related' );
-			$result = $this->parseFieldsForSqlSelect( $fields, $availFields );
-			$fields = $result['fields'];
-			$limit = intval( Option::get( $extras, 'limit', 0 ) );
-			$offset = intval( Option::get( $extras, 'offset', 0 ) );
+			$_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
 
-			// build query string
-			$_query = 'SELECT ';
-			if ( empty( $fields ) )
-			{
-				throw new BadRequestException( 'There are no fields specified in the request.' );
-			}
-			elseif ( is_array( $fields ) )
-			{
-				$_query .= implode( ',', $fields ) . ' ';
-			}
-			else
-			{
-				$_query .= $fields . ' ';
-			}
-
-			$_query .= 'FROM ' . $table . ' ';
-			if ( !empty( $filter ) )
-			{
-				$_query .= ' WHERE ' . $filter;
-			}
-			if ( !empty( $order ) )
-			{
-				$_query .= ' ORDER BY' . $order;
-			}
-			if ( $offset > 0 )
-			{
-				$_query .= ' OFFSET ' . $offset;
-			}
-			if ( $limit > 0 )
-			{
-				$_query .= ' LIMIT ' . $limit;
-			}
-			else
-			{
-				// todo impose a limit to protect server
-			}
-
-			$this->checkConnection();
-			$_result = $this->callGuzzle( 'GET', 'query', array('q' => $_query ) );
-
-			$data = Option::get( $_result, 'records', array() );
+			$_data = Option::get( $_result, 'records', array() );
 
 			$_includeCount = Option::getBool( $extras, 'include_count', false );
-			$_includeSchema = Option::getBool( $extras, 'include_schema', false );
-			if ( $_includeCount || $_includeSchema )
+			$_moreToken = Option::get( $_result, 'nextRecordsUrl' );
+			if ( $_includeCount || $_moreToken )
 			{
 				// count total records
-				if ( $_includeCount )
+				$_data['meta']['count'] = intval( Option::get( $_result, 'totalSize' ) );
+				if ( $_moreToken )
 				{
-					$data['meta']['count'] = intval( Option::get( $_result, 'totalSize' ) );
-				}
-				// count total records
-				if ( $_includeSchema )
-				{
-					$data['meta']['schema'] = SqlDbUtilities::describeTable( $this->_soapClient, $table );
+					$_data['meta']['next'] = substr( $_moreToken, strrpos( $_moreToken, '/' ) + 1 );
 				}
 			}
 
-//            error_log('retrievefilter: ' . PHP_EOL . print_r($data, true));
-
-			return $data;
+			return $_data;
 		}
 		catch ( \Exception $ex )
 		{
-			error_log( 'retrievefilter: ' . $ex->getMessage() . PHP_EOL . $filter );
-			/*
-            $msg = '[QUERYFAILED]: ' . implode(':', $this->_sqlConn->errorInfo()) . "\n";
-            if (isset($GLOBALS['DB_DEBUG'])) {
-                error_log($msg . "\n$query");
-            }
-            */
 			throw $ex;
 		}
 	}
@@ -992,30 +856,24 @@ class SalesforceDbSvc extends BaseDbSvc
 			$records = array( $records );
 		}
 
-		$table = $this->correctTableName( $table );
 		$_idField = Option::get( $extras, 'id_field' );
 		if ( empty( $_idField ) )
 		{
-			$field_info = $this->describeTableFields( $table );
-			$_idField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $field_info );
-			if ( empty( $_idField ) )
-			{
-				throw new BadRequestException( "Identifying field can not be empty." );
-			}
+			$_idField = static::DEFAULT_ID_FIELD;
 		}
-		$ids = array();
-		foreach ( $records as $key => $record )
-		{
-			$id = Option::get( $record, $_idField );
-			if ( empty( $id ) )
-			{
-				throw new BadRequestException( "Identifying field '$_idField' can not be empty for retrieve record [$key] request." );
-			}
-			$ids[] = $id;
-		}
-		$idList = implode( ',', $ids );
 
-		return $this->retrieveRecordsByIds( $table, $idList, $fields, $extras );
+		$_ids = array();
+		foreach ( $records as $_key => $_record )
+		{
+			$_id = Option::get( $_record, $_idField );
+			if ( empty( $_id ) )
+			{
+				throw new BadRequestException( "Identifying field '$_idField' can not be empty for retrieve record [$_key] request." );
+			}
+			$_ids[] = $_id;
+		}
+
+		return $this->retrieveRecordsByIds( $table, $_ids, $fields, $extras );
 	}
 
 	/**
@@ -1028,28 +886,19 @@ class SalesforceDbSvc extends BaseDbSvc
 			throw new BadRequestException( 'There are no fields in the record.' );
 		}
 
-		$_id = Option::get( $record, static::DEFAULT_ID_FIELD );
+		$_idField = Option::get( $extras, 'id_field' );
+		if ( empty( $_idField ) )
+		{
+			$_idField = static::DEFAULT_ID_FIELD;
+		}
+
+		$_id = Option::get( $record, $_idField );
 		if ( empty( $_id ) )
 		{
-			throw new BadRequestException( "Identifying field '_id' can not be empty for retrieve record request." );
+			throw new BadRequestException( "Identifying field '$_idField' can not be empty for retrieve record request." );
 		}
 
-		try
-		{
-			$this->checkConnection();
-			$_result = $this->callGuzzle( 'GET', 'sobjects/' . $table . '/' . $_id );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to get item '$table/$_id' on Salesforce service.\n" . $ex->getMessage() );
-		}
-
-		if ( empty( $_result ) )
-		{
-			throw new NotFoundException( "Record with id '$_id' was not found." );
-		}
-
-		return $_result;
+		return $this->retrieveRecordById( $table, $_id, $fields, $extras );
 	}
 
 	/**
@@ -1066,89 +915,45 @@ class SalesforceDbSvc extends BaseDbSvc
 		{
 			$ids = array_map( 'trim', explode( ',', $ids ) );
 		}
-		$table = $this->correctTableName( $table );
+
 		$_idField = Option::get( $extras, 'id_field' );
+		if ( empty( $_idField ) )
+		{
+			$_idField = static::DEFAULT_ID_FIELD;
+		}
+
+		if ( empty( $fields ) )
+		{
+			throw new BadRequestException( 'There are no fields specified in the request.' );
+		}
+		elseif ( '*' == $fields )
+		{
+			throw new BadRequestException( "The '*' option for 'fields' parameter is not currently supported, please include list of desired fields." );
+		}
+		elseif ( is_array( $fields ) )
+		{
+			$fields .= implode( ',', $fields );
+		}
+
+		if ( !is_array( $ids ) )
+		{
+			$ids = explode( ',', $ids );
+		}
+
+		$ids .= "('" . implode( "','", $ids ) . "')";
+
+		$this->checkConnection();
 		try
 		{
-			$availFields = $this->describeTableFields( $table );
-			$relations = $this->describeTableRelated( $table );
-			$related = Option::get( $extras, 'related' );
-			if ( empty( $_idField ) )
-			{
-				$_idField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $availFields );
-				if ( empty( $_idField ) )
-				{
-					throw new BadRequestException( "Identifying field can not be empty." );
-				}
-			}
-			if ( !empty( $fields ) && ( '*' !== $fields ) )
-			{
-				// add id field to field list
-				$fields = Utilities::addOnceToList( $fields, $_idField, ',' );
-			}
-			$result = $this->parseFieldsForSqlSelect( $fields, $availFields );
-			$bindings = $result['bindings'];
-			$fields = $result['fields'];
-			// use query builder
-			/** @var \CDbCommand $command */
-			$command = $this->_soapClient->createCommand();
-			$command->select( $fields );
-			$command->from( $table );
-			$command->where( array( 'in', $_idField, $ids ) );
+			$_query = "SELECT $fields WHERE $_idField IN $ids";
+			$_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
 
-			$this->checkConnection();
-			$reader = $command->query();
-			$data = array();
-			$dummy = array();
-			foreach ( $bindings as $binding )
-			{
-				$reader->bindColumn( $binding['name'], $dummy[$binding['name']], $binding['type'] );
-			}
-			$reader->setFetchMode( \PDO::FETCH_BOUND );
-			$count = 0;
-			while ( false !== $reader->read() )
-			{
-				$temp = array();
-				foreach ( $bindings as $binding )
-				{
-					$temp[$binding['name']] = $dummy[$binding['name']];
-				}
-				if ( !empty( $related ) )
-				{
-					$temp = $this->retrieveRelatedRecords( $relations, $temp, $related );
-				}
-				$data[$count++] = $temp;
-			}
+			$_data = Option::get( $_result, 'records', array() );
 
-			// order returned data by received ids, fill in error for those not found
-			$results = array();
-			foreach ( $ids as $id )
-			{
-				$foundRecord = null;
-				foreach ( $data as $record )
-				{
-					if ( isset( $record[$_idField] ) && ( $record[$_idField] == $id ) )
-					{
-						$foundRecord = $record;
-						break;
-					}
-				}
-				$results[] = ( isset( $foundRecord )
-					? $foundRecord
-					:
-					( "Could not find record for id = '$id'" ) );
-			}
-
-			return $results;
+			return $_data;
 		}
 		catch ( \Exception $ex )
 		{
-			/*
-            $msg = '[QUERYFAILED]: ' . implode(':', $this->_sqlConn->errorInfo()) . "\n";
-            if (isset($GLOBALS['DB_DEBUG'])) {
-                error_log($msg . "\n$query");
-            }
-            */
 			throw $ex;
 		}
 	}
@@ -1163,10 +968,23 @@ class SalesforceDbSvc extends BaseDbSvc
 			return array();
 		}
 
+		if ( empty( $fields ) )
+		{
+			throw new BadRequestException( 'There are no fields specified in the request.' );
+		}
+		elseif ( '*' == $fields )
+		{
+			throw new BadRequestException( "The '*' option for 'fields' parameter is not currently supported, please include list of desired fields." );
+		}
+		elseif ( is_array( $fields ) )
+		{
+			$fields .= implode( ',', $fields );
+		}
+
+		$this->checkConnection();
 		try
 		{
-			$this->checkConnection();
-			$_result = $this->callGuzzle( 'GET', 'sobjects/' . $table . '/' . $id );
+			$_result = $this->callGuzzle( 'GET', 'sobjects/' . $table . '/' . $id, array( 'fields' => $fields ) );
 		}
 		catch ( \Exception $ex )
 		{
@@ -1181,839 +999,6 @@ class SalesforceDbSvc extends BaseDbSvc
 		return $_result;
 	}
 
-	// Helper methods
-
-	/**
-	 * @param $name
-	 *
-	 * @return array
-	 * @throws \Exception
-	 */
-	protected function describeTableFields( $name )
-	{
-		if ( isset( $this->_fieldCache[$name] ) )
-		{
-			return $this->_fieldCache[$name];
-		}
-
-		$fields = SqlDbUtilities::describeTableFields( $this->_soapClient, $name );
-		$this->_fieldCache[$name] = $fields;
-
-		return $fields;
-	}
-
-	/**
-	 * @param $name
-	 *
-	 * @return array
-	 * @throws \Exception
-	 */
-	protected function describeTableRelated( $name )
-	{
-		if ( isset( $this->_relatedCache[$name] ) )
-		{
-			return $this->_relatedCache[$name];
-		}
-
-		$relations = SqlDbUtilities::describeTableRelated( $this->_soapClient, $name );
-		$relatives = array();
-		foreach ( $relations as $relation )
-		{
-			$how = Option::get( $relation, 'name', '' );
-			$relatives[$how] = $relation;
-		}
-		$this->_relatedCache[$name] = $relatives;
-
-		return $relatives;
-	}
-
-	/**
-	 * @param      $record
-	 * @param      $avail_fields
-	 * @param bool $for_update
-	 *
-	 * @return array
-	 * @throws \Exception
-	 */
-	protected function parseRecord( $record, $avail_fields, $for_update = false )
-	{
-		$parsed = array();
-		$record = Utilities::array_key_lower( $record );
-		$keys = array_keys( $record );
-		$values = array_values( $record );
-		foreach ( $avail_fields as $field_info )
-		{
-			$name = mb_strtolower( $field_info['name'] );
-			$type = $field_info['type'];
-			$dbType = $field_info['db_type'];
-			$pos = array_search( $name, $keys );
-			if ( false !== $pos )
-			{
-				$fieldVal = $values[$pos];
-				// due to conversion from XML to array, null or empty xml elements have the array value of an empty array
-				if ( is_array( $fieldVal ) && empty( $fieldVal ) )
-				{
-					$fieldVal = null;
-				}
-				// overwrite some undercover fields
-				if ( Option::getBool( $field_info, 'auto_increment', false ) )
-				{
-					unset( $keys[$pos] );
-					unset( $values[$pos] );
-					continue; // should I error this?
-				}
-				if ( Utilities::isInList( Option::get( $field_info, 'validation', '' ), 'api_read_only', ',' ) )
-				{
-					unset( $keys[$pos] );
-					unset( $values[$pos] );
-					continue; // should I error this?
-				}
-				if ( is_null( $fieldVal ) && !$field_info['allow_null'] )
-				{
-					if ( $for_update )
-					{
-						continue;
-					} // todo throw away nulls for now
-					throw new BadRequestException( "Field '$name' can not be NULL." );
-				}
-				else
-				{
-					if ( !is_null( $fieldVal ) )
-					{
-						switch ( $this->_driverType )
-						{
-							case SqlDbUtilities::DRV_SQLSRV:
-								switch ( $dbType )
-								{
-									case 'bit':
-										$fieldVal = ( Utilities::boolval( $fieldVal ) ? 1 : 0 );
-										break;
-								}
-								break;
-							case SqlDbUtilities::DRV_MYSQL:
-								switch ( $dbType )
-								{
-									case 'tinyint(1)':
-										$fieldVal = ( Utilities::boolval( $fieldVal ) ? 1 : 0 );
-										break;
-								}
-								break;
-						}
-						switch ( $type )
-						{
-							case 'integer':
-								if ( !is_int( $fieldVal ) )
-								{
-									if ( ( '' === $fieldVal ) && $field_info['allow_null'] )
-									{
-										$fieldVal = null;
-									}
-									elseif ( !( ctype_digit( $fieldVal ) ) )
-									{
-										throw new BadRequestException( "Field '$name' must be a valid integer." );
-									}
-									else
-									{
-										$fieldVal = intval( $fieldVal );
-									}
-								}
-								break;
-							default:
-						}
-					}
-				}
-				$parsed[$name] = $fieldVal;
-				unset( $keys[$pos] );
-				unset( $values[$pos] );
-			}
-			else
-			{
-				// check specific fields
-				switch ( $type )
-				{
-					case 'timestamp_on_create':
-					case 'timestamp_on_update':
-					case 'user_id_on_create':
-					case 'user_id_on_update':
-						break;
-					default:
-						// if field is required, kick back error
-						if ( $field_info['required'] && !$for_update )
-						{
-							throw new BadRequestException( "Required field '$name' can not be NULL." );
-						}
-						break;
-				}
-			}
-			// add or override for specific fields
-			switch ( $type )
-			{
-				case 'timestamp_on_create':
-					if ( !$for_update )
-					{
-						switch ( $this->_driverType )
-						{
-							case SqlDbUtilities::DRV_SQLSRV:
-								$parsed[$name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
-								break;
-							case SqlDbUtilities::DRV_MYSQL:
-								$parsed[$name] = new \CDbExpression( '(NOW())' );
-								break;
-						}
-					}
-					break;
-				case 'timestamp_on_update':
-					switch ( $this->_driverType )
-					{
-						case SqlDbUtilities::DRV_SQLSRV:
-							$parsed[$name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
-							break;
-						case SqlDbUtilities::DRV_MYSQL:
-							$parsed[$name] = new \CDbExpression( '(NOW())' );
-							break;
-					}
-					break;
-				case 'user_id_on_create':
-					if ( !$for_update )
-					{
-						$userId = Session::getCurrentUserId();
-						if ( isset( $userId ) )
-						{
-							$parsed[$name] = $userId;
-						}
-					}
-					break;
-				case 'user_id_on_update':
-					$userId = Session::getCurrentUserId();
-					if ( isset( $userId ) )
-					{
-						$parsed[$name] = $userId;
-					}
-					break;
-			}
-		}
-
-		return $parsed;
-	}
-
-	/**
-	 * @param $table
-	 * @param $record
-	 * @param $id
-	 * @param $avail_relations
-	 *
-	 * @throws \Exception
-	 * @return void
-	 */
-	protected function updateRelations( $table, $record, $id, $avail_relations )
-	{
-		$record = Utilities::array_key_lower( $record );
-		$keys = array_keys( $record );
-		$values = array_values( $record );
-		foreach ( $avail_relations as $relationInfo )
-		{
-			$name = mb_strtolower( $relationInfo['name'] );
-			$pos = array_search( $name, $keys );
-			if ( false !== $pos )
-			{
-				$relations = $values[$pos];
-				$relationType = $relationInfo['type'];
-				switch ( $relationType )
-				{
-					case 'belongs_to':
-						/*
-                    "name": "role_by_role_id",
-                    "type": "belongs_to",
-                    "ref_table": "role",
-                    "ref_field": "id",
-                    "field": "role_id"
-                    */
-						// todo handle this?
-						break;
-					case 'has_many':
-						/*
-                    "name": "users_by_last_modified_by_id",
-                    "type": "has_many",
-                    "ref_table": "user",
-                    "ref_field": "last_modified_by_id",
-                    "field": "id"
-                    */
-						$relatedTable = $relationInfo['ref_table'];
-						$relatedField = $relationInfo['ref_field'];
-						$this->assignManyToOne( $table, $id, $relatedTable, $relatedField, $relations );
-						break;
-					case 'many_many':
-						/*
-                    "name": "roles_by_user",
-                    "type": "many_many",
-                    "ref_table": "role",
-                    "ref_field": "id",
-                    "join": "user(default_app_id,role_id)"
-                    */
-						$relatedTable = $relationInfo['ref_table'];
-						$join = $relationInfo['join'];
-						$joinTable = substr( $join, 0, strpos( $join, '(' ) );
-						$other = explode( ',', substr( $join, strpos( $join, '(' ) + 1, -1 ) );
-						$joinLeftField = trim( $other[0] );
-						$joinRightField = trim( $other[1] );
-						$this->assignManyToOneByMap(
-							$table,
-							$id,
-							$relatedTable,
-							$joinTable,
-							$joinLeftField,
-							$joinRightField,
-							$relations
-						);
-						break;
-					default:
-						throw new InternalServerErrorException( 'Invalid relationship type detected.' );
-						break;
-				}
-				unset( $keys[$pos] );
-				unset( $values[$pos] );
-			}
-		}
-	}
-
-	/**
-	 * @param array $record
-	 *
-	 * @return string
-	 */
-	protected function parseRecordForSqlInsert( $record )
-	{
-		$values = '';
-		foreach ( $record as $key => $value )
-		{
-			$fieldVal = ( is_null( $value ) ) ? "NULL" : $this->_soapClient->quoteValue( $value );
-			$values .= ( !empty( $values ) ) ? ',' : '';
-			$values .= $fieldVal;
-		}
-
-		return $values;
-	}
-
-	/**
-	 * @param array $record
-	 *
-	 * @return string
-	 */
-	protected function parseRecordForSqlUpdate( $record )
-	{
-		$out = '';
-		foreach ( $record as $key => $value )
-		{
-			$fieldVal = ( is_null( $value ) ) ? "NULL" : $this->_soapClient->quoteValue( $value );
-			$out .= ( !empty( $values ) ) ? ',' : '';
-			$out .= "$key = $fieldVal";
-		}
-
-		return $out;
-	}
-
-	/**
-	 * @param        $fields
-	 * @param        $avail_fields
-	 * @param bool   $as_quoted_string
-	 * @param string $prefix
-	 * @param string $fields_as
-	 *
-	 * @return string
-	 */
-	protected function parseFieldsForSqlSelect( $fields, $avail_fields, $as_quoted_string = false, $prefix = '', $fields_as = '' )
-	{
-		if ( empty( $fields ) || ( '*' === $fields ) )
-		{
-			$fields = SqlDbUtilities::listAllFieldsFromDescribe( $avail_fields );
-		}
-		$field_arr = array_map( 'trim', explode( ',', $fields ) );
-		$as_arr = array_map( 'trim', explode( ',', $fields_as ) );
-		if ( !$as_quoted_string )
-		{
-			// yii will not quote anything if any of the fields are expressions
-		}
-		$outString = '';
-		$outArray = array();
-		$bindArray = array();
-		for ( $i = 0, $size = sizeof( $field_arr ); $i < $size; $i++ )
-		{
-			$field = $field_arr[$i];
-			$as = ( isset( $as_arr[$i] ) ? $as_arr[$i] : '' );
-			$context = ( empty( $prefix ) ? $field : $prefix . '.' . $field );
-			$out_as = ( empty( $as ) ? $field : $as );
-			if ( $as_quoted_string )
-			{
-				$context = $this->_soapClient->quoteColumnName( $context );
-				$out_as = $this->_soapClient->quoteColumnName( $out_as );
-			}
-			// find the type
-			$field_info = SqlDbUtilities::getFieldFromDescribe( $field, $avail_fields );
-			$dbType = ( isset( $field_info ) ) ? $field_info['db_type'] : '';
-			$type = ( isset( $field_info ) ) ? $field_info['type'] : '';
-			switch ( $type )
-			{
-				case 'boolean':
-					$bindArray[] = array( 'name' => $field, 'type' => \PDO::PARAM_BOOL );
-					break;
-				case 'integer':
-					$bindArray[] = array( 'name' => $field, 'type' => \PDO::PARAM_INT );
-					break;
-				default:
-					$bindArray[] = array( 'name' => $field, 'type' => \PDO::PARAM_STR );
-					break;
-			}
-			// todo fix special cases - maybe after retrieve
-			switch ( $dbType )
-			{
-				case 'datetime':
-				case 'datetimeoffset':
-					switch ( $this->_driverType )
-					{
-						case SqlDbUtilities::DRV_SQLSRV:
-							if ( !$as_quoted_string )
-							{
-								$context = $this->_soapClient->quoteColumnName( $context );
-								$out_as = $this->_soapClient->quoteColumnName( $out_as );
-							}
-							$out = "(CONVERT(nvarchar(30), $context, 127)) AS $out_as";
-							break;
-						default:
-							$out = $context;
-							break;
-					}
-					break;
-				default :
-					$out = $context;
-					if ( !empty( $as ) )
-					{
-						$out .= ' AS ' . $out_as;
-					}
-					break;
-			}
-
-			$outArray[] = $out;
-		}
-
-		return array( 'fields' => $outArray, 'bindings' => $bindArray );
-	}
-
-	/**
-	 * @param        $fields
-	 * @param        $avail_fields
-	 * @param string $prefix
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return string
-	 */
-	public function parseOutFields( $fields, $avail_fields, $prefix = 'INSERTED' )
-	{
-		if ( empty( $fields ) )
-		{
-			return '';
-		}
-
-		$out_str = '';
-		$field_arr = array_map( 'trim', explode( ',', $fields ) );
-		foreach ( $field_arr as $field )
-		{
-			// find the type
-			if ( false === SqlDbUtilities::findFieldFromDescribe( $field, $avail_fields ) )
-			{
-				throw new BadRequestException( "Invalid field '$field' selected for output." );
-			}
-			if ( !empty( $out_str ) )
-			{
-				$out_str .= ', ';
-			}
-			$out_str .= $prefix . '.' . $this->_soapClient->quoteColumnName( $field );
-		}
-
-		return $out_str;
-	}
-
-	// generic assignments
-
-	/**
-	 * @param $relations
-	 * @param $data
-	 * @param $extras
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
-	 */
-	protected function retrieveRelatedRecords( $relations, $data, $extras )
-	{
-		if ( !empty( $extras ) )
-		{
-			$relatedData = array();
-			foreach ( $extras as $extra )
-			{
-				$extraName = $extra['name'];
-				if ( !isset( $relations[$extraName] ) )
-				{
-					throw new BadRequestException( "Invalid relation '$extraName' requested." );
-				}
-				$relation = $relations[$extraName];
-				$relationType = $relation['type'];
-				$relatedTable = $relation['ref_table'];
-				$relatedField = $relation['ref_field'];
-				$field = $relation['field'];
-				$extraFields = $extra['fields'];
-				switch ( $relationType )
-				{
-					case 'belongs_to':
-						$fieldVal = Option::get( $data, $field );
-						$relatedRecords = $this->retrieveRecordsByFilter( $relatedTable, "$relatedField = '$fieldVal'", $extraFields );
-						if ( !empty( $relatedRecords ) )
-						{
-							$tempData = $relatedRecords[0];
-						}
-						else
-						{
-							$tempData = null;
-						}
-						break;
-					case 'has_many':
-						$fieldVal = Option::get( $data, $field );
-						$tempData = $this->retrieveRecordsByFilter( $relatedTable, "$relatedField = '$fieldVal'", $extraFields );
-						break;
-					case 'many_many':
-						$fieldVal = Option::get( $data, $field );
-						$join = $relation['join'];
-						$joinTable = substr( $join, 0, strpos( $join, '(' ) );
-						$other = explode( ',', substr( $join, strpos( $join, '(' ) + 1, -1 ) );
-						$joinLeftField = trim( $other[0] );
-						$joinRightField = trim( $other[1] );
-						$joinData = $this->retrieveRecordsByFilter( $joinTable, "$joinLeftField = '$fieldVal'", $joinRightField );
-						$tempData = array();
-						if ( !empty( $joinData ) )
-						{
-							$relatedIds = array();
-							foreach ( $joinData as $record )
-							{
-								$relatedIds[] = $record[$joinRightField];
-							}
-							if ( !empty( $relatedIds ) )
-							{
-								$relatedIds = implode( ',', $relatedIds );
-								$tempData = $this->retrieveRecordsByIds( $relatedTable, $relatedIds, $relatedField, $extraFields );
-							}
-						}
-						break;
-					default:
-						throw new InternalServerErrorException( 'Invalid relationship type detected.' );
-						break;
-				}
-				$relatedData[$extraName] = $tempData;
-			}
-			if ( !empty( $relatedData ) )
-			{
-				$data = array_merge( $data, $relatedData );
-			}
-		}
-
-		return $data;
-	}
-
-	/**
-	 * @param string $one_table
-	 * @param string $one_id
-	 * @param string $many_table
-	 * @param string $many_field
-	 * @param array  $many_records
-	 *
-	 * @throws \Exception
-	 * @return void
-	 */
-	protected function assignManyToOne( $one_table, $one_id, $many_table, $many_field, $many_records = array() )
-	{
-		if ( empty( $one_id ) )
-		{
-			throw new BadRequestException( "The $one_table id can not be empty." );
-		}
-		try
-		{
-			$manyFields = $this->describeTableFields( $many_table );
-			$pkField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $manyFields );
-			$oldMany = $this->retrieveRecordsByFilter( $many_table, $many_field . " = '$one_id'", "$pkField,$many_field" );
-			foreach ( $oldMany as $oldKey => $old )
-			{
-				$oldId = Option::get( $old, $pkField );
-				foreach ( $many_records as $key => $item )
-				{
-					$id = Option::get( $item, $pkField, '' );
-					if ( $id == $oldId )
-					{
-						// found it, keeping it, so remove it from the list, as this becomes adds
-						unset( $many_records[$key] );
-						unset( $oldMany[$oldKey] );
-						continue;
-					}
-				}
-			}
-			// reset arrays
-			$many_records = array_values( $many_records );
-			$oldMany = array_values( $oldMany );
-			if ( !empty( $oldMany ) )
-			{
-				// un-assign any left over old ones
-				$ids = array();
-				foreach ( $oldMany as $item )
-				{
-					$ids[] = Option::get( $item, $pkField );
-				}
-				if ( !empty( $ids ) )
-				{
-					$ids = implode( ',', $ids );
-					$this->updateRecordsByIds( $many_table, array( $many_field => null ), $ids, $pkField );
-				}
-			}
-			if ( !empty( $many_records ) )
-			{
-				// assign what is leftover
-				$ids = array();
-				foreach ( $many_records as $item )
-				{
-					$ids[] = Option::get( $item, $pkField );
-				}
-				if ( !empty( $ids ) )
-				{
-					$ids = implode( ',', $ids );
-					$this->updateRecordsByIds( $many_table, array( $many_field => $one_id ), $ids, $pkField );
-				}
-			}
-		}
-		catch ( \Exception $ex )
-		{
-			throw new BadRequestException( "Error updating many to one assignment.\n{$ex->getMessage()}", $ex->getCode() );
-		}
-	}
-
-	/**
-	 * @param       $one_table
-	 * @param       $one_id
-	 * @param       $many_table
-	 * @param       $map_table
-	 * @param       $one_field
-	 * @param       $many_field
-	 * @param array $many_records
-	 *
-	 * @throws \Exception
-	 * @return void
-	 */
-	protected function assignManyToOneByMap( $one_table, $one_id, $many_table, $map_table, $one_field, $many_field, $many_records = array() )
-	{
-		if ( empty( $one_id ) )
-		{
-			throw new BadRequestException( "The $one_table id can not be empty." );
-		}
-		try
-		{
-			$manyFields = $this->describeTableFields( $many_table );
-			$pkManyField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $manyFields );
-			$mapFields = $this->describeTableFields( $map_table );
-			$pkMapField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $mapFields );
-			$maps = $this->retrieveRecordsByFilter( $map_table, "$one_field = '$one_id'", $pkMapField . ',' . $many_field );
-			$toDelete = array();
-			foreach ( $maps as $map )
-			{
-				$manyId = Option::get( $map, $many_field, '' );
-				$id = Option::get( $map, $pkMapField, '' );
-				$found = false;
-				foreach ( $many_records as $key => $item )
-				{
-					$assignId = Option::get( $item, $pkManyField, '' );
-					if ( $assignId == $manyId )
-					{
-						// found it, keeping it, so remove it from the list, as this becomes adds
-						unset( $many_records[$key] );
-						$found = true;
-						continue;
-					}
-				}
-				if ( !$found )
-				{
-					$toDelete[] = $id;
-					continue;
-				}
-			}
-			if ( !empty( $toDelete ) )
-			{
-				$this->deleteRecordsByIds( $map_table, implode( ',', $toDelete ), $pkMapField );
-			}
-			if ( !empty( $many_records ) )
-			{
-				$maps = array();
-				foreach ( $many_records as $item )
-				{
-					$itemId = Option::get( $item, $pkManyField, '' );
-					$maps[] = array( $many_field => $itemId, $one_field => $one_id );
-				}
-				$this->createRecords( $map_table, $maps );
-			}
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Error updating many to one map assignment.\n{$ex->getMessage()}", $ex->getCode() );
-		}
-	}
-
-	/**
-	 * Handle raw SQL Azure requests
-	 */
-	protected function batchSqlQuery( $query, $bindings = array() )
-	{
-		if ( empty( $query ) )
-		{
-			throw new BadRequestException( '[NOQUERY]: No query string present in request.' );
-		}
-		$this->checkConnection();
-		try
-		{
-			Utilities::markTimeStart( 'DB_TIME' );
-
-			/** @var \CDbCommand $command */
-			$command = $this->_soapClient->createCommand( $query );
-			$reader = $command->query();
-			$dummy = null;
-			foreach ( $bindings as $binding )
-			{
-				$reader->bindColumn( $binding['name'], $dummy, $binding['type'] );
-			}
-
-			$data = array();
-			$rowData = array();
-			while ( $row = $reader->read() )
-			{
-				$rowData[] = $row;
-			}
-			if ( 1 == count( $rowData ) )
-			{
-				$rowData = $rowData[0];
-			}
-			$data[] = $rowData;
-
-			// Move to the next result and get results
-			while ( $reader->nextResult() )
-			{
-				$rowData = array();
-				while ( $row = $reader->read() )
-				{
-					$rowData[] = $row;
-				}
-				if ( 1 == count( $rowData ) )
-				{
-					$rowData = $rowData[0];
-				}
-				$data[] = $rowData;
-			}
-
-			Utilities::markTimeStop( 'DB_TIME' );
-
-			return $data;
-		}
-		catch ( \Exception $ex )
-		{
-			error_log( 'batchquery: ' . $ex->getMessage() . PHP_EOL . $query );
-			Utilities::markTimeStop( 'DB_TIME' );
-			/*
-                $msg = '[QUERYFAILED]: ' . implode(':', $this->_sqlConn->errorInfo()) . "\n";
-                if (isset($GLOBALS['DB_DEBUG'])) {
-                    error_log($msg . "\n$query");
-                }
-*/
-			throw $ex;
-		}
-	}
-
-	/**
-	 * Handle SQL Db requests with output as array
-	 */
-	public function singleSqlQuery( $query, $params = null )
-	{
-		if ( empty( $query ) )
-		{
-			throw new BadRequestException( '[NOQUERY]: No query string present in request.' );
-		}
-		$this->checkConnection();
-		try
-		{
-			Utilities::markTimeStart( 'DB_TIME' );
-
-			/** @var \CDbCommand $command */
-			$command = $this->_soapClient->createCommand( $query );
-			if ( isset( $params ) && !empty( $params ) )
-			{
-				$data = $command->queryAll( true, $params );
-			}
-			else
-			{
-				$data = $command->queryAll();
-			}
-
-			Utilities::markTimeStop( 'DB_TIME' );
-
-			return $data;
-		}
-		catch ( \Exception $ex )
-		{
-			error_log( 'singlequery: ' . $ex->getMessage() . PHP_EOL . $query . PHP_EOL . print_r( $params, true ) );
-			Utilities::markTimeStop( 'DB_TIME' );
-			/*
-                    $msg = '[QUERYFAILED]: ' . implode(':', $this->_sqlConn->errorInfo()) . "\n";
-                    if (isset($GLOBALS['DB_DEBUG'])) {
-                        error_log($msg . "\n$query");
-                    }
-*/
-			throw $ex;
-		}
-	}
-
-	/**
-	 * Handle SQL Db requests with output as array
-	 */
-	public function singleSqlExecute( $query, $params = null )
-	{
-		if ( empty( $query ) )
-		{
-			throw new BadRequestException( '[NOQUERY]: No query string present in request.' );
-		}
-		$this->checkConnection();
-		try
-		{
-			Utilities::markTimeStart( 'DB_TIME' );
-
-			/** @var \CDbCommand $command */
-			$command = $this->_soapClient->createCommand( $query );
-			if ( isset( $params ) && !empty( $params ) )
-			{
-				$data = $command->execute( $params );
-			}
-			else
-			{
-				$data = $command->execute();
-			}
-
-			Utilities::markTimeStop( 'DB_TIME' );
-
-			return $data;
-		}
-		catch ( \Exception $ex )
-		{
-			error_log( 'singleexecute: ' . $ex->getMessage() . PHP_EOL . $query . PHP_EOL . print_r( $params, true ) );
-			Utilities::markTimeStop( 'DB_TIME' );
-			/*
-                    $msg = '[QUERYFAILED]: ' . implode(':', $this->_sqlConn->errorInfo()) . "\n";
-                    if (isset($GLOBALS['DB_DEBUG'])) {
-                        error_log($msg . "\n$query");
-                    }
-*/
-			throw $ex;
-		}
-	}
-
 	// Handle administrative options, table add, delete, etc
 
 	/**
@@ -2026,17 +1011,19 @@ class SalesforceDbSvc extends BaseDbSvc
 	 */
 	public function createTables( $tables = array() )
 	{
+		throw new NotImplementedException( "Metadata actions currently not supported." );
 	}
 
 	/**
 	 * Create a single table by name, additional properties
 	 *
-	 * @param array  $properties
+	 * @param array $properties
 	 *
 	 * @throws \Exception
 	 */
 	public function createTable( $properties = array() )
 	{
+		throw new NotImplementedException( "Metadata actions currently not supported." );
 	}
 
 	/**
@@ -2049,18 +1036,20 @@ class SalesforceDbSvc extends BaseDbSvc
 	 */
 	public function updateTables( $tables = array() )
 	{
+		throw new NotImplementedException( "Metadata actions currently not supported." );
 	}
 
 	/**
 	 * Update properties related to the table
 	 *
-	 * @param array  $properties
+	 * @param array $properties
 	 *
 	 * @return array
 	 * @throws \Exception
 	 */
 	public function updateTable( $properties = array() )
 	{
+		throw new NotImplementedException( "Metadata actions currently not supported." );
 	}
 
 	/**
@@ -2074,6 +1063,7 @@ class SalesforceDbSvc extends BaseDbSvc
 	 */
 	public function deleteTables( $tables = array(), $check_empty = false )
 	{
+		throw new NotImplementedException( "Metadata actions currently not supported." );
 	}
 
 	/**
@@ -2087,13 +1077,7 @@ class SalesforceDbSvc extends BaseDbSvc
 	 */
 	public function deleteTable( $table, $check_empty = false )
 	{
+		throw new NotImplementedException( "Metadata actions currently not supported." );
 	}
 
-	/**
-	 * @return int
-	 */
-	public function getDriverType()
-	{
-		return $this->_driverType;
-	}
 }
