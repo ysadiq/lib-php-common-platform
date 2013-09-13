@@ -1,4 +1,6 @@
 <?php
+use DreamFactory\Platform\Yii\Models\ProviderUser;
+
 /**
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
@@ -20,8 +22,19 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Oasys\Components\GenericUser;
+use DreamFactory\Oasys\Interfaces\ProviderLike;
+use DreamFactory\Oasys\Oasys;
+use DreamFactory\Platform\Enums\ProviderUserTypes;
+use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
+use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\HttpMethod;
+use Kisma\Core\Enums\HttpResponse;
+use Kisma\Core\Exceptions\HttpException;
 use Kisma\Core\Exceptions\StorageException;
+use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Sql;
 
@@ -65,6 +78,15 @@ use Kisma\Core\Utility\Sql;
  */
 class User extends BasePlatformSystemModel
 {
+	//*************************************************************************
+	//	Members
+	//*************************************************************************
+
+	/**
+	 * @var Config This DSP's configuration
+	 */
+	protected static $_dspConfig;
+
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
@@ -135,6 +157,7 @@ class User extends BasePlatformSystemModel
 			'users_modified'      => array( self::HAS_MANY, __NAMESPACE__ . '\\User', 'last_modified_by_id' ),
 			'default_app'         => array( self::BELONGS_TO, __NAMESPACE__ . '\\App', 'default_app_id' ),
 			'role'                => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'role_id' ),
+			'authorizations'      => array( self::HAS_MANY, __NAMESPACE__ . '\\ProviderUser', 'user_id' ),
 		);
 
 		return array_merge( parent::relations(), $_relations );
@@ -283,7 +306,7 @@ class User extends BasePlatformSystemModel
 	 * @param string $userName
 	 * @param string $password
 	 *
-	 * @return bool|\User
+	 * @return User
 	 */
 	public static function authenticate( $userName, $password )
 	{
@@ -291,15 +314,32 @@ class User extends BasePlatformSystemModel
 				 ->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
 				 ->findByAttributes( array( 'email' => $userName ) );
 
-		if ( empty( $_user ) || !\CPasswordHelper::verifyPassword( $password, $_user->password ) )
+		if ( empty( $_user ) )
 		{
+			Log::error( 'Platform login fail: ' . $userName . ' NOT FOUND' );
+
 			return false;
 		}
 
-		Log::debug( 'Platform user auth: ' . $userName );
+		if ( !\CPasswordHelper::verifyPassword( $password, $_user->password ) )
+		{
+			if ( $password == sha1( $_user->email ) )
+			{
+				Log::info( 'Platform remote user auth (via email): ' . $userName );
+
+				return $_user;
+			}
+
+			Log::error( 'Platform password verify fail: ' . $userName );
+
+			return false;
+		}
+
+		Log::info( 'Platform local user auth (via password): ' . $userName );
 
 		return $_user;
 	}
+
 	/**
 	 * @param array $columns The columns to return in the permissions array
 	 *
@@ -354,5 +394,207 @@ class User extends BasePlatformSystemModel
 		}
 
 		return $_perms;
+	}
+
+	/**
+	 * @param string $email
+	 *
+	 * @return User
+	 */
+	public static function getByEmail( $email )
+	{
+		return static::model()->find(
+			'email = :email',
+			array(
+				 ':email' => $email,
+			)
+		);
+	}
+
+	/**
+	 * @param string       $email
+	 * @param GenericUser  $profile
+	 * @param string       $providerId
+	 * @param ProviderLike $provider
+	 * @param Provider     $providerModel
+	 *
+	 * @return \DreamFactory\Platform\Yii\Models\User
+	 * @throws \CDbException
+	 * @throws \Exception
+	 * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
+	 */
+	protected static function _createRemoteLoginUser( $email, $profile, $providerId, $provider, $providerModel )
+	{
+		if ( null !== ( $_user = static::getByEmail( $email ) ) )
+		{
+			// Ensure that if user is admin that we allow remote admin logins
+			if ( $_user->is_sys_admin && false === Pii::getParam( 'dsp.allow_admin_remote_logins', false ) )
+			{
+				throw new ForbiddenException( 'System administrators are not allowed to login from remote sources.' );
+			}
+		}
+		else
+		{
+			//	New user!
+			$_user = new self();
+
+			$_userName = $profile->getPreferredUsername() ? : $profile->getDisplayName();
+
+			$_user->is_active = true;
+			$_user->is_sys_admin = false;
+			$_user->user_source = $providerModel->id;
+			$_user->display_name = $_userName . '@' . $providerId;
+			$_user->email = $email;
+			$_user->password = \CPasswordHelper::hashPassword( sha1( $email ) );
+			$_user->confirm_code = Hasher::generateUnique( $email );
+			$_user->phone = $profile->getPhoneNumber();
+			$_user->first_name = $profile->getFirstName();
+			$_user->last_name = $profile->getLastName();
+		}
+
+		//	Set the default role, if one isn't assigned .
+		if ( empty( $_user->role_id ) )
+		{
+			$_user->role_id = static::$_dspConfig->open_reg_role_id;
+		}
+
+		$_data = $_user->user_data;
+
+		if ( empty( $_data ) )
+		{
+			$_data = array();
+		}
+
+		$_data[$providerId . '.profile'] = $profile->toArray();
+
+		//	Save the remote profile info... and then the row
+		$_user->user_data = $_data;
+
+		//	Stamp it
+		$_user->last_login_date = date( 'c' );
+
+		try
+		{
+			$_user->save();
+		}
+		catch ( \Exception $_ex )
+		{
+			Log::error( 'Exception siring remote login user > ' . $_ex->getMessage() );
+			throw $_ex;
+		}
+
+		$_user->refresh();
+
+		return $_user;
+	}
+
+	/**
+	 * @param User         $user
+	 * @param GenericUser  $profile
+	 * @param ProviderLike $provider
+	 * @param Provider     $providerModel
+	 *
+	 *
+	 * @return \DreamFactory\Platform\Yii\Models\ProviderUser
+	 * @throws \CDbException
+	 * @throws \Exception
+	 */
+	protected static function _createRemoteLoginAuthorization( $user, $profile, $provider, $providerModel )
+	{
+		//	Create an authorization row for this dude...
+		if ( null === ( $_providerUser = ProviderUser::model()->byUserProviderUserId( $user->id, $profile->getUserId() )->find() ) )
+		{
+			//	Create new authorization
+			$_providerUser = new ProviderUser();
+			$_providerUser->user_id = $user->id;
+			$_providerUser->provider_user_id = $profile->getUserId();
+			$_providerUser->provider_id = $providerModel->id;
+			$_providerUser->account_type = ProviderUserTypes::REMOTE_LOGIN;
+		}
+
+		$_providerUser->last_use_date = date( 'c' );
+		$_providerUser->auth_text = $provider->getConfig()->toArray();
+
+		try
+		{
+			$_providerUser->save();
+		}
+		catch ( \CDbException $_ex )
+		{
+			Log::error( 'Exception saving remote login authorization > ' . $_ex->getMessage() );
+			throw $_ex;
+		}
+
+		$_providerUser->refresh();
+
+		return $_providerUser;
+	}
+
+	/**
+	 * @param string       $providerId
+	 * @param ProviderLike $provider
+	 * @param Provider     $providerModel
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
+	 * @throws \Exception
+	 */
+	public static function remoteLoginRequest( $providerId, $provider, $providerModel )
+	{
+		if ( null === static::$_dspConfig )
+		{
+			static::$_dspConfig = Config::load();
+		}
+
+		//	Homogenize the provider's user profile
+		$_profile = $provider->getUserData();
+
+		//	Make sure this cat has an email address
+		if ( null === ( $_email = $_profile->getEmailAddress() ) )
+		{
+			throw new ForbiddenException( 'Remote logins are not allowed without an email address.' );
+		}
+
+		//	Let's get retarded!
+		$_user = $_providerUser = null;
+
+		try
+		{
+			//	Step 1: Create new user or load existing
+			$_user = static::_createRemoteLoginUser( $_email, $_profile, $providerId, $provider, $providerModel );
+
+			/**
+			 * Step 2: Create new authorization or update existing
+			 *
+			 * @var ProviderUser $_providerUser
+			 */
+			$_providerUser = static::_createRemoteLoginAuthorization( $_user, $_profile, $provider, $providerModel );
+		}
+		catch ( \Exception $_ex )
+		{
+			Log::error( 'Authorization exception > ' . $_ex->getMessage() );
+			throw $_ex;
+		}
+
+		//	Step 3: Do the doo
+		$_data = Oasys::getStore()->get( $providerId, array() );
+		$_data['config'] = json_encode( $_providerUser->auth_text );
+		Oasys::getStore()->set( $providerId, $_data );
+
+		$_identity = new PlatformUserIdentity( $_user->email, sha1( $_user->email ) );
+
+		if ( !$_identity->authenticate() )
+		{
+			throw new ForbiddenException( 'Invalid credentials' );
+		}
+
+		if ( !Pii::user()->login( $_identity ) )
+		{
+			throw new ForbiddenException( 'User login failed.' );
+		}
+
+		//	Save the state!
+		Pii::setState( $providerId . '.user_config', $_providerUser->auth_text );
+
+		return $_user;
 	}
 }

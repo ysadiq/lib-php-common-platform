@@ -24,7 +24,7 @@ use DreamFactory\Platform\Components\JTablesFormatter;
 use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Services\BasePlatformService;
+use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
@@ -73,6 +73,14 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 * @var bool Query option for output format of package
 	 */
 	protected $_exportPackage = false;
+	/**
+	 * @var bool
+	 */
+	protected $_includeSchema = false;
+	/**
+	 * @var bool
+	 */
+	protected $_includeCount = false;
 
 	//*************************************************************************
 	//* Methods
@@ -81,9 +89,9 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	/**
 	 * Create a new service
 	 *
-	 * @param BasePlatformService $consumer
-	 * @param array               $settings      configuration array
-	 * @param array               $resourceArray Or you can pass in through $settings['resource_array'] = array(...)
+	 * @param RestServiceLike $consumer
+	 * @param array           $settings      configuration array
+	 * @param array           $resourceArray Or you can pass in through $settings['resource_array'] = array(...)
 	 *
 	 * @throws \InvalidArgumentException
 	 */
@@ -130,12 +138,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	public static function select( $ids = null, $fields = null, $extras = array(), $singleRow = false, $includeSchema = false, $includeCount = false )
 	{
 		return ResourceStore::bulkSelectById(
-			$ids,
-			empty( $fields ) ? null : array( 'select' => $fields ),
-			$extras,
-			$singleRow,
-			$includeSchema,
-			$includeCount
+							$ids,
+							empty( $fields ) ? null : array( 'select' => $fields ),
+							$extras,
+							$singleRow,
+							$includeSchema,
+							$includeCount
 		);
 	}
 
@@ -167,6 +175,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		$this->_extras = array();
 		$this->_fields = Option::get( $_REQUEST, 'fields', '*' );
 		$this->_exportPackage = Option::getBool( $_REQUEST, 'pkg' );
+		$this->_includeSchema = Option::getBool( $_REQUEST, 'include_schema', false );
+		$this->_includeCount = Option::getBool( $_REQUEST, 'include_count', false );
 
 		$_related = Option::get( $_REQUEST, 'related' );
 
@@ -185,15 +195,17 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		}
 
 		ResourceStore::reset(
-			array(
-				 'service'          => $this->_serviceName,
-				 'resource_name'    => $this->_apiName,
-				 'resource_id'      => $this->_resourceId,
-				 'resource_array'   => $this->_resourceArray,
-				 'related_resource' => $this->_relatedResource,
-				 'fields'           => $this->_fields,
-				 'extras'           => $this->_extras,
-			)
+					 array(
+						  'service'          => $this->_serviceName,
+						  'resource_name'    => $this->_apiName,
+						  'resource_id'      => $this->_resourceId,
+						  'resource_array'   => $this->_resourceArray,
+						  'related_resource' => $this->_relatedResource,
+						  'fields'           => $this->_fields,
+						  'extras'           => $this->_extras,
+						  'include_count'    => $this->_includeCount,
+						  'include_schema'   => $this->_includeSchema,
+					 )
 		);
 	}
 
@@ -296,12 +308,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		}
 
 		return ResourceStore::select(
-			null,
-			$_criteria,
-			array(),
-			$_singleRow,
-			Option::getBool( $_payload, 'include_count' ),
-			Option::getBool( $_payload, 'include_schema' )
+							null,
+							$_criteria,
+							array(),
+							$_singleRow,
+							Option::getBool( $_payload, 'include_count' ),
+							Option::getBool( $_payload, 'include_schema' )
 		);
 	}
 
@@ -578,5 +590,45 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	public function getExportPackage()
 	{
 		return $this->_exportPackage;
+	}
+
+	/**
+	 * @param boolean $includeCount
+	 *
+	 * @return BaseSystemRestResource
+	 */
+	public function setIncludeCount( $includeCount )
+	{
+		$this->_includeCount = $includeCount;
+
+		return $this;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function getIncludeCount()
+	{
+		return $this->_includeCount;
+	}
+
+	/**
+	 * @param boolean $includeSchema
+	 *
+	 * @return BaseSystemRestResource
+	 */
+	public function setIncludeSchema( $includeSchema )
+	{
+		$this->_includeSchema = $includeSchema;
+
+		return $this;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function getIncludeSchema()
+	{
+		return $this->_includeSchema;
 	}
 }

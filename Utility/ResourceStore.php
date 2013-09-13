@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Utility;
 
 use Composer\Autoload\ClassLoader;
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
@@ -28,18 +27,15 @@ use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Resources\User\Session;
-use DreamFactory\Platform\Services\BasePlatformRestService;
+use DreamFactory\Platform\Yii\Models\BasePlatformModel;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Components\Map;
-use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Interfaces\UtilityLike;
-use Kisma\Core\Seed;
-use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Platform\Services\SystemManager;
 
 /**
  * ResourceStore
@@ -98,6 +94,14 @@ class ResourceStore implements UtilityLike
 	 * @var int The response format if not pass-through
 	 */
 	protected static $_responseFormat;
+	/**
+	 * @var bool
+	 */
+	protected static $_includeSchema = false;
+	/**
+	 * @var bool
+	 */
+	protected static $_includeCount = false;
 
 	//************************************************************************
 	//* Methods
@@ -117,6 +121,8 @@ class ResourceStore implements UtilityLike
 		static::$_service = Option::get( $settings, 'service' );
 		static::$_fields = Option::get( $settings, 'fields' );
 		static::$_extras = Option::get( $settings, 'extras' );
+		static::$_includeCount = Option::getBool( $settings, 'include_count', false );
+		static::$_includeSchema = Option::getBool( $settings, 'include_schema', false );
 		static::$_responseFormat = ResponseFormats::RAW;
 
 		if ( empty( static::$_resourceName ) )
@@ -270,6 +276,7 @@ class ResourceStore implements UtilityLike
 		}
 
 		$_response = array();
+		$_count = 0;
 
 		//	Only one row
 		if ( false !== $single )
@@ -277,6 +284,7 @@ class ResourceStore implements UtilityLike
 			if ( null !== ( $_model = static::_find( $_criteria, $params ) ) )
 			{
 				$_response = static::buildResponsePayload( $_model, false );
+				$_count++;
 			}
 		}
 		//	Multiple rows
@@ -289,13 +297,35 @@ class ResourceStore implements UtilityLike
 				foreach ( $_models as $_model )
 				{
 					$_response[] = static::buildResponsePayload( $_model, false );
+					$_count++;
 				}
 			}
 
 			$_response = array( 'record' => $_response );
 		}
 
+		if ( false !== static::$_includeSchema )
+		{
+			$_response['meta']['schema'] = static::getSchemaForPayload( $_model );
+		}
+
+		//	Return a count of rows
+		if ( false !== static::$_includeCount )
+		{
+			$_response['meta']['count'] = $_count;
+		}
+
 		return $_response;
+	}
+
+	/**
+	 * @param BasePlatformModel $model
+	 *
+	 * @return array
+	 */
+	public static function getSchemaForPayload( $model )
+	{
+		return SqlDbUtilities::describeTable( Pii::db(), $model->tableName(), SystemManager::SYSTEM_TABLE_PREFIX );
 	}
 
 	/**
@@ -305,6 +335,9 @@ class ResourceStore implements UtilityLike
 	 * @param array  $extras
 	 * @param bool   $singleRow
 	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @throws \DreamFactory\Platform\Exceptions\RestException
+	 * @throws \Exception
 	 * @return array
 	 */
 	public static function bulkInsert( $records, $rollback = false, $fields = null, $extras = null, $singleRow = false )
@@ -954,6 +987,7 @@ class ResourceStore implements UtilityLike
 
 		if ( empty( $id ) )
 		{
+			Log::error( 'Update request with no id supplied: ' . print_r( $record, true ) );
 			throw new BadRequestException( 'Identifying field "id" can not be empty for update request . ' );
 		}
 
@@ -1219,5 +1253,37 @@ class ResourceStore implements UtilityLike
 	public static function getResponseFormat()
 	{
 		return self::$_responseFormat;
+	}
+
+	/**
+	 * @param boolean $includeCount
+	 */
+	public static function setIncludeCount( $includeCount )
+	{
+		self::$_includeCount = $includeCount;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public static function getIncludeCount()
+	{
+		return self::$_includeCount;
+	}
+
+	/**
+	 * @param boolean $includeSchema
+	 */
+	public static function setIncludeSchema( $includeSchema )
+	{
+		self::$_includeSchema = $includeSchema;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public static function getIncludeSchema()
+	{
+		return self::$_includeSchema;
 	}
 }
