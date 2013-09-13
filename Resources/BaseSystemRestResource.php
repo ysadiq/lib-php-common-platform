@@ -228,11 +228,20 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	protected function _determineRequestedResource( &$ids = null, &$records = null )
 	{
-		//	Multiple resources by ID
-		$ids = Option::get( $this->_requestPayload, 'ids' );
-		$records = Option::get( $this->_requestPayload, 'record', Option::getDeep( $this->_requestPayload, 'records', 'record' ) );
+		//	Which payload do we love?
+		$_payload = RestData::getPostDataAsArray();
 
-		return $this->_requestPayload;
+		//	Use $_REQUEST instead of POSTed data
+		if ( empty( $_payload ) )
+		{
+			$_payload = $_REQUEST;
+		}
+
+		//	Multiple resources by ID
+		$ids = Option::get( $_payload, 'ids' );
+		$records = Option::get( $_payload, 'record', Option::getDeep( $_payload, 'records', 'record' ) );
+
+		return $_payload;
 	}
 
 	/**

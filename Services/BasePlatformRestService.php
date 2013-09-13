@@ -288,14 +288,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 			}
 		}
 
-		//	Set the payload for all
-		$this->_requestPayload = RestData::getPostDataAsArray();
-
-		if ( empty( $this->_requestPayload ) )
-		{
-			$this->_requestPayload = isset( $_REQUEST ) ? $_REQUEST : array();
-		}
-
 		return $this;
 	}
 

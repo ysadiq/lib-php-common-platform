@@ -987,6 +987,7 @@ class ResourceStore implements UtilityLike
 
 		if ( empty( $id ) )
 		{
+			Log::error( 'Update request with no id supplied: ' . print_r( $record, true ) );
 			throw new BadRequestException( 'Identifying field "id" can not be empty for update request . ' );
 		}
 
