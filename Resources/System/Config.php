@@ -99,12 +99,8 @@ class Config extends BaseSystemRestResource
 		//	Check for CORS changes...
 		if ( null !== ( $_hostList = Option::get( $_payload, 'allowed_hosts', null, true ) ) )
 		{
-			Log::debug( 'Allowed hosts given: ' . print_r( $_hostList, true ) );
+//			Log::debug( 'Allowed hosts given: ' . print_r( $_hostList, true ) );
 			SystemManager::setAllowedHosts( $_hostList );
-		}
-		else
-		{
-			Log::debug( 'No allowed hosts found' );
 		}
 
 		return $_payload;
