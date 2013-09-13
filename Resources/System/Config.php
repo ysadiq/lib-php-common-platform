@@ -90,6 +90,20 @@ class Config extends BaseSystemRestResource
 	/**
 	 * {@InheritDoc}
 	 */
+	protected function _preProcess()
+	{
+		if ( null !== ( $_hostList = Option::get( $this->_requestPayload, 'allowed_hosts', null, true ) ) )
+		{
+			SystemManager::setAllowedHosts( $_hostList );
+		}
+
+		//	Daddy?
+		parent::_preProcess();
+	}
+
+	/**
+	 * {@InheritDoc}
+	 */
 	protected function _postProcess()
 	{
 		//	Only return a single row, not in an array

@@ -81,6 +81,10 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 * @var bool
 	 */
 	protected $_includeCount = false;
+	/**
+	 * @var array The data that came in on the request
+	 */
+	protected $_requestPayload = null;
 
 	//*************************************************************************
 	//* Methods
@@ -138,12 +142,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	public static function select( $ids = null, $fields = null, $extras = array(), $singleRow = false, $includeSchema = false, $includeCount = false )
 	{
 		return ResourceStore::bulkSelectById(
-			$ids,
-			empty( $fields ) ? null : array( 'select' => $fields ),
-			$extras,
-			$singleRow,
-			$includeSchema,
-			$includeCount
+							$ids,
+							empty( $fields ) ? null : array( 'select' => $fields ),
+							$extras,
+							$singleRow,
+							$includeSchema,
+							$includeCount
 		);
 	}
 
@@ -195,17 +199,17 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		}
 
 		ResourceStore::reset(
-			array(
-				 'service'          => $this->_serviceName,
-				 'resource_name'    => $this->_apiName,
-				 'resource_id'      => $this->_resourceId,
-				 'resource_array'   => $this->_resourceArray,
-				 'related_resource' => $this->_relatedResource,
-				 'fields'           => $this->_fields,
-				 'extras'           => $this->_extras,
-				 'include_count'    => $this->_includeCount,
-				 'include_schema'   => $this->_includeSchema,
-			)
+					 array(
+						  'service'          => $this->_serviceName,
+						  'resource_name'    => $this->_apiName,
+						  'resource_id'      => $this->_resourceId,
+						  'resource_array'   => $this->_resourceArray,
+						  'related_resource' => $this->_relatedResource,
+						  'fields'           => $this->_fields,
+						  'extras'           => $this->_extras,
+						  'include_count'    => $this->_includeCount,
+						  'include_schema'   => $this->_includeSchema,
+					 )
 		);
 	}
 
@@ -229,19 +233,19 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	protected function _determineRequestedResource( &$ids = null, &$records = null )
 	{
 		//	Which payload do we love?
-		$_payload = RestData::getPostDataAsArray();
+		$this->_requestPayload = RestData::getPostDataAsArray();
 
 		//	Use $_REQUEST instead of POSTed data
-		if ( empty( $_payload ) )
+		if ( empty( $this->_requestPayload ) )
 		{
-			$_payload = $_REQUEST;
+			$this->_requestPayload = $_REQUEST;
 		}
 
 		//	Multiple resources by ID
-		$ids = Option::get( $_payload, 'ids' );
-		$records = Option::get( $_payload, 'record', Option::getDeep( $_payload, 'records', 'record' ) );
+		$ids = Option::get( $this->_requestPayload, 'ids' );
+		$records = Option::get( $this->_requestPayload, 'record', Option::getDeep( $this->_requestPayload, 'records', 'record' ) );
 
-		return $_payload;
+		return $this->_requestPayload;
 	}
 
 	/**
@@ -308,12 +312,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		}
 
 		return ResourceStore::select(
-			null,
-			$_criteria,
-			array(),
-			$_singleRow,
-			Option::getBool( $_payload, 'include_count' ),
-			Option::getBool( $_payload, 'include_schema' )
+							null,
+							$_criteria,
+							array(),
+							$_singleRow,
+							Option::getBool( $_payload, 'include_count' ),
+							Option::getBool( $_payload, 'include_schema' )
 		);
 	}
 
@@ -630,5 +634,25 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	public function getIncludeSchema()
 	{
 		return $this->_includeSchema;
+	}
+
+	/**
+	 * @param array $requestPayload
+	 *
+	 * @return BaseSystemRestResource
+	 */
+	public function setRequestPayload( $requestPayload )
+	{
+		$this->_requestPayload = $requestPayload;
+
+		return $this;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getRequestPayload()
+	{
+		return $this->_requestPayload;
 	}
 }
