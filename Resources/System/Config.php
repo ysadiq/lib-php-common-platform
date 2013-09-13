@@ -87,12 +87,46 @@ class Config extends BaseSystemRestResource
 	}
 
 	/**
-	 * @param string $fields
-	 * @param bool   $includeSchema
-	 * @param array  $extras
-	 *
-	 * @return array
+	 * {@InheritDoc}
+	 * @todo Currently allow everyone to query config, long term this needs to hide certain fields
 	 */
+	protected function _handleGet()
+	{
+//		UserManager::checkSessionPermission( 'read', 'system', 'config' );
+
+		$_response = parent::_handleGet();
+
+		if ( $this->_includeSchema)
+			R
+			if ( $include_schema )
+			{
+				$results['meta']['schema'] = SqlDbUtilities::describeTable(
+					Pii::db(),
+					$model->tableName(),
+					SystemManager::SYSTEM_TABLE_PREFIX
+				);
+			}
+
+			// get current and latest version info
+			$_dspVersion = SystemManager::getCurrentVersion();
+			$results['dsp_version'] = $_dspVersion;
+			if ( !\Fabric::fabricHosted() )
+			{
+				$_latestVersion = SystemManager::getLatestVersion();
+				$results['latest_version'] = $_latestVersion;
+				$results['upgrade_available'] = version_compare( $_dspVersion, $_latestVersion, '<' );
+			}
+
+			// get cors data from config file
+			$results['allowed_hosts'] = SystemManager::getAllowedHosts();
+
+			return $results;
+		}
+		catch ( \Exception $ex )
+		{
+			throw new \Exception( "Error retrieving configuration record.\n{$ex->getMessage()}" );
+		}
+	}
 
 	/**
 	 * {@InheritDoc}

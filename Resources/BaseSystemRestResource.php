@@ -73,6 +73,14 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 * @var bool Query option for output format of package
 	 */
 	protected $_exportPackage = false;
+	/**
+	 * @var bool
+	 */
+	protected $_includeSchema = false;
+	/**
+	 * @var bool
+	 */
+	protected $_includeCount = false;
 
 	//*************************************************************************
 	//* Methods
@@ -167,6 +175,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		$this->_extras = array();
 		$this->_fields = Option::get( $_REQUEST, 'fields', '*' );
 		$this->_exportPackage = Option::getBool( $_REQUEST, 'pkg' );
+		$this->_includeSchema = Option::getBool( $_REQUEST, 'include_schema', false );
+		$this->_includeCount = Option::getBool( $_REQUEST, 'include_count', false );
 
 		$_related = Option::get( $_REQUEST, 'related' );
 
@@ -193,6 +203,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 				 'related_resource' => $this->_relatedResource,
 				 'fields'           => $this->_fields,
 				 'extras'           => $this->_extras,
+				 'include_count'    => $this->_includeCount,
+				 'include_schema'   => $this->_includeSchema,
 			)
 		);
 	}
@@ -578,5 +590,45 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	public function getExportPackage()
 	{
 		return $this->_exportPackage;
+	}
+
+	/**
+	 * @param boolean $includeCount
+	 *
+	 * @return BaseSystemRestResource
+	 */
+	public function setIncludeCount( $includeCount )
+	{
+		$this->_includeCount = $includeCount;
+
+		return $this;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function getIncludeCount()
+	{
+		return $this->_includeCount;
+	}
+
+	/**
+	 * @param boolean $includeSchema
+	 *
+	 * @return BaseSystemRestResource
+	 */
+	public function setIncludeSchema( $includeSchema )
+	{
+		$this->_includeSchema = $includeSchema;
+
+		return $this;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function getIncludeSchema()
+	{
+		return $this->_includeSchema;
 	}
 }

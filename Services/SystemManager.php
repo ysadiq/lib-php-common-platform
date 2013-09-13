@@ -23,6 +23,7 @@ use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\PlatformServiceException;
 use DreamFactory\Platform\Interfaces\PlatformStates;
 use Kisma\Core\Utility\Curl;
 use DreamFactory\Platform\Utility\FileUtilities;
@@ -37,7 +38,6 @@ use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Interfaces\HttpResponse;
-use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -305,7 +305,6 @@ class SystemManager extends BaseSystemRestService
 					{
 						Log::error( 'Exception upgrading apps to 1.0.6+ version: ' . $_ex->getMessage() );
 					}
-
 				}
 			}
 
@@ -452,7 +451,7 @@ class SystemManager extends BaseSystemRestService
 		try
 		{
 			/** @var User $_user */
-			$_user = User::model()->find( 'email = :email', array( ':email' => $_email ) );
+			$_user = User::getByEmail( $_email );
 
 			if ( empty( $_user ) )
 			{
@@ -805,15 +804,17 @@ class SystemManager extends BaseSystemRestService
 		$allowed_hosts = DataFormat::jsonEncode( $allowed_hosts, true );
 		$_path = Pii::getParam( 'storage_base_path' );
 		$_config = $_path . static::CORS_DEFAULT_CONFIG_FILE;
-		// create directory if it doesn't exists
-		if ( !file_exists( $_path ) )
+
+		//	Create directory if it doesn't exists
+		if ( !is_dir( $_path ) )
 		{
 			@\mkdir( $_path, 0777, true );
 		}
-		// write new cors config
+
+		//	Write new cors config
 		if ( false === file_put_contents( $_config, $allowed_hosts ) )
 		{
-			throw new \Exception( "Failed to update CORS configuration." );
+			throw new PlatformServiceException( 'Failed to update CORS configuration.' );
 		}
 	}
 
@@ -821,6 +822,7 @@ class SystemManager extends BaseSystemRestService
 	 * @param array $allowed_hosts
 	 *
 	 * @throws BadRequestException
+	 * @return bool
 	 */
 	protected static function validateHosts( $allowed_hosts )
 	{
@@ -833,6 +835,8 @@ class SystemManager extends BaseSystemRestService
 				throw new BadRequestException( 'Allowed hosts contains an empty host name.' );
 			}
 		}
+
+		return true;
 	}
 
 	//.........................................................................
@@ -972,7 +976,21 @@ class SystemManager extends BaseSystemRestService
 	{
 		try
 		{
-			$_admins = Sql::scalar( 'SELECT count(id) FROM df_sys_user WHERE is_sys_admin = 1 AND is_deleted = 0', 0, array(), Pii::pdo() );
+			$_admins = Sql::scalar(
+				<<<SQL
+SELECT
+	COUNT(id)
+FROM
+	df_sys_user
+WHERE
+	is_sys_admin = 1 AND
+	is_deleted = 0
+SQL
+				,
+				0,
+				array(),
+				Pii::pdo()
+			);
 
 			return ( 0 == $_admins ? false : ( $_admins > 1 ? $_admins : true ) );
 		}
