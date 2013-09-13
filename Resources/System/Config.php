@@ -25,6 +25,7 @@ use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -91,12 +92,12 @@ class Config extends BaseSystemRestResource
 	/**
 	 * {@InheritDoc}
 	 */
-	protected function _preProcess()
+	protected function _determineRequestedResource( &$ids = null, &$records = null )
 	{
-		parent::_preProcess();
+		$_payload = parent::_determineRequestedResource( $ids, $records );
 
 		//	Check for CORS changes...
-		if ( null !== ( $_hostList = Option::get( $this->_requestPayload, 'allowed_hosts', null, true ) ) )
+		if ( null !== ( $_hostList = Option::get( $_payload, 'allowed_hosts', null, true ) ) )
 		{
 			Log::debug( 'Allowed hosts given: ' . implode( ', ', $_hostList ) );
 			SystemManager::setAllowedHosts( $_hostList );
@@ -105,6 +106,8 @@ class Config extends BaseSystemRestResource
 		{
 			Log::debug( 'No allowed hosts found' );
 		}
+
+		return $_payload;
 	}
 
 	/**
