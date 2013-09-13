@@ -84,17 +84,17 @@ class SystemManager extends BaseSystemRestService
 		static::$_configPath = \Kisma::get( 'app.config_path' );
 
 		parent::__construct(
-			array_merge(
-				array(
-					 'name'        => 'System Configuration Management',
-					 'api_name'    => 'system',
-					 'type'        => 'System',
-					 'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-					 'description' => 'Service for system administration.',
-					 'is_active'   => true,
-				),
-				$settings
-			)
+			  array_merge(
+				  array(
+					   'name'        => 'System Configuration Management',
+					   'api_name'    => 'system',
+					   'type'        => 'System',
+					   'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+					   'description' => 'Service for system administration.',
+					   'is_active'   => true,
+				  ),
+				  $settings
+			  )
 		);
 	}
 
@@ -286,10 +286,10 @@ class SystemManager extends BaseSystemRestService
 					{
 						$command->reset();
 						$serviceId = $command
-									 ->select( 'id' )
-									 ->from( 'df_sys_service' )
-									 ->where( 'api_name = :name', array( ':name' => 'app' ) )
-									 ->queryScalar();
+							->select( 'id' )
+							->from( 'df_sys_service' )
+							->where( 'api_name = :name', array( ':name' => 'app' ) )
+							->queryScalar();
 						if ( false === $serviceId )
 						{
 							throw new \Exception( 'Could not find local app storage service id.' );
@@ -459,8 +459,8 @@ class SystemManager extends BaseSystemRestService
 				$_firstName = Pii::getState( 'first_name', Option::get( $_model, 'firstName' ) );
 				$_lastName = Pii::getState( 'last_name', Option::get( $_model, 'lastName' ) );
 				$_displayName = Pii::getState(
-					'display_name',
-					Option::get( $_model, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
+								   'display_name',
+								   Option::get( $_model, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
 				);
 
 				$_fields = array(
@@ -725,9 +725,9 @@ class SystemManager extends BaseSystemRestService
 	public static function getDspVersions()
 	{
 		$_results = Curl::get(
-			'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags',
-			array(),
-			array( CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' ) )
+						'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags',
+						array(),
+						array( CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' ) )
 		);
 
 		if ( HttpResponse::Ok != Curl::getLastHttpCode() )
@@ -977,8 +977,8 @@ class SystemManager extends BaseSystemRestService
 		try
 		{
 			$_admins = Sql::scalar(
-				<<<SQL
-SELECT
+						  <<<SQL
+		SELECT
 	COUNT(id)
 FROM
 	df_sys_user
@@ -986,10 +986,10 @@ WHERE
 	is_sys_admin = 1 AND
 	is_deleted = 0
 SQL
-				,
-				0,
-				array(),
-				Pii::pdo()
+							  ,
+							  0,
+							  array(),
+							  Pii::pdo()
 			);
 
 			return ( 0 == $_admins ? false : ( $_admins > 1 ? $_admins : true ) );
@@ -1014,8 +1014,8 @@ SQL
 			/** @var User $_user */
 			$_user = $user
 				? : User::model()->find(
-					'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
-					array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
+						'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
+						array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
 				);
 
 			if ( !empty( $_user ) )

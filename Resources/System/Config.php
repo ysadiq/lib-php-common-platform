@@ -22,9 +22,10 @@ namespace DreamFactory\Platform\Resources\System;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BasePlatformService;
+use DreamFactory\Platform\Services\SystemManager;
+use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
 
@@ -50,21 +51,21 @@ class Config extends BaseSystemRestResource
 	public function __construct( $consumer = null, $resourceArray = array() )
 	{
 		parent::__construct(
-			$consumer,
-			array(
-				 'name'           => 'Configuration',
-				 'type'           => 'System',
-				 'service_name'   => 'system',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'config',
-				 'description'    => 'Service general configuration',
-				 'is_active'      => true,
-				 'resource_array' => $resourceArray,
-				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-					 static::Merge => static::Post,
-				 )
-			)
+			  $consumer,
+			  array(
+				   'name'           => 'Configuration',
+				   'type'           => 'System',
+				   'service_name'   => 'system',
+				   'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				   'api_name'       => 'config',
+				   'description'    => 'Service general configuration',
+				   'is_active'      => true,
+				   'resource_array' => $resourceArray,
+				   'verb_aliases'   => array(
+					   static::Patch => static::Post,
+					   static::Merge => static::Post,
+				   )
+			  )
 		);
 	}
 
@@ -88,48 +89,6 @@ class Config extends BaseSystemRestResource
 
 	/**
 	 * {@InheritDoc}
-	 * @todo Currently allow everyone to query config, long term this needs to hide certain fields
-	 */
-	protected function _handleGet()
-	{
-//		UserManager::checkSessionPermission( 'read', 'system', 'config' );
-
-		$_response = parent::_handleGet();
-
-		if ( $this->_includeSchema)
-			R
-			if ( $include_schema )
-			{
-				$results['meta']['schema'] = SqlDbUtilities::describeTable(
-					Pii::db(),
-					$model->tableName(),
-					SystemManager::SYSTEM_TABLE_PREFIX
-				);
-			}
-
-			// get current and latest version info
-			$_dspVersion = SystemManager::getCurrentVersion();
-			$results['dsp_version'] = $_dspVersion;
-			if ( !\Fabric::fabricHosted() )
-			{
-				$_latestVersion = SystemManager::getLatestVersion();
-				$results['latest_version'] = $_latestVersion;
-				$results['upgrade_available'] = version_compare( $_dspVersion, $_latestVersion, '<' );
-			}
-
-			// get cors data from config file
-			$results['allowed_hosts'] = SystemManager::getAllowedHosts();
-
-			return $results;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Error retrieving configuration record.\n{$ex->getMessage()}" );
-		}
-	}
-
-	/**
-	 * {@InheritDoc}
 	 */
 	protected function _postProcess()
 	{
@@ -146,7 +105,20 @@ class Config extends BaseSystemRestResource
 			$this->_response = $this->_response[0];
 		}
 
-		$this->_response['dsp_version'] = defined( 'DSP_VERSION' ) ? DSP_VERSION : 'Unknown';
+		/**
+		 * Versioning and upgrade support
+		 */
+		$this->_response['dsp_version'] = SystemManager::getCurrentVersion();
+
+		if ( !Fabric::fabricHosted() )
+		{
+			$this->_response['latest_version'] = SystemManager::getLatestVersion();
+			$this->_response['upgrade_available'] = version_compare( $this->_response['dsp_version'], $this->_response['latest_version'], '<' );
+		}
+
+		/**
+		 * Remote login support
+		 */
 		$this->_response['allow_remote_logins'] = ( Pii::getParam( 'dsp.allow_remote_logins', false ) && $this->_response['allow_open_registration'] );
 
 		if ( false !== $this->_response['allow_remote_logins'] )
@@ -171,6 +143,11 @@ class Config extends BaseSystemRestResource
 				$this->_response['allow_admin_remote_logins'] = false;
 			}
 		}
+
+		/**
+		 * CORS support
+		 */
+		$this->_response['allowed_hosts'] = SystemManager::getAllowedHosts();
 
 		parent::_postProcess();
 	}
