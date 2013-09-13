@@ -24,7 +24,7 @@ use DreamFactory\Platform\Components\JTablesFormatter;
 use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Services\BasePlatformService;
+use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
@@ -81,10 +81,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 * @var bool
 	 */
 	protected $_includeCount = false;
-	/**
-	 * @var array The data that came in on the request
-	 */
-	protected $_requestPayload = null;
 
 	//*************************************************************************
 	//* Methods
@@ -93,9 +89,9 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	/**
 	 * Create a new service
 	 *
-	 * @param BasePlatformService $consumer
-	 * @param array               $settings      configuration array
-	 * @param array               $resourceArray Or you can pass in through $settings['resource_array'] = array(...)
+	 * @param RestServiceLike $consumer
+	 * @param array           $settings      configuration array
+	 * @param array           $resourceArray Or you can pass in through $settings['resource_array'] = array(...)
 	 *
 	 * @throws \InvalidArgumentException
 	 */
@@ -232,15 +228,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	protected function _determineRequestedResource( &$ids = null, &$records = null )
 	{
-		//	Which payload do we love?
-		$this->_requestPayload = RestData::getPostDataAsArray();
-
-		//	Use $_REQUEST instead of POSTed data
-		if ( empty( $this->_requestPayload ) )
-		{
-			$this->_requestPayload = $_REQUEST;
-		}
-
 		//	Multiple resources by ID
 		$ids = Option::get( $this->_requestPayload, 'ids' );
 		$records = Option::get( $this->_requestPayload, 'record', Option::getDeep( $this->_requestPayload, 'records', 'record' ) );
@@ -634,25 +621,5 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	public function getIncludeSchema()
 	{
 		return $this->_includeSchema;
-	}
-
-	/**
-	 * @param array $requestPayload
-	 *
-	 * @return BaseSystemRestResource
-	 */
-	public function setRequestPayload( $requestPayload )
-	{
-		$this->_requestPayload = $requestPayload;
-
-		return $this;
-	}
-
-	/**
-	 * @return array
-	 */
-	public function getRequestPayload()
-	{
-		return $this->_requestPayload;
 	}
 }

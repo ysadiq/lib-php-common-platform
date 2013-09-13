@@ -19,13 +19,13 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
@@ -114,6 +114,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @var array Additional actions that this resource will respond to
 	 */
 	protected $_extraActions = null;
+	/**
+	 * @var array The data that came in on the request
+	 */
+	protected $_requestPayload = null;
 
 	//*************************************************************************
 	//* Methods
@@ -282,6 +286,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 			{
 				$this->_resource = $_resource;
 			}
+		}
+
+		//	Set the payload for all
+		$this->_requestPayload = RestData::getPostDataAsArray();
+
+		if ( empty( $this->_requestPayload ) )
+		{
+			$this->_requestPayload = isset( $_REQUEST ) ? $_REQUEST : array();
 		}
 
 		return $this;
@@ -673,5 +685,25 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		$this->_extraActions[$action] = $handler;
 
 		return $this;
+	}
+
+	/**
+	 * @param array $requestPayload
+	 *
+	 * @return BasePlatformRestService
+	 */
+	public function setRequestPayload( $requestPayload )
+	{
+		$this->_requestPayload = $requestPayload;
+
+		return $this;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getRequestPayload()
+	{
+		return $this->_requestPayload;
 	}
 }

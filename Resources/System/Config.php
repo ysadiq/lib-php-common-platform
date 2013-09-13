@@ -26,6 +26,7 @@ use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
 
@@ -92,13 +93,18 @@ class Config extends BaseSystemRestResource
 	 */
 	protected function _preProcess()
 	{
+		parent::_preProcess();
+
+		//	Check for CORS changes...
 		if ( null !== ( $_hostList = Option::get( $this->_requestPayload, 'allowed_hosts', null, true ) ) )
 		{
+			Log::debug( 'Allowed hosts given: ' . implode( ', ', $_hostList ) );
 			SystemManager::setAllowedHosts( $_hostList );
 		}
-
-		//	Daddy?
-		parent::_preProcess();
+		else
+		{
+			Log::debug( 'No allowed hosts found' );
+		}
 	}
 
 	/**
