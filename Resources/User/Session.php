@@ -32,20 +32,18 @@ use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Platform\Yii\Models\App;
 use DreamFactory\Platform\Yii\Models\AppGroup;
-use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\Role;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
-use Kisma\Core\Utility\Sql;
 
 /**
  * Session
  * DSP user session
- *
  */
 class Session extends BasePlatformRestResource
 {
@@ -56,7 +54,7 @@ class Session extends BasePlatformRestResource
 	/**
 	 * @var string
 	 */
-	protected static $_randKey;
+	protected static $_sessionSalt = null;
 	/**
 	 * @var int
 	 */
@@ -65,6 +63,14 @@ class Session extends BasePlatformRestResource
 	 * @var array
 	 */
 	protected static $_cache = null;
+	/**
+	 * @var string
+	 */
+	protected static $_ticket = null;
+
+	//*************************************************************************
+	//* Methods
+	//*************************************************************************
 
 	/**
 	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
@@ -73,23 +79,23 @@ class Session extends BasePlatformRestResource
 	public function __construct( $consumer, $resources = array() )
 	{
 		//	For better security. Get a random string from this link: http://tinyurl.com/randstr and put it here
-		static::$_randKey = static::$_randKey ? : Pii::db()->password;
+		static::$_sessionSalt = static::$_sessionSalt ? : Pii::db()->password;
 
 		parent::__construct(
-			$consumer,
-			array(
-				 'name'           => 'User Session',
-				 'service_name'   => 'user',
-				 'type'           => 'System',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'session',
-				 'description'    => 'Resource for a user to manage their session.',
-				 'is_active'      => true,
-				 'resource_array' => $resources,
-				 'verb_aliases'   => array(
-					 static::Put => static::Post,
-				 )
-			)
+			  $consumer,
+			  array(
+				   'name'           => 'User Session',
+				   'service_name'   => 'user',
+				   'type'           => 'System',
+				   'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				   'api_name'       => 'session',
+				   'description'    => 'Resource for a user to manage their session.',
+				   'is_active'      => true,
+				   'resource_array' => $resources,
+				   'verb_aliases'   => array(
+					   static::Put => static::Post,
+				   )
+			  )
 		);
 	}
 
@@ -177,11 +183,11 @@ class Session extends BasePlatformRestResource
 
 				//	Special case for guest user
 				$_config = ResourceStore::model( 'config' )->with(
-							   'guest_role.role_service_accesses',
-							   'guest_role.role_system_accesses',
-							   'guest_role.apps',
-							   'guest_role.services'
-						   )->find();
+										'guest_role.role_service_accesses',
+										'guest_role.role_system_accesses',
+										'guest_role.apps',
+										'guest_role.services'
+				)                       ->find();
 
 				if ( !empty( $_config ) )
 				{
@@ -219,11 +225,11 @@ class Session extends BasePlatformRestResource
 		try
 		{
 			$_user = ResourceStore::model( 'user' )->with(
-						 'role.role_service_accesses',
-						 'role.role_system_accesses',
-						 'role.apps',
-						 'role.services'
-					 )->findByPk( $_userId );
+								  'role.role_service_accesses',
+								  'role.role_system_accesses',
+								  'role.apps',
+								  'role.services'
+			)                     ->findByPk( $_userId );
 
 			if ( empty( $_user ) )
 			{
@@ -316,11 +322,11 @@ class Session extends BasePlatformRestResource
 
 		/** @var User $_user */
 		$_user = $user ? : ResourceStore::model( 'user' )->with(
-							   'role.role_service_accesses',
-							   'role.role_system_accesses',
-							   'role.apps',
-							   'role.services'
-						   )->findByPk( $userId );
+										'role.role_service_accesses',
+										'role.role_system_accesses',
+										'role.apps',
+										'role.services'
+		)                               ->findByPk( $userId );
 
 		if ( empty( $_user ) )
 		{
@@ -407,11 +413,11 @@ class Session extends BasePlatformRestResource
 
 		/** @var Role $_role */
 		$_role = $role ? : ResourceStore::model( 'role' )->with(
-							   'role_service_accesses',
-							   'role_system_accesses',
-							   'apps',
-							   'services'
-						   )->findByPk( $roleId );
+										'role_service_accesses',
+										'role_system_accesses',
+										'apps',
+										'services'
+		)                               ->findByPk( $roleId );
 
 		if ( empty( $_role ) )
 		{
@@ -690,7 +696,9 @@ class Session extends BasePlatformRestResource
 	}
 
 	/**
-	 * @param $_userId
+	 * @param int $userId
+	 *
+	 * @return int
 	 */
 	public static function setCurrentUserId( $userId )
 	{
@@ -724,6 +732,14 @@ class Session extends BasePlatformRestResource
 	}
 
 	/**
+	 * @return string|null
+	 */
+	public static function getCurrentTicket()
+	{
+		return static::$_ticket;
+	}
+
+	/**
 	 * @throws \Exception
 	 */
 	protected static function _checkCache()
@@ -739,11 +755,11 @@ class Session extends BasePlatformRestResource
 			{
 				// special case for possible guest user
 				$_config = ResourceStore::model( 'config' )->with(
-							   'guest_role.role_service_accesses',
-							   'guest_role.role_system_accesses',
-							   'guest_role.apps',
-							   'guest_role.services'
-						   )->find();
+										'guest_role.role_service_accesses',
+										'guest_role.role_system_accesses',
+										'guest_role.apps',
+										'guest_role.services'
+				)                       ->find();
 
 				if ( !empty( $_config ) )
 				{
@@ -773,8 +789,8 @@ class Session extends BasePlatformRestResource
 		$data = Option::get( $session, 'data' );
 		$_userId = Option::get( $data, 'id', '' );
 		$_timestamp = time();
-		$ticket = Utilities::encryptCreds( "$_userId,$_timestamp", "gorilla" );
-		$data['ticket'] = $ticket;
+
+		$data['ticket'] = static::$_ticket = $ticket = Utilities::encryptCreds( "$_userId,$_timestamp", "gorilla" );
 		$data['ticket_expiry'] = time() + ( 5 * 60 );
 		$data['session_id'] = session_id();
 
@@ -793,9 +809,11 @@ class Session extends BasePlatformRestResource
 			 * @var AppGroup[] $theGroups
 			 */
 			$theGroups = ResourceStore::model( 'app_group' )->with( 'apps' )->findAll();
+
 			$appGroups = array();
 			$noGroupApps = array();
 			$_defaultAppId = Option::get( $session, 'default_app_id' );
+
 			foreach ( $_apps as $app )
 			{
 				$appId = $app->id;
@@ -837,5 +855,24 @@ class Session extends BasePlatformRestResource
 		}
 
 		return $data;
+	}
+
+	/**
+	 * Generates a semi-unique hash suitable as filesystem store IDs
+	 *
+	 * @param string $salt
+	 *
+	 * @return string
+	 */
+	public static function getUserIdentifier( $salt = null )
+	{
+		$_hash = Hasher::hash( static::getCurrentTicket() );
+
+		if ( null !== $salt )
+		{
+			$_hash = Hasher::encryptString( $_hash, $salt );
+		}
+
+		return $_hash;
 	}
 }
