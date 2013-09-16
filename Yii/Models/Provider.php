@@ -36,6 +36,7 @@ use Kisma\Core\Utility\Sql;
  * @property string              $api_name
  * @property string              $provider_name
  * @property array               $config_text
+ * @property int                 $is_active
  */
 class Provider extends BasePlatformSystemModel
 {
@@ -58,7 +59,7 @@ class Provider extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array( 'api_name, provider_name, config_text', 'safe' ),
+			array( 'api_name, provider_name, config_textm, is_active', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -93,14 +94,15 @@ class Provider extends BasePlatformSystemModel
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-			array_merge(
-				$additionalLabels,
-				array(
-					 'provider_name' => 'Name',
-					 'api_name'      => 'API Name',
-					 'config_text'   => 'Configuration',
-				)
-			)
+					 array_merge(
+						 $additionalLabels,
+						 array(
+							  'provider_name' => 'Name',
+							  'api_name'      => 'API Name',
+							  'config_text'   => 'Configuration',
+							  'is_active'     => 'Active',
+						 )
+					 )
 		);
 	}
 
@@ -112,10 +114,10 @@ class Provider extends BasePlatformSystemModel
 	public function byPortal( $portal )
 	{
 		$this->getDbCriteria()->mergeWith(
-			array(
-				 'condition' => 'provider_name = :provider_name or api_name = :api_name',
-				 'params'    => array( ':provider_name' => $portal, ':api_name' => Inflector::neutralize( $portal ) ),
-			)
+			 array(
+				  'condition' => 'provider_name = :provider_name or api_name = :api_name',
+				  'params'    => array( ':provider_name' => $portal, ':api_name' => Inflector::neutralize( $portal ) ),
+			 )
 		);
 
 		return $this;
@@ -131,16 +133,17 @@ class Provider extends BasePlatformSystemModel
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-			$requested,
-			array_merge(
-				array(
-					 'api_name',
-					 'provider_name',
-					 'config_text',
-				),
-				$columns
-			),
-			$hidden
+					 $requested,
+					 array_merge(
+						 array(
+							  'api_name',
+							  'provider_name',
+							  'config_text',
+							  'is_active',
+						 ),
+						 $columns
+					 ),
+					 $hidden
 		);
 	}
 
