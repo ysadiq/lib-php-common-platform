@@ -139,6 +139,10 @@ class SalesforceDbSvc extends BaseDbSvc
 		}
 		$request = $client->createRequest( $method, $uri, null, $body, $_options );
 		$request->setHeader( 'Authorization', 'Bearer ' . $this->getLoginResult()->getSessionId() );
+		if ( !empty( $body ) )
+		{
+			$request->setHeader( 'Content-Type', 'application/json' );
+		}
 		if ( !empty( $parameters ) )
 		{
 			$request->getQuery()->merge( $parameters );
@@ -225,13 +229,43 @@ class SalesforceDbSvc extends BaseDbSvc
 	{
 		try
 		{
-			$result = $this->callGuzzle( 'GET', 'sobjects/' );
+			$_result = $this->callGuzzle( 'GET', 'sobjects/' );
 
-			return Option::get( $result, 'sobjects' );
+			return Option::get( $_result, 'sobjects' );
 		}
 		catch ( \Exception $ex )
 		{
 			throw new InternalServerErrorException( "Error describing database tables.\n{$ex->getMessage()}" );
+		}
+	}
+
+	protected function _getAllFields( $table, $as_array = false )
+	{
+		try
+		{
+			$_result = $this->getTable( $table );
+			$_result = Option::get( $_result, 'fields' );
+			if ( empty( $_result ) )
+			{
+				return array();
+			}
+
+			$_fields = array();
+			foreach ( $_result as $_field )
+			{
+				$_fields[] = Option::get( $_field, 'name' );
+			}
+
+			if ( $as_array )
+			{
+				return $_fields;
+			}
+
+			return implode( ',', $_fields );
+		}
+		catch ( \Exception $ex )
+		{
+			throw new InternalServerErrorException( "Error describing database table '$table'.\n{$ex->getMessage()}" );
 		}
 	}
 
@@ -245,7 +279,7 @@ class SalesforceDbSvc extends BaseDbSvc
 		$_result = $this->_getSObjectsArray();
 		foreach ( $_result as $_table )
 		{
-			$_out[] = array( 'name' => Option::get( $_table, 'name' ) );
+			$_out[] = array( 'name' => Option::get( $_table, 'name' ), 'label' => Option::get( $_table, 'label' ) );
 		}
 
 		return array( 'resource' => $_out );
@@ -280,9 +314,9 @@ class SalesforceDbSvc extends BaseDbSvc
 
 		try
 		{
-			$result = $this->callGuzzle( 'GET', 'sobjects/' . $table . '/' );
+			$result = $this->callGuzzle( 'GET', 'sobjects/' . $table . '/describe' );
 
-			return Option::get( $result, 'objectDescribe' );
+			return $result;
 		}
 		catch ( \Exception $ex )
 		{
@@ -328,7 +362,7 @@ class SalesforceDbSvc extends BaseDbSvc
 				try
 				{
 					$_result = $this->callGuzzle( 'POST', 'sobjects/' . $table . '/', null, json_encode( $_record ), $_client );
-					if ( Option::getBool( $_result, 'success', false ) )
+					if ( !Option::getBool( $_result, 'success', false ) )
 					{
 						$_msg = json_encode( Option::get( $_result, 'errors' ) );
 						throw new InternalServerErrorException( "Record insert failed for table '$table'.\n" . $_msg );
@@ -419,7 +453,7 @@ class SalesforceDbSvc extends BaseDbSvc
 					$_record = Utilities::removeOneFromArray( $_idField, $_record );
 
 					$_result = $this->callGuzzle( 'PATCH', 'sobjects/' . $table . '/' . $_id, null, json_encode( $_record ), $_client );
-					if ( Option::getBool( $_result, 'success', false ) )
+					if ( !Option::getBool( $_result, 'success', false ) )
 					{
 						$msg = Option::get( $_result, 'errors' );
 						throw new InternalServerErrorException( "Record update failed for table '$table'.\n" . $msg );
@@ -551,7 +585,7 @@ class SalesforceDbSvc extends BaseDbSvc
 					}
 
 					$_result = $this->callGuzzle( 'PATCH', 'sobjects/' . $table . '/' . $_id, null, json_encode( $record ), $_client );
-					if ( Option::getBool( $_result, 'success', false ) )
+					if ( !Option::getBool( $_result, 'success', false ) )
 					{
 						$msg = Option::get( $_result, 'errors' );
 						throw new InternalServerErrorException( "Record update failed for table '$table'.\n" . $msg );
@@ -720,11 +754,11 @@ class SalesforceDbSvc extends BaseDbSvc
 						throw new BadRequestException( "Identifying field '$_idField' can not be empty for delete record [$_key] request." );
 					}
 
-					$_result = $this->callGuzzle( 'DELETE', 'sobjects/' . $table . '/' . $_id, null, $_client );
-					if ( Option::getBool( $_result, 'success', false ) )
+					$_result = $this->callGuzzle( 'DELETE', 'sobjects/' . $table . '/' . $_id, null, null, $_client );
+					if ( !Option::getBool( $_result, 'success', false ) )
 					{
 						$msg = Option::get( $_result, 'errors' );
-						throw new InternalServerErrorException( "Record update failed for table '$table'.\n" . $msg );
+						throw new InternalServerErrorException( "Record delete failed for table '$table'.\n" . $msg );
 					}
 				}
 				catch ( \Exception $ex )
@@ -781,11 +815,11 @@ class SalesforceDbSvc extends BaseDbSvc
 		}
 		elseif ( '*' == $fields )
 		{
-			throw new BadRequestException( "The '*' option for 'fields' parameter is not currently supported, please include list of desired fields." );
+			$fields = $this->_getAllFields( $table );
 		}
 		elseif ( is_array( $fields ) )
 		{
-			$fields .= implode( ',', $fields );
+			$fields = implode( ',', $fields );
 		}
 
 		$_query = 'SELECT ' . $fields . ' FROM ' . $table;
@@ -928,11 +962,11 @@ class SalesforceDbSvc extends BaseDbSvc
 		}
 		elseif ( '*' == $fields )
 		{
-			throw new BadRequestException( "The '*' option for 'fields' parameter is not currently supported, please include list of desired fields." );
+			$fields = $this->_getAllFields( $table );
 		}
 		elseif ( is_array( $fields ) )
 		{
-			$fields .= implode( ',', $fields );
+			$fields = implode( ',', $fields );
 		}
 
 		if ( !is_array( $ids ) )
@@ -940,12 +974,12 @@ class SalesforceDbSvc extends BaseDbSvc
 			$ids = explode( ',', $ids );
 		}
 
-		$ids .= "('" . implode( "','", $ids ) . "')";
+		$ids = "('" . implode( "','", $ids ) . "')";
 
 		$this->checkConnection();
 		try
 		{
-			$_query = "SELECT $fields WHERE $_idField IN $ids";
+			$_query = 'SELECT ' . $fields . ' FROM ' . $table . ' WHERE ' . $_idField . ' IN ' .$ids;
 			$_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
 
 			$_data = Option::get( $_result, 'records', array() );
@@ -974,11 +1008,11 @@ class SalesforceDbSvc extends BaseDbSvc
 		}
 		elseif ( '*' == $fields )
 		{
-			throw new BadRequestException( "The '*' option for 'fields' parameter is not currently supported, please include list of desired fields." );
+			$fields = $this->_getAllFields( $table );
 		}
 		elseif ( is_array( $fields ) )
 		{
-			$fields .= implode( ',', $fields );
+			$fields = implode( ',', $fields );
 		}
 
 		$this->checkConnection();
