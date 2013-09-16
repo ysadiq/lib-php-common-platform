@@ -89,7 +89,6 @@ class SalesforceDbSvc extends BaseDbSvc
 		$this->_relatedCache = array();
 
 		$_credentials = Option::get( $config, 'credentials' );
-//		$_credentials = array( 'username' => 'dreamfactorytest12@gmail.com', 'password' => 'joshh123', 'security_token' => 'XhJn1WFFFbxHUk4AdnNwgxU4m' );
 
 		if ( null === ( $user = Option::get( $_credentials, 'username' ) ) )
 		{
