@@ -588,6 +588,9 @@ MYSQL;
 						case 'mongodb':
 							$this->storage_type_id = PlatformStorageTypes::MONGODB;
 							break;
+						case 'mongohq':
+							$this->storage_type_id = PlatformStorageTypes::MONGODB;
+							break;
 						case 'couchdb':
 							$this->storage_type_id = PlatformStorageTypes::COUCHDB;
 							break;

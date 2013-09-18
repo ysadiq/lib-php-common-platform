@@ -133,9 +133,9 @@ class SwaggerManager extends BasePlatformRestService
 		// build services from database
 		$_command = Pii::db()->createCommand();
 		$_result = $_command->select( 'api_name,type_id,storage_type_id,description' )
-				  ->from( 'df_sys_service' )
-				  ->order( 'api_name' )
-				  ->queryAll();
+				   ->from( 'df_sys_service' )
+				   ->order( 'api_name' )
+				   ->queryAll();
 
 		// add static services
 		$_other = array(
@@ -191,6 +191,9 @@ class SwaggerManager extends BasePlatformRestService
 				case PlatformServiceTypes::NOSQL_DB:
 					$_fileName = 'NoSqlDbSvc';
 					break;
+				case PlatformServiceTypes::SALESFORCE_SERVICE:
+					$_fileName = 'SalesforceDbSvc';
+					break;
 			}
 
 			$_content = null;
@@ -228,7 +231,7 @@ class SwaggerManager extends BasePlatformRestService
 				if ( is_array( $_fromFile ) )
 				{
 					$_content = array_merge( $_baseSwagger, $_fromFile );
-			}
+				}
 				$_content = json_encode( $_content );
 			}
 
@@ -238,7 +241,7 @@ class SwaggerManager extends BasePlatformRestService
 				continue;
 			}
 
-				// replace service type placeholder with api name for this service instance
+			// replace service type placeholder with api name for this service instance
 			$_content = str_replace( '/{api_name}', '/' . $_apiName, $_content );
 
 			// cache it to a file for later access
@@ -256,19 +259,7 @@ class SwaggerManager extends BasePlatformRestService
 		}
 
 		// cache main api listing file
-		$_resourceListing = array(
-			'swaggerVersion' => '1.2',
-			'apiVersion'     => API_VERSION,
-			'authorizations' => array( "apiKey" => array( "type" => "apiKey", "passAs" => "header" ) ),
-			'info'           => array(
-				"title"             => "DreamFactory Live API Documentation",
-				"description"       => "This is <a href=\"http://swagger.wordnik.com\">Swagger</a>-built documentation detailing the DreamFactory DSP API.\nMore info can be found <a href=\"http://www.dreamfactory.com/df_developers/docs\">here</a>.",
-				"termsOfServiceUrl" => "http://www.dreamfactory.com/terms/",
-				"contact"           => "support@dreamfactory.com",
-				"license"           => "Apache 2.0",
-				"licenseUrl"        => "http://www.apache.org/licenses/LICENSE-2.0.html"
-			)
-		);
+		$_resourceListing = require( $_scanPath . 'SwaggerManager.swagger.php' );
 		$_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
 		$_filePath = $_swaggerPath . '_.json';
 		if ( false === file_put_contents( $_filePath, json_encode( $_out ) ) )

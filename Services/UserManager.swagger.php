@@ -432,11 +432,19 @@ $_models = array(
 			array(
 				'type'        => 'Array',
 				'description' => 'App groups and the containing apps.',
+				'items'       =>
+				array(
+					'type' => 'string',
+				),
 			),
 			'no_group_apps'   =>
 			array(
 				'type'        => 'Array',
 				'description' => 'Apps that are not in any app groups.',
+				'items'       =>
+				array(
+					'type' => 'string',
+				),
 			),
 			'ticket'          =>
 			array(

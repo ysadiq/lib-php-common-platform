@@ -23,9 +23,11 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\NotImplementedException;
+use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Services\BaseDbSvc;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 use Phpforce\SoapClient as SoapClient;
@@ -89,21 +91,20 @@ class SalesforceDbSvc extends BaseDbSvc
 		$this->_relatedCache = array();
 
 		$_credentials = Option::get( $config, 'credentials' );
-//		$_credentials = array( 'username' => 'dreamfactorytest12@gmail.com', 'password' => 'joshh123', 'security_token' => 'XhJn1WFFFbxHUk4AdnNwgxU4m' );
 
 		if ( null === ( $user = Option::get( $_credentials, 'username' ) ) )
 		{
-			throw new \InvalidArgumentException( 'DB admin name can not be empty.' );
+			throw new \InvalidArgumentException( 'A Salesforce username is required for this service.' );
 		}
 
 		if ( null === ( $password = Option::get( $_credentials, 'password' ) ) )
 		{
-			throw new \InvalidArgumentException( 'DB admin password can not be empty.' );
+			throw new \InvalidArgumentException( 'A Salesforce password is required for this service.' );
 		}
 
 		if ( null === ( $token = Option::get( $_credentials, 'security_token' ) ) )
 		{
-			throw new \InvalidArgumentException( 'DB admin security token can not be empty.' );
+			throw new \InvalidArgumentException( 'A Salesforce security token is required for this service.' );
 		}
 
 		$_scanPath = Pii::getParam( 'base_path' ) . '/vendor/dreamfactory/lib-php-common-platform/DreamFactory/Platform/Services/';
@@ -118,35 +119,89 @@ class SalesforceDbSvc extends BaseDbSvc
 		$this->_soapClient = $_builder->build();
 	}
 
+	protected function callCurl( $method = 'GET', $uri = null, $parameters = array(), $body = null, $version = 'v28.0' )
+	{
+		$_options = array(
+//			CURLOPT_RETURNTRANSFER => false,
+//			CURLOPT_HEADER         => false
+		);
+		$_options[CURLOPT_HTTPHEADER][] = 'Authorization: Bearer ' . $this->getLoginResult()->getSessionId();
+		if ( !empty( $body ) )
+		{
+			$_options[CURLOPT_HTTPHEADER][] = 'Content-Type: application/json';
+		}
+
+		$_url = $this->getBaseUrl() . $uri;
+		$_response = Curl::request( $method, $_url, $body, $_options );
+
+		if ( false === $_response )
+		{
+			$_error = Curl::getError();
+			throw new RestException( Option::get( $_error, 'code', 500 ), Option::get( $_error, 'message' ) );
+		}
+
+		return $_response;
+	}
+
 	/**
 	 * Perform call to Salesforce REST API
 	 *
-	 * @param string $method
-	 * @param string $uri
-	 * @param array  $parameters
-	 * @param mixed  $body
+	 * @param string       $method
+	 * @param string       $uri
+	 * @param array        $parameters
+	 * @param mixed        $body
+	 * @param GuzzleClient $client
 	 *
-	 * @internal param array $arguments
-	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @throws \DreamFactory\Platform\Exceptions\RestException
 	 * @return array The JSON response as an array
 	 */
 	protected function callGuzzle( $method = 'GET', $uri = null, $parameters = array(), $body = null, $client = null )
 	{
-		$_options = array();
-		if ( !isset( $client ) )
+		try
 		{
-			$client = $this->getGuzzleClient();
+			$_options = array();
+			if ( !isset( $client ) )
+			{
+				$client = $this->getGuzzleClient();
+			}
+			$request = $client->createRequest( $method, $uri, null, $body, $_options );
+			$request->setHeader( 'Authorization', 'Bearer ' . $this->getLoginResult()->getSessionId() );
+			if ( !empty( $body ) )
+			{
+				$request->setHeader( 'Content-Type', 'application/json' );
+			}
+			if ( !empty( $parameters ) )
+			{
+				$request->getQuery()->merge( $parameters );
+			}
+
+			$response = $request->send();
+
+			return $response->json();
 		}
-		$request = $client->createRequest( $method, $uri, null, $body, $_options );
-		$request->setHeader( 'Authorization', 'Bearer ' . $this->getLoginResult()->getSessionId() );
-		if ( !empty( $parameters ) )
+		catch ( \Guzzle\Http\Exception\BadResponseException $ex )
 		{
-			$request->getQuery()->merge( $parameters );
+			$_response = $ex->getResponse();
+			throw new RestException(
+				$_response->getStatusCode(),
+				$_response->getReasonPhrase() . ': ' . $_response->getEffectiveUrl()
+			);
 		}
+		catch ( \Exception $ex )
+		{
+			throw new InternalServerErrorException( $ex->getMessage(), $ex->getCode() ? : null );
+		}
+	}
 
-		$response = $request->send();
 
-		return $response->json();
+	protected function getBaseUrl( $version = 'v28.0' )
+	{
+		return sprintf(
+			'https://%s.salesforce.com/services/data/%s/',
+			$this->getLoginResult()->getServerInstance(),
+			$version
+		);
 	}
 
 	/**
@@ -158,13 +213,7 @@ class SalesforceDbSvc extends BaseDbSvc
 	 */
 	protected function getGuzzleClient( $version = 'v28.0' )
 	{
-		return new GuzzleClient(
-			sprintf(
-				'https://%s.salesforce.com/services/data/%s/',
-				$this->getLoginResult()->getServerInstance(),
-				$version
-			)
-		);
+		return new GuzzleClient( $this->getBaseUrl( $version ) );
 	}
 
 	/**
@@ -174,6 +223,11 @@ class SalesforceDbSvc extends BaseDbSvc
 	 */
 	protected function getLoginResult()
 	{
+		if ( !isset( $this->_soapClient ) )
+		{
+			throw new InternalServerErrorException( 'Database client has not been initialized.' );
+		}
+
 		return $this->_soapClient->getLoginResult();
 	}
 
@@ -182,17 +236,6 @@ class SalesforceDbSvc extends BaseDbSvc
 	 */
 	public function __destruct()
 	{
-	}
-
-	/**
-	 * @throws \Exception
-	 */
-	protected function checkConnection()
-	{
-		if ( !isset( $this->_soapClient ) )
-		{
-			throw new InternalServerErrorException( 'Database client has not been initialized.' );
-		}
 	}
 
 	/**
@@ -225,14 +268,42 @@ class SalesforceDbSvc extends BaseDbSvc
 	{
 		try
 		{
-			$result = $this->callGuzzle( 'GET', 'sobjects/' );
+			$_result = $this->callGuzzle( 'GET', 'sobjects/' );
 
-			return Option::get( $result, 'sobjects' );
+			return Option::get( $_result, 'sobjects' );
 		}
-		catch ( \Exception $ex )
+		catch ( RestException $ex )
 		{
-			throw new InternalServerErrorException( "Error describing database tables.\n{$ex->getMessage()}" );
+			throw new RestException( $ex->getStatusCode(), "Failed to describe sobjects on Salesforce service.{$ex->getMessage()}" );
 		}
+	}
+
+	/**
+	 * @param      $table
+	 * @param bool $as_array
+	 *
+	 * @return array|string
+	 */protected function _getAllFields( $table, $as_array = false )
+	{
+		$_result = $this->getTable( $table );
+		$_result = Option::get( $_result, 'fields' );
+		if ( empty( $_result ) )
+		{
+			return array();
+		}
+
+		$_fields = array();
+		foreach ( $_result as $_field )
+		{
+			$_fields[] = Option::get( $_field, 'name' );
+		}
+
+		if ( $as_array )
+		{
+			return $_fields;
+		}
+
+		return implode( ',', $_fields );
 	}
 
 	/**
@@ -245,7 +316,7 @@ class SalesforceDbSvc extends BaseDbSvc
 		$_result = $this->_getSObjectsArray();
 		foreach ( $_result as $_table )
 		{
-			$_out[] = array( 'name' => Option::get( $_table, 'name' ) );
+			$_out[] = array( 'name' => Option::get( $_table, 'name' ), 'label' => Option::get( $_table, 'label' ) );
 		}
 
 		return array( 'resource' => $_out );
@@ -280,14 +351,13 @@ class SalesforceDbSvc extends BaseDbSvc
 
 		try
 		{
-			$result = $this->callGuzzle( 'GET', 'sobjects/' . $table . '/' );
+			$result = $this->callGuzzle( 'GET', 'sobjects/' . $table . '/describe' );
 
-			return Option::get( $result, 'objectDescribe' );
+			return $result;
 		}
-		catch ( \Exception $ex )
+		catch ( RestException $ex )
 		{
-			// todo better handling of Guzzle response exceptions
-			throw new InternalServerErrorException( "Failed to get sobject info on Salesforce service.\n" . $ex->getMessage() );
+			throw new RestException( $ex->getStatusCode(), "Failed to describe sobject '$table' on Salesforce service. {$ex->getMessage()}" );
 		}
 	}
 
@@ -309,7 +379,6 @@ class SalesforceDbSvc extends BaseDbSvc
 			$records = array( $records );
 		}
 
-		$_client = $this->getGuzzleClient();
 		$_isSingle = ( 1 == count( $records ) );
 		$_continue = Option::getBool( $extras, 'continue', false );
 		$_idField = Option::get( $extras, 'id_field' );
@@ -318,63 +387,58 @@ class SalesforceDbSvc extends BaseDbSvc
 			$_idField = static::DEFAULT_ID_FIELD;
 		}
 
-		try
+		$_ids = array();
+		$_errors = array();
+		$_client = $this->getGuzzleClient();
+
+		foreach ( $records as $_key => $_record )
 		{
-			$_ids = array();
-			$_errors = array();
-
-			foreach ( $records as $_key => $_record )
+			try
 			{
-				try
+//				$_result = $this->callCurl( 'POST', 'sobjects/' . $table . '/', null, json_encode( $_record ) );
+				$_result = $this->callGuzzle( 'POST', 'sobjects/' . $table . '/', null, json_encode( $_record ), $_client );
+				if ( !Option::getBool( $_result, 'success', false ) )
 				{
-					$_result = $this->callGuzzle( 'POST', 'sobjects/' . $table . '/', null, json_encode( $_record ), $_client );
-					if ( Option::getBool( $_result, 'success', false ) )
-					{
-						$_msg = json_encode( Option::get( $_result, 'errors' ) );
-						throw new InternalServerErrorException( "Record insert failed for table '$table'.\n" . $_msg );
-					}
-					$_ids[$_key] = Option::get( $_result, 'id' );
+					$_msg = json_encode( Option::get( $_result, 'errors' ) );
+					throw new InternalServerErrorException( "Record insert failed for table '$table'.\n" . $_msg );
 				}
-				catch ( \Exception $ex )
+				$_ids[$_key] = Option::get( $_result, 'id' );
+			}
+			catch ( \Exception $ex )
+			{
+				if ( $_isSingle )
 				{
-					if ( $_isSingle )
-					{
-						throw $ex;
-					}
+					throw $ex;
+				}
 
-					$_errors[$_key] = $ex->getMessage();
-					if ( !$_continue )
-					{
-						break;
-					}
+				$_errors[$_key] = $ex->getMessage();
+				if ( !$_continue )
+				{
+					break;
 				}
 			}
-
-			if ( !empty( $_errors ) )
-			{
-				$_msg = array( 'errors' => $_errors, 'ids' => $_ids );
-				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
-			}
-
-			$_results = array();
-			if ( !static::_requireMoreFields( $fields, $_idField ) )
-			{
-				foreach ( $_ids as $_id )
-				{
-					$_results[] = array( $_idField => $_id );
-				}
-			}
-			else
-			{
-				$_results = $this->retrieveRecordsByIds( $table, $_ids, $fields, $extras );
-			}
-
-			return $_results;
 		}
-		catch ( \Exception $ex )
+
+		if ( !empty( $_errors ) )
 		{
-			throw $ex;
+			$_msg = array( 'errors' => $_errors, 'ids' => $_ids );
+			throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
 		}
+
+		$_results = array();
+		if ( !static::_requireMoreFields( $fields, $_idField ) )
+		{
+			foreach ( $_ids as $_id )
+			{
+				$_results[] = array( $_idField => $_id );
+			}
+		}
+		else
+		{
+			$_results = $this->retrieveRecordsByIds( $table, $_ids, $fields, $extras );
+		}
+
+		return $_results;
 	}
 
 	/**
@@ -392,7 +456,6 @@ class SalesforceDbSvc extends BaseDbSvc
 			$records = array( $records );
 		}
 
-		$_client = $this->getGuzzleClient();
 		$_isSingle = ( 1 == count( $records ) );
 		$_continue = Option::getBool( $extras, 'continue', false );
 		$_idField = Option::get( $extras, 'id_field' );
@@ -401,71 +464,65 @@ class SalesforceDbSvc extends BaseDbSvc
 			$_idField = static::DEFAULT_ID_FIELD;
 		}
 
-		try
+		$_ids = array();
+		$_errors = array();
+		$_client = $this->getGuzzleClient();
+
+		foreach ( $records as $_key => $_record )
 		{
-			$_ids = array();
-			$_errors = array();
-
-			foreach ( $records as $_key => $_record )
+			try
 			{
-				try
+				$_id = Option::get( $_record, $_idField );
+				if ( empty( $_id ) )
 				{
-					$_id = Option::get( $_record, $_idField );
-					if ( empty( $_id ) )
-					{
-						throw new BadRequestException( "Identifying field '$_idField' can not be empty for update record [$_key] request." );
-					}
-
-					$_record = Utilities::removeOneFromArray( $_idField, $_record );
-
-					$_result = $this->callGuzzle( 'PATCH', 'sobjects/' . $table . '/' . $_id, null, json_encode( $_record ), $_client );
-					if ( Option::getBool( $_result, 'success', false ) )
-					{
-						$msg = Option::get( $_result, 'errors' );
-						throw new InternalServerErrorException( "Record update failed for table '$table'.\n" . $msg );
-					}
-					$_ids[$_key] = $_id;
+					throw new BadRequestException( "Identifying field '$_idField' can not be empty for update record [$_key] request." );
 				}
-				catch ( \Exception $ex )
-				{
-					if ( $_isSingle )
-					{
-						throw $ex;
-					}
 
-					$_errors[$_key] = $ex->getMessage();
-					if ( !$_continue )
-					{
-						break;
-					}
+				$_record = Utilities::removeOneFromArray( $_idField, $_record );
+
+				$_result = $this->callGuzzle( 'PATCH', 'sobjects/' . $table . '/' . $_id, null, json_encode( $_record ), $_client );
+				if ( $_result && !Option::getBool( $_result, 'success', false ) )
+				{
+					$msg = Option::get( $_result, 'errors' );
+					throw new InternalServerErrorException( "Record update failed for table '$table'.\n" . $msg );
+				}
+				$_ids[$_key] = $_id;
+			}
+			catch ( \Exception $ex )
+			{
+				if ( $_isSingle )
+				{
+					throw $ex;
+				}
+
+				$_errors[$_key] = $ex->getMessage();
+				if ( !$_continue )
+				{
+					break;
 				}
 			}
-
-			if ( !empty( $_errors ) )
-			{
-				$_msg = array( 'errors' => $_errors, 'ids' => $_ids );
-				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
-			}
-
-			$_results = array();
-			if ( !static::_requireMoreFields( $fields, $_idField ) )
-			{
-				foreach ( $_ids as $_id )
-				{
-					$_results[] = array( $_idField => $_id );
-				}
-			}
-			else
-			{
-				$_results = $this->retrieveRecordsByIds( $table, $_ids, $fields, $extras );
-			}
-
-			return $_results;
 		}
-		catch ( \Exception $ex )
+
+		if ( !empty( $_errors ) )
 		{
-			throw $ex;
+			$_msg = array( 'errors' => $_errors, 'ids' => $_ids );
+			throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
 		}
+
+		$_results = array();
+		if ( !static::_requireMoreFields( $fields, $_idField ) )
+		{
+			foreach ( $_ids as $_id )
+			{
+				$_results[] = array( $_idField => $_id );
+			}
+		}
+		else
+		{
+			$_results = $this->retrieveRecordsByIds( $table, $_ids, $fields, $extras );
+		}
+
+		return $_results;
 	}
 
 	/**
@@ -551,7 +608,7 @@ class SalesforceDbSvc extends BaseDbSvc
 					}
 
 					$_result = $this->callGuzzle( 'PATCH', 'sobjects/' . $table . '/' . $_id, null, json_encode( $record ), $_client );
-					if ( Option::getBool( $_result, 'success', false ) )
+					if ( $_result && !Option::getBool( $_result, 'success', false ) )
 					{
 						$msg = Option::get( $_result, 'errors' );
 						throw new InternalServerErrorException( "Record update failed for table '$table'.\n" . $msg );
@@ -589,7 +646,7 @@ class SalesforceDbSvc extends BaseDbSvc
 			else
 			{
 				$_results = $this->retrieveRecordsByIds( $table, $ids, $fields, $extras );
-				}
+			}
 
 			return $_results;
 		}
@@ -720,11 +777,11 @@ class SalesforceDbSvc extends BaseDbSvc
 						throw new BadRequestException( "Identifying field '$_idField' can not be empty for delete record [$_key] request." );
 					}
 
-					$_result = $this->callGuzzle( 'DELETE', 'sobjects/' . $table . '/' . $_id, null, $_client );
-					if ( Option::getBool( $_result, 'success', false ) )
+					$_result = $this->callGuzzle( 'DELETE', 'sobjects/' . $table . '/' . $_id, null, null, $_client );
+					if ( $_result && !Option::getBool( $_result, 'success', false ) )
 					{
 						$msg = Option::get( $_result, 'errors' );
-						throw new InternalServerErrorException( "Record update failed for table '$table'.\n" . $msg );
+						throw new InternalServerErrorException( "Record delete failed for table '$table'.\n" . $msg );
 					}
 				}
 				catch ( \Exception $ex )
@@ -774,20 +831,10 @@ class SalesforceDbSvc extends BaseDbSvc
 	 */
 	public function retrieveRecordsByFilter( $table, $filter = null, $fields = null, $extras = array() )
 	{
-		// build query string
-		if ( empty( $fields ) )
-		{
-			throw new BadRequestException( 'There are no fields specified in the request.' );
-		}
-		elseif ( '*' == $fields )
-		{
-			throw new BadRequestException( "The '*' option for 'fields' parameter is not currently supported, please include list of desired fields." );
-		}
-		elseif ( is_array( $fields ) )
-		{
-			$fields .= implode( ',', $fields );
-		}
+		$_idField = Option::get( $extras, 'id_field' );
+		$fields = $this->_buildFieldList( $table, $fields, $_idField );
 
+		// build query string
 		$_query = 'SELECT ' . $fields . ' FROM ' . $table;
 
 		if ( !empty( $filter ) )
@@ -813,32 +860,23 @@ class SalesforceDbSvc extends BaseDbSvc
 			$_query .= ' LIMIT ' . $_limit;
 		}
 
-		$this->checkConnection();
+		$_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
 
-		try
+		$_data = Option::get( $_result, 'records', array() );
+
+		$_includeCount = Option::getBool( $extras, 'include_count', false );
+		$_moreToken = Option::get( $_result, 'nextRecordsUrl' );
+		if ( $_includeCount || $_moreToken )
 		{
-			$_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
-
-			$_data = Option::get( $_result, 'records', array() );
-
-			$_includeCount = Option::getBool( $extras, 'include_count', false );
-			$_moreToken = Option::get( $_result, 'nextRecordsUrl' );
-			if ( $_includeCount || $_moreToken )
+			// count total records
+			$_data['meta']['count'] = intval( Option::get( $_result, 'totalSize' ) );
+			if ( $_moreToken )
 			{
-				// count total records
-				$_data['meta']['count'] = intval( Option::get( $_result, 'totalSize' ) );
-				if ( $_moreToken )
-				{
-					$_data['meta']['next'] = substr( $_moreToken, strrpos( $_moreToken, '/' ) + 1 );
-				}
+				$_data['meta']['next'] = substr( $_moreToken, strrpos( $_moreToken, '/' ) + 1 );
 			}
+		}
 
-			return $_data;
-		}
-		catch ( \Exception $ex )
-		{
-			throw $ex;
-		}
+		return $_data;
 	}
 
 	/**
@@ -922,40 +960,16 @@ class SalesforceDbSvc extends BaseDbSvc
 			$_idField = static::DEFAULT_ID_FIELD;
 		}
 
-		if ( empty( $fields ) )
-		{
-			throw new BadRequestException( 'There are no fields specified in the request.' );
-		}
-		elseif ( '*' == $fields )
-		{
-			throw new BadRequestException( "The '*' option for 'fields' parameter is not currently supported, please include list of desired fields." );
-		}
-		elseif ( is_array( $fields ) )
-		{
-			$fields .= implode( ',', $fields );
-		}
+		$fields = $this->_buildFieldList( $table, $fields, $_idField );
 
-		if ( !is_array( $ids ) )
-		{
-			$ids = explode( ',', $ids );
-		}
+		$_idList = "('" . implode( "','", $ids ) . "')";
+		$_query = 'SELECT ' . $fields . ' FROM ' . $table . ' WHERE ' . $_idField . ' IN ' . $_idList;
 
-		$ids .= "('" . implode( "','", $ids ) . "')";
+		$_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
 
-		$this->checkConnection();
-		try
-		{
-			$_query = "SELECT $fields WHERE $_idField IN $ids";
-			$_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
+		$_data = Option::get( $_result, 'records', array() );
 
-			$_data = Option::get( $_result, 'records', array() );
-
-			return $_data;
-		}
-		catch ( \Exception $ex )
-		{
-			throw $ex;
-		}
+		return $_data;
 	}
 
 	/**
@@ -968,28 +982,10 @@ class SalesforceDbSvc extends BaseDbSvc
 			return array();
 		}
 
-		if ( empty( $fields ) )
-		{
-			throw new BadRequestException( 'There are no fields specified in the request.' );
-		}
-		elseif ( '*' == $fields )
-		{
-			throw new BadRequestException( "The '*' option for 'fields' parameter is not currently supported, please include list of desired fields." );
-		}
-		elseif ( is_array( $fields ) )
-		{
-			$fields .= implode( ',', $fields );
-		}
+		$_idField = Option::get( $extras, 'id_field' );
+		$fields = $this->_buildFieldList( $table, $fields, $_idField );
 
-		$this->checkConnection();
-		try
-		{
-			$_result = $this->callGuzzle( 'GET', 'sobjects/' . $table . '/' . $id, array( 'fields' => $fields ) );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to get item '$table/$id' on Salesforce service.\n" . $ex->getMessage() );
-		}
+		$_result = $this->callGuzzle( 'GET', 'sobjects/' . $table . '/' . $id, array( 'fields' => $fields ) );
 
 		if ( empty( $_result ) )
 		{
@@ -1080,4 +1076,42 @@ class SalesforceDbSvc extends BaseDbSvc
 		throw new NotImplementedException( "Metadata actions currently not supported." );
 	}
 
+	/**
+	 * @param      $table
+	 * @param null $fields
+	 * @param null $id_field
+	 * @return array|null|string
+	 */
+	protected function _buildFieldList( $table, $fields = null, $id_field = null )
+	{
+		if ( empty( $id_field ) )
+		{
+			$id_field = static::DEFAULT_ID_FIELD;
+		}
+
+		if ( empty( $fields ) )
+		{
+			$fields = $id_field;
+		}
+		elseif ( '*' == $fields )
+		{
+			$fields = $this->_getAllFields( $table );
+		}
+		elseif ( is_array( $fields ) )
+		{
+			$fields = implode( ',', $fields );
+		}
+		else
+		{
+			// make sure the Id field is always returned
+			$fields = array_map( 'trim', explode( ',', $fields ) );
+			if ( false === array_search( $id_field, $fields ) )
+			{
+				$fields[] = $id_field;
+			}
+			$fields = implode( ',', $fields );
+		}
+
+		return $fields;
+	}
 }

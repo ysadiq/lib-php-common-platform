@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Oasys\Oasys;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Inflector;
@@ -180,7 +181,7 @@ class Provider extends BasePlatformSystemModel
 
 		if ( !Pii::guest() )
 		{
-			if ( null !== ( $_auth = ProviderUser::model()->byUserProviderUserId( Pii::user()->getId(), $this->id ) ) )
+			if ( null !== ( $_auth = ProviderUser::model()->byUserProviderUserId( Session::getCurrentUserId(), $this->id ) ) )
 			{
 				$_userConfig = $_auth->auth_text;
 			}
