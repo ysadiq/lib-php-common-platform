@@ -165,17 +165,17 @@ class Role extends BasePlatformSystemModel
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-			$requested,
-			array_merge(
-				array(
-					 'name',
-					 'description',
-					 'is_active',
-					 'default_app_id',
-				),
-				$columns
-			),
-			$hidden
+					 $requested,
+					 array_merge(
+						 array(
+							  'name',
+							  'description',
+							  'is_active',
+							  'default_app_id',
+						 ),
+						 $columns
+					 ),
+					 $hidden
 		);
 	}
 
@@ -409,9 +409,9 @@ class Role extends BasePlatformSystemModel
 				{
 					// simple insert request
 					$record = array(
-						'role_id'    => $role_id,
-						'component'  => Option::get( $item, 'component', '' ),
-						'access'     => Option::get( $item, 'access', '' )
+						'role_id'   => $role_id,
+						'component' => Option::get( $item, 'component', '' ),
+						'access'    => Option::get( $item, 'access', '' )
 					);
 					$command->reset();
 					$rows = $command->insert( $map_table, $record );

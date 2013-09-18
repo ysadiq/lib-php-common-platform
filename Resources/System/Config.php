@@ -26,6 +26,7 @@ use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -53,21 +54,21 @@ class Config extends BaseSystemRestResource
 	public function __construct( $consumer = null, $resourceArray = array() )
 	{
 		parent::__construct(
-			$consumer,
-			array(
-				 'name'           => 'Configuration',
-				 'type'           => 'System',
-				 'service_name'   => 'system',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'config',
-				 'description'    => 'Service general configuration',
-				 'is_active'      => true,
-				 'resource_array' => $resourceArray,
-				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-					 static::Merge => static::Post,
-				 )
-			)
+			  $consumer,
+			  array(
+				   'name'           => 'Configuration',
+				   'type'           => 'System',
+				   'service_name'   => 'system',
+				   'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				   'api_name'       => 'config',
+				   'description'    => 'Service general configuration',
+				   'is_active'      => true,
+				   'resource_array' => $resourceArray,
+				   'verb_aliases'   => array(
+					   static::Patch => static::Post,
+					   static::Merge => static::Post,
+				   )
+			  )
 		);
 	}
 
@@ -144,28 +145,31 @@ class Config extends BaseSystemRestResource
 		{
 			$this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
 
-			$_rows = Sql::findAll( 'SELECT id, api_name, provider_name, is_active FROM df_sys_provider ORDER BY 3', array(), Pii::pdo() );
+			/** @var Provider[] $_models */
+			$_models = ResourceStore::model( 'provider' )->findAll( array( 'order' => 'provider_name' ) );
 
-			if ( !empty( $_rows ) )
+			if ( !empty( $_models ) )
 			{
-				$this->_response['remote_login_providers'] = array();
+				$_data = array();
 
-				foreach ( $_rows as $_row )
+				foreach ( $_models as $_row )
 				{
-					$this->_response['remote_login_providers'][] = $_row;
+					$_data[] = $_row->getAttributes();
+					unset( $_row );
 				}
-			}
-			else
-			{
-				//	No providers, no remote logins
-				$this->_response['allow_remote_logins'] = false;
-				$this->_response['allow_admin_remote_logins'] = false;
+
+				$this->_response['remote_login_providers'] = $_data;
+				unset( $_data, $_models );
 			}
 		}
+		else
+		{
+			//	No providers, no remote logins
+			$this->_response['allow_remote_logins'] = false;
+			$this->_response['allow_admin_remote_logins'] = false;
+		}
 
-		/**
-		 * CORS support
-		 */
+		/** CORS support */
 		$this->_response['allowed_hosts'] = SystemManager::getAllowedHosts();
 
 		parent::_postProcess();

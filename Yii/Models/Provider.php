@@ -19,14 +19,15 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use CEvent;
+use CModelEvent;
 use DreamFactory\Oasys\Oasys;
+use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Hasher;
+use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Inflector;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\Sql;
 
 /**
  * Provider
@@ -38,6 +39,7 @@ use Kisma\Core\Utility\Sql;
  * @property string              $provider_name
  * @property array               $config_text
  * @property int                 $is_active
+ * @property int                 $is_system
  */
 class Provider extends BasePlatformSystemModel
 {
@@ -60,7 +62,7 @@ class Provider extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array( 'api_name, provider_name, config_textm, is_active', 'safe' ),
+			array( 'api_name, provider_name, config_text, is_active, is_system', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -102,6 +104,7 @@ class Provider extends BasePlatformSystemModel
 							  'api_name'      => 'API Name',
 							  'config_text'   => 'Configuration',
 							  'is_active'     => 'Active',
+							  'is_system'     => 'System Provider'
 						 )
 					 )
 		);
@@ -122,30 +125,6 @@ class Provider extends BasePlatformSystemModel
 		);
 
 		return $this;
-	}
-
-	/**
-	 * @param string $requested
-	 * @param array  $columns
-	 * @param array  $hidden
-	 *
-	 * @return array
-	 */
-	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
-	{
-		return parent::getRetrievableAttributes(
-					 $requested,
-					 array_merge(
-						 array(
-							  'api_name',
-							  'provider_name',
-							  'config_text',
-							  'is_active',
-						 ),
-						 $columns
-					 ),
-					 $hidden
-		);
 	}
 
 	/**
@@ -223,5 +202,34 @@ class Provider extends BasePlatformSystemModel
 			//	Then state/stored user creds
 			Option::clean( $stateConfig )
 		);
+	}
+
+	/**
+	 * Protect the system resources...
+	 *
+	 * @throws \CHttpException
+	 * @return bool
+	 */
+	protected function beforeSave()
+	{
+		if ( $this->is_system )
+		{
+			throw new \CHttpException( HttpResponse::Forbidden, 'The system providers are read-only.' );
+		}
+
+		return parent::beforeSave();
+	}
+
+	/**
+	 * Protect the config...
+	 */
+	protected function afterFind()
+	{
+		if ( $this->is_system )
+		{
+			$this->config_text = null;
+		}
+
+		parent::afterFind();
 	}
 }

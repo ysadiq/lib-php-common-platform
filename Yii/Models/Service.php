@@ -117,7 +117,8 @@ class Service extends BasePlatformSystemModel
 	 * Down and dirty service config cache which includes the DSP default services.
 	 * Clears when saves to services are made
 	 *
-	 * @param bool $bust If true, bust the cache
+	 * @param bool  $bust If true, bust the cache
+	 * @param array $attributes
 	 *
 	 * @return array
 	 */
@@ -284,25 +285,25 @@ MYSQL;
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-			array_merge(
-				array(
-					 'name'          => 'Name',
-					 'api_name'      => 'API Name',
-					 'description'   => 'Description',
-					 'is_active'     => 'Is Active',
-					 'is_system'     => 'Is System',
-					 'type'          => 'Type',
-					 'type_id'       => 'Type ID',
-					 'storage_name'  => 'Storage Name',
-					 'storage_type'  => 'Storage Type',
-					 'credentials'   => 'Credentials',
-					 'native_format' => 'Native Format',
-					 'base_url'      => 'Base Url',
-					 'parameters'    => 'Parameters',
-					 'headers'       => 'Headers',
-				),
-				$additionalLabels
-			)
+					 array_merge(
+						 array(
+							  'name'          => 'Name',
+							  'api_name'      => 'API Name',
+							  'description'   => 'Description',
+							  'is_active'     => 'Is Active',
+							  'is_system'     => 'Is System',
+							  'type'          => 'Type',
+							  'type_id'       => 'Type ID',
+							  'storage_name'  => 'Storage Name',
+							  'storage_type'  => 'Storage Type',
+							  'credentials'   => 'Credentials',
+							  'native_format' => 'Native Format',
+							  'base_url'      => 'Base Url',
+							  'parameters'    => 'Parameters',
+							  'headers'       => 'Headers',
+						 ),
+						 $additionalLabels
+					 )
 		);
 	}
 
@@ -467,29 +468,29 @@ MYSQL;
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-			$requested,
-			array_merge(
-				array(
-					 'name',
-					 'api_name',
-					 'description',
-					 'is_active',
-					 'type',
-					 'type_id',
-					 'is_system',
-					 'storage_name',
-					 'storage_type',
-					 'storage_type_id',
-					 'credentials',
-					 'native_format',
-					 'native_format_id',
-					 'base_url',
-					 'parameters',
-					 'headers',
-				),
-				$columns
-			),
-			$hidden
+					 $requested,
+					 array_merge(
+						 array(
+							  'name',
+							  'api_name',
+							  'description',
+							  'is_active',
+							  'type',
+							  'type_id',
+							  'is_system',
+							  'storage_name',
+							  'storage_type',
+							  'storage_type_id',
+							  'credentials',
+							  'native_format',
+							  'native_format_id',
+							  'base_url',
+							  'parameters',
+							  'headers',
+						 ),
+						 $columns
+					 ),
+					 $hidden
 		);
 	}
 
