@@ -53,21 +53,21 @@ class Config extends BaseSystemRestResource
 	public function __construct( $consumer = null, $resourceArray = array() )
 	{
 		parent::__construct(
-			  $consumer,
-			  array(
-				   'name'           => 'Configuration',
-				   'type'           => 'System',
-				   'service_name'   => 'system',
-				   'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				   'api_name'       => 'config',
-				   'description'    => 'Service general configuration',
-				   'is_active'      => true,
-				   'resource_array' => $resourceArray,
-				   'verb_aliases'   => array(
-					   static::Patch => static::Post,
-					   static::Merge => static::Post,
-				   )
-			  )
+			$consumer,
+			array(
+				 'name'           => 'Configuration',
+				 'type'           => 'System',
+				 'service_name'   => 'system',
+				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				 'api_name'       => 'config',
+				 'description'    => 'Service general configuration',
+				 'is_active'      => true,
+				 'resource_array' => $resourceArray,
+				 'verb_aliases'   => array(
+					 static::Patch => static::Post,
+					 static::Merge => static::Post,
+				 )
+			)
 		);
 	}
 
@@ -144,7 +144,7 @@ class Config extends BaseSystemRestResource
 		{
 			$this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
 
-			$_rows = Sql::findAll( 'SELECT id, api_name, provider_name FROM df_sys_provider ORDER BY 1', array(), Pii::pdo() );
+			$_rows = Sql::findAll( 'SELECT id, api_name, provider_name FROM df_sys_provider WHERE is_active = 1 ORDER BY 1', array(), Pii::pdo() );
 
 			if ( !empty( $_rows ) )
 			{
