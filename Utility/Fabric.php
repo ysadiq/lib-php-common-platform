@@ -157,7 +157,7 @@ class Fabric extends SeedUtility
 			if ( HttpResponse::NotFound == Curl::getLastHttpCode() )
 			{
 				Log::setDefaultLog( \Kisma::get( 'app.log_path' ) . '/error.log' );
-				Log::error( 'DB Credential pull failure. Redirecting to df.com', array( 'host' => $_host ) );
+				Log::error( 'DB Credential pull failure. Redirecting to df.com: ' . $_host );
 				header( 'Location: https://www.dreamfactory.com/dsp-not-found?dn=' . urlencode( $_dspName ) );
 				exit();
 			}

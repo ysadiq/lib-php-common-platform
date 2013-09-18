@@ -144,7 +144,7 @@ class Config extends BaseSystemRestResource
 		{
 			$this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
 
-			$_rows = Sql::findAll( 'SELECT id, api_name, provider_name FROM df_sys_provider WHERE is_active = 1 ORDER BY 1', array(), Pii::pdo() );
+			$_rows = Sql::findAll( 'SELECT id, api_name, provider_name, is_active FROM df_sys_provider ORDER BY 3', array(), Pii::pdo() );
 
 			if ( !empty( $_rows ) )
 			{
@@ -152,7 +152,7 @@ class Config extends BaseSystemRestResource
 
 				foreach ( $_rows as $_row )
 				{
-					$this->_response['remote_login_providers'][] = $_row['api_name'];
+					$this->_response['remote_login_providers'][] = $_row;
 				}
 			}
 			else
