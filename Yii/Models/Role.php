@@ -68,6 +68,7 @@ class Role extends BasePlatformSystemModel
 			array( 'name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
 			array( 'is_active, default_app_id', 'numerical', 'integerOnly' => true ),
 			array( 'name', 'length', 'max' => 64 ),
+			array( 'description', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );

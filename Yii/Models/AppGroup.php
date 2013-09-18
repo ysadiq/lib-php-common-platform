@@ -57,6 +57,7 @@ class AppGroup extends BasePlatformSystemModel
 				 array( 'name', 'required' ),
 				 array( 'name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
 				 array( 'name', 'length', 'max' => 64 ),
+				 array( 'description', 'safe' ),
 			)
 		);
 	}
