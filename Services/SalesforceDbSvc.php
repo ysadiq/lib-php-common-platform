@@ -122,8 +122,7 @@ class SalesforceDbSvc extends BaseDbSvc
 	protected function callCurl( $method = 'GET', $uri = null, $parameters = array(), $body = null, $version = 'v28.0' )
 	{
 		$_options = array(
-//			CURLOPT_RETURNTRANSFER => false,
-//			CURLOPT_HEADER         => false
+			CURLOPT_HEADER => false
 		);
 		$_options[CURLOPT_HTTPHEADER][] = 'Authorization: Bearer ' . $this->getLoginResult()->getSessionId();
 		if ( !empty( $body ) )
@@ -139,6 +138,8 @@ class SalesforceDbSvc extends BaseDbSvc
 			$_error = Curl::getError();
 			throw new RestException( Option::get( $_error, 'code', 500 ), Option::get( $_error, 'message' ) );
 		}
+
+		$_code = Curl::getLastHttpCode();
 
 		return $_response;
 	}
@@ -247,6 +248,14 @@ class SalesforceDbSvc extends BaseDbSvc
 	{
 		$_extras = parent::_gatherExtrasFromRequest( $post_data );
 
+		// get possible paging parameter for large requests
+		$_next = FilterInput::request( 'next' );
+		if ( empty( $_next) && !empty( $post_data ) )
+		{
+			$_next = Option::get( $post_data, 'next' );
+		}
+		$_extras['next'] = $_next;
+
 		// continue batch processing if an error occurs, if applicable
 		$_continue = FilterInput::request( 'continue', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
 		if ( empty( $_continue ) && !empty( $post_data ) )
@@ -283,7 +292,8 @@ class SalesforceDbSvc extends BaseDbSvc
 	 * @param bool $as_array
 	 *
 	 * @return array|string
-	 */protected function _getAllFields( $table, $as_array = false )
+	 */
+	protected function _getAllFields( $table, $as_array = false )
 	{
 		$_result = $this->getTable( $table );
 		$_result = Option::get( $_result, 'fields' );
@@ -834,33 +844,41 @@ class SalesforceDbSvc extends BaseDbSvc
 		$_idField = Option::get( $extras, 'id_field' );
 		$fields = $this->_buildFieldList( $table, $fields, $_idField );
 
-		// build query string
-		$_query = 'SELECT ' . $fields . ' FROM ' . $table;
-
-		if ( !empty( $filter ) )
+		$_next = Option::get( $extras, 'next' );
+		if ( !empty( $_next ) )
 		{
-			$_query .= ' WHERE ' . $filter;
+			$_result = $this->callGuzzle( 'GET', 'query/' . $_next );
 		}
-
-		$_order = Option::get( $extras, 'order' );
-		if ( !empty( $_order ) )
+		else
 		{
-			$_query .= ' ORDER BY ' . $_order;
-		}
+			// build query string
+			$_query = 'SELECT ' . $fields . ' FROM ' . $table;
 
-		$_offset = intval( Option::get( $extras, 'offset', 0 ) );
-		if ( $_offset > 0 )
-		{
-			$_query .= ' OFFSET ' . $_offset;
-		}
+			if ( !empty( $filter ) )
+			{
+				$_query .= ' WHERE ' . $filter;
+			}
 
-		$_limit = intval( Option::get( $extras, 'limit', 0 ) );
-		if ( $_limit > 0 )
-		{
-			$_query .= ' LIMIT ' . $_limit;
-		}
+			$_order = Option::get( $extras, 'order' );
+			if ( !empty( $_order ) )
+			{
+				$_query .= ' ORDER BY ' . $_order;
+			}
 
-		$_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
+			$_offset = intval( Option::get( $extras, 'offset', 0 ) );
+			if ( $_offset > 0 )
+			{
+				$_query .= ' OFFSET ' . $_offset;
+			}
+
+			$_limit = intval( Option::get( $extras, 'limit', 0 ) );
+			if ( $_limit > 0 )
+			{
+				$_query .= ' LIMIT ' . $_limit;
+			}
+
+			$_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
+		}
 
 		$_data = Option::get( $_result, 'records', array() );
 
