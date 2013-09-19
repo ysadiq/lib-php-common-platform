@@ -916,11 +916,13 @@ class MongoDbSvc extends NoSqlDbSvc
 		$_limit = intval( Option::get( $extras, 'limit', 0 ) );
 		$_offset = intval( Option::get( $extras, 'offset', 0 ) );
 		$_sort = static::buildSortArray( Option::get( $extras, 'order' ) );
-		$_count = Option::get( $extras, 'include_count', false );
+		$_addCount = Option::get( $extras, 'include_count', false );
 		try
 		{
 			/** @var \MongoCursor $_result */
 			$_result = $_coll->find( $_criteria, $_fieldArray );
+			$_count = $_result->count();
+			$_needMore = ( ( $_count - $_offset ) > static::DEFAULT_MAX_RECORDS );
 			if ( $_offset )
 			{
 				$_result = $_result->skip( $_offset );
@@ -929,15 +931,24 @@ class MongoDbSvc extends NoSqlDbSvc
 			{
 				$_result = $_result->sort( $_sort );
 			}
-			if ( $_limit )
+			if ( $_limit && ( $_limit < static::DEFAULT_MAX_RECORDS ) )
 			{
 				$_result = $_result->limit( $_limit );
 			}
+			else
+			{
+				$_result = $_result->limit( static::DEFAULT_MAX_RECORDS );
+			}
+
 			$_out = iterator_to_array( $_result );
 			$_out =  static::cleanRecords( $_out );
-			if ( $_count )
+			if ( $_addCount || $_needMore )
 			{
-				$_out['meta']['count'] = $_result->count();
+				$_out['meta']['count'] = $_count;
+				if ( $_needMore )
+				{
+					$_out['meta']['next'] = $_offset + static::DEFAULT_MAX_RECORDS + 1;
+				}
 			}
 
 			return $_out;
