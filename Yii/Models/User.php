@@ -296,9 +296,9 @@ class User extends BasePlatformSystemModel
 		}
 
 		return parent::getRetrievableAttributes(
-			$requested,
-			$_myColumns,
-			$hidden
+					 $requested,
+					 $_myColumns,
+					 $hidden
 		);
 	}
 
@@ -311,8 +311,8 @@ class User extends BasePlatformSystemModel
 	public static function authenticate( $userName, $password )
 	{
 		$_user = static::model()
-				 ->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
-				 ->findByAttributes( array( 'email' => $userName ) );
+					   ->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
+					   ->findByAttributes( array( 'email' => $userName ) );
 
 		if ( empty( $_user ) )
 		{
@@ -404,10 +404,10 @@ class User extends BasePlatformSystemModel
 	public static function getByEmail( $email )
 	{
 		return static::model()->find(
-			'email = :email',
-			array(
-				 ':email' => $email,
-			)
+					 'email = :email',
+					 array(
+						  ':email' => $email,
+					 )
 		);
 	}
 
@@ -535,6 +535,7 @@ class User extends BasePlatformSystemModel
 	 * @param ProviderLike $provider
 	 * @param Provider     $providerModel
 	 *
+	 * @return \DreamFactory\Platform\Yii\Models\User
 	 * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
 	 * @throws \Exception
 	 */

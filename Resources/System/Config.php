@@ -145,22 +145,48 @@ class Config extends BaseSystemRestResource
 		{
 			$this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
 
+			$_data = array();
+
+			$_providers = Fabric::getProviderCredentials();
+
+			foreach ( $_providers as $_row )
+			{
+				$_data[] = array(
+					'id'            => $_row->id,
+					'provider_name' => $_row->provider_name_text,
+					'api_name'      => $_row->endpoint_text,
+					'config_text'   => array(),
+					'is_active'     => $_row->enable_ind,
+					'is_system'     => true,
+				);
+
+				unset( $_row );
+			}
+
+			unset( $_global );
+
 			/** @var Provider[] $_models */
 			$_models = ResourceStore::model( 'provider' )->findAll( array( 'order' => 'provider_name' ) );
 
 			if ( !empty( $_models ) )
 			{
-				$_data = array();
-
 				foreach ( $_models as $_row )
 				{
 					$_data[] = $_row->getAttributes();
 					unset( $_row );
 				}
 
-				$this->_response['remote_login_providers'] = $_data;
-				unset( $_data, $_models );
+				unset( $_models );
 			}
+
+			$this->_response['remote_login_providers'] = $_data;
+
+			if ( empty( $_data ) )
+			{
+				$this->_response['allow_remote_logins'] = false;
+			}
+
+			unset( $_data );
 		}
 		else
 		{

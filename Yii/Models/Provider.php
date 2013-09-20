@@ -149,20 +149,22 @@ class Provider extends BasePlatformSystemModel
 	/**
 	 * Retrieves the complete configuration for this provider merging user credentials with the defaults and stored stuff.
 	 *
-	 * @param array $baseConfig
-	 * @param array $stateConfig
+	 * @param \stdClass|Provider $provider
+	 * @param array              $baseConfig
+	 * @param array              $stateConfig
 	 *
 	 * @return array
 	 */
-	public function buildConfig( $baseConfig = array(), $stateConfig = array() )
+	public static function buildConfig( $provider, $baseConfig = array(), $stateConfig = array() )
 	{
 		$_userConfig = array();
 
 		if ( !Pii::guest() )
 		{
-			if ( null !== ( $_auth = ProviderUser::model()->byUserProviderUserId( Session::getCurrentUserId(), $this->id ) ) )
+			if ( null !== ( $_auth = ProviderUser::model()->byUserProviderUserId( Session::getCurrentUserId(), $provider->id )->find( array( 'select' => 'auth_text' ) ) ) )
 			{
 				$_userConfig = $_auth->auth_text;
+				unset( $_auth );
 			}
 		}
 
@@ -172,7 +174,8 @@ class Provider extends BasePlatformSystemModel
 			$stateConfig = array();
 
 			//	See if we have any data to merge
-			$_temp = Oasys::getStore()->get( $this->api_name, array() );
+			$_endpoint = Option::get( $provider, 'api_name', Option::get( $provider, 'endpoint_text' ) );
+			$_temp = Oasys::getStore()->get( $_endpoint, array() );
 
 			if ( null !== ( $_json = Option::get( $_temp, 'config', array() ) ) )
 			{
@@ -194,7 +197,7 @@ class Provider extends BasePlatformSystemModel
 		//	Now simmer...
 		return array_merge(
 		//	My configuration
-			$this->config_text,
+			(array)$provider->config_text,
 			//	Then base from consumer
 			Option::clean( $baseConfig ),
 			//	User creds

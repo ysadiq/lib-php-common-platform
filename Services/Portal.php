@@ -207,12 +207,12 @@ class Portal extends BaseSystemRestService
 		//	Set our store...
 		Oasys::setStore( $_store = new FileSystem( $_sid = session_id() ) );
 
-		$_config = $_providerModel->buildConfig(
-			array(
-				 'flow_type'    => $_flow,
-				 'redirect_uri' => Curl::currentUrl( false ) . '?pid=' . $_providerId,
-			),
-			Pii::getState( $_providerId . '.user_config', array() )
+		$_config = Provider::buildConfig( $_providerModel,
+										  array(
+											   'flow_type'    => $_flow,
+											   'redirect_uri' => Curl::currentUrl( false ) . '?pid=' . $_providerId,
+										  ),
+										  Pii::getState( $_providerId . '.user_config', array() )
 		);
 
 		$_provider = Oasys::getProvider( $_providerId, $_config );
@@ -235,10 +235,10 @@ class Portal extends BaseSystemRestService
 				}
 
 				$_response = $_provider->fetch(
-					$_path,
-					RestData::getPostDataAsArray(),
-					$this->_action,
-					$this->_headers ? : array()
+									   $_path,
+									   RestData::getPostDataAsArray(),
+									   $this->_action,
+									   $this->_headers ? : array()
 				);
 
 				if ( false === $_response )
@@ -282,5 +282,4 @@ class Portal extends BaseSystemRestService
 		//	Shouldn't really get here...
 		throw new BadRequestException( 'The request you submitted is confusing.' );
 	}
-
 }
