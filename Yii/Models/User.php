@@ -577,9 +577,12 @@ class User extends BasePlatformSystemModel
 		}
 
 		//	Step 3: Do the doo
+		Pii::setState( $providerId . '.user_config', $_providerUser->auth_text );
+
 		$_data = Oasys::getStore()->get( $providerId, array() );
 		$_data['config'] = json_encode( $_providerUser->auth_text );
 		Oasys::getStore()->set( $providerId, $_data );
+		Oasys::getStore()->sync();
 
 		$_identity = new PlatformUserIdentity( $_user->email, sha1( $_user->email ) );
 
@@ -592,9 +595,6 @@ class User extends BasePlatformSystemModel
 		{
 			throw new ForbiddenException( 'User login failed.' );
 		}
-
-		//	Save the state!
-		Pii::setState( $providerId . '.user_config', $_providerUser->auth_text );
 
 		return $_user;
 	}
