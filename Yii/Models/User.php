@@ -214,6 +214,27 @@ class User extends BasePlatformSystemModel
 			unset( $values['security_answer'] );
 		}
 
+		if ( !$this->isNewRecord )
+		{
+			$_id = $this->getPrimaryKey();
+			if ( $_id == Session::getCurrentUserId() )
+			{
+				//	Make sure you don't remove yourself from admin, role, or deactivate yourself
+				if ( isset( $values['is_sys_admin'] ) && ( $values['is_sys_admin'] != $this->is_sys_admin ) )
+				{
+					throw new StorageException( 'You can not change your own admin status.' );
+				}
+				if ( isset( $values['role_id'] ) && ( $values['role_id'] != $this->role_id ) )
+				{
+					throw new StorageException( 'You can not change your own role status.' );
+				}
+				if ( isset( $values['is_active'] ) && ( $values['is_active'] != $this->is_active ) )
+				{
+					throw new StorageException( 'You can not change your own active status.' );
+				}
+			}
+		}
+
 		parent::setAttributes( $values, $safeOnly );
 	}
 
