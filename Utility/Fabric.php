@@ -16,6 +16,7 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\DateTime;
 use Kisma\Core\Enums\HttpResponse;
@@ -23,6 +24,7 @@ use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 
 /**
  * Fabric.php
@@ -38,6 +40,10 @@ class Fabric extends SeedUtility
 	 * @var string
 	 */
 	const DEFAULT_AUTH_ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api/instance/credentials';
+	/**
+	 * @var string
+	 */
+	const DEFAULT_PROVIDER_ENDPOINT = 'http://oasys.cloud.dreamfactory.com/oauth/providerCredentials';
 	/**
 	 * @var string
 	 */
@@ -157,7 +163,7 @@ class Fabric extends SeedUtility
 			if ( HttpResponse::NotFound == Curl::getLastHttpCode() )
 			{
 				Log::setDefaultLog( \Kisma::get( 'app.log_path' ) . '/error.log' );
-				Log::error( 'DB Credential pull failure. Redirecting to df.com', array( 'host' => $_host ) );
+				Log::error( 'DB Credential pull failure. Redirecting to df.com: ' . $_host );
 				header( 'Location: https://www.dreamfactory.com/dsp-not-found?dn=' . urlencode( $_dspName ) );
 				exit();
 			}
@@ -269,5 +275,41 @@ class Fabric extends SeedUtility
 	protected static function _cacheFileName( $host )
 	{
 		return rtrim( sys_get_temp_dir(), '/' ) . '/.dsp-' . sha1( $host . $_SERVER['REMOTE_ADDR'] );
+	}
+
+	/**
+	 * Retrieves a global login provider credential set
+	 *
+	 * @param string $id
+	 *
+	 * @return array
+	 */
+	public static function getProviderCredentials( $id = null )
+	{
+		if ( !static::fabricHosted() && !static::hostedPrivatePlatform() )
+		{
+			Log::error( 'Global provider credential pull failure: not hosted entity.' );
+
+			return array();
+		}
+
+		//	Otherwise, get the credentials from the auth server...
+		$_url = static::DEFAULT_PROVIDER_ENDPOINT . '/';
+
+		if ( null !== $id )
+		{
+			$_url .= $id . '/';
+		}
+
+		$_response = Curl::get( $_url . '?oasys=' . urlencode( Pii::getParam( 'oauth.salt' ) ) );
+
+		if ( HttpResponse::Ok != Curl::getLastHttpCode() || !$_response->success )
+		{
+			Log::error( 'Global provider credential pull failure: ' . Curl::getErrorAsString() );
+
+			return array();
+		}
+
+		return Option::get( $_response, 'details', array() );
 	}
 }

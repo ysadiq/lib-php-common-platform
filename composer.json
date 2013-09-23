@@ -26,11 +26,13 @@
 		"php":                             ">=5.3.10",
 		"kisma/kisma":                     ">=0.1.3",
 		"dreamfactory/lib-php-common-yii": "dev-master",
+		"dreamfactory/oasys":              "dev-master",
 		"swiftmailer/swiftmailer":         "4.3.*",
 		"aws/aws-sdk-php":                 "2.*",
-		"rackspace/php-opencloud":         "dev-master",
+		"rackspace/php-opencloud":         "1.5.*",
 		"dready92/php-on-couch":           "dev-master",
-		"microsoft/windowsazure":          "*"
+		"microsoft/windowsazure":          "*",
+	 	"phpforce/soap-client":            "dev-master"
 	},
 	"repositories":      [
 		{

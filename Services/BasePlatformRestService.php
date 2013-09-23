@@ -19,16 +19,15 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Doctrine\Common\Proxy\Exception\InvalidArgumentException;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Enums\OutputFormat;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
@@ -115,6 +114,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @var array Additional actions that this resource will respond to
 	 */
 	protected $_extraActions = null;
+	/**
+	 * @var array The data that came in on the request
+	 */
+	protected $_requestPayload = null;
 
 	//*************************************************************************
 	//* Methods
@@ -141,9 +144,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	public function processRequest( $resource = null, $action = self::Get )
 	{
-		$this->_setResource( $resource );
 		$this->_setAction( $action );
-		$this->_detectResourceMembers();
+		$this->_detectResourceMembers( $resource );
 
 		$this->_preProcess();
 
@@ -268,10 +270,25 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 	/**
 	 * Apply the commonly used REST path members to the class
+	 *
+	 * @param string $resourcePath
+	 *
+	 * @return $this
 	 */
-	protected function _detectResourceMembers()
+	protected function _detectResourceMembers( $resourcePath = null )
 	{
-		$this->_resource = strtolower( Option::get( $this->_resourceArray, 0 ) );
+		$this->_resourcePath = $resourcePath;
+		$this->_resourceArray = ( !empty( $this->_resourcePath ) ) ? explode( '/', $this->_resourcePath ) : array();
+
+		if ( empty( $this->_resource ) )
+		{
+			if ( null !== ( $_resource = Option::get( $this->_resourceArray, 0 ) ) )
+			{
+				$this->_resource = $_resource;
+			}
+		}
+
+		return $this;
 	}
 
 	/**
@@ -456,24 +473,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function getResponse()
 	{
 		return $this->_response;
-	}
-
-	/**
-	 * @param string $resourcePath
-	 *
-	 * @return BasePlatformRestService
-	 */
-	protected function _setResource( $resourcePath = null )
-	{
-		$this->_resourcePath = rtrim( $resourcePath, '/' );
-		$this->_resourceArray = ( !empty( $this->_resourcePath ) ) ? explode( '/', $this->_resourcePath ) : array();
-
-		if ( empty( $this->_resource ) && null !== ( $_resource = Option::get( $this->_resourceArray, 0 ) ) )
-		{
-			$this->_resource = $_resource;
-		}
-
-		return $this;
 	}
 
 	/**
@@ -678,5 +677,25 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		$this->_extraActions[$action] = $handler;
 
 		return $this;
+	}
+
+	/**
+	 * @param array $requestPayload
+	 *
+	 * @return BasePlatformRestService
+	 */
+	public function setRequestPayload( $requestPayload )
+	{
+		$this->_requestPayload = $requestPayload;
+
+		return $this;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getRequestPayload()
+	{
+		return $this->_requestPayload;
 	}
 }

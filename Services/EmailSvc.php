@@ -32,7 +32,7 @@ use DreamFactory\Platform\Yii\Models\EmailTemplate;
  * A service to handle email services accessed through the REST API.
  *
  */
-class EmailSvc extends BaseSystemRestService
+class EmailSvc extends BasePlatformRestService
 {
 	//*************************************************************************
 	//	Members
@@ -104,62 +104,61 @@ class EmailSvc extends BaseSystemRestService
 	 * @return array
 	 * @throws BadRequestException
 	 */
-	protected function _handleResource()
+	protected function _handleGet()
 	{
-		switch ( $this->_resource )
+
+		// no resources currently
+		return array();
+	}
+
+	/**
+	 * @return array
+	 * @throws BadRequestException
+	 */
+	protected function _handlePost()
+	{
+		$data = RestData::getPostDataAsArray();
+
+		// build email from posted data
+		$template = FilterInput::request( 'template' );
+		$template = Option::get( $data, 'template', $template );
+		if ( !empty( $template ) )
 		{
-			case '':
-				switch ( $this->_action )
-				{
-					case self::Post:
-						$data = RestData::getPostDataAsArray();
+			$count = $this->sendEmailByTemplate( $template, $data );
+		}
+		else
+		{
+			if ( empty( $data ) )
+			{
+				throw new BadRequestException( 'No POST data in request.' );
+			}
 
-						// build email from posted data
-						$template = FilterInput::request( 'template' );
-						$template = Option::get( $data, 'template', $template );
-						if ( !empty( $template ) )
-						{
-							$count = $this->sendEmailByTemplate( $template, $data );
-						}
-						else
-						{
-							if ( empty( $data ) )
-							{
-								throw new BadRequestException( 'No POST data in request.' );
-							}
-
-							$to = Option::get( $data, 'to' );
-							$cc = Option::get( $data, 'cc' );
-							$bcc = Option::get( $data, 'bcc' );
-							$subject = Option::get( $data, 'subject' );
-							$text = Option::get( $data, 'body_text' );
-							$html = Option::get( $data, 'body_html' );
-							$fromName = Option::get( $data, 'from_name' );
-							$fromEmail = Option::get( $data, 'from_email' );
-							$replyName = Option::get( $data, 'reply_to_name' );
-							$replyEmail = Option::get( $data, 'reply_to_email' );
-							$count = $this->sendEmail(
-								$to,
-								$cc,
-								$bcc,
-								$subject,
-								$text,
-								$html,
-								$fromName,
-								$fromEmail,
-								$replyName,
-								$replyEmail,
-								$data
-							);
-						}
-
-						return array( 'count' => $count );
-						break;
-				}
-				break;
+			$to = Option::get( $data, 'to' );
+			$cc = Option::get( $data, 'cc' );
+			$bcc = Option::get( $data, 'bcc' );
+			$subject = Option::get( $data, 'subject' );
+			$text = Option::get( $data, 'body_text' );
+			$html = Option::get( $data, 'body_html' );
+			$fromName = Option::get( $data, 'from_name' );
+			$fromEmail = Option::get( $data, 'from_email' );
+			$replyName = Option::get( $data, 'reply_to_name' );
+			$replyEmail = Option::get( $data, 'reply_to_email' );
+			$count = $this->sendEmail(
+				$to,
+				$cc,
+				$bcc,
+				$subject,
+				$text,
+				$html,
+				$fromName,
+				$fromEmail,
+				$replyName,
+				$replyEmail,
+				$data
+			);
 		}
 
-		return false;
+		return array( 'count' => $count );
 	}
 
 	/**

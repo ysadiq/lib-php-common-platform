@@ -19,12 +19,15 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
+use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Utility\ResourceStore;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Common\Utility\DataFormat;
@@ -39,28 +42,28 @@ class Provider extends BaseSystemRestResource
 	/**
 	 * Constructor
 	 *
-	 * @param BasePlatformService $consumer
-	 * @param array               $resourceArray
+	 * @param RestServiceLike $consumer
+	 * @param array           $resourceArray
 	 *
 	 * @return \DreamFactory\Platform\Resources\System\Provider
 	 */
 	public function __construct( $consumer = null, $resourceArray = array() )
 	{
 		parent::__construct(
-			$consumer,
-			array(
-				 'name'           => 'Provider',
-				 'type'           => 'Service',
-				 'service_name'   => 'system',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'provider',
-				 'description'    => 'Provider Configuration.',
-				 'is_active'      => true,
-				 'resource_array' => $resourceArray,
-				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-				 ),
-			)
+			  $consumer,
+			  array(
+				   'name'           => 'Provider',
+				   'type'           => 'Service',
+				   'service_name'   => 'system',
+				   'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				   'api_name'       => 'provider',
+				   'description'    => 'Provider Configuration.',
+				   'is_active'      => true,
+				   'resource_array' => $resourceArray,
+				   'verb_aliases'   => array(
+					   static::Patch => static::Post,
+				   ),
+			  )
 		);
 	}
 }

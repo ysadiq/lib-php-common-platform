@@ -19,13 +19,14 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Interfaces\FileServiceLike;
 use DreamFactory\Platform\Services\BasePlatformRestService;
-use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\FilterInput;
-use DreamFactory\Platform\Utility\DataFormat;
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\RestData;
+use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Option;
 
 /**
  * BaseFileSvc
@@ -60,9 +61,9 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	/**
 	 * Setup container and paths
 	 */
-	protected function _detectResourceMembers()
+	protected function _detectResourceMembers( $resourcePath = null )
 	{
-		parent::_detectResourceMembers();
+		parent::_detectResourceMembers( $resourcePath );
 
 		$this->_container = Option::get( $this->_resourceArray, 0 );
 
@@ -364,7 +365,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				break;
 			case self::Patch:
 			case self::Merge:
-				$this->checkPermission( 'update' );
+				$this->checkPermission( 'update', $this->_container );
 				if ( empty( $this->_container ) )
 				{
 					// nothing?
@@ -403,7 +404,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				}
 				break;
 			case self::Delete:
-				$this->checkPermission( 'delete' );
+				$this->checkPermission( 'delete', $this->_container );
 				$force = FilterInput::request( 'force', false, FILTER_VALIDATE_BOOLEAN );
 				$content = RestData::getPostDataAsArray();
 				if ( empty( $this->_container ) )
@@ -744,8 +745,8 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	}
 
 	/**
-	 * @param array  $data    Array of sub-folder and file paths that are relative to the root folder
-	 * @param string $root    root folder from which to delete
+	 * @param array  $data Array of sub-folder and file paths that are relative to the root folder
+	 * @param string $root root folder from which to delete
 	 * @param  bool  $force
 	 *
 	 * @return array

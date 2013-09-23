@@ -47,7 +47,7 @@ abstract class BasePlatformResourceView extends Seed implements ResourceViewLike
 	/**
 	 * @var int The way to format the schema
 	 */
-	protected $_responseFormat = ResponseFormats::JTABLE;
+	protected $_responseFormat = ResponseFormats::DATATABLES;
 
 	//*************************************************************************
 	//* Methods

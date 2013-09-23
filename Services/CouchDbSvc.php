@@ -182,51 +182,55 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 *
-	 * @param array $tables
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function getTables( $tables = array() )
 	{
-		try
+		if ( empty( $tables ) )
 		{
-			if ( empty( $tables ) )
+			try
 			{
 				$tables = $this->_dbConn->listDatabases();
-				foreach ( $tables as $_key => $_table )
-				{
-					if ( '_' == substr( $_table, 0, 1 ) )
-					{
-						unset( $tables[$_key] );
-					}
-				}
-				$tables = array_values( $tables );
 			}
-			else
+			catch ( \Exception $ex )
 			{
-				if ( !is_array( $tables ) )
-				{
-					$tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
-				}
+				throw new InternalServerErrorException( "Failed to list containers of CouchDb service.\n" . $ex->getMessage() );
 			}
 
-			$_out = array();
-			foreach ( $tables as $_table )
+			foreach ( $tables as $_key => $_table )
 			{
-				if ( is_array( $_table ) )
+				if ( '_' == substr( $_table, 0, 1 ) )
 				{
-					$_table = Option::get( $_table, 'name' );
+					unset( $tables[$_key] );
 				}
-				if ( empty( $_table ) )
-				{
-					throw new BadRequestException( "No 'name' field in data." );
-				}
-				$_out[] = $this->getTable( $_table );
 			}
+			$tables = array_values( $tables );
+		}
 
-			return $_out;
+		return parent::getTables( $tables );
+	}
+
+	/**
+	 * {@inheritdoc}
+	 */
+	public function getTable( $table )
+	{
+		if ( is_array( $table ) )
+		{
+			$table = Option::get( $table, 'name' );
+		}
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( "No 'name' field in data." );
+		}
+
+		try
+		{
+			$this->correctTableName( $table );
+			$_result = $this->_dbConn->asArray()->getDatabaseInfos();
+			$_result['name'] = $table;
+
+			return $_result;
 		}
 		catch ( \Exception $ex )
 		{
@@ -235,27 +239,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * Get any properties related to the table
-	 *
-	 * @param string $table Table name
-	 *
-	 * @return array
-	 * @throws \Exception
-	 */
-	public function getTable( $table )
-	{
-		$this->correctTableName( $table );
-		$_result = $this->_dbConn->asArray()->getDatabaseInfos();
-		$_result['name'] = $table;
-
-		return $_result;
-	}
-
-	/**
-	 * @param array  $properties
-	 *
-	 * @return array
-	 * @throws \Exception
+	 * {@inheritdoc}
 	 */
 	public function createTable( $properties = array() )
 	{
@@ -281,12 +265,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * Get any properties related to the table
-	 *
-	 * @param array  $properties
-	 *
-	 * @return array
-	 * @throws \Exception
+	 * {@inheritdoc}
 	 */
 	public function updateTable( $properties = array() )
 	{
@@ -303,54 +282,19 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param array $tables
-	 * @param bool  $check_empty
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public function deleteTables( $tables = array(), $check_empty = false )
-	{
-		if ( !is_array( $tables ) )
-		{
-			// may be comma-delimited list of names
-			$tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
-		}
-		$_out = array();
-		foreach ( $tables as $_table )
-		{
-			if ( is_array( $_table ) )
-			{
-				$_table = Option::get( $_table, 'name' );
-			}
-			if ( empty( $_table ) )
-			{
-				throw new BadRequestException( "No 'name' field in data." );
-			}
-			try
-			{
-				$_out[] = $this->deleteTable( $_table, $check_empty );
-			}
-			catch ( \Exception $ex )
-			{
-				throw new InternalServerErrorException( "Failed to delete tables from CouchDb service.\n" . $ex->getMessage() );
-			}
-		}
-
-		return $_out;
-	}
-
-	/**
-	 * Delete the table and all of its contents
-	 *
-	 * @param string $table
-	 * @param bool   $check_empty
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function deleteTable( $table, $check_empty = false )
 	{
+		if ( is_array( $table ) )
+		{
+			$table = Option::get( $table, 'name' );
+		}
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( "No 'name' field in data." );
+		}
+
 		try
 		{
 			$this->correctTableName( $table );
@@ -370,13 +314,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	// records is an array of field arrays
 
 	/**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function createRecords( $table, $records, $fields = null, $extras = array() )
 	{
@@ -410,14 +348,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @throws BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function createRecord( $table, $record, $fields = null, $extras = array() )
 	{
@@ -445,13 +376,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function updateRecords( $table, $records, $fields = null, $extras = array() )
 	{
@@ -486,14 +411,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @throws BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function updateRecord( $table, $record, $fields = null, $extras = array() )
 	{
@@ -521,14 +439,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function updateRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
 	{
@@ -555,16 +466,9 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $record
-	 * @param string $id_list
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function updateRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
+	public function updateRecordsByIds( $table, $record, $ids, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -573,7 +477,7 @@ class CouchDbSvc extends NoSqlDbSvc
 		$table = $this->correctTableName( $table );
 
 		// retrieve records to get latest rev and id
-		$_results = $this->retrieveRecordsByIds( $table, $id_list, '', $extras );
+		$_results = $this->retrieveRecordsByIds( $table, $ids, '', $extras );
 		// make sure record doesn't contain identifiers
 		unset( $record[static::DEFAULT_ID_FIELD] );
 		unset( $record[static::REV_FIELD] );
@@ -588,14 +492,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function updateRecordById( $table, $record, $id, $fields = null, $extras = array() )
 	{
@@ -616,13 +513,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function mergeRecords( $table, $records, $fields = null, $extras = array() )
 	{
@@ -663,13 +554,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function mergeRecord( $table, $record, $fields = null, $extras = array() )
 	{
@@ -705,14 +590,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function mergeRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
 	{
@@ -753,16 +631,9 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $record
-	 * @param string $id_list
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function mergeRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
+	public function mergeRecordsByIds( $table, $record, $ids, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -770,14 +641,14 @@ class CouchDbSvc extends NoSqlDbSvc
 		}
 		$table = $this->correctTableName( $table );
 
-		if ( empty( $id_list ) )
+		if ( empty( $ids ) )
 		{
 			throw new BadRequestException( "Identifying values for 'id_field' can not be empty for update request." );
 		}
 
-		$_ids = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
+		$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
 		$_updates = array();
-		foreach ( $_ids as $_key => $_id )
+		foreach ( $ids as $_key => $_id )
 		{
 			if ( empty( $_id ) )
 			{
@@ -791,14 +662,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function mergeRecordById( $table, $record, $id, $fields = null, $extras = array() )
 	{
@@ -817,13 +681,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array|string
+	 * {@inheritdoc}
 	 */
 	public function deleteRecords( $table, $records, $fields = null, $extras = array() )
 	{
@@ -862,13 +720,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function deleteRecord( $table, $record, $fields = null, $extras = array() )
 	{
@@ -900,13 +752,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function deleteRecordsByFilter( $table, $filter, $fields = null, $extras = array() )
 	{
@@ -930,17 +776,11 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $id_list
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function deleteRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
+	public function deleteRecordsByIds( $table, $ids, $fields = null, $extras = array() )
 	{
-		if ( empty( $id_list ) )
+		if ( empty( $ids ) )
 		{
 			throw new BadRequestException( "Identifying values for 'id_field' can not be empty for update request." );
 		}
@@ -950,7 +790,7 @@ class CouchDbSvc extends NoSqlDbSvc
 		try
 		{
 			// get the returnable fields first, then issue delete
-			$_records = $this->retrieveRecordsByIds( $table, $id_list, $fields, $extras );
+			$_records = $this->retrieveRecordsByIds( $table, $ids, $fields, $extras );
 			$result = $this->_dbConn->deleteDocs( $_records, $_rollback );
 
 			return $_records;
@@ -962,13 +802,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function deleteRecordById( $table, $id, $fields = null, $extras = array() )
 	{
@@ -986,13 +820,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param string $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function retrieveRecordsByFilter( $table, $filter = null, $fields = null, $extras = array() )
 	{
@@ -1015,13 +843,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function retrieveRecords( $table, $records, $fields = null, $extras = array() )
 	{
@@ -1063,13 +885,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function retrieveRecord( $table, $record, $fields = null, $extras = array() )
 	{
@@ -1098,21 +914,15 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param string $id_list - comma delimited list of ids
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function retrieveRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
+	public function retrieveRecordsByIds( $table, $ids, $fields = null, $extras = array() )
 	{
-		if ( empty( $id_list ) )
+		if ( empty( $ids ) )
 		{
 			return array();
 		}
-		$ids = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
+		$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
 		$table = $this->correctTableName( $table );
 
 		$_moreFields = static::_requireMoreFields( $fields );
@@ -1131,13 +941,7 @@ class CouchDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function retrieveRecordById( $table, $id, $fields = null, $extras = array() )
 	{

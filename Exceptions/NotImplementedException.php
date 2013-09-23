@@ -17,22 +17,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Enums;
-
-use Kisma\Core\Enums\SeedEnum;
+namespace DreamFactory\Platform\Exceptions;
 
 /**
- * PlatformUserSources
- * Non-dynamic constants for the User.user_source field
+ * NotImplementedException
  */
-class PlatformUserSources extends SeedEnum
+class NotImplementedException extends RestException
 {
-	//*************************************************************************
-	//* Constants
-	//*************************************************************************
-
 	/**
-	 * @var int
+	 * Constructor.
+	 *
+	 * @param string  $message error message
+	 * @param integer $code    error code
 	 */
-	const LOCAL_USER = 0;
+	public function __construct( $message = null, $code = null )
+	{
+		parent::__construct( static::NotImplemented, $message, $code ? : static::NotImplemented );
+	}
 }

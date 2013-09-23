@@ -16,6 +16,7 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\Utilities;
@@ -194,7 +195,7 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	 * @param string $mapColumn
 	 * @param array  $targetRows
 	 *
-	 * @throws Exception
+	 * @throws \Exception
 	 * @throws BadRequestException
 	 * @return void
 	 */
@@ -288,9 +289,9 @@ MYSQL;
 				}
 			}
 		}
-		catch ( Exception $ex )
+		catch ( \Exception $ex )
 		{
-			throw new Exception( "Error updating many to one assignment.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new \Exception( "Error updating many to one assignment.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -302,7 +303,7 @@ MYSQL;
 	 * @param        $mapColumn
 	 * @param array  $targetRows
 	 *
-	 * @throws Exception
+	 * @throws \Exception
 	 * @throws BadRequestException
 	 * @internal param int $id
 	 * @return void
@@ -372,56 +373,15 @@ MYSQL;
 					$rows = $command->insert( $entity, $record );
 					if ( 0 >= $rows )
 					{
-						throw new Exception( "Record insert failed for table '$entity'." );
+						throw new \Exception( "Record insert failed for table '$entity'." );
 					}
 				}
 			}
 		}
-		catch ( Exception $ex )
+		catch ( \Exception $ex )
 		{
-			throw new Exception( "Error updating many to one map assignment.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new \Exception( "Error updating many to one map assignment.\n{$ex->getMessage()}", $ex->getCode() );
 		}
-	}
-
-	/**
-	 * @param array $columns The columns to return in the permissions array
-	 *
-	 * @return array|null
-	 */
-	public function getRoleServicePermissions( $columns = null )
-	{
-		static $_permsFields = array( 'service_id', 'component', 'access' );
-
-		$_perms = null;
-
-		/**
-		 * @var RoleServiceAccess[] $_permissions
-		 * @var Service[]           $_services
-		 */
-		if ( $this->hasRelated( 'role' ) && $this->role && $this->role->role_service_accesses )
-		{
-			/** @var Role $_perm */
-			foreach ( $this->role->role_service_accesses as $_perm )
-			{
-				$_permServiceId = $_perm->service_id;
-				$_temp = $_perm->getAttributes( $columns ? : $_permsFields );
-
-				if ( $this->role->services )
-				{
-					foreach ( $this->role->services as $_service )
-					{
-						if ( $_permServiceId == $_service->id )
-						{
-							$_temp['service'] = $_service->api_name;
-						}
-					}
-				}
-
-				$_perms[] = $_temp;
-			}
-		}
-
-		return $_perms;
 	}
 
 	/**
@@ -445,4 +405,47 @@ MYSQL;
 
 		return $this;
 	}
+
+	/**
+	 * Checks a relationship request for duplicates
+	 *
+	 * @param int    $id
+	 * @param string $mapColumn
+	 * @param array  $relations
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \InvalidArgumentException
+	 */
+	protected function _checkForRequestDuplicates( $id, $mapColumn, $relations = array() )
+	{
+		if ( empty( $id ) )
+		{
+			throw new \InvalidArgumentException( 'No ID specified.' );
+		}
+
+		//	Reset indices if needed
+		$_relations = array_values( $relations );
+
+		//	Check for dupes before processing
+		foreach ( $_relations as $_relation )
+		{
+			$_checkId = Option::get( $_relation, $mapColumn );
+
+			if ( empty( $_checkId ) )
+			{
+				continue;
+			}
+
+			foreach ( $_relations as $_checkRelation )
+			{
+				if ( $_checkId != ( $_id = Option::get( $_checkRelation, $mapColumn ) ) )
+				{
+					continue;
+				}
+			}
+
+			throw new BadRequestException( 'Duplicate mapping found in app-service relation.' );
+		}
+	}
+
 }

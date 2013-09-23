@@ -22,7 +22,11 @@ namespace DreamFactory\Platform\Resources\System;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BasePlatformService;
+use DreamFactory\Platform\Services\SystemManager;
+use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -50,31 +54,58 @@ class Config extends BaseSystemRestResource
 	public function __construct( $consumer = null, $resourceArray = array() )
 	{
 		parent::__construct(
-			$consumer,
-			array(
-				 'name'           => 'Configuration',
-				 'type'           => 'System',
-				 'service_name'   => 'system',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'config',
-				 'description'    => 'Service general configuration',
-				 'is_active'      => true,
-				 'resource_array' => $resourceArray,
-				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-					 static::Merge => static::Post,
-				 )
-			)
+			  $consumer,
+			  array(
+				   'name'           => 'Configuration',
+				   'type'           => 'System',
+				   'service_name'   => 'system',
+				   'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				   'api_name'       => 'config',
+				   'description'    => 'Service general configuration',
+				   'is_active'      => true,
+				   'resource_array' => $resourceArray,
+				   'verb_aliases'   => array(
+					   static::Patch => static::Post,
+					   static::Merge => static::Post,
+				   )
+			  )
 		);
 	}
 
 	/**
-	 * @param string $fields
-	 * @param bool   $includeSchema
-	 * @param array  $extras
+	 * Override for GET of public info
 	 *
-	 * @return array
+	 * @param string $operation
+	 * @param null   $resource
+	 *
+	 * @return bool
 	 */
+	public function checkPermission( $operation, $resource = null )
+	{
+		if ( 'read' == $operation )
+		{
+			return true;
+		}
+
+		return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource );
+	}
+
+	/**
+	 * {@InheritDoc}
+	 */
+	protected function _determineRequestedResource( &$ids = null, &$records = null )
+	{
+		$_payload = parent::_determineRequestedResource( $ids, $records );
+
+		//	Check for CORS changes...
+		if ( null !== ( $_hostList = Option::get( $_payload, 'allowed_hosts', null, true ) ) )
+		{
+//			Log::debug( 'Allowed hosts given: ' . print_r( $_hostList, true ) );
+			SystemManager::setAllowedHosts( $_hostList );
+		}
+
+		return $_payload;
+	}
 
 	/**
 	 * {@InheritDoc}
@@ -94,28 +125,78 @@ class Config extends BaseSystemRestResource
 			$this->_response = $this->_response[0];
 		}
 
-		$this->_response['dsp_version'] = defined( 'DSP_VERSION' ) ? DSP_VERSION : 'Unknown';
+		/**
+		 * Versioning and upgrade support
+		 */
+		$this->_response['dsp_version'] = SystemManager::getCurrentVersion();
+
+		if ( !Fabric::fabricHosted() )
+		{
+			$this->_response['latest_version'] = SystemManager::getLatestVersion();
+			$this->_response['upgrade_available'] = version_compare( $this->_response['dsp_version'], $this->_response['latest_version'], '<' );
+		}
+
+		/**
+		 * Remote login support
+		 */
 		$this->_response['allow_remote_logins'] = ( Pii::getParam( 'dsp.allow_remote_logins', false ) && $this->_response['allow_open_registration'] );
 
 		if ( false !== $this->_response['allow_remote_logins'] )
 		{
-			$_rows = Sql::findAll( 'SELECT id, api_name, provider_name FROM df_sys_provider ORDER BY 1', array(), Pii::pdo() );
+			$this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
 
-			if ( !empty( $_rows ) )
+			$_data = array();
+
+			$_providers = Fabric::getProviderCredentials();
+
+			foreach ( $_providers as $_row )
 			{
-				$this->_response['remote_login_providers'] = array();
+				$_data[] = array(
+					'id'            => $_row->id,
+					'provider_name' => $_row->provider_name_text,
+					'api_name'      => $_row->endpoint_text,
+					'config_text'   => array(),
+					'is_active'     => $_row->enable_ind,
+					'is_system'     => true,
+				);
 
-				foreach ( $_rows as $_row )
-				{
-					$this->_response['remote_login_providers'][] = $_row['api_name'];
-				}
+				unset( $_row );
 			}
-			else
+
+			unset( $_global );
+
+			/** @var Provider[] $_models */
+			$_models = ResourceStore::model( 'provider' )->findAll( array( 'order' => 'provider_name' ) );
+
+			if ( !empty( $_models ) )
 			{
-				//	No providers, no remote logins
+				foreach ( $_models as $_row )
+				{
+					$_data[] = $_row->getAttributes();
+					unset( $_row );
+				}
+
+				unset( $_models );
+			}
+
+			$this->_response['remote_login_providers'] = $_data;
+
+			if ( empty( $_data ) )
+			{
 				$this->_response['allow_remote_logins'] = false;
 			}
+
+			unset( $_data );
 		}
+		else
+		{
+			//	No providers, no remote logins
+			$this->_response['allow_remote_logins'] = false;
+			$this->_response['allow_admin_remote_logins'] = false;
+		}
+
+		/** CORS support */
+		$this->_response['allowed_hosts'] = SystemManager::getAllowedHosts();
 
 		parent::_postProcess();
 	}

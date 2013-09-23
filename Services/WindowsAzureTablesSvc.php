@@ -230,35 +230,22 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	 */
 	public function getTables( $tables = array() )
 	{
-		try
+		if ( empty( $tables ) )
 		{
-			if ( empty( $tables ) )
+			try
 			{
 				/** @var QueryTablesResult $_result */
 				$_result = $this->_dbConn->queryTables();
 				/** @var GetTableResult[] $tables */
 				$tables = $_result->getTables();
 			}
-			else
+			catch ( ServiceException $ex )
 			{
-				if ( !is_array( $tables ) )
-				{
-					$tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
-				}
+				throw new InternalServerErrorException( "Failed to list tables of Windows Azure Tables service.\n" . $ex->getMessage() );
 			}
-
-			$_out = array();
-			foreach ( $tables as $table )
-			{
-				$_out[] = $this->getTable( $table );
-			}
-
-			return $_out;
 		}
-		catch ( ServiceException $ex )
-		{
-			throw new InternalServerErrorException( "Failed to list tables of Windows Azure Tables service.\n" . $ex->getMessage() );
-		}
+
+		return parent::getTables( $tables );
 	}
 
 	/**
@@ -321,36 +308,6 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param array $tables
-	 * @param bool  $check_empty
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public function deleteTables( $tables = array(), $check_empty = false )
-	{
-		$_out = array();
-		foreach ( $tables as $table )
-		{
-			$_name = Option::get( $table, 'name' );
-			if ( empty( $_name ) )
-			{
-				throw new BadRequestException( "No 'name' field in data." );
-			}
-			try
-			{
-				$_out[] = $this->_dbConn->deleteTable( $_name );
-			}
-			catch ( \Exception $ex )
-			{
-				throw $ex;
-			}
-		}
-
-		return $_out;
-	}
-
-	/**
 	 * Delete the table and all of its contents
 	 *
 	 * @param string $table
@@ -361,6 +318,12 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	 */
 	public function deleteTable( $table, $check_empty = false )
 	{
+		$table = Option::get( $table, 'name' );
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( "No 'name' field in data." );
+		}
+
 		try
 		{
 			$this->_dbConn->deleteTable( $table );
@@ -377,13 +340,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	// records is an array of field arrays
 
 	/**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function createRecords( $table, $records, $fields = '', $extras = array() )
 	{
@@ -438,13 +395,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function createRecord( $table, $record, $fields = '', $extras = array() )
 	{
@@ -482,14 +433,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function updateRecords( $table, $records, $fields = '', $extras = array() )
 	{
@@ -547,14 +491,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function updateRecord( $table, $record, $fields = '', $extras = array() )
 	{
@@ -591,15 +528,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $record
-	 * @param string $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function updateRecordsByFilter( $table, $record, $filter = '', $fields = '', $extras = array() )
 	{
@@ -632,31 +561,23 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $record
-	 * @param string $id_list
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function updateRecordsByIds( $table, $record, $id_list, $fields = '', $extras = array() )
+	public function updateRecordsByIds( $table, $record, $ids, $fields = '', $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
 			throw new BadRequestException( "No record fields were passed in the request." );
 		}
 
-		if ( empty( $id_list ) )
+		if ( empty( $ids ) )
 		{
 			throw new BadRequestException( "Identifying values for 'id_field' can not be empty for update request." );
 		}
 
 		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
 		$table = $this->correctTableName( $table );
-		$ids = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
+		$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
 
 		try
 		{
@@ -701,15 +622,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $record
-	 * @param mixed  $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function updateRecordById( $table, $record, $id, $fields = '', $extras = array() )
 	{
@@ -745,13 +658,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function mergeRecords( $table, $records, $fields = '', $extras = array() )
 	{
@@ -760,13 +667,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function mergeRecord( $table, $record, $fields = '', $extras = array() )
 	{
@@ -775,14 +676,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function mergeRecordsByFilter( $table, $record, $filter = '', $fields = '', $extras = array() )
 	{
@@ -791,30 +685,16 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $record
-	 * @param string $id_list
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function mergeRecordsByIds( $table, $record, $id_list, $fields = '', $extras = array() )
+	public function mergeRecordsByIds( $table, $record, $ids, $fields = '', $extras = array() )
 	{
 		// currently the same as update here
-		return $this->updateRecordsByIds( $table, $record, $id_list, $fields, $extras );
+		return $this->updateRecordsByIds( $table, $record, $ids, $fields, $extras );
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function mergeRecordById( $table, $record, $id, $fields = '', $extras = array() )
 	{
@@ -823,14 +703,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function deleteRecords( $table, $records, $fields = '', $extras = array() )
 	{
@@ -893,13 +766,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function deleteRecord( $table, $record, $fields = '', $extras = array() )
 	{
@@ -931,14 +798,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function deleteRecordsByFilter( $table, $filter, $fields = '', $extras = array() )
 	{
@@ -971,23 +831,16 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param mixed  $id_list
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function deleteRecordsByIds( $table, $id_list, $fields = '', $extras = array() )
+	public function deleteRecordsByIds( $table, $ids, $fields = '', $extras = array() )
 	{
-		if ( empty( $id_list ) )
+		if ( empty( $ids ) )
 		{
 			throw new BadRequestException( "Identifying values for id_field can not be empty for update request." );
 		}
 
-		$_ids = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
+		$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
 		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
 		$table = $this->correctTableName( $table );
 
@@ -995,7 +848,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 		$_outMore = array();
 		if ( !empty( $fields ) )
 		{
-			$_outMore = $this->retrieveRecordsByIds( $table, $id_list, $fields = '', $extras );
+			$_outMore = $this->retrieveRecordsByIds( $table, $ids, $fields = '', $extras );
 		}
 
 		try
@@ -1004,7 +857,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 			$operations = new BatchOperations();
 
 			$_out = array();
-			foreach ( $_ids as $key => $_id )
+			foreach ( $ids as $key => $_id )
 			{
 				if ( empty( $_id ) )
 				{
@@ -1038,13 +891,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function deleteRecordById( $table, $id, $fields = '', $extras = array() )
 	{
@@ -1071,13 +918,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param string $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function retrieveRecordsByFilter( $table, $filter = '', $fields = '', $extras = array() )
 	{
@@ -1105,13 +946,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function retrieveRecords( $table, $records, $fields = '', $extras = array() )
 	{
@@ -1157,14 +992,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function retrieveRecord( $table, $record, $fields = '', $extras = array() )
 	{
@@ -1202,22 +1030,16 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param string $id_list - comma delimited list of ids
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function retrieveRecordsByIds( $table, $id_list, $fields = '', $extras = array() )
+	public function retrieveRecordsByIds( $table, $ids, $fields = '', $extras = array() )
 	{
-		if ( empty( $id_list ) )
+		if ( empty( $ids ) )
 		{
 			return array();
 		}
 
-		$ids = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
+		$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
 		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
 		$table = $this->correctTableName( $table );
 		try
@@ -1241,13 +1063,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function retrieveRecordById( $table, $id, $fields = '', $extras = array() )
 	{

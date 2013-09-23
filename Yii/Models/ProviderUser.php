@@ -214,18 +214,18 @@ class ProviderUser extends BasePlatformSystemModel
 	}
 
 	/**
-	 * @param int    $userId
-	 * @param string $providerName
+	 * @param int $userId
+	 * @param int $providerId
 	 *
-	 * @return Provider
+	 * @return ProviderUser
 	 */
-	public static function getLogin( $userId, $providerName )
+	public static function getLogin( $userId, $providerId )
 	{
 		return static::model()->find(
-			'user_id = :user_id and provider_name = :provider_name',
+			'user_id = :user_id and provider_id = :provider_id',
 			array(
-				 ':user_id'       => $userId,
-				 ':provider_name' => $providerName,
+				 ':user_id'     => $userId,
+				 ':provider_id' => $providerId,
 			)
 		);
 	}

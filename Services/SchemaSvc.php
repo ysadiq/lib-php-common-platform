@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\Option;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
@@ -160,34 +161,46 @@ class SchemaSvc extends BasePlatformRestService
 		parent::_preProcess();
 
 		$this->_payload = RestData::getPostDataAsArray();
-		$this->_tables = Option::get( $_payload, 'table', $_payload );
+		$this->_tables = Option::get( $this->_payload, 'table', $this->_payload );
 
 		if ( empty( $this->_tables ) )
 		{
-			$this->_tables = Option::getDeep( $_payload, 'tables', 'table' );
-		}
-
-		if ( static::Get != ( $_action = $this->getRequestedAction() ) && empty( $this->_tableName ) )
-		{
-			throw new BadRequestException();
+			$this->_tables = Option::getDeep( $this->_payload, 'tables', 'table' );
 		}
 
 		//	Create fields in existing table
 		if ( !empty( $this->_tableName ) )
 		{
-			$this->_fields = Option::get( $_payload, 'field', $_payload );
+			$this->_fields = Option::get( $this->_payload, 'field', $this->_payload );
 
 			if ( empty( $this->_fields ) )
 			{
 				// temporary, layer created from xml to array conversion
-				$this->_fields = Option::getDeep( $_payload, 'fields', 'field' );
-			}
-
-			if ( static::Post == $_action && empty( $this->_fieldName ) )
-			{
-				throw new BadRequestException( 'No new field resources currently supported.' );
+				$this->_fields = Option::getDeep( $this->_payload, 'fields', 'field' );
 			}
 		}
+	}
+
+	/**
+	 * After a successful schema call, refresh the database cache
+	 *
+	 * @return bool|void
+	 */
+	protected function _handleResource()
+	{
+		if ( false !== ( $_result = parent::_handleResource() ) )
+		{
+			//	Clear the DB cache if enabled...
+
+			/** @var \CDbCache $_cache */
+			if ( null !== ( $_cache = Pii::component( 'cache' ) ) )
+			{
+				$_cache->flush();
+			}
+
+		}
+
+		return $_result;
 	}
 
 	/**
@@ -291,8 +304,10 @@ class SchemaSvc extends BasePlatformRestService
 	/**
 	 * {@InheritDoc}
 	 */
-	protected function _detectResourceMembers()
+	protected function _detectResourceMembers( $resourcePath = null )
 	{
+		parent::_detectResourceMembers( $resourcePath );
+
 		$this->_tableName = Option::get( $this->_resourceArray, 0 );
 		$this->_fieldName = Option::get( $this->_resourceArray, 1 );
 	}

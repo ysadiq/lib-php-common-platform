@@ -117,7 +117,8 @@ class Service extends BasePlatformSystemModel
 	 * Down and dirty service config cache which includes the DSP default services.
 	 * Clears when saves to services are made
 	 *
-	 * @param bool $bust If true, bust the cache
+	 * @param bool  $bust If true, bust the cache
+	 * @param array $attributes
 	 *
 	 * @return array
 	 */
@@ -203,7 +204,7 @@ MYSQL;
 	/**
 	 * Retrieves the record of the particular service
 	 *
-	 * @param id|string $serviceId
+	 * @param int|string $serviceId
 	 *
 	 * @return array The service record array
 	 * @throws \Exception if retrieving of service is not possible
@@ -284,25 +285,25 @@ MYSQL;
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-			array_merge(
-				array(
-					 'name'          => 'Name',
-					 'api_name'      => 'API Name',
-					 'description'   => 'Description',
-					 'is_active'     => 'Is Active',
-					 'is_system'     => 'Is System',
-					 'type'          => 'Type',
-					 'type_id'       => 'Type ID',
-					 'storage_name'  => 'Storage Name',
-					 'storage_type'  => 'Storage Type',
-					 'credentials'   => 'Credentials',
-					 'native_format' => 'Native Format',
-					 'base_url'      => 'Base Url',
-					 'parameters'    => 'Parameters',
-					 'headers'       => 'Headers',
-				),
-				$additionalLabels
-			)
+					 array_merge(
+						 array(
+							  'name'          => 'Name',
+							  'api_name'      => 'API Name',
+							  'description'   => 'Description',
+							  'is_active'     => 'Is Active',
+							  'is_system'     => 'Is System',
+							  'type'          => 'Type',
+							  'type_id'       => 'Type ID',
+							  'storage_name'  => 'Storage Name',
+							  'storage_type'  => 'Storage Type',
+							  'credentials'   => 'Credentials',
+							  'native_format' => 'Native Format',
+							  'base_url'      => 'Base Url',
+							  'parameters'    => 'Parameters',
+							  'headers'       => 'Headers',
+						 ),
+						 $additionalLabels
+					 )
 		);
 	}
 
@@ -467,29 +468,29 @@ MYSQL;
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-			$requested,
-			array_merge(
-				array(
-					 'name',
-					 'api_name',
-					 'description',
-					 'is_active',
-					 'type',
-					 'type_id',
-					 'is_system',
-					 'storage_name',
-					 'storage_type',
-					 'storage_type_id',
-					 'credentials',
-					 'native_format',
-					 'native_format_id',
-					 'base_url',
-					 'parameters',
-					 'headers',
-				),
-				$columns
-			),
-			$hidden
+					 $requested,
+					 array_merge(
+						 array(
+							  'name',
+							  'api_name',
+							  'description',
+							  'is_active',
+							  'type',
+							  'type_id',
+							  'is_system',
+							  'storage_name',
+							  'storage_type',
+							  'storage_type_id',
+							  'credentials',
+							  'native_format',
+							  'native_format_id',
+							  'base_url',
+							  'parameters',
+							  'headers',
+						 ),
+						 $columns
+					 ),
+					 $hidden
 		);
 	}
 
@@ -497,7 +498,7 @@ MYSQL;
 	 * @param string $type
 	 * @param string $storageType
 	 *
-	 * @return int|false
+	 * @return int|boolean
 	 */
 	public function getServiceTypeId( $type = null, $storageType = null )
 	{
@@ -588,6 +589,9 @@ MYSQL;
 						case 'mongodb':
 							$this->storage_type_id = PlatformStorageTypes::MONGODB;
 							break;
+						case 'mongohq':
+							$this->storage_type_id = PlatformStorageTypes::MONGODB;
+							break;
 						case 'couchdb':
 							$this->storage_type_id = PlatformStorageTypes::COUCHDB;
 							break;
@@ -596,6 +600,10 @@ MYSQL;
 
 				case 'local portal service':
 					$this->type_id = PlatformServiceTypes::LOCAL_PORTAL_SERVICE;
+					break;
+
+				case 'salesforce':
+					$this->type_id = PlatformServiceTypes::SALESFORCE_SERVICE;
 					break;
 
 				default:

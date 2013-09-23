@@ -19,8 +19,11 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Exceptions\RestException;
+use DreamFactory\Platform\Utility\RestData;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Curl;
 
@@ -61,10 +64,11 @@ class RemoteWebSvc extends BasePlatformRestService
 	/**
 	 * @var array
 	 */
-	protected $_curlOptions = array(
-		CURLOPT_RETURNTRANSFER => false,
-		CURLOPT_HEADER         => false,
-	);
+	protected $_curlOptions
+		= array(
+			CURLOPT_RETURNTRANSFER => false,
+			CURLOPT_HEADER         => false,
+		);
 
 	//*************************************************************************
 	//* Methods
@@ -164,7 +168,8 @@ class RemoteWebSvc extends BasePlatformRestService
 				$key = Option::get( $header, 'name' );
 				$value = Option::get( $header, 'value' );
 
-				$options[CURLOPT_HTTPHEADER] = !isset( $options[CURLOPT_HTTPHEADER] ) ? array( $key . ': ' . $value ) : $options[CURLOPT_HTTPHEADER][] = $key . ': ' . $value;
+				$options[CURLOPT_HTTPHEADER] = !isset( $options[CURLOPT_HTTPHEADER] ) ? array( $key . ': ' . $value )
+					: $options[CURLOPT_HTTPHEADER][] = $key . ': ' . $value;
 			}
 		}
 
@@ -176,7 +181,8 @@ class RemoteWebSvc extends BasePlatformRestService
 		parent::_preProcess();
 
 		$this->_query = $this->buildParameterString( $this->_action );
-		$this->_url = rtrim( $this->_baseUrl, '/') . '/' . $this->_resourcePath . '?' . $this->_query;
+		$this->_url
+			= rtrim( $this->_baseUrl, '/' ) . ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null ) . '?' . $this->_query;
 
 		//	set additional headers
 		$this->_curlOptions = $this->addHeaders( $this->_action, $this->_curlOptions );
@@ -190,7 +196,16 @@ class RemoteWebSvc extends BasePlatformRestService
 	 */
 	protected function _handleResource()
 	{
-		if ( false === ( $_results = Curl::request( $this->_action, $this->_url, array(), $this->_curlOptions ) ) )
+//		Log::debug( 'Outbound HTTP request: ' . $this->_action . ': ' . $this->_url );
+
+		$this->_response = Curl::request(
+			$this->_action,
+			$this->_url,
+			RestData::getPostData() ? : array(),
+			$this->_curlOptions
+		);
+
+		if ( false === $this->_response )
 		{
 			$_error = Curl::getError();
 			throw new RestException( Option::get( $_error, 'code', 500 ), Option::get( $_error, 'message' ) );

@@ -146,6 +146,7 @@ class Packager
 								$component = $relation->getAttribute( 'component' );
 								if ( !empty( $component ) )
 								{
+									$component = json_decode( $component, true );
 									// service is probably a db, export table schema if possible
 									$serviceName = $service->getAttribute( 'api_name' );
 									$serviceType = $service->getAttribute( 'type' );
@@ -258,11 +259,24 @@ class Packager
 		}
 
 		$record = DataFormat::jsonToArray( $data );
-		if ( !empty( $import_url ) )
+		if ( !empty( $import_url ) && !isset( $record['import_url'] ) )
 		{
 			$record['import_url'] = $import_url;
 		}
-
+		$_storageServiceId = Option::get( $record, 'storage_service_id' );
+		$_container = Option::get( $record, 'storage_container' );
+		if ( empty( $_storageServiceId ) )
+		{
+			// must be set or defaulted to local
+			$_model = Service::model()->find( 'api_name = :api_name', array( ':api_name' => 'app' ) );
+			$_storageServiceId = ( $_model ) ? $_model->getPrimaryKey() : null;
+			$record['storage_service_id'] = $_storageServiceId;
+			if ( empty( $_container ) )
+			{
+				$_container = 'applications';
+				$record['storage_container'] = $_container;
+			}
+		}
 		try
 		{
 			ResourceStore::setResourceName( 'app' );
@@ -449,19 +463,12 @@ class Packager
 		}
 
 		// extract the rest of the zip file into storage
-		$_storageServiceId = Option::get( $record, 'storage_service_id' );
 		$_apiName = Option::get( $record, 'api_name' );
-
 		/** @var $_service BaseFileSvc */
-		if ( empty( $_storageServiceId ) )
+		$_service = ServiceHandler::getServiceObjectById( $_storageServiceId );
+		if ( empty( $_service ) )
 		{
-			$_service = ServiceHandler::getServiceObject( 'app' );
-			$_container = 'applications';
-		}
-		else
-		{
-			$_service = ServiceHandler::getServiceObjectById( $_storageServiceId );
-			$_container = Option::get( $record, 'storage_container' );
+			throw new \Exception( "App record created, but failed to import files due to unknown storage service with id '$_storageServiceId'." );
 		}
 		if ( empty( $_container ) )
 		{
@@ -473,67 +480,5 @@ class Packager
 		}
 
 		return $returnData;
-	}
-
-	/**
-	 * @param $_name
-	 * @param $zip_file
-	 *
-	 * @return array
-	 * @throws \Exception
-	 */
-	public static function importAppFromZip( $_name, $zip_file )
-	{
-		$record = array( 'api_name' => $_name, 'name' => $_name, 'is_url_external' => 0, 'url' => '/index.html' );
-
-		try
-		{
-			ResourceStore::setResourceName( 'app' );
-			$result = ResourceStore::insert( $record );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Could not create the database entry for this application.\n{$ex->getMessage()}" );
-		}
-
-		$id = ( isset( $result['id'] ) ) ? $result['id'] : '';
-
-		$zip = new \ZipArchive();
-
-		if ( true === $zip->open( $zip_file ) )
-		{
-			// extract the rest of the zip file into storage
-			$dropPath = $zip->getNameIndex( 0 );
-			$dropPath = substr( $dropPath, 0, strpos( $dropPath, '/' ) ) . '/';
-
-			$_storageServiceId = Option::get( $record, 'storage_service_id' );
-			$_apiName = Option::get( $record, 'api_name' );
-
-			/** @var $_service BaseFileSvc */
-			if ( empty( $_storageServiceId ) )
-			{
-				$_service = ServiceHandler::getServiceObject( 'app' );
-				$_container = 'applications';
-			}
-			else
-			{
-				$_service = ServiceHandler::getServiceObjectById( $_storageServiceId );
-				$_container = Option::get( $record, 'storage_container' );
-			}
-			if ( empty( $_container ) )
-			{
-				$_service->extractZipFile( $_apiName, '', $zip, false, $dropPath );
-			}
-			else
-			{
-				$_service->extractZipFile( $_container, $_apiName, $zip, false, $dropPath );
-			}
-
-			return $result;
-		}
-		else
-		{
-			throw new \Exception( 'Error opening zip file.' );
-		}
 	}
 }

@@ -33,9 +33,13 @@ class ProviderUserTypes extends SeedEnum
 	/**
 	 * @var int
 	 */
-	const INDIVIDUAL_USER = 0;
+	const REMOTE_LOGIN = 0;
 	/**
 	 * @var int
 	 */
 	const SINGLE_USER_FOR_ALL = 1;
+	/**
+	 * @var int
+	 */
+	const INDIVIDUAL_USER = 2;
 }

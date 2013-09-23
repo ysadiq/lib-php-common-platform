@@ -264,11 +264,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 *
-	 * @param array $tables
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function getTables( $tables = array() )
 	{
@@ -276,48 +272,24 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			$tables = $this->_getTablesAsArray();
 		}
-		else
-		{
-			if ( !is_array( $tables ) )
-			{
-				$tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
-			}
-		}
 
-		$_out = array();
-		foreach ( $tables as $_table )
-		{
-			if ( is_array( $_table ) )
-			{
-				$_table = Option::get( $_table, 'name' );
-			}
-			if ( empty( $_table ) )
-			{
-				throw new BadRequestException( "No 'name' field in data." );
-			}
-			try
-			{
-				$_out[] = $this->getTable( $_table );
-			}
-			catch ( \Exception $ex )
-			{
-				throw new InternalServerErrorException( "Failed to list tables of DynamoDb Tables service.\n" . $ex->getMessage() );
-			}
-		}
-
-		return $_out;
+		return parent::getTables( $tables );
 	}
 
 	/**
-	 * Get any properties related to the table
-	 *
-	 * @param string $table Table name
-	 *
-	 * @return array
-	 * @throws \Exception
+	 * {@inheritdoc}
 	 */
 	public function getTable( $table )
 	{
+		if ( is_array( $table ) )
+		{
+			$table = Option::get( $table, 'name', Option::get( $table, 'TableName' ) );
+		}
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( "No 'name' field in data." );
+		}
+
 		try
 		{
 			$_result = $this->_dbConn->describeTable(
@@ -339,10 +311,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param array $properties
-	 *
-	 * @return array
-	 * @throws \Exception
+	 * {@inheritdoc}
 	 */
 	public function createTable( $properties = array() )
 	{
@@ -378,16 +347,11 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * Get any properties related to the table
-	 *
-	 * @param array $properties
-	 *
-	 * @return array
-	 * @throws \Exception
+	 * {@inheritdoc}
 	 */
 	public function updateTable( $properties = array() )
 	{
-		$_name = Option::get( $properties, 'name' );
+		$_name = Option::get( $properties, 'name', Option::get( $properties, 'TableName' ) );
 		if ( empty( $_name ) )
 		{
 			throw new BadRequestException( "No 'name' field in data." );
@@ -418,54 +382,19 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param array $tables
-	 * @param bool  $check_empty
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public function deleteTables( $tables = array(), $check_empty = false )
-	{
-		if ( !is_array( $tables ) )
-		{
-			// may be comma-delimited list of names
-			$tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
-		}
-		$_out = array();
-		foreach ( $tables as $_table )
-		{
-			if ( is_array( $_table ) )
-			{
-				$_table = Option::get( $_table, 'name', Option::get( $_table, 'TableName' ) );
-			}
-			if ( empty( $_table ) )
-			{
-				throw new BadRequestException( "No 'name' field in data." );
-			}
-			try
-			{
-				$_out[] = $this->deleteTable( $_table );
-			}
-			catch ( \Exception $ex )
-			{
-				throw $ex;
-			}
-		}
-
-		return $_out;
-	}
-
-	/**
-	 * Delete the table and all of its contents
-	 *
-	 * @param string $table
-	 * @param bool   $check_empty
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function deleteTable( $table, $check_empty = false )
 	{
+		if ( is_array( $table ) )
+		{
+			$table = Option::get( $table, 'name', Option::get( $table, 'TableName' ) );
+		}
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( "No 'name' field in data." );
+		}
+
 		try
 		{
 			$_result = $this->_dbConn->deleteTable(
@@ -492,13 +421,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	// records is an array of field arrays
 
 	/**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function createRecords( $table, $records, $fields = null, $extras = array() )
 	{
@@ -559,14 +482,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @throws BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function createRecord( $table, $record, $fields = null, $extras = array() )
 	{
@@ -609,13 +525,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function updateRecords( $table, $records, $fields = null, $extras = array() )
 	{
@@ -675,14 +585,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @throws BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function updateRecord( $table, $record, $fields = null, $extras = array() )
 	{
@@ -726,14 +629,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function updateRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
 	{
@@ -753,30 +649,23 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $record
-	 * @param string $id_list
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function updateRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
+	public function updateRecordsByIds( $table, $record, $ids, $fields = null, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
 			throw new BadRequestException( "No record fields were passed in the request." );
 		}
 
-		if ( empty( $id_list ) )
+		if ( empty( $ids ) )
 		{
 			throw new BadRequestException( "Identifying values for id_field can not be empty for update request." );
 		}
 
-		if ( !is_array( $id_list ) )
+		if ( !is_array( $ids ) )
 		{
-			$id_list = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
+			$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
 		}
 		$table = $this->correctTableName( $table );
 		$_info = $this->_getKeyInfo( $table, $extras );
@@ -789,7 +678,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 		$_out = array();
 		$_items = array();
-		foreach ( $id_list as $_id )
+		foreach ( $ids as $_id )
 		{
 			$record[$_idField[0]] = $_id;
 			// Add operation to list of batch operations.
@@ -822,14 +711,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function updateRecordById( $table, $record, $id, $fields = null, $extras = array() )
 	{
@@ -874,13 +756,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function mergeRecords( $table, $records, $fields = null, $extras = array() )
 	{
@@ -933,13 +809,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function mergeRecord( $table, $record, $fields = null, $extras = array() )
 	{
@@ -981,14 +851,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function mergeRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
 	{
@@ -1008,23 +871,16 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $record
-	 * @param mixed  $id_list
-	 * @param mixed  $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function mergeRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
+	public function mergeRecordsByIds( $table, $record, $ids, $fields = null, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
 			throw new BadRequestException( 'There are no record fields in the request.' );
 		}
 
-		if ( empty( $id_list ) )
+		if ( empty( $ids ) )
 		{
 			throw new BadRequestException( "Identifying field(s) values can not be empty." );
 		}
@@ -1038,13 +894,13 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
 		}
 
-		if ( !is_array( $id_list ) )
+		if ( !is_array( $ids ) )
 		{
-			$id_list = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
+			$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
 		}
 		$_out = array();
 		$_updates = $this->_dbConn->formatAttributes( $record, Attribute::FORMAT_UPDATE );
-		foreach ( $id_list as $_id )
+		foreach ( $ids as $_id )
 		{
 			$_temp = array( $_idField[0] => $_id );
 			$_keys = static::_buildKey( $_idField, $_idType, $_temp );
@@ -1074,14 +930,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function mergeRecordById( $table, $record, $id, $fields = null, $extras = array() )
 	{
@@ -1129,13 +978,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array|string
+	 * {@inheritdoc}
 	 */
 	public function deleteRecords( $table, $records, $fields = null, $extras = array() )
 	{
@@ -1197,13 +1040,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function deleteRecord( $table, $record, $fields = null, $extras = array() )
 	{
@@ -1241,13 +1078,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function deleteRecordsByFilter( $table, $filter, $fields = null, $extras = array() )
 	{
@@ -1262,24 +1093,18 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $id_list
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function deleteRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
+	public function deleteRecordsByIds( $table, $ids, $fields = null, $extras = array() )
 	{
-		if ( empty( $id_list ) )
+		if ( empty( $ids ) )
 		{
 			throw new BadRequestException( "Identifying values for id_field can not be empty for update request." );
 		}
 
-		if ( !is_array( $id_list ) )
+		if ( !is_array( $ids ) )
 		{
-			$id_list = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
+			$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
 		}
 		$table = $this->correctTableName( $table );
 		$_info = $this->_getKeyInfo( $table, $extras );
@@ -1293,11 +1118,11 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		$_out = array();
 		if ( static::_requireMoreFields( $fields, $_idField ) )
 		{
-			$_out = $this->retrieveRecordsByIds( $table, $id_list, $fields, $extras );
+			$_out = $this->retrieveRecordsByIds( $table, $ids, $fields, $extras );
 		}
 		$_items = array();
 		$_outIds = array();
-		foreach ( $id_list as $_id )
+		foreach ( $ids as $_id )
 		{
 			$_record = array( $_idField[0] => $_id );
 			// Add operation to list of batch operations.
@@ -1330,13 +1155,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function deleteRecordById( $table, $id, $fields = null, $extras = array() )
 	{
@@ -1375,13 +1194,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param string $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function retrieveRecordsByFilter( $table, $filter = null, $fields = null, $extras = array() )
 	{
@@ -1422,13 +1235,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function retrieveRecords( $table, $records, $fields = null, $extras = array() )
 	{
@@ -1496,13 +1303,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function retrieveRecord( $table, $record, $fields = null, $extras = array() )
 	{
@@ -1549,23 +1350,17 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param string $id_list - comma delimited list of ids
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function retrieveRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
+	public function retrieveRecordsByIds( $table, $ids, $fields = null, $extras = array() )
 	{
-		if ( empty( $id_list ) )
+		if ( empty( $ids ) )
 		{
 			return array();
 		}
-		if ( !is_array( $id_list ) )
+		if ( !is_array( $ids ) )
 		{
-			$id_list = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
+			$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
 		}
 		$table = $this->correctTableName( $table );
 		$_info = $this->_getKeyInfo( $table, $extras );
@@ -1576,7 +1371,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
 		}
 		$_keys = array();
-		foreach ( $id_list as $id )
+		foreach ( $ids as $id )
 		{
 			$_record = array( $_idField[0] => $id );
 			$_keys[] = static::_buildKey( $_idField, $_idType, $_record );
@@ -1618,13 +1413,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function retrieveRecordById( $table, $id, $fields = null, $extras = array() )
 	{

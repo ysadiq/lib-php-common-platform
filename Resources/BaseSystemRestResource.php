@@ -19,21 +19,16 @@
  */
 namespace DreamFactory\Platform\Resources;
 
-use DreamFactory\Common\Enums\OutputFormats;
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Components\JTablesFormatter;
+use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Services\BasePlatformRestService;
-use DreamFactory\Platform\Services\BasePlatformService;
+use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
-use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Seed;
 use Kisma\Core\Utility\Option;
-use DreamFactory\Yii\Utility\Pii;
 
 /**
  * BaseSystemRestResource
@@ -79,9 +74,13 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	protected $_exportPackage = false;
 	/**
-	 * @var int
+	 * @var bool
 	 */
-	protected $_responseFormat;
+	protected $_includeSchema = false;
+	/**
+	 * @var bool
+	 */
+	protected $_includeCount = false;
 
 	//*************************************************************************
 	//* Methods
@@ -90,9 +89,9 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	/**
 	 * Create a new service
 	 *
-	 * @param BasePlatformService $consumer
-	 * @param array               $settings      configuration array
-	 * @param array               $resourceArray Or you can pass in through $settings['resource_array'] = array(...)
+	 * @param RestServiceLike $consumer
+	 * @param array           $settings      configuration array
+	 * @param array           $resourceArray Or you can pass in through $settings['resource_array'] = array(...)
 	 *
 	 * @throws \InvalidArgumentException
 	 */
@@ -139,40 +138,29 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	public static function select( $ids = null, $fields = null, $extras = array(), $singleRow = false, $includeSchema = false, $includeCount = false )
 	{
 		return ResourceStore::bulkSelectById(
-			$ids,
-			empty( $fields ) ? null : array( 'select' => $fields ),
-			$extras,
-			$singleRow,
-			$includeSchema,
-			$includeCount
+							$ids,
+							empty( $fields ) ? null : array( 'select' => $fields ),
+							$extras,
+							$singleRow,
+							$includeSchema,
+							$includeCount
 		);
 	}
 
 	/**
 	 * Apply the commonly used REST path members to the class
+	 *
+	 * @param string $resourcePath
+	 *
+	 * @return $this|void
 	 */
-	protected function _detectResourceMembers()
+	protected function _detectResourceMembers( $resourcePath = null )
 	{
-		parent::_detectResourceMembers();
+		parent::_detectResourceMembers( $resourcePath );
 
 		$this->_resourceId = Option::get( $this->_resourceArray, 1 );
 
-		/**
-		 * If this is a request from datatables, tell the store and set
-		 * the controller to emit JSON
-		 *
-		 * @noinspection PhpUndefinedMethodInspection
-		 */
-		/** @noinspection PhpUndefinedMethodInspection */
-		$_format = Pii::controller()->getFormat();
-
-		if ( ResponseFormats::DATATABLES == $_format || ResponseFormats::JTABLE == $_format )
-		{
-			$this->_responseFormat = $_format;
-			ResourceStore::setResponseFormat( $_format );
-			/** @noinspection PhpUndefinedMethodInspection */
-			Pii::controller()->setFormat( OutputFormats::JSON );
-		}
+		return $this;
 	}
 
 	/**
@@ -180,10 +168,15 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	protected function _preProcess()
 	{
+		//	Do validation here
+		$this->checkPermission( PermissionMap::fromMethod( $this->getRequestedAction() ), $this->_resource );
+
 		//	Most requests contain 'returned fields' parameter, all by default
 		$this->_extras = array();
 		$this->_fields = Option::get( $_REQUEST, 'fields', '*' );
 		$this->_exportPackage = Option::getBool( $_REQUEST, 'pkg' );
+		$this->_includeSchema = Option::getBool( $_REQUEST, 'include_schema', false );
+		$this->_includeCount = Option::getBool( $_REQUEST, 'include_count', false );
 
 		$_related = Option::get( $_REQUEST, 'related' );
 
@@ -202,16 +195,29 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		}
 
 		ResourceStore::reset(
-			array(
-				 'service'          => $this->_serviceName,
-				 'resource_name'    => $this->_apiName,
-				 'resource_id'      => $this->_resourceId,
-				 'resource_array'   => $this->_resourceArray,
-				 'related_resource' => $this->_relatedResource,
-				 'fields'           => $this->_fields,
-				 'extras'           => $this->_extras,
-			)
+					 array(
+						  'service'          => $this->_serviceName,
+						  'resource_name'    => $this->_apiName,
+						  'resource_id'      => $this->_resourceId,
+						  'resource_array'   => $this->_resourceArray,
+						  'related_resource' => $this->_relatedResource,
+						  'fields'           => $this->_fields,
+						  'extras'           => $this->_extras,
+						  'include_count'    => $this->_includeCount,
+						  'include_schema'   => $this->_includeSchema,
+					 )
 		);
+	}
+
+	/**
+	 * @param string $operation
+	 * @param string $resource
+	 *
+	 * @return bool
+	 */
+	public function checkPermission( $operation, $resource = null )
+	{
+		return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource );
 	}
 
 	/**
@@ -302,12 +308,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		}
 
 		return ResourceStore::select(
-			null,
-			$_criteria,
-			array(),
-			$_singleRow,
-			Option::getBool( $_payload, 'include_count' ),
-			Option::getBool( $_payload, 'include_schema' )
+							null,
+							$_criteria,
+							array(),
+							$_singleRow,
+							Option::getBool( $_payload, 'include_count' ),
+							Option::getBool( $_payload, 'include_schema' )
 		);
 	}
 
@@ -324,7 +330,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 		if ( !empty( $this->_resourceId ) )
 		{
-			return ResourceStore::bulkUpdateById( $this->_resourceId, $_payload, $_rollback );
+			return ResourceStore::bulkUpdateById( $this->_resourceId, $_payload, $_rollback, null, null, true );
 		}
 
 		if ( !empty( $_ids ) )
@@ -584,5 +590,45 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	public function getExportPackage()
 	{
 		return $this->_exportPackage;
+	}
+
+	/**
+	 * @param boolean $includeCount
+	 *
+	 * @return BaseSystemRestResource
+	 */
+	public function setIncludeCount( $includeCount )
+	{
+		$this->_includeCount = $includeCount;
+
+		return $this;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function getIncludeCount()
+	{
+		return $this->_includeCount;
+	}
+
+	/**
+	 * @param boolean $includeSchema
+	 *
+	 * @return BaseSystemRestResource
+	 */
+	public function setIncludeSchema( $includeSchema )
+	{
+		$this->_includeSchema = $includeSchema;
+
+		return $this;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function getIncludeSchema()
+	{
+		return $this->_includeSchema;
 	}
 }

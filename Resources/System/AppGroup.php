@@ -38,11 +38,11 @@ class AppGroup extends BaseSystemRestResource
 	 * Constructor
 	 *
 	 * @param BasePlatformService $consumer
-	 * @param array               $resourceArray
+	 * @param array               $resources
 	 *
 	 * @return \DreamFactory\Platform\Resources\System\AppGroup
 	 */
-	public function __construct( $consumer, $resourceArray = array() )
+	public function __construct( $consumer, $resources = array() )
 	{
 		$_config = array(
 			'service_name'   => 'system',
@@ -52,13 +52,8 @@ class AppGroup extends BaseSystemRestResource
 			'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
 			'description'    => 'System application grouping administration.',
 			'is_active'      => true,
-			'resource_array' => $resourceArray,
-			'verb_aliases'   => array(
-				static::Put => static::Post,
-			)
-
 		);
 
-		parent::__construct( $consumer, $_config );
+		parent::__construct( $consumer, $_config, $resources );
 	}
 }

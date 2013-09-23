@@ -19,6 +19,8 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use Kisma\Core\Utility\Option;
+
 /**
  * AppServiceRelation.php
  * The system application to service relationship model for the DSP
@@ -73,26 +75,6 @@ class AppServiceRelation extends BasePlatformSystemModel
 	}
 
 	/**
-	 * @return array
-	 */
-	public function behaviors()
-	{
-		return array_merge(
-			parent::behaviors(),
-			array(
-				 //	Secure JSON
-				 'base_platform_model.secure_json' => array(
-					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'             => $this->getDb()->password,
-					 'secureAttributes' => array(
-						 'component',
-					 )
-				 ),
-			)
-		);
-	}
-
-	/**
 	 * @param array $additionalLabels
 	 *
 	 * @return array customized attribute labels (name=>label)
@@ -134,5 +116,23 @@ class AppServiceRelation extends BasePlatformSystemModel
 			),
 			$hidden
 		);
+	}
+
+	/**
+	 * @param bool $names
+	 *
+	 * @return array
+	 */
+	public function getAttributes( $names = true )
+	{
+		$_record =  parent::getAttributes( $names );
+
+		$_component = Option::get( $_record, 'component' );
+		if ( !empty( $_component ) )
+		{
+			$_record['component'] = json_decode( $_component, true );
+		}
+
+		return $_record;
 	}
 }

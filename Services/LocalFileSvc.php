@@ -127,7 +127,7 @@ class LocalFileSvc extends BaseFileSvc
 	 *
 	 * @throws \Exception
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return void
+	 * @return array
 	 */
 	public function createContainer( $properties = array(), $check_exist = false )
 	{
@@ -143,17 +143,20 @@ class LocalFileSvc extends BaseFileSvc
 			{
 				throw new BadRequestException( "Container '$_container' already exists." );
 			}
-
-			return;
 		}
-
-		// create the container
-		$_dir = self::addContainerToName( $_container, '' );
-
-		if ( !mkdir( $_dir, 0777, true ) )
+		else
 		{
-			throw new \Exception( 'Failed to create container.' );
+			// create the container
+			$_dir = self::addContainerToName( $_container, '' );
+
+			if ( !mkdir( $_dir, 0777, true ) )
+			{
+				throw new \Exception( 'Failed to create container.' );
+			}
 		}
+
+		return array( 'name' => $_container, 'path' => $_container );
+
 //            $properties = (empty($properties)) ? '' : json_encode($properties);
 //            $result = file_put_contents($key, $properties);
 //            if (false === $result) {
@@ -182,16 +185,7 @@ class LocalFileSvc extends BaseFileSvc
 			try
 			{
 				// path is full path, name is relative to root, take either
-				$_name = Option::get( $_folder, 'name', Option::get( $_folder, 'path' ) );
-				if ( !empty( $_name ) )
-				{
-					$_out[$_key] = array( 'name' => $_name, 'path' => $_name );
-					$this->createContainer( $_name, $check_exist );
-				}
-				else
-				{
-					throw new BadRequestException( 'No name found for container in create request.' );
-				}
+				$_out[$_key] = $this->createContainer( $_folder, $check_exist );
 			}
 			catch ( \Exception $ex )
 			{

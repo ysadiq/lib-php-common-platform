@@ -26,53 +26,26 @@ use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\UnauthorizedException;
 use DreamFactory\Platform\Interfaces\PermissionTypes;
-use DreamFactory\Platform\Resources\BaseSystemRestResource;
+use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Platform\Yii\Models\App;
-use DreamFactory\Platform\Yii\Models\Config;
+use DreamFactory\Platform\Yii\Models\AppGroup;
 use DreamFactory\Platform\Yii\Models\Role;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
-use Kisma\Core\Utility\Sql;
-use Swagger\Annotations as SWG;
 
 /**
  * Session
  * DSP user session
- *
- * @package
- * @category
- *
- * @SWG\Resource(
- *   resourcePath="/user"
- * )
- *
- * @SWG\Model(id="Session",
- * @SWG\Property(name="id",type="string",description="Identifier for the current user."),
- * @SWG\Property(name="email",type="string",description="Email address of the current user."),
- * @SWG\Property(name="first_name",type="string",description="First name of the current user."),
- * @SWG\Property(name="last_name",type="string",description="Last name of the current user."),
- * @SWG\Property(name="display_name",type="string",description="Full display name of the current user."),
- * @SWG\Property(name="is_sys_admin",type="boolean",description="Is the current user a system administrator."),
- * @SWG\Property(name="last_login_date",type="string",description="Date and time of the last login for the current user."),
- * @SWG\Property(name="app_groups",type="Array",description="App groups and the containing apps."),
- * @SWG\Property(name="no_group_apps",type="Array",description="Apps that are not in any app groups."),
- * @SWG\Property(name="ticket",type="string",description="Timed ticket that can be used to start a separate session."),
- * @SWG\Property(name="ticket_expiry",type="string",description="Expiration time for the given ticket.")
- * )
- *
- * @SWG\Model(id="Login",
- * @SWG\Property(name="email",type="string"),
- * @SWG\Property(name="password",type="string")
- * )
  */
-class Session extends BaseSystemRestResource
+class Session extends BasePlatformRestResource
 {
 	//*************************************************************************
 	//* Members
@@ -81,7 +54,7 @@ class Session extends BaseSystemRestResource
 	/**
 	 * @var string
 	 */
-	protected static $_randKey;
+	protected static $_sessionSalt = null;
 	/**
 	 * @var int
 	 */
@@ -90,6 +63,14 @@ class Session extends BaseSystemRestResource
 	 * @var array
 	 */
 	protected static $_cache = null;
+	/**
+	 * @var string
+	 */
+	protected static $_ticket = null;
+
+	//*************************************************************************
+	//* Methods
+	//*************************************************************************
 
 	/**
 	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
@@ -98,23 +79,23 @@ class Session extends BaseSystemRestResource
 	public function __construct( $consumer, $resources = array() )
 	{
 		//	For better security. Get a random string from this link: http://tinyurl.com/randstr and put it here
-		static::$_randKey = static::$_randKey ? : Pii::db()->password;
+		static::$_sessionSalt = static::$_sessionSalt ? : Pii::db()->password;
 
 		parent::__construct(
-			$consumer,
-			array(
-				 'name'           => 'User Session',
-				 'service_name'   => 'user',
-				 'type'           => 'System',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'session',
-				 'description'    => 'Resource for a user to manage their session.',
-				 'is_active'      => true,
-				 'resource_array' => $resources,
-				 'verb_aliases'   => array(
-					 static::Put => static::Post,
-				 )
-			)
+			  $consumer,
+			  array(
+				   'name'           => 'User Session',
+				   'service_name'   => 'user',
+				   'type'           => 'System',
+				   'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				   'api_name'       => 'session',
+				   'description'    => 'Resource for a user to manage their session.',
+				   'is_active'      => true,
+				   'resource_array' => $resources,
+				   'verb_aliases'   => array(
+					   static::Put => static::Post,
+				   )
+			  )
 		);
 	}
 
@@ -156,21 +137,6 @@ class Session extends BaseSystemRestResource
 
 	/**
 	 * Refreshes an existing session or allows the SSO creation of a new session for external apps via timed ticket
-	 *
-	 * @SWG\Api(
-	 *       path="/user/session", description="Operations on a user's session.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="Retrieve the current user session information.",
-	 *       notes="Calling this refreshes the current session, or returns an error for timed-out or invalid sessions.",
-	 *       responseClass="Session", nickname="getSession",
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *       )
-	 *     )
-	 *   )
-	 * )
 	 *
 	 * @param string $ticket
 	 *
@@ -217,10 +183,11 @@ class Session extends BaseSystemRestResource
 
 				//	Special case for guest user
 				$_config = ResourceStore::model( 'config' )->with(
-							   'guest_role.role_service_accesses',
-							   'guest_role.apps',
-							   'guest_role.services'
-						   )->find();
+										'guest_role.role_service_accesses',
+										'guest_role.role_system_accesses',
+										'guest_role.apps',
+										'guest_role.services'
+				)                       ->find();
 
 				if ( !empty( $_config ) )
 				{
@@ -257,7 +224,12 @@ class Session extends BaseSystemRestResource
 		//	Load user...
 		try
 		{
-			$_user = ResourceStore::model( 'user' )->with( 'role.role_service_accesses', 'role.apps', 'role.services' )->findByPk( $_userId );
+			$_user = ResourceStore::model( 'user' )->with(
+								  'role.role_service_accesses',
+								  'role.role_system_accesses',
+								  'role.apps',
+								  'role.services'
+			)                     ->findByPk( $_userId );
 
 			if ( empty( $_user ) )
 			{
@@ -273,30 +245,6 @@ class Session extends BaseSystemRestResource
 	}
 
 	/**
-	 *
-	 * @SWG\Api(
-	 *           path="/user/session", description="Operations on a user's session.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *           httpMethod="POST", summary="Login and create a new user session.",
-	 *           notes="Calling this creates a new session and logs in the user.",
-	 *           responseClass="Session", nickname="login",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *           name="credentials", description="Data containing name-value pairs used for logging into the system.",
-	 *           paramType="body", required="true", allowMultiple=false, dataType="Login"
-	 *         )
-	 *       ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *       )
-	 *     )
-	 *   )
-	 * )
-	 *
-	 *
 	 * @param string $email
 	 * @param string $password
 	 *
@@ -327,6 +275,7 @@ class Session extends BaseSystemRestResource
 			throw new UnauthorizedException( 'The credentials supplied do not match system records.' );
 		}
 
+		/** @var User $_user */
 		if ( null === ( $_user = $_model->getIdentity()->getUser() ) )
 		{
 			// bad user object
@@ -350,20 +299,6 @@ class Session extends BaseSystemRestResource
 	}
 
 	/**
-	 * @SWG\Api(
-	 *       path="/user/session", description="Operations on a user's session.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *       httpMethod="DELETE", summary="Logout and destroy the current user session.",
-	 *       notes="Calling this deletes the current session and logs out the user.",
-	 *       responseClass="Success", nickname="logout",
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *       )
-	 *     )
-	 *   )
-	 * )
 	 *
 	 */
 	public static function userLogout()
@@ -382,15 +317,25 @@ class Session extends BaseSystemRestResource
 	 */
 	public static function generateSessionDataFromUser( $userId, $user = null )
 	{
-		static $_fields = array( 'id', 'display_name', 'first_name', 'last_name', 'email', 'is_sys_admin', 'last_login_date' );
+		static $_fields = array( 'id', 'display_name', 'first_name', 'last_name', 'email', 'is_sys_admin', 'last_login_date', 'user_data', 'user_source' );
 		static $_appFields = array( 'id', 'api_name', 'is_active' );
 
 		/** @var User $_user */
-		$_user = $user ? : ResourceStore::model( 'user' )->with( 'role.role_service_accesses', 'role.apps', 'role.services' )->findByPk( $userId );
+		$_user = $user ? : ResourceStore::model( 'user' )->with(
+										'role.role_service_accesses',
+										'role.role_system_accesses',
+										'role.apps',
+										'role.services'
+		)                               ->findByPk( $userId );
 
 		if ( empty( $_user ) )
 		{
 			throw new UnauthorizedException( 'The user with id ' . $userId . ' is invalid.' );
+		}
+
+		if ( null !== $userId && $_user->id != $userId )
+		{
+			throw new ForbiddenException( 'Naughty, naughty... Not yours.' . $_user->id . ' != ' . print_r( $userId, true ) );
 		}
 
 		$_email = $_user->email;
@@ -467,7 +412,12 @@ class Session extends BaseSystemRestResource
 		static $_appFields = array( 'id', 'api_name', 'is_active' );
 
 		/** @var Role $_role */
-		$_role = $role ? : ResourceStore::model( 'role' )->with( 'role_service_accesses', 'apps', 'services' )->findByPk( $roleId );
+		$_role = $role ? : ResourceStore::model( 'role' )->with(
+										'role_service_accesses',
+										'role_system_accesses',
+										'apps',
+										'services'
+		)                               ->findByPk( $roleId );
 
 		if ( empty( $_role ) )
 		{
@@ -484,7 +434,7 @@ class Session extends BaseSystemRestResource
 		$_roleData = $role->attributes;
 
 		/**
-		 * @var \App[] $_apps
+		 * @var App[] $_apps
 		 */
 		if ( $_role->apps )
 		{
@@ -586,7 +536,7 @@ class Session extends BaseSystemRestResource
 		}
 
 		// check if app allowed in role
-		if ( null !== ( $_appName = Option::get( $GLOBALS, 'app_name' ) ) )
+		if ( null === ( $_appName = Option::get( $GLOBALS, 'app_name' ) ) )
 		{
 			throw new BadRequestException( 'A valid application name is required to access services.' );
 		}
@@ -610,7 +560,7 @@ class Session extends BaseSystemRestResource
 
 		$_services = Option::clean( Option::get( $_roleInfo, 'services' ) );
 
-		if ( !is_array( $_services ) || empty( $services ) )
+		if ( !is_array( $_services ) || empty( $_services ) )
 		{
 			throw new ForbiddenException( "Access to service '$service' is not provisioned for this user's role." );
 		}
@@ -708,6 +658,9 @@ class Session extends BaseSystemRestResource
 			case 'read':
 				switch ( $access )
 				{
+					case 'Read Only':
+					case 'Read and Write':
+					case 'Full Access':
 					case PermissionTypes::READ_ONLY:
 					case PermissionTypes::READ_WRITE:
 					case PermissionTypes::FULL_ACCESS:
@@ -719,6 +672,9 @@ class Session extends BaseSystemRestResource
 			case 'update':
 				switch ( $access )
 				{
+					case 'Write Only':
+					case 'Read and Write':
+					case 'Full Access':
 					case PermissionTypes::WRITE_ONLY:
 					case PermissionTypes::READ_WRITE:
 					case PermissionTypes::FULL_ACCESS:
@@ -729,6 +685,7 @@ class Session extends BaseSystemRestResource
 			case 'delete':
 				switch ( $access )
 				{
+					case 'Full Access':
 					case PermissionTypes::FULL_ACCESS:
 						return true;
 				}
@@ -739,24 +696,27 @@ class Session extends BaseSystemRestResource
 	}
 
 	/**
-	 * @param $_userId
+	 * @param int $userId
+	 *
+	 * @return int
 	 */
-	public static function setCurrentUserId( $_userId )
+	public static function setCurrentUserId( $userId )
 	{
 		if ( !Pii::guest() && false === Pii::getState( 'df_authenticated' ) )
 		{
-			static::$_userId = $_userId;
+			static::$_userId = $userId;
 		}
 
-		return $_userId;
+		return $userId;
 	}
 
 	/**
-	 * @param mixed $inquirer For future use
+	 * @param int   $setToIfNull If not null, static::$_userId will be set to this value
+	 * @param mixed $inquirer    For future use
 	 *
 	 * @return int|null
 	 */
-	public static function getCurrentUserId( $inquirer = null )
+	public static function getCurrentUserId( $setToIfNull = null, $inquirer = null )
 	{
 		if ( !empty( static::$_userId ) )
 		{
@@ -768,7 +728,15 @@ class Session extends BaseSystemRestResource
 			return static::$_userId = Pii::user()->getId();
 		}
 
-		return static::$_userId = null;
+		return static::$_userId = $setToIfNull ? : null;
+	}
+
+	/**
+	 * @return string|null
+	 */
+	public static function getCurrentTicket()
+	{
+		return static::$_ticket;
 	}
 
 	/**
@@ -787,10 +755,11 @@ class Session extends BaseSystemRestResource
 			{
 				// special case for possible guest user
 				$_config = ResourceStore::model( 'config' )->with(
-							   'guest_role.role_service_accesses',
-							   'guest_role.apps',
-							   'guest_role.services'
-						   )->find();
+										'guest_role.role_service_accesses',
+										'guest_role.role_system_accesses',
+										'guest_role.apps',
+										'guest_role.services'
+				)                       ->find();
 
 				if ( !empty( $_config ) )
 				{
@@ -820,8 +789,8 @@ class Session extends BaseSystemRestResource
 		$data = Option::get( $session, 'data' );
 		$_userId = Option::get( $data, 'id', '' );
 		$_timestamp = time();
-		$ticket = Utilities::encryptCreds( "$_userId,$_timestamp", "gorilla" );
-		$data['ticket'] = $ticket;
+
+		$data['ticket'] = static::$_ticket = $ticket = Utilities::encryptCreds( "$_userId,$_timestamp", "gorilla" );
 		$data['ticket_expiry'] = time() + ( 5 * 60 );
 		$data['session_id'] = session_id();
 
@@ -829,7 +798,7 @@ class Session extends BaseSystemRestResource
 		{
 			$appFields = 'id,api_name,name,description,is_url_external,launch_url,requires_fullscreen,allow_fullscreen_toggle,toggle_location';
 			/**
-			 * @var \App[] $_apps
+			 * @var App[] $_apps
 			 */
 			$_apps = Option::get( $session, 'allowed_apps', array() );
 			if ( $is_sys_admin )
@@ -837,12 +806,14 @@ class Session extends BaseSystemRestResource
 				$_apps = ResourceStore::model( 'app' )->findAll( 'is_active = :ia', array( ':ia' => 1 ) );
 			}
 			/**
-			 * @var \AppGroup[] $theGroups
+			 * @var AppGroup[] $theGroups
 			 */
 			$theGroups = ResourceStore::model( 'app_group' )->with( 'apps' )->findAll();
+
 			$appGroups = array();
 			$noGroupApps = array();
 			$_defaultAppId = Option::get( $session, 'default_app_id' );
+
 			foreach ( $_apps as $app )
 			{
 				$appId = $app->id;
@@ -884,5 +855,24 @@ class Session extends BaseSystemRestResource
 		}
 
 		return $data;
+	}
+
+	/**
+	 * Generates a semi-unique hash suitable as filesystem store IDs
+	 *
+	 * @param string $salt
+	 *
+	 * @return string
+	 */
+	public static function getUserIdentifier( $salt = null )
+	{
+		$_hash = Hasher::hash( static::getCurrentTicket() );
+
+		if ( null !== $salt )
+		{
+			$_hash = Hasher::encryptString( $_hash, $salt );
+		}
+
+		return $_hash;
 	}
 }

@@ -3,7 +3,7 @@
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,30 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Enums;
 
-use Kisma\Core\Enums\SeedEnum;
+$_base = require( __DIR__ . '/BaseDbSvc.swagger.php' );
 
-/**
- * ResponseFormats
- * Supported DSP response formats
- */
-class ResponseFormats extends SeedEnum
-{
-	//*************************************************************************
-	//* Constants
-	//*************************************************************************
-
-	/**
-	 * @var int No formatting. The default
-	 */
-	const RAW = 0;
-	/**
-	 * @var int
-	 */
-	const DATATABLES = 100;
-	/**
-	 * @var int
-	 */
-	const JTABLE = 101;
-}
+return $_base;
