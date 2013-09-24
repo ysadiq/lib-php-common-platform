@@ -950,6 +950,7 @@ class SqlDbSvc extends BaseDbSvc
 			{
 				$fields = '*';
 			}
+			$order = Option::get( $extras, 'order' );
 			$limit = intval( Option::get( $extras, 'limit', 0 ) );
 			$offset = intval( Option::get( $extras, 'offset', 0 ) );
 

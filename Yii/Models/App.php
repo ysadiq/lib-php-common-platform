@@ -201,14 +201,7 @@ class App extends BasePlatformSystemModel
 					{
 						// create in permanent storage
 						$_service->createContainer( array( 'name' => $this->api_name ) );
-						$name = ( !empty( $this->name ) ) ? $this->name : $this->api_name;
-						$content = "<!DOCTYPE html>\n<html>\n<head>\n<title>" . $name . "</title>\n</head>\n";
-						$content .= "<body>\nYour app " . $name . " now lives here.</body>\n</html>";
-						$path = ( !empty( $this->url ) ) ? ltrim( $this->url, '/' ) : 'index.html';
-						if ( !$_service->fileExists( $this->api_name, $path ) )
-						{
-							$_service->writeFile( $this->api_name, $path, $content );
-						}
+						static::_initHostedAppStorage( $this->api_name, $_service, $this->api_name );
 					}
 				}
 				else
@@ -221,15 +214,7 @@ class App extends BasePlatformSystemModel
 					{
 						// create in permanent storage
 						$_service->createFolder( $_container, $this->api_name );
-						$name = ( !empty( $this->name ) ) ? $this->name : $this->api_name;
-						$content = "<!DOCTYPE html>\n<html>\n<head>\n<title>" . $name . "</title>\n</head>\n";
-						$content .= "<body>\nYour app " . $name . " now lives here.</body>\n</html>";
-						$path = $this->api_name . '/';
-						$path .= ( !empty( $this->url ) ) ? ltrim( $this->url, '/' ) : 'index.html';
-						if ( !$_service->fileExists( $_container, $path ) )
-						{
-							$_service->writeFile( $_container, $path, $content );
-						}
+						static::_initHostedAppStorage( $this->api_name, $_service, $_container, $this->api_name );
 					}
 				}
 
@@ -627,4 +612,63 @@ MYSQL
 		}
 	}
 
+	/**
+	 * @param string      $api_name
+	 * @param BaseFileSvc $storage
+	 * @param string      $container
+	 * @param string      $root_folder
+	 *
+	 * @throws \Exception
+	 */
+	protected static function _initHostedAppStorage( $api_name, $storage, $container, $root_folder = null )
+	{
+		$_templateBaseDir = \Kisma::get( 'app.config_path' ) . '/templates/app';
+		if ( is_dir( $_templateBaseDir ) )
+		{
+			$_files = array_diff( scandir( $_templateBaseDir ), array( '.', '..' ) );
+			if ( !empty( $_files ) )
+			{
+				foreach ( $_files as $_file )
+				{
+					$_templatePath = $_templateBaseDir . '/' . $_file;
+					if ( is_dir( $_templatePath ) )
+					{
+						$_storePath = ( empty( $root_folder ) ? : $root_folder . '/' ) . $_file;
+						$storage->createFolder( $container, $_storePath );
+						$_subFiles = array_diff( scandir( $_templatePath ), array( '.', '..' ) );
+						if ( !empty( $_subFiles ) )
+						{
+							foreach ( $_subFiles as $_subFile )
+							{
+								$_templateSubPath = $_templatePath . '/' . $_subFile;
+								if ( is_dir( $_templateSubPath ) )
+								{
+									// support this deep?
+								}
+								else if ( file_exists( $_templateSubPath ) )
+								{
+									$_content = file_get_contents( $_templateSubPath );
+									$storage->writeFile( $container, $_storePath . '/' . $_subFile, $_content, false );
+								}
+							}
+						}
+					}
+					else if ( file_exists( $_templatePath ) )
+					{
+						$_content = file_get_contents( $_templatePath );
+						if ( 'index.html' == $_file )
+						{
+							$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
+							$_dspHost = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' );
+							$_content = str_replace('https://_your_dsp_hostname_here_', $_dspHost, $_content );
+							$_content = str_replace('_your_app_api_name_here_', $api_name, $_content );
+						}
+
+						$_storePath = ( empty( $root_folder ) ? : $root_folder . '/' ) . $_file;
+						$storage->writeFile( $container, $_storePath, $_content, false );
+					}
+				}
+			}
+		}
+	}
 }
