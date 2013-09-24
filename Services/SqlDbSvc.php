@@ -973,16 +973,13 @@ class SqlDbSvc extends BaseDbSvc
 			{
 				$command->offset( $offset );
 			}
-			if ( $limit > 0 && ( $limit < $maxAllowed ) )
-			{
-				$command->limit( $limit );
-			}
-			else
+			if ( ( $limit < 1 ) || ( $limit > $maxAllowed ) )
 			{
 				// impose a limit to protect server
-				$command->limit( $maxAllowed );
+				$limit = $maxAllowed;
 				$_needLimit = true;
 			}
+			$command->limit( $limit );
 
 			$this->checkConnection();
 			$reader = $command->query();
@@ -1025,9 +1022,9 @@ class SqlDbSvc extends BaseDbSvc
 					}
 					$_count = intval( $command->queryScalar() );
 					$data['meta']['count'] = $_count;
-					if ( $_needLimit && ( ( $_count - $offset ) > $maxAllowed ) )
+					if ( ( $_count - $offset ) > $maxAllowed )
 					{
-						$data['meta']['next'] = $offset + $maxAllowed + 1;
+						$data['meta']['next'] = $offset + $limit + 1;
 					}
 				}
 				// count total records

@@ -932,14 +932,11 @@ class MongoDbSvc extends NoSqlDbSvc
 			{
 				$_result = $_result->sort( $_sort );
 			}
-			if ( $_limit && ( $_limit < $_maxAllowed ) )
+			if ( ( $_limit < 1 ) || ( $_limit > $_maxAllowed ) )
 			{
-				$_result = $_result->limit( $_limit );
+				$_limit = $_maxAllowed;
 			}
-			else
-			{
-				$_result = $_result->limit( $_maxAllowed );
-			}
+			$_result = $_result->limit( $_limit );
 
 			$_out = iterator_to_array( $_result );
 			$_out =  static::cleanRecords( $_out );
@@ -948,7 +945,7 @@ class MongoDbSvc extends NoSqlDbSvc
 				$_out['meta']['count'] = $_count;
 				if ( $_needMore )
 				{
-					$_out['meta']['next'] = $_offset + $_maxAllowed + 1;
+					$_out['meta']['next'] = $_offset + $_limit + 1;
 				}
 			}
 
