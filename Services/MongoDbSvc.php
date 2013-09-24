@@ -922,7 +922,8 @@ class MongoDbSvc extends NoSqlDbSvc
 			/** @var \MongoCursor $_result */
 			$_result = $_coll->find( $_criteria, $_fieldArray );
 			$_count = $_result->count();
-			$_needMore = ( ( $_count - $_offset ) > static::DEFAULT_MAX_RECORDS );
+			$_maxAllowed = static::getMaxRecordsReturnedLimit();
+			$_needMore = ( ( $_count - $_offset ) > $_maxAllowed );
 			if ( $_offset )
 			{
 				$_result = $_result->skip( $_offset );
@@ -931,13 +932,13 @@ class MongoDbSvc extends NoSqlDbSvc
 			{
 				$_result = $_result->sort( $_sort );
 			}
-			if ( $_limit && ( $_limit < static::DEFAULT_MAX_RECORDS ) )
+			if ( $_limit && ( $_limit < $_maxAllowed ) )
 			{
 				$_result = $_result->limit( $_limit );
 			}
 			else
 			{
-				$_result = $_result->limit( static::DEFAULT_MAX_RECORDS );
+				$_result = $_result->limit( $_maxAllowed );
 			}
 
 			$_out = iterator_to_array( $_result );
@@ -947,7 +948,7 @@ class MongoDbSvc extends NoSqlDbSvc
 				$_out['meta']['count'] = $_count;
 				if ( $_needMore )
 				{
-					$_out['meta']['next'] = $_offset + static::DEFAULT_MAX_RECORDS + 1;
+					$_out['meta']['next'] = $_offset + $_maxAllowed + 1;
 				}
 			}
 
