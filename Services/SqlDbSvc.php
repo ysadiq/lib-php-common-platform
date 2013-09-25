@@ -950,8 +950,11 @@ class SqlDbSvc extends BaseDbSvc
 			{
 				$fields = '*';
 			}
+			$order = Option::get( $extras, 'order' );
 			$limit = intval( Option::get( $extras, 'limit', 0 ) );
 			$offset = intval( Option::get( $extras, 'offset', 0 ) );
+			$maxAllowed = static::getMaxRecordsReturnedLimit();
+			$_needLimit = false;
 
 			// use query builder
 			/** @var \CDbCommand $command */
@@ -970,14 +973,13 @@ class SqlDbSvc extends BaseDbSvc
 			{
 				$command->offset( $offset );
 			}
-			if ( $limit > 0 )
+			if ( ( $limit < 1 ) || ( $limit > $maxAllowed ) )
 			{
-				$command->limit( $limit );
+				// impose a limit to protect server
+				$limit = $maxAllowed;
+				$_needLimit = true;
 			}
-			else
-			{
-				// todo impose a limit to protect server
-			}
+			$command->limit( $limit );
 
 			$this->checkConnection();
 			$reader = $command->query();
@@ -1006,10 +1008,10 @@ class SqlDbSvc extends BaseDbSvc
 
 			$_includeCount = Option::getBool( $extras, 'include_count', false );
 			$_includeSchema = Option::getBool( $extras, 'include_schema', false );
-			if ( $_includeCount || $_includeSchema )
+			if ( $_includeCount || $_needLimit || $_includeSchema )
 			{
 				// count total records
-				if ( $_includeCount )
+				if ( $_includeCount || $_needLimit )
 				{
 					$command->reset();
 					$command->select( '(COUNT(*)) as ' . $this->_sqlConn->quoteColumnName( 'count' ) );
@@ -1018,7 +1020,12 @@ class SqlDbSvc extends BaseDbSvc
 					{
 						$command->where( $filter );
 					}
-					$data['meta']['count'] = intval( $command->queryScalar() );
+					$_count = intval( $command->queryScalar() );
+					$data['meta']['count'] = $_count;
+					if ( ( $_count - $offset ) > $maxAllowed )
+					{
+						$data['meta']['next'] = $offset + $limit + 1;
+					}
 				}
 				// count total records
 				if ( $_includeSchema )

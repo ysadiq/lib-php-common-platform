@@ -24,6 +24,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
@@ -46,7 +47,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	/**
 	 * Default maximum records returned on filter request
 	 */
-	const DEFAULT_MAX_RECORDS = 1000;
+	const DB_MAX_RECORDS_RETURNED = 1000;
 
 	//*************************************************************************
 	//	Members
@@ -613,6 +614,14 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	}
 
 	// Helper function for record usage
+
+	/**
+	 * @return int
+	 */
+	protected static function getMaxRecordsReturnedLimit()
+	{
+		return intval( Pii::getParam( 'dsp.db_max_records_returned', static::DB_MAX_RECORDS_RETURNED ) );
+	}
 
 	/**
 	 * @param array        $record

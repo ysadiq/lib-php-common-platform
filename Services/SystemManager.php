@@ -135,7 +135,8 @@ class SystemManager extends BaseSystemRestService
 
 			$tables = $_schema->getTableNames();
 
-			if ( empty( $tables ) || ( 'df_sys_cache' == Option::get( $tables, 0 ) ) )
+			// if there is no config table, we have to initialize
+			if ( empty( $tables ) || ( false === array_search( 'df_sys_config', $tables ) ) )
 			{
 				return PlatformStates::INIT_REQUIRED;
 			}
@@ -193,7 +194,7 @@ class SystemManager extends BaseSystemRestService
 	 */
 	public static function initSystem()
 	{
-		static::initSchema( true );
+		static::initSchema();
 		static::initAdmin();
 		static::initData();
 	}
@@ -201,12 +202,81 @@ class SystemManager extends BaseSystemRestService
 	/**
 	 * Configures the system schema.
 	 *
-	 * @param bool $init
+	 * @throws \Exception
+	 * @return null
+	 */
+	public static function initSchema()
+	{
+		$_db = Pii::db();
+
+		try
+		{
+			$contents = file_get_contents( static::$_configPath . '/schema/system_schema.json' );
+
+			if ( empty( $contents ) )
+			{
+				throw new \Exception( "Empty or no system schema file found." );
+			}
+
+			$contents = DataFormat::jsonToArray( $contents );
+			$version = Option::get( $contents, 'version' );
+
+			$command = $_db->createCommand();
+
+			// create system tables
+			$tables = Option::get( $contents, 'table' );
+			if ( empty( $tables ) )
+			{
+				throw new \Exception( "No default system schema found." );
+			}
+
+			Log::debug( 'Checking database schema' );
+
+			$result = SqlDbUtilities::createTables( $_db, $tables, true, false );
+
+			// initialize config table if not already
+			try
+			{
+				$command->reset();
+				// first time is troublesome with session user id
+				$rows = $command->insert( 'df_sys_config', array( 'db_version' => $version ) );
+
+				if ( 0 >= $rows )
+				{
+					Log::error( 'Exception saving database version: ' . $version );
+				}
+			}
+			catch ( \Exception $_ex )
+			{
+				Log::error( 'Exception saving database version: ' . $_ex->getMessage() );
+			}
+
+			//	Any scripts to run?
+			if ( null !== ( $_scripts = Option::get( $contents, 'scripts' ) ) )
+			{
+				if ( isset( $_scripts['install'] ) )
+				{
+					static::_runScript( static::$_configPath . '/schema/' . $_scripts['install'] );
+				}
+			}
+
+			//	Refresh the schema that we just added
+			\Yii::app()->getCache()->flush();
+			$_db->getSchema()->refresh();
+		}
+		catch ( \Exception $ex )
+		{
+			throw $ex;
+		}
+	}
+
+	/**
+	 * Configures the system schema.
 	 *
 	 * @throws \Exception
 	 * @return null
 	 */
-	public static function initSchema( $init = false )
+	public static function upgradeSchema()
 	{
 		$_db = Pii::db();
 
@@ -286,10 +356,10 @@ class SystemManager extends BaseSystemRestService
 					{
 						$command->reset();
 						$serviceId = $command
-							->select( 'id' )
-							->from( 'df_sys_service' )
-							->where( 'api_name = :name', array( ':name' => 'app' ) )
-							->queryScalar();
+									 ->select( 'id' )
+									 ->from( 'df_sys_service' )
+									 ->where( 'api_name = :name', array( ':name' => 'app' ) )
+									 ->queryScalar();
 						if ( false === $serviceId )
 						{
 							throw new \Exception( 'Could not find local app storage service id.' );
@@ -338,12 +408,7 @@ class SystemManager extends BaseSystemRestService
 			//	Any scripts to run?
 			if ( null !== ( $_scripts = Option::get( $contents, 'scripts' ) ) )
 			{
-				if ( $init && isset( $_scripts['install'] ) )
-				{
-					static::_runScript( static::$_configPath . '/schema/' . $_scripts['install'] );
-				}
-
-				if ( !$init && isset( $_scripts['update'] ) )
+				if ( isset( $_scripts['update'] ) )
 				{
 					static::_runScript( static::$_configPath . '/schema/' . $_scripts['update'] );
 				}
@@ -356,12 +421,6 @@ class SystemManager extends BaseSystemRestService
 		catch ( \Exception $ex )
 		{
 			throw $ex;
-		}
-
-		if ( !$init )
-		{
-			// clean up session
-			static::initAdmin();
 		}
 	}
 
