@@ -147,31 +147,11 @@ class Session extends BasePlatformRestResource
 	protected static function _getSession( $ticket = null )
 	{
 		//	Process ticket
-		$_user = static::_validateTicket( $ticket );
-
-		try
+		if ( !empty( $ticket ) )
 		{
-			$_result = static::generateSessionDataFromUser( null, $_user );
-
-			//	Additional stuff for session - launchpad mainly
-			return static::addSessionExtras( $_result, $_user->is_sys_admin, true );
+			$_userId = static::_validateTicket( $ticket );
 		}
-		catch ( \Exception $ex )
-		{
-			throw $ex;
-		}
-	}
-
-	/**
-	 * @param string $ticket
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\UnauthorizedException
-	 * @throws \Exception
-	 * @return User
-	 */
-	protected static function _validateTicket( $ticket )
-	{
-		if ( empty( $ticket ) )
+		else
 		{
 			try
 			{
@@ -183,11 +163,11 @@ class Session extends BasePlatformRestResource
 
 				//	Special case for guest user
 				$_config = ResourceStore::model( 'config' )->with(
-										'guest_role.role_service_accesses',
-										'guest_role.role_system_accesses',
-										'guest_role.apps',
-										'guest_role.services'
-				)                       ->find();
+							   'guest_role.role_service_accesses',
+							   'guest_role.role_system_accesses',
+							   'guest_role.apps',
+							   'guest_role.services'
+						   )                       ->find();
 
 				if ( !empty( $_config ) )
 				{
@@ -204,44 +184,62 @@ class Session extends BasePlatformRestResource
 				throw $ex;
 			}
 		}
-		else
-		{
-			$_creds = Utilities::decryptCreds( $ticket, "gorilla" );
-			$_pieces = explode( ',', $_creds );
-			$_userId = $_pieces[0];
-			$_timestamp = $_pieces[1];
-			$_curTime = time();
-			$_lapse = $_curTime - $_timestamp;
-
-			if ( empty( $_userId ) || ( $_lapse > 300 ) )
-			{
-				// only lasts 5 minutes
-				static::userLogout();
-				throw new UnauthorizedException( 'Ticket expired' );
-			}
-		}
 
 		//	Load user...
 		try
 		{
 			$_user = ResourceStore::model( 'user' )->with(
-								  'role.role_service_accesses',
-								  'role.role_system_accesses',
-								  'role.apps',
-								  'role.services'
-			)                     ->findByPk( $_userId );
-
-			if ( empty( $_user ) )
-			{
-				throw new UnauthorizedException( 'Invalid credentials' );
-			}
-
-			return $_user;
+						 'role.role_service_accesses',
+						 'role.role_system_accesses',
+						 'role.apps',
+						 'role.services'
+					 )->findByPk( $_userId );
 		}
 		catch ( \Exception $ex )
 		{
-			throw $ex;
+			throw new InternalServerErrorException( "Failed lookup of user matching id '$_userId'." );
 		}
+
+		if ( empty( $_user ) )
+		{
+			throw new UnauthorizedException( "No user found matching the user Id '$_userId'." );
+		}
+
+		$_result = static::generateSessionDataFromUser( null, $_user );
+
+		//	Additional stuff for session - launchpad mainly
+		return static::addSessionExtras( $_result, $_user->is_sys_admin, true );
+	}
+
+	/**
+	 * @param string $ticket
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\UnauthorizedException
+	 * @throws \Exception
+	 * @return User
+	 */
+	protected static function _validateTicket( $ticket )
+	{
+		if ( empty( $ticket ) )
+		{
+			throw new UnauthorizedException( 'Session authorization ticket can not be empty.' );
+		}
+
+		$_creds = Utilities::decryptCreds( $ticket, "gorilla" );
+		$_pieces = explode( ',', $_creds );
+		$_userId = $_pieces[0];
+		$_timestamp = $_pieces[1];
+		$_curTime = time();
+		$_lapse = $_curTime - $_timestamp;
+
+		if ( empty( $_userId ) || ( $_lapse > 300 ) )
+		{
+			// only lasts 5 minutes
+			static::userLogout();
+			throw new UnauthorizedException( 'Session authorization ticket has expired.' );
+		}
+
+		return $_userId;
 	}
 
 	/**
