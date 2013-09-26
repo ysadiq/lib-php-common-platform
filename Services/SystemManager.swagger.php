@@ -3451,6 +3451,7 @@ $_models = array(
 			array(
 				'type'        => 'string',
 				'description' => 'One of the supported service types.',
+				'deprecated' => true,
 			),
 			'storage_name'        =>
 			array(
@@ -3461,6 +3462,7 @@ $_models = array(
 			array(
 				'type'        => 'string',
 				'description' => 'They supported storage service type.',
+				'deprecated' => true,
 			),
 			'credentials'         =>
 			array(
