@@ -333,8 +333,14 @@ class SecureJson extends BaseModelBehavior
 			$_data = Hasher::decryptString( $_data, $salt ? : $this->_salt );
 		}
 
+		// 	Try decoding decrypted string
 		//	Make sure we can deserialize...
 		if ( false === ( $_decoded = json_decode( $_data, $asArray ) ) )
+		{
+			return false;
+		}
+
+		if ( empty( $_decoded ) )
 		{
 			//	Try decoding raw string
 			if ( false === ( $_decoded = json_decode( $data, $asArray ) ) )
