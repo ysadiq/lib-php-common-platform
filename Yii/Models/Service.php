@@ -382,7 +382,11 @@ MYSQL;
 		}
 
 		//	Ensure storage type ID is set
-		if ( $this->isStorageService() && empty( $this->storage_type_id ) )
+		if ( !$this->isStorageService() )
+		{
+			$this->storage_type = $this->storage_type_id = null;
+		}
+		else if ( null === $this->storage_type_id )
 		{
 			$this->storage_type_id = $this->getStorageTypeId();
 		}
@@ -414,11 +418,15 @@ MYSQL;
 	}
 
 	/**
+	 * @param int $id
+	 *
 	 * @return bool
 	 */
-	public function isStorageService()
+	public function isStorageService( $id = null )
 	{
-		return PlatformServiceTypes::REMOTE_FILE_STORAGE || PlatformServiceTypes::NOSQL_DB;
+		$_id = $id ? : $this->type_id;
+
+		return PlatformServiceTypes::REMOTE_FILE_STORAGE == $_id || PlatformServiceTypes::NOSQL_DB == $_id;
 	}
 
 	/**
@@ -426,7 +434,7 @@ MYSQL;
 	 */
 	public function afterFind()
 	{
-		if ( !empty( $this->type ) && empty( $this->type_id ) )
+		if ( !empty( $this->type ) && null === $this->type_id )
 		{
 			if ( false === ( $_typeId = $this->getServiceTypeId() ) )
 			{
@@ -436,11 +444,15 @@ MYSQL;
 			{
 				$this->update( array( 'type_id' => $_typeId ) );
 
-				Log::debug( 'Properly set service type id of service "' . $this->api_name . '"' );
+				Log::debug( 'Properly set service type id of service "' . $this->api_name . '" to "' . $_typeId . '"' );
 			}
 		}
 
-		if ( $this->isStorageService() && !empty( $this->storage_type ) && empty( $this->storage_type_id ) )
+		if ( !$this->isStorageService() )
+		{
+			$this->storage_type = $this->storage_type_id = null;
+		}
+		else if ( null === $this->storage_type_id )
 		{
 			if ( false === ( $_typeId = $this->getStorageTypeId() ) )
 			{
@@ -450,7 +462,7 @@ MYSQL;
 			{
 				$this->update( array( 'storage_type_id' => $_typeId ) );
 
-				Log::debug( 'Properly set storage type id of service "' . $this->api_name . '"' );
+				Log::debug( 'Properly set storage type id of service "' . $this->api_name . '" to "' . $_typeId . '"' );
 			}
 		}
 
@@ -527,10 +539,12 @@ MYSQL;
 	 */
 	public function getStorageTypeId( $storageType = null )
 	{
-		$_storageType = str_replace( ' ', '_', strtoupper( $storageType ? : $this->storage_type ) );
+		$_storageType = str_replace( ' ', '_', trim( strtoupper( $storageType ? : $this->storage_type ) ) );
 
 		try
 		{
+			Log::debug( 'Looking up storage type "' . $_storageType . '" (' . $storageType . ')' );
+
 			return PlatformStorageTypes::defines( $_storageType, true );
 		}
 		catch ( \InvalidArgumentException $_ex )
@@ -548,7 +562,7 @@ MYSQL;
 	 */
 	public function getServiceTypeId( $type = null )
 	{
-		$_type = str_replace( ' ', '_', strtoupper( $type ? : $this->type ) );
+		$_type = str_replace( ' ', '_', trim( strtoupper( $type ? : $this->type ) ) );
 
 		try
 		{
