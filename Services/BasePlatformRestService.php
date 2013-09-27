@@ -237,7 +237,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		}
 
 		//	Now all actions must be HTTP verbs
-		if ( !HttpMethod::defines( $this->_action ) )
+		if ( !HttpMethod::contains( $this->_action ) )
 		{
 			throw new BadRequestException( 'The action "' . $this->_action . '" is not supported.' );
 		}

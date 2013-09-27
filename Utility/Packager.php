@@ -117,9 +117,11 @@ class Packager
 						'description',
 						'is_active',
 						'type',
+						'type_id',
 						'is_system',
 						'storage_name',
 						'storage_type',
+						'storage_type_id',
 						'credentials',
 						'native_format',
 						'base_url',
@@ -393,7 +395,7 @@ class Packager
 							$tableName = Option::get( $table, 'name' );
 							$records = Option::get( $table, 'record' );
 
-							$result = $db->createRecords( $tableName, $records, true );
+							$result = $db->createRecords( $tableName, $records );
 
 							if ( isset( $result['record'][0]['error'] ) )
 							{
@@ -420,7 +422,7 @@ class Packager
 							$tableName = Option::get( $table, 'name' );
 							$records = Option::get( $table, 'record' );
 							/** @var $db BaseDbSvc */
-							$result = $db->createRecords( $tableName, $records, true );
+							$result = $db->createRecords( $tableName, $records );
 							if ( isset( $result['record'][0]['error'] ) )
 							{
 								$msg = $result['record'][0]['error']['message'];
@@ -438,7 +440,7 @@ class Packager
 							$db = ServiceHandler::getServiceObject( $serviceName );
 							$records = Option::get( $data, 'record' );
 							/** @var $db BaseDbSvc */
-							$result = $db->createRecords( $tableName, $records, true );
+							$result = $db->createRecords( $tableName, $records );
 							if ( isset( $result['record'][0]['error'] ) )
 							{
 								$msg = $result['record'][0]['error']['message'];

@@ -27,6 +27,7 @@ use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Yii\Models\BasePlatformModel;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
@@ -35,7 +36,6 @@ use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Platform\Services\SystemManager;
 
 /**
  * ResourceStore

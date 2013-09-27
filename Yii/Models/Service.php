@@ -20,12 +20,10 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use CModelEvent;
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Enums\PlatformStorageTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -46,6 +44,7 @@ use Kisma\Core\Utility\Sql;
  * @property int                 $type_id
  * @property string              $storage_name
  * @property string              $storage_type
+ * @property int                 $storage_type_id
  * @property string              $credentials
  * @property string              $native_format
  * @property string              $base_url
@@ -321,13 +320,6 @@ MYSQL;
 				throw new BadRequestException( 'Service type cannot be changed after creation.' );
 			}
 
-			$_typeId = Option::get( $values, 'type_id', $this->type_id );
-
-			if ( empty( $_typeId ) || empty( $this->storage_type_id ) )
-			{
-				$this->type_id = $this->getServiceTypeId();
-			}
-
 			$_apiName = Option::get( $values, 'api_name' );
 
 			if ( ( 0 == strcasecmp( 'app', $this->api_name ) ) && !empty( $_apiName ) && 0 != strcasecmp( $this->api_name, $values['api_name'] ) )
@@ -383,9 +375,20 @@ MYSQL;
 	 */
 	protected function beforeSave()
 	{
-		if ( empty( $this->type_id ) || empty( $this->storage_type_id ) )
+		//	Ensure type ID is set
+		if ( empty( $this->type_id ) )
 		{
 			$this->type_id = $this->getServiceTypeId();
+		}
+
+		//	Ensure storage type ID is set
+		if ( !$this->isStorageService() )
+		{
+			$this->storage_type = $this->storage_type_id = null;
+		}
+		else if ( null === $this->storage_type_id )
+		{
+			$this->storage_type_id = $this->getStorageTypeId();
 		}
 
 		return parent::beforeSave();
@@ -396,7 +399,7 @@ MYSQL;
 	 */
 	protected function beforeDelete()
 	{
-		switch ( $this->type_id )
+		switch ( $this->getServiceTypeId() )
 		{
 			case PlatformServiceTypes::LOCAL_SQL_DB:
 			case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
@@ -415,11 +418,23 @@ MYSQL;
 	}
 
 	/**
+	 * @param int $id
+	 *
+	 * @return bool
+	 */
+	public function isStorageService( $id = null )
+	{
+		$_id = $id ? : $this->type_id;
+
+		return PlatformServiceTypes::REMOTE_FILE_STORAGE == $_id || PlatformServiceTypes::NOSQL_DB == $_id;
+	}
+
+	/**
 	 * {@InheritDoc}
 	 */
 	public function afterFind()
 	{
-		if ( !empty( $this->type ) && empty( $this->type_id ) )
+		if ( !empty( $this->type ) && null === $this->type_id )
 		{
 			if ( false === ( $_typeId = $this->getServiceTypeId() ) )
 			{
@@ -428,7 +443,26 @@ MYSQL;
 			else
 			{
 				$this->update( array( 'type_id' => $_typeId ) );
-				Log::debug( 'Properly set service type id of service "' . $this->api_name . '"' );
+
+				Log::debug( 'Properly set service type id of service "' . $this->api_name . '" to "' . $_typeId . '"' );
+			}
+		}
+
+		if ( !$this->isStorageService() )
+		{
+			$this->storage_type = $this->storage_type_id = null;
+		}
+		else if ( null === $this->storage_type_id )
+		{
+			if ( false === ( $_typeId = $this->getStorageTypeId() ) )
+			{
+				Log::error( 'Invalid storage type "' . $this->storage_type . '" found in row: ' . print_r( $this->getAttributes(), true ) );
+			}
+			else
+			{
+				$this->update( array( 'storage_type_id' => $_typeId ) );
+
+				Log::debug( 'Properly set storage type id of service "' . $this->api_name . '" to "' . $_typeId . '"' );
 			}
 		}
 
@@ -495,128 +529,56 @@ MYSQL;
 	}
 
 	/**
-	 * @param string $type
+	 * Determines the storage type ID from the old string, or returns false otherwise.
+	 *
+	 * NOTE: DOES NOT SET $this->storage_type_id
+	 *
 	 * @param string $storageType
 	 *
-	 * @return int|boolean
+	 * @return bool|int
 	 */
-	public function getServiceTypeId( $type = null, $storageType = null )
+	public function getStorageTypeId( $storageType = null )
 	{
-		$_type = $type ? : $this->type;
-		$_storageType = $storageType ? : $this->storage_type;
+		$_storageType = str_replace( ' ', '_', trim( strtoupper( $storageType ? : $this->storage_type ) ) );
 
 		try
 		{
-			if ( false !== ( $_typeId = PlatformServiceTypes::defines( $_type, true ) ) )
-			{
-				$this->type_id = $_typeId;
-			}
+			Log::debug( 'Looking up storage type "' . $_storageType . '" (' . $storageType . ')' );
+
+			return PlatformStorageTypes::defines( $_storageType, true );
 		}
-		catch ( \Exception $_ex )
+		catch ( \InvalidArgumentException $_ex )
 		{
-			switch ( strtolower( $_type ) )
-			{
-				case 'remote web service':
-					$this->type_id = PlatformServiceTypes::REMOTE_WEB_SERVICE;
-					break;
+			Log::notice( 'Unknown storage type ID request for "' . $storageType . '"' );
 
-				case 'local file storage':
-					$this->type_id = PlatformServiceTypes::LOCAL_FILE_STORAGE;
-					break;
-
-				case 'remote file storage':
-					$this->type_id = PlatformServiceTypes::REMOTE_FILE_STORAGE;
-
-					switch ( strtolower( $_storageType ) )
-					{
-						case 'azure blob':
-							$this->storage_type_id = PlatformStorageTypes::AZURE_BLOB;
-							break;
-
-						case 'aws s3':
-							$this->storage_type_id = PlatformStorageTypes::AWS_S3;
-							break;
-
-						case 'rackspace cloudfiles':
-							$this->storage_type_id = PlatformStorageTypes::RACKSPACE_CLOUDFILES;
-							break;
-
-						case 'openstack object storage':
-							$this->storage_type_id = PlatformStorageTypes::OPENSTACK_OBJECT_STORAGE;
-							break;
-					}
-					break;
-
-				case 'local sql db':
-					$this->type_id = PlatformServiceTypes::LOCAL_SQL_DB;
-					break;
-
-				case 'remote sql db':
-					$this->type_id = PlatformServiceTypes::REMOTE_SQL_DB;
-					break;
-
-				case 'local sql db schema':
-					$this->type_id = PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA;
-					break;
-
-				case 'remote sql db schema':
-					$this->type_id = PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA;
-					break;
-
-				case 'email service':
-				case 'local email service':
-					$this->type_id = PlatformServiceTypes::EMAIL_SERVICE;
-					break;
-
-				case 'remote email service':
-					$this->type_id = PlatformServiceTypes::EMAIL_SERVICE;
-					break;
-
-				case 'nosql db':
-					$this->type_id = PlatformServiceTypes::NOSQL_DB;
-
-					switch ( strtolower( $_storageType ) )
-					{
-						case 'azure tables':
-							$this->storage_type_id = PlatformStorageTypes::AZURE_TABLES;
-							break;
-						case 'aws dynamodb':
-							$this->storage_type_id = PlatformStorageTypes::AWS_DYNAMODB;
-							break;
-						case 'aws simpledb':
-							$this->storage_type_id = PlatformStorageTypes::AWS_SIMPLEDB;
-							break;
-						case 'mongodb':
-							$this->storage_type_id = PlatformStorageTypes::MONGODB;
-							break;
-						case 'mongohq':
-							$this->storage_type_id = PlatformStorageTypes::MONGODB;
-							break;
-						case 'couchdb':
-							$this->storage_type_id = PlatformStorageTypes::COUCHDB;
-							break;
-					}
-					break;
-
-				case 'local portal service':
-					$this->type_id = PlatformServiceTypes::LOCAL_PORTAL_SERVICE;
-					break;
-
-				case 'salesforce':
-					$this->type_id = PlatformServiceTypes::SALESFORCE_SERVICE;
-					break;
-
-				default:
-					//	Giving up...
-					return false;
-			}
+			return false;
 		}
-
-		return $this->type_id;
 	}
 
 	/**
-	 * Make sure type and type_id are selected...
+	 * @param string $type
+	 *
+	 * @return bool
+	 */
+	public function getServiceTypeId( $type = null )
+	{
+		$_type = str_replace( ' ', '_', trim( strtoupper( $type ? : $this->type ) ) );
+
+		try
+		{
+			//	Throws exception if type not defined...
+			return PlatformServiceTypes::defines( $_type, true );
+		}
+		catch ( \InvalidArgumentException $_ex )
+		{
+			Log::notice( 'Unknown service type ID request for "' . $type . '"' );
+
+			return false;
+		}
+	}
+
+	/**
+	 * Make sure type/storage and type_id/storage_type_id are always selected...
 	 *
 	 * @param \CModelEvent $event
 	 */
@@ -624,17 +586,27 @@ MYSQL;
 	{
 		$_criteria = $this->getDbCriteria();
 
-		if ( !empty( $_criteria->select ) && $_criteria->select != '*' )
+		if ( !empty( $_criteria->select ) && '*' != $_criteria->select )
 		{
-			if ( false === strpos( $_criteria->select, 'type' ) )
-			{
-				$_criteria->select .= ',type';
-			}
+			$_cols = explode( ',', $_criteria->select );
 
-			if ( false === strpos( $_criteria->select, 'type_id' ) )
-			{
-				$_criteria->select .= ',type_id';
-			}
+			/**
+			 * I'm doing it this way ( instead of str_replace(' ', null) ) to avoid quoted embedded spaces in the select statement...
+			 */
+			array_walk( $_cols,
+				function ( &$data )
+				{
+					$data = trim( $data );
+				}
+			);
+
+			$_criteria->select = implode(
+				',',
+				array_merge(
+					$_cols,
+					array( 'type', 'type_id', 'storage_type', 'storage_type_id' )
+				)
+			);
 
 			$this->getDbCriteria()->mergeWith( $_criteria );
 		}

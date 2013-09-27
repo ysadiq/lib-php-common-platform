@@ -57,7 +57,7 @@ class PlatformServiceTypes extends SeedEnum
 	/**
 	 * @var int
 	 */
-	const SALESFORCE_SERVICE = 0x0020;
+	const SALESFORCE = 0x0020;
 	/**
 	 * @var int
 	 */

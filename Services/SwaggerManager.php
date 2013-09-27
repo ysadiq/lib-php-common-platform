@@ -191,7 +191,7 @@ class SwaggerManager extends BasePlatformRestService
 				case PlatformServiceTypes::NOSQL_DB:
 					$_fileName = 'NoSqlDbSvc';
 					break;
-				case PlatformServiceTypes::SALESFORCE_SERVICE:
+				case PlatformServiceTypes::SALESFORCE:
 					$_fileName = 'SalesforceDbSvc';
 					break;
 			}
