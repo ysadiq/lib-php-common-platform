@@ -23,6 +23,7 @@ use CModelEvent;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Enums\PlatformStorageTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -371,6 +372,7 @@ MYSQL;
 	}
 
 	/**
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @return bool
 	 */
 	protected function beforeSave()
@@ -378,13 +380,17 @@ MYSQL;
 		//	Ensure type ID is set
 		if ( empty( $this->type_id ) )
 		{
-			$this->type_id = $this->getServiceTypeId();
+			if ( false === ( $_typeId = $this->getServiceTypeId() ) )
+			{
+				throw new InternalServerErrorException( 'Invalid service type "' . $this->type . '" specified.' );
+			}
+
+			$this->type_id = $_typeId;
 		}
 
-		//	Ensure storage type ID is set
-		if ( !$this->isStorageService() )
+		if ( !$this->isStorageService( $this->type_id ) )
 		{
-			$this->storage_type = $this->storage_type_id = null;
+			$this->storage_type_id = null;
 		}
 		else if ( null === $this->storage_type_id )
 		{
@@ -426,7 +432,7 @@ MYSQL;
 	{
 		$_id = $id ? : $this->type_id;
 
-		return PlatformServiceTypes::REMOTE_FILE_STORAGE == $_id || PlatformServiceTypes::NOSQL_DB == $_id;
+		return ( PlatformServiceTypes::REMOTE_FILE_STORAGE == $_id || PlatformServiceTypes::NOSQL_DB == $_id );
 	}
 
 	/**
@@ -450,7 +456,7 @@ MYSQL;
 
 		if ( !$this->isStorageService() )
 		{
-			$this->storage_type = $this->storage_type_id = null;
+			$this->storage_type_id = null;
 		}
 		else if ( null === $this->storage_type_id )
 		{
@@ -564,6 +570,11 @@ MYSQL;
 	{
 		$_type = str_replace( ' ', '_', trim( strtoupper( $type ? : $this->type ) ) );
 
+		if ( 'LOCAL_EMAIL_SERVICE' == $_type )
+		{
+			$_type = 'EMAIL_SERVICE';
+		}
+
 		try
 		{
 			//	Throws exception if type not defined...
@@ -571,7 +582,7 @@ MYSQL;
 		}
 		catch ( \InvalidArgumentException $_ex )
 		{
-			Log::notice( 'Unknown service type ID request for "' . $type . '"' );
+			Log::notice( 'Unknown service type ID request for "' . $type . '" ' );
 
 			return false;
 		}
