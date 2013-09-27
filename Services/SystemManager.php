@@ -25,6 +25,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\PlatformServiceException;
 use DreamFactory\Platform\Interfaces\PlatformStates;
+use DreamFactory\Platform\Resources\User\Session;
 use Kisma\Core\Utility\Curl;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\Packager;
@@ -385,13 +386,10 @@ class SystemManager extends BaseSystemRestService
 				{
 					foreach ( $_models as $_model )
 					{
-						if ( empty( $_model->type_id ) )
-						{
-							if ( $_model->getServiceTypeId())
+						$_model->last_modified_date = date( 'c' );
+						$_model->last_modified_by_id = Session::getCurrentUserId();
 
-							$_model->last_modified_date = date( 'c' );
-							$_model->save();
-						}
+						$_model->save();
 
 						unset( $_model );
 					}
