@@ -376,6 +376,28 @@ class SystemManager extends BaseSystemRestService
 						Log::error( 'Exception upgrading apps to 1.0.6+ version: ' . $_ex->getMessage() );
 					}
 				}
+
+				//	Make sure all the type IDs get set...
+				/** @var Service[] $_models */
+				$_models = Service::model()->findAll();
+
+				if ( !empty( $_models ) )
+				{
+					foreach ( $_models as $_model )
+					{
+						if ( empty( $_model->type_id ) )
+						{
+							if ( $_model->getServiceTypeId())
+
+							$_model->last_modified_date = date( 'c' );
+							$_model->save();
+						}
+
+						unset( $_model );
+					}
+
+					unset( $_models );
+				}
 			}
 
 			// initialize config table if not already
