@@ -22,7 +22,6 @@ namespace DreamFactory\Platform\Yii\Components;
 use DreamFactory\Platform\Utility\Drupal;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Platform\Yii\Utility\Pii;
 
 /**
  * DrupalUserIdentity
@@ -76,7 +75,14 @@ class DrupalUserIdentity extends \CUserIdentity
 
 		if ( !isset( $_user->drupal_id ) )
 		{
-			Log::warning( 'Uncommon response from Drupal::authenticateUser(): ' . print_r( $_user, true ) );
+			if ( isset( $_user->success ) && !$_user->success )
+			{
+				Log::error( 'Drupal user login of "' . $this->username . '" failed.' );
+			}
+			else
+			{
+				Log::warning( 'Uncommon response from Drupal::authenticateUser(): ' . print_r( $_user, true ) );
+			}
 		}
 
 		$this->_user = $_user;
