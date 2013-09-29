@@ -440,35 +440,66 @@ MYSQL;
 	 */
 	public function afterFind()
 	{
-		if ( !empty( $this->type ) && null === $this->type_id )
+		$_didWork = false;
+
+		//	Ensure type ID is set
+		if ( empty( $this->type_id ) )
 		{
+			Log::debug( '>> Service::afterFind(\'' . $this->api_name . '\')',
+						array(
+							 'type_id'         => $this->type_id,
+							 'storage_type_id' => $this->storage_type_id,
+							 'type'            => $this->type,
+							 'storage_type'    => $this->storage_type
+						)
+			);
+
 			if ( false === ( $_typeId = $this->getServiceTypeId() ) )
 			{
-				Log::error( 'Invalid service type "' . $this->type . '" found in row: ' . print_r( $this->getAttributes(), true ) );
+				Log::error( '  * Invalid service type "' . $this->type . '" found in row: ' . print_r( $this->getAttributes(), true ) );
+				throw new InternalServerErrorException( 'Invalid service type "' . $this->type . '" specified.' );
+			}
+
+			$this->type_id = $_typeId;
+
+			if ( $this->update( array( 'type_id' => $_typeId ) ) )
+			{
+				$_didWork = true;
+				Log::debug( '  * Set "type_id" of service "' . $this->api_name . '" to "' . $_typeId . '"' );
 			}
 			else
 			{
-				$this->update( array( 'type_id' => $_typeId ) );
-
-				Log::debug( 'Properly set service type id of service "' . $this->api_name . '" to "' . $_typeId . '"' );
+				Log::notice( '  * Unable to update df_sys_service.type_id to "' . $_typeId . '" in row ID#' . $this->id );
 			}
 		}
 
 		if ( !$this->isStorageService() )
 		{
-			$this->storage_type_id = null;
+			if ( null !== $this->storage_type_id )
+			{
+				$this->storage_type_id = null;
+				$this->update( array( 'storage_type_id' => null ) );
+				Log::debug( '  * Set "storage_type_id" of service "' . $this->api_name . '" to NULL' );
+			}
 		}
 		else if ( null === $this->storage_type_id )
 		{
+			$_didWork = true;
+
 			if ( false === ( $_typeId = $this->getStorageTypeId() ) )
 			{
-				Log::error( 'Invalid storage type "' . $this->storage_type . '" found in row: ' . print_r( $this->getAttributes(), true ) );
+				Log::error( '  * Invalid storage type "' . $this->storage_type . '" found in row: ' . print_r( $this->getAttributes(), true ) );
 			}
 			else
 			{
-				$this->update( array( 'storage_type_id' => $_typeId ) );
-
-				Log::debug( 'Properly set storage type id of service "' . $this->api_name . '" to "' . $_typeId . '"' );
+				if ( $this->update( array( 'storage_type_id' => $_typeId ) ) )
+				{
+					Log::debug( '  * Set "storage_type_id" of service "' . $this->api_name . '" to "' . $_typeId . '"' );
+				}
+				else
+				{
+					Log::notice( '  * Unable to update df_sys_service.storage_type_id to "' . $_typeId . '" in row ID#' . $this->id );
+				}
 			}
 		}
 
@@ -495,7 +526,24 @@ MYSQL;
 				break;
 		}
 
+		if ( 'local email service' == strtolower( trim( $this->type ) ) )
+		{
+			$this->type = 'Email Service';
+		}
+
 		parent::afterFind();
+
+		if ( $_didWork )
+		{
+			Log::debug( '<< Service::afterFind(\'' . $this->api_name . '\')',
+						array(
+							 'type_id'         => $this->type_id,
+							 'storage_type_id' => $this->storage_type_id,
+							 'type'            => $this->type,
+							 'storage_type'    => $this->storage_type
+						)
+			);
+		}
 	}
 
 	/**
@@ -549,13 +597,13 @@ MYSQL;
 
 		try
 		{
-			Log::debug( 'Looking up storage type "' . $_storageType . '" (' . $storageType . ')' );
+			Log::debug( '  * Looking up storage type "' . $_storageType . '" (' . $storageType . ')' );
 
 			return PlatformStorageTypes::defines( $_storageType, true );
 		}
 		catch ( \InvalidArgumentException $_ex )
 		{
-			Log::notice( 'Unknown storage type ID request for "' . $storageType . '"' );
+			Log::notice( '  * Unknown storage type ID request for "' . $storageType . '"' );
 
 			return false;
 		}
@@ -582,22 +630,27 @@ MYSQL;
 		}
 		catch ( \InvalidArgumentException $_ex )
 		{
-			Log::notice( 'Unknown service type ID request for "' . $type . '" ' );
+			if ( empty( $_type ) )
+			{
+				Log::notice( '  * Empty "type", assuming this is a system resource ( type_id == 0 )' );
+
+				return PlatformServiceTypes::SYSTEM_SERVICE;
+			}
+
+			Log::error( '  * Unknown service type ID request for "' . $type . '".' );
 
 			return false;
 		}
 	}
 
 	/**
-	 * Make sure type/storage and type_id/storage_type_id are always selected...
-	 *
-	 * @param \CModelEvent $event
+	 * Ensure types and IDs are included in selected data
 	 */
-	public function onBeforeFind( $event )
+	protected function beforeFind()
 	{
 		$_criteria = $this->getDbCriteria();
 
-		if ( !empty( $_criteria->select ) && '*' != $_criteria->select )
+		if ( empty( $_criteria->select ) || ( !empty( $_criteria->select ) && '*' != $_criteria->select ) )
 		{
 			$_cols = explode( ',', $_criteria->select );
 
@@ -615,13 +668,13 @@ MYSQL;
 				',',
 				array_merge(
 					$_cols,
-					array( 'type', 'type_id', 'storage_type', 'storage_type_id' )
+					array( 'id', 'type', 'type_id', 'storage_type', 'storage_type_id' )
 				)
 			);
 
-			$this->getDbCriteria()->mergeWith( $_criteria );
+			$this->setDbCriteria( $_criteria );
 		}
 
-		parent::onBeforeFind( $event );
+		parent::beforeFind();
 	}
 }
