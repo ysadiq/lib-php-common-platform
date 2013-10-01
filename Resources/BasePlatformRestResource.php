@@ -119,16 +119,6 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	}
 
 	/**
-	 * @param BasePlatformSystemModel $resource
-	 *
-	 * @return mixed
-	 */
-	public function _getSchema( $resource )
-	{
-		return SqlDbUtilities::describeTable( $resource->getDb(), $resource->tableName(), $resource->tableNamePrefix() );
-	}
-
-	/**
 	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
 	 *
 	 * @return BasePlatformRestResource

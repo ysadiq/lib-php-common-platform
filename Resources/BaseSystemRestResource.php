@@ -631,4 +631,14 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	{
 		return $this->_includeSchema;
 	}
+
+	/**
+	 * @param BasePlatformSystemModel $resource
+	 *
+	 * @return mixed
+	 */
+	public function getSchema( $resource )
+	{
+		return SqlDbUtilities::describeTable( $resource->getDb(), $resource->tableName(), $resource->tableNamePrefix() );
+	}
 }

@@ -622,10 +622,10 @@ MYSQL
 	 */
 	protected static function _initHostedAppStorage( $api_name, $storage, $container, $root_folder = null )
 	{
-		$_templateBaseDir = \Kisma::get( 'app.config_path' ) . '/templates/app';
+		$_templateBaseDir = \Kisma::get( 'app.vendor_path' ) . '/dreamfactory/javascript-sdk';
 		if ( is_dir( $_templateBaseDir ) )
 		{
-			$_files = array_diff( scandir( $_templateBaseDir ), array( '.', '..' ) );
+			$_files = array_diff( scandir( $_templateBaseDir ), array( '.', '..', '.gitignore', 'composer.json' ) );
 			if ( !empty( $_files ) )
 			{
 				foreach ( $_files as $_file )
@@ -648,6 +648,13 @@ MYSQL
 								else if ( file_exists( $_templateSubPath ) )
 								{
 									$_content = file_get_contents( $_templateSubPath );
+									if ( 'sdk-init.js' == $_subFile )
+									{
+										$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
+										$_dspHost = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' );
+										$_content = str_replace('https://_your_dsp_hostname_here_', $_dspHost, $_content );
+										$_content = str_replace('_your_app_api_name_here_', $api_name, $_content );
+									}
 									$storage->writeFile( $container, $_storePath . '/' . $_subFile, $_content, false );
 								}
 							}
@@ -656,14 +663,6 @@ MYSQL
 					else if ( file_exists( $_templatePath ) )
 					{
 						$_content = file_get_contents( $_templatePath );
-						if ( 'index.html' == $_file )
-						{
-							$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
-							$_dspHost = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' );
-							$_content = str_replace('https://_your_dsp_hostname_here_', $_dspHost, $_content );
-							$_content = str_replace('_your_app_api_name_here_', $api_name, $_content );
-						}
-
 						$_storePath = ( empty( $root_folder ) ? : $root_folder . '/' ) . $_file;
 						$storage->writeFile( $container, $_storePath, $_content, false );
 					}
