@@ -17,25 +17,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Enums;
-
-use Kisma\Core\Enums\SeedEnum;
+namespace DreamFactory\Platform\Exceptions;
 
 /**
- * PortalAccountTypes
+ * NotImplementedException
  */
-class PortalAccountTypes extends SeedEnum
+class NotImplementedException extends RestException
 {
-	//*************************************************************************
-	//* Constants
-	//*************************************************************************
-
 	/**
-	 * @var int
+	 * Constructor.
+	 *
+	 * @param string  $message error message
+	 * @param integer $code    error code
 	 */
-	const INDIVIDUAL_USER = 0;
-	/**
-	 * @var int
-	 */
-	const SINGLE_USER_FOR_ALL = 1;
+	public function __construct( $message = null, $code = null )
+	{
+		parent::__construct( static::NotImplemented, $message, $code ? : static::NotImplemented );
+	}
 }

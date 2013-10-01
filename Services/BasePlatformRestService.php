@@ -19,36 +19,21 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Doctrine\Common\Proxy\Exception\InvalidArgumentException;
-use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Enums\OutputFormat;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
-use Swagger\Annotations as SWG;
 
 /**
  * BasePlatformRestService
  * A base class for all DSP reset services
- *
- * Some basic models used in REST interfaces
- *
- * @SWG\Model(id="Resources",
- * @SWG\Property(name="resource",type="Array", items="$ref:Resource")
- * )
- * @SWG\Model(id="Resource",
- * @SWG\Property(name="name",type="string")
- * )
- * @SWG\Model(id="Success",
- * @SWG\Property(name="success",type="boolean")
- * )
  *
  */
 abstract class BasePlatformRestService extends BasePlatformService implements RestServiceLike
@@ -129,6 +114,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @var array Additional actions that this resource will respond to
 	 */
 	protected $_extraActions = null;
+	/**
+	 * @var array The data that came in on the request
+	 */
+	protected $_requestPayload = null;
 
 	//*************************************************************************
 	//* Methods
@@ -155,9 +144,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	public function processRequest( $resource = null, $action = self::Get )
 	{
-		$this->_setResource( $resource );
 		$this->_setAction( $action );
-		$this->_detectResourceMembers();
+		$this->_detectResourceMembers( $resource );
 
 		$this->_preProcess();
 
@@ -249,7 +237,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		}
 
 		//	Now all actions must be HTTP verbs
-		if ( !HttpMethod::defines( $this->_action ) )
+		if ( !HttpMethod::contains( $this->_action ) )
 		{
 			throw new BadRequestException( 'The action "' . $this->_action . '" is not supported.' );
 		}
@@ -282,10 +270,25 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 	/**
 	 * Apply the commonly used REST path members to the class
+	 *
+	 * @param string $resourcePath
+	 *
+	 * @return $this
 	 */
-	protected function _detectResourceMembers()
+	protected function _detectResourceMembers( $resourcePath = null )
 	{
-		$this->_resource = strtolower( Option::get( $this->_resourceArray, 0 ) );
+		$this->_resourcePath = $resourcePath;
+		$this->_resourceArray = ( !empty( $this->_resourcePath ) ) ? explode( '/', $this->_resourcePath ) : array();
+
+		if ( empty( $this->_resource ) )
+		{
+			if ( null !== ( $_resource = Option::get( $this->_resourceArray, 0 ) ) )
+			{
+				$this->_resource = $_resource;
+			}
+		}
+
+		return $this;
 	}
 
 	/**
@@ -416,7 +419,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		$_criteria = ( !( $criteria instanceof \CDbCriteria ) ? new \CDbCriteria( $criteria ) : $criteria );
 
 		//	Columns
-		$_criteria->select = ( !empty( $_columns ) ? implode( ', ', $_columns ) : array_keys( \Registry::model()->restMap() ) );
+		$_criteria->select = ( !empty( $_columns ) ? implode( ', ', $_columns ) : '*' );
 
 		//	Limits
 		$_limit = FilterInput::get( INPUT_GET, 'iDisplayLength', -1, FILTER_SANITIZE_NUMBER_INT );
@@ -470,24 +473,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function getResponse()
 	{
 		return $this->_response;
-	}
-
-	/**
-	 * @param string $resourcePath
-	 *
-	 * @return BasePlatformRestService
-	 */
-	protected function _setResource( $resourcePath = null )
-	{
-		$this->_resourcePath = rtrim( $resourcePath, '/' );
-		$this->_resourceArray = ( !empty( $this->_resourcePath ) ) ? explode( '/', $this->_resourcePath ) : array();
-
-		if ( empty( $this->_resource ) && null !== ( $_resource = Option::get( $this->_resourceArray, 0 ) ) )
-		{
-			$this->_resource = $_resource;
-		}
-
-		return $this;
 	}
 
 	/**
@@ -692,5 +677,25 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		$this->_extraActions[$action] = $handler;
 
 		return $this;
+	}
+
+	/**
+	 * @param array $requestPayload
+	 *
+	 * @return BasePlatformRestService
+	 */
+	public function setRequestPayload( $requestPayload )
+	{
+		$this->_requestPayload = $requestPayload;
+
+		return $this;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getRequestPayload()
+	{
+		return $this->_requestPayload;
 	}
 }

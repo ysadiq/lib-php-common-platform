@@ -61,9 +61,17 @@ class PlatformStorageTypes extends SeedEnum
 	/**
 	 * @var int
 	 */
+	const MONGOHQ = 9;
+	/**
+	 * @var int
+	 */
 	const OPENSTACK_OBJECT_STORAGE = 7;
 	/**
 	 * @var int
 	 */
 	const RACKSPACE_CLOUDFILES = 8;
+	/**
+	 * @var int
+	 */
+	const EMAIL_TRANSPORT = 10;
 }

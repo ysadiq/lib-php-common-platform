@@ -19,15 +19,13 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Platform\Services\RemoteFileSvc;
+use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Exceptions\NotFoundException;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use DreamFactory\Platform\Exceptions\BlobServiceException;
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Platform\Utility\DataFormat;
 use WindowsAzure\Blob\BlobRestProxy;
-use WindowsAzure\Blob\Models\Container;
 use WindowsAzure\Blob\Models\CreateBlobOptions;
 use WindowsAzure\Blob\Models\CreateContainerOptions;
 use WindowsAzure\Blob\Models\ListBlobsOptions;
@@ -53,7 +51,7 @@ class WindowsAzureBlobSvc extends RemoteFileSvc
 	protected $_blobConn = null;
 
 	//*************************************************************************
-	//	Members
+	//	Methods
 	//*************************************************************************
 
 	/**
@@ -227,7 +225,7 @@ class WindowsAzureBlobSvc extends RemoteFileSvc
 	 * @param array $properties
 	 * @param array $metadata
 	 *
-	 * @throws \Platform\Exceptions\BadRequestException
+	 * @throws BadRequestException
 	 * @return array
 	 */
 	public function createContainer( $properties, $metadata = array() )
@@ -254,7 +252,7 @@ class WindowsAzureBlobSvc extends RemoteFileSvc
 	 * @param string $container
 	 * @param array  $properties
 	 *
-	 * @throws \Platform\Exceptions\NotFoundException
+	 * @throws NotFoundException
 	 * @return void
 	 */
 	public function updateContainerProperties( $container, $properties = array() )
@@ -369,6 +367,8 @@ class WindowsAzureBlobSvc extends RemoteFileSvc
 	 * @param string $name
 	 * @param string $src_container
 	 * @param string $src_name
+	 *
+	 * @param array  $properties
 	 *
 	 * @return void
 	 */

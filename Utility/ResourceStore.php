@@ -20,19 +20,18 @@
 namespace DreamFactory\Platform\Utility;
 
 use Composer\Autoload\ClassLoader;
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Resources\User\Session;
-use DreamFactory\Platform\Services\BasePlatformRestService;
+use DreamFactory\Platform\Services\SystemManager;
+use DreamFactory\Platform\Yii\Models\BasePlatformModel;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Seed;
-use Kisma\Core\SeedUtility;
+use Kisma\Core\Interfaces\UtilityLike;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
@@ -44,7 +43,7 @@ use Kisma\Core\Utility\Option;
  *
  * This object DOES NOT check permissions.
  */
-class ResourceStore extends SeedUtility
+class ResourceStore implements UtilityLike
 {
 	//*************************************************************************
 	//* Constants
@@ -95,6 +94,14 @@ class ResourceStore extends SeedUtility
 	 * @var int The response format if not pass-through
 	 */
 	protected static $_responseFormat;
+	/**
+	 * @var bool
+	 */
+	protected static $_includeSchema = false;
+	/**
+	 * @var bool
+	 */
+	protected static $_includeCount = false;
 
 	//************************************************************************
 	//* Methods
@@ -114,6 +121,9 @@ class ResourceStore extends SeedUtility
 		static::$_service = Option::get( $settings, 'service' );
 		static::$_fields = Option::get( $settings, 'fields' );
 		static::$_extras = Option::get( $settings, 'extras' );
+		static::$_includeCount = Option::getBool( $settings, 'include_count', false );
+		static::$_includeSchema = Option::getBool( $settings, 'include_schema', false );
+		static::$_responseFormat = ResponseFormats::RAW;
 
 		if ( empty( static::$_resourceName ) )
 		{
@@ -126,16 +136,16 @@ class ResourceStore extends SeedUtility
 	 */
 
 	/**
-	 * @param array  $record
+	 * @param array  $records
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @return array
 	 */
-	public static function insert( $record, $rollback = false, $fields = null, $extras = null )
+	public static function insert( $records, $rollback = false, $fields = null, $extras = null )
 	{
-		return static::bulkInsert( array( $record ), $rollback, $fields, $extras );
+		return static::bulkInsert( $records, $rollback, $fields, $extras );
 	}
 
 	/**
@@ -146,22 +156,59 @@ class ResourceStore extends SeedUtility
 	 *
 	 * @return array
 	 */
-	public static function update( $record, $rollback = false, $fields = null, $extras = null )
+	public static function insertOne( $record, $rollback = false, $fields = null, $extras = null )
 	{
-		return static::bulkUpdate( array( $record ), $rollback, $fields, $extras );
+		return static::bulkInsert( array( $record ), $rollback, $fields, $extras, true );
 	}
 
 	/**
-	 * @param array $record
-	 *
-	 * @param null  $fields
-	 * @param null  $extras
+	 * @param array  $records
+	 * @param bool   $rollback
+	 * @param string $fields
+	 * @param array  $extras
 	 *
 	 * @return array
 	 */
-	public static function delete( $record, $fields = null, $extras = null )
+	public static function update( $records, $rollback = false, $fields = null, $extras = null )
 	{
-		return static::bulkDelete( array( $record ) );
+		return static::bulkUpdate( $records, $rollback, $fields, $extras );
+	}
+
+	/**
+	 * @param array  $record
+	 * @param bool   $rollback
+	 * @param string $fields
+	 * @param array  $extras
+	 *
+	 * @return array
+	 */
+	public static function updateOne( $record, $rollback = false, $fields = null, $extras = null )
+	{
+		return static::bulkUpdate( array( $record ), $rollback, $fields, $extras, true );
+	}
+
+	/**
+	 * @param array  $records
+	 * @param string $fields
+	 * @param array  $extras
+	 *
+	 * @return array
+	 */
+	public static function delete( $records, $fields = null, $extras = null )
+	{
+		return static::bulkDelete( $records, true, $fields, $extras );
+	}
+
+	/**
+	 * @param mixed  $record
+	 * @param string $fields
+	 * @param array  $extras
+	 *
+	 * @return array
+	 */
+	public static function deleteOne( $record, $fields = null, $extras = null )
+	{
+		return static::bulkDelete( array( $record ), true, $fields, $extras, true );
 	}
 
 	/**
@@ -180,6 +227,7 @@ class ResourceStore extends SeedUtility
 			$criteria = array( 'select' => $criteria );
 		}
 
+		//	Extract proper criteria from third-party library AJAX calls/parameters
 		switch ( static::$_responseFormat )
 		{
 			case ResponseFormats::DATATABLES:
@@ -187,7 +235,7 @@ class ResourceStore extends SeedUtility
 				break;
 
 			case ResponseFormats::JTABLE:
-//				$criteria = static::_buildDataTablesCriteria( explode( ',', static::$_fields ), $criteria );
+				$criteria = static::_buildDataTablesCriteria( explode( ',', static::$_fields ), $criteria );
 				break;
 		}
 
@@ -199,15 +247,100 @@ class ResourceStore extends SeedUtility
 	 */
 
 	/**
+	 * @param string $ids
+	 * @param mixed  $criteria
+	 * @param array  $params
+	 * @param bool   $single If true, will return a single array instead of an array of one row
+	 *
+	 * @return array|array[]
+	 */
+	public static function bulkSelectById( $ids, $criteria = null, $params = array(), $single = false )
+	{
+		if ( empty( $ids ) || array( null ) == $ids )
+		{
+			$ids = null;
+		}
+		else
+		{
+			$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
+		}
+
+		$_model = static::model();
+		$_pk = $_model->tableSchema->primaryKey;
+
+		$_criteria = static::_buildCriteria( $criteria );
+
+		if ( !empty( $_ids ) )
+		{
+			$_criteria->addInCondition( $_pk, $_ids );
+		}
+
+		$_response = array();
+		$_count = 0;
+
+		//	Only one row
+		if ( false !== $single )
+		{
+			if ( null !== ( $_model = static::_find( $_criteria, $params ) ) )
+			{
+				$_response = static::buildResponsePayload( $_model, false );
+				$_count++;
+			}
+		}
+		//	Multiple rows
+		else
+		{
+			$_models = static::_findAll( $_criteria, $params );
+
+			if ( !empty( $_models ) )
+			{
+				foreach ( $_models as $_model )
+				{
+					$_response[] = static::buildResponsePayload( $_model, false );
+					$_count++;
+				}
+			}
+
+			$_response = array( 'record' => $_response );
+		}
+
+		if ( false !== static::$_includeSchema )
+		{
+			$_response['meta']['schema'] = static::getSchemaForPayload( $_model );
+		}
+
+		//	Return a count of rows
+		if ( false !== static::$_includeCount )
+		{
+			$_response['meta']['count'] = $_count;
+		}
+
+		return $_response;
+	}
+
+	/**
+	 * @param BasePlatformModel $model
+	 *
+	 * @return array
+	 */
+	public static function getSchemaForPayload( $model )
+	{
+		return SqlDbUtilities::describeTable( Pii::db(), $model->tableName(), SystemManager::SYSTEM_TABLE_PREFIX );
+	}
+
+	/**
 	 * @param array  $records
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
+	 * @param bool   $singleRow
 	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @throws \DreamFactory\Platform\Exceptions\RestException
+	 * @throws \Exception
 	 * @return array
 	 */
-	public static function bulkInsert( $records, $rollback = false, $fields = null, $extras = null )
+	public static function bulkInsert( $records, $rollback = false, $fields = null, $extras = null, $singleRow = false )
 	{
 		static::_validateRecords( $records );
 
@@ -217,7 +350,7 @@ class ResourceStore extends SeedUtility
 		try
 		{
 			//	Start a transaction
-			if ( false !== $rollback )
+			if ( !$singleRow && $rollback )
 			{
 				$_transaction = Pii::db()->beginTransaction();
 			}
@@ -230,21 +363,27 @@ class ResourceStore extends SeedUtility
 				}
 				catch ( \Exception $_ex )
 				{
+					if ( $singleRow )
+					{
+						throw $_ex;
+					}
+					if ( $rollback && $_transaction )
+					{
+						$_transaction->rollBack();
+						throw $_ex;
+					}
+
 					$_response[] = array( 'error' => array( 'message' => $_ex->getMessage(), 'code' => $_ex->getCode() ) );
 				}
 			}
 		}
+		catch ( RestException $_ex )
+		{
+			throw $_ex;
+		}
 		catch ( \Exception $_ex )
 		{
-			$_response[] = array( 'error' => array( 'message' => $_ex->getMessage(), 'code' => $_ex->getCode() ) );
-
-			if ( false !== $rollback && $_transaction )
-			{
-				//	Rollback
-				$_transaction->rollback();
-
-				return array( 'record' => $_response );
-			}
+			throw new InternalServerErrorException( $_ex->getMessage(), $_ex->getCode() );
 		}
 
 		//	Commit
@@ -253,7 +392,7 @@ class ResourceStore extends SeedUtility
 			$_transaction->commit();
 		}
 
-		return array( 'record' => $_response );
+		return $singleRow ? current( $_response ) : array( 'record' => $_response );
 	}
 
 	/**
@@ -262,11 +401,12 @@ class ResourceStore extends SeedUtility
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
+	 * @param bool   $singleRow
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
-	public static function bulkUpdateById( $ids, $record, $rollback = false, $fields = null, $extras = null )
+	public static function bulkUpdateById( $ids, $record, $rollback = false, $fields = null, $extras = null, $singleRow = false )
 	{
 		static::_validateRecords( $record );
 
@@ -291,20 +431,19 @@ class ResourceStore extends SeedUtility
 			unset( $_record );
 		}
 
-		return static::bulkUpdate( $_records, $rollback, $fields, $extras );
+		return static::bulkUpdate( $_records, $rollback, $fields, $extras, $singleRow );
 	}
 
 	/**
-	 * @param array $records
-	 * @param bool  $rollback
+	 * @param array  $records
+	 * @param bool   $rollback
+	 * @param string $fields
+	 * @param string $extras
+	 * @param bool   $singleRow
 	 *
-	 * @param null  $fields
-	 * @param null  $extras
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
-	public static function bulkUpdate( $records, $rollback = false, $fields = null, $extras = null )
+	public static function bulkUpdate( $records, $rollback = false, $fields = null, $extras = null, $singleRow = false )
 	{
 		static::_validateRecords( $records );
 
@@ -334,7 +473,7 @@ class ResourceStore extends SeedUtility
 					//	Rollback
 					$_transaction->rollback();
 
-					return array( 'record' => $_response );
+					return $singleRow ? current( $_response ) : array( 'record' => $_response );
 				}
 			}
 		}
@@ -345,43 +484,70 @@ class ResourceStore extends SeedUtility
 			$_transaction->commit();
 		}
 
-		return array( 'record' => $_response );
+		return $singleRow ? current( $_response ) : array( 'record' => $_response );
 	}
 
 	/**
 	 * @param string $ids
 	 * @param bool   $rollback
 	 * @param string $fields
-	 * @param array  $extras
+	 * @param string $extras
+	 * @param bool   $singleRow
 	 *
 	 * @return array
 	 */
-	public static function bulkDeleteById( $ids, $rollback = false, $fields = null, $extras = null )
+	public static function bulkDeleteById( $ids, $rollback = false, $fields = null, $extras = null, $singleRow = false )
 	{
 		$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
+		$_response = array();
+		$_transaction = null;
 
-		$_records = array();
-		$_pk = static::model()->tableSchema->primaryKey;
+		//	Start a transaction
+		if ( false !== $rollback )
+		{
+			$_transaction = Pii::db()->beginTransaction();
+		}
 
 		foreach ( $_ids as $_id )
 		{
-			$_records[] = array( $_pk => $_id );
+			// records could be an array of ids or records containing an id field-value
+			try
+			{
+				$_response[] = static::_deleteInternal( $_id, $fields, $extras );
+			}
+			catch ( \CDbException $_ex )
+			{
+				$_response[] = array( 'error' => array( 'message' => $_ex->getMessage(), 'code' => $_ex->getCode() ) );
+
+				if ( false !== $rollback && $_transaction )
+				{
+					//	Rollback
+					$_transaction->rollback();
+
+					return $singleRow ? current( $_response ) : array( 'record' => $_response );
+				}
+			}
 		}
 
-		return static::bulkDelete( $_records, $rollback, $fields, $extras );
+		//	Commit
+		if ( $_transaction )
+		{
+			$_transaction->commit();
+		}
+
+		return $singleRow ? current( $_response ) : array( 'record' => $_response );
 	}
 
 	/**
-	 * @param array $records
-	 * @param bool  $rollback
+	 * @param array  $records
+	 * @param bool   $rollback
+	 * @param string $fields
+	 * @param string $extras
+	 * @param bool   $singleRow
 	 *
-	 * @param null  $fields
-	 * @param null  $extras
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
-	public static function bulkDelete( $records, $rollback = false, $fields = null, $extras = null )
+	public static function bulkDelete( $records, $rollback = false, $fields = null, $extras = null, $singleRow = false )
 	{
 		static::_validateRecords( $records );
 
@@ -398,9 +564,19 @@ class ResourceStore extends SeedUtility
 
 		foreach ( $records as $_record )
 		{
+			// records could be an array of ids or records containing an id field-value
+
+			if ( is_array( $_record ) )
+			{
+				$_id = Option::get( $_record, $_pk );
+			}
+			else
+			{
+				$_id = $_record;
+			}
 			try
 			{
-				$_response[] = static::_deleteInternal( Option::get( $_record, $_pk ), $fields, $extras );
+				$_response[] = static::_deleteInternal( $_id, $fields, $extras );
 			}
 			catch ( \CDbException $_ex )
 			{
@@ -411,7 +587,7 @@ class ResourceStore extends SeedUtility
 					//	Rollback
 					$_transaction->rollback();
 
-					return array( 'record' => $_response );
+					return $singleRow ? current( $_response ) : array( 'record' => $_response );
 				}
 			}
 		}
@@ -422,62 +598,7 @@ class ResourceStore extends SeedUtility
 			$_transaction->commit();
 		}
 
-		return array( 'record' => $_response );
-	}
-
-	/**
-	 * @param string $ids
-	 * @param mixed  $criteria
-	 * @param array  $params
-	 * @param bool   $single If true, will return a single array instead of an array of one row
-	 *
-	 * @return array|array[]
-	 */
-	public static function bulkSelectById( $ids, $criteria = null, $params = array(), $single = false )
-	{
-		if ( empty( $ids ) || array( null ) == $ids )
-		{
-			$ids = null;
-		}
-		else
-		{
-			$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
-		}
-
-		$_pk = static::model()->tableSchema->primaryKey;
-
-		$_criteria = new \CDbCriteria( $criteria );
-
-		if ( !empty( $_ids ) )
-		{
-			$_criteria->addInCondition( $_pk, $_ids );
-		}
-
-		$_response = array();
-
-		//	Only one row
-		if ( false !== $single )
-		{
-			if ( null !== ( $_model = static::_find( $_criteria, $params ) ) )
-			{
-				$_response = static::buildResponsePayload( $_model, false );
-			}
-		}
-		//	Multiple rows
-		else
-		{
-			$_models = static::_findAll( $_criteria, $params );
-
-			if ( !empty( $_models ) )
-			{
-				foreach ( $_models as $_model )
-				{
-					$_response[] = static::buildResponsePayload( $_model, false );
-				}
-			}
-		}
-
-		return $_response;
+		return $singleRow ? current( $_response ) : array( 'record' => $_response );
 	}
 
 	/**
@@ -511,9 +632,9 @@ class ResourceStore extends SeedUtility
 
 		if ( !empty( static::$_extras ) )
 		{
-			$_relations = $resource->relations();
+			$_availableRelations = array_keys( $resource->relations() );
 
-			if ( !empty( $_relations ) )
+			if ( !empty( $_availableRelations ) )
 			{
 				$_relatedData = array();
 
@@ -524,13 +645,15 @@ class ResourceStore extends SeedUtility
 				{
 					$_extraName = $_extra['name'];
 
-					if ( !isset( $_relations[$_extraName] ) )
+					if ( !in_array( $_extraName, $_availableRelations ) )
 					{
-						throw new BadRequestException( 'Invalid relation "' . $_extraName . '" requested . ' );
+						Log::error( 'Invalid relation "' . $_extraName . '" requested. Available are: ' . implode( ', ', $_availableRelations ) );
+						continue;
 					}
 
 					$_extraFields = $_extra['fields'];
 					$_relations = $resource->getRelated( $_extraName, true );
+					$_relatedPayload = array();
 
 					//	Got relations?
 					if ( !empty( $_relations ) )
@@ -544,18 +667,19 @@ class ResourceStore extends SeedUtility
 
 							foreach ( $_relations as $_relation )
 							{
-								$_payload[] = $_relation->getAttributes( $_relatedFields );
+								$_relatedPayload[] = $_relation->getAttributes( $_relatedFields );
 								unset( $_relation );
 							}
-
-							$_relatedData[$_extraName] = $_payload;
 						}
 
 						unset( $_relatedFields );
 					}
 
+					$_relatedData[$_extraName] = $_relatedPayload;
 					unset( $_extra, $_relations, $_relative, $_extraFields );
 				}
+
+				unset( $_availableRelations );
 
 				if ( !empty( $_relatedData ) )
 				{
@@ -646,7 +770,11 @@ class ResourceStore extends SeedUtility
 		{
 			try
 			{
-				return new $_className( Pii::controller(), $resources );
+				/** @var BasePlatformRestResource $_resource */
+				$_resource = new $_className( Pii::controller(), $resources );
+				$_resource->setResponseFormat( static::$_responseFormat );
+
+				return $_resource;
 			}
 			catch ( \Exception $_ex )
 			{
@@ -667,6 +795,8 @@ class ResourceStore extends SeedUtility
 		{
 			Log::error( 'Invalid model class identified: ' . $_className . ' Error: ' . $_ex->getMessage() );
 		}
+
+		return null;
 	}
 
 	/**
@@ -680,7 +810,7 @@ class ResourceStore extends SeedUtility
 	 */
 	public static function checkPermission( $operation, $service = null, $resource = null )
 	{
-		Session::checkSessionPermission( $operation, $service ? : static::$_resourceName, $resource );
+		Session::checkSessionPermission( $operation, $service ? : static::$_service, $resource );
 
 		return true;
 	}
@@ -857,6 +987,7 @@ class ResourceStore extends SeedUtility
 
 		if ( empty( $id ) )
 		{
+			Log::error( 'Update request with no id supplied: ' . print_r( $record, true ) );
 			throw new BadRequestException( 'Identifying field "id" can not be empty for update request . ' );
 		}
 
@@ -876,7 +1007,7 @@ class ResourceStore extends SeedUtility
 		}
 		catch ( \Exception $_ex )
 		{
-			throw new InternalServerErrorException( 'Failed	to update resource: ' . $_ex->getMessage() );
+			throw new InternalServerErrorException( 'Failed to update resource: ' . $_ex->getMessage() );
 		}
 	}
 
@@ -911,6 +1042,21 @@ class ResourceStore extends SeedUtility
 	}
 
 	/**
+	 * @param array|\CDbCriteria $criteria
+	 *
+	 * @return \CDbCriteria
+	 */
+	protected static function _buildCriteria( $criteria = null )
+	{
+		if ( empty( $criteria ) )
+		{
+			$criteria = array();
+		}
+
+		return new \CDbCriteria( $criteria );
+	}
+
+	/**
 	 * Adds criteria garnered from the query string from DataTables
 	 *
 	 * @param array|\CDbCriteria $criteria
@@ -921,7 +1067,7 @@ class ResourceStore extends SeedUtility
 	 */
 	protected static function _buildDataTablesCriteria( $columns, $criteria = null )
 	{
-		$criteria = $criteria ? : array();
+		$criteria = static::_buildCriteria( $criteria );
 		$_criteria = ( $criteria instanceof \CDbCriteria ? $criteria : new \CDbCriteria( $criteria ) );
 
 		//	Columns
@@ -1109,4 +1255,35 @@ class ResourceStore extends SeedUtility
 		return self::$_responseFormat;
 	}
 
+	/**
+	 * @param boolean $includeCount
+	 */
+	public static function setIncludeCount( $includeCount )
+	{
+		self::$_includeCount = $includeCount;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public static function getIncludeCount()
+	{
+		return self::$_includeCount;
+	}
+
+	/**
+	 * @param boolean $includeSchema
+	 */
+	public static function setIncludeSchema( $includeSchema )
+	{
+		self::$_includeSchema = $includeSchema;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public static function getIncludeSchema()
+	{
+		return self::$_includeSchema;
+	}
 }

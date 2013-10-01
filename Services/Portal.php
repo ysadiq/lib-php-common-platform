@@ -19,7 +19,10 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Platform\Enums\PortalAccountTypes;
+use DreamFactory\Oasys\Enums\Flows;
+use DreamFactory\Oasys\Oasys;
+use DreamFactory\Oasys\Providers\BaseOAuthProvider;
+use DreamFactory\Oasys\Stores\FileSystem;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
@@ -28,8 +31,10 @@ use DreamFactory\Platform\Services\Portal\BasePortalClient;
 use DreamFactory\Platform\Services\Portal\OAuthResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
-use DreamFactory\Platform\Yii\Models\PortalAccount;
+use DreamFactory\Platform\Yii\Models\Provider;
+use DreamFactory\Platform\Yii\Models\ProviderUser;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
@@ -64,7 +69,7 @@ class Portal extends BaseSystemRestService
 	 */
 	protected $_parameters;
 	/**
-	 * @var BasePortalClient
+	 * @var BaseOAuthProvider
 	 */
 	protected $_client;
 	/**
@@ -135,110 +140,27 @@ class Portal extends BaseSystemRestService
 	/**
 	 * @param string $portalName
 	 *
-	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-	 *
-	 * @return array
+	 * @throws BadRequestException
+	 * @return Provider
 	 */
 	protected function _validateProvider( $portalName = null )
 	{
-		$_config = \Kisma::get( 'app.config_path' ) . '/portals/' . $portalName . '.php';
-
-		if ( !file_exists( $_config ) || !is_readable( $_config ) )
+		if ( null === ( $_provider = Provider::model()->byPortal( $portalName )->find() ) )
 		{
-			throw new NotFoundException( 'Invalid portal' );
+			throw new BadRequestException( 'The provider "' . $portalName . '" does not exist.' );
 		}
 
-		return require $_config;
+		return $_provider;
 	}
 
 	/**
 	 * @param string $portalName
 	 *
-	 * @return PortalAccount
+	 * @return ProviderUser
 	 */
 	protected function _getAuthorization( $portalName )
 	{
-		return ResourceStore::model( 'portal_account' )->byUserPortal( $this->_currentUserId, $portalName )->find();
-	}
-
-	/**
-	 * @param string $state
-	 * @param array  $config
-	 * @param int    $providerId
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\RestException
-	 * @return string
-	 */
-	protected function _registerAuthorization( $state, $config, $providerId )
-	{
-		$_payload = array(
-			'state'  => $state,
-			'config' => json_encode( $config ),
-		);
-
-		$_endpoint = Pii::getParam( 'cloud.endpoint' ) . '/oauth/register';
-		$_redirectUri = Pii::getParam( 'cloud.endpoint' ) . '/oauth/authorize';
-
-		$_result = Curl::post( $_endpoint, $_payload );
-
-		if ( false === $_result || !is_object( $_result ) )
-		{
-			throw new InternalServerErrorException( 'Error registering authorization request.' );
-		}
-
-		if ( !$_result->success || !$_result->details )
-		{
-			throw new InternalServerErrorException( 'Error registering authorization request: ' . print_r( $_result, true ) );
-		}
-
-		Log::info( 'Registering auth request: ' . $state );
-
-		$_endpoint = Pii::getParam( 'cloud.endpoint' ) . '/oauth/register?state=' . $state;
-		$_result = Curl::get( $_endpoint );
-
-		if ( false === $_result || !is_object( $_result ) )
-		{
-			Log::error( 'Error checking authorization request.', HttpResponse::InternalServerError );
-
-			return false;
-		}
-
-		if ( !$_result->success || !$_result->details )
-		{
-			return false;
-		}
-
-		if ( null === ( $_account = PortalAccount::model()->byUserService( $this->_currentUserId, $providerId )->find() ) )
-		{
-			$_account = new PortalAccount();
-			$_account->user_id = $this->_currentUserId;
-			$_account->provider_id = $providerId;
-			$_account->account_type = PortalAccountTypes::INDIVIDUAL_USER;
-		}
-
-		$_account->auth_text = $_result->details->token;
-		$_account->save();
-
-		return $_redirectUri;
-	}
-
-	/**
-	 * @param string $state
-	 * @param string $portalName
-	 *
-	 * @return string
-	 */
-	protected function _checkPriorAuthorization( $state, $portalName )
-	{
-		//	See if there's an entry in the service auth table...
-		$_account = $this->_getAuthorization( $portalName );
-
-		if ( empty( $_account ) )
-		{
-			return false;
-		}
-
-		return $_account->auth_text;
+		return ProviderUser::model()->byUserPortal( $this->_currentUserId, $portalName )->find();
 	}
 
 	/**
@@ -250,85 +172,114 @@ class Portal extends BaseSystemRestService
 	 * /rest/portal/{service_name}/{service request string}
 	 *
 	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @throws BadRequestException
 	 * @return bool
-	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-	 * @throws \Exception
 	 */
 	protected function _handleResource()
 	{
-		$_host = \Kisma::get( 'app.host_name' );
+		if ( empty( $this->_resource ) && $this->_action == HttpMethod::Get )
+		{
+			$_providers = array();
+
+			if ( null !== ( $_models = Provider::model()->findAll() ) )
+			{
+				/** @var Provider $_row */
+				foreach ( $_models as $_row )
+				{
+					$_providers[] = array(
+						'id'            => $_row->id,
+						'api_name'      => $_row->api_name,
+						'provider_name' => $_row->provider_name,
+						'config_text'   => $_row->config_text
+					);
+				}
+			}
+
+			return array( 'resource' => $_providers );
+		}
 
 		//	Find service auth record
-		$_provider = $this->_validateProvider();
+		$_providerModel = $this->_validateProvider( $this->_resource );
+		$_providerId = $_providerModel->api_name;
+		$_flow = FilterInput::request( 'flow', Flows::CLIENT_SIDE, FILTER_SANITIZE_NUMBER_INT );
 
-		$this->_client = new OAuthResource( $this, $_provider );
-		$this->_client->setInteractive( $this->_interactive );
-		$_state = sha1( $this->_currentUserId . '_' . $this->_resource . '_' . $this->_client->getClientId() );
+		//	Set our store...
+		Oasys::setStore( $_store = new FileSystem( $_sid = session_id() ) );
 
-		$_token = $this->_checkPriorAuthorization( $_state, $_provider['api_name'] );
+		$_config = Provider::buildConfig( $_providerModel,
+										  array(
+											   'flow_type'    => $_flow,
+											   'redirect_uri' => Curl::currentUrl( false ) . '?pid=' . $_providerId,
+										  ),
+										  Pii::getState( $_providerId . '.user_config', array() )
+		);
 
-		if ( !empty( $_token ) )
+		$_provider = Oasys::getProvider( $_providerId, $_config );
+
+		if ( $_provider->handleRequest() )
 		{
-			$this->_client->setAccessToken( $_token );
-		}
-		else
-		{
-			if ( !$this->_client->authorized( false ) )
+			//	Pass the request on...
+			try
 			{
-				$_config
-					= array(
-					'api_name'               => $_provider,
-					'user_id'                => $this->_currentUserId,
-					'host_name'              => $_host,
-					'client'                 => serialize( $this->_client ),
-					'resource'               => $this->_resourcePath,
-					'authorize_redirect_uri' => 'http://' . Option::server( 'HTTP_HOST', $_host ) . Option::server( 'REQUEST_URI', '/' ),
+				//	Recreate the request...
+				$_params = $this->_resourceArray;
+
+				//	Shift off the service name
+				array_shift( $_params );
+				$_path = '/' . implode( '/', $_params );
+
+				if ( null !== ( $_queryString = $this->buildParameterString( $this->_action ) ) )
+				{
+					$_path .= '?' . $_queryString;
+				}
+
+				$_response = $_provider->fetch(
+									   $_path,
+									   RestData::getPostDataAsArray(),
+									   $this->_action,
+									   $this->_headers ? : array()
 				);
 
-				if ( false !== ( $_redirectUri = $this->_registerAuthorization( $_state, $_config, $_provider->id ) ) )
+				if ( false === $_response )
 				{
-					$this->_client->setRedirectUri( $_redirectUri );
+					throw new InternalServerErrorException( 'Network error', $_response['code'] );
 				}
 
-				if ( !$this->_client->getInteractive() )
+				/**
+				 * Results from fetch always come back like this:
+				 *
+				 *  array(
+				 *            'result'       => the actual result of the request from the provider
+				 *            'code'         => the HTTP response code of the request
+				 *            'content_type' => the content type returned
+				 * )
+				 *
+				 * If the content type is json, the 'result' has already been decoded.
+				 */
+				if ( is_string( $_response['result'] ) && false !== stripos( $_response['content_type'], 'application/json', 0 ) )
 				{
-					return array( 'redirect_uri' => $this->_client->getAuthorizationUrl( array( 'state' => $_state ) ) );
+					return json_decode( $_response['result'] );
 				}
+
+				if ( HttpResponse::Ok != $_response['code'] )
+				{
+					throw new RestException( $_response['code'] );
+				}
+
+				return $_response['result'];
+			}
+			catch ( \Exception $_ex )
+			{
+				Log::error( 'Portal request exception: ' . $_ex->getMessage() );
+
+				//	No soup for you!
+				header( 'Location: /?error=' . urlencode( $_ex->getMessage() ) );
+				exit();
 			}
 		}
 
-		if ( $this->_client->authorized( true, array( 'state' => $_state ) ) )
-		{
-			//	Recreate the request...
-			$_params = $this->_resourceArray;
-
-			//	Shift off the service name
-			array_shift( $_params );
-			$_path = '/' . implode( '/', $_params );
-
-			if ( null !== ( $_queryString = $this->buildParameterString( $this->_action ) ) )
-			{
-				$_path .= '?' . $_queryString;
-			}
-
-			$_response = $this->_client->fetch(
-				$_path,
-				RestData::getPostDataAsArray(),
-				$this->_action,
-				$this->_headers ? : array()
-			);
-
-			if ( false === $_response )
-			{
-				throw new InternalServerErrorException( 'Network error', $_response['code'] );
-			}
-
-			if ( false !== stripos( $_response['content_type'], 'application/json', 0 ) )
-			{
-				return json_decode( $_response['result'] );
-			}
-
-			return $_response['result'];
-		}
+		//	Shouldn't really get here...
+		throw new BadRequestException( 'The request you submitted is confusing.' );
 	}
 }

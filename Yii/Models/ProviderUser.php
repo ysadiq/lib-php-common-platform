@@ -30,8 +30,8 @@ use Kisma\Core\Utility\Sql;
  * Columns:
  *
  * @property int                 $user_id
- * @property int                 $provider_id
  * @property string              $provider_user_id
+ * @property int                 $provider_id
  * @property int                 $account_type
  * @property array               $auth_text
  * @property string              $last_use_date
@@ -116,6 +116,116 @@ class ProviderUser extends BasePlatformSystemModel
 					 'auth_text'        => 'Authorization',
 					 'last_use_date'    => 'Last Used',
 				)
+			)
+		);
+	}
+
+	/**
+	 * @param int    $userId
+	 * @param string $portal
+	 *
+	 * @return $this
+	 */
+	public function byUserPortal( $userId, $portal )
+	{
+		$this->getDbCriteria()->mergeWith(
+			array(
+				 'condition' => 'user_id = :user_id and provider_id = ( select p.id from df_sys_provider p where p.api_name = :api_name limit 1 order by id )',
+				 'params'    => array(
+					 ':user_id'  => $userId,
+					 ':api_name' => trim( strtolower( $portal ) ),
+				 ),
+			)
+		);
+
+		return $this;
+	}
+
+	/**
+	 * @param int $userId
+	 * @param int $portalId
+	 *
+	 * @return $this
+	 */
+	public function byUserPortalId( $userId, $portalId )
+	{
+		$this->getDbCriteria()->mergeWith(
+			array(
+				 'condition' => 'user_id = :user_id and provider_id = :portal_id',
+				 'params'    => array(
+					 ':user_id'   => $userId,
+					 ':portal_id' => $portalId,
+				 ),
+			)
+		);
+
+		return $this;
+	}
+
+	/**
+	 * @param int $userId
+	 * @param int $providerUserId
+	 *
+	 * @return $this
+	 */
+	public function byUserProviderUserId( $userId, $providerUserId )
+	{
+		$this->getDbCriteria()->mergeWith(
+			array(
+				 'condition' => 'user_id = :user_id and provider_user_id = :provider_user_id',
+				 'params'    => array(
+					 ':user_id'          => $userId,
+					 ':provider_user_id' => $providerUserId,
+				 ),
+			)
+		);
+
+		return $this;
+	}
+
+	/**
+	 * @param string $email
+	 *
+	 * @return User
+	 */
+	public static function getByEmail( $email )
+	{
+		return User::model()->find(
+			'email = :email',
+			array(
+				 ':email' => $email,
+			)
+		);
+	}
+
+	/**
+	 * @param int $userId
+	 *
+	 * @return Provider[]
+	 */
+	public static function getLogins( $userId )
+	{
+		return static::model()->findAll(
+			'user_id = :user_id',
+			array(
+				 ':user_id' => $userId,
+			)
+		);
+	}
+
+	/**
+	 * @param int $userId
+	 * @param int $providerId
+	 *
+	 * @return ProviderUser
+	 */
+	public static function getLogin( $userId, $providerId )
+	{
+		return static::model()->find(
+			'user_id = :user_id and provider_id = :provider_id',
+			array(
+				 ':user_id'     => $userId,
+				 ':provider_id' => $providerId,
 			)
 		);
 	}

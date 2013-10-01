@@ -22,36 +22,19 @@ namespace DreamFactory\Platform\Resources\System;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BasePlatformService;
+use DreamFactory\Platform\Services\SystemManager;
+use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
-use Swagger\Annotations as SWG;
 
 /**
  * Config
  * DSP system administration manager
- *
- * @SWG\Resource(
- *   resourcePath="/system"
- * )
- *
- * @SWG\Model(id="Config",
- * @SWG\Property(name="dsp_version",type="string",description="Version of the DSP software."),
- * @SWG\Property(name="db_version",type="string",description="Version of the database schema."),
- * @SWG\Property(name="allow_open_registration",type="boolean",description="Allow guests to register for a user account."),
- * @SWG\Property(name="open_reg_role_id",type="int",description="Default Role Id assigned to newly registered users."),
- * @SWG\Property(name="allow_guest_user",type="boolean",description="Allow app access for non-authenticated users."),
- * @SWG\Property(name="guest_role_id",type="int",description="Role Id assigned for all guest sessions."),
- * @SWG\Property(name="editable_profile_fields",type="string",description="Comma-delimited list of fields the user is allowed to edit."),
- * @SWG\Property(name="allowed_hosts",type="Array",items="$ref:HostInfo",description="CORS whitelist of allowed remote hosts.")
- * )
- * @SWG\Model(id="HostInfo",
- * @SWG\Property(name="host",type="string",description="URL, server name, or * to define the CORS host."),
- * @SWG\Property(name="is_enabled",type="boolean",description="Allow this host's configuration to be used by CORS."),
- * @SWG\Property(name="verbs",type="Array",items="$ref:string",description="Allowed HTTP verbs for this host.")
- * )
  *
  */
 class Config extends BaseSystemRestResource
@@ -71,43 +54,58 @@ class Config extends BaseSystemRestResource
 	public function __construct( $consumer = null, $resourceArray = array() )
 	{
 		parent::__construct(
-			$consumer,
-			array(
-				 'name'           => 'Configuration',
-				 'type'           => 'System',
-				 'service_name'   => 'system',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'config',
-				 'description'    => 'Service general configuration',
-				 'is_active'      => true,
-				 'resource_array' => $resourceArray,
-				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-					 static::Put   => static::Post,
-					 static::Merge => static::Post,
-				 )
-			)
+			  $consumer,
+			  array(
+				   'name'           => 'Configuration',
+				   'type'           => 'System',
+				   'service_name'   => 'system',
+				   'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				   'api_name'       => 'config',
+				   'description'    => 'Service general configuration',
+				   'is_active'      => true,
+				   'resource_array' => $resourceArray,
+				   'verb_aliases'   => array(
+					   static::Patch => static::Post,
+					   static::Merge => static::Post,
+				   )
+			  )
 		);
 	}
 
 	/**
-	 * @SWG\Api(
-	 *       path="/system/config", description="Operations for system configuration options.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="Retrieve system configuration options.",
-	 *       notes="The retrieved properties control how the system behaves.",
-	 *       responseClass="Config", nickname="getConfig"
-	 *     )
-	 *   )
-	 * )
+	 * Override for GET of public info
 	 *
-	 * @param string $fields
-	 * @param bool   $includeSchema
-	 * @param array  $extras
+	 * @param string $operation
+	 * @param null   $resource
 	 *
-	 * @return array
+	 * @return bool
 	 */
+	public function checkPermission( $operation, $resource = null )
+	{
+		if ( 'read' == $operation )
+		{
+			return true;
+		}
+
+		return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource );
+	}
+
+	/**
+	 * {@InheritDoc}
+	 */
+	protected function _determineRequestedResource( &$ids = null, &$records = null )
+	{
+		$_payload = parent::_determineRequestedResource( $ids, $records );
+
+		//	Check for CORS changes...
+		if ( null !== ( $_hostList = Option::get( $_payload, 'allowed_hosts', null, true ) ) )
+		{
+//			Log::debug( 'Allowed hosts given: ' . print_r( $_hostList, true ) );
+			SystemManager::setAllowedHosts( $_hostList );
+		}
+
+		return $_payload;
+	}
 
 	/**
 	 * {@InheritDoc}
@@ -122,26 +120,83 @@ class Config extends BaseSystemRestResource
 				$this->_response = $_record;
 			}
 		}
-
-		$this->_response['dsp_version'] = DSP_VERSION;
-<<<<<<< HEAD
-		if ( false !== ( $this->_response['allow_remote_logins'] = Pii::getParam( 'dsp.allow_remote_logins' ) ) )
+		else if ( is_array( $this->_response ) && isset( $this->_response[0] ) && sizeof( $this->_response ) == 1 )
 		{
-			$_rows = Sql::findAll( 'select api_name from df_sys_provider order by 1', array(), Pii::pdo() );
-
-			if ( !empty( $_rows ) )
-			{
-				$this->_response['remote_login_providers'] = array();
-				foreach ( $_rows as $_row )
-				{
-					$this->_response['remote_login_providers'][] = $_row['api_name'];
-				}
-			}
+			$this->_response = $this->_response[0];
 		}
-=======
-		$this->_response['allow_remote_logins'] = Pii::getParam( 'dsp.allow_remote_logins' );
-		$this->_response['remote_login_providers'] = Pii::getParam( 'dsp.remote_login_providers' );
->>>>>>> parent of 889636b... merge revert #2
+
+		/**
+		 * Versioning and upgrade support
+		 */
+		$this->_response['dsp_version'] = SystemManager::getCurrentVersion();
+
+		if ( !Fabric::fabricHosted() )
+		{
+			$this->_response['latest_version'] = SystemManager::getLatestVersion();
+			$this->_response['upgrade_available'] = version_compare( $this->_response['dsp_version'], $this->_response['latest_version'], '<' );
+		}
+
+		/**
+		 * Remote login support
+		 */
+		$this->_response['allow_remote_logins'] = ( Pii::getParam( 'dsp.allow_remote_logins', false ) && $this->_response['allow_open_registration'] );
+
+		if ( false !== $this->_response['allow_remote_logins'] )
+		{
+			$this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
+
+			$_data = array();
+
+			$_providers = Fabric::getProviderCredentials();
+
+			foreach ( $_providers as $_row )
+			{
+				$_data[] = array(
+					'id'            => $_row->id,
+					'provider_name' => $_row->provider_name_text,
+					'api_name'      => $_row->endpoint_text,
+					'config_text'   => array(),
+					'is_active'     => $_row->enable_ind,
+					'is_system'     => true,
+				);
+
+				unset( $_row );
+			}
+
+			unset( $_global );
+
+			/** @var Provider[] $_models */
+			$_models = ResourceStore::model( 'provider' )->findAll( array( 'order' => 'provider_name' ) );
+
+			if ( !empty( $_models ) )
+			{
+				foreach ( $_models as $_row )
+				{
+					$_data[] = $_row->getAttributes();
+					unset( $_row );
+				}
+
+				unset( $_models );
+			}
+
+			$this->_response['remote_login_providers'] = $_data;
+
+			if ( empty( $_data ) )
+			{
+				$this->_response['allow_remote_logins'] = false;
+			}
+
+			unset( $_data );
+		}
+		else
+		{
+			//	No providers, no remote logins
+			$this->_response['allow_remote_logins'] = false;
+			$this->_response['allow_admin_remote_logins'] = false;
+		}
+
+		/** CORS support */
+		$this->_response['allowed_hosts'] = SystemManager::getAllowedHosts();
 
 		parent::_postProcess();
 	}

@@ -16,9 +16,9 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\ServiceHandler;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Seed;
@@ -62,7 +62,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	protected $_proxyClient;
 	/**
-	 * @var The current user ID
+	 * @var int current user ID
 	 */
 	protected $_currentUserId;
 
@@ -94,6 +94,17 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 		}
 
 		$this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
+	}
+
+	/**
+	 * Destructor
+	 */
+	public function __destruct()
+	{
+		//	Save myself!
+		ServiceHandler::cacheService( $this->_apiName, $this );
+
+		parent::__destruct();
 	}
 
 	/**
@@ -248,7 +259,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	}
 
 	/**
-	 * @return \DreamFactory\Platform\Services\The
+	 * @return int
 	 */
 	public function getUserId()
 	{

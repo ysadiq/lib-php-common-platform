@@ -129,42 +129,87 @@ class SecureJson extends BaseModelBehavior
 	 */
 	public function beforeValidate( $event )
 	{
-		if ( empty( $this->_secureAttributes ) )
+		if ( !empty( $this->_secureAttributes ) )
 		{
-			return;
-		}
-
-		foreach ( Option::clean( $this->_secureAttributes ) as $_attribute )
-		{
-			if ( $event->sender->hasAttribute( $_attribute ) )
+			foreach ( Option::clean( $this->_secureAttributes ) as $_attribute )
 			{
-				if ( false !== ( $_secrets = $this->_toSecureJson( $event->sender->getAttribute( $_attribute ) ) ) )
+				if ( $event->sender->hasAttribute( $_attribute ) )
 				{
-					$event->sender->setAttribute( $_attribute, $_secrets );
-					continue;
-				}
+					if ( false !== ( $_secrets = $this->_toSecureJson( $event->sender->getAttribute( $_attribute ) ) ) )
+					{
+						$event->sender->setAttribute( $_attribute, $_secrets );
+						continue;
+					}
 
-				$event->isValid = false;
-				$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" is malformed or otherwise invalid.' );
+					$event->isValid = false;
+					$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" is malformed or otherwise invalid.' );
+				}
 			}
 		}
 
-		foreach ( Option::clean( $this->_insecureAttributes ) as $_attribute )
+		if ( !empty( $this->_insecureAttributes ) )
 		{
-			if ( $event->sender->hasAttribute( $_attribute ) )
+			foreach ( Option::clean( $this->_insecureAttributes ) as $_attribute )
 			{
-				if ( false !== ( $_secrets = $this->_toSecureJson( $event->sender->getAttribute( $_attribute ), false ) ) )
+				if ( $event->sender->hasAttribute( $_attribute ) )
 				{
-					$event->sender->setAttribute( $_attribute, $_secrets );
-					continue;
-				}
+					if ( false !== ( $_secrets = $this->_toSecureJson( $event->sender->getAttribute( $_attribute ), false ) ) )
+					{
+						$event->sender->setAttribute( $_attribute, $_secrets );
+						continue;
+					}
 
-				$event->isValid = false;
-				$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" is malformed or otherwise invalid.' );
+					$event->isValid = false;
+					$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" is malformed or otherwise invalid.' );
+				}
 			}
 		}
 
 		parent::beforeValidate( $event );
+	}
+
+	/**
+	 * @param \CModelEvent $event
+	 */
+	protected function afterSave( $event )
+	{
+		if ( !empty( $this->_secureAttributes ) )
+		{
+			foreach ( Option::clean( $this->_secureAttributes ) as $_attribute )
+			{
+				if ( $event->sender->hasAttribute( $_attribute ) )
+				{
+					if ( false !== ( $_secrets = $this->_fromSecureJson( $event->sender->getAttribute( $_attribute ) ) ) )
+					{
+						$event->sender->setAttribute( $_attribute, $_secrets );
+						continue;
+					}
+
+					$event->isValid = false;
+					$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" encryption malformed or otherwise invalid.' );
+				}
+			}
+		}
+
+		if ( !empty( $this->_insecureAttributes ) )
+		{
+			foreach ( Option::clean( $this->_insecureAttributes ) as $_attribute )
+			{
+				if ( $event->sender->hasAttribute( $_attribute ) )
+				{
+					if ( false !== ( $_secrets = $this->_fromSecureJson( $event->sender->getAttribute( $_attribute ), false ) ) )
+					{
+						$event->sender->setAttribute( $_attribute, $_secrets );
+						continue;
+					}
+
+					$event->isValid = false;
+					$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" is malformed or otherwise invalid.' );
+				}
+			}
+		}
+
+		parent::afterSave( $event );
 	}
 
 	/**
@@ -174,38 +219,39 @@ class SecureJson extends BaseModelBehavior
 	 */
 	public function afterFind( $event )
 	{
-		if ( empty( $this->_secureAttributes ) )
+		if ( !empty( $this->_secureAttributes ) )
 		{
-			return;
-		}
-
-		foreach ( Option::clean( $this->_secureAttributes ) as $_attribute )
-		{
-			if ( $event->sender->hasAttribute( $_attribute ) )
+			foreach ( Option::clean( $this->_secureAttributes ) as $_attribute )
 			{
-				if ( false !== ( $_secrets = $this->_fromSecureJson( $event->sender->getAttribute( $_attribute ) ) ) )
+				if ( $event->sender->hasAttribute( $_attribute ) )
 				{
-					$event->sender->setAttribute( $_attribute, $_secrets );
-					continue;
-				}
+					if ( false !== ( $_secrets = $this->_fromSecureJson( $event->sender->getAttribute( $_attribute ) ) ) )
+					{
+						$event->sender->setAttribute( $_attribute, $_secrets );
+						continue;
+					}
 
-				$event->isValid = false;
-				$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" encryption malformed or otherwise invalid.' );
+					$event->isValid = false;
+					$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" encryption malformed or otherwise invalid.' );
+				}
 			}
 		}
 
-		foreach ( Option::clean( $this->_insecureAttributes ) as $_attribute )
+		if ( !empty( $this->_insecureAttributes ) )
 		{
-			if ( $event->sender->hasAttribute( $_attribute ) )
+			foreach ( Option::clean( $this->_insecureAttributes ) as $_attribute )
 			{
-				if ( false !== ( $_secrets = $this->_fromSecureJson( $event->sender->getAttribute( $_attribute ), false ) ) )
+				if ( $event->sender->hasAttribute( $_attribute ) )
 				{
-					$event->sender->setAttribute( $_attribute, $_secrets );
-					continue;
-				}
+					if ( false !== ( $_secrets = $this->_fromSecureJson( $event->sender->getAttribute( $_attribute ), false ) ) )
+					{
+						$event->sender->setAttribute( $_attribute, $_secrets );
+						continue;
+					}
 
-				$event->isValid = false;
-				$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" is malformed or otherwise invalid.' );
+					$event->isValid = false;
+					$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" is malformed or otherwise invalid.' );
+				}
 			}
 		}
 
@@ -280,15 +326,27 @@ class SecureJson extends BaseModelBehavior
 			return $defaultValue;
 		}
 
+		$_workData = $data;
+
 		if ( false !== $salt )
 		{
-			$data = Hasher::decryptString( $data, $salt ? : $this->_salt );
+			$_workData = Hasher::decryptString( $_workData, $salt ? : $this->_salt );
 		}
 
+		// 	Try decoding decrypted string
 		//	Make sure we can deserialize...
-		if ( false === ( $_decoded = json_decode( $data, $asArray ) ) )
+		if ( false === ( $_decoded = json_decode( $_workData, $asArray ) ) )
 		{
 			return false;
+		}
+
+		if ( empty( $_decoded ) )
+		{
+			//	Try decoding raw string
+			if ( false === ( $_decoded = json_decode( $data, $asArray ) ) )
+			{
+				return false;
+			}
 		}
 
 		return $_decoded ? : $defaultValue;

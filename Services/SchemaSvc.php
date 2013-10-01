@@ -19,72 +19,18 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\Option;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
-use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Scalar;
-use Swagger\Annotations as SWG;
 
 /**
  * SchemaSvc
  * A service to handle SQL database schema-related services accessed through the REST API.
- *
- * @SWG\Resource(
- *   resourcePath="/{sql_schema}"
- * )
- *
- * @SWG\Model(id="Tables",
- * @SWG\Property(name="table",type="Array",items="$ref:TableSchema",description="An array of table definitions.")
- * )
- * @SWG\Model(id="TableSchema",
- * @SWG\Property(name="name",type="string",description="Identifier/Name for the table."),
- * @SWG\Property(name="label",type="Array",items="$ref:EmailAddress",description="Displayable singular name for the table."),
- * @SWG\Property(name="plural",type="Array",items="$ref:EmailAddress",description="Displayable plural name for the table."),
- * @SWG\Property(name="primary_key",type="string",description="Field(s), if any, that represent the primary key of each record."),
- * @SWG\Property(name="name_field",type="string",description="Field(s), if any, that represent the name of each record."),
- * @SWG\Property(name="field",type="Array",items="$ref:FieldSchema",description="An array of available fields in each record."),
- * @SWG\Property(name="related",type="Array",items="$ref:RelatedSchema",description="An array of available relationships to other tables.")
- * )
- * @SWG\Model(id="Fields",
- * @SWG\Property(name="field",type="Array",items="$ref:FieldSchema",description="An array of field definitions.")
- * )
- * @SWG\Model(id="FieldSchema",
- * @SWG\Property(name="name",type="string",description="The API name of the field."),
- * @SWG\Property(name="label",type="string",description="The displayable label for the field."),
- * @SWG\Property(name="type",type="string",description="The DSP abstract data type for this field."),
- * @SWG\Property(name="db_type",type="string",description="The native database type used for this field."),
- * @SWG\Property(name="length",type="int",description="The maximum length allowed (in characters for string, displayed for numbers)."),
- * @SWG\Property(name="precision",type="int",description="Total number of places for numbers."),
- * @SWG\Property(name="scale",type="int",description="Number of decimal places allowed for numbers."),
- * @SWG\Property(name="default",type="string",description="Default value for this field."),
- * @SWG\Property(name="required",type="boolean",description="Is a value required for record creation."),
- * @SWG\Property(name="allow_null",type="boolean",description="Is null allowed as a value."),
- * @SWG\Property(name="fixed_length",type="boolean",description="Is the length fixed (not variable)."),
- * @SWG\Property(name="supports_multibyte",type="boolean",description="Does the data type support multibyte characters."),
- * @SWG\Property(name="auto_increment",type="boolean",description="Does the integer field value increment upon new record creation."),
- * @SWG\Property(name="is_primary_key",type="boolean",description="Is this field used as/part of the primary key."),
- * @SWG\Property(name="is_foreign_key",type="boolean",description="Is this field used as a foreign key."),
- * @SWG\Property(name="ref_table",type="string",description="For foreign keys, the referenced table name."),
- * @SWG\Property(name="ref_fields",type="string",description="For foreign keys, the referenced table field name."),
- * @SWG\Property(name="validation",type="Array",items="$ref:string",description="validations to be performed on this field."),
- * @SWG\Property(name="values",type="Array",items="$ref:string",description="Selectable string values for picklist validation.")
- * )
- * @SWG\Model(id="Relateds",
- * @SWG\Property(name="related",type="Array",items="$ref:RelatedSchema",description="An array of relationship definitions.")
- * )
- * @SWG\Model(id="RelatedSchema",
- * @SWG\Property(name="name",type="string",description="Name of the relationship."),
- * @SWG\Property(name="type",type="string",description="Relationship type - belongs_to, has_many, many_many."),
- * @SWG\Property(name="ref_table",type="string",description="The table name that is referenced by the relationship."),
- * @SWG\Property(name="ref_field",type="string",description="The field name that is referenced by the relationship."),
- * @SWG\Property(name="join",type="string",description="The intermediate joining table used for many_many relationships."),
- * @SWG\Property(name="field",type="string",description="The current table field that is used in the relationship.")
- * )
- *
  *
  */
 class SchemaSvc extends BasePlatformRestService
@@ -181,7 +127,7 @@ class SchemaSvc extends BasePlatformRestService
 				break;
 
 			case SqlDbUtilities::DRV_SQLSRV:
-				$this->_sqlConn->setAttribute( \PDO::SQLSRV_ATTR_DIRECT_QUERY, true );
+//				$this->_sqlConn->setAttribute( \PDO::SQLSRV_ATTR_DIRECT_QUERY, true );
 //				$this->_sqlConn->setAttribute( 'MultipleActiveResultSets', false );
 //				$this->_sqlConn->setAttribute( 'ReturnDatesAsStrings', true );
 				$this->_sqlConn->setAttribute( 'CharacterSet', 'UTF-8' );
@@ -215,34 +161,46 @@ class SchemaSvc extends BasePlatformRestService
 		parent::_preProcess();
 
 		$this->_payload = RestData::getPostDataAsArray();
-		$this->_tables = Option::get( $_payload, 'table', $_payload );
+		$this->_tables = Option::get( $this->_payload, 'table', $this->_payload );
 
 		if ( empty( $this->_tables ) )
 		{
-			$this->_tables = Option::getDeep( $_payload, 'tables', 'table' );
-		}
-
-		if ( static::Get != ( $_action = $this->getRequestedAction() ) && empty( $this->_tableName ) )
-		{
-			throw new BadRequestException();
+			$this->_tables = Option::getDeep( $this->_payload, 'tables', 'table' );
 		}
 
 		//	Create fields in existing table
 		if ( !empty( $this->_tableName ) )
 		{
-			$this->_fields = Option::get( $_payload, 'field', $_payload );
+			$this->_fields = Option::get( $this->_payload, 'field', $this->_payload );
 
 			if ( empty( $this->_fields ) )
 			{
 				// temporary, layer created from xml to array conversion
-				$this->_fields = Option::getDeep( $_payload, 'fields', 'field' );
-			}
-
-			if ( static::Post == $_action && empty( $this->_fieldName ) )
-			{
-				throw new BadRequestException( 'No new field resources currently supported.' );
+				$this->_fields = Option::getDeep( $this->_payload, 'fields', 'field' );
 			}
 		}
+	}
+
+	/**
+	 * After a successful schema call, refresh the database cache
+	 *
+	 * @return bool|void
+	 */
+	protected function _handleResource()
+	{
+		if ( false !== ( $_result = parent::_handleResource() ) )
+		{
+			//	Clear the DB cache if enabled...
+
+			/** @var \CDbCache $_cache */
+			if ( null !== ( $_cache = Pii::component( 'cache' ) ) )
+			{
+				$_cache->flush();
+			}
+
+		}
+
+		return $_result;
 	}
 
 	/**
@@ -346,8 +304,10 @@ class SchemaSvc extends BasePlatformRestService
 	/**
 	 * {@InheritDoc}
 	 */
-	protected function _detectResourceMembers()
+	protected function _detectResourceMembers( $resourcePath = null )
 	{
+		parent::_detectResourceMembers( $resourcePath );
+
 		$this->_tableName = Option::get( $this->_resourceArray, 0 );
 		$this->_fieldName = Option::get( $this->_resourceArray, 1 );
 	}
@@ -391,7 +351,7 @@ class SchemaSvc extends BasePlatformRestService
 			{
 				if ( 0 === substr_compare( $_table, $_sysPrefix, 0, $_length ) )
 				{
-					throw new NotFoundException( "Table '$table' not found." );
+					throw new NotFoundException( "Table '$_table' not found." );
 				}
 			}
 
@@ -491,6 +451,7 @@ class SchemaSvc extends BasePlatformRestService
 			throw new BadRequestException( 'There are no table sets in the request.' );
 		}
 
+		$_sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
 		$_length = strlen( SystemManager::SYSTEM_TABLE_PREFIX );
 
 		if ( $this->_isNative )
@@ -504,7 +465,8 @@ class SchemaSvc extends BasePlatformRestService
 
 					if ( 0 === substr_compare( $name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
 					{
-						throw new BadRequestException( "Tables can not use the prefix '$sysPrefix'. '$name' can not be created." );
+
+						throw new BadRequestException( "Tables can not use the prefix '$_sysPrefix'. '$name' can not be created." );
 					}
 				}
 			}
@@ -515,7 +477,7 @@ class SchemaSvc extends BasePlatformRestService
 
 				if ( 0 === substr_compare( $name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
 				{
-					throw new BadRequestException( "Tables can not use the prefix '$sysPrefix'. '$name' can not be created." );
+					throw new BadRequestException( "Tables can not use the prefix '$_sysPrefix'. '$name' can not be created." );
 				}
 			}
 		}

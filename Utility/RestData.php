@@ -40,10 +40,13 @@ class RestData
 	public static function getPostDataAsArray()
 	{
 		$_postData = static::getPostData();
+
 		$_data = null;
+
 		if ( !empty( $_postData ) )
 		{
 			$_contentType = ( isset( $_SERVER['CONTENT_TYPE'] ) ) ? $_SERVER['CONTENT_TYPE'] : '';
+
 			if ( !empty( $_contentType ) )
 			{
 				if ( false !== stripos( $_contentType, '/json' ) )
@@ -51,10 +54,12 @@ class RestData
 					$_data = DataFormat::jsonToArray( $_postData );
 				}
 				elseif ( false !== stripos( $_contentType, '/xml' ) )
-				{ // application/xml or text/xml
+				{
+					// application/xml or text/xml
 					$_data = DataFormat::xmlToArray( $_postData );
 				}
 			}
+
 			if ( !isset( $_data ) )
 			{
 				try
@@ -73,9 +78,9 @@ class RestData
 					}
 				}
 			}
+
 			if ( !empty( $_data ) && is_array( $_data ) )
 			{
-				$_data = DataFormat::arrayKeyLower( $_data );
 				$_data = ( isset( $_data['dfapi'] ) ) ? $_data['dfapi'] : $_data;
 			}
 		}

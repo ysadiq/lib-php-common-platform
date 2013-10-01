@@ -24,7 +24,9 @@ use DreamFactory\Platform\Services\BaseFileSvc;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Exceptions\DataStoreException;
 use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
 
@@ -55,7 +57,7 @@ use Kisma\Core\Utility\Sql;
  * @property User[]               $users_default_app
  * @property AppGroup[]           $app_groups
  * @property Role[]               $roles
- * @property AppServiceRelation[] $app_service_relation
+ * @property AppServiceRelation[] $app_service_relations
  * @property Service[]            $services
  * @property Service              $storage_service
  */
@@ -68,7 +70,7 @@ class App extends BasePlatformSystemModel
 	/**
 	 * @var string The url to launch the app from, comprised of its storage and starting file.
 	 */
-	public $launch_url;
+	protected $launch_url = '';
 
 	//*************************************************************************
 	//* Methods
@@ -170,7 +172,7 @@ class App extends BasePlatformSystemModel
 	 */
 	protected function beforeSave()
 	{
-		if ( !$this->is_url_external && empty( $this->url ) )
+		if ( empty( $this->url ) && !$this->is_url_external && !empty( $this->storage_service_id ) )
 		{
 			$this->url = '/index.html';
 		}
@@ -183,38 +185,59 @@ class App extends BasePlatformSystemModel
 	 */
 	protected function afterSave()
 	{
-		//	Make sure we have an app in the folder
 		if ( !$this->is_url_external )
 		{
-			$_local = empty( $this->storage_service_id );
-
-			$_serviceId = $_local ? 'app' : $this->storage_service_id;
-			$_container = $_local ? 'applications' : $this->storage_container;
-
-			/** @var BaseFileSvc $_service */
-			$_service = ServiceHandler::getService( $_serviceId );
-
-			if ( empty( $_container ) )
+			if ( !empty( $this->storage_service_id ) )
 			{
-				if ( !$_service->containerExists( $this->api_name ) )
+				// make sure we have an app in the folder
+				$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
+				$this->launch_url = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' ) . '/';
+				/** @var BaseFileSvc $_service */
+				$_service = ServiceHandler::getService( $this->storage_service_id );
+				$_container = $this->storage_container;
+				if ( empty( $_container ) )
 				{
-					$this->_createContainer( $_service );
+					if ( !$_service->containerExists( $this->api_name ) )
+					{
+						// create in permanent storage
+						$_service->createContainer( array( 'name' => $this->api_name ) );
+						static::_initHostedAppStorage( $this->api_name, $_service, $this->api_name );
+					}
 				}
+				else
+				{
+					if ( !$_service->containerExists( $_container ) )
+					{
+						$_service->createContainer( array( 'name' => $_container ) );
+					}
+					if ( !$_service->folderExists( $_container, $this->api_name ) )
+					{
+						// create in permanent storage
+						$_service->createFolder( $_container, $this->api_name );
+						static::_initHostedAppStorage( $this->api_name, $_service, $_container, $this->api_name );
+					}
+				}
+
+				/** @var $service Service */
+				$service = $this->getRelated( 'storage_service' );
+				if ( !empty( $service ) )
+				{
+					$this->launch_url .= $service->api_name . '/';
+				}
+				if ( !empty( $this->storage_container ) )
+				{
+					$this->launch_url .= $this->storage_container . '/';
+				}
+				$this->launch_url .= $this->api_name . $this->url;
 			}
 			else
 			{
-				if ( !$_service->containerExists( $_container ) )
-				{
-					$_service->createContainer( array( 'name' => $_container ) );
-				}
-
-				if ( !$_service->folderExists( $_container, $this->api_name ) )
-				{
-					// create in permanent storage
-					$_service->createFolder( $_container, $this->api_name );
-					$this->_createContainer( $_service );
-				}
+				$this->launch_url = '';
 			}
+		}
+		else
+		{
+			$this->launch_url = $this->url;
 		}
 
 		parent::afterSave();
@@ -243,30 +266,22 @@ class App extends BasePlatformSystemModel
 
 		if ( !$this->is_url_external )
 		{
-			$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
-			$this->launch_url = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' ) . '/';
-
 			if ( !empty( $this->storage_service_id ) )
 			{
+				$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
+				$this->launch_url = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' ) . '/';
 				/** @var $service Service */
 				$_service = $this->getRelated( 'storage_service' );
-
 				if ( !empty( $_service ) )
 				{
 					$this->launch_url .= $_service->api_name . '/';
 				}
-
 				if ( !empty( $this->storage_container ) )
 				{
 					$this->launch_url .= $this->storage_container . '/';
 				}
+				$this->launch_url .= $this->api_name . $this->url;
 			}
-			else
-			{
-				$this->launch_url .= 'app/applications/';
-			}
-
-			$this->launch_url .= $this->api_name . $this->url;
 		}
 		else
 		{
@@ -309,17 +324,17 @@ class App extends BasePlatformSystemModel
 	}
 
 	/**
-	 * @param  int  $id The row ID
+	 * @param int   $id          The row ID
 	 * @param array $relations
 	 *
-	 * @throws Exception
+	 * @throws \Exception
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \CDbException
 	 * @return void
 	 */
 	protected function assignAppServiceRelations( $id, $relations = array() )
 	{
-		if ( empty( $app_id ) )
+		if ( empty( $id ) )
 		{
 			throw new BadRequestException( 'App id can not be empty.' );
 		}
@@ -332,12 +347,12 @@ class App extends BasePlatformSystemModel
 			// check for dupes before processing
 			for ( $_key1 = 0; $_key1 < $_count; $_key1++ )
 			{
-				$access = $relations[$_key1];
-				$_serviceId = Utilities::getArrayValue( 'service_id', $access, null );
-				for ( $key2 = $_key1 + 1; $key2 < $_count; $key2++ )
+				$_access = $relations[$_key1];
+				$_serviceId = Option::get( $_access, 'service_id' );
+				for ( $_key2 = $_key1 + 1; $_key2 < $_count; $_key2++ )
 				{
-					$access2 = $relations[$key2];
-					$_serviceId2 = Utilities::getArrayValue( 'service_id', $access2, null );
+					$_access2 = $relations[$_key2];
+					$_serviceId2 = Option::get( $_access2, 'service_id' );
 					if ( $_serviceId == $_serviceId2 )
 					{
 						throw new BadRequestException( "Duplicated service in app service relation." );
@@ -347,69 +362,69 @@ class App extends BasePlatformSystemModel
 			$_mapTable = static::tableNamePrefix() . 'app_to_service';
 			$_mapPrimaryKey = 'id';
 			// use query builder
-			/** @var CDbCommand $_command */
+			/** @var \CDbCommand $_command */
 			$_command = Pii::db()->createCommand();
 			$_command->select( 'id,service_id,component' );
 			$_command->from( $_mapTable );
 			$_command->where( 'app_id = :aid' );
-			$maps = $_command->queryAll( true, array( ':aid' => $app_id ) );
-			$toDelete = array();
+			$_maps = $_command->queryAll( true, array( ':aid' => $id ) );
+			$_deletes = array();
 			$_updates = array();
-			foreach ( $maps as $map )
+			foreach ( $_maps as $_map )
 			{
-				$manyId = Utilities::getArrayValue( 'service_id', $map, null );
-				$id = Utilities::getArrayValue( $_mapPrimaryKey, $map, '' );
-				$found = false;
-				foreach ( $relations as $_key => $item )
+				$_manyId = Option::get( $_map, 'service_id' );
+				$id = Option::get( $_map, $_mapPrimaryKey, '' );
+				$_found = false;
+				foreach ( $relations as $_key => $_item )
 				{
-					$assignId = Utilities::getArrayValue( 'service_id', $item, null );
-					if ( $assignId == $manyId )
+					$_assignId = Option::get( $_item, 'service_id' );
+					if ( $_assignId == $_manyId )
 					{
 						// found it, keeping it, so remove it from the list, as this becomes adds
 						// update if need be
-						$oldComponent = Utilities::getArrayValue( 'component', $map, null );
-						$newComponent = Utilities::getArrayValue( 'component', $item, null );
-						if ( !empty( $newComponent ) )
+						$_oldComponent = Option::get( $_map, 'component' );
+						$_newComponent = Option::get( $_item, 'component' );
+						if ( !empty( $_newComponent ) )
 						{
-							$newComponent = json_encode( $newComponent );
+							$_newComponent = json_encode( $_newComponent );
 						}
 						else
 						{
-							$newComponent = null; // no empty arrays here
+							$_newComponent = null; // no empty arrays here
 						}
 						// old should be encoded in the db
-						if ( $oldComponent != $newComponent )
+						if ( $_oldComponent != $_newComponent )
 						{
-							$map['component'] = $newComponent;
-							$_updates[] = $map;
+							$_map['component'] = $_newComponent;
+							$_updates[] = $_map;
 						}
 						// otherwise throw it out
 						unset( $relations[$_key] );
-						$found = true;
+						$_found = true;
 						continue;
 					}
 				}
-				if ( !$found )
+				if ( !$_found )
 				{
-					$toDelete[] = $id;
+					$_deletes[] = $id;
 					continue;
 				}
 			}
-			if ( !empty( $toDelete ) )
+			if ( !empty( $_deletes ) )
 			{
 				// simple delete request
 				$_command->reset();
-				$rows = $_command->delete( $_mapTable, array( 'in', $_mapPrimaryKey, $toDelete ) );
+				$rows = $_command->delete( $_mapTable, array( 'in', $_mapPrimaryKey, $_deletes ) );
 			}
 			if ( !empty( $_updates ) )
 			{
-				foreach ( $_updates as $item )
+				foreach ( $_updates as $_item )
 				{
-					$itemId = Utilities::getArrayValue( 'id', $item, '' );
-					unset( $item['id'] );
+					$_itemId = Option::get( $_item, 'id' );
+					unset( $_item['id'] );
 					// simple update request
 					$_command->reset();
-					$rows = $_command->update( $_mapTable, $item, 'id = :id', array( ':id' => $itemId ) );
+					$rows = $_command->update( $_mapTable, $_item, 'id = :id', array( ':id' => $_itemId ) );
 					if ( 0 >= $rows )
 					{
 						throw new \CDbException( "Record update failed." );
@@ -418,28 +433,28 @@ class App extends BasePlatformSystemModel
 			}
 			if ( !empty( $relations ) )
 			{
-				foreach ( $relations as $item )
+				foreach ( $relations as $_item )
 				{
 					// simple insert request
-					$newComponent = Utilities::getArrayValue( 'component', $item, null );
-					if ( !empty( $newComponent ) )
+					$_newComponent = Option::get( $_item, 'component' );
+					if ( !empty( $_newComponent ) )
 					{
-						$newComponent = json_encode( $newComponent );
+						$_newComponent = json_encode( $_newComponent );
 					}
 					else
 					{
-						$newComponent = null; // no empty arrays here
+						$_newComponent = null; // no empty arrays here
 					}
-					$record = array(
-						'app_id'     => $app_id,
-						'service_id' => Utilities::getArrayValue( 'service_id', $item, null ),
-						'component'  => $newComponent
+					$_record = array(
+						'app_id'     => $id,
+						'service_id' => Option::get( $_item, 'service_id' ),
+						'component'  => $_newComponent
 					);
 					$_command->reset();
-					$rows = $_command->insert( $_mapTable, $record );
+					$rows = $_command->insert( $_mapTable, $_record );
 					if ( 0 >= $rows )
 					{
-						throw new Exception( "Record insert failed." );
+						throw new \Exception( "Record insert failed." );
 					}
 				}
 			}
@@ -460,7 +475,7 @@ class App extends BasePlatformSystemModel
 	 *
 	 * @return void
 	 */
-	protected function _mapRelations( $id, $relations = array(), $relationKey = null )
+	protected function _mapRelations( $id, $relations = array(), $relationKey = 'service_id' )
 	{
 		if ( empty( $id ) )
 		{
@@ -485,14 +500,13 @@ class App extends BasePlatformSystemModel
 			$_model = static::model();
 			$_mapTable = $_model->tableName();
 			$_mapPrimaryKey = 'id';
-			$_relationKey = $relationKey ? : 'service_id';
 
-			/** @var CDbCommand $_command */
+			/** @var \CDbCommand $_command */
 			$_mapRows = Sql::findAll(
 				<<<MYSQL
 SELECT
 	id,
-	{$_relationKey},
+	{$relationKey},
 	component
 FROM
 	{$_mapTable}
@@ -511,7 +525,7 @@ MYSQL
 
 			foreach ( $_mapRows as $_mapping )
 			{
-				$_serviceId = Option::get( $_mapping, $_relationKey );
+				$_serviceId = Option::get( $_mapping, $relationKey );
 				$_id = Option::get( $_mapping, $_mapPrimaryKey );
 
 				$_found = false;
@@ -519,7 +533,7 @@ MYSQL
 				foreach ( $relations as $_key => $_item )
 				{
 					// Found it, keeping it, so remove it from the list, as this becomes adds update if need be
-					if ( $_serviceId == ( $_assignId = Option::get( $_item, $_relationKey ) ) )
+					if ( $_serviceId == ( $_assignId = Option::get( $_item, $relationKey ) ) )
 					{
 						// old should be encoded in the db
 						if ( Option::get( $_mapping, 'component' ) != ( $_newComponent = json_encode( Option::get( $_item, 'component' ) ) ) )
@@ -599,25 +613,61 @@ MYSQL
 	}
 
 	/**
-	 * @param BaseFileSvc $service
+	 * @param string      $api_name
+	 * @param BaseFileSvc $storage
+	 * @param string      $container
+	 * @param string      $root_folder
 	 *
-	 * @return mixed
+	 * @throws \Exception
 	 */
-	protected function _createContainer( $service )
+	protected static function _initHostedAppStorage( $api_name, $storage, $container, $root_folder = null )
 	{
-		// create in permanent storage
-		$service->createContainer( array( 'name' => $this->api_name ) );
-
-		$_name = $this->name ? : $this->api_name;
-		$_content = "<!DOCTYPE html>\n<html>\n<head>\n<title>" . $_name . "</title>\n</head>\n";
-		$_content .= "<body>\nYour app " . $_name . " now lives here.</body>\n</html>";
-
-		$_url = ltrim( $this->url, '/ ' );
-		$_path = $_url ? : 'index.html';
-
-		if ( !$service->fileExists( $this->api_name, $_path ) )
+		$_templateBaseDir = \Kisma::get( 'app.vendor_path' ) . '/dreamfactory/javascript-sdk';
+		if ( is_dir( $_templateBaseDir ) )
 		{
-			$service->writeFile( $this->api_name, $_path, $_content );
+			$_files = array_diff( scandir( $_templateBaseDir ), array( '.', '..', '.gitignore', 'composer.json' ) );
+			if ( !empty( $_files ) )
+			{
+				foreach ( $_files as $_file )
+				{
+					$_templatePath = $_templateBaseDir . '/' . $_file;
+					if ( is_dir( $_templatePath ) )
+					{
+						$_storePath = ( empty( $root_folder ) ? : $root_folder . '/' ) . $_file;
+						$storage->createFolder( $container, $_storePath );
+						$_subFiles = array_diff( scandir( $_templatePath ), array( '.', '..' ) );
+						if ( !empty( $_subFiles ) )
+						{
+							foreach ( $_subFiles as $_subFile )
+							{
+								$_templateSubPath = $_templatePath . '/' . $_subFile;
+								if ( is_dir( $_templateSubPath ) )
+								{
+									// support this deep?
+								}
+								else if ( file_exists( $_templateSubPath ) )
+								{
+									$_content = file_get_contents( $_templateSubPath );
+									if ( 'sdk-init.js' == $_subFile )
+									{
+										$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
+										$_dspHost = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' );
+										$_content = str_replace('https://_your_dsp_hostname_here_', $_dspHost, $_content );
+										$_content = str_replace('_your_app_api_name_here_', $api_name, $_content );
+									}
+									$storage->writeFile( $container, $_storePath . '/' . $_subFile, $_content, false );
+								}
+							}
+						}
+					}
+					else if ( file_exists( $_templatePath ) )
+					{
+						$_content = file_get_contents( $_templatePath );
+						$_storePath = ( empty( $root_folder ) ? : $root_folder . '/' ) . $_file;
+						$storage->writeFile( $container, $_storePath, $_content, false );
+					}
+				}
+			}
 		}
 	}
 }

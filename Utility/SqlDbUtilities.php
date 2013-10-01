@@ -1513,7 +1513,9 @@ class SqlDbUtilities implements SqlDbDriverTypes
 	 * @param string         $table_name
 	 * @param array          $data
 	 * @param bool           $return_labels_refs
+	 * @param bool           $checkExist
 	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \Exception
 	 * @return array
 	 */

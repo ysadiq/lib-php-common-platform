@@ -20,12 +20,11 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use CModelEvent;
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Enums\PlatformStorageTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -46,6 +45,7 @@ use Kisma\Core\Utility\Sql;
  * @property int                 $type_id
  * @property string              $storage_name
  * @property string              $storage_type
+ * @property int                 $storage_type_id
  * @property string              $credentials
  * @property string              $native_format
  * @property string              $base_url
@@ -117,7 +117,8 @@ class Service extends BasePlatformSystemModel
 	 * Down and dirty service config cache which includes the DSP default services.
 	 * Clears when saves to services are made
 	 *
-	 * @param bool $bust If true, bust the cache
+	 * @param bool  $bust If true, bust the cache
+	 * @param array $attributes
 	 *
 	 * @return array
 	 */
@@ -203,7 +204,7 @@ MYSQL;
 	/**
 	 * Retrieves the record of the particular service
 	 *
-	 * @param id|string $serviceId
+	 * @param int|string $serviceId
 	 *
 	 * @return array The service record array
 	 * @throws \Exception if retrieving of service is not possible
@@ -284,25 +285,25 @@ MYSQL;
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-			array_merge(
-				array(
-					 'name'          => 'Name',
-					 'api_name'      => 'API Name',
-					 'description'   => 'Description',
-					 'is_active'     => 'Is Active',
-					 'is_system'     => 'Is System',
-					 'type'          => 'Type',
-					 'type_id'       => 'Type ID',
-					 'storage_name'  => 'Storage Name',
-					 'storage_type'  => 'Storage Type',
-					 'credentials'   => 'Credentials',
-					 'native_format' => 'Native Format',
-					 'base_url'      => 'Base Url',
-					 'parameters'    => 'Parameters',
-					 'headers'       => 'Headers',
-				),
-				$additionalLabels
-			)
+					 array_merge(
+						 array(
+							  'name'          => 'Name',
+							  'api_name'      => 'API Name',
+							  'description'   => 'Description',
+							  'is_active'     => 'Is Active',
+							  'is_system'     => 'Is System',
+							  'type'          => 'Type',
+							  'type_id'       => 'Type ID',
+							  'storage_name'  => 'Storage Name',
+							  'storage_type'  => 'Storage Type',
+							  'credentials'   => 'Credentials',
+							  'native_format' => 'Native Format',
+							  'base_url'      => 'Base Url',
+							  'parameters'    => 'Parameters',
+							  'headers'       => 'Headers',
+						 ),
+						 $additionalLabels
+					 )
 		);
 	}
 
@@ -318,13 +319,6 @@ MYSQL;
 			if ( !empty( $_type ) && 0 !== strcasecmp( $this->type, $_type ) )
 			{
 				throw new BadRequestException( 'Service type cannot be changed after creation.' );
-			}
-
-			$_typeId = Option::get( $values, 'type_id', $this->type_id );
-
-			if ( empty( $_typeId ) || empty( $this->storage_type_id ) )
-			{
-				$this->type_id = $this->getServiceTypeId();
 			}
 
 			$_apiName = Option::get( $values, 'api_name' );
@@ -378,13 +372,29 @@ MYSQL;
 	}
 
 	/**
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @return bool
 	 */
 	protected function beforeSave()
 	{
-		if ( empty( $this->type_id ) || empty( $this->storage_type_id ) )
+		//	Ensure type ID is set
+		if ( empty( $this->type_id ) )
 		{
-			$this->type_id = $this->getServiceTypeId();
+			if ( false === ( $_typeId = $this->getServiceTypeId() ) )
+			{
+				throw new InternalServerErrorException( 'Invalid service type "' . $this->type . '" specified.' );
+			}
+
+			$this->type_id = $_typeId;
+		}
+
+		if ( !$this->isStorageService( $this->type_id ) )
+		{
+			$this->storage_type_id = null;
+		}
+		else if ( null === $this->storage_type_id )
+		{
+			$this->storage_type_id = $this->getStorageTypeId();
 		}
 
 		return parent::beforeSave();
@@ -395,7 +405,7 @@ MYSQL;
 	 */
 	protected function beforeDelete()
 	{
-		switch ( $this->type_id )
+		switch ( $this->getServiceTypeId() )
 		{
 			case PlatformServiceTypes::LOCAL_SQL_DB:
 			case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
@@ -414,20 +424,82 @@ MYSQL;
 	}
 
 	/**
+	 * @param int $id
+	 *
+	 * @return bool
+	 */
+	public function isStorageService( $id = null )
+	{
+		$_id = $id ? : $this->type_id;
+
+		return ( PlatformServiceTypes::REMOTE_FILE_STORAGE == $_id || PlatformServiceTypes::NOSQL_DB == $_id );
+	}
+
+	/**
 	 * {@InheritDoc}
 	 */
 	public function afterFind()
 	{
-		if ( !empty( $this->type ) && empty( $this->type_id ) )
+		$_didWork = false;
+
+		//	Ensure type ID is set
+		if ( empty( $this->type_id ) )
 		{
+			Log::debug( '>> Service::afterFind(\'' . $this->api_name . '\')',
+						array(
+							 'type_id'         => $this->type_id,
+							 'storage_type_id' => $this->storage_type_id,
+							 'type'            => $this->type,
+							 'storage_type'    => $this->storage_type
+						)
+			);
+
 			if ( false === ( $_typeId = $this->getServiceTypeId() ) )
 			{
-				Log::error( 'Invalid service type "' . $this->type . '" found in row: ' . print_r( $this->getAttributes(), true ) );
+				Log::error( '  * Invalid service type "' . $this->type . '" found in row: ' . print_r( $this->getAttributes(), true ) );
+				throw new InternalServerErrorException( 'Invalid service type "' . $this->type . '" specified.' );
+			}
+
+			$this->type_id = $_typeId;
+
+			if ( $this->update( array( 'type_id' => $_typeId ) ) )
+			{
+				$_didWork = true;
+				Log::debug( '  * Set "type_id" of service "' . $this->api_name . '" to "' . $_typeId . '"' );
 			}
 			else
 			{
-				$this->update( array( 'type_id' => $_typeId ) );
-				Log::debug( 'Properly set service type id of service "' . $this->api_name . '"' );
+				Log::notice( '  * Unable to update df_sys_service.type_id to "' . $_typeId . '" in row ID#' . $this->id );
+			}
+		}
+
+		if ( !$this->isStorageService() )
+		{
+			if ( null !== $this->storage_type_id )
+			{
+				$this->storage_type_id = null;
+				$this->update( array( 'storage_type_id' => null ) );
+				Log::debug( '  * Set "storage_type_id" of service "' . $this->api_name . '" to NULL' );
+			}
+		}
+		else if ( null === $this->storage_type_id )
+		{
+			$_didWork = true;
+
+			if ( false === ( $_typeId = $this->getStorageTypeId() ) )
+			{
+				Log::error( '  * Invalid storage type "' . $this->storage_type . '" found in row: ' . print_r( $this->getAttributes(), true ) );
+			}
+			else
+			{
+				if ( $this->update( array( 'storage_type_id' => $_typeId ) ) )
+				{
+					Log::debug( '  * Set "storage_type_id" of service "' . $this->api_name . '" to "' . $_typeId . '"' );
+				}
+				else
+				{
+					Log::notice( '  * Unable to update df_sys_service.storage_type_id to "' . $_typeId . '" in row ID#' . $this->id );
+				}
 			}
 		}
 
@@ -454,7 +526,24 @@ MYSQL;
 				break;
 		}
 
+		if ( 'local email service' == strtolower( trim( $this->type ) ) )
+		{
+			$this->type = 'Email Service';
+		}
+
 		parent::afterFind();
+
+		if ( $_didWork )
+		{
+			Log::debug( '<< Service::afterFind(\'' . $this->api_name . '\')',
+						array(
+							 'type_id'         => $this->type_id,
+							 'storage_type_id' => $this->storage_type_id,
+							 'type'            => $this->type,
+							 'storage_type'    => $this->storage_type
+						)
+			);
+		}
 	}
 
 	/**
@@ -467,170 +556,125 @@ MYSQL;
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-			$requested,
-			array_merge(
-				array(
-					 'name',
-					 'api_name',
-					 'description',
-					 'is_active',
-					 'type',
-					 'type_id',
-					 'is_system',
-					 'storage_name',
-					 'storage_type',
-					 'storage_type_id',
-					 'credentials',
-					 'native_format',
-					 'native_format_id',
-					 'base_url',
-					 'parameters',
-					 'headers',
-				),
-				$columns
-			),
-			$hidden
+					 $requested,
+					 array_merge(
+						 array(
+							  'name',
+							  'api_name',
+							  'description',
+							  'is_active',
+							  'type',
+							  'type_id',
+							  'is_system',
+							  'storage_name',
+							  'storage_type',
+							  'storage_type_id',
+							  'credentials',
+							  'native_format',
+							  'native_format_id',
+							  'base_url',
+							  'parameters',
+							  'headers',
+						 ),
+						 $columns
+					 ),
+					 $hidden
 		);
 	}
 
 	/**
-	 * @param string $type
+	 * Determines the storage type ID from the old string, or returns false otherwise.
+	 *
+	 * NOTE: DOES NOT SET $this->storage_type_id
+	 *
 	 * @param string $storageType
 	 *
-	 * @return int|false
+	 * @return bool|int
 	 */
-	public function getServiceTypeId( $type = null, $storageType = null )
+	public function getStorageTypeId( $storageType = null )
 	{
-		$_type = $type ? : $this->type;
-		$_storageType = $storageType ? : $this->storage_type;
+		$_storageType = str_replace( ' ', '_', trim( strtoupper( $storageType ? : $this->storage_type ) ) );
 
 		try
 		{
-			if ( false !== ( $_typeId = PlatformServiceTypes::defines( $_type, true ) ) )
-			{
-				$this->type_id = $_typeId;
-			}
+			Log::debug( '  * Looking up storage type "' . $_storageType . '" (' . $storageType . ')' );
+
+			return PlatformStorageTypes::defines( $_storageType, true );
 		}
-		catch ( \Exception $_ex )
+		catch ( \InvalidArgumentException $_ex )
 		{
-			switch ( strtolower( $_type ) )
-			{
-				case 'remote web service':
-					$this->type_id = PlatformServiceTypes::REMOTE_WEB_SERVICE;
-					break;
+			Log::notice( '  * Unknown storage type ID request for "' . $storageType . '"' );
 
-				case 'local file storage':
-					$this->type_id = PlatformServiceTypes::LOCAL_FILE_STORAGE;
-					break;
-
-				case 'remote file storage':
-					$this->type_id = PlatformServiceTypes::REMOTE_FILE_STORAGE;
-
-					switch ( strtolower( $_storageType ) )
-					{
-						case 'azure blob':
-							$this->storage_type_id = PlatformStorageTypes::AZURE_BLOB;
-							break;
-
-						case 'aws s3':
-							$this->storage_type_id = PlatformStorageTypes::AWS_S3;
-							break;
-
-						case 'rackspace cloudfiles':
-							$this->storage_type_id = PlatformStorageTypes::RACKSPACE_CLOUDFILES;
-							break;
-
-						case 'openstack object storage':
-							$this->storage_type_id = PlatformStorageTypes::OPENSTACK_OBJECT_STORAGE;
-							break;
-					}
-					break;
-
-				case 'local sql db':
-					$this->type_id = PlatformServiceTypes::LOCAL_SQL_DB;
-					break;
-
-				case 'remote sql db':
-					$this->type_id = PlatformServiceTypes::REMOTE_SQL_DB;
-					break;
-
-				case 'local sql db schema':
-					$this->type_id = PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA;
-					break;
-
-				case 'remote sql db schema':
-					$this->type_id = PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA;
-					break;
-
-				case 'email service':
-				case 'local email service':
-					$this->type_id = PlatformServiceTypes::LOCAL_EMAIL_SERVICE;
-					break;
-
-				case 'remote email service':
-					$this->type_id = PlatformServiceTypes::REMOTE_EMAIL_SERVICE;
-					break;
-
-				case 'nosql db':
-					$this->type_id = PlatformServiceTypes::NOSQL_DB;
-
-					switch ( strtolower( $_storageType ) )
-					{
-						case 'azure tables':
-							$this->storage_type_id = PlatformStorageTypes::AZURE_TABLES;
-							break;
-						case 'aws dynamodb':
-							$this->storage_type_id = PlatformStorageTypes::AWS_DYNAMODB;
-							break;
-						case 'aws simpledb':
-							$this->storage_type_id = PlatformStorageTypes::AWS_SIMPLEDB;
-							break;
-						case 'mongodb':
-							$this->storage_type_id = PlatformStorageTypes::MONGODB;
-							break;
-						case 'couchdb':
-							$this->storage_type_id = PlatformStorageTypes::COUCHDB;
-							break;
-					}
-					break;
-
-				case 'local portal service':
-					$this->type_id = PlatformServiceTypes::LOCAL_PORTAL_SERVICE;
-					break;
-
-				default:
-					//	Giving up...
-					return false;
-			}
+			return false;
 		}
-
-		return $this->type_id;
 	}
 
 	/**
-	 * Make sure type and type_id are selected...
+	 * @param string $type
 	 *
-	 * @param \CModelEvent $event
+	 * @return bool
 	 */
-	public function onBeforeFind( $event )
+	public function getServiceTypeId( $type = null )
+	{
+		$_type = str_replace( ' ', '_', trim( strtoupper( $type ? : $this->type ) ) );
+
+		if ( 'LOCAL_EMAIL_SERVICE' == $_type )
+		{
+			$_type = 'EMAIL_SERVICE';
+		}
+
+		try
+		{
+			//	Throws exception if type not defined...
+			return PlatformServiceTypes::defines( $_type, true );
+		}
+		catch ( \InvalidArgumentException $_ex )
+		{
+			if ( empty( $_type ) )
+			{
+				Log::notice( '  * Empty "type", assuming this is a system resource ( type_id == 0 )' );
+
+				return PlatformServiceTypes::SYSTEM_SERVICE;
+			}
+
+			Log::error( '  * Unknown service type ID request for "' . $type . '".' );
+
+			return false;
+		}
+	}
+
+	/**
+	 * Ensure types and IDs are included in selected data
+	 */
+	protected function beforeFind()
 	{
 		$_criteria = $this->getDbCriteria();
 
-		if ( !empty( $_criteria->select ) && $_criteria->select != '*' )
+		if ( empty( $_criteria->select ) || ( !empty( $_criteria->select ) && '*' != $_criteria->select ) )
 		{
-			if ( false === strpos( $_criteria->select, 'type' ) )
-			{
-				$_criteria->select .= ',type';
-			}
+			$_cols = explode( ',', $_criteria->select );
 
-			if ( false === strpos( $_criteria->select, 'type_id' ) )
-			{
-				$_criteria->select .= ',type_id';
-			}
+			/**
+			 * I'm doing it this way ( instead of str_replace(' ', null) ) to avoid quoted embedded spaces in the select statement...
+			 */
+			array_walk( $_cols,
+				function ( &$data )
+				{
+					$data = trim( $data );
+				}
+			);
 
-			$this->getDbCriteria()->mergeWith( $_criteria );
+			$_criteria->select = implode(
+				',',
+				array_merge(
+					$_cols,
+					array( 'id', 'type', 'type_id', 'storage_type', 'storage_type_id' )
+				)
+			);
+
+			$this->setDbCriteria( $_criteria );
 		}
 
-		parent::onBeforeFind( $event );
+		parent::beforeFind();
 	}
 }

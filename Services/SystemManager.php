@@ -23,8 +23,10 @@ use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\PlatformServiceException;
 use DreamFactory\Platform\Interfaces\PlatformStates;
-use DreamFactory\Platform\Utility\Curl;
+use DreamFactory\Platform\Resources\User\Session;
+use Kisma\Core\Utility\Curl;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\Packager;
 use DreamFactory\Platform\Utility\ResourceStore;
@@ -37,19 +39,13 @@ use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Interfaces\HttpResponse;
-use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
-use Swagger\Annotations as SWG;
 
 /**
  * SystemManager
  * DSP system administration manager
- *
- * @SWG\Resource(
- *   resourcePath="/system"
- * )
  *
  */
 class SystemManager extends BaseSystemRestService
@@ -89,17 +85,17 @@ class SystemManager extends BaseSystemRestService
 		static::$_configPath = \Kisma::get( 'app.config_path' );
 
 		parent::__construct(
-			array_merge(
-				array(
-					 'name'        => 'System Configuration Management',
-					 'api_name'    => 'system',
-					 'type'        => 'System',
-					 'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-					 'description' => 'Service for system administration.',
-					 'is_active'   => true,
-				),
-				$settings
-			)
+			  array_merge(
+				  array(
+					   'name'        => 'System Configuration Management',
+					   'api_name'    => 'system',
+					   'type'        => 'System',
+					   'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+					   'description' => 'Service for system administration.',
+					   'is_active'   => true,
+				  ),
+				  $settings
+			  )
 		);
 	}
 
@@ -140,7 +136,8 @@ class SystemManager extends BaseSystemRestService
 
 			$tables = $_schema->getTableNames();
 
-			if ( empty( $tables ) || ( 'df_sys_cache' == Option::get( $tables, 0 ) ) )
+			// if there is no config table, we have to initialize
+			if ( empty( $tables ) || ( false === array_search( 'df_sys_config', $tables ) ) )
 			{
 				return PlatformStates::INIT_REQUIRED;
 			}
@@ -165,7 +162,7 @@ class SystemManager extends BaseSystemRestService
 				}
 
 				$_version = Option::get( $contents, 'version' );
-				$_oldVersion = Sql::scalar( 'select db_version from df_sys_config order by id desc' );
+				$_oldVersion = Sql::scalar( 'SELECT db_version FROM df_sys_config ORDER BY id DESC' );
 
 				if ( static::doesDbVersionRequireUpgrade( $_oldVersion, $_version ) )
 				{
@@ -198,7 +195,7 @@ class SystemManager extends BaseSystemRestService
 	 */
 	public static function initSystem()
 	{
-		static::initSchema( true );
+		static::initSchema();
 		static::initAdmin();
 		static::initData();
 	}
@@ -206,12 +203,81 @@ class SystemManager extends BaseSystemRestService
 	/**
 	 * Configures the system schema.
 	 *
-	 * @param bool $init
+	 * @throws \Exception
+	 * @return null
+	 */
+	public static function initSchema()
+	{
+		$_db = Pii::db();
+
+		try
+		{
+			$contents = file_get_contents( static::$_configPath . '/schema/system_schema.json' );
+
+			if ( empty( $contents ) )
+			{
+				throw new \Exception( "Empty or no system schema file found." );
+			}
+
+			$contents = DataFormat::jsonToArray( $contents );
+			$version = Option::get( $contents, 'version' );
+
+			$command = $_db->createCommand();
+
+			// create system tables
+			$tables = Option::get( $contents, 'table' );
+			if ( empty( $tables ) )
+			{
+				throw new \Exception( "No default system schema found." );
+			}
+
+			Log::debug( 'Checking database schema' );
+
+			$result = SqlDbUtilities::createTables( $_db, $tables, true, false );
+
+			// initialize config table if not already
+			try
+			{
+				$command->reset();
+				// first time is troublesome with session user id
+				$rows = $command->insert( 'df_sys_config', array( 'db_version' => $version ) );
+
+				if ( 0 >= $rows )
+				{
+					Log::error( 'Exception saving database version: ' . $version );
+				}
+			}
+			catch ( \Exception $_ex )
+			{
+				Log::error( 'Exception saving database version: ' . $_ex->getMessage() );
+			}
+
+			//	Any scripts to run?
+			if ( null !== ( $_scripts = Option::get( $contents, 'scripts' ) ) )
+			{
+				if ( isset( $_scripts['install'] ) )
+				{
+					static::_runScript( static::$_configPath . '/schema/' . $_scripts['install'] );
+				}
+			}
+
+			//	Refresh the schema that we just added
+			\Yii::app()->getCache()->flush();
+			$_db->getSchema()->refresh();
+		}
+		catch ( \Exception $ex )
+		{
+			throw $ex;
+		}
+	}
+
+	/**
+	 * Configures the system schema.
 	 *
 	 * @throws \Exception
 	 * @return null
 	 */
-	public static function initSchema( $init = false )
+	public static function upgradeSchema()
 	{
 		$_db = Pii::db();
 
@@ -283,6 +349,34 @@ class SystemManager extends BaseSystemRestService
 				{
 					Log::error( 'Exception removing prior indexes: ' . $_ex->getMessage() );
 				}
+
+				// Need upgrade path from <1.0.6 for apps
+				if ( version_compare( $oldVersion, '1.0.6', '<' ) )
+				{
+					try
+					{
+						$command->reset();
+						$serviceId = $command
+							->select( 'id' )
+							->from( 'df_sys_service' )
+							->where( 'api_name = :name', array( ':name' => 'app' ) )
+							->queryScalar();
+						if ( false === $serviceId )
+						{
+							throw new \Exception( 'Could not find local app storage service id.' );
+						}
+
+						$command->reset();
+						$attributes = array( 'storage_service_id' => $serviceId, 'storage_container' => 'applications' );
+						$condition = 'is_url_external = :external and storage_service_id is null';
+						$params = array( ':external' => 0 );
+						$rows = $command->update( 'df_sys_app', $attributes, $condition, $params );
+					}
+					catch ( \Exception $_ex )
+					{
+						Log::error( 'Exception upgrading apps to 1.0.6+ version: ' . $_ex->getMessage() );
+					}
+				}
 			}
 
 			// initialize config table if not already
@@ -315,12 +409,7 @@ class SystemManager extends BaseSystemRestService
 			//	Any scripts to run?
 			if ( null !== ( $_scripts = Option::get( $contents, 'scripts' ) ) )
 			{
-				if ( $init && isset( $_scripts['install'] ) )
-				{
-					static::_runScript( static::$_configPath . '/schema/' . $_scripts['install'] );
-				}
-
-				if ( !$init && isset( $_scripts['update'] ) )
+				if ( isset( $_scripts['update'] ) )
 				{
 					static::_runScript( static::$_configPath . '/schema/' . $_scripts['update'] );
 				}
@@ -333,12 +422,6 @@ class SystemManager extends BaseSystemRestService
 		catch ( \Exception $ex )
 		{
 			throw $ex;
-		}
-
-		if ( !$init )
-		{
-			// clean up session
-			static::initAdmin();
 		}
 	}
 
@@ -385,8 +468,15 @@ class SystemManager extends BaseSystemRestService
 		{
 			if ( trim( $_command ) )
 			{
-				$_success += ( false === Sql::execute( $_command ) ? 0 : 1 );
-				$_total += 1;
+				try
+				{
+					$_success += ( false === Sql::execute( $_command ) ? 0 : 1 );
+					$_total += 1;
+				}
+				catch ( \Exception $_ex )
+				{
+					Log::error( 'Exception executing script: ' . $_ex->getMessage() );
+				}
 			}
 		}
 
@@ -421,7 +511,7 @@ class SystemManager extends BaseSystemRestService
 		try
 		{
 			/** @var User $_user */
-			$_user = User::model()->find( 'email = :email', array( ':email' => $_email ) );
+			$_user = User::getByEmail( $_email );
 
 			if ( empty( $_user ) )
 			{
@@ -429,8 +519,8 @@ class SystemManager extends BaseSystemRestService
 				$_firstName = Pii::getState( 'first_name', Option::get( $_model, 'firstName' ) );
 				$_lastName = Pii::getState( 'last_name', Option::get( $_model, 'lastName' ) );
 				$_displayName = Pii::getState(
-					'display_name',
-					Option::get( $_model, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
+								   'display_name',
+								   Option::get( $_model, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
 				);
 
 				$_fields = array(
@@ -695,23 +785,25 @@ class SystemManager extends BaseSystemRestService
 	public static function getDspVersions()
 	{
 		$_results = Curl::get(
-			'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags',
-			array(),
-			array( CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' ) )
+						'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags',
+						array(),
+						array( CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' ) )
 		);
 
-		if ( HttpResponse::Ok != Curl::getLastHttpCode() )
+		if ( HttpResponse::Ok != ( $_code = Curl::getLastHttpCode() ) )
 		{
-			// log an error here, but don't stop config pull
-			return '';
+			//	log an error here, but don't stop config pull
+			Log::error( 'Error retrieving DSP versions from GitHub: ' . $_code );
+
+			return null;
 		}
 
-		if ( !empty( $_results ) )
+		if ( is_string( $_results ) && !empty( $_results ) )
 		{
-			return json_decode( $_results, true );
+			$_results = json_decode( $_results, true );
 		}
 
-		return array();
+		return $_results;
 	}
 
 	/**
@@ -774,15 +866,17 @@ class SystemManager extends BaseSystemRestService
 		$allowed_hosts = DataFormat::jsonEncode( $allowed_hosts, true );
 		$_path = Pii::getParam( 'storage_base_path' );
 		$_config = $_path . static::CORS_DEFAULT_CONFIG_FILE;
-		// create directory if it doesn't exists
-		if ( !file_exists( $_path ) )
+
+		//	Create directory if it doesn't exists
+		if ( !is_dir( $_path ) )
 		{
 			@\mkdir( $_path, 0777, true );
 		}
-		// write new cors config
+
+		//	Write new cors config
 		if ( false === file_put_contents( $_config, $allowed_hosts ) )
 		{
-			throw new \Exception( "Failed to update CORS configuration." );
+			throw new PlatformServiceException( 'Failed to update CORS configuration.' );
 		}
 	}
 
@@ -790,6 +884,7 @@ class SystemManager extends BaseSystemRestService
 	 * @param array $allowed_hosts
 	 *
 	 * @throws BadRequestException
+	 * @return bool
 	 */
 	protected static function validateHosts( $allowed_hosts )
 	{
@@ -802,6 +897,8 @@ class SystemManager extends BaseSystemRestService
 				throw new BadRequestException( 'Allowed hosts contains an empty host name.' );
 			}
 		}
+
+		return true;
 	}
 
 	//.........................................................................
@@ -809,32 +906,23 @@ class SystemManager extends BaseSystemRestService
 	//.........................................................................
 
 	/**
-	 * @SWG\Api(
-	 *       path="/system", description="Operations available for system management.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *       httpMethod="GET", summary="List resources available for system management.",
-	 *       notes="See listed operations for each resource available.",
-	 *       responseClass="Resources", nickname="getResources"
-	 *     )
-	 *   )
-	 * )
-	 *
 	 * @return array
 	 */
 	protected function _listResources()
 	{
-		$resources = array(
-			array( 'name' => 'app', 'label' => 'Application' ),
-			array( 'name' => 'app_group', 'label' => 'Application Group' ),
-			array( 'name' => 'config', 'label' => 'Configuration' ),
-			array( 'name' => 'role', 'label' => 'Role' ),
-			array( 'name' => 'service', 'label' => 'Service' ),
-			array( 'name' => 'user', 'label' => 'User' ),
-			array( 'name' => 'email_template', 'label' => 'Email Template' )
+		return array(
+			'resource' => array(
+				array( 'name' => 'app', 'label' => 'Application' ),
+				array( 'name' => 'app_group', 'label' => 'Application Group' ),
+				array( 'name' => 'config', 'label' => 'Configuration' ),
+				array( 'name' => 'email_template', 'label' => 'Email Template' ),
+				array( 'name' => 'provider', 'label' => 'Provider' ),
+				array( 'name' => 'provider_user', 'label' => 'Provider User' ),
+				array( 'name' => 'role', 'label' => 'Role' ),
+				array( 'name' => 'service', 'label' => 'Service' ),
+				array( 'name' => 'user', 'label' => 'User' ),
+			)
 		);
-
-		return array( 'resource' => $resources );
 	}
 
 	/**
@@ -951,7 +1039,21 @@ class SystemManager extends BaseSystemRestService
 	{
 		try
 		{
-			$_admins = Sql::scalar( 'SELECT count(id) from df_sys_user where is_sys_admin = 1 and is_deleted = 0', 0, array(), Pii::pdo() );
+			$_admins = Sql::scalar(
+						  <<<SQL
+				SELECT
+	COUNT(id)
+FROM
+	df_sys_user
+WHERE
+	is_sys_admin = 1 AND
+	is_deleted = 0
+SQL
+							  ,
+							  0,
+							  array(),
+							  Pii::pdo()
+			);
 
 			return ( 0 == $_admins ? false : ( $_admins > 1 ? $_admins : true ) );
 		}
@@ -975,8 +1077,8 @@ class SystemManager extends BaseSystemRestService
 			/** @var User $_user */
 			$_user = $user
 				? : User::model()->find(
-					'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
-					array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
+						'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
+						array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
 				);
 
 			if ( !empty( $_user ) )

@@ -25,39 +25,14 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Utility\EmailUtilities;
 use DreamFactory\Platform\Utility\RestData;
-use Swagger\Annotations as SWG;
+use DreamFactory\Platform\Yii\Models\EmailTemplate;
 
 /**
  * EmailSvc
  * A service to handle email services accessed through the REST API.
  *
- * @SWG\Resource(
- *   resourcePath="/{email}"
- * )
- *
- * @SWG\Model(id="Email",
- * @SWG\Property(name="template",type="string",description="Email Template to base email on."),
- * @SWG\Property(name="to",type="Array",items="$ref:EmailAddress",description="Required single or multiple receiver addresses."),
- * @SWG\Property(name="cc",type="Array",items="$ref:EmailAddress",description="Optional CC receiver addresses."),
- * @SWG\Property(name="bcc",type="Array",items="$ref:EmailAddress",description="Optional BCC receiver addresses."),
- * @SWG\Property(name="subject",type="string",description="Text only subject line."),
- * @SWG\Property(name="body_text",type="string",description="Text only version of the body."),
- * @SWG\Property(name="body_html",type="string",description="Escaped HTML version of the body."),
- * @SWG\Property(name="from_name",type="string",description="Required sender name."),
- * @SWG\Property(name="from_email",type="string",description="Required sender email."),
- * @SWG\Property(name="reply_to_name",type="string",description="Optional reply to name."),
- * @SWG\Property(name="reply_to_email",type="string",description="Optional reply to email.")
- * )
- * @SWG\Model(id="EmailAddress",
- * @SWG\Property(name="name",type="string",description="Optional name displayed along with the email address."),
- * @SWG\Property(name="email",type="string",description="Required email address.")
- * )
- * @SWG\Model(id="EmailResponse",
- * @SWG\Property(name="count",type="int",description="Number of emails successfully sent.")
- * )
- *
  */
-class EmailSvc extends BaseSystemRestService
+class EmailSvc extends BasePlatformRestService
 {
 	//*************************************************************************
 	//	Members
@@ -126,92 +101,64 @@ class EmailSvc extends BaseSystemRestService
 	}
 
 	/**
-	 * @SWG\Api(
-	 *           path="/{email}", description="Operations on a email service.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *           httpMethod="POST", summary="Send an email created from posted data.",
-	 *           notes="If a template is not used with all required fields, then they must be included in the request. If the 'from' address is not provisioned in the service, then it must be included in the request..",
-	 *           responseClass="EmailResponse", nickname="sendEmail",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *           name="template", description="Optional template to base email on.",
-	 *           paramType="query", required="false", allowMultiple=false, dataType="string"
-	 *         ),
-	 * @SWG\Parameter(
-	 *           name="data", description="Data containing name-value pairs used for provisioning emails.",
-	 *           paramType="body", required="false", allowMultiple=false, dataType="Email"
-	 *         )
-	 *       ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request is not complete or valid."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="404", reason="Not Found - Email template or system resource not found."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *       )
-	 *     )
-	 *   )
-	 * )
-	 *
 	 * @return array
 	 * @throws BadRequestException
 	 */
-	protected function _handleResource()
+	protected function _handleGet()
 	{
-		switch ( $this->_resource )
+
+		// no resources currently
+		return array();
+	}
+
+	/**
+	 * @return array
+	 * @throws BadRequestException
+	 */
+	protected function _handlePost()
+	{
+		$data = RestData::getPostDataAsArray();
+
+		// build email from posted data
+		$template = FilterInput::request( 'template' );
+		$template = Option::get( $data, 'template', $template );
+		if ( !empty( $template ) )
 		{
-			case '':
-				switch ( $this->_action )
-				{
-					case self::Post:
-						$data = RestData::getPostDataAsArray();
+			$count = $this->sendEmailByTemplate( $template, $data );
+		}
+		else
+		{
+			if ( empty( $data ) )
+			{
+				throw new BadRequestException( 'No POST data in request.' );
+			}
 
-						// build email from posted data
-						$template = FilterInput::request( 'template' );
-						$template = Option::get( $data, 'template', $template );
-						if ( !empty( $template ) )
-						{
-							$count = $this->sendEmailByTemplate( $template, $data );
-						}
-						else
-						{
-							if ( empty( $data ) )
-							{
-								throw new BadRequestException( 'No POST data in request.' );
-							}
-
-							$to = Option::get( $data, 'to' );
-							$cc = Option::get( $data, 'cc' );
-							$bcc = Option::get( $data, 'bcc' );
-							$subject = Option::get( $data, 'subject' );
-							$text = Option::get( $data, 'body_text' );
-							$html = Option::get( $data, 'body_html' );
-							$fromName = Option::get( $data, 'from_name' );
-							$fromEmail = Option::get( $data, 'from_email' );
-							$replyName = Option::get( $data, 'reply_to_name' );
-							$replyEmail = Option::get( $data, 'reply_to_email' );
-							$count = $this->sendEmail(
-								$to,
-								$cc,
-								$bcc,
-								$subject,
-								$text,
-								$html,
-								$fromName,
-								$fromEmail,
-								$replyName,
-								$replyEmail,
-								$data
-							);
-						}
-
-						return array( 'count' => $count );
-						break;
-				}
-				break;
+			$to = Option::get( $data, 'to' );
+			$cc = Option::get( $data, 'cc' );
+			$bcc = Option::get( $data, 'bcc' );
+			$subject = Option::get( $data, 'subject' );
+			$text = Option::get( $data, 'body_text' );
+			$html = Option::get( $data, 'body_html' );
+			$fromName = Option::get( $data, 'from_name' );
+			$fromEmail = Option::get( $data, 'from_email' );
+			$replyName = Option::get( $data, 'reply_to_name' );
+			$replyEmail = Option::get( $data, 'reply_to_email' );
+			$count = $this->sendEmail(
+				$to,
+				$cc,
+				$bcc,
+				$subject,
+				$text,
+				$html,
+				$fromName,
+				$fromEmail,
+				$replyName,
+				$replyEmail,
+				$data
+			);
 		}
 
-		return false;
+		return array( 'count' => $count );
 	}
 
 	/**
@@ -224,7 +171,7 @@ class EmailSvc extends BaseSystemRestService
 	public function sendEmailByTemplate( $template, $data )
 	{
 		// find template in system db
-		$record = \EmailTemplate::model()->findByAttributes( array( 'name' => $template ) );
+		$record = EmailTemplate::model()->findByAttributes( array( 'name' => $template ) );
 		if ( empty( $record ) )
 		{
 			throw new NotFoundException( "Email Template '$template' not found" );

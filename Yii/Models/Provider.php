@@ -19,9 +19,15 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
-use Kisma\Core\Utility\Hasher;
-use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Sql;
+use CEvent;
+use CModelEvent;
+use DreamFactory\Oasys\Oasys;
+use DreamFactory\Platform\Exceptions\ForbiddenException;
+use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\HttpResponse;
+use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Option;
 
 /**
  * Provider
@@ -29,8 +35,11 @@ use Kisma\Core\Utility\Sql;
  *
  * Columns:
  *
+ * @property string              $api_name
  * @property string              $provider_name
  * @property array               $config_text
+ * @property int                 $is_active
+ * @property int                 $is_system
  */
 class Provider extends BasePlatformSystemModel
 {
@@ -53,7 +62,7 @@ class Provider extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array( 'provider_name, config_text', 'safe' ),
+			array( 'api_name, provider_name, config_text, is_active, is_system', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -88,13 +97,142 @@ class Provider extends BasePlatformSystemModel
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-			array_merge(
-				$additionalLabels,
-				array(
-					 'provider_name' => 'Name',
-					 'config_text'   => 'Configuration',
-				)
-			)
+					 array_merge(
+						 $additionalLabels,
+						 array(
+							  'provider_name' => 'Name',
+							  'api_name'      => 'API Name',
+							  'config_text'   => 'Configuration',
+							  'is_active'     => 'Active',
+							  'is_system'     => 'System Provider'
+						 )
+					 )
 		);
+	}
+
+	/**
+	 * @param string $portal
+	 *
+	 * @return $this
+	 */
+	public function byPortal( $portal )
+	{
+		$this->getDbCriteria()->mergeWith(
+			 array(
+				  'condition' => 'provider_name = :provider_name or api_name = :api_name',
+				  'params'    => array( ':provider_name' => $portal, ':api_name' => Inflector::neutralize( $portal ) ),
+			 )
+		);
+
+		return $this;
+	}
+
+	/**
+	 * Returns an array of the row attributes merged with the config array
+	 *
+	 * @param string $columnName
+	 *
+	 * @return array
+	 */
+	public function getMergedAttributes( $columnName = 'config_text' )
+	{
+		$_merge = array_merge(
+			$this->getAttributes(),
+			Option::clean( $this->getAttribute( $columnName ) )
+		);
+
+		unset( $_merge[$columnName] );
+
+		return $_merge;
+	}
+
+	/**
+	 * Retrieves the complete configuration for this provider merging user credentials with the defaults and stored stuff.
+	 *
+	 * @param \stdClass|Provider $provider
+	 * @param array              $baseConfig
+	 * @param array              $stateConfig
+	 *
+	 * @return array
+	 */
+	public static function buildConfig( $provider, $baseConfig = array(), $stateConfig = array() )
+	{
+		$_userConfig = array();
+
+		if ( !Pii::guest() )
+		{
+			if ( null !== ( $_auth = ProviderUser::model()->byUserProviderUserId( Session::getCurrentUserId(), $provider->id )->find( array( 'select' => 'auth_text' ) ) ) )
+			{
+				$_userConfig = $_auth->auth_text;
+				unset( $_auth );
+			}
+		}
+
+		//	If the user config is empty and there is no passed in state config, check the store...
+		if ( empty( $stateConfig ) )
+		{
+			$stateConfig = array();
+
+			//	See if we have any data to merge
+			$_endpoint = Option::get( $provider, 'api_name', Option::get( $provider, 'endpoint_text' ) );
+			$_temp = Oasys::getStore()->get( $_endpoint, array() );
+
+			if ( null !== ( $_json = Option::get( $_temp, 'config', array() ) ) )
+			{
+				if ( is_array( $_json ) )
+				{
+					$stateConfig = $_json;
+				}
+				else if ( false === ( $stateConfig = json_decode( $_json, true ) ) )
+				{
+					$stateConfig = array();
+				}
+
+				unset( $_json );
+			}
+
+			unset( $_temp );
+		}
+
+		//	Now simmer...
+		return array_merge(
+		//	My configuration
+			(array)$provider->config_text,
+			//	Then base from consumer
+			Option::clean( $baseConfig ),
+			//	User creds
+			Option::clean( $_userConfig ),
+			//	Then state/stored user creds
+			Option::clean( $stateConfig )
+		);
+	}
+
+	/**
+	 * Protect the system resources...
+	 *
+	 * @throws \CHttpException
+	 * @return bool
+	 */
+	protected function beforeSave()
+	{
+		if ( $this->is_system )
+		{
+			throw new \CHttpException( HttpResponse::Forbidden, 'The system providers are read-only.' );
+		}
+
+		return parent::beforeSave();
+	}
+
+	/**
+	 * Protect the config...
+	 */
+	protected function afterFind()
+	{
+		if ( $this->is_system )
+		{
+			$this->config_text = null;
+		}
+
+		parent::afterFind();
 	}
 }

@@ -37,7 +37,7 @@ class PlatformServiceTypes extends SeedEnum
 	/**
 	 * @var int
 	 */
-	const LOCAL_EMAIL_SERVICE = 0x0001;
+	const EMAIL_SERVICE = 0x0001;
 	/**
 	 * @var int
 	 */
@@ -57,15 +57,11 @@ class PlatformServiceTypes extends SeedEnum
 	/**
 	 * @var int
 	 */
-	const LOCAL_WEB_SERVICE = 0x0020;
+	const SALESFORCE = 0x0020;
 	/**
 	 * @var int
 	 */
 	const LOCAL_PORTAL_SERVICE = 0x0040;
-	/**
-	 * @var int
-	 */
-	const REMOTE_EMAIL_SERVICE = 0x1001;
 	/**
 	 * @var int
 	 */

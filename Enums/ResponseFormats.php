@@ -32,6 +32,10 @@ class ResponseFormats extends SeedEnum
 	//*************************************************************************
 
 	/**
+	 * @var int No formatting. The default
+	 */
+	const RAW = 0;
+	/**
 	 * @var int
 	 */
 	const DATATABLES = 100;
