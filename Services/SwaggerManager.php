@@ -204,7 +204,8 @@ class SwaggerManager extends BasePlatformRestService
 				$_filePath = $_storePath . $_apiName . '.json';
 				if ( !file_exists( $_filePath ) )
 				{
-					$_defaultPath = Pii::basePath() . '/../../docs/default_service_swagger.json';
+					$_defaultPath = Pii::getParam( 'base_path' ) . '/vendor/dreamfactory/lib-php-common-platform/DreamFactory/Platform';
+					$_defaultPath .= '/Templates/Swagger/default_service_swagger.json';
 					if ( !file_exists( $_defaultPath ) )
 					{
 						Log::error( "No default swagger file at $_defaultPath." );
