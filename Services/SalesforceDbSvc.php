@@ -27,7 +27,6 @@ use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Services\BaseDbSvc;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 use Phpforce\SoapClient as SoapClient;
@@ -35,7 +34,7 @@ use Guzzle\Http\Client as GuzzleClient;
 
 /**
  * SalesforceDbSvc.php
- * A service to handle SQL database services accessed through the REST API.
+ * A service to handle Salesforce services accessed through the REST API.
  *
  */
 class SalesforceDbSvc extends BaseDbSvc
@@ -57,6 +56,10 @@ class SalesforceDbSvc extends BaseDbSvc
 	 * @var SoapClient\Client
 	 */
 	protected $_soapClient;
+	/**
+	 * @var array
+	 */
+	protected $_version = 'v28.0';
 	/**
 	 * @var array
 	 */
@@ -88,7 +91,6 @@ class SalesforceDbSvc extends BaseDbSvc
 		parent::__construct( $config );
 
 		$this->_fieldCache = array();
-		$this->_relatedCache = array();
 
 		$_credentials = Option::get( $config, 'credentials' );
 
@@ -107,41 +109,17 @@ class SalesforceDbSvc extends BaseDbSvc
 			throw new \InvalidArgumentException( 'A Salesforce security token is required for this service.' );
 		}
 
-		$_scanPath = Pii::getParam( 'base_path' ) . '/vendor/dreamfactory/lib-php-common-platform/DreamFactory/Platform/Services/';
+		$_version = Option::get( $_credentials, 'version' );
+		if ( !empty( $_version ) )
+		{
+			$this->_version = $_version;
+		}
 
-		$_builder = new SoapClient\ClientBuilder(
-			$_scanPath . 'salesforce.enterprise.wsdl.xml',
-			$user,
-			$password,
-			$token
-		);
+		$_scanPath = Pii::getParam( 'base_path' ) . '/vendor/dreamfactory/lib-php-common-platform/DreamFactory/Platform';
+		$_wsdl = $_scanPath . '/Templates/Salesforce/salesforce.enterprise.wsdl.xml';
 
+		$_builder = new SoapClient\ClientBuilder( $_wsdl, $user, $password,	$token );
 		$this->_soapClient = $_builder->build();
-	}
-
-	protected function callCurl( $method = 'GET', $uri = null, $parameters = array(), $body = null, $version = 'v28.0' )
-	{
-		$_options = array(
-			CURLOPT_HEADER => false
-		);
-		$_options[CURLOPT_HTTPHEADER][] = 'Authorization: Bearer ' . $this->getLoginResult()->getSessionId();
-		if ( !empty( $body ) )
-		{
-			$_options[CURLOPT_HTTPHEADER][] = 'Content-Type: application/json';
-		}
-
-		$_url = $this->getBaseUrl() . $uri;
-		$_response = Curl::request( $method, $_url, $body, $_options );
-
-		if ( false === $_response )
-		{
-			$_error = Curl::getError();
-			throw new RestException( Option::get( $_error, 'code', 500 ), Option::get( $_error, 'message' ) );
-		}
-
-		$_code = Curl::getLastHttpCode();
-
-		return $_response;
 	}
 
 	/**
@@ -184,9 +162,13 @@ class SalesforceDbSvc extends BaseDbSvc
 		catch ( \Guzzle\Http\Exception\BadResponseException $ex )
 		{
 			$_response = $ex->getResponse();
+			$_body = $_response->json();
+			$_body = isset( $_body, $_body[0] ) ? $_body[0] : array();
+			$_message = Option::get( $_body, 'message', $_response->getMessage() );
+			$_code = Option::get( $_body, 'errorCode', 'ERROR');
 			throw new RestException(
 				$_response->getStatusCode(),
-				$_response->getReasonPhrase() . ': ' . $_response->getEffectiveUrl()
+				$_code . " " . $_message
 			);
 		}
 		catch ( \Exception $ex )
@@ -196,25 +178,23 @@ class SalesforceDbSvc extends BaseDbSvc
 	}
 
 
-	protected function getBaseUrl( $version = 'v28.0' )
+	protected function getBaseUrl()
 	{
 		return sprintf(
 			'https://%s.salesforce.com/services/data/%s/',
 			$this->getLoginResult()->getServerInstance(),
-			$version
+			$this->_version
 		);
 	}
 
 	/**
 	 * Get Guzzle client
 	 *
-	 * @param string $version
-	 *
 	 * @return \Guzzle\Http\Client
 	 */
-	protected function getGuzzleClient( $version = 'v28.0' )
+	protected function getGuzzleClient()
 	{
-		return new GuzzleClient( $this->getBaseUrl( $version ) );
+		return new GuzzleClient( $this->getBaseUrl() );
 	}
 
 	/**
@@ -405,7 +385,6 @@ class SalesforceDbSvc extends BaseDbSvc
 		{
 			try
 			{
-//				$_result = $this->callCurl( 'POST', 'sobjects/' . $table . '/', null, json_encode( $_record ) );
 				$_result = $this->callGuzzle( 'POST', 'sobjects/' . $table . '/', null, json_encode( $_record ), $_client );
 				if ( !Option::getBool( $_result, 'success', false ) )
 				{
@@ -1115,19 +1094,23 @@ class SalesforceDbSvc extends BaseDbSvc
 		{
 			$fields = $this->_getAllFields( $table );
 		}
-		elseif ( is_array( $fields ) )
-		{
-			$fields = implode( ',', $fields );
-		}
 		else
 		{
-			// make sure the Id field is always returned
-			$fields = array_map( 'trim', explode( ',', $fields ) );
-			if ( false === array_search( $id_field, $fields ) )
+			if ( is_array( $fields ) )
 			{
-				$fields[] = $id_field;
+				$fields = implode( ',', $fields );
 			}
-			$fields = implode( ',', $fields );
+
+			// make sure the Id field is always returned
+			if ( false === array_search( strtolower( $id_field ),
+										 array_map( 'trim',
+													explode( ',', strtolower( $fields ) )
+										 ) ) )
+			{
+				$fields = array_map( 'trim', explode( ',', $fields ) );
+				$fields[] = $id_field;
+				$fields = implode( ',', $fields );
+			}
 		}
 
 		return $fields;
