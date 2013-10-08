@@ -20,12 +20,17 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BaseDbSvc;
 use DreamFactory\Platform\Services\BaseFileSvc;
 use DreamFactory\Platform\Services\SchemaSvc;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\FileSystem;
+use DreamFactory\Platform\Utility\FileUtilities;
+use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Yii\Models\App;
 use DreamFactory\Platform\Yii\Models\Service;
 use Kisma\Core\SeedUtility;
@@ -33,8 +38,6 @@ use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
-use DreamFactory\Platform\Utility\FileUtilities;
-use DreamFactory\Platform\Utility\ServiceHandler;
 
 /**
  * Packager
@@ -69,7 +72,7 @@ class Packager
 
 		if ( null === $app )
 		{
-			throw new \Exception( "No database entry exists for this application with id '$app_id'." );
+			throw new NotFoundException( "No database entry exists for this application with id '$app_id'." );
 		}
 
 		$fields = array(
@@ -93,13 +96,13 @@ class Packager
 			$zipFileName = $tempDir . $app_root . '.dfpkg';
 			if ( true !== $zip->open( $zipFileName, \ZipArchive::CREATE ) )
 			{
-				throw new \Exception( 'Can not create package file for this application.' );
+				throw new InternalServerErrorException( 'Can not create package file for this application.' );
 			}
 
 			// add database entry file
 			if ( !$zip->addFromString( 'description.json', json_encode( $record ) ) )
 			{
-				throw new \Exception( "Can not include description in package file." );
+				throw new InternalServerErrorException( "Can not include description in package file." );
 			}
 			if ( $include_services || $include_schema )
 			{
@@ -172,11 +175,11 @@ class Packager
 					}
 					if ( !empty( $services ) && !$zip->addFromString( 'services.json', json_encode( $services ) ) )
 					{
-						throw new \Exception( "Can not include services in package file." );
+						throw new InternalServerErrorException( "Can not include services in package file." );
 					}
 					if ( !empty( $schemas ) && !$zip->addFromString( 'schema.json', json_encode( array( 'service' => $schemas ) ) ) )
 					{
-						throw new \Exception( "Can not include database schema in package file." );
+						throw new InternalServerErrorException( "Can not include database schema in package file." );
 					}
 				}
 			}
@@ -251,13 +254,13 @@ class Packager
 		$zip = new \ZipArchive();
 		if ( true !== $zip->open( $pkg_file ) )
 		{
-			throw new \Exception( 'Error opening zip file.' );
+			throw new InternalServerErrorException( 'Error opening zip file.' );
 		}
 
 		$data = $zip->getFromName( 'description.json' );
 		if ( false === $data )
 		{
-			throw new \Exception( 'No application description file in this package file.' );
+			throw new BadRequestException( 'No application description file in this package file.' );
 		}
 
 		$record = DataFormat::jsonToArray( $data );
@@ -286,7 +289,7 @@ class Packager
 		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Could not create the application.\n{$ex->getMessage()}" );
+			throw new InternalServerErrorException( "Could not create the application.\n{$ex->getMessage()}" );
 		}
 		$id = Option::get( $returnData, 'id' );
 		$zip->deleteName( 'description.json' );
@@ -306,7 +309,7 @@ class Packager
 				}
 				catch ( \Exception $ex )
 				{
-					throw new \Exception( "Could not create the services.\n{$ex->getMessage()}" );
+					throw new InternalServerErrorException( "Could not create the services.\n{$ex->getMessage()}" );
 				}
 				$zip->deleteName( 'services.json' );
 			}
@@ -329,7 +332,7 @@ class Packager
 							if ( isset( $result[0]['error'] ) )
 							{
 								$msg = $result[0]['error']['message'];
-								throw new \Exception( "Could not create the database tables for this application.\n$msg" );
+								throw new InternalServerErrorException( "Could not create the database tables for this application.\n$msg" );
 							}
 						}
 					}
@@ -351,7 +354,7 @@ class Packager
 						if ( isset( $result[0]['error'] ) )
 						{
 							$msg = $result[0]['error']['message'];
-							throw new \Exception( "Could not create the database tables for this application.\n$msg" );
+							throw new InternalServerErrorException( "Could not create the database tables for this application.\n$msg" );
 						}
 					}
 					else
@@ -367,7 +370,7 @@ class Packager
 							if ( isset( $result['error'] ) )
 							{
 								$msg = $result['error']['message'];
-								throw new \Exception( "Could not create the database tables for this application.\n$msg" );
+								throw new InternalServerErrorException( "Could not create the database tables for this application.\n$msg" );
 							}
 						}
 					}
@@ -400,7 +403,7 @@ class Packager
 							if ( isset( $result['record'][0]['error'] ) )
 							{
 								$msg = $result['record'][0]['error']['message'];
-								throw new \Exception( "Could not insert the database entries for table '$tableName'' for this application.\n$msg" );
+								throw new InternalServerErrorException( "Could not insert the database entries for table '$tableName'' for this application.\n$msg" );
 							}
 						}
 					}
@@ -426,7 +429,7 @@ class Packager
 							if ( isset( $result['record'][0]['error'] ) )
 							{
 								$msg = $result['record'][0]['error']['message'];
-								throw new \Exception( "Could not insert the database entries for table '$tableName'' for this application.\n$msg" );
+								throw new InternalServerErrorException( "Could not insert the database entries for table '$tableName'' for this application.\n$msg" );
 							}
 						}
 					}
@@ -444,7 +447,7 @@ class Packager
 							if ( isset( $result['record'][0]['error'] ) )
 							{
 								$msg = $result['record'][0]['error']['message'];
-								throw new \Exception( "Could not insert the database entries for table '$tableName'' for this application.\n$msg" );
+								throw new InternalServerErrorException( "Could not insert the database entries for table '$tableName'' for this application.\n$msg" );
 							}
 						}
 					}
@@ -470,7 +473,7 @@ class Packager
 		$_service = ServiceHandler::getServiceObjectById( $_storageServiceId );
 		if ( empty( $_service ) )
 		{
-			throw new \Exception( "App record created, but failed to import files due to unknown storage service with id '$_storageServiceId'." );
+			throw new InternalServerErrorException( "App record created, but failed to import files due to unknown storage service with id '$_storageServiceId'." );
 		}
 		if ( empty( $_container ) )
 		{
@@ -482,5 +485,118 @@ class Packager
 		}
 
 		return $returnData;
+	}
+
+	/**
+	 * @param string $app_id
+	 * @param bool   $include_files
+	 *
+	 * @throws \Exception
+	 * @return null
+	 */
+	public static function exportAppAsSDK( $app_id )
+	{
+		$_model = ResourceStore::model( 'app' );
+
+		$_app = $_model->findByPk( $app_id );
+
+		if ( null === $_app )
+		{
+			throw new NotFoundException( "No database entry exists for this application with id '$app_id'." );
+		}
+
+		$_record = $_app->getAttributes( array( 'api_name', 'name' ) );
+		$_apiName = Option::get( $_record, 'api_name' );
+
+		try
+		{
+			$_zip = new \ZipArchive();
+			$_tempDir = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR;
+			$_zipFileName = $_tempDir . $_apiName . '.zip';
+			if ( true !== $_zip->open( $_zipFileName, \ZipArchive::CREATE ) )
+			{
+				throw new InternalServerErrorException( 'Can not create sdk zip file for this application.' );
+			}
+
+			$_templateBaseDir = \Kisma::get( 'app.vendor_path' ) . '/dreamfactory/javascript-sdk';
+			if ( !is_dir( $_templateBaseDir ) )
+			{
+				throw new InternalServerErrorException( 'Bad path to sdk template.' );
+			}
+
+			$_files = array_diff( scandir( $_templateBaseDir ), array( '.', '..', '.gitignore', 'composer.json' ) );
+			if ( !empty( $_files ) )
+			{
+				foreach ( $_files as $_file )
+				{
+					$_templatePath = $_templateBaseDir . '/' . $_file;
+					if ( is_dir( $_templatePath ) )
+					{
+						$_subFiles = array_diff( scandir( $_templatePath ), array( '.', '..' ) );
+						if ( !empty( $_subFiles ) )
+						{
+							foreach ( $_subFiles as $_subFile )
+							{
+								$_templateSubPath = $_templatePath . '/' . $_subFile;
+								if ( is_dir( $_templateSubPath ) )
+								{
+									// support this deep?
+								}
+								else if ( file_exists( $_templateSubPath ) )
+								{
+									if ( 'sdk-init.js' == $_subFile )
+									{
+										$_content = file_get_contents( $_templateSubPath );
+										$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
+										$_dspHost = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' );
+										$_content = str_replace('https://_your_dsp_hostname_here_', $_dspHost, $_content );
+										$_content = str_replace('_your_app_api_name_here_', $_apiName, $_content );
+										$_zip->addFromString( $_file . '/' . $_subFile, $_content );
+									}
+									else
+									{
+										$_zip->addFile( $_templateSubPath, $_file . '/' . $_subFile );
+									}
+								}
+							}
+						}
+						else
+						{
+							$_zip->addEmptyDir( $_file );
+						}
+					}
+					else if ( file_exists( $_templatePath ) )
+					{
+						$_zip->addFile( $_templatePath, $_file );
+					}
+				}
+			}
+
+			$_zip->close();
+
+			$fd = fopen( $_zipFileName, "r" );
+			if ( $fd )
+			{
+				$fsize = filesize( $_zipFileName );
+				$path_parts = pathinfo( $_zipFileName );
+				header( "Content-type: application/zip" );
+				header( "Content-Disposition: filename=\"" . $path_parts["basename"] . "\"" );
+				header( "Content-length: $fsize" );
+				header( "Cache-control: private" ); //use this to open files directly
+				while ( !feof( $fd ) )
+				{
+					$buffer = fread( $fd, 2048 );
+					echo $buffer;
+				}
+			}
+			fclose( $fd );
+			unlink( $_zipFileName );
+
+			return null;
+		}
+		catch ( \Exception $ex )
+		{
+			throw $ex;
+		}
 	}
 }

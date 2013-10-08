@@ -36,6 +36,19 @@ use Kisma\Core\Utility\Option;
 class App extends BaseSystemRestResource
 {
 	//*************************************************************************
+	//* Members
+	//*************************************************************************
+
+	/**
+	 * @var bool Query option for output format of package
+	 */
+	protected $_exportPackage = false;
+	/**
+	 * @var bool Query option for output sdk for this app in format of zip
+	 */
+	protected $_exportSDK = false;
+
+	//*************************************************************************
 	//	Methods
 	//*************************************************************************
 
@@ -60,6 +73,18 @@ class App extends BaseSystemRestResource
 	}
 
 	/**
+	 * @return bool
+	 */
+	protected function _preProcess()
+	{
+		parent::_preProcess();
+
+		//	Most requests contain 'returned fields' parameter, all by default
+		$this->_exportPackage = Option::getBool( $_REQUEST, 'pkg' );
+		$this->_exportSDK = Option::getBool( $_REQUEST, 'sdk' );
+	}
+
+	/**
 	 * @throws \Exception
 	 * @return array|bool
 	 */
@@ -75,6 +100,13 @@ class App extends BaseSystemRestResource
 			$this->checkPermission( 'admin', $this->_resource );
 
 			return Packager::exportAppAsPackage( $this->_resourceId, $_includeFiles, $_includeServices, $_includeSchema, $_includeData );
+		}
+
+		if ( false !== $this->_exportSDK && !empty( $this->_resourceId ) )
+		{
+			$this->checkPermission( 'read', $this->_resource );
+
+			return Packager::exportAppAsSDK( $this->_resourceId );
 		}
 
 		return parent::_handleGet();
@@ -144,5 +176,45 @@ class App extends BaseSystemRestResource
 		}
 
 		return parent::_handlePost();
+	}
+
+	/**
+	 * @param boolean $exportPackage
+	 *
+	 * @return BaseSystemRestResource
+	 */
+	public function setExportPackage( $exportPackage )
+	{
+		$this->_exportPackage = $exportPackage;
+
+		return $this;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function getExportPackage()
+	{
+		return $this->_exportPackage;
+	}
+
+	/**
+	 * @param boolean $exportSDK
+	 *
+	 * @return BaseSystemRestResource
+	 */
+	public function setExportSDK( $exportSDK )
+	{
+		$this->_exportSDK = $exportSDK;
+
+		return $this;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function getExportSDK()
+	{
+		return $this->_exportSDK;
 	}
 }

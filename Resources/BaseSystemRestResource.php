@@ -70,10 +70,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	protected $_extras;
 	/**
-	 * @var bool Query option for output format of package
-	 */
-	protected $_exportPackage = false;
-	/**
 	 * @var bool
 	 */
 	protected $_includeSchema = false;
@@ -174,7 +170,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		//	Most requests contain 'returned fields' parameter, all by default
 		$this->_extras = array();
 		$this->_fields = Option::get( $_REQUEST, 'fields', '*' );
-		$this->_exportPackage = Option::getBool( $_REQUEST, 'pkg' );
 		$this->_includeSchema = Option::getBool( $_REQUEST, 'include_schema', false );
 		$this->_includeCount = Option::getBool( $_REQUEST, 'include_count', false );
 
@@ -570,26 +565,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	public function getResponseFormat()
 	{
 		return $this->_responseFormat;
-	}
-
-	/**
-	 * @param boolean $exportPackage
-	 *
-	 * @return BaseSystemRestResource
-	 */
-	public function setExportPackage( $exportPackage )
-	{
-		$this->_exportPackage = $exportPackage;
-
-		return $this;
-	}
-
-	/**
-	 * @return boolean
-	 */
-	public function getExportPackage()
-	{
-		return $this->_exportPackage;
 	}
 
 	/**
