@@ -3,3 +3,7 @@ vendor
 .idea/tasks.xml
 composer.lock
 Services\(Original\)
+.composer
+tests/log
+tests/config/keys.php
+tests/metrics

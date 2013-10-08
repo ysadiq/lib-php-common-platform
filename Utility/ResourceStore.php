@@ -158,7 +158,7 @@ class ResourceStore implements UtilityLike
 	 */
 	public static function insertOne( $record, $rollback = false, $fields = null, $extras = null )
 	{
-		return static::bulkInsert( array( $record ), $rollback, $fields, $extras, true );
+		return static::bulkInsert( array($record), $rollback, $fields, $extras, true );
 	}
 
 	/**
@@ -184,7 +184,7 @@ class ResourceStore implements UtilityLike
 	 */
 	public static function updateOne( $record, $rollback = false, $fields = null, $extras = null )
 	{
-		return static::bulkUpdate( array( $record ), $rollback, $fields, $extras, true );
+		return static::bulkUpdate( array($record), $rollback, $fields, $extras, true );
 	}
 
 	/**
@@ -208,7 +208,7 @@ class ResourceStore implements UtilityLike
 	 */
 	public static function deleteOne( $record, $fields = null, $extras = null )
 	{
-		return static::bulkDelete( array( $record ), true, $fields, $extras, true );
+		return static::bulkDelete( array($record), true, $fields, $extras, true );
 	}
 
 	/**
@@ -224,7 +224,7 @@ class ResourceStore implements UtilityLike
 		//	Passed in a comma-delimited string of ids...
 		if ( $criteria && is_string( $criteria ) && $criteria !== '*' )
 		{
-			$criteria = array( 'select' => $criteria );
+			$criteria = array('select' => $criteria);
 		}
 
 		//	Extract proper criteria from third-party library AJAX calls/parameters
@@ -239,7 +239,7 @@ class ResourceStore implements UtilityLike
 				break;
 		}
 
-		return static::bulkSelectById( null !== $id ? array( $id ) : null, $criteria, $params, $singleRow );
+		return static::bulkSelectById( null !== $id ? array($id) : null, $criteria, $params, $singleRow );
 	}
 
 	/**
@@ -256,7 +256,7 @@ class ResourceStore implements UtilityLike
 	 */
 	public static function bulkSelectById( $ids, $criteria = null, $params = array(), $single = false )
 	{
-		if ( empty( $ids ) || array( null ) == $ids )
+		if ( empty( $ids ) || array(null) == $ids )
 		{
 			$ids = null;
 		}
@@ -301,7 +301,7 @@ class ResourceStore implements UtilityLike
 				}
 			}
 
-			$_response = array( 'record' => $_response );
+			$_response = array('record' => $_response);
 		}
 
 		if ( false !== static::$_includeSchema )
@@ -373,7 +373,7 @@ class ResourceStore implements UtilityLike
 						throw $_ex;
 					}
 
-					$_response[] = array( 'error' => array( 'message' => $_ex->getMessage(), 'code' => $_ex->getCode() ) );
+					$_response[] = array('error' => array('message' => $_ex->getMessage(), 'code' => $_ex->getCode()));
 				}
 			}
 		}
@@ -392,7 +392,7 @@ class ResourceStore implements UtilityLike
 			$_transaction->commit();
 		}
 
-		return $singleRow ? current( $_response ) : array( 'record' => $_response );
+		return $singleRow ? current( $_response ) : array('record' => $_response);
 	}
 
 	/**
@@ -466,14 +466,14 @@ class ResourceStore implements UtilityLike
 			}
 			catch ( \CDbException $_ex )
 			{
-				$_response[] = array( 'error' => array( 'message' => $_ex->getMessage(), 'code' => $_ex->getCode() ) );
+				$_response[] = array('error' => array('message' => $_ex->getMessage(), 'code' => $_ex->getCode()));
 
 				if ( false !== $rollback && $_transaction )
 				{
 					//	Rollback
 					$_transaction->rollback();
 
-					return $singleRow ? current( $_response ) : array( 'record' => $_response );
+					return $singleRow ? current( $_response ) : array('record' => $_response);
 				}
 			}
 		}
@@ -484,7 +484,7 @@ class ResourceStore implements UtilityLike
 			$_transaction->commit();
 		}
 
-		return $singleRow ? current( $_response ) : array( 'record' => $_response );
+		return $singleRow ? current( $_response ) : array('record' => $_response);
 	}
 
 	/**
@@ -517,14 +517,14 @@ class ResourceStore implements UtilityLike
 			}
 			catch ( \CDbException $_ex )
 			{
-				$_response[] = array( 'error' => array( 'message' => $_ex->getMessage(), 'code' => $_ex->getCode() ) );
+				$_response[] = array('error' => array('message' => $_ex->getMessage(), 'code' => $_ex->getCode()));
 
 				if ( false !== $rollback && $_transaction )
 				{
 					//	Rollback
 					$_transaction->rollback();
 
-					return $singleRow ? current( $_response ) : array( 'record' => $_response );
+					return $singleRow ? current( $_response ) : array('record' => $_response);
 				}
 			}
 		}
@@ -535,7 +535,7 @@ class ResourceStore implements UtilityLike
 			$_transaction->commit();
 		}
 
-		return $singleRow ? current( $_response ) : array( 'record' => $_response );
+		return $singleRow ? current( $_response ) : array('record' => $_response);
 	}
 
 	/**
@@ -580,14 +580,14 @@ class ResourceStore implements UtilityLike
 			}
 			catch ( \CDbException $_ex )
 			{
-				$_response[] = array( 'error' => array( 'message' => $_ex->getMessage(), 'code' => $_ex->getCode() ) );
+				$_response[] = array('error' => array('message' => $_ex->getMessage(), 'code' => $_ex->getCode()));
 
 				if ( false !== $rollback && $_transaction )
 				{
 					//	Rollback
 					$_transaction->rollback();
 
-					return $singleRow ? current( $_response ) : array( 'record' => $_response );
+					return $singleRow ? current( $_response ) : array('record' => $_response);
 				}
 			}
 		}
@@ -598,7 +598,7 @@ class ResourceStore implements UtilityLike
 			$_transaction->commit();
 		}
 
-		return $singleRow ? current( $_response ) : array( 'record' => $_response );
+		return $singleRow ? current( $_response ) : array('record' => $_response);
 	}
 
 	/**
@@ -619,7 +619,7 @@ class ResourceStore implements UtilityLike
 		{
 			$_pk = static::model()->tableSchema->primaryKey;
 
-			return array( $_pk => $resource->getAttribute( $_pk ) );
+			return array($_pk => $resource->getAttribute( $_pk ));
 		}
 
 		//	Refresh requested?
@@ -736,7 +736,7 @@ class ResourceStore implements UtilityLike
 		$_name = ucfirst( Inflector::deneutralize( $_resourceName ) );
 
 		//	Does the resource have a class?
-		if ( class_exists( $_resourceName, false ) || $_loader->loadClass( $_resourceName ) )
+		if ( false === $returnResource && ( ( class_exists( $_resourceName, false ) || $_loader->loadClass( $_resourceName ) ) ) )
 		{
 			$_className = $_resourceName;
 		}
@@ -789,7 +789,7 @@ class ResourceStore implements UtilityLike
 				return new $_className();
 			}
 
-			return call_user_func( array( $_className, 'model' ) );
+			return call_user_func( array($_className, 'model') );
 		}
 		catch ( \Exception $_ex )
 		{
@@ -830,7 +830,7 @@ class ResourceStore implements UtilityLike
 		if ( !isset( $records[0] ) )
 		{
 			// conversion from xml can pull single record out of array format
-			$records = array( $records );
+			$records = array($records);
 		}
 	}
 
