@@ -1,6 +1,9 @@
 # lib-php-common-platform
 
-## Common DSP Components for the DreamFactory Services Platform&trade;
+[![Latest Stable Version](https://poser.pugx.org/dreamfactory/lib-php-common-platform/version.png)](https://packagist.org/packages/dreamfactory/lib-php-common-platform)
+[![Total Downloads](https://poser.pugx.org/dreamfactory/lib-php-common-platform/downloads.png)](https://packagist.org/packages/dreamfactory/lib-php-common-platform)
+
+This library contains common components for interacting with the DreamFactory Services Platform&trade;. It is, for all intents and purposes, the PHP SDK; and will be renamed as such, in the future.
 
 ## Installation
 
