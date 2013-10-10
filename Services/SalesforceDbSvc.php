@@ -53,13 +53,25 @@ class SalesforceDbSvc extends BaseDbSvc
 	//*************************************************************************
 
 	/**
-	 * @var SoapClient\Client
+	 * @var string
 	 */
-	protected $_soapClient;
+	protected $_username;
+	/**
+	 * @var array
+	 */
+	protected $_password;
+	/**
+	 * @var array
+	 */
+	protected $_securityToken;
 	/**
 	 * @var array
 	 */
 	protected $_version = 'v28.0';
+	/**
+	 * @var array
+	 */
+	protected $_sessionCache;
 	/**
 	 * @var array
 	 */
@@ -90,23 +102,14 @@ class SalesforceDbSvc extends BaseDbSvc
 
 		parent::__construct( $config );
 
-		$this->_fieldCache = array();
-
 		$_credentials = Option::get( $config, 'credentials' );
 
-		if ( null === ( $user = Option::get( $_credentials, 'username' ) ) )
+		$this->_username = Option::get( $_credentials, 'username' );
+		$this->_password = Option::get( $_credentials, 'password' );
+		$this->_securityToken = Option::get( $_credentials, 'security_token' );
+		if ( empty( $this->_username ) || empty( $this->_password) || empty( $this->_securityToken ) )
 		{
-			throw new \InvalidArgumentException( 'A Salesforce username is required for this service.' );
-		}
-
-		if ( null === ( $password = Option::get( $_credentials, 'password' ) ) )
-		{
-			throw new \InvalidArgumentException( 'A Salesforce password is required for this service.' );
-		}
-
-		if ( null === ( $token = Option::get( $_credentials, 'security_token' ) ) )
-		{
-			throw new \InvalidArgumentException( 'A Salesforce security token is required for this service.' );
+			throw new \InvalidArgumentException( 'A Salesforce username, password, and security token are required for this service.' );
 		}
 
 		$_version = Option::get( $_credentials, 'version' );
@@ -115,11 +118,62 @@ class SalesforceDbSvc extends BaseDbSvc
 			$this->_version = $_version;
 		}
 
+		$this->_sessionCache = Pii::getState( 'service.' . $this->getApiName() . '.cache', array() );
+
+		$this->_fieldCache = array();
+	}
+
+	protected function _getSoapLoginResult()
+	{
+		// todo use client provided Salesforce wsdl for the different versions
 		$_scanPath = Pii::getParam( 'base_path' ) . '/vendor/dreamfactory/lib-php-common-platform/DreamFactory/Platform';
 		$_wsdl = $_scanPath . '/Templates/Salesforce/salesforce.enterprise.wsdl.xml';
 
-		$_builder = new SoapClient\ClientBuilder( $_wsdl, $user, $password,	$token );
-		$this->_soapClient = $_builder->build();
+		$_builder = new SoapClient\ClientBuilder( $_wsdl, $this->_username, $this->_password, $this->_securityToken );
+		$_soapClient = $_builder->build();
+		if ( !isset( $_soapClient ) )
+		{
+			throw new InternalServerErrorException( 'Failed to build session with Salesforce.' );
+		}
+
+		$_result = $_soapClient->getLoginResult();
+		$this->_sessionCache['server_instance'] = $_result->getServerInstance();
+		$this->_sessionCache['session_id'] = $_result->getSessionId();
+		Pii::setState( 'service.' . $this->getApiName() . '.cache', $this->_sessionCache );
+	}
+
+	protected function _getSessionId()
+	{
+		$_id = Option::get( $this->_sessionCache, 'session_id' );
+		if ( empty( $_id ) )
+		{
+			$this->_getSoapLoginResult();
+
+			$_id = Option::get( $this->_sessionCache, 'session_id' );
+			if ( empty( $_id ) )
+			{
+				throw new InternalServerErrorException( 'Failed to get session id from Salesforce.' );
+			}
+		}
+
+		return $_id;
+	}
+
+	protected function _getServerInstance()
+	{
+		$_instance = Option::get( $this->_sessionCache, 'server_instance' );
+		if ( empty( $_instance ) )
+		{
+			$this->_getSoapLoginResult();
+
+			$_instance = Option::get( $this->_sessionCache, 'server_instance' );
+			if ( empty( $_instance ) )
+			{
+				throw new InternalServerErrorException( 'Failed to get server instance from Salesforce.' );
+			}
+		}
+
+		return $_instance;
 	}
 
 	/**
@@ -145,7 +199,7 @@ class SalesforceDbSvc extends BaseDbSvc
 				$client = $this->getGuzzleClient();
 			}
 			$request = $client->createRequest( $method, $uri, null, $body, $_options );
-			$request->setHeader( 'Authorization', 'Bearer ' . $this->getLoginResult()->getSessionId() );
+			$request->setHeader( 'Authorization', 'Bearer ' . $this->_getSessionId() );
 			if ( !empty( $body ) )
 			{
 				$request->setHeader( 'Content-Type', 'application/json' );
@@ -182,7 +236,7 @@ class SalesforceDbSvc extends BaseDbSvc
 	{
 		return sprintf(
 			'https://%s.salesforce.com/services/data/%s/',
-			$this->getLoginResult()->getServerInstance(),
+			$this->_getServerInstance(),
 			$this->_version
 		);
 	}
@@ -195,21 +249,6 @@ class SalesforceDbSvc extends BaseDbSvc
 	protected function getGuzzleClient()
 	{
 		return new GuzzleClient( $this->getBaseUrl() );
-	}
-
-	/**
-	 * Get login result from SOAP client
-	 *
-	 * @return SoapClient\Result\LoginResult
-	 */
-	protected function getLoginResult()
-	{
-		if ( !isset( $this->_soapClient ) )
-		{
-			throw new InternalServerErrorException( 'Database client has not been initialized.' );
-		}
-
-		return $this->_soapClient->getLoginResult();
 	}
 
 	/**
