@@ -327,7 +327,6 @@ $_base['apis'] = array(
 				'type'             => 'App',
 				'parameters'       =>
 				array(
-					0 =>
 					array(
 						'name'          => 'id',
 						'description'   => 'Identifier of the record to retrieve.',
@@ -336,7 +335,6 @@ $_base['apis'] = array(
 						'paramType'     => 'path',
 						'required'      => true,
 					),
-					1 =>
 					array(
 						'name'          => 'fields',
 						'description'   => 'Comma-delimited list of field names to retrieve for each record.',
@@ -345,12 +343,51 @@ $_base['apis'] = array(
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					2 =>
 					array(
 						'name'          => 'related',
 						'description'   => 'Comma-delimited list of related names to retrieve for each record.',
 						'allowMultiple' => true,
 						'type'          => 'string',
+						'paramType'     => 'query',
+						'required'      => false,
+					),
+					array(
+						'name'          => 'pkg',
+						'description'   => 'Download this app as a DreamFactory package file.',
+						'allowMultiple' => false,
+						'type'          => 'boolean',
+						'paramType'     => 'query',
+						'required'      => false,
+					),
+					array(
+						'name'          => 'include_files',
+						'description'   => "If 'pkg' is true, include hosted files in the package.",
+						'allowMultiple' => false,
+						'type'          => 'boolean',
+						'paramType'     => 'query',
+						'required'      => false,
+					),
+					array(
+						'name'          => 'include_services',
+						'description'   => "If 'pkg' is true, include associated services configuration in the package.",
+						'allowMultiple' => false,
+						'type'          => 'boolean',
+						'paramType'     => 'query',
+						'required'      => false,
+					),
+					array(
+						'name'          => 'include_schema',
+						'description'   => "If 'pkg' is true, include associated database schema in the package.",
+						'allowMultiple' => false,
+						'type'          => 'boolean',
+						'paramType'     => 'query',
+						'required'      => false,
+					),
+					array(
+						'name'          => 'sdk',
+						'description'   => 'Download the DreamFactory Javascript SDK amended for this app.',
+						'allowMultiple' => false,
+						'type'          => 'boolean',
 						'paramType'     => 'query',
 						'required'      => false,
 					),

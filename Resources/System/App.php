@@ -36,25 +36,11 @@ use Kisma\Core\Utility\Option;
 class App extends BaseSystemRestResource
 {
 	//*************************************************************************
-	//* Members
-	//*************************************************************************
-
-	/**
-	 * @var bool Query option for output format of package
-	 */
-	protected $_exportPackage = false;
-	/**
-	 * @var bool Query option for output sdk for this app in format of zip
-	 */
-	protected $_exportSDK = false;
-
-	//*************************************************************************
 	//	Methods
 	//*************************************************************************
 
 	/**
 	 * Creates a new SystemResource instance
-	 *
 	 *
 	 */
 	public function __construct( $consumer, $resources = array() )
@@ -73,40 +59,33 @@ class App extends BaseSystemRestResource
 	}
 
 	/**
-	 * @return bool
-	 */
-	protected function _preProcess()
-	{
-		parent::_preProcess();
-
-		//	Most requests contain 'returned fields' parameter, all by default
-		$this->_exportPackage = Option::getBool( $_REQUEST, 'pkg' );
-		$this->_exportSDK = Option::getBool( $_REQUEST, 'sdk' );
-	}
-
-	/**
 	 * @throws \Exception
 	 * @return array|bool
 	 */
 	protected function _handleGet()
 	{
-		if ( false !== $this->_exportPackage && !empty( $this->_resourceId ) )
+		if ( !empty( $this->_resourceId ) )
 		{
-			$_includeFiles = Option::getBool( $_REQUEST, 'include_files' );
-			$_includeServices = Option::getBool( $_REQUEST, 'include_services' );
-			$_includeSchema = Option::getBool( $_REQUEST, 'include_schema' );
-			$_includeData = Option::getBool( $_REQUEST, 'include_data' );
+			//	Export the app as a package file
+			if ( Option::getBool( $_REQUEST, 'pkg' ) )
+			{
+				$_includeFiles = Option::getBool( $_REQUEST, 'include_files' );
+				$_includeServices = Option::getBool( $_REQUEST, 'include_services' );
+				$_includeSchema = Option::getBool( $_REQUEST, 'include_schema' );
+				$_includeData = Option::getBool( $_REQUEST, 'include_data' );
 
-			$this->checkPermission( 'admin', $this->_resource );
+				$this->checkPermission( 'admin', $this->_resource );
 
-			return Packager::exportAppAsPackage( $this->_resourceId, $_includeFiles, $_includeServices, $_includeSchema, $_includeData );
-		}
+				return Packager::exportAppAsPackage( $this->_resourceId, $_includeFiles, $_includeServices, $_includeSchema, $_includeData );
+			}
 
-		if ( false !== $this->_exportSDK && !empty( $this->_resourceId ) )
-		{
-			$this->checkPermission( 'read', $this->_resource );
+			// Export the sdk amended for this app
+			if ( Option::getBool( $_REQUEST, 'sdk' ) )
+			{
+				$this->checkPermission( 'read', $this->_resource );
 
-			return Packager::exportAppAsSDK( $this->_resourceId );
+				return Packager::exportAppAsSDK( $this->_resourceId );
+			}
 		}
 
 		return parent::_handleGet();
@@ -176,45 +155,5 @@ class App extends BaseSystemRestResource
 		}
 
 		return parent::_handlePost();
-	}
-
-	/**
-	 * @param boolean $exportPackage
-	 *
-	 * @return BaseSystemRestResource
-	 */
-	public function setExportPackage( $exportPackage )
-	{
-		$this->_exportPackage = $exportPackage;
-
-		return $this;
-	}
-
-	/**
-	 * @return boolean
-	 */
-	public function getExportPackage()
-	{
-		return $this->_exportPackage;
-	}
-
-	/**
-	 * @param boolean $exportSDK
-	 *
-	 * @return BaseSystemRestResource
-	 */
-	public function setExportSDK( $exportSDK )
-	{
-		$this->_exportSDK = $exportSDK;
-
-		return $this;
-	}
-
-	/**
-	 * @return boolean
-	 */
-	public function getExportSDK()
-	{
-		return $this->_exportSDK;
 	}
 }
