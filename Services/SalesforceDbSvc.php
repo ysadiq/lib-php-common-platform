@@ -216,14 +216,52 @@ class SalesforceDbSvc extends BaseDbSvc
 		catch ( \Guzzle\Http\Exception\BadResponseException $ex )
 		{
 			$_response = $ex->getResponse();
-			$_body = $_response->json();
-			$_body = isset( $_body, $_body[0] ) ? $_body[0] : array();
-			$_message = Option::get( $_body, 'message', $_response->getMessage() );
-			$_code = Option::get( $_body, 'errorCode', 'ERROR');
-			throw new RestException(
-				$_response->getStatusCode(),
-				$_code . " " . $_message
-			);
+			$_status = $_response->getStatusCode();
+			if ( 401 == $_status )
+			{
+				// attempt the clear cache and rebuild session
+				$this->_sessionCache = array();
+				// resend request
+				try
+				{
+					$client = $client->setBaseUrl( $this->getBaseUrl() );
+					$request = $client->createRequest( $method, $uri, null, $body, $_options );
+					$request->setHeader( 'Authorization', 'Bearer ' . $this->_getSessionId() );
+					if ( !empty( $body ) )
+					{
+						$request->setHeader( 'Content-Type', 'application/json' );
+					}
+					if ( !empty( $parameters ) )
+					{
+						$request->getQuery()->merge( $parameters );
+					}
+
+					$response = $request->send();
+
+					return $response->json();
+				}
+				catch ( \Guzzle\Http\Exception\BadResponseException $ex )
+				{
+					$_response = $ex->getResponse();
+					$_status = $_response->getStatusCode();
+					$_error = $_response->json();
+					$_error = Option::get( $_error, 0, array() );
+					$_message = Option::get( $_error, 'message', $_response->getMessage() );
+					$_code = Option::get( $_error, 'errorCode', 'ERROR');
+					throw new RestException( $_status, $_code . ' ' . $_message );
+				}
+				catch ( \Exception $ex )
+				{
+					throw new InternalServerErrorException( $ex->getMessage(), $ex->getCode() ? : null );
+				}
+
+			}
+
+			$_error = $_response->json();
+			$_error = Option::get( $_error, 0, array() );
+			$_message = Option::get( $_error, 'message', $_response->getMessage() );
+			$_code = Option::get( $_error, 'errorCode', 'ERROR');
+			throw new RestException( $_status, $_code . ' ' . $_message );
 		}
 		catch ( \Exception $ex )
 		{
