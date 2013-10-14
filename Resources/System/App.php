@@ -42,7 +42,6 @@ class App extends BaseSystemRestResource
 	/**
 	 * Creates a new SystemResource instance
 	 *
-	 *
 	 */
 	public function __construct( $consumer, $resources = array() )
 	{
@@ -65,16 +64,28 @@ class App extends BaseSystemRestResource
 	 */
 	protected function _handleGet()
 	{
-		if ( false !== $this->_exportPackage && !empty( $this->_resourceId ) )
+		if ( !empty( $this->_resourceId ) )
 		{
-			$_includeFiles = Option::getBool( $_REQUEST, 'include_files' );
-			$_includeServices = Option::getBool( $_REQUEST, 'include_services' );
-			$_includeSchema = Option::getBool( $_REQUEST, 'include_schema' );
-			$_includeData = Option::getBool( $_REQUEST, 'include_data' );
+			//	Export the app as a package file
+			if ( Option::getBool( $_REQUEST, 'pkg' ) )
+			{
+				$_includeFiles = Option::getBool( $_REQUEST, 'include_files' );
+				$_includeServices = Option::getBool( $_REQUEST, 'include_services' );
+				$_includeSchema = Option::getBool( $_REQUEST, 'include_schema' );
+				$_includeData = Option::getBool( $_REQUEST, 'include_data' );
 
-			$this->checkPermission( 'admin', $this->_resource );
+				$this->checkPermission( 'admin', $this->_resource );
 
-			return Packager::exportAppAsPackage( $this->_resourceId, $_includeFiles, $_includeServices, $_includeSchema, $_includeData );
+				return Packager::exportAppAsPackage( $this->_resourceId, $_includeFiles, $_includeServices, $_includeSchema, $_includeData );
+			}
+
+			// Export the sdk amended for this app
+			if ( Option::getBool( $_REQUEST, 'sdk' ) )
+			{
+				$this->checkPermission( 'read', $this->_resource );
+
+				return Packager::exportAppAsSDK( $this->_resourceId );
+			}
 		}
 
 		return parent::_handleGet();

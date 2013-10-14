@@ -987,7 +987,7 @@ class SqlDbSvc extends BaseDbSvc
 			$dummy = array();
 			foreach ( $bindings as $binding )
 			{
-				$reader->bindColumn( $binding['name'], $dummy[$binding['name']], $binding['type'] );
+				$reader->bindColumn( $binding['name'], $dummy[$binding['name']], $binding['pdo_type'] );
 			}
 			$reader->setFetchMode( \PDO::FETCH_BOUND );
 			$count = 0;
@@ -996,7 +996,13 @@ class SqlDbSvc extends BaseDbSvc
 				$temp = array();
 				foreach ( $bindings as $binding )
 				{
-					$temp[$binding['name']] = $dummy[$binding['name']];
+					$_name = $binding['name'];
+					$_value = $dummy[ $_name ];
+					if ( 'float' == $binding['php_type'] )
+					{
+						$_value = floatval( $_value );
+					}
+					$temp[ $_name ] = $_value;
 				}
 
 				if ( !empty( $related ) )
@@ -1141,7 +1147,7 @@ class SqlDbSvc extends BaseDbSvc
 			$dummy = array();
 			foreach ( $bindings as $binding )
 			{
-				$reader->bindColumn( $binding['name'], $dummy[$binding['name']], $binding['type'] );
+				$reader->bindColumn( $binding['name'], $dummy[$binding['name']], $binding['pdo_type'] );
 			}
 			$reader->setFetchMode( \PDO::FETCH_BOUND );
 			$count = 0;
@@ -1150,8 +1156,15 @@ class SqlDbSvc extends BaseDbSvc
 				$temp = array();
 				foreach ( $bindings as $binding )
 				{
-					$temp[$binding['name']] = $dummy[$binding['name']];
+					$_name = $binding['name'];
+					$_value = $dummy[ $_name ];
+					if ( 'float' == $binding['php_type'] )
+					{
+						$_value = floatval( $_value );
+					}
+					$temp[ $_name ] = $_value;
 				}
+
 				if ( !empty( $related ) )
 				{
 					$temp = $this->retrieveRelatedRecords( $relations, $temp, $related );
@@ -1560,20 +1573,15 @@ class SqlDbSvc extends BaseDbSvc
 			}
 			// find the type
 			$field_info = SqlDbUtilities::getFieldFromDescribe( $field, $avail_fields );
-			$dbType = ( isset( $field_info ) ) ? $field_info['db_type'] : '';
-			$type = ( isset( $field_info ) ) ? $field_info['type'] : '';
-			switch ( $type )
-			{
-				case 'boolean':
-					$bindArray[] = array( 'name' => $field, 'type' => \PDO::PARAM_BOOL );
-					break;
-				case 'integer':
-					$bindArray[] = array( 'name' => $field, 'type' => \PDO::PARAM_INT );
-					break;
-				default:
-					$bindArray[] = array( 'name' => $field, 'type' => \PDO::PARAM_STR );
-					break;
-			}
+			$dbType = Option::get( $field_info, 'db_type', '');
+			$type = Option::get( $field_info, 'type', '');
+
+			$bindArray[] = array(
+				'name' => $field,
+				'pdo_type' => SqlDbUtilities::determinePdoBindingType( $type, $dbType ),
+				'php_type' => SqlDbUtilities::determinePhpConversionType( $type, $dbType ),
+			);
+
 			// todo fix special cases - maybe after retrieve
 			switch ( $dbType )
 			{
@@ -1891,7 +1899,7 @@ class SqlDbSvc extends BaseDbSvc
 			$dummy = null;
 			foreach ( $bindings as $binding )
 			{
-				$reader->bindColumn( $binding['name'], $dummy, $binding['type'] );
+				$reader->bindColumn( $binding['name'], $dummy, $binding['pdo_type'] );
 			}
 
 			$data = array();

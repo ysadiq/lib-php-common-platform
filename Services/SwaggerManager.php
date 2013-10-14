@@ -255,7 +255,7 @@ class SwaggerManager extends BasePlatformRestService
 			// build main services list
 			$_services[] = array(
 				'path'        => '/' . $_apiName,
-				'description' => $_service['description']
+				'description' => Option::get( $_service, 'description' )
 			);
 		}
 

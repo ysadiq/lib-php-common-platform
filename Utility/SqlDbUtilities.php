@@ -2055,9 +2055,14 @@ SQL;
 			case 'bool':
 				return 'boolean';
 
+			case 'decimal':
+			case 'numeric':
+			case 'number':
+			case 'percent':
+				return 'decimal';
+
 			case 'double':
 			case 'float':
-			case 'numeric':
 				return 'float';
 
 			case 'tinyint':
@@ -2087,7 +2092,6 @@ SQL;
 				return 'datetime';
 
 			//	String types
-			default:
 			case 'string':
 			case 'char':
 			case 'text':
@@ -2096,8 +2100,75 @@ SQL;
 			case 'varchar':
 			case 'nchar':
 			case 'nvarchar':
+			default:
 				return 'string';
 		}
 	}
 
+	/**
+	 * @param $type
+	 * @param $db_type
+	 *
+	 * @return int | null
+	 */
+	public static function determinePdoBindingType( $type, $db_type )
+	{
+		switch ( $type )
+		{
+			case 'boolean':
+				return \PDO::PARAM_BOOL;
+				break;
+			case 'integer':
+			case 'id':
+			case 'reference':
+			case 'user_id':
+			case 'user_id_on_create':
+			case 'user_id_on_update':
+				return \PDO::PARAM_INT;
+				break;
+			case 'string':
+				return \PDO::PARAM_STR;
+				break;
+			case 'decimal':
+			case 'float':
+			default:
+				break;
+		}
+
+		return null;
+	}
+
+	/**
+	 * @param $type
+	 * @param $db_type
+	 * @return null|string
+	 */
+	public static function determinePhpConversionType( $type, $db_type )
+	{
+		switch ( $type )
+		{
+			case 'boolean':
+				return 'bool';
+				break;
+			case 'integer':
+			case 'id':
+			case 'reference':
+			case 'user_id':
+			case 'user_id_on_create':
+			case 'user_id_on_update':
+				return 'int';
+				break;
+			case 'decimal':
+			case 'float':
+			case 'double':
+				return 'float';
+			case 'string':
+				return 'string';
+				break;
+			default:
+				break;
+		}
+
+		return null;
+	}
 }

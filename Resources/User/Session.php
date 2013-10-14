@@ -333,7 +333,7 @@ class Session extends BasePlatformRestResource
 
 		if ( null !== $userId && $_user->id != $userId )
 		{
-			throw new ForbiddenException( 'Naughty, naughty... Not yours.' . $_user->id . ' != ' . print_r( $userId, true ) );
+			throw new ForbiddenException( 'Naughty, naughty... Not yours. ' . $_user->id . ' != ' . print_r( $userId, true ) );
 		}
 
 		$_email = $_user->email;
@@ -367,6 +367,7 @@ class Session extends BasePlatformRestResource
 			}
 
 			$_role = $_user->role->attributes;
+			$_data['role'] = Option::get( $_role, 'name' );
 
 			if ( $_user->role->apps )
 			{
