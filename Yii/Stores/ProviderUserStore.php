@@ -71,8 +71,6 @@ class ProviderUserStore extends BaseOasysStore
 	 */
 	public function sync()
 	{
-		//@TODO What to do about new users, no record?
-
 		try
 		{
 			$this->_userModel->user_data = $this->contents();
@@ -86,5 +84,29 @@ class ProviderUserStore extends BaseOasysStore
 
 			return false;
 		}
+	}
+
+	/**
+	 * Revoke stored token
+	 *
+	 * @param bool $delete If true (default), row is deleted from storage
+	 *
+	 * @return bool
+	 */
+	public function revoke( $delete = true )
+	{
+		if ( empty( $this->_userModel ) )
+		{
+			return true;
+		}
+
+		if ( $delete )
+		{
+			return $this->_userModel->delete();
+		}
+
+		$this->_userModel->auth_text = null;
+
+		return $this->_userModel->save();
 	}
 }
