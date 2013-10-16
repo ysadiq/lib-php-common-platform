@@ -21,10 +21,7 @@ namespace DreamFactory\Platform\Yii\Stores;
 
 use DreamFactory\Oasys\Stores\BaseOasysStore;
 use DreamFactory\Platform\Yii\Models\User;
-use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\Sql;
 
 /**
  * ProviderUserStore.php
@@ -95,18 +92,27 @@ class ProviderUserStore extends BaseOasysStore
 	 */
 	public function revoke( $delete = true )
 	{
-		if ( empty( $this->_userModel ) )
+		try
 		{
-			return true;
-		}
+			if ( empty( $this->_userModel ) )
+			{
+				return true;
+			}
 
-		if ( $delete )
+			if ( true === $delete )
+			{
+				return $this->_userModel->delete();
+			}
+
+			$this->_userModel->auth_text = null;
+
+			return $this->_userModel->save();
+		}
+		catch ( \CDbException $_ex )
 		{
-			return $this->_userModel->delete();
+			Log::error( 'Exception revoking provider user row: ' . $_ex->getMessage() );
+
+			return false;
 		}
-
-		$this->_userModel->auth_text = null;
-
-		return $this->_userModel->save();
 	}
 }
