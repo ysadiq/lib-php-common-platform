@@ -54,21 +54,21 @@ class Config extends BaseSystemRestResource
 	public function __construct( $consumer = null, $resourceArray = array() )
 	{
 		parent::__construct(
-			  $consumer,
-			  array(
-				   'name'           => 'Configuration',
-				   'type'           => 'System',
-				   'service_name'   => 'system',
-				   'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				   'api_name'       => 'config',
-				   'description'    => 'Service general configuration',
-				   'is_active'      => true,
-				   'resource_array' => $resourceArray,
-				   'verb_aliases'   => array(
-					   static::Patch => static::Post,
-					   static::Merge => static::Post,
-				   )
-			  )
+			$consumer,
+			array(
+				 'name'           => 'Configuration',
+				 'type'           => 'System',
+				 'service_name'   => 'system',
+				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				 'api_name'       => 'config',
+				 'description'    => 'Service general configuration',
+				 'is_active'      => true,
+				 'resource_array' => $resourceArray,
+				 'verb_aliases'   => array(
+					 static::Patch => static::Post,
+					 static::Merge => static::Post,
+				 )
+			)
 		);
 	}
 
@@ -155,7 +155,7 @@ class Config extends BaseSystemRestResource
 					'id'            => $_row->id,
 					'provider_name' => $_row->provider_name_text,
 					'api_name'      => $_row->endpoint_text,
-					'config_text'   => array(),
+					'config_text'   => array( 'client_id' => Option::getDeep( $_row, 'config_text', 'client_id' ) ),
 					'is_active'     => $_row->enable_ind,
 					'is_system'     => true,
 				);

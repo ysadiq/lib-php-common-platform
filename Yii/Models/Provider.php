@@ -97,16 +97,16 @@ class Provider extends BasePlatformSystemModel
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-					 array_merge(
-						 $additionalLabels,
-						 array(
-							  'provider_name' => 'Name',
-							  'api_name'      => 'API Name',
-							  'config_text'   => 'Configuration',
-							  'is_active'     => 'Active',
-							  'is_system'     => 'System Provider'
-						 )
-					 )
+			array_merge(
+				$additionalLabels,
+				array(
+					 'provider_name' => 'Name',
+					 'api_name'      => 'API Name',
+					 'config_text'   => 'Configuration',
+					 'is_active'     => 'Active',
+					 'is_system'     => 'System Provider'
+				)
+			)
 		);
 	}
 
@@ -118,10 +118,10 @@ class Provider extends BasePlatformSystemModel
 	public function byPortal( $portal )
 	{
 		$this->getDbCriteria()->mergeWith(
-			 array(
-				  'condition' => 'provider_name = :provider_name or api_name = :api_name',
-				  'params'    => array( ':provider_name' => $portal, ':api_name' => Inflector::neutralize( $portal ) ),
-			 )
+			array(
+				 'condition' => 'provider_name = :provider_name or api_name = :api_name',
+				 'params'    => array( ':provider_name' => $portal, ':api_name' => Inflector::neutralize( $portal ) ),
+			)
 		);
 
 		return $this;
@@ -161,7 +161,12 @@ class Provider extends BasePlatformSystemModel
 
 		if ( !Pii::guest() )
 		{
-			if ( null !== ( $_auth = ProviderUser::model()->byUserProviderUserId( Session::getCurrentUserId(), $provider->id )->find( array( 'select' => 'auth_text' ) ) ) )
+			if ( null !==
+				 ( $_auth =
+					 ProviderUser::model()->byUserProviderUserId( Session::getCurrentUserId(), Option::get( $provider, 'id' ) )->find(
+						 array( 'select' => 'auth_text' )
+					 ) )
+			)
 			{
 				$_userConfig = $_auth->auth_text;
 				unset( $_auth );
@@ -197,7 +202,7 @@ class Provider extends BasePlatformSystemModel
 		//	Now simmer...
 		return array_merge(
 		//	My configuration
-			(array)$provider->config_text,
+			(array)Option::get( $provider, 'config_text', array() ),
 			//	Then base from consumer
 			Option::clean( $baseConfig ),
 			//	User creds
