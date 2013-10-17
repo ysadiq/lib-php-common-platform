@@ -25,15 +25,13 @@ $_base['apis'] = array(
 		'path'        => '/{api_name}/service',
 		'operations'  =>
 		array(
-			0 =>
 			array(
 				'method'           => 'GET',
-				'summary'          => 'Retrieve multiple services.',
+				'summary'          => 'getServices() - Retrieve one or more services.',
 				'nickname'         => 'getServices',
-				'type'             => 'Services',
+				'type'             => 'ServicesResponse',
 				'parameters'       =>
 				array(
-					0 =>
 					array(
 						'name'          => 'ids',
 						'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
@@ -42,7 +40,6 @@ $_base['apis'] = array(
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					1 =>
 					array(
 						'name'          => 'filter',
 						'description'   => 'SQL-like filter to limit the records to retrieve.',
@@ -51,7 +48,6 @@ $_base['apis'] = array(
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					2 =>
 					array(
 						'name'          => 'limit',
 						'description'   => 'Set to limit the filter results.',
@@ -60,7 +56,6 @@ $_base['apis'] = array(
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					3 =>
 					array(
 						'name'          => 'order',
 						'description'   => 'SQL-like order containing field and direction for filter results.',
@@ -69,7 +64,6 @@ $_base['apis'] = array(
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					4 =>
 					array(
 						'name'          => 'offset',
 						'description'   => 'Set to offset the filter results to a particular record count.',
@@ -78,7 +72,6 @@ $_base['apis'] = array(
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					5 =>
 					array(
 						'name'          => 'fields',
 						'description'   => 'Comma-delimited list of field names to retrieve for each record.',
@@ -87,7 +80,6 @@ $_base['apis'] = array(
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					6 =>
 					array(
 						'name'          => 'related',
 						'description'   => 'Comma-delimited list of related names to retrieve for each record.',
@@ -96,19 +88,17 @@ $_base['apis'] = array(
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					7 =>
 					array(
 						'name'          => 'include_count',
-						'description'   => 'Include the total number of filter results.',
+						'description'   => 'Include the total number of filter results in returned metadata.',
 						'allowMultiple' => false,
 						'type'          => 'boolean',
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					8 =>
 					array(
 						'name'          => 'include_schema',
-						'description'   => 'Include the schema of the table queried.',
+						'description'   => 'Include the schema of the table queried in returned metadata.',
 						'allowMultiple' => false,
 						'type'          => 'boolean',
 						'paramType'     => 'query',
@@ -117,110 +107,112 @@ $_base['apis'] = array(
 				),
 				'responseMessages' =>
 				array(
-					0 =>
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
 					),
-					1 =>
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
 						'code'    => 401,
 					),
-					2 =>
 					array(
 						'message' => 'System Error - Specific reason is included in the error message.',
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. Use the \'fields\' and \'related\' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.',
+				'notes'            => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. ' .
+									  'By default, all records up to the maximum are returned. <br>' .
+									  'Use the \'fields\' and \'related\' parameters to limit properties returned for each record. ' .
+									  'By default, all fields and no relations are returned for each record. <br>' .
+									  'Alternatively, to retrieve by record, a large list of ids, or a complicated filter, ' .
+									  'use the POST request with X-HTTP-METHOD = GET header and post records or ids.',
 			),
-			1 =>
 			array(
 				'method'           => 'POST',
-				'summary'          => 'Create one or more services.',
+				'summary'          => 'createServices() - Create one or more services.',
 				'nickname'         => 'createServices',
-				'type'             => 'Success',
+				'type'             => 'ServicesResponse',
 				'parameters'       =>
 				array(
-					0 =>
 					array(
-						'name'          => 'record',
+						'name'          => 'body',
 						'description'   => 'Data containing name-value pairs of records to create.',
 						'allowMultiple' => false,
-						'type'          => 'Services',
+						'type'          => 'ServicesRequest',
 						'paramType'     => 'body',
 						'required'      => true,
 					),
-					1 =>
 					array(
 						'name'          => 'fields',
-						'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+						'description'   => 'Comma-delimited list of field names to return for each record affected.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					2 =>
 					array(
 						'name'          => 'related',
-						'description'   => 'Comma-delimited list of related names to retrieve for each record.',
+						'description'   => 'Comma-delimited list of related names to return for each record affected.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
+						'required'      => false,
+					),
+					array(
+						'name'          => 'X-HTTP-METHOD',
+						'description'   => 'Override request using POST to tunnel other http request, such as DELETE.',
+						'enum'          => array( 'GET', 'PUT', 'PATCH', 'DELETE' ),
+						'allowMultiple' => false,
+						'type'          => 'string',
+						'paramType'     => 'header',
 						'required'      => false,
 					),
 				),
 				'responseMessages' =>
 				array(
-					0 =>
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
 					),
-					1 =>
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
 						'code'    => 401,
 					),
-					2 =>
 					array(
 						'message' => 'System Error - Specific reason is included in the error message.',
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+				'notes'            => 'Post data should be a single record or an array of records (shown). ' .
+									  'By default, only the id property of the record affected is returned on success, ' .
+									  'use \'fields\' and \'related\' to return more info.',
 			),
-			2 =>
 			array(
-				'method'           => 'PUT',
-				'summary'          => 'Update one or more services.',
+				'method'           => 'PATCH',
+				'summary'          => 'updateServices() - Update one or more services.',
 				'nickname'         => 'updateServices',
-				'type'             => 'Success',
+				'type'             => 'ServicesResponse',
 				'parameters'       =>
 				array(
-					0 =>
 					array(
-						'name'          => 'record',
+						'name'          => 'body',
 						'description'   => 'Data containing name-value pairs of records to update.',
 						'allowMultiple' => false,
-						'type'          => 'Services',
+						'type'          => 'ServicesRequest',
 						'paramType'     => 'body',
 						'required'      => true,
 					),
-					1 =>
 					array(
 						'name'          => 'fields',
-						'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+						'description'   => 'Comma-delimited list of field names to return for each record affected.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					2 =>
 					array(
 						'name'          => 'related',
-						'description'   => 'Comma-delimited list of related names to retrieve for each record.',
+						'description'   => 'Comma-delimited list of related names to return for each record affected.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
@@ -229,63 +221,58 @@ $_base['apis'] = array(
 				),
 				'responseMessages' =>
 				array(
-					0 =>
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
 					),
-					1 =>
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
 						'code'    => 401,
 					),
-					2 =>
 					array(
 						'message' => 'System Error - Specific reason is included in the error message.',
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+				'notes'            => 'Post data should be a single record or an array of records (shown). ' .
+									  'By default, only the id property of the record is returned on success, ' .
+									  'use \'fields\' and \'related\' to return more info.',
 			),
-			3 =>
 			array(
 				'method'           => 'DELETE',
-				'summary'          => 'Delete one or more services.',
+				'summary'          => 'deleteServices() - Delete one or more services.',
 				'nickname'         => 'deleteServices',
-				'type'             => 'Success',
+				'type'             => 'ServicesResponse',
 				'parameters'       =>
 				array(
-					0 =>
 					array(
 						'name'          => 'ids',
-						'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
+						'description'   => 'Comma-delimited list of the identifiers of the records to delete.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					1 =>
 					array(
-						'name'          => 'record',
-						'description'   => 'Data containing name-value pairs of records to delete.',
+						'name'          => 'force',
+						'description'   => 'Set force to true to delete all records in this table, otherwise \'ids\' parameter is required.',
 						'allowMultiple' => false,
-						'type'          => 'Services',
-						'paramType'     => 'body',
+						'type'          => 'boolean',
+						'paramType'     => 'query',
 						'required'      => false,
+						'default'       => false,
 					),
-					2 =>
 					array(
 						'name'          => 'fields',
-						'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+						'description'   => 'Comma-delimited list of field names to return for each record affected.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					3 =>
 					array(
 						'name'          => 'related',
-						'description'   => 'Comma-delimited list of related names to retrieve for each record.',
+						'description'   => 'Comma-delimited list of related names to return for each record affected.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
@@ -294,23 +281,23 @@ $_base['apis'] = array(
 				),
 				'responseMessages' =>
 				array(
-					0 =>
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
 					),
-					1 =>
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
 						'code'    => 401,
 					),
-					2 =>
 					array(
 						'message' => 'System Error - Specific reason is included in the error message.',
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Use \'ids\' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use \'fields\' and \'related\' to return more info.',
+				'notes'            => 'By default, only the id property of the record deleted is returned on success. ' .
+									  'Use \'fields\' and \'related\' to return more properties of the deleted records. <br>' .
+									  'Alternatively, to delete by record or a large list of ids, ' .
+									  'use the POST request with X-HTTP-METHOD = DELETE header and post records or ids.',
 			),
 		),
 		'description' => 'Operations for service administration.',
@@ -319,15 +306,13 @@ $_base['apis'] = array(
 		'path'        => '/{api_name}/service/{id}',
 		'operations'  =>
 		array(
-			0 =>
 			array(
 				'method'           => 'GET',
-				'summary'          => 'Retrieve one service by identifier.',
+				'summary'          => 'getService() - Retrieve one service.',
 				'nickname'         => 'getService',
-				'type'             => 'Service',
+				'type'             => 'ServiceResponse',
 				'parameters'       =>
 				array(
-					0 =>
 					array(
 						'name'          => 'id',
 						'description'   => 'Identifier of the record to retrieve.',
@@ -336,19 +321,17 @@ $_base['apis'] = array(
 						'paramType'     => 'path',
 						'required'      => true,
 					),
-					1 =>
 					array(
 						'name'          => 'fields',
-						'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+						'description'   => 'Comma-delimited list of field names to return.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					2 =>
 					array(
 						'name'          => 'related',
-						'description'   => 'Comma-delimited list of related names to retrieve for each record.',
+						'description'   => 'Comma-delimited list of related records to return.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
@@ -357,17 +340,14 @@ $_base['apis'] = array(
 				),
 				'responseMessages' =>
 				array(
-					0 =>
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
 					),
-					1 =>
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
 						'code'    => 401,
 					),
-					2 =>
 					array(
 						'message' => 'System Error - Specific reason is included in the error message.',
 						'code'    => 500,
@@ -375,45 +355,40 @@ $_base['apis'] = array(
 				),
 				'notes'            => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
 			),
-			1 =>
 			array(
-				'method'           => 'PUT',
-				'summary'          => 'Update one service.',
+				'method'           => 'PATCH',
+				'summary'          => 'updateService() - Update one service.',
 				'nickname'         => 'updateService',
-				'type'             => 'Success',
+				'type'             => 'ServiceResponse',
 				'parameters'       =>
 				array(
-					0 =>
 					array(
 						'name'          => 'id',
-						'description'   => 'Identifier of the record to retrieve.',
+						'description'   => 'Identifier of the record to update.',
 						'allowMultiple' => false,
 						'type'          => 'string',
 						'paramType'     => 'path',
 						'required'      => true,
 					),
-					1 =>
 					array(
-						'name'          => 'record',
-						'description'   => 'Data containing name-value pairs of records to update.',
+						'name'          => 'body',
+						'description'   => 'Data containing name-value pairs of fields to update.',
 						'allowMultiple' => false,
-						'type'          => 'Service',
+						'type'          => 'ServiceRequest',
 						'paramType'     => 'body',
 						'required'      => true,
 					),
-					2 =>
 					array(
 						'name'          => 'fields',
-						'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+						'description'   => 'Comma-delimited list of field names to return.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					3 =>
 					array(
 						'name'          => 'related',
-						'description'   => 'Comma-delimited list of related names to retrieve for each record.',
+						'description'   => 'Comma-delimited list of related records to return.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
@@ -422,54 +397,48 @@ $_base['apis'] = array(
 				),
 				'responseMessages' =>
 				array(
-					0 =>
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
 					),
-					1 =>
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
 						'code'    => 401,
 					),
-					2 =>
 					array(
 						'message' => 'System Error - Specific reason is included in the error message.',
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Post data should be an array of fields for a single record. Use the \'fields\' and/or \'related\' parameter to return more properties. By default, the id is returned.',
+				'notes'            => 'Post data should be an array of fields to update for a single record. <br>' .
+									  'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return more properties.',
 			),
-			2 =>
 			array(
 				'method'           => 'DELETE',
-				'summary'          => 'Delete one service.',
+				'summary'          => 'deleteService() - Delete one service.',
 				'nickname'         => 'deleteService',
-				'type'             => 'Success',
+				'type'             => 'ServiceResponse',
 				'parameters'       =>
 				array(
-					0 =>
 					array(
 						'name'          => 'id',
-						'description'   => 'Identifier of the record to retrieve.',
+						'description'   => 'Identifier of the record to delete.',
 						'allowMultiple' => false,
 						'type'          => 'string',
 						'paramType'     => 'path',
 						'required'      => true,
 					),
-					1 =>
 					array(
 						'name'          => 'fields',
-						'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+						'description'   => 'Comma-delimited list of field names to return.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
 						'required'      => false,
 					),
-					2 =>
 					array(
 						'name'          => 'related',
-						'description'   => 'Comma-delimited list of related names to retrieve for each record.',
+						'description'   => 'Comma-delimited list of related records to return.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
@@ -478,125 +447,142 @@ $_base['apis'] = array(
 				),
 				'responseMessages' =>
 				array(
-					0 =>
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
 					),
-					1 =>
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
 						'code'    => 401,
 					),
-					2 =>
 					array(
 						'message' => 'System Error - Specific reason is included in the error message.',
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Use the \'fields\' and/or \'related\' parameter to return deleted properties. By default, the id is returned.',
+				'notes'            => 'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return deleted properties.',
 			),
 		),
 		'description' => 'Operations for individual service administration.',
 	),
 );
 
+$_commonProperties = array(
+	'id'                  =>
+	array(
+		'type'        => 'integer',
+		'description' => 'Identifier of this service.',
+	),
+	'name'                =>
+	array(
+		'type'        => 'string',
+		'description' => 'Displayable name of this service.',
+	),
+	'api_name'            =>
+	array(
+		'type'        => 'string',
+		'description' => 'Name of the service to use in API transactions.',
+	),
+	'description'         =>
+	array(
+		'type'        => 'string',
+		'description' => 'Description of this service.',
+	),
+	'is_active'           =>
+	array(
+		'type'        => 'boolean',
+		'description' => 'True if this service is active for use.',
+	),
+	'type'                =>
+	array(
+		'type'        => 'string',
+		'description' => 'One of the supported service types.',
+		'deprecated' => true,
+	),
+	'type_id'                =>
+	array(
+		'type'        => 'integer',
+		'description' => 'One of the supported enumerated service types.',
+	),
+	'storage_name'        =>
+	array(
+		'type'        => 'string',
+		'description' => 'The local or remote storage name (i.e. root folder).',
+	),
+	'storage_type'        =>
+	array(
+		'type'        => 'string',
+		'description' => 'They supported storage service type.',
+		'deprecated' => true,
+	),
+	'storage_type_id'                =>
+	array(
+		'type'        => 'integer',
+		'description' => 'One of the supported enumerated storage service types.',
+	),
+	'credentials'         =>
+	array(
+		'type'        => 'string',
+		'description' => 'Any credentials data required by the service.',
+	),
+	'native_format'       =>
+	array(
+		'type'        => 'string',
+		'description' => 'The format of the returned data of the service.',
+	),
+	'base_url'            =>
+	array(
+		'type'        => 'string',
+		'description' => 'The base URL for remote web services.',
+	),
+	'parameters'          =>
+	array(
+		'type'        => 'string',
+		'description' => 'Additional URL parameters required by the service.',
+	),
+	'headers'             =>
+	array(
+		'type'        => 'string',
+		'description' => 'Additional headers required by the service.',
+	),
+	'apps'                =>
+	array(
+		'type'        => 'Array',
+		'description' => 'Related apps by app to service assignment.',
+		'items'       =>
+		array(
+			'$ref' => 'App',
+		),
+	),
+	'roles'               =>
+	array(
+		'type'        => 'Array',
+		'description' => 'Related roles by service to role assignment.',
+		'items'       =>
+		array(
+			'$ref' => 'Role',
+		),
+	),
+);
+
 $_base['models'] = array(
 	'Service'        =>
 	array(
-		'id'         => 'Service',
+		'id'         => 'ServiceRequest',
+		'properties' => $_commonProperties,
+	),
+	'ServiceResponse'  =>
+	array(
+		'id'         => 'ServiceResponse',
 		'properties' =>
+		array_merge(
+			$_commonProperties,
 		array(
-			'id'                  =>
-			array(
-				'type'        => 'integer',
-				'description' => 'Identifier of this service.',
-			),
-			'name'                =>
-			array(
-				'type'        => 'string',
-				'description' => 'Displayable name of this service.',
-			),
-			'api_name'            =>
-			array(
-				'type'        => 'string',
-				'description' => 'Name of the service to use in API transactions.',
-			),
-			'description'         =>
-			array(
-				'type'        => 'string',
-				'description' => 'Description of this service.',
-			),
-			'is_active'           =>
-			array(
-				'type'        => 'boolean',
-				'description' => 'True if this service is active for use.',
-			),
-			'is_system'           =>
-			array(
-				'type'        => 'boolean',
-				'description' => 'True if this service is a default system service.',
-			),
-			'type'                =>
-			array(
-				'type'        => 'string',
-				'description' => 'One of the supported service types.',
-				'deprecated' => true,
-			),
-			'storage_name'        =>
-			array(
-				'type'        => 'string',
-				'description' => 'The local or remote storage name (i.e. root folder).',
-			),
-			'storage_type'        =>
-			array(
-				'type'        => 'string',
-				'description' => 'They supported storage service type.',
-				'deprecated' => true,
-			),
-			'credentials'         =>
-			array(
-				'type'        => 'string',
-				'description' => 'Any credentials data required by the service.',
-			),
-			'native_format'       =>
-			array(
-				'type'        => 'string',
-				'description' => 'The format of the returned data of the service.',
-			),
-			'base_url'            =>
-			array(
-				'type'        => 'string',
-				'description' => 'The base URL for remote web services.',
-			),
-			'parameters'          =>
-			array(
-				'type'        => 'string',
-				'description' => 'Additional URL parameters required by the service.',
-			),
-			'headers'             =>
-			array(
-				'type'        => 'string',
-				'description' => 'Additional headers required by the service.',
-			),
-			'apps'                =>
-			array(
-				'type'        => 'Array',
-				'description' => 'Related apps by app to service assignment.',
-				'items'       =>
-				array(
-					'$ref' => 'App',
-				),
-			),
-			'roles'               =>
-			array(
-				'type'        => 'Array',
-				'description' => 'Related roles by service to role assignment.',
-				'items'       =>
-				array(
-					'$ref' => 'Role',
-				),
-			),
+			 'is_system'           =>
+			 array(
+				 'type'        => 'boolean',
+				 'description' => 'True if this service is a default system service.',
+			 ),
 			'created_date'        =>
 			array(
 				'type'        => 'string',
@@ -617,11 +603,12 @@ $_base['models'] = array(
 				'type'        => 'integer',
 				'description' => 'User Id of who last modified this service.',
 			),
+		)
 		),
 	),
-	'Services'       =>
+	'ServicesRequest'       =>
 	array(
-		'id'         => 'Services',
+		'id'         => 'ServicesRequest',
 		'properties' =>
 		array(
 			'record' =>
@@ -630,8 +617,38 @@ $_base['models'] = array(
 				'description' => 'Array of system service records.',
 				'items'       =>
 				array(
-					'$ref' => 'Service',
+					'$ref' => 'ServiceRequest',
 				),
+			),
+			'ids'    =>
+			array(
+				'type'        => 'Array',
+				'description' => 'Array of system record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
+				'items'       =>
+				array(
+					'$ref' => 'integer',
+				),
+			),
+		),
+	),
+	'ServicesResponse'       =>
+	array(
+		'id'         => 'ServicesResponse',
+		'properties' =>
+		array(
+			'record' =>
+			array(
+				'type'        => 'Array',
+				'description' => 'Array of system service records.',
+				'items'       =>
+				array(
+					'$ref' => 'ServiceResponse',
+				),
+			),
+			'meta'   =>
+			array(
+				'type'        => 'Metadata',
+				'description' => 'Array of metadata returned for GET requests.',
 			),
 		),
 	),

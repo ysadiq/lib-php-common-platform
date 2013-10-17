@@ -19,27 +19,27 @@
  */
 
 $_description = '<p>
-	This is <a href="http://swagger.wordnik.com">Swagger</a>-built documentation detailing the DreamFactory DSP API.<br>
+	This is <a href="http://swagger.wordnik.com">Swagger</a>-built documentation detailing the DreamFactory DSP REST API.<br>
 	More info can be found <a href="http://www.dreamfactory.com/df_developers/docs">here</a>.<br>
 	<br>
 	<b>Important Notes</b><br>
 	Use of our API requires SSL3. If you plan on making requests from Curl, or your Native SDK, make sure you are using version 3.<br>
-	For example, in curl: <code>curl - 3 url</code><br>
+	For example, in curl: <code>curl -3 url</code><br>
 	<br>
 	<b>Your API Key</b><br>
 	Your “api key” to talk to our API is your App Name as defined in the Administration App.<br>
 	For each request, you can :<br>
-	<t>1. Append <code>app_name=yourappname</code> to the querystring or<br>
+	<t>1. Append <code>app_name=yourappname</code> to the querystring, or<br>
 	<t>2. Send a request header called <b>X-DreamFactory-Application-Name</b> with the value of your app name.<br>
 	<br>
 	<b>Authentication</b><br>
-	If your application is not part of the guest user’s role, then access to any service or data components will require authentication.<br>
-	To authenticate a user, simply POST a JSON string to <code>/user/session</code> that takes on the following format:<br>
+	If your application is not part of the guest user’s role, or is not being hosted on the DSP,
+	then access to any service or data components will require authentication.<br>
+	To authenticate a user, simply POST a JSON string to <code>/rest/user/session</code> that takes on the following format:<br>
 	<code>\'{“email”:”email_value”, “password”:”password_value”}\'</code><br>
 	If successful, in the response, you’ll see a <b>session_id</b> has been created.<br>
-	<br>
-	<b>Very Important</b><br>
-	For all future requests to the API, you’ll need to pass the <b>session_id</b> as a new request header called <b>X-DreamFactory-Session-Token</b>.
+	<b>Very Important : </b>
+	For all future requests to the API, you’ll need to pass the <b>session_id</b> as a request header called <b>X-DreamFactory-Session-Token</b>.
 	</p>';
 
 return array(

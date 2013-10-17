@@ -29,7 +29,6 @@ return array(
 	'resourcePath' => '/{api_name}',
 	'apis'         =>
 	array(
-		0 =>
 		array(
 			'path'        => '/{api_name}',
 			'operations'  =>

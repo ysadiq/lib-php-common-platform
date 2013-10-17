@@ -25,45 +25,39 @@ $_base['apis'] = array(
 		'path'        => '/{api_name}/config',
 		'operations'  =>
 		array(
-			0 =>
 			array(
 				'method'   => 'GET',
-				'summary'  => 'Retrieve system configuration options.',
+				'summary'  => 'getConfig() - Retrieve system configuration properties.',
 				'nickname' => 'getConfig',
-				'type'     => 'Config',
+				'type'     => 'ConfigResponse',
 				'notes'    => 'The retrieved properties control how the system behaves.',
 			),
-			1 =>
 			array(
 				'method'           => 'POST',
-				'summary'          => 'Update one or more system configuration properties.',
+				'summary'          => 'setConfig() - Update one or more system configuration properties.',
 				'nickname'         => 'setConfig',
-				'type'             => 'Success',
+				'type'             => 'ConfigResponse',
 				'parameters'       =>
 				array(
-					0 =>
 					array(
-						'name'          => 'config',
+						'name'          => 'body',
 						'description'   => 'Data containing name-value pairs of properties to set.',
 						'allowMultiple' => false,
-						'type'          => 'Config',
+						'type'          => 'ConfigRequest',
 						'paramType'     => 'body',
 						'required'      => true,
 					),
 				),
 				'responseMessages' =>
 				array(
-					0 =>
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
 					),
-					1 =>
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
 						'code'    => 401,
 					),
-					2 =>
 					array(
 						'message' => 'System Error - Specific reason is included in the error message.',
 						'code'    => 500,
@@ -76,56 +70,67 @@ $_base['apis'] = array(
 	),
 );
 
-$_base['models'] = array(
-	'Config'         =>
+$_commonProperties = array(
+	'allow_open_registration' =>
 	array(
-		'id'         => 'Config',
-		'properties' =>
+		'type'        => 'boolean',
+		'description' => 'Allow guests to register for a user account.',
+	),
+	'open_reg_role_id'        =>
+	array(
+		'type'        => 'integer',
+		'description' => 'Default Role Id assigned to newly registered users.',
+	),
+	'allow_guest_user'        =>
+	array(
+		'type'        => 'boolean',
+		'description' => 'Allow app access for non-authenticated users.',
+	),
+	'guest_role_id'           =>
+	array(
+		'type'        => 'integer',
+		'description' => 'Role Id assigned for all guest sessions.',
+	),
+	'editable_profile_fields' =>
+	array(
+		'type'        => 'string',
+		'description' => 'Comma-delimited list of fields the user is allowed to edit.',
+	),
+	'allowed_hosts'           =>
+	array(
+		'type'        => 'Array',
+		'description' => 'CORS whitelist of allowed remote hosts.',
+		'items'       =>
 		array(
-			'dsp_version'             =>
+			'$ref' => 'HostInfo',
+		),
+	),
+);
+
+$_base['models'] = array(
+	'ConfigRequest'  =>
+	array(
+		'id'         => 'ConfigRequest',
+		'properties' => $_commonProperties,
+	),
+	'ConfigResponse' =>
+	array(
+		'id'         => 'ConfigResponse',
+		'properties' =>
+		array_merge(
+			$_commonProperties,
 			array(
-				'type'        => 'string',
-				'description' => 'Version of the DSP software.',
-			),
-			'db_version'              =>
-			array(
-				'type'        => 'string',
-				'description' => 'Version of the database schema.',
-			),
-			'allow_open_registration' =>
-			array(
-				'type'        => 'boolean',
-				'description' => 'Allow guests to register for a user account.',
-			),
-			'open_reg_role_id'        =>
-			array(
-				'type'        => 'integer',
-				'description' => 'Default Role Id assigned to newly registered users.',
-			),
-			'allow_guest_user'        =>
-			array(
-				'type'        => 'boolean',
-				'description' => 'Allow app access for non-authenticated users.',
-			),
-			'guest_role_id'           =>
-			array(
-				'type'        => 'integer',
-				'description' => 'Role Id assigned for all guest sessions.',
-			),
-			'editable_profile_fields' =>
-			array(
-				'type'        => 'string',
-				'description' => 'Comma-delimited list of fields the user is allowed to edit.',
-			),
-			'allowed_hosts'           =>
-			array(
-				'type'        => 'Array',
-				'description' => 'CORS whitelist of allowed remote hosts.',
-				'items'       =>
-				array(
-					'$ref' => 'HostInfo',
-				),
-			),
+				 'dsp_version' =>
+				 array(
+					 'type'        => 'string',
+					 'description' => 'Version of the DSP software.',
+				 ),
+				 'db_version'  =>
+				 array(
+					 'type'        => 'string',
+					 'description' => 'Version of the database schema.',
+				 ),
+			)
 		),
 	),
 	'HostInfo'       =>

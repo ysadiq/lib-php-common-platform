@@ -22,20 +22,17 @@ return array(
 	'resourcePath' => '/{api_name}',
 	'apis'         =>
 	array(
-		0 =>
 		array(
 			'path'        => '/{api_name}',
 			'operations'  =>
 			array(
-				0 =>
 				array(
 					'method'           => 'POST',
-					'summary'          => 'Send an email created from posted data.',
+					'summary'          => 'sendEmail() - Send an email created from posted data.',
 					'nickname'         => 'sendEmail',
 					'type'             => 'EmailResponse',
 					'parameters'       =>
 					array(
-						0 =>
 						array(
 							'name'          => 'template',
 							'description'   => 'Optional template to base email on.',
@@ -44,40 +41,36 @@ return array(
 							'paramType'     => 'query',
 							'required'      => false,
 						),
-						1 =>
 						array(
 							'name'          => 'data',
 							'description'   => 'Data containing name-value pairs used for provisioning emails.',
 							'allowMultiple' => false,
-							'type'          => 'Email',
+							'type'          => 'EmailRequest',
 							'paramType'     => 'body',
 							'required'      => false,
 						),
 					),
 					'responseMessages' =>
 					array(
-						0 =>
 						array(
 							'message' => 'Bad Request - Request is not complete or valid.',
 							'code'    => 400,
 						),
-						1 =>
 						array(
 							'message' => 'Unauthorized Access - No currently valid session available.',
 							'code'    => 401,
 						),
-						2 =>
 						array(
 							'message' => 'Not Found - Email template or system resource not found.',
 							'code'    => 404,
 						),
-						3 =>
 						array(
 							'message' => 'System Error - Specific reason is included in the error message.',
 							'code'    => 500,
 						),
 					),
-					'notes'            => 'If a template is not used with all required fields, then they must be included in the request. If the \'from\' address is not provisioned in the service, then it must be included in the request..',
+					'notes'            => 'If a template is not used with all required fields, then they must be included in the request. '.
+										  'If the \'from\' address is not provisioned in the service, then it must be included in the request.',
 				),
 			),
 			'description' => 'Operations on a email service.',
@@ -97,7 +90,7 @@ return array(
 				),
 			),
 		),
-		'Email'         =>
+		'EmailRequest'         =>
 		array(
 			'id'         => 'Email',
 			'properties' =>
