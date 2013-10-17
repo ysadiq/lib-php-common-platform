@@ -21,10 +21,7 @@ namespace DreamFactory\Platform\Yii\Stores;
 
 use DreamFactory\Oasys\Stores\BaseOasysStore;
 use DreamFactory\Platform\Yii\Models\User;
-use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\Sql;
 
 /**
  * ProviderUserStore.php
@@ -71,8 +68,6 @@ class ProviderUserStore extends BaseOasysStore
 	 */
 	public function sync()
 	{
-		//@TODO What to do about new users, no record?
-
 		try
 		{
 			$this->_userModel->user_data = $this->contents();
@@ -83,6 +78,39 @@ class ProviderUserStore extends BaseOasysStore
 		catch ( \CDbException $_ex )
 		{
 			Log::error( 'Exception saving provider user row: ' . $_ex->getMessage() );
+
+			return false;
+		}
+	}
+
+	/**
+	 * Revoke stored token
+	 *
+	 * @param bool $delete If true (default), row is deleted from storage
+	 *
+	 * @return bool
+	 */
+	public function revoke( $delete = true )
+	{
+		try
+		{
+			if ( empty( $this->_userModel ) )
+			{
+				return true;
+			}
+
+			if ( true === $delete )
+			{
+				return $this->_userModel->delete();
+			}
+
+			$this->_userModel->auth_text = null;
+
+			return $this->_userModel->save();
+		}
+		catch ( \CDbException $_ex )
+		{
+			Log::error( 'Exception revoking provider user row: ' . $_ex->getMessage() );
 
 			return false;
 		}

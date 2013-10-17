@@ -310,6 +310,8 @@ class Fabric extends SeedUtility
 			return array();
 		}
 
+		Log::debug( 'Global providers pulled: ' . print_r( Option::get( $_response, 'details', array() ), true ) );
+
 		return Option::get( $_response, 'details', array() );
 	}
 }
