@@ -305,7 +305,7 @@ class Fabric extends SeedUtility
 
 		if ( HttpResponse::Ok != Curl::getLastHttpCode() || !$_response->success )
 		{
-			Log::error( 'Global provider credential pull failure: ' . Curl::getErrorAsString() );
+			Log::error( 'Global provider credential pull failure: ' . Curl::getLastHttpCode() . PHP_EOL . print_r( $_response, true ) );
 
 			return array();
 		}
