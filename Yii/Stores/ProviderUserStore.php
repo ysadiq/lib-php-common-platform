@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Yii\Stores;
 use DreamFactory\Oasys\Stores\BaseOasysStore;
 use DreamFactory\Platform\Yii\Models\ProviderUser;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 
 /**
  * ProviderUserStore.php
