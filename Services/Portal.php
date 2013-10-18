@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Oasys\Enums\Flows;
 use DreamFactory\Oasys\Oasys;
 use DreamFactory\Oasys\Providers\BaseProvider;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -27,7 +28,9 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Platform\Yii\Models\User;
+use DreamFactory\Platform\Yii\Stores\ProviderUserStore;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
@@ -45,20 +48,9 @@ class Portal extends BaseSystemRestService
 	//*************************************************************************
 
 	/**
-	 * @var bool
+	 * @var bool If true (the default), the client will be redirected automatically to authorize
 	 */
-	protected $_interactive = false;
-	/**
-	 * @var array The parameters we don't want to proxy
-	 */
-	protected $_ignoredParameters
-		= array(
-			'_', // timestamp added by jquery
-			'app_name', // app_name required by our api
-			'method', // method option for our api
-			'format',
-			'path',
-		);
+	protected $_interactive = true;
 	/**
 	 * @var array The known services
 	 */
@@ -111,7 +103,7 @@ class Portal extends BaseSystemRestService
 
 		//	Clean up the resource path
 		$this->_resourcePath = trim( str_replace( $this->_apiName, null, $this->_resourcePath ), ' /' );
-		$this->_interactive = Option::getBool( $_REQUEST, 'interactive', false, true );
+		$this->_interactive = Option::getBool( $_REQUEST, 'interactive', $this->_interactive, true );
 		$this->_urlParameters = $this->_parseRequest();
 	}
 
@@ -168,7 +160,7 @@ class Portal extends BaseSystemRestService
 		{
 			if ( !isset( $_urlParameters[$_key] ) )
 			{
-				$_urlParameters[] = $_value;
+				$_urlParameters[$_key] = $_value;
 			}
 		}
 
@@ -198,13 +190,6 @@ class Portal extends BaseSystemRestService
 
 					$_key = $_parts[0];
 				}
-			}
-
-			//	Removed ignored things...
-			if ( in_array( strtolower( $_key ), $this->_ignoredParameters ) )
-			{
-				unset( $_params[$_key] );
-				continue;
 			}
 		}
 
@@ -250,7 +235,7 @@ class Portal extends BaseSystemRestService
 	 */
 	protected function _handleResource()
 	{
-		$_config = null;
+		$_config = array();
 
 		if ( empty( $this->_resource ) && $this->_action == HttpMethod::Get )
 		{
@@ -266,7 +251,7 @@ class Portal extends BaseSystemRestService
 				);
 			}
 
-			return array('resource' => $_providers);
+			return array( 'resource' => $_providers );
 		}
 
 		//	1. Validate portal
@@ -284,6 +269,23 @@ class Portal extends BaseSystemRestService
 			$_config = @include( $_configPath );
 		}
 
+		$_config = array_merge(
+			$_config,
+			Option::getDeep(
+				$this->_serviceMap,
+				$this->_resource,
+				'config_text',
+				array()
+			)
+		);
+
+		if ( $this->_interactive )
+		{
+			$_config['flow_type'] = Flows::CLIENT_SIDE;
+		}
+
+		$_config['payload'] = $_payload = array_merge( $this->_urlParameters, Option::clean( RestData::getPostDataAsArray() ) );
+
 		//	2. Get provider and store
 		Oasys::setStore( new ProviderUserStore( $this->_portalUser->id, $this->_serviceMap[$this->_resource]['id'], $_config ), true );
 
@@ -291,12 +293,26 @@ class Portal extends BaseSystemRestService
 		$_provider = Oasys::getProvider( $this->_resource, Oasys::getStore()->get() );
 
 		//	3. Relay call
-		$_resource = '/' . implode( '/', array_slice( $this->_uriPath, 2 ) );
-
-		$_payload = array_merge( $this->_urlParameters, Option::clean( RestData::getPostDataAsArray() ) );
+		$_resource = '/' . implode( '/', array_slice( $this->_uriPath, 3 ) );
 
 		if ( $_provider->authorized( true ) )
 		{
+			/** @var ProviderUserStore $_store */
+			$_store = Oasys::getStore();
+			if ( null === $_store->getProviderUserId() )
+			{
+				$_payload = $_provider->getConfig()->getPayload();
+				$_profile = $_provider->getUserData();
+
+				if ( !empty( $_profile ) )
+				{
+					$_store->getProviderUserId( $_profile->getUserId() );
+					$_store->sync();
+				}
+
+				$_provider->getConfig()->setPayload( $_payload );
+			}
+
 			Log::debug( 'Requesting portal resource "' . $_resource . '"' );
 
 			try
@@ -371,12 +387,23 @@ class Portal extends BaseSystemRestService
 		//	Service cache
 		if ( null === ( $_services = Pii::getState( 'portal.services' ) ) )
 		{
-			$_services = Sql::findAll( 'SELECT * FROM df_sys_provider ORDER BY provider_name', array(), Pii::pdo() );
+			$_providers = Provider::model()->findAll();
 
-			if ( empty( $_services ) )
+			if ( empty( $_providers ) )
 			{
 				return;
 			}
+
+			$_services = array();
+
+			/** @var Provider[] $_providers */
+			foreach ( $_providers as $_provider )
+			{
+				$_services[] = $_provider->getAttributes();
+				unset( $_provider );
+			}
+
+			unset( $_providers );
 
 			Pii::setState( 'portal.services', $_services );
 //			Log::debug( 'Portal services set: ' . print_r( $_services, true ) );
@@ -401,7 +428,7 @@ class Portal extends BaseSystemRestService
 
 		foreach ( $_services as $_service )
 		{
-			$this->_serviceMap[$_service['endpoint_text']] = $_service;
+			$this->_serviceMap[$_service['api_name']] = $_service;
 		}
 
 		$this->_aliases = $_aliases;
@@ -428,26 +455,6 @@ class Portal extends BaseSystemRestService
 	}
 
 	/**
-	 * @param array $ignoredParameters
-	 *
-	 * @return Portal
-	 */
-	public function setIgnoredParameters( $ignoredParameters )
-	{
-		$this->_ignoredParameters = $ignoredParameters;
-
-		return $this;
-	}
-
-	/**
-	 * @return array
-	 */
-	public function getIgnoredParameters()
-	{
-		return $this->_ignoredParameters;
-	}
-
-	/**
 	 * @param boolean $interactive
 	 *
 	 * @return Portal
@@ -465,26 +472,6 @@ class Portal extends BaseSystemRestService
 	public function getInteractive()
 	{
 		return $this->_interactive;
-	}
-
-	/**
-	 * @param array $parameters
-	 *
-	 * @return Portal
-	 */
-	public function setParameters( $parameters )
-	{
-		$this->_parameters = $parameters;
-
-		return $this;
-	}
-
-	/**
-	 * @return array
-	 */
-	public function getParameters()
-	{
-		return $this->_parameters;
 	}
 
 	/**
