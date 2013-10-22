@@ -52,10 +52,6 @@ class Session extends BasePlatformRestResource
 	//*************************************************************************
 
 	/**
-	 * @var string
-	 */
-	protected static $_sessionSalt = null;
-	/**
 	 * @var int
 	 */
 	protected static $_userId = null;
@@ -78,24 +74,21 @@ class Session extends BasePlatformRestResource
 	 */
 	public function __construct( $consumer, $resources = array() )
 	{
-		//	For better security. Get a random string from this link: http://tinyurl.com/randstr and put it here
-		static::$_sessionSalt = static::$_sessionSalt ? : Pii::db()->password;
-
 		parent::__construct(
-			  $consumer,
-			  array(
-				   'name'           => 'User Session',
-				   'service_name'   => 'user',
-				   'type'           => 'System',
-				   'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				   'api_name'       => 'session',
-				   'description'    => 'Resource for a user to manage their session.',
-				   'is_active'      => true,
-				   'resource_array' => $resources,
-				   'verb_aliases'   => array(
-					   static::Put => static::Post,
-				   )
-			  )
+			$consumer,
+			array(
+				 'name'           => 'User Session',
+				 'service_name'   => 'user',
+				 'type'           => 'System',
+				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				 'api_name'       => 'session',
+				 'description'    => 'Resource for a user to manage their session.',
+				 'is_active'      => true,
+				 'resource_array' => $resources,
+				 'verb_aliases'   => array(
+					 static::Put => static::Post,
+				 )
+			)
 		);
 	}
 
@@ -117,8 +110,6 @@ class Session extends BasePlatformRestResource
 	protected function _handlePost()
 	{
 		$_data = RestData::getPostDataAsArray();
-
-		//$password = Utilities::decryptPassword($password);
 
 		return $this->userLogin( Option::get( $_data, 'email' ), Option::get( $_data, 'password' ) );
 	}
@@ -167,7 +158,7 @@ class Session extends BasePlatformRestResource
 							   'guest_role.role_system_accesses',
 							   'guest_role.apps',
 							   'guest_role.services'
-						   )                       ->find();
+						   )->find();
 
 				if ( !empty( $_config ) )
 				{
@@ -319,16 +310,17 @@ class Session extends BasePlatformRestResource
 		static $_appFields = array( 'id', 'api_name', 'is_active' );
 
 		/** @var User $_user */
-		$_user = $user ? : ResourceStore::model( 'user' )->with(
-										'role.role_service_accesses',
-										'role.role_system_accesses',
-										'role.apps',
-										'role.services'
-		)                               ->findByPk( $userId );
+		$_user = $user
+			? : ResourceStore::model( 'user' )->with(
+					'role.role_service_accesses',
+					'role.role_system_accesses',
+					'role.apps',
+					'role.services'
+				)->findByPk( $userId );
 
 		if ( empty( $_user ) )
 		{
-			throw new UnauthorizedException( 'The user with id ' . $userId . ' is invalid.' );
+			throw new UnauthorizedException( 'The user id ' . $userId . ' is invalid.' );
 		}
 
 		if ( null !== $userId && $_user->id != $userId )
@@ -340,14 +332,14 @@ class Session extends BasePlatformRestResource
 
 		if ( !$_user->is_active )
 		{
-			throw new ForbiddenException( "The user with email '$_email' is not currently active." );
+			throw new ForbiddenException( "The user '$_email' is not currently active." );
 		}
 
 		$_isAdmin = $_user->getAttribute( 'is_sys_admin' );
 		$_defaultAppId = $_user->getAttribute( 'default_app_id' );
 		$_data = $_userInfo = $_user->getAttributes( $_fields );
 
-		$_perms = $_roleApps = $_allowedApps = array();
+		$_roleApps = $_allowedApps = array();
 
 		if ( !$_isAdmin )
 		{
@@ -356,9 +348,10 @@ class Session extends BasePlatformRestResource
 				throw new ForbiddenException( "The user '$_email' has not been assigned a role." );
 			}
 
+			$_roleName = $_user->role->name;
 			if ( !$_user->role->is_active )
 			{
-				throw new ForbiddenException( "The role this user is assigned to is not currently active." );
+				throw new ForbiddenException( "The role '$_roleName' is not currently active." );
 			}
 
 			if ( !isset( $_defaultAppId ) )
@@ -366,8 +359,7 @@ class Session extends BasePlatformRestResource
 				$_defaultAppId = $_user->role->default_app_id;
 			}
 
-			$_role = $_user->role->attributes;
-			$_data['role'] = Option::get( $_role, 'name' );
+			$_data['role'] = $_roleName;
 
 			if ( $_user->role->apps )
 			{
@@ -385,6 +377,7 @@ class Session extends BasePlatformRestResource
 				}
 			}
 
+			$_role = $_user->role->attributes;
 			$_role['apps'] = $_roleApps;
 			$_role['services'] = $_user->getRoleServicePermissions();
 			$_userInfo['role'] = $_role;
@@ -411,16 +404,17 @@ class Session extends BasePlatformRestResource
 		static $_appFields = array( 'id', 'api_name', 'is_active' );
 
 		/** @var Role $_role */
-		$_role = $role ? : ResourceStore::model( 'role' )->with(
-										'role_service_accesses',
-										'role_system_accesses',
-										'apps',
-										'services'
-		)                               ->findByPk( $roleId );
+		$_role = $role
+			? : ResourceStore::model( 'role' )->with(
+					'role_service_accesses',
+					'role_system_accesses',
+					'apps',
+					'services'
+				)->findByPk( $roleId );
 
 		if ( empty( $_role ) )
 		{
-			throw new UnauthorizedException( "The role with id $roleId does not exist in the system." );
+			throw new UnauthorizedException( "The role id '$roleId' does not exist in the system." );
 		}
 
 		if ( !$_role->is_active )
@@ -754,11 +748,11 @@ class Session extends BasePlatformRestResource
 			{
 				// special case for possible guest user
 				$_config = ResourceStore::model( 'config' )->with(
-										'guest_role.role_service_accesses',
-										'guest_role.role_system_accesses',
-										'guest_role.apps',
-										'guest_role.services'
-				)                       ->find();
+							   'guest_role.role_service_accesses',
+							   'guest_role.role_system_accesses',
+							   'guest_role.apps',
+							   'guest_role.services'
+						   )->find();
 
 				if ( !empty( $_config ) )
 				{

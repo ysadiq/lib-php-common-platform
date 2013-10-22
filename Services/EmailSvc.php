@@ -117,155 +117,138 @@ class EmailSvc extends BasePlatformRestService
 	 */
 	protected function _handlePost()
 	{
-		$data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostDataAsArray();
 
 		// build email from posted data
-		$template = FilterInput::request( 'template' );
-		$template = Option::get( $data, 'template', $template );
-		if ( !empty( $template ) )
+		$_template = Option::get( $_data, 'template', FilterInput::request( 'template' ) );
+		$_templateId = Option::get( $_data, 'template_id', FilterInput::request( 'template_id' ) );
+		$_templateData = array();
+		if ( !empty( $_template ) )
 		{
-			$count = $this->sendEmailByTemplate( $template, $data );
+			$_templateData = static::getTemplateDataByName( $_template );
 		}
-		else
+		elseif ( !empty( $template_id ) )
 		{
-			if ( empty( $data ) )
-			{
-				throw new BadRequestException( 'No POST data in request.' );
-			}
-
-			$to = Option::get( $data, 'to' );
-			$cc = Option::get( $data, 'cc' );
-			$bcc = Option::get( $data, 'bcc' );
-			$subject = Option::get( $data, 'subject' );
-			$text = Option::get( $data, 'body_text' );
-			$html = Option::get( $data, 'body_html' );
-			$fromName = Option::get( $data, 'from_name' );
-			$fromEmail = Option::get( $data, 'from_email' );
-			$replyName = Option::get( $data, 'reply_to_name' );
-			$replyEmail = Option::get( $data, 'reply_to_email' );
-			$count = $this->sendEmail(
-				$to,
-				$cc,
-				$bcc,
-				$subject,
-				$text,
-				$html,
-				$fromName,
-				$fromEmail,
-				$replyName,
-				$replyEmail,
-				$data
-			);
+			$_templateData = static::getTemplateDataById( $_templateId );
 		}
 
-		return array( 'count' => $count );
+		if ( empty( $_templateData ) && empty( $_data ) )
+		{
+			throw new BadRequestException( 'No valid data in request.' );
+		}
+
+		// build email from template defaults overwritten by posted data
+		$_data = array_merge( Option::get( $_templateData, 'defaults', array(), true ), $_data );
+		$_data = array_merge( $_templateData, $_data );
+
+		$_count = $this->sendEmail( $_data );
+
+		return array( 'count' => $_count );
 	}
 
 	/**
-	 * @param $template
-	 * @param $data
+	 * @param $name
 	 *
-	 * @return int
-	 * @throws NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+	 *
+	 * @return array
 	 */
-	public function sendEmailByTemplate( $template, $data )
+	public static function getTemplateDataByName( $name )
 	{
 		// find template in system db
-		$record = EmailTemplate::model()->findByAttributes( array( 'name' => $template ) );
-		if ( empty( $record ) )
+		$_template = EmailTemplate::model()->findByAttributes( array( 'name' => $name ) );
+		if ( empty( $_template ) )
 		{
-			throw new NotFoundException( "Email Template '$template' not found" );
+			throw new NotFoundException( "Email Template '$name' not found" );
 		}
-		$to = $record->getAttribute( 'to' );
-		$cc = $record->getAttribute( 'cc' );
-		$bcc = $record->getAttribute( 'bcc' );
-		$subject = $record->getAttribute( 'subject' );
-		$text = $record->getAttribute( 'body_text' );
-		$html = $record->getAttribute( 'body_html' );
-		$fromName = $record->getAttribute( 'from_name' );
-		$fromEmail = $record->getAttribute( 'from_email' );
-		$replyName = $record->getAttribute( 'reply_to_name' );
-		$replyEmail = $record->getAttribute( 'reply_to_email' );
-		$defaults = $record->getAttribute( 'defaults' );
 
-		// build email from template defaults overwritten by posted data
-		$to = Option::get( $data, 'to', $to );
-		$cc = Option::get( $data, 'cc', $cc );
-		$bcc = Option::get( $data, 'bcc', $bcc );
-		$fromName = Option::get( $data, 'from_name', $fromName );
-		$fromEmail = Option::get( $data, 'from_email', $fromEmail );
-		$replyName = Option::get( $data, 'reply_to_name', $replyName );
-		$replyEmail = Option::get( $data, 'reply_to_email', $replyEmail );
-		$data = array_merge( $defaults, $data );
+		return $_template->getAttributes();
+	}
 
-		return $this->sendEmail(
-			$to,
-			$cc,
-			$bcc,
-			$subject,
-			$text,
-			$html,
-			$fromName,
-			$fromEmail,
-			$replyName,
-			$replyEmail,
-			$data
-		);
+	/**
+	 * @param $id
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+	 *
+	 * @return array
+	 */
+	public static function getTemplateDataById( $id )
+	{
+		// find template in system db
+		$_template = EmailTemplate::model()->findByPk( $id );
+		if ( empty( $_template ) )
+		{
+			throw new NotFoundException( "Email Template id '$id' not found" );
+		}
+
+		return $_template->getAttributes();
 	}
 
 	/**
 	 * Default Send Email function determines specific mailing function
 	 * based on service configuration.
 	 *
-	 * @param string $to_emails   comma-delimited list of receiver addresses
-	 * @param string $cc_emails   comma-delimited list of CC'd addresses
-	 * @param string $bcc_emails  comma-delimited list of BCC'd addresses
-	 * @param string $subject     Text only subject line
-	 * @param string $body_text   Text only version of the email body
-	 * @param string $body_html   Escaped HTML version of the email body
-	 * @param string $from_name   Name displayed for the sender
-	 * @param string $from_email  Email displayed for the sender
-	 * @param string $reply_name  Name displayed for the reply to
-	 * @param string $reply_email Email used for the sender reply to
-	 * @param array  $data        Name-Value pairs for replaceable data in subject and body
+	 * @param array $data Array of email parameters
 	 *
 	 * @return int
 	 */
-	public function sendEmail( $to_emails, $cc_emails = '', $bcc_emails = '', $subject = '', $body_text = '',
-							   $body_html = '', $from_name = '', $from_email = '',
-							   $reply_name = '', $reply_email = '', $data = array() )
+	public function sendEmail( $data = array() )
 	{
-		if ( empty( $from_email ) )
+		/*
+		 * @param string $_to   comma-delimited list of receiver addresses
+		 * @param string $_cc   comma-delimited list of CC'd addresses
+		 * @param string $_bcc  comma-delimited list of BCC'd addresses
+		 * @param string $_subject     Text only subject line
+		 * @param string $_text   Text only version of the email body
+		 * @param string $_html   Escaped HTML version of the email body
+		 * @param string $_fromName   Name displayed for the sender
+		 * @param string $_fromEmail  Email displayed for the sender
+		 * @param string $_replyName  Name displayed for the reply to
+		 * @param string $_replyEmail Email used for the sender reply to
+		 * @param array  $data        Name-Value pairs for replaceable data in subject and body
+		 */
+		$_to = Option::get( $data, 'to' );
+		$_cc = Option::get( $data, 'cc' );
+		$_bcc = Option::get( $data, 'bcc' );
+		$_subject = Option::get( $data, 'subject' );
+		$_text = Option::get( $data, 'body_text' );
+		$_html = Option::get( $data, 'body_html' );
+		$_fromName = Option::get( $data, 'from_name' );
+		$_fromEmail = Option::get( $data, 'from_email' );
+		$_replyName = Option::get( $data, 'reply_to_name' );
+		$_replyEmail = Option::get( $data, 'reply_to_email' );
+
+		if ( empty( $_fromEmail ) )
 		{
-			$from_email = $this->fromAddress;
-			if ( empty( $from_name ) )
+			$_fromEmail = $this->fromAddress;
+			if ( empty( $_fromName ) )
 			{
-				$from_name = $this->fromName;
+				$_fromName = $this->fromName;
 			}
 		}
-		if ( empty( $reply_email ) )
+		if ( empty( $_replyEmail ) )
 		{
-			$reply_email = $this->replyToAddress;
-			if ( empty( $reply_name ) )
+			$_replyEmail = $this->replyToAddress;
+			if ( empty( $_replyName ) )
 			{
-				$reply_name = $this->replyToName;
+				$_replyName = $this->replyToName;
 			}
 		}
 
-		$to_emails = EmailUtilities::sanitizeAndValidateEmails( $to_emails, 'swift' );
-		if ( !empty( $cc_emails ) )
+		$_to = EmailUtilities::sanitizeAndValidateEmails( $_to, 'swift' );
+		if ( !empty( $_cc ) )
 		{
-			$cc_emails = EmailUtilities::sanitizeAndValidateEmails( $cc_emails, 'swift' );
+			$_cc = EmailUtilities::sanitizeAndValidateEmails( $_cc, 'swift' );
 		}
-		if ( !empty( $bcc_emails ) )
+		if ( !empty( $_bcc ) )
 		{
-			$bcc_emails = EmailUtilities::sanitizeAndValidateEmails( $bcc_emails, 'swift' );
+			$_bcc = EmailUtilities::sanitizeAndValidateEmails( $_bcc, 'swift' );
 		}
 
-		$from_email = EmailUtilities::sanitizeAndValidateEmails( $from_email, 'swift' );
-		if ( !empty( $reply_email ) )
+		$_fromEmail = EmailUtilities::sanitizeAndValidateEmails( $_fromEmail, 'swift' );
+		if ( !empty( $_replyEmail ) )
 		{
-			$reply_email = EmailUtilities::sanitizeAndValidateEmails( $reply_email, 'swift' );
+			$_replyEmail = EmailUtilities::sanitizeAndValidateEmails( $_replyEmail, 'swift' );
 		}
 
 		// do template field replacement
@@ -276,43 +259,44 @@ class EmailSvc extends BasePlatformRestService
 				if ( is_string( $value ) )
 				{
 					// replace {xxx} in subject
-					$subject = str_replace( '{' . $name . '}', $value, $subject );
+					$_subject = str_replace( '{' . $name . '}', $value, $_subject );
 					// replace {xxx} in body - text and html
-					$body_text = str_replace( '{' . $name . '}', $value, $body_text );
-					$body_html = str_replace( '{' . $name . '}', $value, $body_html );
+					$_text = str_replace( '{' . $name . '}', $value, $_text );
+					$_html = str_replace( '{' . $name . '}', $value, $_html );
 				}
 			}
 		}
 		// handle special case, like invite link
-		if ( false !== strpos( $body_text, '{_invite_url_}' ) ||
-			 false !== strpos( $body_html, '{_invite_url_}' )
+		if ( false !== strpos( $_text, '{_invite_url_}' ) ||
+			 false !== strpos( $_html, '{_invite_url_}' )
 		)
 		{
 			// generate link for user, to email should always be the user
-			$inviteLink = UserManager::userInvite( $to_emails );
-			$body_text = str_replace( '{_invite_url_}', $inviteLink, $body_text );
-			$body_html = str_replace( '{_invite_url_}', $inviteLink, $body_html );
+			$inviteLink = UserManager::userInvite( $_to );
+			$_text = str_replace( '{_invite_url_}', $inviteLink, $_text );
+			$_html = str_replace( '{_invite_url_}', $inviteLink, $_html );
 		}
-		if ( empty( $body_html ) )
+		if ( empty( $_html ) )
 		{
-			$body_html = str_replace( "\r\n", "<br />", $body_text );
+			$_html = str_replace( "\r\n", "<br />", $_text );
 		}
 
-		$message = EmailUtilities::createMessage(
-			$to_emails,
-			$cc_emails,
-			$bcc_emails,
-			$subject,
-			$body_text,
-			$body_html,
-			$from_name,
-			$from_email,
-			$reply_name,
-			$reply_email
+		$_message = EmailUtilities::createMessage(
+			$_to,
+			$_cc,
+			$_bcc,
+			$_subject,
+			$_text,
+			$_html,
+			$_fromName,
+			$_fromEmail,
+			$_replyName,
+			$_replyEmail
 		);
 
-		return EmailUtilities::sendMessage( $this->_transport, $message );
+		return EmailUtilities::sendMessage( $this->_transport, $_message );
 	}
+
 	/*
 		public static function sendUserEmail( $template, $data )
 		{

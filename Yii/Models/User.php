@@ -133,7 +133,7 @@ class User extends BasePlatformSystemModel
 			array( 'password, first_name, last_name, security_answer', 'length', 'max' => 64 ),
 			array( 'phone', 'length', 'max' => 32 ),
 			array( 'confirm_code, display_name, security_question', 'length', 'max' => 128 ),
-			array( 'user_source, user_data, is_active, is_sys_admin, user_source', 'safe' ),
+			array( 'user_source, user_data, is_active, is_sys_admin', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -321,6 +321,26 @@ class User extends BasePlatformSystemModel
 					 $_myColumns,
 					 $hidden
 		);
+	}
+
+	public static function getProfileAttributes( $writable = false )
+	{
+		$_fields = array(
+			'first_name',
+			'last_name',
+			'display_name',
+			'email',
+			'phone',
+			'security_question',
+			'default_app_id',
+		);
+
+		if ($writable)
+		{
+			$_fields[] = 'security_answer';
+		}
+
+		return $_fields;
 	}
 
 	/**

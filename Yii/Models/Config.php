@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 
 /**
  * Config.php
@@ -27,17 +28,26 @@ use DreamFactory\Common\Utility\DataFormat;
  *
  * Columns
  *
- * @property string     $db_version
- * @property integer    $allow_open_registration
- * @property integer    $open_reg_role_id
- * @property integer    $allow_guest_user
- * @property integer    $guest_role_id
- * @property string     $editable_profile_fields
+ * @property string              $db_version
+ * @property boolean             $allow_open_registration
+ * @property integer             $open_reg_role_id
+ * @property integer             $open_reg_email_service_id
+ * @property integer             $open_reg_email_template_id
+ * @property integer             $password_email_service_id
+ * @property integer             $password_email_template_id
+ * @property boolean             $allow_guest_user
+ * @property integer             $guest_role_id
+ * @property string              $editable_profile_fields
+ * @property string              $custom_settings
  *
  * Relations
  *
- * @property Role       $open_reg_role
- * @property Role       $guest_role
+ * @property Role                $open_reg_role
+ * @property Service             $open_reg_email_service
+ * @property EmailTemplate       $open_reg_email_template
+ * @property Service             $password_email_service
+ * @property EmailTemplate       $password_email_template
+ * @property Role                $guest_role
  */
 class Config extends BasePlatformSystemModel
 {
@@ -54,6 +64,26 @@ class Config extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @return array
+	 */
+	public function behaviors()
+	{
+		return array_merge(
+			parent::behaviors(),
+			array(
+				 //	Secure JSON
+				 'base_platform_model.secure_json' => array(
+					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					 'salt'               => $this->getDb()->password,
+					 'insecureAttributes' => array(
+						 'custom_settings',
+					 )
+				 ),
+			)
+		);
+	}
+
+	/**
 	 * @return array validation rules for model attributes.
 	 */
 	public function rules()
@@ -61,7 +91,14 @@ class Config extends BasePlatformSystemModel
 		return array(
 			array( 'db_version', 'length', 'max' => 32 ),
 			array( 'editable_profile_fields', 'length', 'max' => 255 ),
-			array( 'allow_open_registration, allow_guest_user, open_reg_role_id, guest_role_id', 'numerical', 'integerOnly' => true ),
+			array( 'allow_open_registration, allow_guest_user', 'boolean' ),
+			array(
+				'open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id, ' .
+				'password_email_service_id, password_email_template_id, guest_role_id',
+				'numerical',
+				'integerOnly' => true
+			),
+			array( 'custom_settings', 'safe' ),
 		);
 	}
 
@@ -71,8 +108,12 @@ class Config extends BasePlatformSystemModel
 	public function relations()
 	{
 		$_relations = array(
-			'open_reg_role' => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'open_reg_role_id' ),
-			'guest_role'    => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'guest_role_id' ),
+			'open_reg_role'           => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'open_reg_role_id' ),
+			'open_reg_email_service'  => array( self::BELONGS_TO, __NAMESPACE__ . '\\Service', 'open_reg_email_service_id' ),
+			'open_reg_email_template' => array( self::BELONGS_TO, __NAMESPACE__ . '\\EmailTemplate', 'open_reg_email_template_id' ),
+			'password_email_service'  => array( self::BELONGS_TO, __NAMESPACE__ . '\\Service', 'password_email_service_id' ),
+			'password_email_template' => array( self::BELONGS_TO, __NAMESPACE__ . '\\EmailTemplate', 'password_email_template_id' ),
+			'guest_role'              => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'guest_role_id' ),
 		);
 
 		return array_merge( parent::relations(), $_relations );
@@ -87,12 +128,17 @@ class Config extends BasePlatformSystemModel
 	{
 		return parent::attributeLabels(
 			array(
-				'db_version'              => 'Db Version',
-				'allow_open_registration' => 'Allow Open Registration',
-				'open_reg_role_id'        => 'Open Registration Default Role Id',
-				'allow_guest_user'        => 'Allow Guest User',
-				'guest_role_id'           => 'Guest Role Id',
-				'editable_profile_fields' => 'Editable Profile Fields',
+				'db_version'                 => 'Db Version',
+				'allow_open_registration'    => 'Allow Open Registration',
+				'open_reg_role_id'           => 'Open Registration Default Role Id',
+				'open_reg_email_service_id'  => 'Open Registration Email Service',
+				'open_reg_email_template_id' => 'Open Registration Email Template',
+				'password_email_service_id'  => 'Password Reset Email Service',
+				'password_email_template_id' => 'Password Reset Email Template',
+				'allow_guest_user'           => 'Allow Guest User',
+				'guest_role_id'              => 'Guest Role Id',
+				'editable_profile_fields'    => 'Editable Profile Fields',
+				'custom_settings'            => 'Custom System-Level Settings',
 			) + $additionalLabels
 		);
 	}
@@ -113,9 +159,14 @@ class Config extends BasePlatformSystemModel
 					 'db_version',
 					 'allow_open_registration',
 					 'open_reg_role_id',
+					 'open_reg_email_service_id',
+					 'open_reg_email_template_id',
+					 'password_email_service_id',
+					 'password_email_template_id',
 					 'allow_guest_user',
 					 'guest_role_id',
 					 'editable_profile_fields',
+					 'custom_settings',
 				),
 				$columns
 			),

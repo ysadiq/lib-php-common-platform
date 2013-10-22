@@ -71,25 +71,35 @@ $_base['apis'] = array(
 );
 
 $_commonProperties = array(
-	'allow_open_registration' =>
-	array(
-		'type'        => 'boolean',
-		'description' => 'Allow guests to register for a user account.',
-	),
 	'open_reg_role_id'        =>
 	array(
 		'type'        => 'integer',
-		'description' => 'Default Role Id assigned to newly registered users.',
+		'description' => 'Default Role Id assigned to newly registered users, set to null to turn off open registration.',
 	),
-	'allow_guest_user'        =>
+	'open_reg_email_service_id'        =>
 	array(
-		'type'        => 'boolean',
-		'description' => 'Allow app access for non-authenticated users.',
+		'type'        => 'integer',
+		'description' => 'Set to an email-type service id to require email confirmation of newly registered users.',
+	),
+	'open_reg_email_template_id'        =>
+	array(
+		'type'        => 'integer',
+		'description' => 'Default email template used for open registration email confirmations.',
+	),
+	'password_email_service_id'        =>
+	array(
+		'type'        => 'integer',
+		'description' => 'Set to an email-type service id to require email confirmation to reset passwords, otherwise defaults to security question and answer.',
+	),
+	'password_email_template_id'        =>
+	array(
+		'type'        => 'integer',
+		'description' => 'Default email template used for password reset email confirmations.',
 	),
 	'guest_role_id'           =>
 	array(
 		'type'        => 'integer',
-		'description' => 'Role Id assigned for all guest sessions.',
+		'description' => 'Role Id assigned for all guest sessions, set to null to require authenticated sessions.',
 	),
 	'editable_profile_fields' =>
 	array(

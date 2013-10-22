@@ -26,6 +26,10 @@ use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\UnauthorizedException;
+use DreamFactory\Platform\Resources\User\CustomSettings;
+use DreamFactory\Platform\Resources\User\Password;
+use DreamFactory\Platform\Resources\User\Profile;
+use DreamFactory\Platform\Resources\User\Register;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
@@ -35,6 +39,7 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Hasher;
+use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
 
 /**
@@ -74,7 +79,7 @@ class UserManager extends BaseSystemRestService
 			)
 		);
 
-		//	For better security. Get a random string from this link: http://tinyurl.com/randstr and put it here
+		//	For better security. "random" key is used when creating confirmation codes
 		static::$_randKey = \sha1( Pii::db()->password );
 	}
 
@@ -84,12 +89,11 @@ class UserManager extends BaseSystemRestService
 	protected function _listResources()
 	{
 		$resources = array(
-			array( 'name' => 'session' ),
-			array( 'name' => 'profile' ),
+			array( 'name' => 'custom' ),
 			array( 'name' => 'password' ),
-			array( 'name' => 'challenge' ),
+			array( 'name' => 'profile' ),
 			array( 'name' => 'register' ),
-			array( 'name' => 'confirm' ),
+			array( 'name' => 'session' ),
 			array( 'name' => 'ticket' )
 		);
 
@@ -132,128 +136,28 @@ class UserManager extends BaseSystemRestService
 				$result = $obj->processRequest( null, $this->_action );
 				break;
 
+			case 'data':
+				$obj = new CustomSettings( $this );
+				$result = $obj->processRequest( null, $this->_action );
+				break;
+
 			case 'profile':
-				switch ( $this->_action )
-				{
-					case self::Get:
-						$result = $this->getProfile();
-						break;
-					case self::Post:
-					case self::Put:
-					case self::Patch:
-					case self::Merge:
-						$data = RestData::getPostDataAsArray();
-						$result = $this->changeProfile( $data );
-						break;
-					default:
-						return false;
-				}
+				$obj = new Profile( $this );
+				$result = $obj->processRequest( null, $this->_action );
 				break;
 
+			case 'challenge': // backward compatibility
 			case 'password':
-				switch ( $this->_action )
-				{
-					case self::Post:
-					case self::Put:
-					case self::Patch:
-					case self::Merge:
-						$data = RestData::getPostDataAsArray();
-						$oldPassword = Utilities::getArrayValue( 'old_password', $data, '' );
-						//$oldPassword = Utilities::decryptPassword($oldPassword);
-						$newPassword = Utilities::getArrayValue( 'new_password', $data, '' );
-						//$newPassword = Utilities::decryptPassword($newPassword);
-						$result = $this->changePassword( $oldPassword, $newPassword );
-						break;
-					default:
-						return false;
-				}
+				$obj = new Password( $this );
+				$result = $obj->processRequest( null, $this->_action );
 				break;
 
+			case 'confirm': // backward compatibility
 			case 'register':
-				switch ( $this->_action )
-				{
-					case self::Post:
-						$data = RestData::getPostDataAsArray();
-						$firstName = Utilities::getArrayValue( 'first_name', $data, '' );
-						$lastName = Utilities::getArrayValue( 'last_name', $data, '' );
-						$displayName = Utilities::getArrayValue( 'display_name', $data, '' );
-						$email = Utilities::getArrayValue( 'email', $data, '' );
-						$result = $this->userRegister( $email, $firstName, $lastName, $displayName );
-						break;
-					default:
-						return false;
-				}
+				$obj = new Register( $this );
+				$result = $obj->processRequest( null, $this->_action );
 				break;
 
-			case 'confirm':
-				switch ( $this->_action )
-				{
-					case self::Post:
-						$data = RestData::getPostDataAsArray();
-						$code = Utilities::getArrayValue( 'code', $_REQUEST, '' );
-						if ( empty( $code ) )
-						{
-							$code = Utilities::getArrayValue( 'code', $data, '' );
-						}
-						$email = Utilities::getArrayValue( 'email', $_REQUEST, '' );
-						if ( empty( $email ) )
-						{
-							$email = Utilities::getArrayValue( 'email', $data, '' );
-						}
-						if ( empty( $email ) && !empty( $code ) )
-						{
-							throw new BadRequestException( "Missing required email or code for invitation." );
-						}
-						$newPassword = Utilities::getArrayValue( 'new_password', $data, '' );
-						if ( empty( $newPassword ) )
-						{
-							throw new BadRequestException( "Missing required fields 'new_password'." );
-						}
-						if ( !empty( $code ) )
-						{
-							$result = $this->passwordResetByCode( $code, $newPassword );
-						}
-						else
-						{
-							$result = $this->passwordResetByEmail( $email, $newPassword );
-						}
-						break;
-					default:
-						return false;
-				}
-				break;
-
-			case 'challenge':
-				switch ( $this->_action )
-				{
-					case self::Get:
-						$email = Utilities::getArrayValue( 'email', $_REQUEST, '' );
-						$result = $this->getChallenge( $email );
-						break;
-					case self::Post:
-					case self::Put:
-					case self::Patch:
-					case self::Merge:
-						$data = RestData::getPostDataAsArray();
-						$email = Utilities::getArrayValue( 'email', $_REQUEST, '' );
-						if ( empty( $email ) )
-						{
-							$email = Utilities::getArrayValue( 'email', $data, '' );
-						}
-						$answer = Utilities::getArrayValue( 'security_answer', $data, '' );
-						if ( !empty( $email ) && !empty( $answer ) )
-						{
-							$result = $this->userSecurityAnswer( $email, $answer );
-						}
-						else
-						{
-							throw new BadRequestException( "Missing required fields 'email' and 'security_answer'." );
-						}
-						break;
-					default:
-						return false;
-				}
-				break;
 			case 'ticket':
 				switch ( $this->_action )
 				{
@@ -324,132 +228,6 @@ class UserManager extends BaseSystemRestService
 	}
 
 	/**
-	 * @param string $email
-	 * @param string $first_name
-	 * @param string $last_name
-	 * @param string $display_name
-	 *
-	 * @throws BadRequestException
-	 * @throws \Exception
-	 * @return array
-	 */
-	public static function userRegister( $email, $first_name = '', $last_name = '', $display_name = '' )
-	{
-		if ( empty( $email ) )
-		{
-			throw new BadRequestException( "The email field for User can not be empty." );
-		}
-
-		$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
-
-		if ( null !== $theUser )
-		{
-			throw new BadRequestException( "A User already exists with the email '$email'." );
-		}
-
-		/** @var $config Config */
-		if ( null === ( $config = Config::model()->find( array( 'select' => 'allow_open_registration, open_reg_role_id' ) ) ) )
-		{
-			throw new InternalServerErrorException( 'Unable to load configuration.' );
-		}
-
-		if ( $config->allow_open_registration )
-		{
-			throw new BadRequestException( "Open registration for user accounts is not currently active for this system." );
-		}
-
-		$roleId = $config->open_reg_role_id;
-		$confirmCode = static::_makeConfirmationMd5( $email );
-
-		// fill out the user fields for creation
-		$temp = substr( $email, 0, strrpos( $email, '@' ) );
-		$fields = array(
-			'email'        => $email,
-			'first_name'   => ( !empty( $first_name ) ) ? $first_name : $temp,
-			'last_name'    => ( !empty( $last_name ) ) ? $last_name : $temp,
-			'display_name' => ( !empty( $display_name ) )
-				? $display_name
-				: ( !empty( $first_name ) && !empty( $last_name ) ) ? $first_name . ' ' . $last_name : $temp,
-			'role_id'      => $roleId,
-			'confirm_code' => $confirmCode
-		);
-		try
-		{
-			$user = new User();
-			$user->setAttributes( $fields );
-			$user->save();
-		}
-		catch ( \CDbException $ex )
-		{
-			throw new InternalServerErrorException( "Failed to store new user!" );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to register new user!\n{$ex->getMessage()}", $ex->getCode() );
-		}
-
-		return array( 'success' => true );
-	}
-
-	/**
-	 * @param $code
-	 *
-	 * @throws BadRequestException
-	 * @throws \Exception
-	 * @return mixed
-	 */
-	public static function userConfirm( $code )
-	{
-		$theUser = User::model()->find( 'confirm_code=:cc', array( ':cc' => $code ) );
-		if ( null === $theUser )
-		{
-			throw new BadRequestException( "Invalid confirm code." );
-		}
-
-		try
-		{
-			$theUser->setAttribute( 'confirm_code', 'y' );
-			$theUser->save();
-		}
-		catch ( \CDbException $ex )
-		{
-			throw new InternalServerErrorException( "Failed to update user storage!" );
-		}
-
-		return array( 'success' => true );
-	}
-
-	/**
-	 * @param $email
-	 *
-	 * @throws NotFoundException
-	 * @throws ForbiddenException
-	 * @return string
-	 */
-	public static function getChallenge( $email )
-	{
-		$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
-		if ( null === $theUser )
-		{
-			// bad email
-			throw new NotFoundException( "The supplied email was not found in the system." );
-		}
-		if ( 'y' !== $theUser->getAttribute( 'confirm_code' ) )
-		{
-			throw new ForbiddenException( "Login registration has not been confirmed." );
-		}
-		$question = $theUser->getAttribute( 'security_question' );
-		if ( !empty( $question ) )
-		{
-			return array( 'security_question' => $question );
-		}
-		else
-		{
-			throw new NotFoundException( 'No valid security question provisioned for this user.' );
-		}
-	}
-
-	/**
 	 * userTicket generates a SSO timed ticket for current valid session
 	 *
 	 * @return array
@@ -466,333 +244,12 @@ class UserManager extends BaseSystemRestService
 			Session::userLogout();
 			throw $ex;
 		}
+
 		// regenerate new timed ticket
 		$timestamp = time();
 		$ticket = Utilities::encryptCreds( "$userId,$timestamp", "gorilla" );
 
 		return array( 'ticket' => $ticket, 'ticket_expiry' => time() + ( 5 * 60 ) );
-	}
-
-	/**
-	 * @param      $email
-	 * @param bool $send_email
-	 *
-	 * @throws \Exception
-	 * @return string
-	 */
-	public static function forgotPassword( $email, $send_email = false )
-	{
-		$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
-		if ( null === $theUser )
-		{
-			// bad email
-			throw new NotFoundException( "The supplied email was not found in the system." );
-		}
-		if ( 'y' !== $theUser->confirm_code )
-		{
-			throw new BadRequestException( "Login registration has not been confirmed." );
-		}
-		if ( $send_email )
-		{
-			$email = $theUser->email;
-			$fullName = $theUser->display_name;
-			if ( !empty( $email ) && !empty( $fullName ) )
-			{
-//					static::sendResetPasswordLink( $email, $fullName );
-
-				return array( 'success' => true );
-			}
-			else
-			{
-				throw new InternalServerErrorException( 'No valid email provisioned for this user.' );
-			}
-		}
-		else
-		{
-			$question = $theUser->security_question;
-			if ( !empty( $question ) )
-			{
-				return array( 'security_question' => $question );
-			}
-			else
-			{
-				throw new InternalServerErrorException( 'No valid security question provisioned for this user.' );
-			}
-		}
-	}
-
-	/**
-	 * @param $email
-	 * @param $answer
-	 *
-	 * @throws UnauthorizedException
-	 * @throws \Exception
-	 * @return mixed
-	 */
-	public static function userSecurityAnswer( $email, $answer )
-	{
-		$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
-		if ( null === $theUser )
-		{
-			// bad email
-			throw new NotFoundException( "The supplied email was not found in the system." );
-		}
-		if ( 'y' !== $theUser->confirm_code )
-		{
-			throw new BadRequestException( "Login registration has not been confirmed." );
-		}
-		// validate answer
-		if ( !\CPasswordHelper::verifyPassword( $answer, $theUser->security_answer ) )
-		{
-			throw new UnauthorizedException( "The challenge response supplied does not match system records." );
-		}
-
-		Pii::user()->setId( $theUser->id );
-		$isSysAdmin = $theUser->is_sys_admin;
-		$result = Session::generateSessionDataFromUser( null, $theUser );
-
-		// write back login datetime
-		$theUser->last_login_date = date( 'c' );
-		$theUser->save();
-
-		Session::setCurrentUserId( $theUser->id );
-
-		// additional stuff for session - launchpad mainly
-		return Session::addSessionExtras( $result, $isSysAdmin, true );
-	}
-
-	/**
-	 * @param string $code
-	 * @param string $new_password
-	 *
-	 * @throws \Exception
-	 * @return mixed
-	 */
-	public static function passwordResetByCode( $code, $new_password )
-	{
-		$theUser = User::model()->find( 'confirm_code=:cc', array( ':cc' => $code ) );
-		if ( null === $theUser )
-		{
-			// bad code
-			throw new \Exception( "The supplied confirmation was not found in the system." );
-		}
-
-		try
-		{
-			$theUser->setAttribute( 'confirm_code', 'y' );
-			$theUser->setAttribute( 'password', \CPasswordHelper::hashPassword( $new_password ) );
-			$theUser->save();
-		}
-		catch ( \CDbException $ex )
-		{
-			throw new InternalServerErrorException( "Error storing new password." );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Error processing password reset.\n{$ex->getMessage()}", $ex->getCode() );
-		}
-
-		try
-		{
-			return Session::userLogin( $theUser->email, $new_password );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Password set, but failed to create a session.\n{$ex->getMessage()}", $ex->getCode() );
-		}
-	}
-
-	/**
-	 * @param string $email
-	 * @param string $new_password
-	 *
-	 * @throws \Exception
-	 * @return mixed
-	 */
-	public static function passwordResetByEmail( $email, $new_password )
-	{
-		/** @var User $theUser */
-		$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
-		if ( null === $theUser )
-		{
-			// bad code
-			throw new NotFoundException( "The supplied email was not found in the system." );
-		}
-
-		$confirmCode = $theUser->confirm_code;
-		if ( empty( $confirmCode ) || ( 'y' == $confirmCode ) )
-		{
-			throw new NotFoundException( "No invitation was found for the supplied email." );
-		}
-
-		try
-		{
-			$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
-			if ( null === $theUser )
-			{
-				// bad code
-				throw new \Exception( "The supplied email was not found in the system." );
-			}
-			$confirmCode = $theUser->confirm_code;
-			if ( empty( $confirmCode ) || ( 'y' == $confirmCode ) )
-			{
-				throw new \Exception( "No invitation was found for the supplied email." );
-			}
-			$theUser->setAttribute( 'confirm_code', 'y' );
-			$theUser->setAttribute( 'password', \CPasswordHelper::hashPassword( $new_password ) );
-			$theUser->save();
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Error processing password reset.\n{$ex->getMessage()}", $ex->getCode() );
-		}
-
-		try
-		{
-			return Session::userLogin( $email, $new_password );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Password set, but failed to create a session.\n{$ex->getMessage()}", $ex->getCode() );
-		}
-	}
-
-	/**
-	 * @param $old_password
-	 * @param $new_password
-	 *
-	 * @throws BadRequestException
-	 * @throws \Exception
-	 * @return bool
-	 */
-	public static function changePassword( $old_password, $new_password )
-	{
-		// check valid session,
-		// using userId from session, query with check for old password
-		// then update with new password
-		$userId = Session::validateSession();
-
-		try
-		{
-			$theUser = User::model()->findByPk( $userId );
-			if ( null === $theUser )
-			{
-				// bad session
-				throw new \Exception( "The user for the current session was not found in the system." );
-			}
-			// validate answer
-			if ( !\CPasswordHelper::verifyPassword( $old_password, $theUser->password ) )
-			{
-				throw new BadRequestException( "The password supplied does not match." );
-			}
-			$theUser->setAttribute( 'password', \CPasswordHelper::hashPassword( $new_password ) );
-			$theUser->save();
-
-			return array( 'success' => true );
-		}
-		catch ( \Exception $ex )
-		{
-			throw $ex;
-		}
-	}
-
-	/**
-	 * @return array
-	 * @throws \Exception
-	 */
-	public static function getProfile()
-	{
-		// check valid session,
-		// using userId from session, update with new profile elements
-		$userId = Session::validateSession();
-
-		try
-		{
-			$theUser = User::model()->findByPk( $userId );
-			if ( null === $theUser )
-			{
-				// bad session
-				throw new \Exception( "The user for the current session was not found in the system." );
-			}
-			// todo protect certain attributes here
-			$fields = $theUser->getAttributes(
-				array(
-					 'first_name',
-					 'last_name',
-					 'display_name',
-					 'email',
-					 'phone',
-					 'security_question',
-					 'default_app_id',
-					 'user_data',
-				)
-			);
-
-			return $fields;
-		}
-		catch ( \Exception $ex )
-		{
-			throw $ex;
-		}
-	}
-
-	/**
-	 * @param array $record
-	 *
-	 * @throws InternalServerErrorException
-	 * @throws \Exception
-	 * @return bool
-	 */
-	public static function changeProfile( $record )
-	{
-		// check valid session,
-		// using userId from session, update with new profile elements
-		$userId = Session::validateSession();
-
-		try
-		{
-			$theUser = User::model()->findByPk( $userId );
-			if ( null === $theUser )
-			{
-				// bad session
-				throw new \Exception( "The user for the current session was not found in the system." );
-			}
-			$allow = array(
-				'first_name',
-				'last_name',
-				'display_name',
-				'email',
-				'phone',
-				'security_question',
-				'security_answer',
-				'default_app_id'
-			);
-			foreach ( $record as $key => $value )
-			{
-				if ( false === array_search( $key, $allow ) )
-				{
-					throw new InternalServerErrorException( "Attribute '$key' can not be updated through profile change." );
-				}
-			}
-			$theUser->setAttributes( $record );
-			$theUser->save();
-
-			return array( 'success' => true );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to update the user profile." );
-		}
-	}
-
-	/**
-	 * @param $email
-	 *
-	 * @return string
-	 */
-	protected function _getResetPasswordCode( $email )
-	{
-		return substr( md5( $email . static::$_randKey ), 0, 10 );
 	}
 
 	/**
