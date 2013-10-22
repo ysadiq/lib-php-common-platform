@@ -25,7 +25,7 @@ $_app = require( __DIR__ . '/../Resources/System/App.swagger.php' );
 $_appGroup = require( __DIR__ . '/../Resources/System/AppGroup.swagger.php' );
 $_config = require( __DIR__ . '/../Resources/System/Config.swagger.php' );
 $_constant = require( __DIR__ . '/../Resources/System/Constant.swagger.php' );
-$_custom = require( __DIR__ . '/../Resources/System/CustomSettings.swagger.php' );
+//$_custom = require( __DIR__ . '/../Resources/System/CustomSettings.swagger.php' );
 $_email = require( __DIR__ . '/../Resources/System/EmailTemplate.swagger.php' );
 $_role = require( __DIR__ . '/../Resources/System/Role.swagger.php' );
 $_service = require( __DIR__ . '/../Resources/System/Service.swagger.php' );
@@ -53,7 +53,7 @@ $_base['apis'] = array_merge(
 	Option::get( $_appGroup, 'apis' ),
 	Option::get( $_config, 'apis' ),
 	Option::get( $_constant, 'apis' ),
-	Option::get( $_custom, 'apis' ),
+//	Option::get( $_custom, 'apis' ),
 	Option::get( $_email, 'apis' ),
 	Option::get( $_role, 'apis' ),
 	Option::get( $_service, 'apis' ),
@@ -65,7 +65,7 @@ $_base['models'] = array_merge(
 	Option::get( $_appGroup, 'models' ),
 	Option::get( $_config, 'models' ),
 	Option::get( $_constant, 'models' ),
-	Option::get( $_custom, 'models' ),
+//	Option::get( $_custom, 'models' ),
 	Option::get( $_email, 'models' ),
 	Option::get( $_role, 'models' ),
 	Option::get( $_service, 'models' ),

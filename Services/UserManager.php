@@ -136,7 +136,7 @@ class UserManager extends BaseSystemRestService
 				$result = $obj->processRequest( null, $this->_action );
 				break;
 
-			case 'data':
+			case 'custom':
 				$obj = new CustomSettings( $this );
 				$result = $obj->processRequest( null, $this->_action );
 				break;

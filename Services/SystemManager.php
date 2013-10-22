@@ -915,6 +915,7 @@ class SystemManager extends BaseSystemRestService
 				array( 'name' => 'app', 'label' => 'Application' ),
 				array( 'name' => 'app_group', 'label' => 'Application Group' ),
 				array( 'name' => 'config', 'label' => 'Configuration' ),
+//				array( 'name' => 'custom', 'label' => 'Custom Settings' ),
 				array( 'name' => 'email_template', 'label' => 'Email Template' ),
 				array( 'name' => 'provider', 'label' => 'Provider' ),
 				array( 'name' => 'provider_user', 'label' => 'Provider User' ),
@@ -942,6 +943,11 @@ class SystemManager extends BaseSystemRestService
 			return false;
 		}
 
+		if ( 'custom' == $this->_resource )
+		{
+			$this->_resource = 'custom_settings';
+		}
+
 		$_resource = ResourceStore::resource( $this->_resource, $this->_resourceArray );
 
 		return $_resource->processRequest( $this->_resourcePath, $this->_action );
@@ -955,6 +961,11 @@ class SystemManager extends BaseSystemRestService
 	 */
 	public static function getResourceModel( $resource )
 	{
+		if ( 'custom' == $resource )
+		{
+			$resource = 'custom_settings';
+		}
+
 		return ResourceStore::model( $resource );
 	}
 
