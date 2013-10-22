@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Common\Enums\OutputFormats;
+use DreamFactory\Oasys\Exceptions\RedirectRequiredException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
@@ -73,24 +74,25 @@ class RestResponse extends HttpResponse
 	 */
 	public static function sendErrors( $ex, $desired_format = 'json' )
 	{
-		$_status = static::InternalServerError;
+		$_status = $ex->getCode();
 
 		if ( $ex instanceof RestException || $ex instanceOf \CHttpException )
 		{
-			$_status = $ex->statusCode;
+			$_status = property_exists( $ex, 'statusCode' ) ? $ex->statusCode : $ex->getStatusCode();
 		}
-		else if ( $ex instanceof \DreamFactory\Platform\Exceptions\RestException )
+
+		$_errorInfo = array(
+			'message' => htmlentities( $ex->getMessage() ),
+			'code'    => $ex->getCode()
+		);
+
+		if ( $ex instanceof RedirectRequiredException )
 		{
-			$_status = $ex->getStatusCode();
+			$_errorInfo['location'] = $ex->getRedirectUri();
 		}
 
 		$result = array(
-			"error" => array(
-				array(
-					"message" => htmlentities( $ex->getMessage() ),
-					"code"    => $ex->getCode()
-				)
-			)
+			'error' => array( $_errorInfo )
 		);
 
 		if ( static::Ok != $_status )

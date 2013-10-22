@@ -20,8 +20,9 @@
 namespace DreamFactory\Platform\Yii\Stores;
 
 use DreamFactory\Oasys\Stores\BaseOasysStore;
-use DreamFactory\Platform\Yii\Models\User;
+use DreamFactory\Platform\Yii\Models\ProviderUser;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 
 /**
  * ProviderUserStore.php
@@ -34,31 +35,71 @@ class ProviderUserStore extends BaseOasysStore
 	//*************************************************************************
 
 	/**
-	 * @var User
+	 * @var int
 	 */
-	protected $_userModel;
+	protected $_userId;
+	/**
+	 * @var int
+	 */
+	protected $_providerUserId;
+	/**
+	 * @var int
+	 */
+	protected $_providerId;
 
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
 
 	/**
-	 * @param \DreamFactory\Platform\Yii\Models\User $userModel
-	 * @param array                                  $contents
+	 * @param int   $userId
+	 * @param int   $providerId
+	 * @param array $contents
 	 *
-	 * @throws \InvalidArgumentException
 	 * @return \DreamFactory\Platform\Yii\Stores\ProviderUserStore
 	 */
-	public function __construct( $userModel, $contents = array() )
+	public function __construct( $userId, $providerId, $contents = array() )
 	{
-		if ( empty( $userModel ) || !( $userModel instanceof User ) )
+		$this->_providerId = $providerId;
+		$this->_userId = $userId;
+		$this->_providerUserId = Option::get( $contents, 'provider_user_id', $this->_providerUserId, true );
+
+		$this->_load();
+
+		parent::__construct( $contents );
+	}
+
+	/**
+	 * Retrieves any previously stored data for this user
+	 *
+	 * @param bool $fill
+	 *
+	 * @return ProviderUser
+	 */
+	protected function _load( $fill = true )
+	{
+		$_condition = 'user_id = :user_id AND provider_id = :provider_id';
+		$_params = array(
+			':user_id'     => $this->_userId,
+			':provider_id' => $this->_providerId,
+		);
+
+		if ( !empty( $this->_providerUserId ) )
 		{
-			throw new \InvalidArgumentException( 'You must specify the "User" model of the store.' );
+			$_condition .= ' AND provider_user_id = :provider_user_id';
+			$_params[':provider_user_id'] = $this->_providerUserId;
 		}
 
-		$this->_userModel = $userModel;
+		/** @var ProviderUser $_pu */
+		$_pu = ProviderUser::model()->find( $_condition, $_params );
 
-		parent::__construct( $userModel ? $this->_userModel->user_data : array() );
+		//	Load prior auth stuff...
+		if ( null !== $_pu && !empty( $_pu->auth_text ) && true === $fill )
+		{
+			$this->merge( $_pu->auth_text );
+		}
+
+		return $_pu;
 	}
 
 	/**
@@ -70,8 +111,17 @@ class ProviderUserStore extends BaseOasysStore
 	{
 		try
 		{
-			$this->_userModel->user_data = $this->contents();
-			$this->_userModel->save();
+			if ( null === ( $_pu = $this->_load( false ) ) )
+			{
+				$_pu = new ProviderUser();
+				$_pu->user_id = $this->_userId;
+				$_pu->provider_id = $this->_providerId;
+			}
+
+			$_pu->provider_user_id = $this->_providerUserId;
+			$_pu->auth_text = array_merge( empty( $_pu->auth_text ) ? array() : $_pu->auth_text, $this->contents() );
+			$_pu->last_use_date = date( 'c' );
+			$_pu->save();
 
 			return true;
 		}
@@ -84,9 +134,7 @@ class ProviderUserStore extends BaseOasysStore
 	}
 
 	/**
-	 * Revoke stored token
-	 *
-	 * @param bool $delete If true (default), row is deleted from storage
+	 * @param bool $delete
 	 *
 	 * @return bool
 	 */
@@ -94,19 +142,19 @@ class ProviderUserStore extends BaseOasysStore
 	{
 		try
 		{
-			if ( empty( $this->_userModel ) )
+			if ( null === ( $_pu = $this->_load( false ) ) )
 			{
 				return true;
 			}
 
 			if ( true === $delete )
 			{
-				return $this->_userModel->delete();
+				return $_pu->delete();
 			}
 
-			$this->_userModel->auth_text = null;
+			$_pu->auth_text = null;
 
-			return $this->_userModel->save();
+			return $_pu->save();
 		}
 		catch ( \CDbException $_ex )
 		{
@@ -115,4 +163,65 @@ class ProviderUserStore extends BaseOasysStore
 			return false;
 		}
 	}
+
+	/**
+	 * @param int $providerId
+	 *
+	 * @return ProviderUserStore
+	 */
+	public function setProviderId( $providerId )
+	{
+		$this->_providerId = $providerId;
+
+		return $this;
+	}
+
+	/**
+	 * @return int
+	 */
+	public function getProviderId()
+	{
+		return $this->_providerId;
+	}
+
+	/**
+	 * @param int $providerUserId
+	 *
+	 * @return ProviderUserStore
+	 */
+	public function setProviderUserId( $providerUserId )
+	{
+		$this->_providerUserId = $providerUserId;
+
+		return $this;
+	}
+
+	/**
+	 * @return int
+	 */
+	public function getProviderUserId()
+	{
+		return $this->_providerUserId;
+	}
+
+	/**
+	 * @param int $userId
+	 *
+	 * @return ProviderUserStore
+	 */
+	public function setUserId( $userId )
+	{
+		$this->_userId = $userId;
+
+		return $this;
+	}
+
+	/**
+	 * @return int
+	 */
+	public function getUserId()
+	{
+		return $this->_userId;
+	}
+
 }
