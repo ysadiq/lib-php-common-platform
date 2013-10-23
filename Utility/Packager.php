@@ -524,7 +524,10 @@ class Packager
 				throw new InternalServerErrorException( 'Bad path to sdk template.' );
 			}
 
-			$_files = array_diff( scandir( $_templateBaseDir ), array( '.', '..', '.gitignore', 'composer.json', 'README.md' ) );
+			$_files = array_diff(
+				scandir( $_templateBaseDir ),
+				array( '.', '..', '.gitignore', 'composer.json', 'README.md' )
+			);
 			if ( !empty( $_files ) )
 			{
 				foreach ( $_files as $_file )

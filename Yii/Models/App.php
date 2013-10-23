@@ -625,7 +625,10 @@ MYSQL
 		$_templateBaseDir = \Kisma::get( 'app.vendor_path' ) . '/dreamfactory/javascript-sdk';
 		if ( is_dir( $_templateBaseDir ) )
 		{
-			$_files = array_diff( scandir( $_templateBaseDir ), array( '.', '..', '.gitignore', 'composer.json' ) );
+			$_files = array_diff(
+				scandir( $_templateBaseDir ),
+				array( '.', '..', '.gitignore', 'composer.json', 'README.md' )
+			);
 			if ( !empty( $_files ) )
 			{
 				foreach ( $_files as $_file )
