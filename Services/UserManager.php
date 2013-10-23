@@ -137,7 +137,7 @@ class UserManager extends BaseSystemRestService
 				break;
 
 			case 'custom':
-				$obj = new CustomSettings( $this );
+				$obj = new CustomSettings( $this, $this->_resourceArray );
 				$result = $obj->processRequest( null, $this->_action );
 				break;
 

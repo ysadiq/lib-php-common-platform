@@ -25,7 +25,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\PlatformServiceException;
 use DreamFactory\Platform\Interfaces\PlatformStates;
-use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Resources\System\CustomSettings;
 use Kisma\Core\Utility\Curl;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\Packager;
@@ -915,7 +915,7 @@ class SystemManager extends BaseSystemRestService
 				array( 'name' => 'app', 'label' => 'Application' ),
 				array( 'name' => 'app_group', 'label' => 'Application Group' ),
 				array( 'name' => 'config', 'label' => 'Configuration' ),
-//				array( 'name' => 'custom', 'label' => 'Custom Settings' ),
+				array( 'name' => 'custom', 'label' => 'Custom Settings' ),
 				array( 'name' => 'email_template', 'label' => 'Email Template' ),
 				array( 'name' => 'provider', 'label' => 'Provider' ),
 				array( 'name' => 'provider_user', 'label' => 'Provider User' ),
@@ -945,7 +945,8 @@ class SystemManager extends BaseSystemRestService
 
 		if ( 'custom' == $this->_resource )
 		{
-			$this->_resource = 'custom_settings';
+			$_obj = new CustomSettings( $this, $this->_resourceArray );
+			return $_obj->processRequest( null, $this->_action );
 		}
 
 		$_resource = ResourceStore::resource( $this->_resource, $this->_resourceArray );

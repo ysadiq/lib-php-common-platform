@@ -19,13 +19,13 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
+use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
-use DreamFactory\Platform\Yii\Models\User;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -34,6 +34,15 @@ use Kisma\Core\Utility\Option;
  */
 class CustomSettings extends BasePlatformRestResource
 {
+	//*************************************************************************
+	//* Members
+	//*************************************************************************
+
+	/**
+	 * @var string
+	 */
+	protected $_setting = null;
+
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
@@ -45,23 +54,24 @@ class CustomSettings extends BasePlatformRestResource
 	public function __construct( $consumer, $resources = array() )
 	{
 		parent::__construct(
-			$consumer,
-			array(
-				 'name'           => 'System Custom Settings',
-				 'service_name'   => 'system',
-				 'type'           => 'System',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'custom',
-				 'description'    => 'Resource for an admin to manage custom system settings.',
-				 'is_active'      => true,
-				 'resource_array' => $resources,
-				 'verb_aliases'   => array(
-					 static::Put   => static::Post,
-					 static::Patch => static::Post,
-					 static::Merge => static::Post,
-				 )
-			)
+			  $consumer,
+			  array(
+				   'name'         => 'System Custom Settings',
+				   'service_name' => 'system',
+				   'type'         => 'System',
+				   'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
+				   'api_name'     => 'custom',
+				   'description'  => 'Resource for an admin to manage custom system settings.',
+				   'is_active'    => true,
+				   'verb_aliases' => array(
+					   static::Put   => static::Post,
+					   static::Patch => static::Post,
+					   static::Merge => static::Post,
+				   )
+			  )
 		);
+
+		$this->_setting = Option::get( $resources, 1 );
 	}
 
 	// REST interface implementation
@@ -85,43 +95,38 @@ class CustomSettings extends BasePlatformRestResource
 	}
 
 	/**
-	 * @return mixed
+	 * @return bool
 	 */
-	protected function _handleGet()
+	protected function _preProcess()
 	{
-		if ( !empty( $this->_resourceId ) )
-		{
-			return $this->getCustomSettings( $this->_resourceId );
-		}
-
-		return $this->getCustomSettings();
+		//	Do validation here
+		$this->checkPermission( PermissionMap::fromMethod( $this->getRequestedAction() ), 'config' );
 	}
 
 	/**
-	 * @return array|bool|void
+	 * @return array
+	 */
+	protected function _handleGet()
+	{
+		return $this->getCustomSettings( $this->_setting );
+	}
+
+	/**
+	 * @return array
 	 */
 	protected function _handlePost()
 	{
 		$_data = RestData::getPostDataAsArray();
-		if ( !empty( $this->_resourceId ) )
-		{
-			return $this->setCustomSettings( $_data );
-		}
 
-		return false; // don't allow individual update due to content type
+		return $this->setCustomSettings( $_data, $this->_setting );
 	}
 
 	/**
-	 * @return array|bool|void
+	 * @return array
 	 */
 	protected function _handleDelete()
 	{
-		if ( !empty( $this->_resourceId ) )
-		{
-			return $this->deleteCustomSettings( $this->_resourceId );
-		}
-
-		return false; // don't allow mass delete
+		return $this->deleteCustomSettings( $this->_setting );
 	}
 
 	//-------- User Operations ------------------------------------------------
@@ -135,18 +140,23 @@ class CustomSettings extends BasePlatformRestResource
 	 */
 	public static function getCustomSettings( $setting = '' )
 	{
-		$_config = Config::model()->find();
+		$_config = ResourceStore::model( 'config' )->find();
 		if ( null === $_config )
 		{
-			throw new NotFoundException( "The system configuration was not able to be retrieved." );
+			throw new InternalServerErrorException( "Failed to retrieve the system configuration." );
 		}
 
 		try
 		{
 			$_data = $_config->getAttribute( 'custom_settings' );
+			if ( empty( $_data ) )
+			{
+				return null;
+			}
+
 			if ( !empty( $setting ) )
 			{
-				return Option::get( $_data, $setting, array() );
+				return array( $setting => Option::get( $_data, $setting ) );
 			}
 
 			return $_data;
@@ -158,18 +168,25 @@ class CustomSettings extends BasePlatformRestResource
 	}
 
 	/**
-	 * @param array $data
+	 * @param array  $data
+	 * @param string $setting
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @return bool
+	 * @return array
 	 */
-	public static function setCustomSettings( $data )
+	public static function setCustomSettings( $data, $setting = '' )
 	{
-		$_config = Config::model()->find();
+		if ( !empty( $setting ) )
+		{
+			throw new BadRequestException( 'Setting individual custom setting is not currently supported.' );
+		}
+
+		$_config = ResourceStore::model( 'config' )->find();
 		if ( null === $_config )
 		{
-			throw new NotFoundException( "The system configuration was not able to be retrieved." );
+			throw new InternalServerErrorException( "Failed to retrieve the system configuration." );
 		}
 
 		try
@@ -191,21 +208,27 @@ class CustomSettings extends BasePlatformRestResource
 	 * @param string $setting
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @return bool
+	 * @return array
 	 */
-	public static function deleteCustomSettings( $setting )
+	public static function deleteCustomSettings( $setting = '' )
 	{
-		$_config = Config::model()->find();
+		if ( empty( $setting ) )
+		{
+			throw new BadRequestException( 'Deleting all custom settings is not currently supported.' );
+		}
+
+		$_config = ResourceStore::model( 'config' )->find();
 		if ( null === $_config )
 		{
-			throw new NotFoundException( "The system configuration was not able to be retrieved." );
+			throw new InternalServerErrorException( "Failed to retrieve the system configuration." );
 		}
 
 		try
 		{
 			$_data = $_config->getAttribute( 'custom_settings' );
-			unset( $_data[ $setting ] );
+			unset( $_data[$setting] );
 			$_config->setAttribute( 'custom_settings', $_data );
 			$_config->save();
 

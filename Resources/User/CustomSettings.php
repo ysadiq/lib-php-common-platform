@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Resources\User;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
@@ -34,6 +35,15 @@ use Kisma\Core\Utility\Option;
  */
 class CustomSettings extends BasePlatformRestResource
 {
+	//*************************************************************************
+	//* Members
+	//*************************************************************************
+
+	/**
+	 * @var string
+	 */
+	protected $_setting = null;
+
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
@@ -54,7 +64,6 @@ class CustomSettings extends BasePlatformRestResource
 				 'api_name'       => 'custom',
 				 'description'    => 'Resource for a user to manage their custom settings.',
 				 'is_active'      => true,
-				 'resource_array' => $resources,
 				 'verb_aliases'   => array(
 					 static::Put   => static::Post,
 					 static::Patch => static::Post,
@@ -62,12 +71,14 @@ class CustomSettings extends BasePlatformRestResource
 				 )
 			)
 		);
+
+		$this->_setting = Option::get( $resources, 1 );
 	}
 
 	// REST interface implementation
 
 	/**
-	 * @return bool
+	 * @return array
 	 */
 	protected function _handleGet()
 	{
@@ -75,34 +86,24 @@ class CustomSettings extends BasePlatformRestResource
 		// using userId from session, get user_data attribute
 		$_userId = Session::validateSession();
 
-		if ( !empty( $this->_resourceId ) )
-		{
-			return $this->getCustomSettings( $_userId, $this->_resourceId );
-		}
-
-		return $this->getCustomSettings( $_userId );
+		return $this->getCustomSettings( $_userId, $this->_setting );
 	}
 
 	/**
-	 * @return array|bool|void
+	 * @return array
 	 */
 	protected function _handlePost()
 	{
 		// check valid session,
 		// using userId from session, get user_data attribute
 		$_userId = Session::validateSession();
-
 		$_data = RestData::getPostDataAsArray();
-		if ( empty( $this->_resourceId ) )
-		{
-			return $this->setCustomSettings( $_userId, $_data );
-		}
 
-		return false;
+		return $this->setCustomSettings( $_userId, $_data, $this->_setting );
 	}
 
 	/**
-	 * @return array|bool|void
+	 * @return array
 	 */
 	protected function _handleDelete()
 	{
@@ -110,12 +111,7 @@ class CustomSettings extends BasePlatformRestResource
 		// using userId from session, get user_data attribute
 		$_userId = Session::validateSession();
 
-		if ( !empty( $this->_resourceId ) )
-		{
-			return $this->deleteCustomSettings( $_userId, $this->_resourceId );
-		}
-
-		return false; // don't allow mass delete
+		return $this->deleteCustomSettings( $_userId, $this->_setting );
 	}
 
 	//-------- User Operations ------------------------------------------------
@@ -140,9 +136,14 @@ class CustomSettings extends BasePlatformRestResource
 		try
 		{
 			$_data = $_theUser->getAttribute( 'user_data' );
+			if ( empty( $_data ) )
+			{
+				return null;
+			}
+
 			if ( !empty( $setting ) )
 			{
-				return Option::get( $_data, $setting, array() );
+				return array( $setting => Option::get( $_data, $setting ) );
 			}
 
 			return $_data;
@@ -154,15 +155,22 @@ class CustomSettings extends BasePlatformRestResource
 	}
 
 	/**
-	 * @param int   $user_id
-	 * @param array $data
+	 * @param int    $user_id
+	 * @param array  $data
+	 * @param string $setting
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @return bool
+	 * @return array
 	 */
-	public static function setCustomSettings( $user_id, $data )
+	public static function setCustomSettings( $user_id, $data, $setting = '' )
 	{
+		if ( !empty( $setting ) )
+		{
+			throw new BadRequestException( 'Setting individual custom setting is not currently supported.' );
+		}
+
 		$_theUser = User::model()->findByPk( $user_id );
 		if ( null === $_theUser )
 		{
@@ -190,11 +198,17 @@ class CustomSettings extends BasePlatformRestResource
 	 * @param string $setting
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @return bool
+	 * @return array
 	 */
-	public static function deleteCustomSettings( $user_id, $setting )
+	public static function deleteCustomSettings( $user_id, $setting = '' )
 	{
+		if ( empty( $setting) )
+		{
+			throw new BadRequestException( 'Deleting all custom settings is not currently supported.' );
+		}
+
 		$_theUser = User::model()->findByPk( $user_id );
 		if ( null === $_theUser )
 		{
