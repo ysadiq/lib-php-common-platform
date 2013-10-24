@@ -22,25 +22,15 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Oasys\Enums\Flows;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Exceptions\ForbiddenException;
-use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Platform\Exceptions\UnauthorizedException;
 use DreamFactory\Platform\Resources\User\CustomSettings;
 use DreamFactory\Platform\Resources\User\Password;
 use DreamFactory\Platform\Resources\User\Profile;
 use DreamFactory\Platform\Resources\User\Register;
 use DreamFactory\Platform\Resources\User\Session;
-use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
-use DreamFactory\Platform\Yii\Models\Config;
-use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
-use Kisma\Core\Utility\Hasher;
-use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\Sql;
 
 /**
  * UserManager
@@ -78,9 +68,6 @@ class UserManager extends BaseSystemRestService
 				 'is_active'   => true,
 			)
 		);
-
-		//	For better security. "random" key is used when creating confirmation codes
-		static::$_randKey = \sha1( Pii::db()->password );
 	}
 
 	/**
@@ -180,54 +167,6 @@ class UserManager extends BaseSystemRestService
 	//-------- User Operations ------------------------------------------------
 
 	/**
-	 * @param $email
-	 *
-	 * @return string
-	 * @throws \Exception
-	 */
-	public static function userInvite( $email )
-	{
-		if ( empty( $email ) )
-		{
-			throw new BadRequestException( "The email field for invitation can not be empty." );
-		}
-		$theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
-		if ( empty( $theUser ) )
-		{
-			throw new BadRequestException( "No user currently exists with the email '$email'." );
-		}
-		$confirmCode = $theUser->confirm_code;
-		if ( 'y' == $confirmCode )
-		{
-			throw new BadRequestException( "User with email '$email' has already confirmed registration in the system." );
-		}
-		try
-		{
-			if ( empty( $confirmCode ) )
-			{
-				$confirmCode = static::_makeConfirmationMd5( $email );
-				$record = array( 'confirm_code' => $confirmCode );
-				$theUser->setAttributes( $record );
-				$theUser->save();
-			}
-
-			// generate link
-			$link = Pii::app()->createAbsoluteUrl( 'public/launchpad/confirm.html' );
-			$link .= '?email=' . urlencode( $email ) . '&code=' . urlencode( $confirmCode );
-
-			return $link;
-		}
-		catch ( \CDbException $ex )
-		{
-			throw new InternalServerErrorException( "Failed to store generated user invite!" );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to generate user invite!\n{$ex->getMessage()}", $ex->getCode() );
-		}
-	}
-
-	/**
 	 * userTicket generates a SSO timed ticket for current valid session
 	 *
 	 * @return array
@@ -250,18 +189,5 @@ class UserManager extends BaseSystemRestService
 		$ticket = Utilities::encryptCreds( "$userId,$timestamp", "gorilla" );
 
 		return array( 'ticket' => $ticket, 'ticket_expiry' => time() + ( 5 * 60 ) );
-	}
-
-	/**
-	 * @param $conf_key
-	 *
-	 * @return string
-	 */
-	protected function _makeConfirmationMd5( $conf_key )
-	{
-		$randNo1 = rand();
-		$randNo2 = rand();
-
-		return md5( $conf_key . static::$_randKey . $randNo1 . '' . $randNo2 );
 	}
 }

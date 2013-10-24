@@ -233,7 +233,7 @@ class SystemManager extends BaseSystemRestService
 
 			Log::debug( 'Checking database schema' );
 
-			$result = SqlDbUtilities::createTables( $_db, $tables, true, false );
+			SqlDbUtilities::createTables( $_db, $tables, true, false );
 
 			// initialize config table if not already
 			try
@@ -310,7 +310,7 @@ class SystemManager extends BaseSystemRestService
 
 			Log::debug( 'Checking database schema' );
 
-			$result = SqlDbUtilities::createTables( $_db, $tables, true, false );
+			SqlDbUtilities::createTables( $_db, $tables, true, false );
 
 			if ( !empty( $oldVersion ) )
 			{
@@ -363,14 +363,14 @@ class SystemManager extends BaseSystemRestService
 							->queryScalar();
 						if ( false === $serviceId )
 						{
-							throw new \Exception( 'Could not find local app storage service id.' );
+							throw new \Exception( 'Could not find local file storage service id.' );
 						}
 
 						$command->reset();
 						$attributes = array( 'storage_service_id' => $serviceId, 'storage_container' => 'applications' );
 						$condition = 'is_url_external = :external and storage_service_id is null';
 						$params = array( ':external' => 0 );
-						$rows = $command->update( 'df_sys_app', $attributes, $condition, $params );
+						$command->update( 'df_sys_app', $attributes, $condition, $params );
 					}
 					catch ( \Exception $_ex )
 					{
@@ -578,43 +578,41 @@ class SystemManager extends BaseSystemRestService
 		{
 			throw new \Exception( "Empty or no system data file found." );
 		}
+
 		$contents = DataFormat::jsonToArray( $contents );
 		foreach ( $contents as $table => $content )
 		{
 			switch ( $table )
 			{
 				case 'df_sys_service':
-					$result = Service::model()->findAll();
-
-					if ( empty( $result ) )
+					if ( !empty( $content ) )
 					{
-						if ( empty( $content ) )
-						{
-							throw new \Exception( "No default system services found." );
-						}
-
 						foreach ( $content as $service )
 						{
-							try
+							$_apiName = Option::get( $service, 'api_name' );
+							if ( !Service::model()->exists( 'api_name = :name', array( ':name' => $_apiName ) ) )
 							{
-								$obj = new Service();
-								$obj->setAttributes( $service );
-								$obj->save();
-							}
-							catch ( \Exception $ex )
-							{
-								throw new InternalServerErrorException( "Failed to create services.\n{$ex->getMessage()}" );
+								try
+								{
+									$obj = new Service();
+									$obj->setAttributes( $service );
+									$obj->save();
+								}
+								catch ( \Exception $ex )
+								{
+									throw new InternalServerErrorException( "Failed to create services.\n{$ex->getMessage()}" );
+								}
 							}
 						}
 					}
 					break;
 				case 'df_sys_email_template':
-					$result = EmailTemplate::model()->findAll();
-					if ( empty( $result ) )
+					if ( !empty( $content ) )
 					{
-						if ( !empty( $content ) )
+						foreach ( $content as $template )
 						{
-							foreach ( $content as $template )
+							$_name = Option::get( $template, 'name' );
+							if ( !EmailTemplate::model()->exists( 'name = :name', array( ':name' => $_name ) ) )
 							{
 								try
 								{

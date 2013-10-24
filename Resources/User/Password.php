@@ -25,14 +25,12 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Services\EmailSvc;
-use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
-use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -61,22 +59,22 @@ class Password extends BasePlatformRestResource
 	public function __construct( $consumer, $resources = array() )
 	{
 		parent::__construct(
-			$consumer,
-			array(
-				 'name'           => 'User Password',
-				 'service_name'   => 'user',
-				 'type'           => 'System',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'password',
-				 'description'    => 'Resource for a user to manage their password.',
-				 'is_active'      => true,
-				 'resource_array' => $resources,
-				 'verb_aliases'   => array(
-					 static::Put   => static::Post,
-					 static::Patch => static::Post,
-					 static::Merge => static::Post,
-				 )
-			)
+			  $consumer,
+			  array(
+				   'name'           => 'User Password',
+				   'service_name'   => 'user',
+				   'type'           => 'System',
+				   'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				   'api_name'       => 'password',
+				   'description'    => 'Resource for a user to manage their password.',
+				   'is_active'      => true,
+				   'resource_array' => $resources,
+				   'verb_aliases'   => array(
+					   static::Put   => static::Post,
+					   static::Patch => static::Post,
+					   static::Merge => static::Post,
+				   )
+			  )
 		);
 
 		//	For better security. "random" key is used when creating confirmation codes
@@ -199,8 +197,8 @@ class Password extends BasePlatformRestResource
 		}
 
 		$_theUser = User::model()->find(
-			'email=:email AND confirm_code=:cc',
-			array( ':email' => $email, ':cc' => $code )
+						'email=:email AND confirm_code=:cc',
+						array( ':email' => $email, ':cc' => $code )
 		);
 		if ( null === $_theUser )
 		{
@@ -347,11 +345,33 @@ class Password extends BasePlatformRestResource
 				$_theUser->save();
 
 				/** @var EmailSvc $_emailService */
-				// todo send email
 				$_emailService = ServiceHandler::getServiceObject( $_serviceId );
+				if ( !$_emailService )
+				{
+					throw new \Exception( "Bad service identifier '$_serviceId'." );
+				}
+
+				$_data = array();
 				$_template = $_config->password_email_template_id;
-				$_extras = array();
-				$_emailService->sendEmailByTemplate( $_template, $_extras );
+				if ( !empty( $_template ) )
+				{
+					$_data['template_id'] = $_template;
+				}
+				else
+				{
+					$_data = array(
+						'subject'   => 'Password Reset',
+						'to'        => $email,
+						'body_html' => "Hi {first_name},<br/>\n<br/>\nYou have requested to reset your password. " .
+									   "Go to the following url, enter the code below, and set your new password.<br/>\n<br/>\n" .
+									   "{dsp.host_url}/public/launchpad/confirm_reset.html<br/>\n<br/>\n" .
+									   "{confirm_code}<br/>\n<br/>\nEnjoy!<br/>\n{from_name}",
+					);
+				}
+
+				$_userFields = array( 'first_name', 'last_name', 'display_name', 'confirm_code' );
+				$_data = array_merge( $_data, $_theUser->getAttributes( $_userFields ) );
+				$_emailService->sendEmail( $_data );
 
 				return array( 'success' => true );
 			}
@@ -361,7 +381,7 @@ class Password extends BasePlatformRestResource
 			}
 		}
 
-		throw new InternalServerErrorException( 'No security question found or email confirmation available for this user. '.
+		throw new InternalServerErrorException( 'No security question found or email confirmation available for this user. ' .
 												'Please contact your administrator.' );
 	}
 

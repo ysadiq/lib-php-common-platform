@@ -20,24 +20,17 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BaseDbSvc;
 use DreamFactory\Platform\Services\BaseFileSvc;
 use DreamFactory\Platform\Services\SchemaSvc;
 use DreamFactory\Platform\Services\SwaggerManager;
-use DreamFactory\Platform\Utility\FileSystem;
-use DreamFactory\Platform\Utility\FileUtilities;
-use DreamFactory\Platform\Utility\ServiceHandler;
-use DreamFactory\Platform\Yii\Models\App;
 use DreamFactory\Platform\Yii\Models\Service;
-use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\FilterInput;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\Sql;
 
 /**
  * Packager
@@ -154,11 +147,11 @@ class Packager
 									$component = json_decode( $component, true );
 									// service is probably a db, export table schema if possible
 									$serviceName = $service->getAttribute( 'api_name' );
-									$serviceType = $service->getAttribute( 'type' );
+									$serviceType = $service->getAttribute( 'type_id' );
 									switch ( strtolower( $serviceType ) )
 									{
-										case 'local sql db schema':
-										case 'remote sql db schema':
+										case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
+										case PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA:
 											/** @var $db SchemaSvc */
 											$db = ServiceHandler::getServiceObject( $serviceName );
 											$describe = $db->describeTables( implode( ',', $component ) );
@@ -183,22 +176,31 @@ class Packager
 					}
 				}
 			}
-			$isExternal = DataFormat::boolval( Option::get( $record, 'is_url_external', false ) );
+			$isExternal = Option::getBool( $record, 'is_url_external', false );
 			if ( !$isExternal && $include_files )
 			{
 				// add files
 				$_storageServiceId = Option::get( $record, 'storage_service_id' );
+				$_container = Option::get( $record, 'storage_container' );
 				/** @var $_service BaseFileSvc */
 				if ( empty( $_storageServiceId ) )
 				{
-					$_service = ServiceHandler::getServiceObject( 'app' );
+					$_model = Service::model()->find( 'type_id = :type',
+													  array( ':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE ) );
+					$_storageServiceId = ( $_model ) ? $_model->getPrimaryKey() : null;
 					$_container = 'applications';
 				}
-				else
+				if ( empty( $_storageServiceId ) )
 				{
-					$_service = ServiceHandler::getServiceObjectById( $_storageServiceId );
-					$_container = Option::get( $record, 'storage_container' );
+					throw new InternalServerErrorException( "Can not find storage service identifier." );
 				}
+
+				$_service = ServiceHandler::getServiceObjectById( $_storageServiceId );
+				if ( !$_service )
+				{
+					throw new InternalServerErrorException( "Can not find storage service by identifier '$_storageServiceId''." );
+				}
+
 				if ( empty( $_container ) )
 				{
 					if ( $_service->containerExists( $app_root ) )
@@ -213,6 +215,10 @@ class Packager
 						$_service->getFolderAsZip( $_container, $app_root, $zip, $zipFileName, true );
 					}
 				}
+			}
+			if ( $include_data )
+			{
+				// todo do we need to load data unfiltered
 			}
 			$zip->close();
 
@@ -273,7 +279,8 @@ class Packager
 		if ( empty( $_storageServiceId ) )
 		{
 			// must be set or defaulted to local
-			$_model = Service::model()->find( 'api_name = :api_name', array( ':api_name' => 'app' ) );
+			$_model = Service::model()->find( 'type_id = :type',
+											  array( ':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE ) );
 			$_storageServiceId = ( $_model ) ? $_model->getPrimaryKey() : null;
 			$record['storage_service_id'] = $_storageServiceId;
 			if ( empty( $_container ) )
@@ -291,6 +298,7 @@ class Packager
 		{
 			throw new InternalServerErrorException( "Could not create the application.\n{$ex->getMessage()}" );
 		}
+
 		$id = Option::get( $returnData, 'id' );
 		$zip->deleteName( 'description.json' );
 		try
@@ -304,6 +312,10 @@ class Packager
 					//set service 'service',
 					ResourceStore::setResourceName( 'service' );
 					$result = ResourceStore::insert( $data );
+					if ( empty( $result ) )
+					{
+						// error nothing
+					}
 					// clear swagger cache upon any service changes.
 					SwaggerManager::clearCache();
 				}

@@ -19,13 +19,14 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Kisma\Core\Utility\FilterInput;
-use Kisma\Core\Utility\Option;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Utility\EmailUtilities;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\EmailTemplate;
+use Kisma\Core\Utility\Curl;
+use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Option;
 
 /**
  * EmailSvc
@@ -118,29 +119,6 @@ class EmailSvc extends BasePlatformRestService
 	protected function _handlePost()
 	{
 		$_data = RestData::getPostDataAsArray();
-
-		// build email from posted data
-		$_template = Option::get( $_data, 'template', FilterInput::request( 'template' ) );
-		$_templateId = Option::get( $_data, 'template_id', FilterInput::request( 'template_id' ) );
-		$_templateData = array();
-		if ( !empty( $_template ) )
-		{
-			$_templateData = static::getTemplateDataByName( $_template );
-		}
-		elseif ( !empty( $template_id ) )
-		{
-			$_templateData = static::getTemplateDataById( $_templateId );
-		}
-
-		if ( empty( $_templateData ) && empty( $_data ) )
-		{
-			throw new BadRequestException( 'No valid data in request.' );
-		}
-
-		// build email from template defaults overwritten by posted data
-		$_data = array_merge( Option::get( $_templateData, 'defaults', array(), true ), $_data );
-		$_data = array_merge( $_templateData, $_data );
-
 		$_count = $this->sendEmail( $_data );
 
 		return array( 'count' => $_count );
@@ -190,22 +168,45 @@ class EmailSvc extends BasePlatformRestService
 	 *
 	 * @param array $data Array of email parameters
 	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return int
 	 */
 	public function sendEmail( $data = array() )
 	{
+		// build email from posted data
+		$_template = Option::get( $data, 'template', FilterInput::request( 'template' ), true );
+		$_templateId = Option::get( $data, 'template_id', FilterInput::request( 'template_id' ), true );
+		$_templateData = array();
+		if ( !empty( $_template ) )
+		{
+			$_templateData = static::getTemplateDataByName( $_template );
+		}
+		elseif ( !empty( $template_id ) )
+		{
+			$_templateData = static::getTemplateDataById( $_templateId );
+		}
+
+		if ( empty( $_templateData ) && empty( $data ) )
+		{
+			throw new BadRequestException( 'No valid data in request.' );
+		}
+
+		// build email from template defaults overwritten by posted data
+		$data = array_merge( Option::get( $_templateData, 'defaults', array(), true ), $data );
+		$data = array_merge( $_templateData, $data );
+
 		/*
-		 * @param string $_to   comma-delimited list of receiver addresses
-		 * @param string $_cc   comma-delimited list of CC'd addresses
-		 * @param string $_bcc  comma-delimited list of BCC'd addresses
-		 * @param string $_subject     Text only subject line
-		 * @param string $_text   Text only version of the email body
-		 * @param string $_html   Escaped HTML version of the email body
-		 * @param string $_fromName   Name displayed for the sender
-		 * @param string $_fromEmail  Email displayed for the sender
-		 * @param string $_replyName  Name displayed for the reply to
-		 * @param string $_replyEmail Email used for the sender reply to
-		 * @param array  $data        Name-Value pairs for replaceable data in subject and body
+		 * @var string $_to   comma-delimited list of receiver addresses
+		 * @var string $_cc   comma-delimited list of CC'd addresses
+		 * @var string $_bcc  comma-delimited list of BCC'd addresses
+		 * @var string $_subject     Text only subject line
+		 * @var string $_text   Text only version of the email body
+		 * @var string $_html   Escaped HTML version of the email body
+		 * @var string $_fromName   Name displayed for the sender
+		 * @var string $_fromEmail  Email displayed for the sender
+		 * @var string $_replyName  Name displayed for the reply to
+		 * @var string $_replyEmail Email used for the sender reply to
+		 * @var array  $data        Name-Value pairs for replaceable data in subject and body
 		 */
 		$_to = Option::get( $data, 'to' );
 		$_cc = Option::get( $data, 'cc' );
@@ -251,7 +252,11 @@ class EmailSvc extends BasePlatformRestService
 			$_replyEmail = EmailUtilities::sanitizeAndValidateEmails( $_replyEmail, 'swift' );
 		}
 
-		// do template field replacement
+		// handle special case, add server side details options
+		Option::sins( $data, 'dsp.host_url', Curl::currentUrl( false, false ) );
+		Option::sins( $data, 'dsp.name', \Kisma::get( 'app.app_name' ) );
+
+		// do placeholder replacement, currently {xxx}
 		if ( !empty( $data ) )
 		{
 			foreach ( $data as $name => $value )
@@ -266,32 +271,24 @@ class EmailSvc extends BasePlatformRestService
 				}
 			}
 		}
-		// handle special case, like invite link
-		if ( false !== strpos( $_text, '{_invite_url_}' ) ||
-			 false !== strpos( $_html, '{_invite_url_}' )
-		)
-		{
-			// generate link for user, to email should always be the user
-			$inviteLink = UserManager::userInvite( $_to );
-			$_text = str_replace( '{_invite_url_}', $inviteLink, $_text );
-			$_html = str_replace( '{_invite_url_}', $inviteLink, $_html );
-		}
+
 		if ( empty( $_html ) )
 		{
+			// get some kind of html
 			$_html = str_replace( "\r\n", "<br />", $_text );
 		}
 
 		$_message = EmailUtilities::createMessage(
-			$_to,
-			$_cc,
-			$_bcc,
-			$_subject,
-			$_text,
-			$_html,
-			$_fromName,
-			$_fromEmail,
-			$_replyName,
-			$_replyEmail
+								  $_to,
+								  $_cc,
+								  $_bcc,
+								  $_subject,
+								  $_text,
+								  $_html,
+								  $_fromName,
+								  $_fromEmail,
+								  $_replyName,
+								  $_replyEmail
 		);
 
 		return EmailUtilities::sendMessage( $this->_transport, $_message );

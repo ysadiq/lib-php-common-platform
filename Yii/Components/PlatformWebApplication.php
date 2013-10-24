@@ -22,7 +22,6 @@ namespace DreamFactory\Platform\Yii\Components;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -58,11 +57,11 @@ class PlatformWebApplication extends \CWebApplication
 	 */
 	const CORS_DEFAULT_CONFIG_FILE = '/cors.config.json';
 	/**
-	 * @var The default DSP resource namespace
+	 * @var string The default DSP resource namespace
 	 */
 	const DEFAULT_RESOURCE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Resource';
 	/**
-	 * @var The default DSP model namespace
+	 * @var string The default DSP model namespace
 	 */
 	const DEFAULT_MODEL_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Yii\\Models';
 

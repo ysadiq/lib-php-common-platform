@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
-use CModelEvent;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Enums\PlatformStorageTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -315,15 +314,13 @@ MYSQL;
 		if ( !$this->isNewRecord )
 		{
 			$_type = Option::get( $values, 'type' );
-
 			if ( !empty( $_type ) && 0 !== strcasecmp( $this->type, $_type ) )
 			{
 				throw new BadRequestException( 'Service type cannot be changed after creation.' );
 			}
 
 			$_apiName = Option::get( $values, 'api_name' );
-
-			if ( ( 0 == strcasecmp( 'app', $this->api_name ) ) && !empty( $_apiName ) && 0 != strcasecmp( $this->api_name, $values['api_name'] ) )
+			if ( !empty( $_apiName ) && 0 != strcasecmp( $this->api_name, $_apiName ) )
 			{
 				throw new BadRequestException( 'Service API name currently can not be modified after creation.' );
 			}
@@ -410,13 +407,10 @@ MYSQL;
 			case PlatformServiceTypes::LOCAL_SQL_DB:
 			case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
 				throw new BadRequestException( 'System generated database services can not be deleted.' );
+				break;
 
 			case PlatformServiceTypes::LOCAL_FILE_STORAGE:
-				switch ( $this->api_name )
-				{
-					case 'app':
-						throw new BadRequestException( 'System generated application storage service can not be deleted.' );
-				}
+				throw new BadRequestException( 'System generated application storage service can not be deleted.' );
 				break;
 		}
 
@@ -508,17 +502,8 @@ MYSQL;
 		{
 			case PlatformServiceTypes::LOCAL_SQL_DB:
 			case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
-				$this->is_system = true;
-				break;
-
 			case PlatformServiceTypes::LOCAL_FILE_STORAGE:
-			case PlatformServiceTypes::REMOTE_FILE_STORAGE:
-				switch ( $this->api_name )
-				{
-					case 'app':
-						$this->is_system = true;
-						break;
-				}
+				$this->is_system = true;
 				break;
 
 			default:

@@ -21,13 +21,11 @@ namespace DreamFactory\Platform\Resources\User;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Platform\Exceptions\UnauthorizedException;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
-use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Services\EmailSvc;
 use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
@@ -209,7 +207,34 @@ class Register extends BasePlatformRestResource
 
 			if ( !empty( $_serviceId ) )
 			{
-				// todo send email
+				/** @var EmailSvc $_emailService */
+				$_emailService = ServiceHandler::getServiceObject( $_serviceId );
+				if ( !$_emailService )
+				{
+					throw new \Exception( "Bad service identifier '$_serviceId'." );
+				}
+
+				$_data = array();
+				$_template = $_config->password_email_template_id;
+				if ( !empty( $_template ) )
+				{
+					$_data['template_id'] = $_template;
+				}
+				else
+				{
+					$_data = array(
+						'subject'   => 'Registration Confirmation',
+						'to'        => $_email,
+						'body_html' => "Hi {first_name},<br/>\nYou have registered to become a {dsp.name} user. ".
+									   "Go to the following url, enter the code below, and set your password to confirm your account.<br/>\n<br/>\n".
+									   "{dsp.host_url}/public/launchpad/confirm_reg.html<br/>\n<br/>\n".
+									   "{confirm_code}<br/>\n<br/>\nThanks,<br/>\n{from_name}",
+					);
+				}
+
+				$_userFields = array( 'first_name', 'last_name', 'display_name', 'confirm_code' );
+				$_data = array_merge( $_data, $_theUser->getAttributes( $_userFields ) );
+				$_emailService->sendEmail( $_data );
 			}
 		}
 		catch ( \Exception $ex )
