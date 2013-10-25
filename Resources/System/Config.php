@@ -172,6 +172,16 @@ class Config extends BaseSystemRestResource
 			{
 				foreach ( $_models as $_row )
 				{
+					//	Local providers take precedent over global...
+					foreach ( $_data as $_index => $_priorRow )
+					{
+						if ( $_priorRow['api_name'] == $_row->api_name )
+						{
+							unset( $_data[$_index] );
+							break;
+						}
+					}
+
 					$_data[] = $_row->getAttributes();
 					unset( $_row );
 				}
