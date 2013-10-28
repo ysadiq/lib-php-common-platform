@@ -470,15 +470,4 @@ class Utilities
 
 		return $track;
 	}
-
-	/**
-	 * @return string
-	 */
-	public static function getAbsoluteURLFolder()
-	{
-		$_url = 'http' . ( 'on' == FilterInput::server( 'HTTPS' ) ? 's' : null ) . '://' . FilterInput::server( 'HTTP_HOST' )
-				. rtrim( dirname( $_SERVER['REQUEST_URI'] ), '/\\' ) . '/';
-
-		return $_url;
-	}
 }

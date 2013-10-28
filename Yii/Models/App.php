@@ -23,6 +23,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Services\BaseFileSvc;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -190,9 +191,7 @@ class App extends BasePlatformSystemModel
 		{
 			if ( !empty( $this->storage_service_id ) )
 			{
-				// make sure we have an app in the folder
-				$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
-				$this->launch_url = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' ) . '/';
+				$this->launch_url = Curl::currentUrl( false, false )  . '/';
 				/** @var $_service Service */
 				$_service = $this->getRelated( 'storage_service' );
 				if ( !empty( $_service ) )
@@ -243,8 +242,7 @@ class App extends BasePlatformSystemModel
 		{
 			if ( !empty( $this->storage_service_id ) )
 			{
-				$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
-				$this->launch_url = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' ) . '/';
+				$this->launch_url = Curl::currentUrl( false, false )  . '/';
 				/** @var $_service Service */
 				$_service = $this->getRelated( 'storage_service' );
 				if ( !empty( $_service ) )
@@ -628,8 +626,7 @@ MYSQL
 									$_content = file_get_contents( $_templateSubPath );
 									if ( 'sdk-init.js' == $_subFile )
 									{
-										$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
-										$_dspHost = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' );
+										$_dspHost = Curl::currentUrl( false, false );
 										$_content = str_replace( 'https://_your_dsp_hostname_here_', $_dspHost, $_content );
 										$_content = str_replace( '_your_app_api_name_here_', $api_name, $_content );
 									}

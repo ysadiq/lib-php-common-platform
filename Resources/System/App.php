@@ -29,6 +29,7 @@ use DreamFactory\Platform\Utility\FileSystem;
 use DreamFactory\Platform\Utility\Packager;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\ServiceHandler;
+use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
@@ -308,8 +309,7 @@ class App extends BaseSystemRestResource
 									$_content = file_get_contents( $_templateSubPath );
 									if ( 'sdk-init.js' == $_subFile )
 									{
-										$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
-										$_dspHost = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' );
+										$_dspHost = Curl::currentUrl( false, false );
 										$_content = str_replace( 'https://_your_dsp_hostname_here_', $_dspHost, $_content );
 										$_content = str_replace( '_your_app_api_name_here_', $_apiName, $_content );
 									}
@@ -434,8 +434,7 @@ class App extends BaseSystemRestResource
 									if ( 'sdk-init.js' == $_subFile )
 									{
 										$_content = file_get_contents( $_templateSubPath );
-										$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
-										$_dspHost = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' );
+										$_dspHost = Curl::currentUrl( false, false );
 										$_content = str_replace( 'https://_your_dsp_hostname_here_', $_dspHost, $_content );
 										$_content = str_replace( '_your_app_api_name_here_', $_apiName, $_content );
 										$_zip->addFromString( $_file . '/' . $_subFile, $_content );
