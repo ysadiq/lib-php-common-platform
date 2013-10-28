@@ -306,7 +306,7 @@ class Portal extends BaseSystemRestService
 
 				if ( !empty( $_profile ) )
 				{
-					$_store->getProviderUserId( $_profile->getUserId() );
+					$_store->setProviderUserId( $_profile->getUserId() );
 					$_store->sync();
 				}
 
