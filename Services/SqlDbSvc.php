@@ -337,14 +337,31 @@ class SqlDbSvc extends BaseDbSvc
 		$_isSingle = ( 1 == count( $records ) );
 		$_rollback = Option::getBool( $extras, 'rollback', false );
 		$_continue = Option::getBool( $extras, 'continue', false );
-		$_idField = Option::get( $extras, 'id_field' );
+		$_idFields = Option::get( $extras, 'id_field' );
 		try
 		{
 			$_fieldInfo = $this->describeTableFields( $table );
 			$_relatedInfo = $this->describeTableRelated( $table );
-			if ( empty( $_idField ) )
+			$_idFieldsInfo = array();
+			if ( empty( $_idFields ) )
 			{
-				$_idField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $_fieldInfo );
+				$_idFieldsInfo = SqlDbUtilities::getPrimaryKeys( $_fieldInfo );
+				$_idFields = array();
+				foreach ( $_idFieldsInfo as $_temp )
+				{
+					$_idFields[] = $_temp['name'];
+				}
+			}
+			else
+			{
+				if ( !is_array( $_idFields ) )
+				{
+					$_idFields = array_map( 'trim', explode( ',', trim( $_idFields, ',' ) ) );
+				}
+				foreach ( $_idFields as $_temp )
+				{
+					$_idFieldsInfo[] = SqlDbUtilities::getFieldFromDescribe( $_temp, $_fieldInfo );
+				}
 			}
 
 			/** @var \CDbCommand $command */
@@ -374,9 +391,27 @@ class SqlDbSvc extends BaseDbSvc
 					{
 						throw new InternalServerErrorException( "Record [$_key] insert failed for table '$table'." );
 					}
-					$_id = $this->_sqlConn->lastInsertID;
-					$this->updateRelations( $table, $_record, $_id, $_relatedInfo );
-					$_ids[$_key] = $_id;
+
+					if ( !empty( $_idFieldsInfo ) )
+					{
+						$_id = null;
+						foreach ( $_idFieldsInfo as $_info )
+						{
+							// todo support multi-field keys
+							if ( Option::getBool( $_info, 'auto_increment' ) )
+							{
+								$_id = $this->_sqlConn->lastInsertID;
+							}
+							else
+							{
+								// must have been passed in with request
+								$_id = Option::get( $_record, Option::get( $_info, 'name' ) );
+							}
+						}
+
+						$this->updateRelations( $table, $_record, $_id, $_relatedInfo );
+						$_ids[$_key] = $_id;
+					}
 				}
 				catch ( \Exception $ex )
 				{
@@ -409,12 +444,17 @@ class SqlDbSvc extends BaseDbSvc
 			}
 
 			$_results = array();
-			if ( !static::_requireMoreFields( $fields, $_idField ) )
+			if ( !static::_requireMoreFields( $fields, $_idFields ) )
 			{
+				$_temp = array();
 				foreach ( $_ids as $_id )
 				{
-					$_results[] = array( $_idField => $_id );
+					foreach( $_idFields as $_field)
+					{
+						$_temp[] = array( $_field => $_id );
+					}
 				}
+				$_results[] = $_temp;
 			}
 			else
 			{
@@ -997,12 +1037,12 @@ class SqlDbSvc extends BaseDbSvc
 				foreach ( $bindings as $binding )
 				{
 					$_name = $binding['name'];
-					$_value = $dummy[ $_name ];
+					$_value = $dummy[$_name];
 					if ( 'float' == $binding['php_type'] )
 					{
 						$_value = floatval( $_value );
 					}
-					$temp[ $_name ] = $_value;
+					$temp[$_name] = $_value;
 				}
 
 				if ( !empty( $related ) )
@@ -1157,12 +1197,12 @@ class SqlDbSvc extends BaseDbSvc
 				foreach ( $bindings as $binding )
 				{
 					$_name = $binding['name'];
-					$_value = $dummy[ $_name ];
+					$_value = $dummy[$_name];
 					if ( 'float' == $binding['php_type'] )
 					{
 						$_value = floatval( $_value );
 					}
-					$temp[ $_name ] = $_value;
+					$temp[$_name] = $_value;
 				}
 
 				if ( !empty( $related ) )
@@ -1573,11 +1613,11 @@ class SqlDbSvc extends BaseDbSvc
 			}
 			// find the type
 			$field_info = SqlDbUtilities::getFieldFromDescribe( $field, $avail_fields );
-			$dbType = Option::get( $field_info, 'db_type', '');
-			$type = Option::get( $field_info, 'type', '');
+			$dbType = Option::get( $field_info, 'db_type', '' );
+			$type = Option::get( $field_info, 'type', '' );
 
 			$bindArray[] = array(
-				'name' => $field,
+				'name'     => $field,
 				'pdo_type' => SqlDbUtilities::determinePdoBindingType( $type, $dbType ),
 				'php_type' => SqlDbUtilities::determinePhpConversionType( $type, $dbType ),
 			);
@@ -2074,7 +2114,7 @@ class SqlDbSvc extends BaseDbSvc
 	/**
 	 * Create a single table by name, additional properties
 	 *
-	 * @param array  $properties
+	 * @param array $properties
 	 *
 	 * @throws \Exception
 	 */
@@ -2097,7 +2137,7 @@ class SqlDbSvc extends BaseDbSvc
 	/**
 	 * Update properties related to the table
 	 *
-	 * @param array  $properties
+	 * @param array $properties
 	 *
 	 * @return array
 	 * @throws \Exception
