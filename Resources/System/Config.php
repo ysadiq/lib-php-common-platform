@@ -155,7 +155,7 @@ class Config extends BaseSystemRestResource
 					'id'            => $_row->id,
 					'provider_name' => $_row->provider_name_text,
 					'api_name'      => $_row->endpoint_text,
-					'config_text'   => array( 'client_id' => Option::getDeep( $_row, 'config_text', 'client_id' ) ),
+					'config_text'   => array('client_id' => Option::getDeep( $_row, 'config_text', 'client_id' )),
 					'is_active'     => $_row->enable_ind,
 					'is_system'     => true,
 				);
@@ -166,12 +166,22 @@ class Config extends BaseSystemRestResource
 			unset( $_global );
 
 			/** @var Provider[] $_models */
-			$_models = ResourceStore::model( 'provider' )->findAll( array( 'order' => 'provider_name' ) );
+			$_models = ResourceStore::model( 'provider' )->findAll( array('order' => 'provider_name') );
 
 			if ( !empty( $_models ) )
 			{
 				foreach ( $_models as $_row )
 				{
+					//	Local providers take precedent over global...
+					foreach ( $_data as $_index => $_priorRow )
+					{
+						if ( $_priorRow['api_name'] == $_row->api_name )
+						{
+							unset( $_data[$_index] );
+							break;
+						}
+					}
+
 					$_data[] = $_row->getAttributes();
 					unset( $_row );
 				}
@@ -179,7 +189,7 @@ class Config extends BaseSystemRestResource
 				unset( $_models );
 			}
 
-			$this->_response['remote_login_providers'] = $_data;
+			$this->_response['remote_login_providers'] = array_values( $_data );
 
 			if ( empty( $_data ) )
 			{
