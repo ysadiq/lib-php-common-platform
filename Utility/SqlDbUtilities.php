@@ -759,6 +759,26 @@ class SqlDbUtilities implements SqlDbDriverTypes
 	}
 
 	/**
+	 * @param array   $avail_fields
+	 * @param boolean $names_only Return only an array of names, otherwise return all properties
+	 *
+	 * @return array
+	 */
+	public static function getPrimaryKeys( $avail_fields, $names_only = false )
+	{
+		$_keys = array();
+		foreach ( $avail_fields as $_info )
+		{
+			if ( $_info['is_primary_key'] )
+			{
+				$_keys[] = ( $names_only ? $_info['name'] : $_info );
+			}
+		}
+
+		return $_keys;
+	}
+
+	/**
 	 * @param     $field
 	 * @param int $driver_type
 	 *
@@ -2141,6 +2161,7 @@ SQL;
 	/**
 	 * @param $type
 	 * @param $db_type
+	 *
 	 * @return null|string
 	 */
 	public static function determinePhpConversionType( $type, $db_type )

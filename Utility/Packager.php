@@ -29,7 +29,6 @@ use DreamFactory\Platform\Services\BaseFileSvc;
 use DreamFactory\Platform\Services\SchemaSvc;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Yii\Models\Service;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -54,60 +53,60 @@ class Packager
 	 */
 	public static function exportAppAsPackage( $app_id, $include_files = false, $include_services = false, $include_schema = false, $include_data = false )
 	{
-		$model = ResourceStore::model( 'app' );
+		$_model = ResourceStore::model( 'app' );
 
 		if ( $include_services || $include_schema )
 		{
-			$model->with( 'app_service_relations.service' );
+			$_model->with( 'app_service_relations.service' );
 		}
 
-		$app = $model->findByPk( $app_id );
+		$_app = $_model->findByPk( $app_id );
 
-		if ( null === $app )
+		if ( null === $_app )
 		{
 			throw new NotFoundException( "No database entry exists for this application with id '$app_id'." );
 		}
 
-		$fields = array(
-			'api_name',
-			'name',
-			'description',
-			'is_active',
-			'url',
-			'is_url_external',
-			'import_url',
-			'requires_fullscreen',
-			'requires_plugin'
-		);
-		$record = $app->getAttributes( $fields );
-		$app_root = Option::get( $record, 'api_name' );
+		$_appApiName = $_app->api_name;
 
 		try
 		{
-			$zip = new \ZipArchive();
-			$tempDir = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR;
-			$zipFileName = $tempDir . $app_root . '.dfpkg';
-			if ( true !== $zip->open( $zipFileName, \ZipArchive::CREATE ) )
+			$_zip = new \ZipArchive();
+			$_tempDir = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR;
+			$_zipFileName = $_tempDir . $_appApiName . '.dfpkg';
+			if ( true !== $_zip->open( $_zipFileName, \ZipArchive::CREATE ) )
 			{
 				throw new InternalServerErrorException( 'Can not create package file for this application.' );
 			}
 
 			// add database entry file
-			if ( !$zip->addFromString( 'description.json', json_encode( $record ) ) )
+			$_appFields = array(
+				'api_name',
+				'name',
+				'description',
+				'is_active',
+				'url',
+				'is_url_external',
+				'import_url',
+				'requires_fullscreen',
+				'requires_plugin'
+			);
+			$_record = $_app->getAttributes( $_appFields );
+			if ( !$_zip->addFromString( 'description.json', json_encode( $_record ) ) )
 			{
 				throw new InternalServerErrorException( "Can not include description in package file." );
 			}
 			if ( $include_services || $include_schema )
 			{
 				/**
-				 * @var Service[] $serviceRelations
+				 * @var Service[] $_serviceRelations
 				 */
-				$serviceRelations = $app->getRelated( 'app_service_relations' );
-				if ( !empty( $serviceRelations ) )
+				$_serviceRelations = $_app->getRelated( 'app_service_relations' );
+				if ( !empty( $_serviceRelations ) )
 				{
-					$services = array();
-					$schemas = array();
-					$serviceFields = array(
+					$_services = array();
+					$_schemas = array();
+					$_serviceFields = array(
 						'name',
 						'api_name',
 						'description',
@@ -124,70 +123,72 @@ class Packager
 						'parameters',
 						'headers',
 					);
-					foreach ( $serviceRelations as $relation )
+					foreach ( $_serviceRelations as $_relation )
 					{
-						/** @var Service $service */
-						$service = $relation->getRelated( 'service' );
-						if ( !empty( $service ) )
+						/** @var Service $_service */
+						$_service = $_relation->getRelated( 'service' );
+						if ( !empty( $_service ) )
 						{
 							if ( $include_services )
 							{
-								if ( !DataFormat::boolval( $service->getAttribute( 'is_system' ) ) )
+								if ( !DataFormat::boolval( $_service->getAttribute( 'is_system' ) ) )
 								{
 									// get service details to restore with app
-									$temp = $service->getAttributes( $serviceFields );
-									$services[] = $temp;
+									$_temp = $_service->getAttributes( $_serviceFields );
+									$_services[] = $_temp;
 								}
 							}
 							if ( $include_schema )
 							{
-								$component = $relation->getAttribute( 'component' );
-								if ( !empty( $component ) )
+								$_component = $_relation->getAttribute( 'component' );
+								if ( !empty( $_component ) )
 								{
-									$component = json_decode( $component, true );
+									$_component = json_decode( $_component, true );
 									// service is probably a db, export table schema if possible
-									$serviceName = $service->getAttribute( 'api_name' );
-									$serviceType = $service->getAttribute( 'type_id' );
-									switch ( strtolower( $serviceType ) )
+									$_serviceName = $_service->api_name;
+									$_serviceType = $_service->type_id;
+									switch ( strtolower( $_serviceType ) )
 									{
 										case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
 										case PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA:
-											/** @var $db SchemaSvc */
-											$db = ServiceHandler::getServiceObject( $serviceName );
-											$describe = $db->describeTables( implode( ',', $component ) );
-											$temp = array(
-												'api_name' => $serviceName,
-												'table'    => $describe
+											/** @var $_schema SchemaSvc */
+											$_schema = ServiceHandler::getServiceObject( $_serviceName );
+											$_describe = $_schema->describeTables( implode( ',', $_component ) );
+											$_temp = array(
+												'api_name' => $_serviceName,
+												'table'    => $_describe
 											);
-											$schemas[] = $temp;
+											$_schemas[] = $_temp;
 											break;
 									}
 								}
 							}
 						}
 					}
-					if ( !empty( $services ) && !$zip->addFromString( 'services.json', json_encode( $services ) ) )
+					if ( !empty( $_services ) && !$_zip->addFromString( 'services.json', json_encode( $_services ) ) )
 					{
 						throw new InternalServerErrorException( "Can not include services in package file." );
 					}
-					if ( !empty( $schemas ) && !$zip->addFromString( 'schema.json', json_encode( array( 'service' => $schemas ) ) ) )
+					if ( !empty( $_schemas ) && !$_zip->addFromString( 'schema.json', json_encode( array( 'service' => $_schemas ) ) ) )
 					{
 						throw new InternalServerErrorException( "Can not include database schema in package file." );
 					}
 				}
 			}
-			$isExternal = Option::getBool( $record, 'is_url_external', false );
-			if ( !$isExternal && $include_files )
+
+			if ( !$_app->is_url_external && $include_files )
 			{
 				// add files
-				$_storageServiceId = Option::get( $record, 'storage_service_id' );
-				$_container = Option::get( $record, 'storage_container' );
-				/** @var $_service BaseFileSvc */
+				$_storageServiceId = $_app->storage_service_id;
+				$_container = $_app->storage_container;
+				/** @var $_storage BaseFileSvc */
 				if ( empty( $_storageServiceId ) )
 				{
-					$_model = Service::model()->find( 'type_id = :type',
-													  array( ':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE ) );
-					$_storageServiceId = ( $_model ) ? $_model->getPrimaryKey() : null;
+					$_service = Service::model()->find(
+									   'type_id = :type',
+									   array( ':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE )
+					);
+					$_storageServiceId = ( $_service ) ? $_service->getPrimaryKey() : null;
 					$_container = 'applications';
 				}
 				if ( empty( $_storageServiceId ) )
@@ -195,24 +196,24 @@ class Packager
 					throw new InternalServerErrorException( "Can not find storage service identifier." );
 				}
 
-				$_service = ServiceHandler::getServiceObjectById( $_storageServiceId );
-				if ( !$_service )
+				$_storage = ServiceHandler::getServiceObjectById( $_storageServiceId );
+				if ( !$_storage )
 				{
 					throw new InternalServerErrorException( "Can not find storage service by identifier '$_storageServiceId''." );
 				}
 
 				if ( empty( $_container ) )
 				{
-					if ( $_service->containerExists( $app_root ) )
+					if ( $_storage->containerExists( $_appApiName ) )
 					{
-						$_service->getFolderAsZip( $app_root, '', $zip, $zipFileName, true );
+						$_storage->getFolderAsZip( $_appApiName, '', $_zip, $_zipFileName, true );
 					}
 				}
 				else
 				{
-					if ( $_service->folderExists( $_container, $app_root ) )
+					if ( $_storage->folderExists( $_container, $_appApiName ) )
 					{
-						$_service->getFolderAsZip( $_container, $app_root, $zip, $zipFileName, true );
+						$_storage->getFolderAsZip( $_container, $_appApiName, $_zip, $_zipFileName, true );
 					}
 				}
 			}
@@ -220,25 +221,24 @@ class Packager
 			{
 				// todo do we need to load data unfiltered
 			}
-			$zip->close();
+			$_zip->close();
 
-			$fd = fopen( $zipFileName, "r" );
-			if ( $fd )
+			$_fd = fopen( $_zipFileName, "r" );
+			if ( $_fd )
 			{
-				$fsize = filesize( $zipFileName );
-				$path_parts = pathinfo( $zipFileName );
+				$_pathParts = pathinfo( $_zipFileName );
 				header( "Content-type: application/zip" );
-				header( "Content-Disposition: filename=\"" . $path_parts["basename"] . "\"" );
-				header( "Content-length: $fsize" );
+				header( "Content-Disposition: filename=\"" . $_pathParts["basename"] . "\"" );
+				header( "Content-length: " . filesize( $_zipFileName ) );
 				header( "Cache-control: private" ); //use this to open files directly
-				while ( !feof( $fd ) )
+				while ( !feof( $_fd ) )
 				{
-					$buffer = fread( $fd, 2048 );
-					echo $buffer;
+					$_buffer = fread( $_fd, 2048 );
+					echo $_buffer;
 				}
 			}
-			fclose( $fd );
-			unlink( $zipFileName );
+			fclose( $_fd );
+			unlink( $_zipFileName );
 
 			return null;
 		}
@@ -257,42 +257,44 @@ class Packager
 	 */
 	public static function importAppFromPackage( $pkg_file, $import_url = '' )
 	{
-		$zip = new \ZipArchive();
-		if ( true !== $zip->open( $pkg_file ) )
+		$_zip = new \ZipArchive();
+		if ( true !== $_zip->open( $pkg_file ) )
 		{
 			throw new InternalServerErrorException( 'Error opening zip file.' );
 		}
 
-		$data = $zip->getFromName( 'description.json' );
-		if ( false === $data )
+		$_data = $_zip->getFromName( 'description.json' );
+		if ( false === $_data )
 		{
 			throw new BadRequestException( 'No application description file in this package file.' );
 		}
 
-		$record = DataFormat::jsonToArray( $data );
-		if ( !empty( $import_url ) && !isset( $record['import_url'] ) )
+		$_record = DataFormat::jsonToArray( $_data );
+		if ( !empty( $import_url ) && !isset( $_record['import_url'] ) )
 		{
-			$record['import_url'] = $import_url;
+			$_record['import_url'] = $import_url;
 		}
-		$_storageServiceId = Option::get( $record, 'storage_service_id' );
-		$_container = Option::get( $record, 'storage_container' );
+		$_storageServiceId = Option::get( $_record, 'storage_service_id' );
+		$_container = Option::get( $_record, 'storage_container' );
 		if ( empty( $_storageServiceId ) )
 		{
 			// must be set or defaulted to local
-			$_model = Service::model()->find( 'type_id = :type',
-											  array( ':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE ) );
+			$_model = Service::model()->find(
+							 'type_id = :type',
+							 array( ':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE )
+			);
 			$_storageServiceId = ( $_model ) ? $_model->getPrimaryKey() : null;
-			$record['storage_service_id'] = $_storageServiceId;
+			$_record['storage_service_id'] = $_storageServiceId;
 			if ( empty( $_container ) )
 			{
 				$_container = 'applications';
-				$record['storage_container'] = $_container;
+				$_record['storage_container'] = $_container;
 			}
 		}
 		try
 		{
 			ResourceStore::setResourceName( 'app' );
-			$returnData = ResourceStore::insert( $record, 'id,api_name' );
+			$returnData = ResourceStore::insert( $_record, 'id,api_name' );
 		}
 		catch ( \Exception $ex )
 		{
@@ -300,18 +302,18 @@ class Packager
 		}
 
 		$id = Option::get( $returnData, 'id' );
-		$zip->deleteName( 'description.json' );
+		$_zip->deleteName( 'description.json' );
 		try
 		{
-			$data = $zip->getFromName( 'services.json' );
-			if ( false !== $data )
+			$_data = $_zip->getFromName( 'services.json' );
+			if ( false !== $_data )
 			{
-				$data = DataFormat::jsonToArray( $data );
+				$_data = DataFormat::jsonToArray( $_data );
 				try
 				{
 					//set service 'service',
 					ResourceStore::setResourceName( 'service' );
-					$result = ResourceStore::insert( $data );
+					$result = ResourceStore::insert( $_data );
 					if ( empty( $result ) )
 					{
 						// error nothing
@@ -323,13 +325,13 @@ class Packager
 				{
 					throw new InternalServerErrorException( "Could not create the services.\n{$ex->getMessage()}" );
 				}
-				$zip->deleteName( 'services.json' );
+				$_zip->deleteName( 'services.json' );
 			}
-			$data = $zip->getFromName( 'schema.json' );
-			if ( false !== $data )
+			$_data = $_zip->getFromName( 'schema.json' );
+			if ( false !== $_data )
 			{
-				$data = DataFormat::jsonToArray( $data );
-				$services = Option::get( $data, 'service' );
+				$_data = DataFormat::jsonToArray( $_data );
+				$services = Option::get( $_data, 'service' );
 				if ( !empty( $services ) )
 				{
 					foreach ( $services as $schemas )
@@ -352,10 +354,10 @@ class Packager
 				else
 				{
 					// single or multiple tables for one service
-					$tables = Option::get( $data, 'table' );
+					$tables = Option::get( $_data, 'table' );
 					if ( !empty( $tables ) )
 					{
-						$serviceName = Option::get( $data, 'api_name' );
+						$serviceName = Option::get( $_data, 'api_name' );
 						if ( empty( $serviceName ) )
 						{
 							$serviceName = 'schema'; // for older packages
@@ -372,13 +374,13 @@ class Packager
 					else
 					{
 						// single table with no wrappers - try default schema service
-						$table = Option::get( $data, 'name' );
+						$table = Option::get( $_data, 'name' );
 						if ( !empty( $table ) )
 						{
 							$serviceName = 'schema';
 							/** @var $db SchemaSvc */
 							$db = ServiceHandler::getServiceObject( $serviceName );
-							$result = $db->createTables( $data, true );
+							$result = $db->createTables( $_data, true );
 							if ( isset( $result['error'] ) )
 							{
 								$msg = $result['error']['message'];
@@ -387,14 +389,14 @@ class Packager
 						}
 					}
 				}
-				$zip->deleteName( 'schema.json' );
+				$_zip->deleteName( 'schema.json' );
 			}
 
-			$data = $zip->getFromName( 'data.json' );
-			if ( false !== $data )
+			$_data = $_zip->getFromName( 'data.json' );
+			if ( false !== $_data )
 			{
-				$data = DataFormat::jsonToArray( $data );
-				$services = Option::get( $data, 'service' );
+				$_data = DataFormat::jsonToArray( $_data );
+				$services = Option::get( $_data, 'service' );
 				if ( !empty( $services ) )
 				{
 					foreach ( $services as $service )
@@ -403,7 +405,7 @@ class Packager
 
 						/** @var BaseDbSvc $db */
 						$db = ServiceHandler::getServiceObject( $serviceName );
-						$tables = Option::get( $data, 'table' );
+						$tables = Option::get( $_data, 'table' );
 
 						foreach ( $tables as $table )
 						{
@@ -423,10 +425,10 @@ class Packager
 				else
 				{
 					// single or multiple tables for one service
-					$tables = Option::get( $data, 'table' );
+					$tables = Option::get( $_data, 'table' );
 					if ( !empty( $tables ) )
 					{
-						$serviceName = Option::get( $data, 'api_name' );
+						$serviceName = Option::get( $_data, 'api_name' );
 						if ( empty( $serviceName ) )
 						{
 							$serviceName = 'db'; // for older packages
@@ -448,12 +450,12 @@ class Packager
 					else
 					{
 						// single table with no wrappers - try default database service
-						$tableName = Option::get( $data, 'name' );
+						$tableName = Option::get( $_data, 'name' );
 						if ( !empty( $tableName ) )
 						{
 							$serviceName = 'db';
 							$db = ServiceHandler::getServiceObject( $serviceName );
-							$records = Option::get( $data, 'record' );
+							$records = Option::get( $_data, 'record' );
 							/** @var $db BaseDbSvc */
 							$result = $db->createRecords( $tableName, $records );
 							if ( isset( $result['record'][0]['error'] ) )
@@ -464,7 +466,7 @@ class Packager
 						}
 					}
 				}
-				$zip->deleteName( 'data.json' );
+				$_zip->deleteName( 'data.json' );
 			}
 		}
 		catch ( \Exception $ex )
@@ -480,7 +482,7 @@ class Packager
 		}
 
 		// extract the rest of the zip file into storage
-		$_apiName = Option::get( $record, 'api_name' );
+		$_apiName = Option::get( $_record, 'api_name' );
 		/** @var $_service BaseFileSvc */
 		$_service = ServiceHandler::getServiceObjectById( $_storageServiceId );
 		if ( empty( $_service ) )
@@ -489,129 +491,13 @@ class Packager
 		}
 		if ( empty( $_container ) )
 		{
-			$_service->extractZipFile( $_apiName, '', $zip, false, $_apiName . '/' );
+			$_service->extractZipFile( $_apiName, '', $_zip, false, $_apiName . '/' );
 		}
 		else
 		{
-			$_service->extractZipFile( $_container, '', $zip );
+			$_service->extractZipFile( $_container, '', $_zip );
 		}
 
 		return $returnData;
-	}
-
-	/**
-	 * @param string $app_id
-	 * @param bool   $include_files
-	 *
-	 * @throws \Exception
-	 * @return null
-	 */
-	public static function exportAppAsSDK( $app_id )
-	{
-		$_model = ResourceStore::model( 'app' );
-
-		$_app = $_model->findByPk( $app_id );
-
-		if ( null === $_app )
-		{
-			throw new NotFoundException( "No database entry exists for this application with id '$app_id'." );
-		}
-
-		$_record = $_app->getAttributes( array( 'api_name', 'name' ) );
-		$_apiName = Option::get( $_record, 'api_name' );
-
-		try
-		{
-			$_zip = new \ZipArchive();
-			$_tempDir = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR;
-			$_zipFileName = $_tempDir . $_apiName . '.zip';
-			if ( true !== $_zip->open( $_zipFileName, \ZipArchive::CREATE ) )
-			{
-				throw new InternalServerErrorException( 'Can not create sdk zip file for this application.' );
-			}
-
-			$_templateBaseDir = \Kisma::get( 'app.vendor_path' ) . '/dreamfactory/javascript-sdk';
-			if ( !is_dir( $_templateBaseDir ) )
-			{
-				throw new InternalServerErrorException( 'Bad path to sdk template.' );
-			}
-
-			$_files = array_diff(
-				scandir( $_templateBaseDir ),
-				array( '.', '..', '.gitignore', 'composer.json', 'README.md' )
-			);
-			if ( !empty( $_files ) )
-			{
-				foreach ( $_files as $_file )
-				{
-					$_templatePath = $_templateBaseDir . '/' . $_file;
-					if ( is_dir( $_templatePath ) )
-					{
-						$_subFiles = array_diff( scandir( $_templatePath ), array( '.', '..' ) );
-						if ( !empty( $_subFiles ) )
-						{
-							foreach ( $_subFiles as $_subFile )
-							{
-								$_templateSubPath = $_templatePath . '/' . $_subFile;
-								if ( is_dir( $_templateSubPath ) )
-								{
-									// support this deep?
-								}
-								else if ( file_exists( $_templateSubPath ) )
-								{
-									if ( 'sdk-init.js' == $_subFile )
-									{
-										$_content = file_get_contents( $_templateSubPath );
-										$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
-										$_dspHost = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' );
-										$_content = str_replace('https://_your_dsp_hostname_here_', $_dspHost, $_content );
-										$_content = str_replace('_your_app_api_name_here_', $_apiName, $_content );
-										$_zip->addFromString( $_file . '/' . $_subFile, $_content );
-									}
-									else
-									{
-										$_zip->addFile( $_templateSubPath, $_file . '/' . $_subFile );
-									}
-								}
-							}
-						}
-						else
-						{
-							$_zip->addEmptyDir( $_file );
-						}
-					}
-					else if ( file_exists( $_templatePath ) )
-					{
-						$_zip->addFile( $_templatePath, $_file );
-					}
-				}
-			}
-
-			$_zip->close();
-
-			$fd = fopen( $_zipFileName, "r" );
-			if ( $fd )
-			{
-				$fsize = filesize( $_zipFileName );
-				$path_parts = pathinfo( $_zipFileName );
-				header( "Content-type: application/zip" );
-				header( "Content-Disposition: filename=\"" . $path_parts["basename"] . "\"" );
-				header( "Content-length: $fsize" );
-				header( "Cache-control: private" ); //use this to open files directly
-				while ( !feof( $fd ) )
-				{
-					$buffer = fread( $fd, 2048 );
-					echo $buffer;
-				}
-			}
-			fclose( $fd );
-			unlink( $_zipFileName );
-
-			return null;
-		}
-		catch ( \Exception $ex )
-		{
-			throw $ex;
-		}
 	}
 }

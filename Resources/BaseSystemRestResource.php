@@ -27,6 +27,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Utility\Option;
 

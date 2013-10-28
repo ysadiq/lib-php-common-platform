@@ -459,25 +459,30 @@ class SchemaSvc extends BasePlatformRestService
 			// check for system tables and deny
 			if ( isset( $tables[0] ) )
 			{
-				foreach ( $tables as $table )
+				foreach ( $tables as $_table )
 				{
-					$name = Option::get( $table, 'name' );
-
-					if ( 0 === substr_compare( $name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
+					if ( null === ( $_name = Option::get( $_table, 'name' ) ) )
 					{
+						throw new BadRequestException( "Table schema received does not have a valid name." );
+					}
 
-						throw new BadRequestException( "Tables can not use the prefix '$_sysPrefix'. '$name' can not be created." );
+					if ( 0 === substr_compare( $_name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
+					{
+						throw new BadRequestException( "Tables can not use the prefix '$_sysPrefix'. '$_name' can not be created." );
 					}
 				}
 			}
 			else
 			{
 				//	single table
-				$name = Option::get( $tables, 'name' );
-
-				if ( 0 === substr_compare( $name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
+				if ( null === ( $_name = Option::get( $tables, 'name' ) ) )
 				{
-					throw new BadRequestException( "Tables can not use the prefix '$_sysPrefix'. '$name' can not be created." );
+					throw new BadRequestException( "Table schema received does not have a valid name." );
+				}
+
+				if ( 0 === substr_compare( $_name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
+				{
+					throw new BadRequestException( "Tables can not use the prefix '$_sysPrefix'. '$_name' can not be created." );
 				}
 			}
 		}
