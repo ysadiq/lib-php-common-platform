@@ -22,9 +22,7 @@ namespace DreamFactory\Platform\Yii\Models;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Services\BaseFileSvc;
 use DreamFactory\Platform\Services\SystemManager;
-use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Exceptions\DataStoreException;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -97,7 +95,10 @@ class App extends BasePlatformSystemModel
 				array( 'name, api_name', 'length', 'max' => 64 ),
 				array( 'storage_container', 'length', 'max' => 255 ),
 				array(
-					'name, api_name, description, is_active, url, is_url_external, import_url, storage_service_id, storage_container, launch_url, requires_fullscreen, allow_fullscreen_toggle, toggle_location, requires_plugin',
+					'name, api_name, description, is_active, ' .
+					'url, is_url_external, import_url, launch_url, ' .
+					'storage_service_id, storage_container, ' .
+					'requires_fullscreen, allow_fullscreen_toggle, toggle_location, requires_plugin',
 					'safe'
 				),
 			);
@@ -192,37 +193,11 @@ class App extends BasePlatformSystemModel
 				// make sure we have an app in the folder
 				$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
 				$this->launch_url = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' ) . '/';
-				/** @var BaseFileSvc $_service */
-				$_service = ServiceHandler::getService( $this->storage_service_id );
-				$_container = $this->storage_container;
-				if ( empty( $_container ) )
+				/** @var $_service Service */
+				$_service = $this->getRelated( 'storage_service' );
+				if ( !empty( $_service ) )
 				{
-					if ( !$_service->containerExists( $this->api_name ) )
-					{
-						// create in permanent storage
-						$_service->createContainer( array( 'name' => $this->api_name ) );
-						static::_initHostedAppStorage( $this->api_name, $_service, $this->api_name );
-					}
-				}
-				else
-				{
-					if ( !$_service->containerExists( $_container ) )
-					{
-						$_service->createContainer( array( 'name' => $_container ) );
-					}
-					if ( !$_service->folderExists( $_container, $this->api_name ) )
-					{
-						// create in permanent storage
-						$_service->createFolder( $_container, $this->api_name );
-						static::_initHostedAppStorage( $this->api_name, $_service, $_container, $this->api_name );
-					}
-				}
-
-				/** @var $service Service */
-				$service = $this->getRelated( 'storage_service' );
-				if ( !empty( $service ) )
-				{
-					$this->launch_url .= $service->api_name . '/';
+					$this->launch_url .= $_service->api_name . '/';
 				}
 				if ( !empty( $this->storage_container ) )
 				{
@@ -270,7 +245,7 @@ class App extends BasePlatformSystemModel
 			{
 				$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
 				$this->launch_url = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' ) . '/';
-				/** @var $service Service */
+				/** @var $_service Service */
 				$_service = $this->getRelated( 'storage_service' );
 				if ( !empty( $_service ) )
 				{
@@ -324,7 +299,7 @@ class App extends BasePlatformSystemModel
 	}
 
 	/**
-	 * @param int   $id          The row ID
+	 * @param int   $id The row ID
 	 * @param array $relations
 	 *
 	 * @throws \Exception
@@ -414,7 +389,7 @@ class App extends BasePlatformSystemModel
 			{
 				// simple delete request
 				$_command->reset();
-				$rows = $_command->delete( $_mapTable, array( 'in', $_mapPrimaryKey, $_deletes ) );
+				$_command->delete( $_mapTable, array( 'in', $_mapPrimaryKey, $_deletes ) );
 			}
 			if ( !empty( $_updates ) )
 			{
@@ -655,8 +630,8 @@ MYSQL
 									{
 										$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
 										$_dspHost = $_protocol . '://' . FilterInput::server( 'HTTP_HOST' );
-										$_content = str_replace('https://_your_dsp_hostname_here_', $_dspHost, $_content );
-										$_content = str_replace('_your_app_api_name_here_', $api_name, $_content );
+										$_content = str_replace( 'https://_your_dsp_hostname_here_', $_dspHost, $_content );
+										$_content = str_replace( '_your_app_api_name_here_', $api_name, $_content );
 									}
 									$storage->writeFile( $container, $_storePath . '/' . $_subFile, $_content, false );
 								}
