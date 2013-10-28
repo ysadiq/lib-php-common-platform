@@ -224,14 +224,14 @@ class Register extends BasePlatformRestResource
 				{
 					$_data = array(
 						'subject'   => 'Registration Confirmation',
-						'to'        => $_email,
 						'body_html' => "Hi {first_name},<br/>\nYou have registered to become a {dsp.name} user. ".
 									   "Go to the following url, enter the code below, and set your password to confirm your account.<br/>\n<br/>\n".
 									   "{dsp.host_url}/public/launchpad/confirm_reg.html<br/>\n<br/>\n".
-									   "{confirm_code}<br/>\n<br/>\nThanks,<br/>\n{from_name}",
+									   "Confirmation Code: {confirm_code}<br/>\n<br/>\nThanks,<br/>\n{from_name}",
 					);
 				}
 
+				$_data['to'] = $_email;
 				$_userFields = array( 'first_name', 'last_name', 'display_name', 'confirm_code' );
 				$_data = array_merge( $_data, $_theUser->getAttributes( $_userFields ) );
 				$_emailService->sendEmail( $_data );

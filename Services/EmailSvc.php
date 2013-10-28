@@ -44,21 +44,9 @@ class EmailSvc extends BasePlatformRestService
 	 */
 	protected $_transport = null;
 	/**
-	 * @var string
+	 * @var null|array
 	 */
-	protected $fromName;
-	/**
-	 * @var string
-	 */
-	protected $fromAddress;
-	/**
-	 * @var string
-	 */
-	protected $replyToName;
-	/**
-	 * @var string
-	 */
-	protected $replyToAddress;
+	protected $_parameters = array();
 
 	//*************************************************************************
 	//	Methods
@@ -73,32 +61,12 @@ class EmailSvc extends BasePlatformRestService
 	{
 		parent::__construct( $config );
 
-		$transportType = Option::get( $config, 'storage_type' );
-		$credentials = Option::get( $config, 'credentials', array() );
+		$_transportType = Option::get( $config, 'storage_type' );
+		$_credentials = Option::get( $config, 'credentials', array() );
 		// Create the Transport
-		$this->_transport = EmailUtilities::createTransport( $transportType, $credentials );
+		$this->_transport = EmailUtilities::createTransport( $_transportType, $_credentials );
 
-		$parameters = Option::get( $config, 'parameters', array() );
-		foreach ( $parameters as $param )
-		{
-			$key = Option::get( $param, 'name' );
-			$value = Option::get( $param, 'value' );
-			switch ( $key )
-			{
-				case 'from_name':
-					$this->fromName = $value;
-					break;
-				case 'from_email':
-					$this->fromAddress = $value;
-					break;
-				case 'reply_to_name':
-					$this->replyToName = $value;
-					break;
-				case 'reply_to_email':
-					$this->replyToAddress = $value;
-					break;
-			}
-		}
+		$this->_parameters = Option::get( $config, 'parameters', array() );
 	}
 
 	/**
@@ -191,9 +159,9 @@ class EmailSvc extends BasePlatformRestService
 			throw new BadRequestException( 'No valid data in request.' );
 		}
 
-		// build email from template defaults overwritten by posted data
+		// build email from config defaults and template defaults overwritten by posted data
 		$data = array_merge( Option::get( $_templateData, 'defaults', array(), true ), $data );
-		$data = array_merge( $_templateData, $data );
+		$data = array_merge( $this->_parameters, $_templateData, $data );
 
 		/*
 		 * @var string $_to   comma-delimited list of receiver addresses
@@ -221,18 +189,12 @@ class EmailSvc extends BasePlatformRestService
 
 		if ( empty( $_fromEmail ) )
 		{
-			$_fromEmail = $this->fromAddress;
+			$_fromEmail = 'no-reply@dreamfactory.com';
+			$data['from_email'] = $_fromEmail;
 			if ( empty( $_fromName ) )
 			{
-				$_fromName = $this->fromName;
-			}
-		}
-		if ( empty( $_replyEmail ) )
-		{
-			$_replyEmail = $this->replyToAddress;
-			if ( empty( $_replyName ) )
-			{
-				$_replyName = $this->replyToName;
+				$_fromName = 'DreamFactory Software, Inc.';
+				$data['from_name'] = $_fromName;
 			}
 		}
 
@@ -279,16 +241,16 @@ class EmailSvc extends BasePlatformRestService
 		}
 
 		$_message = EmailUtilities::createMessage(
-								  $_to,
-								  $_cc,
-								  $_bcc,
-								  $_subject,
-								  $_text,
-								  $_html,
-								  $_fromName,
-								  $_fromEmail,
-								  $_replyName,
-								  $_replyEmail
+			$_to,
+			$_cc,
+			$_bcc,
+			$_subject,
+			$_text,
+			$_html,
+			$_fromName,
+			$_fromEmail,
+			$_replyName,
+			$_replyEmail
 		);
 
 		return EmailUtilities::sendMessage( $this->_transport, $_message );

@@ -361,14 +361,14 @@ class Password extends BasePlatformRestResource
 				{
 					$_data = array(
 						'subject'   => 'Password Reset',
-						'to'        => $email,
 						'body_html' => "Hi {first_name},<br/>\n<br/>\nYou have requested to reset your password. " .
 									   "Go to the following url, enter the code below, and set your new password.<br/>\n<br/>\n" .
 									   "{dsp.host_url}/public/launchpad/confirm_reset.html<br/>\n<br/>\n" .
-									   "{confirm_code}<br/>\n<br/>\nEnjoy!<br/>\n{from_name}",
+									   "Confirmation Code: {confirm_code}<br/>\n<br/>\nEnjoy!<br/>\n{from_name}",
 					);
 				}
 
+				$_data['to'] = $email;
 				$_userFields = array( 'first_name', 'last_name', 'display_name', 'confirm_code' );
 				$_data = array_merge( $_data, $_theUser->getAttributes( $_userFields ) );
 				$_emailService->sendEmail( $_data );
