@@ -196,6 +196,11 @@ class Password extends BasePlatformRestResource
 			throw new BadRequestException( "Missing required email for password reset confirmation." );
 		}
 
+		if ( empty( $new_password ) )
+		{
+			throw new BadRequestException( "Missing new password for reset." );
+		}
+
 		$_theUser = User::model()->find(
 						'email=:email AND confirm_code=:cc',
 						array( ':email' => $email, ':cc' => $code )
@@ -248,6 +253,11 @@ class Password extends BasePlatformRestResource
 		if ( empty( $email ) )
 		{
 			throw new BadRequestException( "Missing required email for password reset confirmation." );
+		}
+
+		if ( empty( $new_password ) )
+		{
+			throw new BadRequestException( "Missing new password for reset." );
 		}
 
 		$_theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
