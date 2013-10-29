@@ -19,14 +19,14 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Utility\Option;
+use DreamFactory\Common\Exceptions\RestException;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Scalar;
+use Kisma\Core\Utility\Option;
 
 /**
  * SchemaSvc
@@ -325,9 +325,13 @@ class SchemaSvc extends BasePlatformRestService
 		{
 			return SqlDbUtilities::describeDatabase( $this->_sqlConn, null, $_exclude );
 		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error describing database tables.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error describing database tables.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -362,9 +366,13 @@ class SchemaSvc extends BasePlatformRestService
 		{
 			return SqlDbUtilities::describeTables( $this->_sqlConn, $_tables );
 		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error describing database tables '$table_list'.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error describing database tables '$table_list'.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -396,9 +404,13 @@ class SchemaSvc extends BasePlatformRestService
 		{
 			return SqlDbUtilities::describeTable( $this->_sqlConn, $table );
 		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error describing database table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error describing database table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -431,9 +443,13 @@ class SchemaSvc extends BasePlatformRestService
 		{
 			return SqlDbUtilities::describeField( $this->_sqlConn, $table, $field );
 		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error describing database table '$table' field '$field'.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error describing database table '$table' field '$field'.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -535,9 +551,13 @@ class SchemaSvc extends BasePlatformRestService
 
 			return SqlDbUtilities::describeFields( $this->_sqlConn, $table, $names );
 		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error creating database fields for table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error creating database fields for table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -638,9 +658,13 @@ class SchemaSvc extends BasePlatformRestService
 
 			return SqlDbUtilities::describeFields( $this->_sqlConn, $table, $names );
 		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error updating database table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error updating database table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
