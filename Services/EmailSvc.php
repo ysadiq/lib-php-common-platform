@@ -87,6 +87,9 @@ class EmailSvc extends BasePlatformRestService
 	protected function _handlePost()
 	{
 		$_data = RestData::getPostDataAsArray();
+		Option::sins( $_data, 'template', FilterInput::request( 'template' ) );
+		Option::sins( $_data, 'template_id', FilterInput::request( 'template_id' ) );
+
 		$_count = $this->sendEmail( $_data );
 
 		return array( 'count' => $_count );
@@ -142,14 +145,14 @@ class EmailSvc extends BasePlatformRestService
 	public function sendEmail( $data = array() )
 	{
 		// build email from posted data
-		$_template = Option::get( $data, 'template', FilterInput::request( 'template' ), true );
-		$_templateId = Option::get( $data, 'template_id', FilterInput::request( 'template_id' ), true );
+		$_template = Option::get( $data, 'template', null, true );
+		$_templateId = Option::get( $data, 'template_id', null, true );
 		$_templateData = array();
 		if ( !empty( $_template ) )
 		{
 			$_templateData = static::getTemplateDataByName( $_template );
 		}
-		elseif ( !empty( $template_id ) )
+		elseif ( !empty( $_templateId ) )
 		{
 			$_templateData = static::getTemplateDataById( $_templateId );
 		}

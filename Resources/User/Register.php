@@ -215,7 +215,7 @@ class Register extends BasePlatformRestResource
 				}
 
 				$_data = array();
-				$_template = $_config->password_email_template_id;
+				$_template = $_config->open_reg_email_template_id;
 				if ( !empty( $_template ) )
 				{
 					$_data['template_id'] = $_template;
