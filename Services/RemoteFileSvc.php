@@ -19,7 +19,7 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Kisma\Core\Utility\Log;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use Kisma\Core\Utility\Option;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
@@ -380,7 +380,7 @@ abstract class RemoteFileSvc extends BaseFileSvc
 			{
 				if ( !$force )
 				{
-					throw new \Exception( "Folder '$path' contains other files or folders." );
+					throw new BadRequestException( "Folder '$path' contains other files or folders." );
 				}
 				foreach ( $_blobs as $_blob )
 				{
@@ -586,7 +586,7 @@ abstract class RemoteFileSvc extends BaseFileSvc
 		{
 			if ( ( $check_exist ) )
 			{
-				throw new \Exception( "File '$path' already exists." );
+				throw new BadRequestException( "File '$path' already exists." );
 			}
 		}
 		// does this folder's parent exist?
@@ -782,7 +782,7 @@ abstract class RemoteFileSvc extends BaseFileSvc
 			}
 			if ( true !== $zip->open( $zipFileName, ( $overwrite ? \ZipArchive::OVERWRITE : \ZipArchive::CREATE ) ) )
 			{
-				throw new \Exception( "Can not create zip file for directory '$path'." );
+				throw new InternalServerErrorException( "Can not create zip file for directory '$path'." );
 			}
 		}
 		$_results = $this->listBlobs( $container, $path, $_delimiter );
@@ -799,7 +799,7 @@ abstract class RemoteFileSvc extends BaseFileSvc
 				// folders
 				if ( !$zip->addEmptyDir( $_shortName ) )
 				{
-					throw new \Exception( "Can not include folder '$_shortName' in zip file." );
+					throw new InternalServerErrorException( "Can not include folder '$_shortName' in zip file." );
 				}
 			}
 			else
@@ -808,7 +808,7 @@ abstract class RemoteFileSvc extends BaseFileSvc
 				$_content = $this->getBlobData( $container, $_fullPathName );
 				if ( !$zip->addFromString( $_shortName, $_content ) )
 				{
-					throw new \Exception( "Can not include file '$_shortName' in zip file." );
+					throw new InternalServerErrorException( "Can not include file '$_shortName' in zip file." );
 				}
 			}
 		}
@@ -851,7 +851,7 @@ abstract class RemoteFileSvc extends BaseFileSvc
 			}
 			catch ( \Exception $ex )
 			{
-				throw new \Exception( "Could not clean out existing directory $path.\n{$ex->getMessage()}" );
+				throw new InternalServerErrorException( "Could not clean out existing directory $path.\n{$ex->getMessage()}" );
 			}
 		}
 		for ( $i = 0; $i < $zip->numFiles; $i++ )

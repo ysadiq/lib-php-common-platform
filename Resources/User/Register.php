@@ -250,7 +250,7 @@ class Register extends BasePlatformRestResource
 	 *
 	 * @return string
 	 */
-	protected function _makeConfirmationMd5( $conf_key )
+	protected static function _makeConfirmationMd5( $conf_key )
 	{
 		$randNo1 = rand();
 		$randNo2 = rand();

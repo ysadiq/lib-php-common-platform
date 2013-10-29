@@ -400,7 +400,7 @@ class Password extends BasePlatformRestResource
 	 *
 	 * @return string
 	 */
-	protected function _makeConfirmationMd5( $conf_key )
+	protected static function _makeConfirmationMd5( $conf_key )
 	{
 		$_randNo1 = rand();
 		$_randNo2 = rand();

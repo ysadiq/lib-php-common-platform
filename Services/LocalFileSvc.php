@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\Platform;
@@ -50,7 +51,7 @@ class LocalFileSvc extends BaseFileSvc
 		{
 			if ( !mkdir( $container, 0777, true ) )
 			{
-				throw new \Exception( 'Failed to create container.' );
+				throw new InternalServerErrorException( 'Failed to create container.' );
 			}
 		}
 	}
@@ -151,7 +152,7 @@ class LocalFileSvc extends BaseFileSvc
 
 			if ( !mkdir( $_dir, 0777, true ) )
 			{
-				throw new \Exception( 'Failed to create container.' );
+				throw new InternalServerErrorException( 'Failed to create container.' );
 			}
 		}
 
@@ -160,7 +161,7 @@ class LocalFileSvc extends BaseFileSvc
 //            $properties = (empty($properties)) ? '' : json_encode($properties);
 //            $result = file_put_contents($key, $properties);
 //            if (false === $result) {
-//                throw new \Exception('Failed to create container properties.');
+//                throw new InternalServerErrorException('Failed to create container properties.');
 //            }
 	}
 
@@ -218,7 +219,7 @@ class LocalFileSvc extends BaseFileSvc
 //            $key = self::addContainerToName($container, '');
 //            $result = file_put_contents($key, $properties);
 //            if (false === $result) {
-//                throw new \Exception('Failed to create container properties.');
+//                throw InternalServerErrorException('Failed to create container properties.');
 //            }
 	}
 
@@ -236,7 +237,7 @@ class LocalFileSvc extends BaseFileSvc
 		$_dir = static::addContainerToName( $container, '' );
 		if ( !rmdir( $_dir ) )
 		{
-			throw new \Exception( 'Failed to delete container.' );
+			throw new InternalServerErrorException( 'Failed to delete container.' );
 		}
 	}
 
@@ -409,12 +410,12 @@ class LocalFileSvc extends BaseFileSvc
 		if ( false === @mkdir( $_dir, 0777, true ) )
 		{
 			Log::error( 'Unable to create directory: ' . $_dir );
-			throw new \Exception( 'Failed to create folder: ' . $path );
+			throw new InternalServerErrorException( 'Failed to create folder: ' . $path );
 		}
 //            $properties = (empty($properties)) ? '' : json_encode($properties);
 //            $result = file_put_contents($key, $properties);
 //            if (false === $result) {
-//                throw new \Exception('Failed to create folder properties.');
+//                throw new InternalServerErrorException('Failed to create folder properties.');
 //            }
 	}
 
@@ -478,7 +479,7 @@ class LocalFileSvc extends BaseFileSvc
 //            $key = self::addContainerToName($container, $path);
 //            $result = file_put_contents($key, $properties);
 //            if (false === $result) {
-//                throw new \Exception('Failed to create folder properties.');
+//                throw new InternalServerErrorException('Failed to create folder properties.');
 //            }
 	}
 
@@ -577,7 +578,7 @@ class LocalFileSvc extends BaseFileSvc
 		$_data = file_get_contents( $_file );
 		if ( false === $_data )
 		{
-			throw new \Exception( 'Failed to retrieve file content.' );
+			throw new InternalServerErrorException( 'Failed to retrieve file content.' );
 		}
 		if ( !empty( $local_file ) )
 		{
@@ -585,7 +586,7 @@ class LocalFileSvc extends BaseFileSvc
 			$_result = file_put_contents( $local_file, $_data );
 			if ( false === $_result )
 			{
-				throw new \Exception( 'Failed to put file content as local file.' );
+				throw new InternalServerErrorException( 'Failed to put file content as local file.' );
 			}
 
 			return '';
@@ -634,7 +635,7 @@ class LocalFileSvc extends BaseFileSvc
 			$_contents = file_get_contents( $_file );
 			if ( false === $_contents )
 			{
-				throw new \Exception( 'Failed to retrieve file properties.' );
+				throw new InternalServerErrorException( 'Failed to retrieve file properties.' );
 			}
 			if ( $content_as_base )
 			{
@@ -706,7 +707,7 @@ class LocalFileSvc extends BaseFileSvc
 		{
 			if ( ( $check_exist ) )
 			{
-				throw new \Exception( "File '$path' already exists." );
+				throw new InternalServerErrorException( "File '$path' already exists." );
 			}
 		}
 		// does this folder's parent exist?
@@ -726,7 +727,7 @@ class LocalFileSvc extends BaseFileSvc
 		$_result = file_put_contents( $_file, $content );
 		if ( false === $_result )
 		{
-			throw new \Exception( 'Failed to create file.' );
+			throw new InternalServerErrorException( 'Failed to create file.' );
 		}
 	}
 
@@ -768,7 +769,7 @@ class LocalFileSvc extends BaseFileSvc
 		$_file = static::addContainerToName( $container, $path );
 		if ( !rename( $local_path, $_file ) )
 		{
-			throw new \Exception( "Failed to move file '$path'" );
+			throw new InternalServerErrorException( "Failed to move file '$path'" );
 		}
 	}
 
@@ -812,7 +813,7 @@ class LocalFileSvc extends BaseFileSvc
 		$_result = copy( $_srcFile, $_file );
 		if ( !$_result )
 		{
-			throw new \Exception( 'Failed to copy file.' );
+			throw new InternalServerErrorException( 'Failed to copy file.' );
 		}
 	}
 
@@ -833,7 +834,7 @@ class LocalFileSvc extends BaseFileSvc
 		}
 		if ( !unlink( $_file ) )
 		{
-			throw new \Exception( 'Failed to delete file.' );
+			throw new InternalServerErrorException( 'Failed to delete file.' );
 		}
 	}
 
@@ -863,7 +864,7 @@ class LocalFileSvc extends BaseFileSvc
 					}
 					if ( !unlink( $_file ) )
 					{
-						throw new \Exception( "Failed to delete file '$_path'." );
+						throw new InternalServerErrorException( "Failed to delete file '$_path'." );
 					}
 				}
 				else
@@ -925,7 +926,7 @@ class LocalFileSvc extends BaseFileSvc
 			}
 			if ( true !== $zip->open( $zipFileName, ( $overwrite ? \ZipArchive::OVERWRITE : \ZipArchive::CREATE ) ) )
 			{
-				throw new \Exception( "Can not create zip file for directory '$path'." );
+				throw new InternalServerErrorException( "Can not create zip file for directory '$path'." );
 			}
 		}
 		FileUtilities::addTreeToZip( $zip, $_root, rtrim( $path, '/' ) );
@@ -959,7 +960,7 @@ class LocalFileSvc extends BaseFileSvc
 			}
 			catch ( \Exception $ex )
 			{
-				throw new \Exception( "Could not clean out existing directory $path.\n{$ex->getMessage()}" );
+				throw new InternalServerErrorException( "Could not clean out existing directory $path.\n{$ex->getMessage()}" );
 			}
 		}
 		for ( $i = 0; $i < $zip->numFiles; $i++ )
@@ -1100,7 +1101,7 @@ class LocalFileSvc extends BaseFileSvc
 		}
 		else
 		{
-			throw new \Exception( "Folder '$prefix' does not exist in storage." );
+			throw new NotFoundException( "Folder '$prefix' does not exist in storage." );
 		}
 
 		return $out;
