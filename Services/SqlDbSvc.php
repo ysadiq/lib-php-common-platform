@@ -449,7 +449,7 @@ class SqlDbSvc extends BaseDbSvc
 				$_temp = array();
 				foreach ( $_ids as $_id )
 				{
-					foreach( $_idFields as $_field)
+					foreach ( $_idFields as $_field )
 					{
 						$_temp[] = array( $_field => $_id );
 					}
@@ -786,6 +786,24 @@ class SqlDbSvc extends BaseDbSvc
 	{
 		if ( !is_array( $records ) || empty( $records ) )
 		{
+			if ( Option::getBool( $extras, 'force', false ) )
+			{
+				// truncate the table, return success
+				$table = $this->correctTableName( $table );
+				try
+				{
+					/** @var \CDbCommand $command */
+					$command = $this->_sqlConn->createCommand();
+					$results = array();
+					$rows = $command->truncateTable( $table );
+
+					return $results;
+				}
+				catch ( \Exception $ex )
+				{
+					throw $ex;
+				}
+			}
 			throw new BadRequestException( 'There are no record sets in the request.' );
 		}
 		if ( !isset( $records[0] ) )
