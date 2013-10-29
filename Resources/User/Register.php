@@ -30,6 +30,7 @@ use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -38,15 +39,6 @@ use Kisma\Core\Utility\Option;
  */
 class Register extends BasePlatformRestResource
 {
-	//*************************************************************************
-	//	Members
-	//*************************************************************************
-
-	/**
-	 * @var string
-	 */
-	protected static $_randKey;
-
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
@@ -75,9 +67,6 @@ class Register extends BasePlatformRestResource
 				 )
 			)
 		);
-
-		//	For better security. "random" key is used when creating confirmation codes
-		static::$_randKey = \sha1( Pii::db()->password );
 	}
 
 	// REST interface implementation
@@ -161,7 +150,7 @@ class Register extends BasePlatformRestResource
 			}
 			else
 			{
-				$_confirmCode = static::_makeConfirmationMd5( $_email );
+				$_confirmCode = Hasher::generateUnique( $_email );
 			}
 		}
 		else
@@ -243,18 +232,5 @@ class Register extends BasePlatformRestResource
 		}
 
 		return array( 'success' => true );
-	}
-
-	/**
-	 * @param $conf_key
-	 *
-	 * @return string
-	 */
-	protected static function _makeConfirmationMd5( $conf_key )
-	{
-		$randNo1 = rand();
-		$randNo2 = rand();
-
-		return md5( $conf_key . static::$_randKey . $randNo1 . '' . $randNo2 );
 	}
 }

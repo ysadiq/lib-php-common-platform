@@ -29,8 +29,8 @@ use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\User;
-use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -39,15 +39,6 @@ use Kisma\Core\Utility\Option;
  */
 class Password extends BasePlatformRestResource
 {
-	//*************************************************************************
-	//	Members
-	//*************************************************************************
-
-	/**
-	 * @var string
-	 */
-	protected static $_randKey;
-
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
@@ -76,9 +67,6 @@ class Password extends BasePlatformRestResource
 				   )
 			  )
 		);
-
-		//	For better security. "random" key is used when creating confirmation codes
-		static::$_randKey = \sha1( Pii::db()->password );
 	}
 
 	// REST interface implementation
@@ -348,7 +336,7 @@ class Password extends BasePlatformRestResource
 		$_serviceId = $_config->password_email_service_id;
 		if ( !empty( $_serviceId ) )
 		{
-			$_code = static::_makeConfirmationMd5( $email );
+			$_code = Hasher::generateUnique( $email );
 			try
 			{
 				$_theUser->setAttribute( 'confirm_code', $_code );
@@ -393,18 +381,5 @@ class Password extends BasePlatformRestResource
 
 		throw new InternalServerErrorException( 'No security question found or email confirmation available for this user. ' .
 												'Please contact your administrator.' );
-	}
-
-	/**
-	 * @param $conf_key
-	 *
-	 * @return string
-	 */
-	protected static function _makeConfirmationMd5( $conf_key )
-	{
-		$_randNo1 = rand();
-		$_randNo2 = rand();
-
-		return md5( $conf_key . static::$_randKey . $_randNo1 . '' . $_randNo2 );
 	}
 }

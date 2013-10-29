@@ -236,6 +236,16 @@ class EmailSvc extends BasePlatformRestService
 				}
 			}
 		}
+		// handle special case, like invite link, remove this later
+		if ( false !== strpos( $_text, '{_invite_url_}' ) ||
+			 false !== strpos( $_html, '{_invite_url_}' )
+		)
+		{
+			// generate link for user, to email should always be the user
+			$inviteLink = UserManager::userInvite( $_to );
+			$_text = str_replace( '{_invite_url_}', $inviteLink, $_text );
+			$_html = str_replace( '{_invite_url_}', $inviteLink, $_html );
+		}
 
 		if ( empty( $_html ) )
 		{
