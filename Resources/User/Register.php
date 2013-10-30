@@ -22,13 +22,13 @@ namespace DreamFactory\Platform\Resources\User;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Services\EmailSvc;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\User;
-use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Option;
@@ -87,11 +87,14 @@ class Register extends BasePlatformRestResource
 	/**
 	 * @param array $data
 	 *
-	 * @throws BadRequestException
+	 * @param bool  $login
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \Exception
 	 * @return array
 	 */
-	public static function userRegister( $data )
+	public static function userRegister( $data, $login = true )
 	{
 		/** @var $_config Config */
 		$_fields = 'allow_open_registration, open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id';
@@ -111,8 +114,6 @@ class Register extends BasePlatformRestResource
 			throw new BadRequestException( "The email field for registering a user can not be empty." );
 		}
 
-		$_theUser = User::model()->find( 'email=:email', array( ':email' => $_email ) );
-
 		$_newPassword = Option::get( $data, 'new_password' );
 		$_confirmCode = 'y'; // default
 		$_roleId = $_config->open_reg_role_id;
@@ -124,34 +125,10 @@ class Register extends BasePlatformRestResource
 			$_code = Option::get( $data, 'code', FilterInput::request( 'code' ) );
 			if ( !empty( $_code ) )
 			{
-				// registration confirmation by emailed code
-				if ( empty( $_theUser ) )
-				{
-					throw new BadRequestException( "No registered user exists with the email '$_email'." );
-				}
-
-				if ( empty( $_newPassword ) )
-				{
-					throw new BadRequestException( "Missing required fields 'new_password'." );
-				}
-
-				try
-				{
-					$_theUser->setAttribute( 'confirm_code', $_confirmCode );
-					$_theUser->setAttribute( 'password', \CPasswordHelper::hashPassword( $_newPassword ) );
-					$_theUser->save();
-
-					return array( 'success' => true );
-				}
-				catch ( \Exception $ex )
-				{
-					throw new InternalServerErrorException( "Error processing user registration confirmation.\n{$ex->getMessage()}", $ex->getCode() );
-				}
+				return static::userConfirm( $_email, $_code, $_newPassword );
 			}
-			else
-			{
-				$_confirmCode = Hasher::generateUnique( $_email );
-			}
+
+			$_confirmCode = Hasher::generateUnique( $_email, 32 );
 		}
 		else
 		{
@@ -163,6 +140,7 @@ class Register extends BasePlatformRestResource
 		}
 
 		// Registration, check for email validation required
+		$_theUser = User::model()->find( 'email=:email', array( ':email' => $_email ) );
 		if ( null !== $_theUser )
 		{
 			throw new BadRequestException( "A registered user already exists with the email '$_email'." );
@@ -178,11 +156,10 @@ class Register extends BasePlatformRestResource
 			'first_name'   => ( !empty( $_firstName ) ) ? $_firstName : $_temp,
 			'last_name'    => ( !empty( $_lastName ) ) ? $_lastName : $_temp,
 			'display_name' => ( !empty( $_displayName ) ) ? $_displayName
-				: ( !empty( $_firstName ) && !empty( $_lastName ) ) ? $_firstName . ' ' . $_lastName : $_temp,
+					: ( !empty( $_firstName ) && !empty( $_lastName ) ) ? $_firstName . ' ' . $_lastName : $_temp,
 			'role_id'      => $_roleId,
 			'confirm_code' => $_confirmCode
 		);
-
 
 		try
 		{
@@ -194,7 +171,15 @@ class Register extends BasePlatformRestResource
 			}
 			$_theUser->save();
 
-			if ( !empty( $_serviceId ) )
+		}
+		catch ( \Exception $ex )
+		{
+			throw new InternalServerErrorException( "Failed to register new user!\n{$ex->getMessage()}", $ex->getCode() );
+		}
+
+		if ( !empty( $_serviceId ) )
+		{
+			try
 			{
 				/** @var EmailSvc $_emailService */
 				$_emailService = ServiceHandler::getServiceObject( $_serviceId );
@@ -213,9 +198,9 @@ class Register extends BasePlatformRestResource
 				{
 					$_data = array(
 						'subject'   => 'Registration Confirmation',
-						'body_html' => "Hi {first_name},<br/>\nYou have registered to become a {dsp.name} user. ".
-									   "Go to the following url, enter the code below, and set your password to confirm your account.<br/>\n<br/>\n".
-									   "{dsp.host_url}/public/launchpad/confirm_reg.html<br/>\n<br/>\n".
+						'body_html' => "Hi {first_name},<br/>\nYou have registered to become a {dsp.name} user. " .
+									   "Go to the following url, enter the code below, and set your password to confirm your account.<br/>\n<br/>\n" .
+									   "{dsp.host_url}/public/launchpad/confirm_reg.html<br/>\n<br/>\n" .
 									   "Confirmation Code: {confirm_code}<br/>\n<br/>\nThanks,<br/>\n{from_name}",
 					);
 				}
@@ -225,12 +210,92 @@ class Register extends BasePlatformRestResource
 				$_data = array_merge( $_data, $_theUser->getAttributes( $_userFields ) );
 				$_emailService->sendEmail( $_data );
 			}
+			catch ( \Exception $ex )
+			{
+				throw new InternalServerErrorException( "Registration complete, but failed to send confirmation email.\n{$ex->getMessage()}", $ex->getCode() );
+			}
 		}
-		catch ( \Exception $ex )
+		else
 		{
-			throw new InternalServerErrorException( "Failed to register new user!\n{$ex->getMessage()}", $ex->getCode() );
+			if ( $login )
+			{
+				try
+				{
+					return Session::userLogin( $_theUser->email, $_newPassword );
+				}
+				catch ( \Exception $ex )
+				{
+					throw new InternalServerErrorException( "Registration complete, but failed to create a session.\n{$ex->getMessage()}", $ex->getCode() );
+				}
+			}
 		}
 
 		return array( 'success' => true );
 	}
+
+	/**
+	 * @param string $email
+	 * @param string $code
+	 * @param string $new_password
+	 * @param bool   $login
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 *
+	 * @return array
+	 */
+	public static function userConfirm( $email, $code, $new_password, $login = true )
+	{
+		if ( empty( $email ) )
+		{
+			throw new BadRequestException( "Missing required email for registration confirmation." );
+		}
+
+		if ( empty( $new_password ) )
+		{
+			throw new BadRequestException( "Missing required fields 'new_password'." );
+		}
+
+		if ( empty( $code ) || 'y' == $code )
+		{
+			throw new BadRequestException( "Missing or invalid confirmation code'." );
+		}
+
+		$_theUser = User::model()->find(
+			'email=:email AND confirm_code=:cc',
+			array( ':email' => $email, ':cc' => $code )
+		);
+		if ( null === $_theUser )
+		{
+			// bad code
+			throw new NotFoundException( "The supplied email and/or confirmation code were not found in the system." );
+		}
+
+		try
+		{
+			$_theUser->setAttribute( 'confirm_code', 'y' );
+			$_theUser->setAttribute( 'password', \CPasswordHelper::hashPassword( $new_password ) );
+			$_theUser->save();
+		}
+		catch ( \Exception $ex )
+		{
+			throw new InternalServerErrorException( "Error processing user registration confirmation.\n{$ex->getMessage()}", $ex->getCode() );
+		}
+
+		if ( $login )
+		{
+			try
+			{
+				return Session::userLogin( $_theUser->email, $new_password );
+			}
+			catch ( \Exception $ex )
+			{
+				throw new InternalServerErrorException( "Registration complete, but failed to create a session.\n{$ex->getMessage()}", $ex->getCode() );
+			}
+		}
+
+		return array( 'success' => true );
+	}
+
 }

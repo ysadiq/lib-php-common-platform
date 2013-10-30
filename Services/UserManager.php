@@ -207,34 +207,33 @@ class UserManager extends BaseSystemRestService
 		{
 			throw new BadRequestException( "The email field for invitation can not be empty." );
 		}
+
 		$_theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
 		if ( empty( $_theUser ) )
 		{
 			throw new BadRequestException( "No user currently exists with the email '$email'." );
 		}
+
 		$_confirmCode = $_theUser->confirm_code;
 		if ( 'y' == $_confirmCode )
 		{
 			throw new BadRequestException( "User with email '$email' has already confirmed registration in the system." );
 		}
+
 		try
 		{
 			if ( empty( $_confirmCode ) )
 			{
-				$_confirmCode = Hasher::generateUnique( $email );
+				$_confirmCode = Hasher::generateUnique( $email, 32 );
 				$_theUser->setAttribute( 'confirm_code', $_confirmCode );
 				$_theUser->save();
 			}
 
 			// generate link
-			$link = Curl::currentUrl( false, false ) .'/public/launchpad/confirm_reg.html';
-			$link .= '<br/><br/>Confirmation Code: ' . $_confirmCode;
+			$_link = Curl::currentUrl( false, false ) .'/public/launchpad/confirm_reset.html';
+			$_link .= '<br/><br/>Confirmation Code: ' . $_confirmCode;
 
-			return $link;
-		}
-		catch ( \CDbException $ex )
-		{
-			throw new InternalServerErrorException( "Failed to store generated user invite!" );
+			return $_link;
 		}
 		catch ( \Exception $ex )
 		{

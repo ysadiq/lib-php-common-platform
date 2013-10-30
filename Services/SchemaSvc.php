@@ -161,23 +161,20 @@ class SchemaSvc extends BasePlatformRestService
 		parent::_preProcess();
 
 		$this->_payload = RestData::getPostDataAsArray();
-		$this->_tables = Option::get( $this->_payload, 'table', $this->_payload );
-
-		if ( empty( $this->_tables ) )
-		{
-			$this->_tables = Option::getDeep( $this->_payload, 'tables', 'table' );
-		}
+		$this->_tables = Option::get(
+			$this->_payload,
+			'table',
+			Option::getDeep( $this->_payload, 'tables', 'table' )
+		);
 
 		//	Create fields in existing table
 		if ( !empty( $this->_tableName ) )
 		{
-			$this->_fields = Option::get( $this->_payload, 'field', $this->_payload );
-
-			if ( empty( $this->_fields ) )
-			{
-				// temporary, layer created from xml to array conversion
-				$this->_fields = Option::getDeep( $this->_payload, 'fields', 'field' );
-			}
+			$this->_fields = Option::get(
+				$this->_payload,
+				'field',
+				Option::getDeep( $this->_payload, 'fields', 'field' )
+			);
 		}
 	}
 
@@ -516,6 +513,11 @@ class SchemaSvc extends BasePlatformRestService
 	 */
 	public function createTable( $table )
 	{
+		if ( null != Option::get( $table, 0 ) )
+		{
+			throw new BadRequestException( 'Bad request format.' );
+		}
+
 		$result = $this->createTables( $table );
 
 		return Option::get( $result, 0, array() );
@@ -624,6 +626,11 @@ class SchemaSvc extends BasePlatformRestService
 	 */
 	public function updateTable( $table )
 	{
+		if ( null != Option::get( $table, 0 ) )
+		{
+			throw new BadRequestException( 'Bad request format.' );
+		}
+
 		$result = $this->updateTables( $table );
 
 		return Option::get( $result, 0, array() );

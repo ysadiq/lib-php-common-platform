@@ -50,22 +50,22 @@ class Password extends BasePlatformRestResource
 	public function __construct( $consumer, $resources = array() )
 	{
 		parent::__construct(
-			  $consumer,
-			  array(
-				   'name'           => 'User Password',
-				   'service_name'   => 'user',
-				   'type'           => 'System',
-				   'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				   'api_name'       => 'password',
-				   'description'    => 'Resource for a user to manage their password.',
-				   'is_active'      => true,
-				   'resource_array' => $resources,
-				   'verb_aliases'   => array(
-					   static::Put   => static::Post,
-					   static::Patch => static::Post,
-					   static::Merge => static::Post,
-				   )
-			  )
+			$consumer,
+			array(
+				 'name'           => 'User Password',
+				 'service_name'   => 'user',
+				 'type'           => 'System',
+				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				 'api_name'       => 'password',
+				 'description'    => 'Resource for a user to manage their password.',
+				 'is_active'      => true,
+				 'resource_array' => $resources,
+				 'verb_aliases'   => array(
+					 static::Put   => static::Post,
+					 static::Patch => static::Post,
+					 static::Merge => static::Post,
+				 )
+			)
 		);
 	}
 
@@ -189,14 +189,19 @@ class Password extends BasePlatformRestResource
 			throw new BadRequestException( "Missing new password for reset." );
 		}
 
+		if ( empty( $code ) || 'y' == $code )
+		{
+			throw new BadRequestException( "Invalid confirmation code." );
+		}
+
 		$_theUser = User::model()->find(
-						'email=:email AND confirm_code=:cc',
-						array( ':email' => $email, ':cc' => $code )
+			'email=:email AND confirm_code=:cc',
+			array( ':email' => $email, ':cc' => $code )
 		);
 		if ( null === $_theUser )
 		{
 			// bad code
-			throw new NotFoundException( "The supplied email and confirmation code were not found in the system." );
+			throw new NotFoundException( "The supplied email and/or confirmation code were not found in the system." );
 		}
 
 		try
@@ -336,7 +341,7 @@ class Password extends BasePlatformRestResource
 		$_serviceId = $_config->password_email_service_id;
 		if ( !empty( $_serviceId ) )
 		{
-			$_code = Hasher::generateUnique( $email );
+			$_code = Hasher::generateUnique( $email, 32 );
 			try
 			{
 				$_theUser->setAttribute( 'confirm_code', $_code );
