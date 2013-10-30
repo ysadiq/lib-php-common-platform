@@ -22,7 +22,6 @@ namespace DreamFactory\Platform\Yii\Models;
 use CEvent;
 use CModelEvent;
 use DreamFactory\Oasys\Oasys;
-use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
@@ -35,11 +34,13 @@ use Kisma\Core\Utility\Option;
  *
  * Columns:
  *
+ * @property int                 $base_provider_id  Contains the ID of the provider if this is based on the same authentication means
  * @property string              $api_name
  * @property string              $provider_name
  * @property array               $config_text
  * @property int                 $is_active
  * @property int                 $is_system
+ * @property int                 $is_login_provider If this is set to true, this provider will be presented as a login provider with Open Registration
  */
 class Provider extends BasePlatformSystemModel
 {
@@ -62,7 +63,7 @@ class Provider extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array( 'api_name, provider_name, config_text, is_active, is_system', 'safe' ),
+			array('api_name, provider_name, base_provider_id, config_text, is_active, is_system, is_login_provider', 'safe'),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -100,11 +101,13 @@ class Provider extends BasePlatformSystemModel
 			array_merge(
 				$additionalLabels,
 				array(
-					 'provider_name' => 'Name',
-					 'api_name'      => 'API Name',
-					 'config_text'   => 'Configuration',
-					 'is_active'     => 'Active',
-					 'is_system'     => 'System Provider'
+					 'provider_name'     => 'Name',
+					 'api_name'          => 'API Name',
+					 'config_text'       => 'Configuration',
+					 'is_active'         => 'Active',
+					 'is_system'         => 'Is a System Provider',
+					 'is_login_provider' => 'Provider Login Services',
+					 'base_provider_id'  => 'Base Provider',
 				)
 			)
 		);
@@ -119,8 +122,8 @@ class Provider extends BasePlatformSystemModel
 	{
 		$this->getDbCriteria()->mergeWith(
 			array(
-				 'condition' => 'provider_name = :provider_name or api_name = :api_name',
-				 'params'    => array( ':provider_name' => $portal, ':api_name' => Inflector::neutralize( $portal ) ),
+				 'condition' => 'lower(provider_name) = lower(:provider_name) or lower(api_name) = lower(:api_name)',
+				 'params'    => array(':provider_name' => $portal, ':api_name' => Inflector::neutralize( $portal )),
 			)
 		);
 
@@ -164,7 +167,7 @@ class Provider extends BasePlatformSystemModel
 			if ( null !==
 				 ( $_auth =
 					 ProviderUser::model()->byUserProviderUserId( Session::getCurrentUserId(), Option::get( $provider, 'id' ) )->find(
-						 array( 'select' => 'auth_text' )
+						 array('select' => 'auth_text')
 					 ) )
 			)
 			{
@@ -220,9 +223,9 @@ class Provider extends BasePlatformSystemModel
 	 */
 	protected function beforeSave()
 	{
-		if ( $this->is_system )
+		if ( $this->is_system || $this->id < 0 )
 		{
-			throw new \CHttpException( HttpResponse::Forbidden, 'The system providers are read-only.' );
+			throw new \CHttpException( HttpResponse::Forbidden, 'The system and global providers are read-only.' );
 		}
 
 		return parent::beforeSave();
