@@ -369,6 +369,7 @@ abstract class RemoteFileSvc extends BaseFileSvc
 	 */
 	public function deleteFolder( $container, $path, $force = false )
 	{
+		$path = rtrim($path, '/') . '/';
 		$_blobs = $this->listBlobs( $container, $path );
 		if ( !empty( $_blobs ) )
 		{
