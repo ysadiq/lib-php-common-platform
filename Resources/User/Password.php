@@ -253,6 +253,11 @@ class Password extends BasePlatformRestResource
 			throw new BadRequestException( "Missing new password for reset." );
 		}
 
+		if ( empty( $answer ) )
+		{
+			throw new BadRequestException( "Missing security answer." );
+		}
+
 		$_theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
 		if ( null === $_theUser )
 		{

@@ -594,9 +594,20 @@ class OpenStackObjectStoreSvc extends RemoteFileSvc
 				throw new \Exception( "No container named '$container'" );
 			}
 
-			$_obj = $_container->DataObject( $name );
-
-			$_obj->Delete();
+			$_obj = null;
+			try
+			{
+				$_obj = $_container->DataObject( $name );
+			}
+			catch ( \Exception $ex )
+			{
+				// doesn't exist
+				return;
+			}
+			if ( $_obj )
+			{
+				$_obj->Delete();
+			}
 		}
 		catch ( \Exception $ex )
 		{
@@ -645,6 +656,10 @@ class OpenStackObjectStoreSvc extends RemoteFileSvc
 		{
 			if ( !empty( $_obj->name ) )
 			{
+				if ( 0 == strcmp( $prefix, $_obj->name ) )
+				{
+					continue;
+				}
 				$_out[] = array(
 					'name'           => $_obj->name,
 					'content_type'   => $_obj->content_type,
