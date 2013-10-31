@@ -19,14 +19,14 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Utility\Option;
+use DreamFactory\Common\Exceptions\RestException;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Scalar;
+use Kisma\Core\Utility\Option;
 
 /**
  * SchemaSvc
@@ -161,23 +161,20 @@ class SchemaSvc extends BasePlatformRestService
 		parent::_preProcess();
 
 		$this->_payload = RestData::getPostDataAsArray();
-		$this->_tables = Option::get( $this->_payload, 'table', $this->_payload );
-
-		if ( empty( $this->_tables ) )
-		{
-			$this->_tables = Option::getDeep( $this->_payload, 'tables', 'table' );
-		}
+		$this->_tables = Option::get(
+			$this->_payload,
+			'table',
+			Option::getDeep( $this->_payload, 'tables', 'table' )
+		);
 
 		//	Create fields in existing table
 		if ( !empty( $this->_tableName ) )
 		{
-			$this->_fields = Option::get( $this->_payload, 'field', $this->_payload );
-
-			if ( empty( $this->_fields ) )
-			{
-				// temporary, layer created from xml to array conversion
-				$this->_fields = Option::getDeep( $this->_payload, 'fields', 'field' );
-			}
+			$this->_fields = Option::get(
+				$this->_payload,
+				'field',
+				Option::getDeep( $this->_payload, 'fields', 'field' )
+			);
 		}
 	}
 
@@ -325,9 +322,13 @@ class SchemaSvc extends BasePlatformRestService
 		{
 			return SqlDbUtilities::describeDatabase( $this->_sqlConn, null, $_exclude );
 		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error describing database tables.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error describing database tables.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -362,9 +363,13 @@ class SchemaSvc extends BasePlatformRestService
 		{
 			return SqlDbUtilities::describeTables( $this->_sqlConn, $_tables );
 		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error describing database tables '$table_list'.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error describing database tables '$table_list'.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -396,9 +401,13 @@ class SchemaSvc extends BasePlatformRestService
 		{
 			return SqlDbUtilities::describeTable( $this->_sqlConn, $table );
 		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error describing database table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error describing database table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -431,9 +440,13 @@ class SchemaSvc extends BasePlatformRestService
 		{
 			return SqlDbUtilities::describeField( $this->_sqlConn, $table, $field );
 		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error describing database table '$table' field '$field'.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error describing database table '$table' field '$field'.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -459,25 +472,30 @@ class SchemaSvc extends BasePlatformRestService
 			// check for system tables and deny
 			if ( isset( $tables[0] ) )
 			{
-				foreach ( $tables as $table )
+				foreach ( $tables as $_table )
 				{
-					$name = Option::get( $table, 'name' );
-
-					if ( 0 === substr_compare( $name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
+					if ( null === ( $_name = Option::get( $_table, 'name' ) ) )
 					{
+						throw new BadRequestException( "Table schema received does not have a valid name." );
+					}
 
-						throw new BadRequestException( "Tables can not use the prefix '$_sysPrefix'. '$name' can not be created." );
+					if ( 0 === substr_compare( $_name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
+					{
+						throw new BadRequestException( "Tables can not use the prefix '$_sysPrefix'. '$_name' can not be created." );
 					}
 				}
 			}
 			else
 			{
 				//	single table
-				$name = Option::get( $tables, 'name' );
-
-				if ( 0 === substr_compare( $name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
+				if ( null === ( $_name = Option::get( $tables, 'name' ) ) )
 				{
-					throw new BadRequestException( "Tables can not use the prefix '$_sysPrefix'. '$name' can not be created." );
+					throw new BadRequestException( "Table schema received does not have a valid name." );
+				}
+
+				if ( 0 === substr_compare( $_name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
+				{
+					throw new BadRequestException( "Tables can not use the prefix '$_sysPrefix'. '$_name' can not be created." );
 				}
 			}
 		}
@@ -495,6 +513,11 @@ class SchemaSvc extends BasePlatformRestService
 	 */
 	public function createTable( $table )
 	{
+		if ( null != Option::get( $table, 0 ) )
+		{
+			throw new BadRequestException( 'Bad request format.' );
+		}
+
 		$result = $this->createTables( $table );
 
 		return Option::get( $result, 0, array() );
@@ -530,9 +553,13 @@ class SchemaSvc extends BasePlatformRestService
 
 			return SqlDbUtilities::describeFields( $this->_sqlConn, $table, $names );
 		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error creating database fields for table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error creating database fields for table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
@@ -599,6 +626,11 @@ class SchemaSvc extends BasePlatformRestService
 	 */
 	public function updateTable( $table )
 	{
+		if ( null != Option::get( $table, 0 ) )
+		{
+			throw new BadRequestException( 'Bad request format.' );
+		}
+
 		$result = $this->updateTables( $table );
 
 		return Option::get( $result, 0, array() );
@@ -633,9 +665,13 @@ class SchemaSvc extends BasePlatformRestService
 
 			return SqlDbUtilities::describeFields( $this->_sqlConn, $table, $names );
 		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
 		catch ( \Exception $ex )
 		{
-			throw new \Exception( "Error updating database table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error updating database table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 

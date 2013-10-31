@@ -24,7 +24,6 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Exceptions\RestException;
-use DreamFactory\Platform\Services\BaseDbSvc;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
@@ -191,9 +190,9 @@ class SalesforceDbSvc extends BaseDbSvc
 	 */
 	protected function callGuzzle( $method = 'GET', $uri = null, $parameters = array(), $body = null, $client = null )
 	{
+		$_options = array();
 		try
 		{
-			$_options = array();
 			if ( !isset( $client ) )
 			{
 				$client = $this->getGuzzleClient();

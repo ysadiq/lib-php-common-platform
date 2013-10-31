@@ -751,17 +751,31 @@ class MongoDbSvc extends NoSqlDbSvc
 	 */
 	public function deleteRecords( $table, $records, $fields = null, $extras = array() )
 	{
+		$_coll = $this->selectTable( $table );
 		if ( !is_array( $records ) || empty( $records ) )
 		{
+			if ( Option::getBool( $extras, 'force', false ) )
+			{
+				try
+				{
+					$result = $_coll->remove( array() );
+
+					return array();
+				}
+				catch ( \Exception $ex )
+				{
+					throw new InternalServerErrorException( "Failed to delete all items from '$table' on MongoDb service.\n" . $ex->getMessage() );
+				}
+			}
 			throw new BadRequestException( 'There are no record sets in the request.' );
 		}
+
 		if ( !isset( $records[0] ) )
 		{
 			// single record
 			$records = array( $records );
 		}
 
-		$_coll = $this->selectTable( $table );
 		$_ids = static::recordsAsIds( $records );
 		$_criteria = array( static::DEFAULT_ID_FIELD => array( '$in' => static::idsToMongoIds( $_ids ) ) );
 		$_fieldArray = static::buildFieldArray( $fields );

@@ -29,8 +29,8 @@ use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\User;
-use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -39,15 +39,6 @@ use Kisma\Core\Utility\Option;
  */
 class Password extends BasePlatformRestResource
 {
-	//*************************************************************************
-	//	Members
-	//*************************************************************************
-
-	/**
-	 * @var string
-	 */
-	protected static $_randKey;
-
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
@@ -59,26 +50,23 @@ class Password extends BasePlatformRestResource
 	public function __construct( $consumer, $resources = array() )
 	{
 		parent::__construct(
-			  $consumer,
-			  array(
-				   'name'           => 'User Password',
-				   'service_name'   => 'user',
-				   'type'           => 'System',
-				   'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				   'api_name'       => 'password',
-				   'description'    => 'Resource for a user to manage their password.',
-				   'is_active'      => true,
-				   'resource_array' => $resources,
-				   'verb_aliases'   => array(
-					   static::Put   => static::Post,
-					   static::Patch => static::Post,
-					   static::Merge => static::Post,
-				   )
-			  )
+			$consumer,
+			array(
+				 'name'           => 'User Password',
+				 'service_name'   => 'user',
+				 'type'           => 'System',
+				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				 'api_name'       => 'password',
+				 'description'    => 'Resource for a user to manage their password.',
+				 'is_active'      => true,
+				 'resource_array' => $resources,
+				 'verb_aliases'   => array(
+					 static::Put   => static::Post,
+					 static::Patch => static::Post,
+					 static::Merge => static::Post,
+				 )
+			)
 		);
-
-		//	For better security. "random" key is used when creating confirmation codes
-		static::$_randKey = \sha1( Pii::db()->password );
 	}
 
 	// REST interface implementation
@@ -196,14 +184,24 @@ class Password extends BasePlatformRestResource
 			throw new BadRequestException( "Missing required email for password reset confirmation." );
 		}
 
+		if ( empty( $new_password ) )
+		{
+			throw new BadRequestException( "Missing new password for reset." );
+		}
+
+		if ( empty( $code ) || 'y' == $code )
+		{
+			throw new BadRequestException( "Invalid confirmation code." );
+		}
+
 		$_theUser = User::model()->find(
-						'email=:email AND confirm_code=:cc',
-						array( ':email' => $email, ':cc' => $code )
+			'email=:email AND confirm_code=:cc',
+			array( ':email' => $email, ':cc' => $code )
 		);
 		if ( null === $_theUser )
 		{
 			// bad code
-			throw new NotFoundException( "The supplied email and confirmation code were not found in the system." );
+			throw new NotFoundException( "The supplied email and/or confirmation code were not found in the system." );
 		}
 
 		try
@@ -248,6 +246,11 @@ class Password extends BasePlatformRestResource
 		if ( empty( $email ) )
 		{
 			throw new BadRequestException( "Missing required email for password reset confirmation." );
+		}
+
+		if ( empty( $new_password ) )
+		{
+			throw new BadRequestException( "Missing new password for reset." );
 		}
 
 		$_theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
@@ -338,7 +341,7 @@ class Password extends BasePlatformRestResource
 		$_serviceId = $_config->password_email_service_id;
 		if ( !empty( $_serviceId ) )
 		{
-			$_code = static::_makeConfirmationMd5( $email );
+			$_code = Hasher::generateUnique( $email, 32 );
 			try
 			{
 				$_theUser->setAttribute( 'confirm_code', $_code );
@@ -361,14 +364,14 @@ class Password extends BasePlatformRestResource
 				{
 					$_data = array(
 						'subject'   => 'Password Reset',
-						'to'        => $email,
 						'body_html' => "Hi {first_name},<br/>\n<br/>\nYou have requested to reset your password. " .
 									   "Go to the following url, enter the code below, and set your new password.<br/>\n<br/>\n" .
 									   "{dsp.host_url}/public/launchpad/confirm_reset.html<br/>\n<br/>\n" .
-									   "{confirm_code}<br/>\n<br/>\nEnjoy!<br/>\n{from_name}",
+									   "Confirmation Code: {confirm_code}<br/>\n<br/>\nEnjoy!<br/>\n{from_name}",
 					);
 				}
 
+				$_data['to'] = $email;
 				$_userFields = array( 'first_name', 'last_name', 'display_name', 'confirm_code' );
 				$_data = array_merge( $_data, $_theUser->getAttributes( $_userFields ) );
 				$_emailService->sendEmail( $_data );
@@ -383,18 +386,5 @@ class Password extends BasePlatformRestResource
 
 		throw new InternalServerErrorException( 'No security question found or email confirmation available for this user. ' .
 												'Please contact your administrator.' );
-	}
-
-	/**
-	 * @param $conf_key
-	 *
-	 * @return string
-	 */
-	protected function _makeConfirmationMd5( $conf_key )
-	{
-		$_randNo1 = rand();
-		$_randNo2 = rand();
-
-		return md5( $conf_key . static::$_randKey . $_randNo1 . '' . $_randNo2 );
 	}
 }

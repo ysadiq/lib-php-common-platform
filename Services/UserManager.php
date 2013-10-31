@@ -22,15 +22,19 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Oasys\Enums\Flows;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\User\CustomSettings;
 use DreamFactory\Platform\Resources\User\Password;
 use DreamFactory\Platform\Resources\User\Profile;
 use DreamFactory\Platform\Resources\User\Register;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
+use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Hasher;
 
 /**
  * UserManager
@@ -189,5 +193,51 @@ class UserManager extends BaseSystemRestService
 		$ticket = Utilities::encryptCreds( "$userId,$timestamp", "gorilla" );
 
 		return array( 'ticket' => $ticket, 'ticket_expiry' => time() + ( 5 * 60 ) );
+	}
+
+	/**
+	 * @param $email
+	 *
+	 * @return string
+	 * @throws \Exception
+	 */
+	public static function userInvite( $email )
+	{
+		if ( empty( $email ) )
+		{
+			throw new BadRequestException( "The email field for invitation can not be empty." );
+		}
+
+		$_theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
+		if ( empty( $_theUser ) )
+		{
+			throw new BadRequestException( "No user currently exists with the email '$email'." );
+		}
+
+		$_confirmCode = $_theUser->confirm_code;
+		if ( 'y' == $_confirmCode )
+		{
+			throw new BadRequestException( "User with email '$email' has already confirmed registration in the system." );
+		}
+
+		try
+		{
+			if ( empty( $_confirmCode ) )
+			{
+				$_confirmCode = Hasher::generateUnique( $email, 32 );
+				$_theUser->setAttribute( 'confirm_code', $_confirmCode );
+				$_theUser->save();
+			}
+
+			// generate link
+			$_link = Curl::currentUrl( false, false ) .'/public/launchpad/confirm_reset.html';
+			$_link .= '<br/><br/>Confirmation Code: ' . $_confirmCode;
+
+			return $_link;
+		}
+		catch ( \Exception $ex )
+		{
+			throw new InternalServerErrorException( "Failed to generate user invite!\n{$ex->getMessage()}", $ex->getCode() );
+		}
 	}
 }

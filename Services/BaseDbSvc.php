@@ -21,8 +21,6 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
@@ -512,9 +510,17 @@ abstract class BaseDbSvc extends BasePlatformRestService
 					{
 						if ( empty( $_data ) )
 						{
-							throw new BadRequestException( 'No record in delete request.' );
+							if ( !FilterInput::request( 'force', false, FILTER_VALIDATE_BOOLEAN ) )
+							{
+								throw new BadRequestException( 'No filter or records given for delete request.' );
+							}
+							$_extras['force'] = true;
+							$_result = $this->deleteRecords( $this->_resource, null, $_fields, $_extras );
 						}
-						$_result = $this->deleteRecord( $this->_resource, $_data, $_fields, $_extras );
+						else
+						{
+							$_result = $this->deleteRecord( $this->_resource, $_data, $_fields, $_extras );
+						}
 					}
 					else
 					{

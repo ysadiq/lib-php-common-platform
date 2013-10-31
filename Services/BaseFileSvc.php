@@ -20,8 +20,8 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Interfaces\FileServiceLike;
-use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\RestData;
@@ -334,12 +334,12 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 						$files = FileUtilities::rearrangePostedFiles( $_FILES['files'] );
 						if ( 1 < count( $files ) )
 						{
-							throw new \Exception( "Multiple files uploaded to a single REST resource '$name'." );
+							throw new BadRequestException( "Multiple files uploaded to a single REST resource '$name'." );
 						}
 						$file = Option::get( $files, 0 );
 						if ( empty( $file ) )
 						{
-							throw new \Exception( "No file uploaded to REST resource '$name'." );
+							throw new BadRequestException( "No file uploaded to REST resource '$name'." );
 						}
 						$error = $file['error'];
 						if ( UPLOAD_ERR_OK == $error )
@@ -358,7 +358,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 						}
 						else
 						{
-							throw new \Exception( "Failed to upload file $name.\n$error" );
+							throw new InternalServerErrorException( "Failed to upload file $name.\n$error" );
 						}
 					}
 				}
@@ -503,7 +503,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 			}
 			else
 			{
-				throw new \Exception( 'Error opening temporary zip file.' );
+				throw new InternalServerErrorException( 'Error opening temporary zip file.' );
 			}
 		}
 		else
@@ -549,7 +549,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 			}
 			else
 			{
-				throw new \Exception( 'Error opening temporary zip file.' );
+				throw new InternalServerErrorException( 'Error opening temporary zip file.' );
 			}
 		}
 		else
@@ -601,7 +601,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 		if ( !empty( $err ) )
 		{
 			$msg = 'Failed to upload the following files to folder ' . $this->_folderPath . ': ' . implode( ', ', $err );
-			throw new \Exception( $msg );
+			throw new InternalServerErrorException( $msg );
 		}
 
 		return array( 'file' => $out );
