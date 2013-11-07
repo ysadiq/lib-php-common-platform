@@ -135,12 +135,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	public static function select( $ids = null, $fields = null, $extras = array(), $singleRow = false, $includeSchema = false, $includeCount = false )
 	{
 		return ResourceStore::bulkSelectById(
-							$ids,
-							empty( $fields ) ? null : array( 'select' => $fields ),
-							$extras,
-							$singleRow,
-							$includeSchema,
-							$includeCount
+			$ids,
+			empty( $fields ) ? null : array( 'select' => $fields ),
+			$extras,
+			$singleRow,
+			$includeSchema,
+			$includeCount
 		);
 	}
 
@@ -191,17 +191,17 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		}
 
 		ResourceStore::reset(
-					 array(
-						  'service'          => $this->_serviceName,
-						  'resource_name'    => $this->_apiName,
-						  'resource_id'      => $this->_resourceId,
-						  'resource_array'   => $this->_resourceArray,
-						  'related_resource' => $this->_relatedResource,
-						  'fields'           => $this->_fields,
-						  'extras'           => $this->_extras,
-						  'include_count'    => $this->_includeCount,
-						  'include_schema'   => $this->_includeSchema,
-					 )
+			array(
+				 'service'          => $this->_serviceName,
+				 'resource_name'    => $this->_apiName,
+				 'resource_id'      => $this->_resourceId,
+				 'resource_array'   => $this->_resourceArray,
+				 'related_resource' => $this->_relatedResource,
+				 'fields'           => $this->_fields,
+				 'extras'           => $this->_extras,
+				 'include_count'    => $this->_includeCount,
+				 'include_schema'   => $this->_includeSchema,
+			)
 		);
 	}
 
@@ -304,12 +304,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		}
 
 		return ResourceStore::select(
-							null,
-							$_criteria,
-							array(),
-							$_singleRow,
-							Option::getBool( $_payload, 'include_count' ),
-							Option::getBool( $_payload, 'include_schema' )
+			null,
+			$_criteria,
+			array(),
+			$_singleRow,
+			Option::getBool( $_payload, 'include_count' ),
+			Option::getBool( $_payload, 'include_schema' )
 		);
 	}
 
