@@ -54,11 +54,6 @@ class Provider extends BaseSystemRestResource
 				 'description'    => 'Provider Configuration',
 				 'is_active'      => true,
 				 'resource_array' => $resourceArray,
-				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-					 static::Put   => static::Post,
-					 static::Merge => static::Post,
-				 ),
 			)
 		);
 	}
