@@ -58,7 +58,6 @@ class Config extends BaseSystemRestResource
 			array(
 				 'name'           => 'Configuration',
 				 'type'           => 'System',
-				 'service_name'   => 'system',
 				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
 				 'api_name'       => 'config',
 				 'description'    => 'Service general configuration',

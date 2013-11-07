@@ -279,7 +279,11 @@ class Portal extends BaseSystemRestService
 			)
 		);
 
-		if ( $this->_interactive )
+		if ( null !== ( $_flow = Option::get( $this->_urlParameters, 'flow_type', null, true ) ) )
+		{
+			$_config['flow_type'] = $_flow;
+		}
+		elseif ( $this->_interactive )
 		{
 			$_config['flow_type'] = Flows::CLIENT_SIDE;
 		}
@@ -299,9 +303,10 @@ class Portal extends BaseSystemRestService
 		{
 			/** @var ProviderUserStore $_store */
 			$_store = Oasys::getStore();
+
 			if ( null === $_store->getProviderUserId() )
 			{
-				$_payload = $_provider->getConfig()->getPayload();
+				$_payload = $_provider->getRequestPayload();
 				$_profile = $_provider->getUserData();
 
 				if ( !empty( $_profile ) )
@@ -309,8 +314,6 @@ class Portal extends BaseSystemRestService
 					$_store->setProviderUserId( $_profile->getUserId() );
 					$_store->sync();
 				}
-
-				$_provider->getConfig()->setPayload( $_payload );
 			}
 
 			Log::debug( 'Requesting portal resource "' . $_resource . '"' );

@@ -16,12 +16,16 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\ServiceHandler;
+use DreamFactory\Platform\Yii\Models\Service;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Seed;
+use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Option;
 
 /**
  * BasePlatformService
@@ -83,17 +87,81 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 		parent::__construct( $settings );
 
 		// Validate basic settings
+		if ( null === Option::get( $settings, 'api_name', $this->_apiName ) )
+		{
+			if ( null !== ( $_name = Option::get( $settings, 'name', $this->_name ) ) )
+			{
+				$this->_apiName = Inflector::neutralize( $_name );
+			}
+		}
+
 		if ( empty( $this->_apiName ) )
 		{
 			throw new \InvalidArgumentException( '"api_name" can not be empty.' );
 		}
 
-		if ( empty( $this->_type ) )
+		if ( null === $this->_typeId )
 		{
-			throw new \InvalidArgumentException( '"type" can not be empty.' );
+			if ( false !== ( $_typeId = $this->_determineTypeId() ) )
+			{
+				$this->_typeId = $_typeId;
+
+				//	Set type from ID
+				if ( null === $this->_type )
+				{
+					$this->_type = PlatformServiceTypes::nameOf( $this->_typeId );
+				}
+			}
+		}
+
+		if ( empty( $this->_type ) || null === $this->_typeId )
+		{
+			throw new \InvalidArgumentException( '"type" and/or "type_id" cannot be empty.' );
+		}
+
+		//	Set description from name...
+		if ( empty( $this->_description ) )
+		{
+			$this->_description = $this->_name;
 		}
 
 		$this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
+	}
+
+	/**
+	 * Given an old string-based TYPE, determine new integer identifier
+	 *
+	 * @param string $type
+	 *
+	 * @return bool|int
+	 */
+	protected function _determineTypeId( $type = null )
+	{
+		$_type = str_replace( ' ', '_', trim( strtoupper( $type ? : $this->_type ) ) );
+
+		if ( 'LOCAL_EMAIL_SERVICE' == $_type )
+		{
+			$_type = 'EMAIL_SERVICE';
+		}
+
+		try
+		{
+			//	Throws exception if type not defined...
+			return PlatformServiceTypes::defines( $_type, true );
+		}
+		catch ( \InvalidArgumentException $_ex )
+		{
+			if ( empty( $_type ) )
+			{
+				Log::notice( '  * Empty "type", assuming this is a system resource ( type_id == 0 )' );
+
+				return PlatformServiceTypes::SYSTEM_SERVICE;
+			}
+
+			Log::error( '  * Unknown service type ID request for "' . $type . '".' );
+
+			return false;
+		}
 	}
 
 	/**
