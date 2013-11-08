@@ -91,6 +91,11 @@ class Portal extends BaseSystemRestService
 	 */
 	public function __construct( $settings = array() )
 	{
+		if ( null !== ( $_flow = Option::request( 'interactive', null, true ) ) )
+		{
+			$settings['interactive'] = ( Flows::CLIENT_SIDE == $_flow );
+		}
+
 		parent::__construct( $settings );
 
 		$this->_mapServices();
@@ -223,6 +228,46 @@ class Portal extends BaseSystemRestService
 	}
 
 	/**
+	 * Creates the configuration settings, sets the Oasys store and returns a provider
+	 *
+	 * @return BaseProvider
+	 */
+	protected function _getProvider()
+	{
+		$_config = array();
+
+		//	Load any local configuration files for this provider...
+		$_configPath = \Kisma::get( 'app.config_path' ) . '/portal/' . $this->_resource . '.config.php';
+
+		if ( file_exists( $_configPath ) )
+		{
+			/** @noinspection PhpIncludeInspection */
+			$_config = @include( $_configPath );
+		}
+
+		$_config = array_merge(
+			$_config,
+			Option::getDeep(
+				$this->_serviceMap,
+				$this->_resource,
+				'config_text',
+				array()
+			)
+		);
+
+		$this->_requestPayload = array_merge( $this->_urlParameters, Option::clean( RestData::getPostDataAsArray() ) );
+
+		//	Set the flow type
+		$_config['flow_type'] = $this->_interactive ? Flows::CLIENT_SIDE : Flows::SERVER_SIDE;
+
+		//	Set the store for this portal
+		Oasys::setStore( new ProviderUserStore( $this->_portalUser->id, $this->_serviceMap[$this->_resource]['id'], $_config ), true );
+
+		return Oasys::getProvider( $this->_resource, Oasys::getStore()->get() );
+
+	}
+
+	/**
 	 * Handle a service request
 	 *
 	 * Comes in like this:
@@ -237,8 +282,6 @@ class Portal extends BaseSystemRestService
 	 */
 	protected function _handleResource()
 	{
-		$_config = array();
-
 		if ( empty( $this->_resource ) && $this->_action == HttpMethod::Get )
 		{
 			$_providers = array();
@@ -262,90 +305,44 @@ class Portal extends BaseSystemRestService
 		//	2. Authorize user
 		$this->_validateRequest();
 
-		//	Load any local configuration files for this provider...
-		$_configPath = \Kisma::get( 'app.config_path' ) . '/portal/' . $this->_resource . '.config.php';
-
-		if ( file_exists( $_configPath ) )
-		{
-			/** @noinspection PhpIncludeInspection */
-			$_config = @include( $_configPath );
-		}
-
-		$_config = array_merge(
-			$_config,
-			Option::getDeep(
-				$this->_serviceMap,
-				$this->_resource,
-				'config_text',
-				array()
-			)
-		);
-
-		if ( null !== ( $_flow = Option::get( $this->_urlParameters, 'flow_type', null, true ) ) )
-		{
-			$_config['flow_type'] = $_flow;
-		}
-		elseif ( $this->_interactive )
-		{
-			$_config['flow_type'] = Flows::CLIENT_SIDE;
-		}
-
-		$_config['payload'] = $_payload = array_merge( $this->_urlParameters, Option::clean( RestData::getPostDataAsArray() ) );
-
-		//	2. Get provider and store
-		Oasys::setStore( new ProviderUserStore( $this->_portalUser->id, $this->_serviceMap[$this->_resource]['id'], $_config ), true );
-
-		/** @var BaseProvider $_provider */
-		$_provider = Oasys::getProvider( $this->_resource, Oasys::getStore()->get() );
+		//	3. Build provider
+		$_provider = $this->_getProvider();
 
 		//	3. Relay call
-		$_resource = '/' . implode( '/', array_slice( $this->_uriPath, 3 ) );
-
 		if ( $_provider->authorized( true ) )
 		{
-			/** @var ProviderUserStore $_store */
-			$_store = Oasys::getStore();
-
-			if ( null === $_store->getProviderUserId() )
-			{
-				$_profile = $_provider->getUserData();
-
-				if ( !empty( $_profile ) )
-				{
-					$_store->setProviderUserId( $_profile->getUserId() );
-					$_store->sync();
-				}
-			}
+			//	The REAL request
+			$_resource = '/' . implode( '/', array_slice( $this->_uriPath, 3 ) );
 
 			//	if this is a bounce, pull the original request out of the state...
-			if ( isset( $_REQUEST, $_REQUEST['code'], $_REQUEST['state'] ) )
+			if ( isset( $_REQUEST, $_REQUEST['code'], $_REQUEST['state'], $_REQUEST['oasys'] ) )
 			{
 				$_state = Storage::defrost( Option::request( 'state' ) );
+
 				if ( null === ( $_origin = Option::get( $_state, 'origin' ) ) )
 				{
 					$_origin = Curl::currentUrl( false );
 				}
 
+				if ( $_REQUEST['oasys'] != sha1( $_origin ) )
+				{
+					Log::error( 'Received inbound relay but Oasys key mismatch: ' . $_REQUEST['oasys'] . ' != ' . sha1( $_origin ) );
+					throw new BadRequestException( 'Possible forged token.' );
+				}
+
+				//	Update user profile while we're here...
+				$this->_updateUserProfile( $_provider );
+
 				//	Go back to whence you came!
 				header( 'Location: ' . $_origin );
 				die();
-//
-//				$this->_action = Option::getDeep( $_state, 'request', 'method', static::Get );
-//				$_requestPayload = Option::getDeep( $_state, 'request', 'payload', array() );
-//				$_path = Option::get( $_requestPayload, 'path' );
-//				$_resource = str_ireplace( 'portal/' . $_provider->getProviderId(), null, $_path );
-//
-//				//	Clean up
-//				unset( $_requestPayload['flow_type'], $_requestPayload['code'], $_requestPayload['state'], $_requestPayload['dfpapikey'], $_requestPayload['path'] );
-//
-//				$_payload = $_requestPayload;
 			}
 
 			Log::debug( 'Requesting portal resource "' . $_resource . '"' );
 
 			try
 			{
-				$_response = $_provider->fetch( $_resource, $_payload, $this->_action );
+				$_response = $_provider->fetch( $_resource, $this->_requestPayload, $this->_action );
 
 				if ( false === $_response )
 				{
@@ -370,6 +367,31 @@ class Portal extends BaseSystemRestService
 		}
 
 		throw new BadRequestException( 'The request you submitted is confusing.' );
+	}
+
+	/**
+	 * @param BaseProvider $provider
+	 *
+	 * @return bool
+	 */
+	protected function _updateUserProfile( $provider )
+	{
+		/** @var ProviderUserStore $_store */
+		$_store = Oasys::getStore();
+
+		if ( null === $_store->getProviderUserId() )
+		{
+			$_profile = $provider->getUserData();
+
+			if ( !empty( $_profile ) )
+			{
+				$_store->setProviderUserId( $_profile->getUserId() );
+
+				return $_store->sync();
+			}
+		}
+
+		return true;
 	}
 
 	/**

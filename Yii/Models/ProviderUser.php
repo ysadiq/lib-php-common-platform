@@ -58,6 +58,8 @@ class ProviderUser extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
+			array( 'user_id, provider_id, provider_user_id', 'required' ),
+			array( 'user_id, provider_id, provider_user_id', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
 			array( 'provider_id, provider_user_id, user_id, account_type, auth_text, last_use_date', 'safe' ),
 		);
 

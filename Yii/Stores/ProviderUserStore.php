@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Stores;
 
 use DreamFactory\Oasys\Stores\BaseOasysStore;
+use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Yii\Models\ProviderUser;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -62,7 +63,7 @@ class ProviderUserStore extends BaseOasysStore
 	{
 		$this->_providerId = $providerId;
 		$this->_userId = $userId;
-		$this->_providerUserId = Option::get( $contents, 'provider_user_id', $this->_providerUserId, true );
+		$this->_providerUserId = $this->_providerUserId ? : Option::get( $contents, 'provider_user_id', null, true );
 
 		$this->_load();
 
@@ -91,7 +92,7 @@ class ProviderUserStore extends BaseOasysStore
 		}
 
 		/** @var ProviderUser $_pu */
-		$_pu = ProviderUser::model()->find( $_condition, $_params );
+		$_pu = ResourceStore::model( 'provider_user' )->find( $_condition, $_params );
 
 		//	Load prior auth stuff...
 		if ( null !== $_pu && !empty( $_pu->auth_text ) && true === $fill )
@@ -113,21 +114,24 @@ class ProviderUserStore extends BaseOasysStore
 		{
 			if ( null === ( $_pu = $this->_load( false ) ) )
 			{
-				$_pu = new ProviderUser();
+				/** @var ProviderUser $_pu */
+				$_pu = ResourceStore::model( 'provider_user' );
 				$_pu->user_id = $this->_userId;
 				$_pu->provider_id = $this->_providerId;
+				$_pu->provider_user_id = $this->_providerUserId;
 			}
 
-			$_pu->provider_user_id = $this->_providerUserId;
 			$_pu->auth_text = array_merge( empty( $_pu->auth_text ) ? array() : $_pu->auth_text, $this->contents() );
 			$_pu->last_use_date = date( 'c' );
 			$_pu->save();
+
+			Log::info( 'ProviderUserStore sync complete' );
 
 			return true;
 		}
 		catch ( \CDbException $_ex )
 		{
-			Log::error( 'Exception saving provider user row: ' . $_ex->getMessage() );
+			Log::error( 'ProviderUserStore sync failure: ' . $_ex->getMessage() );
 
 			return false;
 		}
