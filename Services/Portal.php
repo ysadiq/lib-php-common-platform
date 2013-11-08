@@ -34,8 +34,10 @@ use DreamFactory\Platform\Yii\Stores\ProviderUserStore;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
+use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Storage;
 
 /**
  * Portal
@@ -306,7 +308,6 @@ class Portal extends BaseSystemRestService
 
 			if ( null === $_store->getProviderUserId() )
 			{
-				$_payload = $_provider->getRequestPayload();
 				$_profile = $_provider->getUserData();
 
 				if ( !empty( $_profile ) )
@@ -314,6 +315,30 @@ class Portal extends BaseSystemRestService
 					$_store->setProviderUserId( $_profile->getUserId() );
 					$_store->sync();
 				}
+			}
+
+			//	if this is a bounce, pull the original request out of the state...
+			if ( isset( $_REQUEST, $_REQUEST['code'], $_REQUEST['state'] ) )
+			{
+				$_state = Storage::defrost( Option::request( 'state' ) );
+				if ( null === ( $_origin = Option::get( $_state, 'origin' ) ) )
+				{
+					$_origin = Curl::currentUrl( false );
+				}
+
+				//	Go back to whence you came!
+				header( 'Location: ' . $_origin );
+				die();
+//
+//				$this->_action = Option::getDeep( $_state, 'request', 'method', static::Get );
+//				$_requestPayload = Option::getDeep( $_state, 'request', 'payload', array() );
+//				$_path = Option::get( $_requestPayload, 'path' );
+//				$_resource = str_ireplace( 'portal/' . $_provider->getProviderId(), null, $_path );
+//
+//				//	Clean up
+//				unset( $_requestPayload['flow_type'], $_requestPayload['code'], $_requestPayload['state'], $_requestPayload['dfpapikey'], $_requestPayload['path'] );
+//
+//				$_payload = $_requestPayload;
 			}
 
 			Log::debug( 'Requesting portal resource "' . $_resource . '"' );
@@ -327,30 +352,12 @@ class Portal extends BaseSystemRestService
 					throw new InternalServerErrorException( 'Network error', $_response['code'] );
 				}
 
-				/**
-				 * Results from fetch always come back like this:
-				 *
-				 *  array(
-				 *            'result'       => the actual result of the request from the provider
-				 *            'code'         => the HTTP response code of the request
-				 *            'content_type' => the content type returned
-				 * )
-				 *
-				 * If the content type is json, the 'result' has already been decoded.
-				 */
-				if ( isset( $_response, $_response['result'] ) && is_string( $_response['result'] ) &&
-					 false !== stripos( $_response['content_type'], 'application/json', 0 )
-				)
+				if ( HttpResponse::Ok != $_provider->getLastResponseCode() )
 				{
-					return json_decode( $_response['result'] );
+					throw new RestException( $_provider->getLastResponseCode(), $_provider->getLastError() );
 				}
 
-				if ( HttpResponse::Ok != $_response['code'] )
-				{
-					throw new RestException( $_response['code'] );
-				}
-
-				return $_response['result'];
+				return $_response;
 			}
 			catch ( \Exception $_ex )
 			{
@@ -536,5 +543,4 @@ class Portal extends BaseSystemRestService
 	{
 		return $this->_urlParameters;
 	}
-
 }
