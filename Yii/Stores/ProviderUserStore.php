@@ -119,6 +119,7 @@ class ProviderUserStore extends BaseOasysStore
 				$_pu->user_id = $this->_userId;
 				$_pu->provider_id = $this->_providerId;
 				$_pu->provider_user_id = $this->_providerUserId;
+				$_pu->auth_text = array();
 			}
 
 			$_pu->auth_text = array_merge( empty( $_pu->auth_text ) ? array() : $_pu->auth_text, $this->contents() );
