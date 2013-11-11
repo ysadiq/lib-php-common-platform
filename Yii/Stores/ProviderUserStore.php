@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Yii\Stores;
 
 use DreamFactory\Oasys\Stores\BaseOasysStore;
-use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Yii\Models\ProviderUser;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -79,25 +78,29 @@ class ProviderUserStore extends BaseOasysStore
 	 */
 	protected function _load( $fill = true )
 	{
-		$_condition = 'user_id = :user_id AND provider_id = :provider_id';
-		$_params = array(
-			':user_id'     => $this->_userId,
-			':provider_id' => $this->_providerId,
+		$_criteria = new \CDbCriteria();
+		$_criteria->order = 'id';
+		$_criteria->limit = 1;
+		$_criteria->condition = 'user_id = :user_id AND provider_id = :provider_id';
+		$_criteria->params = array(
+			'user_id'     => $this->_userId,
+			'provider_id' => $this->_providerId,
 		);
 
 		if ( !empty( $this->_providerUserId ) )
 		{
-			$_condition .= ' AND provider_user_id = :provider_user_id';
-			$_params[':provider_user_id'] = $this->_providerUserId;
+			$_criteria->condition .= ' AND provider_user_id = :provider_user_id';
+			$_criteria->params[':provider_user_id'] = $this->_providerUserId;
 		}
 
 		/** @var ProviderUser $_pu */
-		$_pu = ResourceStore::model( 'provider_user' )->find( $_condition, $_params );
-
-		//	Load prior auth stuff...
-		if ( null !== $_pu && !empty( $_pu->auth_text ) && true === $fill )
+		if ( null !== ( $_pu = ProviderUser::model()->find( $_criteria ) ) )
 		{
-			$this->merge( $_pu->auth_text );
+			//	Load prior auth stuff...
+			if ( !empty( $_pu->auth_text ) && true === $fill )
+			{
+				$this->merge( $_pu->auth_text );
+			}
 		}
 
 		return $_pu;
@@ -110,32 +113,31 @@ class ProviderUserStore extends BaseOasysStore
 	 */
 	public function sync()
 	{
+		if ( null === ( $_creds = $this->_load( false ) ) )
+		{
+			$_creds = new ProviderUser();
+			$_creds->user_id = $this->_userId;
+			$_creds->provider_id = $this->_providerId;
+			$_creds->auth_text = array();
+		}
+
+		$_creds->provider_user_id = $this->_providerUserId;
+		$_creds->auth_text = array_merge( !is_array( $_creds->auth_text ) ? array() : $_creds->auth_text, $this->contents() );
+		$_creds->last_use_date = date( 'c' );
+
 		try
 		{
-			if ( null === ( $_pu = $this->_load( false ) ) )
-			{
-				/** @var ProviderUser $_pu */
-				$_pu = ResourceStore::model( 'provider_user' );
-				$_pu->user_id = $this->_userId;
-				$_pu->provider_id = $this->_providerId;
-				$_pu->provider_user_id = $this->_providerUserId;
-				$_pu->auth_text = array();
-			}
-
-			$_pu->auth_text = array_merge( empty( $_pu->auth_text ) ? array() : $_pu->auth_text, $this->contents() );
-			$_pu->last_use_date = date( 'c' );
-			$_pu->save();
-
-			Log::info( 'ProviderUserStore sync complete' );
+			$_creds->save();
+			Log::debug( 'User credentials stored' );
 
 			return true;
 		}
 		catch ( \CDbException $_ex )
 		{
-			Log::error( 'ProviderUserStore sync failure: ' . $_ex->getMessage() );
-
-			return false;
+			Log::error( $_ex->getMessage() );
 		}
+
+		return true;
 	}
 
 	/**

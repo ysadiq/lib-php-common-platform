@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Oasys\Enums\Flows;
 use DreamFactory\Oasys\Oasys;
 use DreamFactory\Oasys\Providers\BaseProvider;
+use DreamFactory\Oasys\Stores\Session;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
@@ -29,6 +30,7 @@ use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\Provider;
+use DreamFactory\Platform\Yii\Models\ProviderUser;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Platform\Yii\Stores\ProviderUserStore;
 use DreamFactory\Yii\Utility\Pii;
@@ -81,6 +83,10 @@ class Portal extends BaseSystemRestService
 	 * @var array
 	 */
 	protected $_urlParameters;
+	/**
+	 * @var  ProviderUserStore
+	 */
+	protected $_store;
 
 	//*************************************************************************
 	//* Methods
@@ -261,7 +267,16 @@ class Portal extends BaseSystemRestService
 		$_config['flow_type'] = $this->_interactive ? Flows::CLIENT_SIDE : Flows::SERVER_SIDE;
 
 		//	Set the store for this portal
-		Oasys::setStore( new ProviderUserStore( $this->_portalUser->id, $this->_serviceMap[$this->_resource]['id'], $_config ), true );
+		if ( empty( $this->_store ) )
+		{
+			$this->_store = new ProviderUserStore(
+				$this->_currentUserId,
+				$this->_serviceMap[$this->_resource]['id'],
+				$_config
+			);
+		}
+
+		Oasys::setStore( $this->_store, true );
 
 		return Oasys::getProvider( $this->_resource, Oasys::getStore()->get() );
 
@@ -335,13 +350,15 @@ class Portal extends BaseSystemRestService
 
 				//	Go back to whence you came!
 				header( 'Location: ' . $_origin );
-				die();
+				Pii::end();
 			}
 
 			Log::debug( 'Requesting portal resource "' . $_resource . '"' );
 
 			try
 			{
+				$this->_cleanRequestPayload();
+
 				$_response = $_provider->fetch( $_resource, $this->_requestPayload, $this->_action );
 
 				if ( false === $_response )
@@ -349,7 +366,7 @@ class Portal extends BaseSystemRestService
 					throw new InternalServerErrorException( 'Network error', $_response['code'] );
 				}
 
-				if ( HttpResponse::Ok != $_provider->getLastResponseCode() )
+				if ( empty( $_response ) || $_provider->getLastResponseCode() > HttpResponse::PartialContent )
 				{
 					throw new RestException( $_provider->getLastResponseCode(), $_provider->getLastError() );
 				}
@@ -370,28 +387,49 @@ class Portal extends BaseSystemRestService
 	}
 
 	/**
+	 * Cleans out the request parameters from the payload
+	 */
+	protected function _cleanRequestPayload()
+	{
+		if ( empty( $this->_requestPayload ) )
+		{
+			return;
+		}
+
+		//	Merge in request stuff if there
+		$this->_requestPayload = array_merge( $this->_requestPayload, is_array( $_REQUEST ) ? $_REQUEST : array() );
+
+		foreach ( $this->_requestPayload as $_key => $_value )
+		{
+			switch ( strtolower( $_key ) )
+			{
+				case 'dfpapikey':
+				case 'path':
+				case 'interactive':
+					unset( $this->_requestPayload[$_key] );
+					break;
+			}
+		}
+	}
+
+	/**
 	 * @param BaseProvider $provider
 	 *
 	 * @return bool
 	 */
 	protected function _updateUserProfile( $provider )
 	{
-		/** @var ProviderUserStore $_store */
-		$_store = Oasys::getStore();
-
-		if ( null === $_store->getProviderUserId() )
+		if ( !empty( $this->_store ) )
 		{
 			$_profile = $provider->getUserData();
 
 			if ( !empty( $_profile ) )
 			{
-				$_store->setProviderUserId( $_profile->getUserId() );
-
-				return $_store->sync();
+				return $this->_store->setProviderUserId( $_profile->getUserId() )->merge( $provider->getConfigForStorage() )->sync();
 			}
 		}
 
-		return true;
+		return false;
 	}
 
 	/**
@@ -565,4 +603,25 @@ class Portal extends BaseSystemRestService
 	{
 		return $this->_urlParameters;
 	}
+
+	/**
+	 * @param \DreamFactory\Platform\Yii\Stores\ProviderUserStore $store
+	 *
+	 * @return Portal
+	 */
+	public function setStore( $store )
+	{
+		$this->_store = $store;
+
+		return $this;
+	}
+
+	/**
+	 * @return \DreamFactory\Platform\Yii\Stores\ProviderUserStore
+	 */
+	public function getStore()
+	{
+		return $this->_store;
+	}
+
 }
