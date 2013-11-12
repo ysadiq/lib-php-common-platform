@@ -24,6 +24,7 @@ use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Utility\EmailUtilities;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\EmailTemplate;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
@@ -218,7 +219,11 @@ class EmailSvc extends BasePlatformRestService
 		}
 
 		// handle special case, add server side details options
-		Option::sins( $data, 'dsp.host_url', Curl::currentUrl( false, false ) );
+		$_hostUrl = Curl::currentUrl( false, false );
+		Option::sins( $data, 'dsp.host_url', $_hostUrl );
+		Option::sins( $data, 'dsp.confirm_invite_url', $_hostUrl . Pii::getParam( 'dsp.confirm_invite_url' ) );
+		Option::sins( $data, 'dsp.confirm_register_url', $_hostUrl . Pii::getParam( 'dsp.confirm_register_url' ) );
+		Option::sins( $data, 'dsp.confirm_reset_url', $_hostUrl . Pii::getParam( 'dsp.confirm_reset_url' ) );
 		Option::sins( $data, 'dsp.name', \Kisma::get( 'app.app_name' ) );
 
 		// do placeholder replacement, currently {xxx}
@@ -235,16 +240,6 @@ class EmailSvc extends BasePlatformRestService
 					$_html = str_replace( '{' . $name . '}', $value, $_html );
 				}
 			}
-		}
-		// handle special case, like invite link, remove this later
-		if ( false !== strpos( $_text, '{_invite_url_}' ) ||
-			 false !== strpos( $_html, '{_invite_url_}' )
-		)
-		{
-			// generate link for user, to email should always be the user
-			$inviteLink = UserManager::userInvite( $_to );
-			$_text = str_replace( '{_invite_url_}', $inviteLink, $_text );
-			$_html = str_replace( '{_invite_url_}', $inviteLink, $_html );
 		}
 
 		if ( empty( $_html ) )

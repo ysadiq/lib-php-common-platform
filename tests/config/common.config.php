@@ -180,7 +180,7 @@ return array_merge(
 		 /**
 		  * The default application to start
 		  */
-		 'dsp.default_app'               => '/public/launchpad/index.html',
+		 'dsp.default_app'               => '/launchpad/index.html',
 		 /**
 		  * The default application to start
 		  */

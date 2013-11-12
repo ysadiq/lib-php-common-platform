@@ -1,7 +1,7 @@
 <?php
-namespace DreamFactory\Tests\Utility;
+namespace DreamFactory\Tests\Services;
 
-use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Services\SystemManager;
 use Kisma\Core\Utility\Log;
 
 /**
@@ -13,14 +13,12 @@ class SystemManagerTest extends \PHPUnit_Framework_TestCase
 	{
 		Log::setDefaultLog( __DIR__ . '/../log/error.log' );
 
-		ResourceStore::reset( array('resource_name' => 'provider') );
-
 		parent::setUp();
 	}
 
-	public function testGetProvider()
+	public function testSystemManager()
 	{
-		$_model = ResourceStore::model( 'user' );
+		$_model = new SystemManager();
 
 		$this->assertNotEmpty( $_model );
 	}

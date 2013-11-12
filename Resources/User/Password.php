@@ -29,6 +29,7 @@ use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\User;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Option;
@@ -367,13 +368,19 @@ class Password extends BasePlatformRestResource
 				}
 				else
 				{
-					$_data = array(
-						'subject'   => 'Password Reset',
-						'body_html' => "Hi {first_name},<br/>\n<br/>\nYou have requested to reset your password. " .
-									   "Go to the following url, enter the code below, and set your new password.<br/>\n<br/>\n" .
-									   "{dsp.host_url}/public/launchpad/confirm_reset.html<br/>\n<br/>\n" .
-									   "Confirmation Code: {confirm_code}<br/>\n<br/>\nEnjoy!<br/>\n{from_name}",
-					);
+					$_defaultPath = Pii::getParam( 'base_path' ) . '/vendor/dreamfactory/lib-php-common-platform/DreamFactory/Platform';
+					$_defaultPath .= '/Templates/Email/confirm_password_reset.json';
+					if ( !file_exists( $_defaultPath ) )
+					{
+						throw new \Exception( "No default email template for password reset." );
+					}
+
+					$_data = file_get_contents( $_defaultPath );
+					$_data = json_decode( $_data, true );
+					if ( empty( $_data ) || !is_array( $_data ) )
+					{
+						throw new \Exception( "No data found in default email template for password reset." );
+					}
 				}
 
 				$_data['to'] = $email;

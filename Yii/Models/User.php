@@ -21,7 +21,6 @@ use DreamFactory\Platform\Yii\Models\ProviderUser;
  */
 namespace DreamFactory\Platform\Yii\Models;
 
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Oasys\Components\GenericUser;
 use DreamFactory\Oasys\Interfaces\ProviderLike;
 use DreamFactory\Oasys\Oasys;
@@ -30,13 +29,9 @@ use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\Exceptions\HttpException;
 use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Sql;
 
 /**
  * User.php
@@ -317,9 +312,9 @@ class User extends BasePlatformSystemModel
 		}
 
 		return parent::getRetrievableAttributes(
-					 $requested,
-					 $_myColumns,
-					 $hidden
+			$requested,
+			$_myColumns,
+			$hidden
 		);
 	}
 
@@ -335,7 +330,7 @@ class User extends BasePlatformSystemModel
 			'default_app_id',
 		);
 
-		if ($writable)
+		if ( $writable )
 		{
 			$_fields[] = 'security_answer';
 		}
@@ -352,8 +347,8 @@ class User extends BasePlatformSystemModel
 	public static function authenticate( $userName, $password )
 	{
 		$_user = static::model()
-					   ->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
-					   ->findByAttributes( array( 'email' => $userName ) );
+			->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
+			->findByAttributes( array( 'email' => $userName ) );
 
 		if ( empty( $_user ) )
 		{
@@ -444,12 +439,7 @@ class User extends BasePlatformSystemModel
 	 */
 	public static function getByEmail( $email )
 	{
-		return static::model()->find(
-					 'email = :email',
-					 array(
-						  ':email' => $email,
-					 )
-		);
+		return static::model()->find( 'email = :email',	array( ':email' => $email )	);
 	}
 
 	/**

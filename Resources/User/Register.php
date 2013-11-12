@@ -29,6 +29,7 @@ use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\User;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Option;
@@ -196,13 +197,19 @@ class Register extends BasePlatformRestResource
 				}
 				else
 				{
-					$_data = array(
-						'subject'   => 'Registration Confirmation',
-						'body_html' => "Hi {first_name},<br/>\nYou have registered to become a {dsp.name} user. " .
-									   "Go to the following url, enter the code below, and set your password to confirm your account.<br/>\n<br/>\n" .
-									   "{dsp.host_url}/public/launchpad/confirm_reg.html<br/>\n<br/>\n" .
-									   "Confirmation Code: {confirm_code}<br/>\n<br/>\nThanks,<br/>\n{from_name}",
-					);
+					$_defaultPath = Pii::getParam( 'base_path' ) . '/vendor/dreamfactory/lib-php-common-platform/DreamFactory/Platform';
+					$_defaultPath .= '/Templates/Email/confirm_user_registration.json';
+					if ( !file_exists( $_defaultPath ) )
+					{
+						throw new \Exception( "No default email template for user registration." );
+					}
+
+					$_data = file_get_contents( $_defaultPath );
+					$_data = json_decode( $_data, true );
+					if ( empty( $_data ) || !is_array( $_data ) )
+					{
+						throw new \Exception( "No data found in default email template for user registration." );
+					}
 				}
 
 				$_data['to'] = $_email;

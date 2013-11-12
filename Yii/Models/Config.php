@@ -33,6 +33,8 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
  * @property integer             $open_reg_role_id
  * @property integer             $open_reg_email_service_id
  * @property integer             $open_reg_email_template_id
+ * @property integer             $invite_email_service_id
+ * @property integer             $invite_email_template_id
  * @property integer             $password_email_service_id
  * @property integer             $password_email_template_id
  * @property boolean             $allow_guest_user
@@ -45,6 +47,8 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
  * @property Role                $open_reg_role
  * @property Service             $open_reg_email_service
  * @property EmailTemplate       $open_reg_email_template
+ * @property Service             $invite_email_service
+ * @property EmailTemplate       $invite_email_template
  * @property Service             $password_email_service
  * @property EmailTemplate       $password_email_template
  * @property Role                $guest_role
@@ -94,7 +98,9 @@ class Config extends BasePlatformSystemModel
 			array( 'allow_open_registration, allow_guest_user', 'boolean' ),
 			array(
 				'open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id, ' .
-				'password_email_service_id, password_email_template_id, guest_role_id',
+				'invite_email_service_id, invite_email_template_id, ' .
+				'password_email_service_id, password_email_template_id, ' .
+				'guest_role_id',
 				'numerical',
 				'integerOnly' => true
 			),
@@ -111,6 +117,8 @@ class Config extends BasePlatformSystemModel
 			'open_reg_role'           => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'open_reg_role_id' ),
 			'open_reg_email_service'  => array( self::BELONGS_TO, __NAMESPACE__ . '\\Service', 'open_reg_email_service_id' ),
 			'open_reg_email_template' => array( self::BELONGS_TO, __NAMESPACE__ . '\\EmailTemplate', 'open_reg_email_template_id' ),
+			'invite_email_service'    => array( self::BELONGS_TO, __NAMESPACE__ . '\\Service', 'invite_email_service_id' ),
+			'invite_email_template'   => array( self::BELONGS_TO, __NAMESPACE__ . '\\EmailTemplate', 'invite_email_template_id' ),
 			'password_email_service'  => array( self::BELONGS_TO, __NAMESPACE__ . '\\Service', 'password_email_service_id' ),
 			'password_email_template' => array( self::BELONGS_TO, __NAMESPACE__ . '\\EmailTemplate', 'password_email_template_id' ),
 			'guest_role'              => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'guest_role_id' ),
@@ -133,6 +141,8 @@ class Config extends BasePlatformSystemModel
 				'open_reg_role_id'           => 'Open Registration Default Role Id',
 				'open_reg_email_service_id'  => 'Open Registration Email Service',
 				'open_reg_email_template_id' => 'Open Registration Email Template',
+				'invite_email_service_id'    => 'Invitation Email Service',
+				'invite_email_template_id'   => 'Invitation Email Template',
 				'password_email_service_id'  => 'Password Reset Email Service',
 				'password_email_template_id' => 'Password Reset Email Template',
 				'allow_guest_user'           => 'Allow Guest User',
@@ -161,6 +171,8 @@ class Config extends BasePlatformSystemModel
 					 'open_reg_role_id',
 					 'open_reg_email_service_id',
 					 'open_reg_email_template_id',
+					 'invite_email_service_id',
+					 'invite_email_template_id',
 					 'password_email_service_id',
 					 'password_email_template_id',
 					 'allow_guest_user',
