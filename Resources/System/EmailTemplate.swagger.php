@@ -18,9 +18,9 @@
  * limitations under the License.
  */
 
-$_base = array();
+$_email = array();
 
-$_base['apis'] = array(
+$_email['apis'] = array(
 	array(
 		'path'        => '/{api_name}/email_template',
 		'operations'  =>
@@ -546,7 +546,7 @@ $_commonProperties = array(
 	),
 );
 
-$_base['models'] = array(
+$_email['models'] = array(
 	'EmailTemplateRequest'   =>
 	array(
 		'id'         => 'EmailTemplateRequest',
@@ -647,4 +647,4 @@ $_base['models'] = array(
 	),
 );
 
-return $_base;
+return $_email;

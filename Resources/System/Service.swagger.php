@@ -18,9 +18,9 @@
  * limitations under the License.
  */
 
-$_base = array();
+$_service = array();
 
-$_base['apis'] = array(
+$_service['apis'] = array(
 	array(
 		'path'        => '/{api_name}/service',
 		'operations'  =>
@@ -565,7 +565,7 @@ $_commonProperties = array(
 	),
 );
 
-$_base['models'] = array(
+$_service['models'] = array(
 	'Service'        =>
 	array(
 		'id'         => 'ServiceRequest',
@@ -654,4 +654,4 @@ $_base['models'] = array(
 	),
 );
 
-return $_base;
+return $_service;

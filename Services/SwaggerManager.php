@@ -21,7 +21,6 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Log;
@@ -120,14 +119,12 @@ class SwaggerManager extends BasePlatformRestService
 		}
 
 		// generate swagger output from file annotations
-		$_scanPath = Pii::getParam( 'base_path' ) . '/vendor/dreamfactory/lib-php-common-platform/DreamFactory/Platform/Services/';
+		$_scanPath = rtrim( __DIR__, '/') . '/';
 
 		$_baseSwagger = array(
 			'swaggerVersion' => '1.2',
 			'apiVersion'     => API_VERSION,
 			'basePath'       => $_basePath,
-			'produces'       => array( 'application/json', 'application/xml' ),
-			'consumes'       => array( 'application/json', 'application/xml' )
 		);
 
 		// build services from database

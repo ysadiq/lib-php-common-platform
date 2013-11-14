@@ -18,9 +18,9 @@
  * limitations under the License.
  */
 
-$_base = array();
+$_session = array();
 
-$_base['apis'] = array(
+$_session['apis'] = array(
 	array(
 		'path'        => '/{api_name}/session',
 		'operations'  =>
@@ -91,7 +91,7 @@ $_base['apis'] = array(
 	),
 );
 
-$_base['models'] = array(
+$_session['models'] = array(
 	'Session'           =>
 	array(
 		'id'         => 'Session',
@@ -253,4 +253,4 @@ $_base['models'] = array(
 	),
 );
 
-return $_base;
+return $_session;

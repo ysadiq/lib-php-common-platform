@@ -18,9 +18,9 @@
  * limitations under the License.
  */
 
-$_base = array();
+$_role = array();
 
-$_base['apis'] = array(
+$_role['apis'] = array(
 	array(
 		'path'        => '/{api_name}/role',
 		'operations'  =>
@@ -527,7 +527,7 @@ $_commonProperties = array(
 	),
 );
 
-$_base['models'] = array(
+$_role['models'] = array(
 	'RoleRequest'   =>
 	array(
 		'id'         => 'RoleRequest',
@@ -611,4 +611,4 @@ $_base['models'] = array(
 	),
 );
 
-return $_base;
+return $_role;

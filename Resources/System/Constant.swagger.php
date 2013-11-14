@@ -18,9 +18,9 @@
  * limitations under the License.
  */
 
-$_base = array();
+$_constant = array();
 
-$_base['apis'] = array(
+$_constant['apis'] = array(
 	array(
 		'path'        => '/{api_name}/constant',
 		'operations'  =>
@@ -92,7 +92,7 @@ $_base['apis'] = array(
 	),
 );
 
-$_base['models'] = array(
+$_constant['models'] = array(
 	'Constants'   =>
 	array(
 		'id'         => 'Constants',
@@ -123,4 +123,4 @@ $_base['models'] = array(
 	),
 );
 
-return $_base;
+return $_constant;

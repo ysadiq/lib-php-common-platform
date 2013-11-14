@@ -18,9 +18,9 @@
  * limitations under the License.
  */
 
-$_base = array();
+$_group = array();
 
-$_base['apis'] = array(
+$_group['apis'] = array(
 	array(
 		'path'        => '/{api_name}/app_group',
 		'operations'  =>
@@ -494,7 +494,7 @@ $_commonProperties = array(
 	),
 );
 
-$_base['models'] = array(
+$_group['models'] = array(
 	'AppGroupRequest'   =>
 	array(
 		'id'         => 'AppGroupRequest',
@@ -578,4 +578,4 @@ $_base['models'] = array(
 	),
 );
 
-return $_base;
+return $_group;

@@ -18,9 +18,9 @@
  * limitations under the License.
  */
 
-$_base = array();
+$_user = array();
 
-$_base['apis'] = array(
+$_user['apis'] = array(
 	array(
 		'path'        => '/{api_name}/user',
 		'operations'  =>
@@ -535,7 +535,7 @@ $_commonProperties = array(
 	),
 );
 
-$_base['models'] = array(
+$_user['models'] = array(
 	'UserRequest'   =>
 	array(
 		'id'         => 'UserRequest',
@@ -624,4 +624,4 @@ $_base['models'] = array(
 	),
 );
 
-return $_base;
+return $_user;

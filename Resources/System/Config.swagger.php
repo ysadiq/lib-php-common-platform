@@ -18,9 +18,9 @@
  * limitations under the License.
  */
 
-$_base = array();
+$_config = array();
 
-$_base['apis'] = array(
+$_config['apis'] = array(
 	array(
 		'path'        => '/{api_name}/config',
 		'operations'  =>
@@ -127,7 +127,7 @@ $_commonProperties = array(
 		),
 );
 
-$_base['models'] = array(
+$_config['models'] = array(
 	'ConfigRequest'  =>
 		array(
 			'id'         => 'ConfigRequest',
@@ -181,4 +181,4 @@ $_base['models'] = array(
 		),
 );
 
-return $_base;
+return $_config;
