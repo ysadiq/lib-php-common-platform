@@ -247,8 +247,6 @@ class RestResponse extends HttpResponse
 		}
 
 		echo $data;
-
-		self::sendResponse();
 	}
 
 	/**
