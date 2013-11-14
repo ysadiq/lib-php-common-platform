@@ -25,7 +25,6 @@ use DreamFactory\Oasys\Exceptions\RedirectRequiredException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -125,6 +124,12 @@ class RestResponse extends HttpResponse
 			$title = static::getHttpStatusCodeTitle( $code );
 			header( "HTTP/1.1 $code $title" );
 
+			if ( ( null == $result_format ) && ( 'csv' == $desired_format ) )
+			{
+				// need to strip 'record' wrapper before reformatting to csv
+				// todo move this logic elsewhere
+				$result = Option::get( $result, 'record', $result );
+			}
 			$result = DataFormat::reformatData( $result, $result_format, $desired_format );
 
 			switch ( $desired_format )
@@ -137,6 +142,10 @@ class RestResponse extends HttpResponse
 				case OutputFormats::XML:
 				case 'xml':
 					static::sendXmlResponse( $result );
+					break;
+
+				case 'csv':
+					static::sendCsvResponse( $result );
 					break;
 			}
 
@@ -184,6 +193,21 @@ class RestResponse extends HttpResponse
 	/**
 	 * @param $data
 	 */
+	public static function sendCsvResponse( $data )
+	{
+		/* gzip handling output if necessary */
+		ob_start();
+		ob_implicit_flush( 0 );
+
+		header( 'Content-type: text/csv' );
+		echo $data;
+
+		self::sendResponse();
+	}
+
+	/**
+	 * @param $data
+	 */
 	public static function sendXmlResponse( $data )
 	{
 		/* gzip handling output if necessary */
@@ -223,6 +247,8 @@ class RestResponse extends HttpResponse
 		}
 
 		echo $data;
+
+		self::sendResponse();
 	}
 
 	/**
@@ -285,15 +311,5 @@ class RestResponse extends HttpResponse
 
 		return preg_match( $identifier_syntax, $subject )
 			   && !in_array( mb_strtolower( $subject, 'UTF-8' ), $reserved_words );
-	}
-
-	/**
-	 * @param array $data
-	 *
-	 * @return mixed
-	 */
-	public static function sendDataTablesResponse( $data )
-	{
-		return DataTablesFormatter::format( $data );
 	}
 }

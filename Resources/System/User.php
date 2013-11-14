@@ -71,6 +71,8 @@ class User extends BaseSystemRestResource
 	 */
 	protected function _postProcess()
 	{
+		parent::_postProcess();
+
 		if ( static::Post == $this->_action )
 		{
 			if ( Option::getBool( $_REQUEST, 'send_invite' ) )
@@ -94,8 +96,6 @@ class User extends BaseSystemRestResource
 				}
 			}
 		}
-
-		parent::_postProcess();
 	}
 
 	protected static function _sendInvite( $user_id )

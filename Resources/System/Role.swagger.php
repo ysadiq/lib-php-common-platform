@@ -24,591 +24,597 @@ $_role['apis'] = array(
 	array(
 		'path'        => '/{api_name}/role',
 		'operations'  =>
-		array(
 			array(
-				'method'           => 'GET',
-				'summary'          => 'getRoles() - Retrieve one or more roles.',
-				'nickname'         => 'getRoles',
-				'type'             => 'RolesResponse',
-				'parameters'       =>
 				array(
-					array(
-						'name'          => 'ids',
-						'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'filter',
-						'description'   => 'SQL-like filter to limit the records to retrieve.',
-						'allowMultiple' => false,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'limit',
-						'description'   => 'Set to limit the filter results.',
-						'allowMultiple' => false,
-						'type'          => 'integer',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'order',
-						'description'   => 'SQL-like order containing field and direction for filter results.',
-						'allowMultiple' => false,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'offset',
-						'description'   => 'Set to offset the filter results to a particular record count.',
-						'allowMultiple' => false,
-						'type'          => 'integer',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'fields',
-						'description'   => 'Comma-delimited list of field names to retrieve for each record.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'related',
-						'description'   => 'Comma-delimited list of related names to retrieve for each record.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'include_count',
-						'description'   => 'Include the total number of filter results in returned metadata.',
-						'allowMultiple' => false,
-						'type'          => 'boolean',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'include_schema',
-						'description'   => 'Include the schema of the table queried in returned metadata.',
-						'allowMultiple' => false,
-						'type'          => 'boolean',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
+					'method'           => 'GET',
+					'summary'          => 'getRoles() - Retrieve one or more roles.',
+					'nickname'         => 'getRoles',
+					'type'             => 'RolesResponse',
+					'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
+					'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
+					'parameters'       =>
+						array(
+							array(
+								'name'          => 'ids',
+								'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'filter',
+								'description'   => 'SQL-like filter to limit the records to retrieve.',
+								'allowMultiple' => false,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'limit',
+								'description'   => 'Set to limit the filter results.',
+								'allowMultiple' => false,
+								'type'          => 'integer',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'order',
+								'description'   => 'SQL-like order containing field and direction for filter results.',
+								'allowMultiple' => false,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'offset',
+								'description'   => 'Set to offset the filter results to a particular record count.',
+								'allowMultiple' => false,
+								'type'          => 'integer',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'fields',
+								'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'related',
+								'description'   => 'Comma-delimited list of related names to retrieve for each record.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'include_count',
+								'description'   => 'Include the total number of filter results in returned metadata.',
+								'allowMultiple' => false,
+								'type'          => 'boolean',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'include_schema',
+								'description'   => 'Include the schema of the table queried in returned metadata.',
+								'allowMultiple' => false,
+								'type'          => 'boolean',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+						),
+					'responseMessages' =>
+						array(
+							array(
+								'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+								'code'    => 400,
+							),
+							array(
+								'message' => 'Unauthorized Access - No currently valid session available.',
+								'code'    => 401,
+							),
+							array(
+								'message' => 'System Error - Specific reason is included in the error message.',
+								'code'    => 500,
+							),
+						),
+					'notes'            => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. ' .
+										  'By default, all records up to the maximum are returned. <br>' .
+										  'Use the \'fields\' and \'related\' parameters to limit properties returned for each record. ' .
+										  'By default, all fields and no relations are returned for each record. <br>' .
+										  'Alternatively, to retrieve by record, a large list of ids, or a complicated filter, ' .
+										  'use the POST request with X-HTTP-METHOD = GET header and post records or ids.',
 				),
-				'responseMessages' =>
 				array(
-					array(
-						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-						'code'    => 400,
-					),
-					array(
-						'message' => 'Unauthorized Access - No currently valid session available.',
-						'code'    => 401,
-					),
-					array(
-						'message' => 'System Error - Specific reason is included in the error message.',
-						'code'    => 500,
-					),
+					'method'           => 'POST',
+					'summary'          => 'createRoles() - Create one or more roles.',
+					'nickname'         => 'createRoles',
+					'type'             => 'RolesResponse',
+					'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
+					'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
+					'parameters'       =>
+						array(
+							array(
+								'name'          => 'body',
+								'description'   => 'Data containing name-value pairs of records to create.',
+								'allowMultiple' => false,
+								'type'          => 'RolesRequest',
+								'paramType'     => 'body',
+								'required'      => true,
+							),
+							array(
+								'name'          => 'fields',
+								'description'   => 'Comma-delimited list of field names to return for each record affected.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'related',
+								'description'   => 'Comma-delimited list of related names to return for each record affected.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'X-HTTP-METHOD',
+								'description'   => 'Override request using POST to tunnel other http request, such as DELETE.',
+								'enum'          => array( 'GET', 'PUT', 'PATCH', 'DELETE' ),
+								'allowMultiple' => false,
+								'type'          => 'string',
+								'paramType'     => 'header',
+								'required'      => false,
+							),
+						),
+					'responseMessages' =>
+						array(
+							array(
+								'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+								'code'    => 400,
+							),
+							array(
+								'message' => 'Unauthorized Access - No currently valid session available.',
+								'code'    => 401,
+							),
+							array(
+								'message' => 'System Error - Specific reason is included in the error message.',
+								'code'    => 500,
+							),
+						),
+					'notes'            => 'Post data should be a single record or an array of records (shown). ' .
+										  'By default, only the id property of the record affected is returned on success, ' .
+										  'use \'fields\' and \'related\' to return more info.',
 				),
-				'notes'            => 'Use the \'ids\' or \'filter\' parameter to limit records that are returned. ' .
-									  'By default, all records up to the maximum are returned. <br>' .
-									  'Use the \'fields\' and \'related\' parameters to limit properties returned for each record. ' .
-									  'By default, all fields and no relations are returned for each record. <br>' .
-									  'Alternatively, to retrieve by record, a large list of ids, or a complicated filter, ' .
-									  'use the POST request with X-HTTP-METHOD = GET header and post records or ids.',
+				array(
+					'method'           => 'PATCH',
+					'summary'          => 'updateRoles() - Update one or more roles.',
+					'nickname'         => 'updateRoles',
+					'type'             => 'RolesResponse',
+					'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
+					'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
+					'parameters'       =>
+						array(
+							array(
+								'name'          => 'body',
+								'description'   => 'Data containing name-value pairs of records to update.',
+								'allowMultiple' => false,
+								'type'          => 'RolesRequest',
+								'paramType'     => 'body',
+								'required'      => true,
+							),
+							array(
+								'name'          => 'fields',
+								'description'   => 'Comma-delimited list of field names to return for each record affected.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'related',
+								'description'   => 'Comma-delimited list of related names to return for each record affected.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+						),
+					'responseMessages' =>
+						array(
+							array(
+								'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+								'code'    => 400,
+							),
+							array(
+								'message' => 'Unauthorized Access - No currently valid session available.',
+								'code'    => 401,
+							),
+							array(
+								'message' => 'System Error - Specific reason is included in the error message.',
+								'code'    => 500,
+							),
+						),
+					'notes'            => 'Post data should be a single record or an array of records (shown). ' .
+										  'By default, only the id property of the record is returned on success, ' .
+										  'use \'fields\' and \'related\' to return more info.',
+				),
+				array(
+					'method'           => 'DELETE',
+					'summary'          => 'deleteRoles() - Delete one or more roles.',
+					'nickname'         => 'deleteRoles',
+					'type'             => 'RolesResponse',
+					'parameters'       =>
+						array(
+							array(
+								'name'          => 'ids',
+								'description'   => 'Comma-delimited list of the identifiers of the records to delete.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'force',
+								'description'   => 'Set force to true to delete all records in this table, otherwise \'ids\' parameter is required.',
+								'allowMultiple' => false,
+								'type'          => 'boolean',
+								'paramType'     => 'query',
+								'required'      => false,
+								'default'       => false,
+							),
+							array(
+								'name'          => 'fields',
+								'description'   => 'Comma-delimited list of field names to return for each record affected.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'related',
+								'description'   => 'Comma-delimited list of related names to return for each record affected.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+						),
+					'responseMessages' =>
+						array(
+							array(
+								'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+								'code'    => 400,
+							),
+							array(
+								'message' => 'Unauthorized Access - No currently valid session available.',
+								'code'    => 401,
+							),
+							array(
+								'message' => 'System Error - Specific reason is included in the error message.',
+								'code'    => 500,
+							),
+						),
+					'notes'            => 'By default, only the id property of the record deleted is returned on success. ' .
+										  'Use \'fields\' and \'related\' to return more properties of the deleted records. <br>' .
+										  'Alternatively, to delete by record or a large list of ids, ' .
+										  'use the POST request with X-HTTP-METHOD = DELETE header and post records or ids.',
+				),
 			),
-			array(
-				'method'           => 'POST',
-				'summary'          => 'createRoles() - Create one or more roles.',
-				'nickname'         => 'createRoles',
-				'type'             => 'RolesResponse',
-				'parameters'       =>
-				array(
-					array(
-						'name'          => 'body',
-						'description'   => 'Data containing name-value pairs of records to create.',
-						'allowMultiple' => false,
-						'type'          => 'RolesRequest',
-						'paramType'     => 'body',
-						'required'      => true,
-					),
-					array(
-						'name'          => 'fields',
-						'description'   => 'Comma-delimited list of field names to return for each record affected.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'related',
-						'description'   => 'Comma-delimited list of related names to return for each record affected.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'X-HTTP-METHOD',
-						'description'   => 'Override request using POST to tunnel other http request, such as DELETE.',
-						'enum'          => array( 'GET', 'PUT', 'PATCH', 'DELETE' ),
-						'allowMultiple' => false,
-						'type'          => 'string',
-						'paramType'     => 'header',
-						'required'      => false,
-					),
-				),
-				'responseMessages' =>
-				array(
-					array(
-						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-						'code'    => 400,
-					),
-					array(
-						'message' => 'Unauthorized Access - No currently valid session available.',
-						'code'    => 401,
-					),
-					array(
-						'message' => 'System Error - Specific reason is included in the error message.',
-						'code'    => 500,
-					),
-				),
-				'notes'            => 'Post data should be a single record or an array of records (shown). ' .
-									  'By default, only the id property of the record affected is returned on success, ' .
-									  'use \'fields\' and \'related\' to return more info.',
-			),
-			array(
-				'method'           => 'PATCH',
-				'summary'          => 'updateRoles() - Update one or more roles.',
-				'nickname'         => 'updateRoles',
-				'type'             => 'RolesResponse',
-				'parameters'       =>
-				array(
-					array(
-						'name'          => 'body',
-						'description'   => 'Data containing name-value pairs of records to update.',
-						'allowMultiple' => false,
-						'type'          => 'RolesRequest',
-						'paramType'     => 'body',
-						'required'      => true,
-					),
-					array(
-						'name'          => 'fields',
-						'description'   => 'Comma-delimited list of field names to return for each record affected.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'related',
-						'description'   => 'Comma-delimited list of related names to return for each record affected.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-				),
-				'responseMessages' =>
-				array(
-					array(
-						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-						'code'    => 400,
-					),
-					array(
-						'message' => 'Unauthorized Access - No currently valid session available.',
-						'code'    => 401,
-					),
-					array(
-						'message' => 'System Error - Specific reason is included in the error message.',
-						'code'    => 500,
-					),
-				),
-				'notes'            => 'Post data should be a single record or an array of records (shown). ' .
-									  'By default, only the id property of the record is returned on success, ' .
-									  'use \'fields\' and \'related\' to return more info.',
-			),
-			array(
-				'method'           => 'DELETE',
-				'summary'          => 'deleteRoles() - Delete one or more roles.',
-				'nickname'         => 'deleteRoles',
-				'type'             => 'RolesResponse',
-				'parameters'       =>
-				array(
-					array(
-						'name'          => 'ids',
-						'description'   => 'Comma-delimited list of the identifiers of the records to delete.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'force',
-						'description'   => 'Set force to true to delete all records in this table, otherwise \'ids\' parameter is required.',
-						'allowMultiple' => false,
-						'type'          => 'boolean',
-						'paramType'     => 'query',
-						'required'      => false,
-						'default'       => false,
-					),
-					array(
-						'name'          => 'fields',
-						'description'   => 'Comma-delimited list of field names to return for each record affected.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'related',
-						'description'   => 'Comma-delimited list of related names to return for each record affected.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-				),
-				'responseMessages' =>
-				array(
-					array(
-						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-						'code'    => 400,
-					),
-					array(
-						'message' => 'Unauthorized Access - No currently valid session available.',
-						'code'    => 401,
-					),
-					array(
-						'message' => 'System Error - Specific reason is included in the error message.',
-						'code'    => 500,
-					),
-				),
-				'notes'            => 'By default, only the id property of the record deleted is returned on success. ' .
-									  'Use \'fields\' and \'related\' to return more properties of the deleted records. <br>' .
-									  'Alternatively, to delete by record or a large list of ids, ' .
-									  'use the POST request with X-HTTP-METHOD = DELETE header and post records or ids.',
-			),
-		),
 		'description' => 'Operations for role administration.',
 	),
 	array(
 		'path'        => '/{api_name}/role/{id}',
 		'operations'  =>
-		array(
 			array(
-				'method'           => 'GET',
-				'summary'          => 'getRole() - Retrieve one role.',
-				'nickname'         => 'getRole',
-				'type'             => 'RoleResponse',
-				'parameters'       =>
 				array(
-					array(
-						'name'          => 'id',
-						'description'   => 'Identifier of the record to retrieve.',
-						'allowMultiple' => false,
-						'type'          => 'string',
-						'paramType'     => 'path',
-						'required'      => true,
-					),
-					array(
-						'name'          => 'fields',
-						'description'   => 'Comma-delimited list of field names to return.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'related',
-						'description'   => 'Comma-delimited list of related records to return.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
+					'method'           => 'GET',
+					'summary'          => 'getRole() - Retrieve one role.',
+					'nickname'         => 'getRole',
+					'type'             => 'RoleResponse',
+					'parameters'       =>
+						array(
+							array(
+								'name'          => 'id',
+								'description'   => 'Identifier of the record to retrieve.',
+								'allowMultiple' => false,
+								'type'          => 'string',
+								'paramType'     => 'path',
+								'required'      => true,
+							),
+							array(
+								'name'          => 'fields',
+								'description'   => 'Comma-delimited list of field names to return.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'related',
+								'description'   => 'Comma-delimited list of related records to return.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+						),
+					'responseMessages' =>
+						array(
+							array(
+								'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+								'code'    => 400,
+							),
+							array(
+								'message' => 'Unauthorized Access - No currently valid session available.',
+								'code'    => 401,
+							),
+							array(
+								'message' => 'System Error - Specific reason is included in the error message.',
+								'code'    => 500,
+							),
+						),
+					'notes'            => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
 				),
-				'responseMessages' =>
 				array(
-					array(
-						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-						'code'    => 400,
-					),
-					array(
-						'message' => 'Unauthorized Access - No currently valid session available.',
-						'code'    => 401,
-					),
-					array(
-						'message' => 'System Error - Specific reason is included in the error message.',
-						'code'    => 500,
-					),
+					'method'           => 'PATCH',
+					'summary'          => 'updateRole() - Update one role.',
+					'nickname'         => 'updateRole',
+					'type'             => 'RoleResponse',
+					'parameters'       =>
+						array(
+							array(
+								'name'          => 'id',
+								'description'   => 'Identifier of the record to update.',
+								'allowMultiple' => false,
+								'type'          => 'string',
+								'paramType'     => 'path',
+								'required'      => true,
+							),
+							array(
+								'name'          => 'body',
+								'description'   => 'Data containing name-value pairs of fields to update.',
+								'allowMultiple' => false,
+								'type'          => 'RoleRequest',
+								'paramType'     => 'body',
+								'required'      => true,
+							),
+							array(
+								'name'          => 'fields',
+								'description'   => 'Comma-delimited list of field names to return.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'related',
+								'description'   => 'Comma-delimited list of related records to return.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+						),
+					'responseMessages' =>
+						array(
+							array(
+								'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+								'code'    => 400,
+							),
+							array(
+								'message' => 'Unauthorized Access - No currently valid session available.',
+								'code'    => 401,
+							),
+							array(
+								'message' => 'System Error - Specific reason is included in the error message.',
+								'code'    => 500,
+							),
+						),
+					'notes'            => 'Post data should be an array of fields to update for a single record. <br>' .
+										  'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return more properties.',
 				),
-				'notes'            => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
+				array(
+					'method'           => 'DELETE',
+					'summary'          => 'deleteRole() - Delete one role.',
+					'nickname'         => 'deleteRole',
+					'type'             => 'RoleResponse',
+					'parameters'       =>
+						array(
+							array(
+								'name'          => 'id',
+								'description'   => 'Identifier of the record to delete.',
+								'allowMultiple' => false,
+								'type'          => 'string',
+								'paramType'     => 'path',
+								'required'      => true,
+							),
+							array(
+								'name'          => 'fields',
+								'description'   => 'Comma-delimited list of field names to return.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'related',
+								'description'   => 'Comma-delimited list of related records to return.',
+								'allowMultiple' => true,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+						),
+					'responseMessages' =>
+						array(
+							array(
+								'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+								'code'    => 400,
+							),
+							array(
+								'message' => 'Unauthorized Access - No currently valid session available.',
+								'code'    => 401,
+							),
+							array(
+								'message' => 'System Error - Specific reason is included in the error message.',
+								'code'    => 500,
+							),
+						),
+					'notes'            => 'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return deleted properties.',
+				),
 			),
-			array(
-				'method'           => 'PATCH',
-				'summary'          => 'updateRole() - Update one role.',
-				'nickname'         => 'updateRole',
-				'type'             => 'RoleResponse',
-				'parameters'       =>
-				array(
-					array(
-						'name'          => 'id',
-						'description'   => 'Identifier of the record to update.',
-						'allowMultiple' => false,
-						'type'          => 'string',
-						'paramType'     => 'path',
-						'required'      => true,
-					),
-					array(
-						'name'          => 'body',
-						'description'   => 'Data containing name-value pairs of fields to update.',
-						'allowMultiple' => false,
-						'type'          => 'RoleRequest',
-						'paramType'     => 'body',
-						'required'      => true,
-					),
-					array(
-						'name'          => 'fields',
-						'description'   => 'Comma-delimited list of field names to return.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'related',
-						'description'   => 'Comma-delimited list of related records to return.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-				),
-				'responseMessages' =>
-				array(
-					array(
-						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-						'code'    => 400,
-					),
-					array(
-						'message' => 'Unauthorized Access - No currently valid session available.',
-						'code'    => 401,
-					),
-					array(
-						'message' => 'System Error - Specific reason is included in the error message.',
-						'code'    => 500,
-					),
-				),
-				'notes'            => 'Post data should be an array of fields to update for a single record. <br>' .
-									  'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return more properties.',
-			),
-			array(
-				'method'           => 'DELETE',
-				'summary'          => 'deleteRole() - Delete one role.',
-				'nickname'         => 'deleteRole',
-				'type'             => 'RoleResponse',
-				'parameters'       =>
-				array(
-					array(
-						'name'          => 'id',
-						'description'   => 'Identifier of the record to delete.',
-						'allowMultiple' => false,
-						'type'          => 'string',
-						'paramType'     => 'path',
-						'required'      => true,
-					),
-					array(
-						'name'          => 'fields',
-						'description'   => 'Comma-delimited list of field names to return.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'related',
-						'description'   => 'Comma-delimited list of related records to return.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-				),
-				'responseMessages' =>
-				array(
-					array(
-						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-						'code'    => 400,
-					),
-					array(
-						'message' => 'Unauthorized Access - No currently valid session available.',
-						'code'    => 401,
-					),
-					array(
-						'message' => 'System Error - Specific reason is included in the error message.',
-						'code'    => 500,
-					),
-				),
-				'notes'            => 'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return deleted properties.',
-			),
-		),
 		'description' => 'Operations for individual role administration.',
 	),
 );
 
 $_commonProperties = array(
 	'id'             =>
-	array(
-		'type'        => 'integer',
-		'description' => 'Identifier of this role.',
-	),
+		array(
+			'type'        => 'integer',
+			'description' => 'Identifier of this role.',
+		),
 	'name'           =>
-	array(
-		'type'        => 'string',
-		'description' => 'Displayable name of this role.',
-	),
+		array(
+			'type'        => 'string',
+			'description' => 'Displayable name of this role.',
+		),
 	'description'    =>
-	array(
-		'type'        => 'string',
-		'description' => 'Description of this role.',
-	),
+		array(
+			'type'        => 'string',
+			'description' => 'Description of this role.',
+		),
 	'is_active'      =>
-	array(
-		'type'        => 'boolean',
-		'description' => 'Is this role active for use.',
-	),
+		array(
+			'type'        => 'boolean',
+			'description' => 'Is this role active for use.',
+		),
 	'default_app_id' =>
-	array(
-		'type'        => 'integer',
-		'description' => 'Default launched app for this role.',
-	),
+		array(
+			'type'        => 'integer',
+			'description' => 'Default launched app for this role.',
+		),
 	'default_app'    =>
-	array(
-		'type'        => 'App',
-		'description' => 'Related app by default_app_id.',
-	),
+		array(
+			'type'        => 'App',
+			'description' => 'Related app by default_app_id.',
+		),
 	'users'          =>
-	array(
-		'type'        => 'Array',
-		'description' => 'Related users by User.role_id.',
-		'items'       =>
 		array(
-			'type' => 'string',
+			'type'        => 'Array',
+			'description' => 'Related users by User.role_id.',
+			'items'       =>
+				array(
+					'type' => 'string',
+				),
 		),
-	),
 	'apps'           =>
-	array(
-		'type'        => 'Array',
-		'description' => 'Related apps by role assignment.',
-		'items'       =>
 		array(
-			'type' => 'string',
+			'type'        => 'Array',
+			'description' => 'Related apps by role assignment.',
+			'items'       =>
+				array(
+					'type' => 'string',
+				),
 		),
-	),
 	'services'       =>
-	array(
-		'type'        => 'Array',
-		'description' => 'Related services by role assignment.',
-		'items'       =>
 		array(
-			'type' => 'string',
+			'type'        => 'Array',
+			'description' => 'Related services by role assignment.',
+			'items'       =>
+				array(
+					'type' => 'string',
+				),
 		),
-	),
 );
 
 $_role['models'] = array(
 	'RoleRequest'   =>
-	array(
-		'id'         => 'RoleRequest',
-		'properties' => $_commonProperties,
-	),
+		array(
+			'id'         => 'RoleRequest',
+			'properties' => $_commonProperties,
+		),
 	'RoleResponse'  =>
-	array(
-		'id'         => 'RoleResponse',
-		'properties' =>
-		array_merge(
-			$_commonProperties,
-			array(
-				 'created_date'        =>
-				 array(
-					 'type'        => 'string',
-					 'description' => 'Date this role was created.',
-				 ),
-				 'created_by_id'       =>
-				 array(
-					 'type'        => 'integer',
-					 'description' => 'User Id of who created this role.',
-				 ),
-				 'last_modified_date'  =>
-				 array(
-					 'type'        => 'string',
-					 'description' => 'Date this role was last modified.',
-				 ),
-				 'last_modified_by_id' =>
-				 array(
-					 'type'        => 'integer',
-					 'description' => 'User Id of who last modified this role.',
-				 ),
-			)
+		array(
+			'id'         => 'RoleResponse',
+			'properties' =>
+				array_merge(
+					$_commonProperties,
+					array(
+						 'created_date'        =>
+							 array(
+								 'type'        => 'string',
+								 'description' => 'Date this role was created.',
+							 ),
+						 'created_by_id'       =>
+							 array(
+								 'type'        => 'integer',
+								 'description' => 'User Id of who created this role.',
+							 ),
+						 'last_modified_date'  =>
+							 array(
+								 'type'        => 'string',
+								 'description' => 'Date this role was last modified.',
+							 ),
+						 'last_modified_by_id' =>
+							 array(
+								 'type'        => 'integer',
+								 'description' => 'User Id of who last modified this role.',
+							 ),
+					)
+				),
 		),
-	),
 	'RolesRequest'  =>
-	array(
-		'id'         => 'RolesRequest',
-		'properties' =>
 		array(
-			'record' =>
-			array(
-				'type'        => 'Array',
-				'description' => 'Array of system role records.',
-				'items'       =>
+			'id'         => 'RolesRequest',
+			'properties' =>
 				array(
-					'$ref' => 'Role',
+					'record' =>
+						array(
+							'type'        => 'Array',
+							'description' => 'Array of system role records.',
+							'items'       =>
+								array(
+									'$ref' => 'Role',
+								),
+						),
+					'ids'    =>
+						array(
+							'type'        => 'Array',
+							'description' => 'Array of system record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
+							'items'       =>
+								array(
+									'$ref' => 'integer',
+								),
+						),
 				),
-			),
-			'ids'    =>
-			array(
-				'type'        => 'Array',
-				'description' => 'Array of system record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
-				'items'       =>
-				array(
-					'$ref' => 'integer',
-				),
-			),
 		),
-	),
 	'RolesResponse' =>
-	array(
-		'id'         => 'RolesResponse',
-		'properties' =>
 		array(
-			'record' =>
-			array(
-				'type'        => 'Array',
-				'description' => 'Array of system role records.',
-				'items'       =>
+			'id'         => 'RolesResponse',
+			'properties' =>
 				array(
-					'$ref' => 'Role',
+					'record' =>
+						array(
+							'type'        => 'Array',
+							'description' => 'Array of system role records.',
+							'items'       =>
+								array(
+									'$ref' => 'Role',
+								),
+						),
+					'meta'   =>
+						array(
+							'type'        => 'Metadata',
+							'description' => 'Array of metadata returned for GET requests.',
+						),
 				),
-			),
-			'meta'   =>
-			array(
-				'type'        => 'Metadata',
-				'description' => 'Array of metadata returned for GET requests.',
-			),
 		),
-	),
 );
 
 return $_role;

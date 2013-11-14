@@ -51,12 +51,20 @@ class RestData
 			{
 				if ( false !== stripos( $_contentType, '/json' ) )
 				{
+					// application/json
 					$_data = DataFormat::jsonToArray( $_postData );
 				}
 				elseif ( false !== stripos( $_contentType, '/xml' ) )
 				{
 					// application/xml or text/xml
 					$_data = DataFormat::xmlToArray( $_postData );
+				}
+				elseif ( false !== stripos( $_contentType, '/csv' ) )
+				{
+					// text/csv
+					$_data = DataFormat::csvToArray( $_postData );
+					// expected record array format is wrapped with 'record'
+					$_data = array( 'record' => $_data );
 				}
 			}
 
@@ -81,6 +89,7 @@ class RestData
 
 			if ( !empty( $_data ) && is_array( $_data ) )
 			{
+				// strip xml dfapi wrapper
 				$_data = ( isset( $_data['dfapi'] ) ) ? $_data['dfapi'] : $_data;
 			}
 		}

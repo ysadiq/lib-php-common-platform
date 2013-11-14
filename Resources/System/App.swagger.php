@@ -30,6 +30,8 @@ $_app['apis'] = array(
 					'summary'          => 'getApps() - Retrieve one or more applications.',
 					'nickname'         => 'getApps',
 					'type'             => 'AppsResponse',
+					'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
+					'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
 					'parameters'       =>
 						array(
 							array(
@@ -132,6 +134,8 @@ $_app['apis'] = array(
 					'summary'          => 'createApps() - Create one or more applications.',
 					'nickname'         => 'createApps',
 					'type'             => 'AppsResponse',
+					'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
+					'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
 					'parameters'       =>
 						array(
 							array(
@@ -192,6 +196,8 @@ $_app['apis'] = array(
 					'summary'          => 'updateApps() - Update one or more applications.',
 					'nickname'         => 'updateApps',
 					'type'             => 'AppsResponse',
+					'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
+					'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
 					'parameters'       =>
 						array(
 							array(
