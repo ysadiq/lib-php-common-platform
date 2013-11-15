@@ -75,9 +75,13 @@ class RestResponse extends HttpResponse
 	{
 		$_status = $ex->getCode();
 
-		if ( $ex instanceof RestException || $ex instanceOf \CHttpException )
+		if ( $ex instanceof RestException )
 		{
-			$_status = property_exists( $ex, 'statusCode' ) ? $ex->statusCode : $ex->getStatusCode();
+			$_status = $ex->getStatusCode();
+		}
+		elseif ( $ex instanceOf \CHttpException )
+		{
+			$_status = $ex->statusCode;
 		}
 
 		$_errorInfo = array(
@@ -118,135 +122,98 @@ class RestResponse extends HttpResponse
 	public static function sendResults( $result, $code = RestResponse::Ok, $result_format = null, $desired_format = 'json' )
 	{
 		//	Some REST services may handle the response, they just return null
-		if ( !is_null( $result ) )
+		if ( is_null( $result ) )
 		{
+			Pii::end();
+
+			return;
+		}
+
+		if ( ( null == $result_format ) && ( 'csv' == $desired_format ) )
+		{
+			// need to strip 'record' wrapper before reformatting to csv
+			// todo move this logic elsewhere
+			$result = Option::get( $result, 'record', $result );
+		}
+
+		$result = DataFormat::reformatData( $result, $result_format, $desired_format );
+
+		switch ( $desired_format )
+		{
+			case OutputFormats::JSON:
+			case 'json':
+				$_contentType = 'application/json; charset=utf-8';
+
+				// JSON if no callback
+				if ( isset( $_GET['callback'] ) )
+				{
+					// JSONP if valid callback
+					if ( !static::is_valid_callback( $_GET['callback'] ) )
+					{
+						// Otherwise, bad request
+						header( 'status: 400 Bad Request', true, static::BadRequest );
+						Pii::end();
+
+						return;
+					}
+
+					$result = "{$_GET['callback']}($result);";
+				}
+				break;
+
+			case OutputFormats::XML:
+			case 'xml':
+				$_contentType = 'application/xml';
+				$result = '<?xml version="1.0" ?>' . "<dfapi>$result</dfapi>";
+				break;
+
+			case 'csv':
+				$_contentType = 'text/csv';
+				break;
+
+			default:
+				$_contentType = 'application/octet-stream';
+				break;
+		}
+
+		/* gzip handling output if necessary */
+		ob_start();
+		ob_implicit_flush( 0 );
+
+		if ( !headers_sent() )
+		{
+			// headers
 			$code = static::getHttpStatusCode( $code );
-			$title = static::getHttpStatusCodeTitle( $code );
-			header( "HTTP/1.1 $code $title" );
-
-			if ( ( null == $result_format ) && ( 'csv' == $desired_format ) )
-			{
-				// need to strip 'record' wrapper before reformatting to csv
-				// todo move this logic elsewhere
-				$result = Option::get( $result, 'record', $result );
-			}
-			$result = DataFormat::reformatData( $result, $result_format, $desired_format );
-
-			switch ( $desired_format )
-			{
-				case OutputFormats::JSON:
-				case 'json':
-					static::sendJsonResponse( $result );
-					break;
-
-				case OutputFormats::XML:
-				case 'xml':
-					static::sendXmlResponse( $result );
-					break;
-
-				case 'csv':
-					static::sendCsvResponse( $result );
-					break;
-			}
+			$_title = static::getHttpStatusCodeTitle( $code );
+			header( "HTTP/1.1 $code $_title" );
+			header( "Content-type: $_contentType" );
+			//	IE 9 requires hoop for session cookies in iframes
+			header( 'P3P:CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"' );
 
 			//	Add additional headers for CORS support
 			Pii::app()->addCorsHeaders();
 		}
 
-		Pii::end();
-	}
+		// send it out
+		echo $result;
 
-	/**
-	 * @todo this function needs to be revisited
-	 */
-	public static function sendResponse()
-	{
-		$_encoding = ( !headers_sent() && false !== strpos( Option::server( 'HTTP_ACCEPT_ENCODING' ), 'gzip' ) );
-
-		//	IE 9 requires hoop for session cookies in iframes
-		if ( !headers_sent() )
-		{
-			header( 'P3P:CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"' );
-		}
-
-		if ( $_encoding )
+		if ( false !== strpos( Option::server( 'HTTP_ACCEPT_ENCODING' ), 'gzip' ) )
 		{
 			$_output = ob_get_clean();
 
-			if ( strlen( $_output ) < static::GZIP_THRESHOLD )
-			{
-				//	no need to waste resources in compressing very little data
-				echo $_output;
-			}
-			else
+			if ( strlen( $_output ) >= static::GZIP_THRESHOLD )
 			{
 				header( 'Content-Encoding: gzip' );
-				echo gzencode( $_output, 9 );
+				$_output = gzencode( $_output, 9 );
 			}
 
-			return;
+			//	no need to waste resources in compressing very little data
+			echo $_output;
 		}
 
 		ob_end_flush();
-	}
 
-	/**
-	 * @param $data
-	 */
-	public static function sendCsvResponse( $data )
-	{
-		/* gzip handling output if necessary */
-		ob_start();
-		ob_implicit_flush( 0 );
-
-		header( 'Content-type: text/csv' );
-		echo $data;
-
-		self::sendResponse();
-	}
-
-	/**
-	 * @param $data
-	 */
-	public static function sendXmlResponse( $data )
-	{
-		/* gzip handling output if necessary */
-		ob_start();
-		ob_implicit_flush( 0 );
-
-		header( 'Content-type: application/xml' );
-		echo "<?xml version=\"1.0\" ?>\n<dfapi>\n" . $data . "</dfapi>";
-
-		self::sendResponse();
-	}
-
-	/**
-	 * @param string $data Data already in json format - see uses
-	 */
-	public static function sendJsonResponse( $data )
-	{
-		/* gzip handling output if necessary */
-		ob_start();
-		ob_implicit_flush( 0 );
-
-		header( 'Content-type: application/json; charset=utf-8' );
-
-		// JSON if no callback
-		if ( isset( $_GET['callback'] ) )
-		{
-			// JSONP if valid callback
-			if ( static::is_valid_callback( $_GET['callback'] ) )
-			{
-				$data = "{$_GET['callback']}($data);";
-			}
-			else
-			{
-				// Otherwise, bad request
-				header( 'status: 400 Bad Request', true, static::BadRequest );
-			}
-		}
-
-		echo $data;
+		Pii::end();
 	}
 
 	/**
