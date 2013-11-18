@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\Fabric;
@@ -138,7 +139,8 @@ class Config extends BaseSystemRestResource
 		/**
 		 * Remote login support
 		 */
-		$this->_response['allow_remote_logins'] = ( Pii::getParam( 'dsp.allow_remote_logins', false ) && $this->_response['allow_open_registration'] );
+		$this->_response['allow_remote_logins'] =
+			( Pii::getParam( 'dsp.allow_remote_logins', false ) && $this->_response['allow_open_registration'] );
 
 		if ( false !== $this->_response['allow_remote_logins'] )
 		{
@@ -148,40 +150,54 @@ class Config extends BaseSystemRestResource
 
 			$_providers = Fabric::getProviderCredentials();
 
-			foreach ( $_providers as $_row )
+			if ( !empty( $_providers ) )
 			{
-				$_data[] = array(
-					'id'            => $_row->id,
-					'provider_name' => $_row->provider_name_text,
-					'api_name'      => $_row->endpoint_text,
-					'config_text'   => array('client_id' => Option::getDeep( $_row, 'config_text', 'client_id' )),
-					'is_active'     => $_row->enable_ind,
-					'is_system'     => true,
-				);
+				foreach ( $_providers as $_row )
+				{
+					if ( 1 == $_row->login_provider_ind )
+					{
+						$_config = $this->_sanitizeProviderConfig( $this->config_text );
 
-				unset( $_row );
+						$_data[] = array(
+							'id'            => $_row->id,
+							'provider_name' => $_row->provider_name_text,
+							'api_name'      => $_row->endpoint_text,
+							'config_text'   => $_config,
+							'is_active'     => $_row->enable_ind,
+							'is_system'     => true,
+						);
+					}
+
+					unset( $_row );
+				}
 			}
 
-			unset( $_global );
+			unset( $_providers );
 
 			/** @var Provider[] $_models */
-			$_models = ResourceStore::model( 'provider' )->findAll( array('order' => 'provider_name') );
+			$_models = ResourceStore::model( 'provider' )->findAll( array( 'order' => 'provider_name' ) );
 
 			if ( !empty( $_models ) )
 			{
 				foreach ( $_models as $_row )
 				{
-					//	Local providers take precedent over global...
-					foreach ( $_data as $_index => $_priorRow )
+					if ( 1 == $_row->is_login_provider )
 					{
-						if ( $_priorRow['api_name'] == $_row->api_name )
+						$_config = $this->_sanitizeProviderConfig( $this->config_text );
+
+						//	Local providers take precedent over global...
+						foreach ( $_data as $_index => $_priorRow )
 						{
-							unset( $_data[$_index] );
-							break;
+							if ( $_priorRow['api_name'] == $_row->api_name )
+							{
+								unset( $_data[$_index] );
+								break;
+							}
 						}
+
+						$_data[] = array_merge( $_row->getAttributes(), array( 'config_text' => $_config ) );
 					}
 
-					$_data[] = $_row->getAttributes();
 					unset( $_row );
 				}
 
@@ -209,4 +225,30 @@ class Config extends BaseSystemRestResource
 
 		parent::_postProcess();
 	}
+
+	/**
+	 * Strictly for your protection!
+	 *
+	 * @param array $config
+	 *
+	 * @return array
+	 */
+	protected function _sanitizeProviderConfig( $config )
+	{
+		if ( Session::isSystemAdmin() )
+		{
+			return $config;
+		}
+
+		$_config = Option::clean( $config );
+
+		//	Remove sensitive information before returning for non-admins
+		Option::remove( $_config, 'client_secret' );
+		Option::remove( $_config, 'access_token' );
+		Option::remove( $_config, 'refresh_token' );
+
+		return $_config;
+	}
 }
+
+
