@@ -23,8 +23,6 @@ use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Interfaces\RestResourceLike;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Services\BasePlatformRestService;
-use DreamFactory\Platform\Utility\SqlDbUtilities;
-use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Utility\Option;
 
 /**

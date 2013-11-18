@@ -19,13 +19,14 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
-use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
@@ -72,15 +73,13 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected $_action = self::Get;
 	/**
-	 * @var mixed The response to the request
-	 */
-	protected $_response = null;
-	/**
-	 * @var bool If true, _handleResource() dispatches a call to _handle[Action]() methods if defined. For example, a GET request would be dispatched to _handleGet().
+	 * @var bool If true, _handleResource() dispatches a call to _handle[Action]() methods if defined.
+	 * For example, a GET request would be dispatched to _handleGet().
 	 */
 	protected $_autoDispatch = true;
 	/**
-	 * @var string The pattern to search for dispatch methods. The string {action} will be replaced by the inbound action (i.e. Get, Put, Post, etc.)
+	 * @var string The pattern to search for dispatch methods.
+	 * The string {action} will be replaced by the inbound action (i.e. Get, Put, Post, etc.)
 	 */
 	protected $_autoDispatchPattern = self::DEFAULT_HANDLER_PATTERN;
 	/**
@@ -107,10 +106,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected $_originalAction = null;
 	/**
-	 * @var int
-	 */
-	protected $_serviceId = null;
-	/**
 	 * @var array Additional actions that this resource will respond to
 	 */
 	protected $_extraActions = null;
@@ -118,6 +113,23 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @var array The data that came in on the request
 	 */
 	protected $_requestPayload = null;
+	/**
+	 * @var mixed The response to the request
+	 */
+	protected $_response = null;
+	/**
+	 * @var int The HTTP response code returned for this request
+	 */
+	protected $_responseCode = RestResponse::Ok;
+	/**
+	 * @var string Default output format, either 'json' or 'xml'.
+	 * NOTE: Output format is different from RESPONSE format (inner payload format vs. envelope)
+	 */
+	protected $_outputFormat = 'json';
+	/**
+	 * @var int
+	 */
+	protected $_serviceId = null;
 
 	//*************************************************************************
 	//* Methods
@@ -138,13 +150,15 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	/**
 	 * @param string $resource
 	 * @param string $action
+	 * @param string $output_format
 	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return mixed
-	 * @throws BadRequestException
 	 */
-	public function processRequest( $resource = null, $action = self::Get )
+	public function processRequest( $resource = null, $action = self::Get, $output_format = null )
 	{
 		$this->_setAction( $action );
+		$this->setOutputFormat( $output_format );
 		$this->_detectResourceMembers( $resource );
 
 		$this->_preProcess();
@@ -161,7 +175,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 		$this->_postProcess();
 
-		return $this->_response;
+		return $this->_respond();
 	}
 
 	/**
@@ -308,6 +322,22 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	protected function _postProcess()
 	{
 		// throw exception here to stop processing
+	}
+
+	/**
+	 * @return mixed|null If response is for internal use, returns result of operation.
+	 *                    Otherwise, responds to REST client in desired format and ends processing.
+	 */
+	protected function _respond()
+	{
+		if ( empty( $this->_outputFormat ) )
+		{
+			return DataFormat::reformatData( $this->_response, $this->_nativeFormat, null );
+		}
+
+		RestResponse::sendResults( $this->_response, $this->_responseCode, $this->_nativeFormat, $this->_outputFormat );
+
+		return null; // to keep editor happy, processing dies in response
 	}
 
 	/**
@@ -697,5 +727,37 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function getRequestPayload()
 	{
 		return $this->_requestPayload;
+	}
+
+	/**
+	 * @param array $responseCode
+	 */
+	public function setResponseCode( $responseCode )
+	{
+		$this->_responseCode = $responseCode;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getResponseCode()
+	{
+		return $this->_responseCode;
+	}
+
+	/**
+	 * @param string $outputFormat
+	 */
+	public function setOutputFormat( $outputFormat )
+	{
+		$this->_outputFormat = $outputFormat;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getOutputFormat()
+	{
+		return $this->_outputFormat;
 	}
 }
