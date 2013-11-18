@@ -207,11 +207,14 @@ class RestResponse extends HttpResponse
 				$_output = gzencode( $_output, 9 );
 			}
 
-			//	no need to waste resources in compressing very little data
+			// compressed or not, dump it out as the buffer is destroyed already
 			echo $_output;
 		}
-
-		ob_end_flush();
+		else
+		{
+			// flush output and destroy buffer
+			ob_end_flush();
+		}
 
 		Pii::end();
 	}
