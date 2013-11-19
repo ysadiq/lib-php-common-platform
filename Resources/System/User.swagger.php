@@ -106,6 +106,14 @@ $_user['apis'] = array(
 								'paramType'     => 'query',
 								'required'      => false,
 							),
+							array(
+								'name'          => 'file',
+								'description'   => 'Download the results of the request as a file.',
+								'allowMultiple' => false,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
 						),
 					'responseMessages' =>
 						array(

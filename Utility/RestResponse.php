@@ -202,7 +202,7 @@ class RestResponse extends HttpResponse
 			$_errorInfo['location'] = $ex->getRedirectUri();
 		}
 
-		$result = array(
+		$_result = array(
 			'error' => array( $_errorInfo )
 		);
 
@@ -218,16 +218,17 @@ class RestResponse extends HttpResponse
 			}
 		}
 
-		static::sendResults( $result, $_status, null, $desired_format );
+		$_result = DataFormat::reformatData( $_result, null, $desired_format );
+		static::sendResults( $_result, $_status, $desired_format );
 	}
 
 	/**
-	 * @param        $result
+	 * @param mixed  $result
 	 * @param int    $code
-	 * @param null   $result_format
-	 * @param string $desired_format
+	 * @param string $format
+	 * @param string $as_file
 	 */
-	public static function sendResults( $result, $code = RestResponse::Ok, $result_format = null, $desired_format = 'json' )
+	public static function sendResults( $result, $code = RestResponse::Ok, $format = 'json', $as_file = null )
 	{
 		//	Some REST services may handle the response, they just return null
 		if ( is_null( $result ) )
@@ -237,16 +238,7 @@ class RestResponse extends HttpResponse
 			return;
 		}
 
-		if ( ( null == $result_format ) && ( 'csv' == $desired_format ) )
-		{
-			// need to strip 'record' wrapper before reformatting to csv
-			// todo move this logic elsewhere
-			$result = Option::get( $result, 'record', $result );
-		}
-
-		$result = DataFormat::reformatData( $result, $result_format, $desired_format );
-
-		switch ( $desired_format )
+		switch ( $format )
 		{
 			case OutputFormats::JSON:
 			case 'json':
@@ -294,9 +286,15 @@ class RestResponse extends HttpResponse
 			$code = static::getHttpStatusCode( $code );
 			$_title = static::getHttpStatusCodeTitle( $code );
 			header( "HTTP/1.1 $code $_title" );
-			header( "Content-type: $_contentType" );
+			header( "Content-Type: $_contentType" );
 			//	IE 9 requires hoop for session cookies in iframes
 			header( 'P3P:CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"' );
+
+			if ( !empty( $as_file ) )
+			{
+				header( "Content-Disposition: attachment; filename=\"$as_file\";" );
+				header( "Cache-control: private" ); //use this to open files directly
+			}
 
 			//	Add additional headers for CORS support
 			Pii::app()->addCorsHeaders();

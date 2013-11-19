@@ -132,6 +132,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected $_outputFormat = null;
 	/**
+	 * @var string If set, prompt browser to download response as a file.
+	 */
+	protected $_outputAsFile = null;
+	/**
 	 * @var int
 	 */
 	protected $_serviceId = null;
@@ -166,8 +170,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 		// required app name for security check
 		$this->_detectAppName();
-		$this->_outputFormat = RestResponse::detectResponseFormat( $output_format, $this->_responseFormat );
 		$this->_detectResourceMembers( $resource );
+		$this->_detectResponseMembers( $output_format );
 
 		$this->_preProcess();
 
@@ -338,12 +342,23 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _respond()
 	{
-		if ( empty( $this->_outputFormat ) )
+		$_result = $this->_response;
+		if ( ( null == $this->_nativeFormat ) && ( 'csv' == $this->_outputFormat ) )
 		{
-			return DataFormat::reformatData( $this->_response, $this->_nativeFormat, null );
+			// need to strip 'record' wrapper before reformatting to csv
+			// todo move this logic elsewhere
+			$_result = Option::get( $_result, 'record', $_result );
 		}
 
-		RestResponse::sendResults( $this->_response, $this->_responseCode, $this->_nativeFormat, $this->_outputFormat );
+		$_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
+
+		if ( empty( $this->_outputFormat ) )
+		{
+			// native arrays must be staying local, just return
+			return $_result;
+		}
+
+		RestResponse::sendResults( $_result, $this->_responseCode, $this->_outputFormat, $this->_outputAsFile );
 
 		return null; // to keep editor happy, processing dies in response
 	}
@@ -388,6 +403,25 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 		// assign to global for system usage, todo improve this
 		$GLOBALS['app_name'] = $_appName;
+	}
+
+	protected function _detectResponseMembers( $output_format = null )
+	{
+		// determine output format, inner and outer formatting if necessary
+		$this->_outputFormat = RestResponse::detectResponseFormat( $output_format, $this->_responseFormat );
+
+		// determine if output as file is enabled
+		$_file = FilterInput::request( 'file', null, FILTER_SANITIZE_STRING );
+		if ( !empty( $_file ) )
+		{
+			if ( DataFormat::boolval( $_file ) )
+			{
+				$_file = $this->getApiName();
+				$_file .= '.' . $this->_outputFormat;
+			}
+
+			$this->_outputAsFile = $_file;
+		}
 	}
 
 	/**
