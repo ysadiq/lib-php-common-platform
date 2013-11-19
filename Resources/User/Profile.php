@@ -85,7 +85,7 @@ class Profile extends BasePlatformRestResource
 		// check valid session,
 		// using userId from session, get profile attributes
 		$_userId = Session::validateSession();
-		$_data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostedData( false, true );
 
 		return $this->changeProfile( $_userId, $_data );
 	}

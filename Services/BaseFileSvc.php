@@ -217,7 +217,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				{
 					// create one or more containers
 					$checkExist = FilterInput::request( 'check_exist', false, FILTER_VALIDATE_BOOLEAN );
-					$data = RestData::getPostDataAsArray();
+					$data = RestData::getPostedData( false, true );
 					$containers = Option::get( $data, 'container' );
 					if ( empty( $containers ) )
 					{
@@ -246,7 +246,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 					if ( !empty( $fileNameHeader ) )
 					{
 						// html5 single posting for file create
-						$content = RestData::getPostData();
+						$content = RestData::getPostedData();
 						$contentType = FilterInput::server( 'CONTENT_TYPE', '' );
 						$result = $this->_handleFileContent(
 							$this->_folderPath,
@@ -262,7 +262,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 					{
 						// html5 single posting for folder create
 						$fullPathName = $this->_folderPath . $folderNameHeader;
-						$content = RestData::getPostDataAsArray();
+						$content = RestData::getPostedData( false, true );
 						$this->createFolder( $this->_container, $fullPathName, $content );
 						$result = array( 'folder' => array( array( 'name' => $folderNameHeader, 'path' => $this->_container . '/' . $fullPathName ) ) );
 					}
@@ -289,7 +289,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 					else
 					{
 						// possibly xml or json post either of files or folders to create, copy or move
-						$data = RestData::getPostDataAsArray();
+						$data = RestData::getPostedData( false, true );
 						if ( empty( $data ) )
 						{
 							// create folder from resource path
@@ -317,7 +317,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 						$contentType = Option::get( $_SERVER, 'CONTENT_TYPE', '' );
 						// direct load from posted data as content
 						// or possibly xml or json post of file properties create, copy or move
-						$content = RestData::getPostData();
+						$content = RestData::getPostedData();
 						$result = $this->_handleFileContent(
 							$path,
 							$name,
@@ -374,14 +374,14 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				else if ( empty( $this->_folderPath ) )
 				{
 					// update container properties
-					$content = RestData::getPostDataAsArray();
+					$content = RestData::getPostedData( false, true );
 					$this->updateContainerProperties( $this->_container, $content );
 					$result = array( 'container' => array( 'name' => $this->_container ) );
 				}
 				else if ( empty( $this->_filePath ) )
 				{
 					// update folder properties
-					$content = RestData::getPostDataAsArray();
+					$content = RestData::getPostedData( false, true );
 					$this->updateFolderProperties( $this->_container, $this->_folderPath, $content );
 					$result = array(
 						'folder' => array(
@@ -393,7 +393,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				else
 				{
 					// update file properties?
-					$content = RestData::getPostDataAsArray();
+					$content = RestData::getPostedData( false, true );
 					$this->updateFileProperties( $this->_container, $this->_filePath, $content );
 					$result = array(
 						'file' => array(
@@ -406,7 +406,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 			case self::Delete:
 				$this->checkPermission( 'delete', $this->_container );
 				$force = FilterInput::request( 'force', false, FILTER_VALIDATE_BOOLEAN );
-				$content = RestData::getPostDataAsArray();
+				$content = RestData::getPostedData( false, true );
 				if ( empty( $this->_container ) )
 				{
 					$containers = Option::get( $content, 'container' );

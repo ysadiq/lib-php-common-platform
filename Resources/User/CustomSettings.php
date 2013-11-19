@@ -97,7 +97,7 @@ class CustomSettings extends BasePlatformRestResource
 		// check valid session,
 		// using userId from session, get user_data attribute
 		$_userId = Session::validateSession();
-		$_data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostedData( true, true );
 
 		return $this->setCustomSettings( $_userId, $_data, $this->_setting );
 	}

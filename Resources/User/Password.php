@@ -77,7 +77,7 @@ class Password extends BasePlatformRestResource
 	 */
 	protected function _handlePost()
 	{
-		$_data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostedData( false, true );
 		$_old = Option::get( $_data, 'old_password' );
 		$_new = Option::get( $_data, 'new_password' );
 

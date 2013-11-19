@@ -225,7 +225,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	protected function _determineRequestedResource( &$ids = null, &$records = null )
 	{
 		//	Which payload do we love?
-		$_payload = RestData::getPostDataAsArray();
+		$_payload = RestData::getPostedData( true, true );
 
 		//	Use $_REQUEST instead of POSTed data
 		if ( empty( $_payload ) )

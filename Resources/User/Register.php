@@ -77,7 +77,7 @@ class Register extends BasePlatformRestResource
 	 */
 	protected function _handlePost()
 	{
-		$_data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostedData( false, true );
 		$_result = $this->userRegister( $_data );
 
 		return $_result;

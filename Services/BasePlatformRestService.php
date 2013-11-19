@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
@@ -34,7 +35,7 @@ use Kisma\Core\Utility\Option;
 
 /**
  * BasePlatformRestService
- * A base class for all DSP reset services
+ * A base class for all DSP REST services
  *
  */
 abstract class BasePlatformRestService extends BasePlatformService implements RestServiceLike
@@ -122,10 +123,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected $_responseCode = RestResponse::Ok;
 	/**
-	 * @var string Default output format, either 'json' or 'xml'.
+	 * @var int The inner payload response format, used for table formatting, etc.
+	 */
+	protected $_responseFormat = ResponseFormats::RAW;
+	/**
+	 * @var string Default output format, either null (native), 'json' or 'xml'.
 	 * NOTE: Output format is different from RESPONSE format (inner payload format vs. envelope)
 	 */
-	protected $_outputFormat = 'json';
+	protected $_outputFormat = null;
 	/**
 	 * @var int
 	 */
@@ -148,9 +153,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	}
 
 	/**
-	 * @param string $resource
-	 * @param string $action
-	 * @param string $output_format
+	 * @param string $resource Optional resource for the REST call
+	 * @param string $action HTTP action for this request
+	 * @param string $output_format Optional override for detecting output format
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return mixed
@@ -158,7 +163,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function processRequest( $resource = null, $action = self::Get, $output_format = null )
 	{
 		$this->_setAction( $action );
-		$this->setOutputFormat( $output_format );
+
+		// required app name for security check
+		$this->_detectAppName();
+		$this->_outputFormat = RestResponse::detectResponseFormat( $output_format, $this->_responseFormat );
 		$this->_detectResourceMembers( $resource );
 
 		$this->_preProcess();
@@ -338,6 +346,48 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		RestResponse::sendResults( $this->_response, $this->_responseCode, $this->_nativeFormat, $this->_outputFormat );
 
 		return null; // to keep editor happy, processing dies in response
+	}
+
+	/**
+	 * Determine the app_name/API key of this request
+	 *
+	 * @return mixed
+	 */
+	protected function _detectAppName()
+	{
+		// 	Determine application if any
+		$_appName = FilterInput::request( 'app_name', null, FILTER_SANITIZE_STRING );
+		if ( empty( $_appName ) )
+		{
+			if ( null === ( $_appName = Option::get( $_SERVER, 'HTTP_X_DREAMFACTORY_APPLICATION_NAME' ) ) )
+			{
+				//	Old non-name-spaced header
+				$_appName = Option::get( $_SERVER, 'HTTP_X_APPLICATION_NAME' );
+			}
+		}
+
+		//	Still empty?
+		if ( empty( $_appName ) )
+		{
+			//	We give portal requests a break, as well as inbound OAuth redirects
+			if ( false !== stripos( Option::server( 'REQUEST_URI' ), '/rest/portal', 0 ) )
+			{
+				$_appName = 'portal';
+			}
+			elseif ( isset( $_REQUEST, $_REQUEST['code'], $_REQUEST['state'], $_REQUEST['oasys'] ) )
+			{
+				$_appName = 'auth_redirect';
+			}
+			else
+			{
+				RestResponse::sendErrors(
+					new BadRequestException( 'No application name header or parameter value in request.' )
+				);
+			}
+		}
+
+		// assign to global for system usage, todo improve this
+		$GLOBALS['app_name'] = $_appName;
 	}
 
 	/**
@@ -759,5 +809,25 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function getOutputFormat()
 	{
 		return $this->_outputFormat;
+	}
+
+	/**
+	 * @param int $responseFormat
+	 *
+	 * @return BasePlatformRestService
+	 */
+	public function setResponseFormat( $responseFormat )
+	{
+		$this->_responseFormat = $responseFormat;
+
+		return $this;
+	}
+
+	/**
+	 * @return int
+	 */
+	public function getResponseFormat()
+	{
+		return $this->_responseFormat;
 	}
 }

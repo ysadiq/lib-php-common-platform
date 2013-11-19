@@ -22,9 +22,11 @@ namespace DreamFactory\Platform\Utility;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Oasys\Exceptions\RedirectRequiredException;
+use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
+use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -45,6 +47,112 @@ class RestResponse extends HttpResponse
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
+
+	/**
+	 * @param string $requested Optional requested set format
+	 * @param string $internal Reference returned internal formatting (jtables, etc.)
+	 *
+	 * @return string output format, outer envelope
+	 */
+	public static function detectResponseFormat( $requested, &$internal )
+	{
+		$internal = ResponseFormats::RAW;
+		$_format = $requested;
+
+		if ( empty( $_format ) )
+		{
+			$_format = FilterInput::request( 'format', null, FILTER_SANITIZE_STRING );
+
+			if ( empty( $_format ) )
+			{
+				$_accepted = RestResponse::parseAcceptHeader(
+					FilterInput::server( 'HTTP_ACCEPT', null, FILTER_SANITIZE_STRING )
+				);
+				$_accepted = array_values( $_accepted );
+				$_format = Option::get( $_accepted, 0 );
+			}
+		}
+		$_format = trim( strtolower( $_format ) );
+		switch ( $_format )
+		{
+			case 'json':
+			case 'application/json':
+				$_format = 'json';
+				break;
+			case 'xml':
+			case 'application/xml':
+			case 'text/xml':
+				$_format = 'xml';
+				break;
+			case 'csv':
+			case 'text/csv':
+				$_format = 'csv';
+				break;
+
+			default:
+				if ( ResponseFormats::contains( $_format ) )
+				{
+					//	Set the response format here and in the store
+					ResourceStore::setResponseFormat( $internal = $_format );
+				}
+
+				//	Set envelope to JSON
+				$_format = 'json';
+				break;
+		}
+
+		return $_format;
+	}
+
+	public static function parseAcceptHeader( $header )
+	{
+		$accept = array();
+		foreach ( preg_split( '/\s*,\s*/', $header ) as $i => $term )
+		{
+			$o = new \stdclass;
+			$o->pos = $i;
+			if ( preg_match( ",^(\S+)\s*;\s*(?:q|level)=([0-9\.]+),i", $term, $M ) )
+			{
+				$o->type = $M[1];
+				$o->q = (double)$M[2];
+			}
+			else
+			{
+				$o->type = $term;
+				$o->q = 1;
+			}
+			$accept[] = $o;
+		}
+		usort(
+			$accept,
+			function ( $a, $b )
+			{ /* first tier: highest q factor wins */
+				$diff = $b->q - $a->q;
+				if ( $diff > 0 )
+				{
+					$diff = 1;
+				}
+				else if ( $diff < 0 )
+				{
+					$diff = -1;
+				}
+				else
+				{ /* tie-breaker: first listed item wins */
+					$diff = $a->pos - $b->pos;
+				}
+
+				return $diff;
+			}
+		);
+
+		$_result = array();
+		foreach ( $accept as $a )
+		{
+			$_result[$a->type] = $a->type;
+		}
+
+		return $_result;
+	}
 
 	/**
 	 * @param int $code

@@ -160,7 +160,7 @@ class SchemaSvc extends BasePlatformRestService
 	{
 		parent::_preProcess();
 
-		$this->_payload = RestData::getPostDataAsArray();
+		$this->_payload = RestData::getPostedData( false, true );
 		$this->_tables = Option::get(
 			$this->_payload,
 			'table',

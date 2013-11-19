@@ -109,7 +109,7 @@ class Session extends BasePlatformRestResource
 	 */
 	protected function _handlePost()
 	{
-		$_data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostedData( false, true );
 
 		return $this->userLogin( Option::get( $_data, 'email' ), Option::get( $_data, 'password' ) );
 	}

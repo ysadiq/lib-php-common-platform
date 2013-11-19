@@ -261,7 +261,7 @@ class Portal extends BaseSystemRestService
 			)
 		);
 
-		$this->_requestPayload = array_merge( $this->_urlParameters, Option::clean( RestData::getPostDataAsArray() ) );
+		$this->_requestPayload = array_merge( $this->_urlParameters, Option::clean( RestData::getPostedData( false, true ) ) );
 
 		//	Set the flow type
 		$_config['flow_type'] = $this->_interactive ? Flows::CLIENT_SIDE : Flows::SERVER_SIDE;

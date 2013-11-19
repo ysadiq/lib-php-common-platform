@@ -87,7 +87,7 @@ class EmailSvc extends BasePlatformRestService
 	 */
 	protected function _handlePost()
 	{
-		$_data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostedData( false, true );
 		Option::sins( $_data, 'template', FilterInput::request( 'template' ) );
 		Option::sins( $_data, 'template_id', FilterInput::request( 'template_id' ) );
 
