@@ -236,6 +236,14 @@ class User extends BasePlatformSystemModel
 	/** {@InheritDoc} */
 	protected function beforeValidate()
 	{
+		if ( empty( $this->default_app_id ) )
+		{
+			$this->default_app_id = null;
+		}
+		if ( empty( $this->role_id ) )
+		{
+			$this->role_id = null;
+		}
 		if ( empty( $this->confirm_code ) && ( !empty( $this->password ) ) )
 		{
 			$this->confirm_code = 'y';

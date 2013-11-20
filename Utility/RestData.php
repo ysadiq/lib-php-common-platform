@@ -64,7 +64,7 @@ class RestData
 
 		if ( empty( $_data ) && $from_file )
 		{
-			$_file = Option::get( $_FILES, 'file' );
+			$_file = Option::get( $_FILES, 'files' );
 			if ( empty( $_file ) )
 			{
 				return null; // can't find anything to return
@@ -122,21 +122,8 @@ class RestData
 
 			if ( empty( $_data ) )
 			{
-				try
-				{
-					$_data = DataFormat::jsonToArray( $_postData );
-				}
-				catch ( \Exception $ex )
-				{
-					try
-					{
-						$_data = DataFormat::xmlToArray( $_postData );
-					}
-					catch ( \Exception $ex )
-					{
-						throw new \Exception( 'Invalid Format Requested. ' . $ex->getMessage() );
-					}
-				}
+				// last chance, assume it is json
+				$_data = DataFormat::jsonToArray( $_postData );
 			}
 
 			// get rid of xml wrapper if present

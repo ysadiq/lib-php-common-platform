@@ -293,7 +293,6 @@ class RestResponse extends HttpResponse
 			if ( !empty( $as_file ) )
 			{
 				header( "Content-Disposition: attachment; filename=\"$as_file\";" );
-				header( "Cache-control: private" ); //use this to open files directly
 			}
 
 			//	Add additional headers for CORS support
