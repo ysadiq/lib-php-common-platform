@@ -32,7 +32,7 @@ use Kisma\Core\Exceptions\StorageException;
  *
  * @property string              $name
  * @property string              $description
- * @property integer             $is_active
+ * @property boolean             $is_active
  * @property integer             $default_app_id
  *
  * Relations:
@@ -66,8 +66,9 @@ class Role extends BasePlatformSystemModel
 		$_rules = array(
 			array( 'name', 'required' ),
 			array( 'name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
-			array( 'is_active, default_app_id', 'numerical', 'integerOnly' => true ),
 			array( 'name', 'length', 'max' => 64 ),
+			array( 'default_app_id', 'numerical', 'integerOnly' => true ),
+			array( 'is_active', 'boolean' ),
 			array( 'description', 'safe' ),
 		);
 
@@ -138,6 +139,17 @@ class Role extends BasePlatformSystemModel
 		{
 			$this->assignManyToOneByMap( $id, 'service', 'role_service_access', 'role_id', 'service_id', $values['services'] );
 		}
+	}
+
+	/** {@InheritDoc} */
+	protected function beforeValidate()
+	{
+		if ( empty( $this->default_app_id ) )
+		{
+			$this->default_app_id = null;
+		}
+
+		return parent::beforeValidate();
 	}
 
 	/**

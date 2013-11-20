@@ -200,4 +200,43 @@ class Config extends BasePlatformSystemModel
 
 		return $_config;
 	}
+
+	/** {@InheritDoc} */
+	protected function beforeValidate()
+	{
+		if ( empty( $this->guest_role_id ) )
+		{
+			$this->guest_role_id = null;
+		}
+		if ( empty( $this->open_reg_role_id ) )
+		{
+			$this->open_reg_role_id = null;
+		}
+		if ( empty( $this->open_reg_email_service_id ) )
+		{
+			$this->open_reg_email_service_id = null;
+		}
+		if ( empty( $this->open_reg_email_template_id ) )
+		{
+			$this->open_reg_email_template_id = null;
+		}
+		if ( empty( $this->password_email_service_id ) )
+		{
+			$this->password_email_service_id = null;
+		}
+		if ( empty( $this->password_email_template_id ) )
+		{
+			$this->password_email_template_id = null;
+		}
+		if ( empty( $this->invite_email_service_id ) )
+		{
+			$this->invite_email_service_id = null;
+		}
+		if ( empty( $this->invite_email_template_id ) )
+		{
+			$this->invite_email_template_id = null;
+		}
+
+		return parent::beforeValidate();
+	}
 }

@@ -38,8 +38,8 @@ use Kisma\Core\Utility\Sql;
  * @property string              $name
  * @property string              $api_name
  * @property string              $description
- * @property integer             $is_active
- * @property integer             $is_system
+ * @property boolean             $is_active
+ * @property boolean             $is_system
  * @property string              $type
  * @property int                 $type_id
  * @property string              $storage_name
@@ -252,11 +252,12 @@ MYSQL;
 		$_rules = array(
 			array( 'name, api_name, type', 'required' ),
 			array( 'name, api_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
-			array( 'is_active, type_id, storage_type_id, native_format_id', 'numerical', 'integerOnly' => true ),
+			array( 'type_id, storage_type_id', 'numerical', 'integerOnly' => true ),
 			array( 'name, api_name, type, storage_type, native_format', 'length', 'max' => 64 ),
 			array( 'storage_name', 'length', 'max' => 80 ),
 			array( 'base_url', 'length', 'max' => 255 ),
-			array( 'type_id, storage_type_id, native_format_id, description, credentials, parameters, headers', 'safe' ),
+			array( 'is_active', 'boolean' ),
+			array( 'description, credentials, parameters, headers', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -344,6 +345,21 @@ MYSQL;
 		{
 			$this->assignManyToOneByMap( $id, 'role', 'role_service_access', 'service_id', 'role_id', $_roles );
 		}
+	}
+
+	/** {@InheritDoc} */
+	protected function beforeValidate()
+	{
+		if ( empty( $this->type_id ) )
+		{
+			$this->type_id = null;
+		}
+		if ( empty( $this->storage_type_id ) )
+		{
+			$this->storage_type_id = null;
+		}
+
+		return parent::beforeValidate();
 	}
 
 	/**

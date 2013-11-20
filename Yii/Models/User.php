@@ -45,8 +45,8 @@ use Kisma\Core\Utility\Log;
  * @property string     $last_name
  * @property string     $display_name
  * @property string     $phone
- * @property integer    $is_active
- * @property integer    $is_sys_admin
+ * @property boolean    $is_active
+ * @property boolean    $is_sys_admin
  * @property string     $confirm_code
  * @property integer    $default_app_id
  * @property integer    $role_id
@@ -128,7 +128,8 @@ class User extends BasePlatformSystemModel
 			array( 'password, first_name, last_name, security_answer', 'length', 'max' => 64 ),
 			array( 'phone', 'length', 'max' => 32 ),
 			array( 'confirm_code, display_name, security_question', 'length', 'max' => 128 ),
-			array( 'user_source, user_data, is_active, is_sys_admin', 'safe' ),
+			array( 'is_active, is_sys_admin', 'boolean' ),
+			array( 'user_data', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
