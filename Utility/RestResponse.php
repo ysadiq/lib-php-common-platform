@@ -50,7 +50,7 @@ class RestResponse extends HttpResponse
 
 	/**
 	 * @param string $requested Optional requested set format
-	 * @param string $internal Reference returned internal formatting (jtables, etc.)
+	 * @param string $internal  Reference returned internal formatting (jtables, etc.)
 	 *
 	 * @return string output format, outer envelope
 	 */
@@ -79,11 +79,13 @@ class RestResponse extends HttpResponse
 			case 'application/json':
 				$_format = 'json';
 				break;
+
 			case 'xml':
 			case 'application/xml':
 			case 'text/xml':
 				$_format = 'xml';
 				break;
+
 			case 'csv':
 			case 'text/csv':
 				$_format = 'csv';
