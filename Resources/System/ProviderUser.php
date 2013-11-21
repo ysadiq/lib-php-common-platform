@@ -22,7 +22,9 @@ namespace DreamFactory\Platform\Resources\System;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
+use DreamFactory\Platform\Utility\ResourceStore;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
 use DreamFactory\Common\Utility\DataFormat;
 
@@ -54,4 +56,14 @@ class ProviderUser extends BaseSystemRestResource
 			)
 		);
 	}
+
+	/**
+	 * @return bool
+	 */
+	protected function _handleGet()
+	{
+		return parent::_handleGet();
+	}
 }
+
+

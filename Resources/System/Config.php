@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
+use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Resources\User\Session;
@@ -26,12 +27,9 @@ use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\ResourceStore;
-use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\Sql;
 
 /**
  * Config
@@ -128,27 +126,77 @@ class Config extends BaseSystemRestResource
 		/**
 		 * Versioning and upgrade support
 		 */
-		$this->_response['dsp_version'] = SystemManager::getCurrentVersion();
+		if ( null === ( $_versionInfo = Pii::getState( 'platform.version_info' ) ) )
+		{
+			$_versionInfo = array(
+				'dsp_version'       => $_currentVersion = SystemManager::getCurrentVersion(),
+				'latest_version'    => $_latestVersion = SystemManager::getLatestVersion(),
+				'upgrade_available' => version_compare( $_currentVersion, $_latestVersion, '<' ),
+			);
+
+			Pii::setState( 'platform.version_info', $_versionInfo );
+		}
+
+		$this->_response['dsp_version'] = $_versionInfo['dsp_version'];
 
 		if ( !Fabric::fabricHosted() )
 		{
-			$this->_response['latest_version'] = SystemManager::getLatestVersion();
-			$this->_response['upgrade_available'] = version_compare( $this->_response['dsp_version'], $this->_response['latest_version'], '<' );
+			$this->_response['latest_version'] = $_versionInfo['latest_version'];
+			$this->_response['upgrade_available'] = $_versionInfo['upgrade_available'];
 		}
+
+		unset( $_versionInfo );
 
 		/**
 		 * Remote login support
 		 */
-		$this->_response['allow_remote_logins'] =
-			( Pii::getParam( 'dsp.allow_remote_logins', false ) && $this->_response['allow_open_registration'] );
+		$this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
+		$this->_response['allow_remote_logins'] = ( Pii::getParam( 'dsp.allow_remote_logins', false ) && $this->_response['allow_open_registration'] );
 
 		if ( false !== $this->_response['allow_remote_logins'] )
 		{
-			$this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
+			$_remoteProviders = $this->_getRemoteProviders();
 
-			$_data = array();
+			if ( empty( $_remoteProviders ) )
+			{
+				$this->_response['allow_remote_logins'] = false;
+			}
+			else
+			{
+				$this->_response['remote_login_providers'] = array_values( $_remoteProviders );
+			}
 
-			$_providers = Fabric::getProviderCredentials();
+			unset( $_remoteProviders );
+		}
+		else
+		{
+			//	No providers, no admin remote logins
+			$this->_response['allow_admin_remote_logins'] = false;
+		}
+
+		/** CORS support **/
+		$this->_response['allowed_hosts'] = SystemManager::getAllowedHosts();
+
+		parent::_postProcess();
+	}
+
+	/**
+	 * @return array|mixed
+	 */
+	protected function _getRemoteProviders()
+	{
+		if ( null === ( $_remoteProviders = Pii::getState( 'platform.remote_login_providers' ) ) )
+		{
+			$_remoteProviders = array();
+
+			//*************************************************************************
+			//	Global Providers
+			//*************************************************************************
+
+			if ( null === ( $_providers = Pii::getState( 'platform.global_providers' ) ) )
+			{
+				Pii::setState( 'platform.global_providers', $_providers = Fabric::getProviderCredentials() );
+			}
 
 			if ( !empty( $_providers ) )
 			{
@@ -156,9 +204,9 @@ class Config extends BaseSystemRestResource
 				{
 					if ( 1 == $_row->login_provider_ind )
 					{
-						$_config = $this->_sanitizeProviderConfig( $this->config_text );
+						$_config = $this->_sanitizeProviderConfig( $_row->config_text );
 
-						$_data[] = array(
+						$_remoteProviders[] = array(
 							'id'            => $_row->id,
 							'provider_name' => $_row->provider_name_text,
 							'api_name'      => $_row->endpoint_text,
@@ -174,6 +222,10 @@ class Config extends BaseSystemRestResource
 
 			unset( $_providers );
 
+			//*************************************************************************
+			//	Local Providers
+			//*************************************************************************
+
 			/** @var Provider[] $_models */
 			$_models = ResourceStore::model( 'provider' )->findAll( array( 'order' => 'provider_name' ) );
 
@@ -183,19 +235,19 @@ class Config extends BaseSystemRestResource
 				{
 					if ( 1 == $_row->is_login_provider )
 					{
-						$_config = $this->_sanitizeProviderConfig( $this->config_text );
+						$_config = $this->_sanitizeProviderConfig( $_row->config_text );
 
 						//	Local providers take precedent over global...
-						foreach ( $_data as $_index => $_priorRow )
+						foreach ( $_remoteProviders as $_index => $_priorRow )
 						{
 							if ( $_priorRow['api_name'] == $_row->api_name )
 							{
-								unset( $_data[$_index] );
+								unset( $_remoteProviders[$_index] );
 								break;
 							}
 						}
 
-						$_data[] = array_merge( $_row->getAttributes(), array( 'config_text' => $_config ) );
+						$_remoteProviders[] = array_merge( $_row->getAttributes(), array( 'config_text' => $_config ) );
 					}
 
 					unset( $_row );
@@ -204,26 +256,10 @@ class Config extends BaseSystemRestResource
 				unset( $_models );
 			}
 
-			$this->_response['remote_login_providers'] = array_values( $_data );
-
-			if ( empty( $_data ) )
-			{
-				$this->_response['allow_remote_logins'] = false;
-			}
-
-			unset( $_data );
-		}
-		else
-		{
-			//	No providers, no remote logins
-			$this->_response['allow_remote_logins'] = false;
-			$this->_response['allow_admin_remote_logins'] = false;
+			Pii::setState( 'platform.remote_login_providers', $_remoteProviders );
 		}
 
-		/** CORS support */
-		$this->_response['allowed_hosts'] = SystemManager::getAllowedHosts();
-
-		parent::_postProcess();
+		return $_remoteProviders;
 	}
 
 	/**
