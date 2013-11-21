@@ -402,7 +402,7 @@ class ResourceStore implements UtilityLike
 		if ( !empty( $_errors ) )
 		{
 			$_msg = array( 'errors' => $_errors, 'record' => $_response );
-			throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+			throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 		}
 
 		return $single_row ? current( $_response ) : array( 'record' => $_response );
@@ -525,7 +525,7 @@ class ResourceStore implements UtilityLike
 		if ( !empty( $_errors ) )
 		{
 			$_msg = array( 'errors' => $_errors, 'record' => $_response );
-			throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+			throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 		}
 
 		return $single_row ? current( $_response ) : array( 'record' => $_response );
@@ -605,7 +605,7 @@ class ResourceStore implements UtilityLike
 		if ( !empty( $_errors ) )
 		{
 			$_msg = array( 'errors' => $_errors, 'record' => $_response );
-			throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+			throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 		}
 
 		return $single_row ? current( $_response ) : array( 'record' => $_response );
@@ -698,7 +698,7 @@ class ResourceStore implements UtilityLike
 		if ( !empty( $_errors ) )
 		{
 			$_msg = array( 'errors' => $_errors, 'record' => $_response );
-			throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+			throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 		}
 
 		return $single_row ? current( $_response ) : array( 'record' => $_response );

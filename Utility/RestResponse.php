@@ -182,22 +182,21 @@ class RestResponse extends HttpResponse
 	public static function sendErrors( $ex, $desired_format = 'json' )
 	{
 		$_status = $ex->getCode();
-
-		if ( $ex instanceof RestException )
-		{
-			$_status = $ex->getStatusCode();
-		}
-		elseif ( $ex instanceOf \CHttpException )
-		{
-			$_status = $ex->statusCode;
-		}
-
 		$_errorInfo = array(
 			'message' => htmlentities( $ex->getMessage() ),
 			'code'    => $ex->getCode()
 		);
 
-		if ( $ex instanceof RedirectRequiredException )
+		if ( $ex instanceof RestException )
+		{
+			$_status = $ex->getStatusCode();
+			$_errorInfo['context'] = $ex->getContext();
+		}
+		elseif ( $ex instanceOf \CHttpException )
+		{
+			$_status = $ex->statusCode;
+		}
+		elseif ( $ex instanceof RedirectRequiredException )
 		{
 			$_errorInfo['location'] = $ex->getRedirectUri();
 		}

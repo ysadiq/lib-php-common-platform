@@ -50,8 +50,10 @@ class RestException extends PlatformServiceException implements HttpResponse
 	 * @param int    $status  HTTP status code, such as 404, 500, etc.
 	 * @param string $message error message
 	 * @param int    $code    error code
+	 * @param mixed  $previous
+	 * @param mixed  $context Additional information for downstream consumers
 	 */
-	public function __construct( $status, $message = null, $code = null )
+	public function __construct( $status, $message = null, $code = null, $previous = null, $context = null )
 	{
 		$this->_statusCode = $status;
 		$code = $code ? : $this->_statusCode;
@@ -62,7 +64,7 @@ class RestException extends PlatformServiceException implements HttpResponse
 			$message = Inflector::camelize( Inflector::neutralize( $_name ), '_', true );
 		}
 
-		parent::__construct( $message, $code );
+		parent::__construct( $message, $code, $previous, $context );
 
 		Log::error( 'REST Exception #' . $code . ' > ' . $message );
 	}

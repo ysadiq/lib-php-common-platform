@@ -29,9 +29,11 @@ class NotFoundException extends RestException
 	 *
 	 * @param string  $message error message
 	 * @param integer $code    error code
+	 * @param mixed   $previous
+	 * @param mixed   $context Additional information for downstream consumers
 	 */
-	public function __construct( $message = null, $code = null )
+	public function __construct( $message = null, $code = null, $previous = null, $context = null )
 	{
-		parent::__construct( static::NotFound, $message, $code ? : static::NotFound );
+		parent::__construct( static::NotFound, $message, $code ? : static::NotFound, $previous, $context );
 	}
 }

@@ -440,7 +440,7 @@ class SqlDbSvc extends BaseDbSvc
 			if ( !empty( $_errors ) )
 			{
 				$_msg = array( 'errors' => $_errors, 'ids' => $_ids );
-				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+				throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 			}
 
 			$_results = array();
@@ -566,7 +566,7 @@ class SqlDbSvc extends BaseDbSvc
 			if ( !empty( $_errors ) )
 			{
 				$_msg = array( 'errors' => $_errors, 'ids' => $_ids );
-				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+				throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 			}
 
 			$_results = array();
@@ -728,7 +728,7 @@ class SqlDbSvc extends BaseDbSvc
 			if ( !empty( $_errors ) )
 			{
 				$_msg = array( 'errors' => $_errors, 'ids' => $ids );
-				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+				throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 			}
 
 			$_results = array();
@@ -965,7 +965,7 @@ class SqlDbSvc extends BaseDbSvc
 			if ( !empty( $_errors ) )
 			{
 				$_msg = array( 'errors' => $_errors, 'ids' => $ids );
-				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+				throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 			}
 
 			$_results = array();
