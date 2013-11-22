@@ -341,7 +341,16 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _respond()
 	{
-		$_result = DataFormat::reformatData( $this->_response, $this->_nativeFormat, $this->_outputFormat );
+		$_result = $this->_response;
+
+		if ( null === $this->_nativeFormat && DataFormat::CSV == $this->_outputFormat )
+		{
+			// need to strip 'record' wrapper before reformatting to csv
+			//@todo move this logic elsewhere
+			$_result = Option::get( $_result, 'record', $_result );
+		}
+
+		$_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
 
 		if ( !empty( $this->_outputFormat ) )
 		{
