@@ -341,20 +341,21 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	{
 		$_payload = $this->_determineRequestedResource( $_ids, $_records );
 		$_rollback = Option::getBool( $_payload, 'rollback' );
+		$_continue = Option::getBool( $_payload, 'continue' );
 
 		if ( !empty( $this->_resourceId ) )
 		{
-			return ResourceStore::bulkUpdateById( $this->_resourceId, $_payload, $_rollback, null, null, true );
+			return ResourceStore::bulkUpdateById( $this->_resourceId, $_payload, $_rollback, null, null, true, $_continue );
 		}
 
 		if ( !empty( $_ids ) )
 		{
-			return ResourceStore::bulkUpdateById( $_ids, $_payload, $_rollback );
+			return ResourceStore::bulkUpdateById( $_ids, $_payload, $_rollback, null, null, false, $_continue );
 		}
 
 		if ( !empty( $_records ) )
 		{
-			return ResourceStore::bulkUpdate( $_records, $_rollback );
+			return ResourceStore::bulkUpdate( $_records, $_rollback, null, null, false, $_continue );
 		}
 
 		if ( empty( $_payload ) )
@@ -399,7 +400,9 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 		if ( !empty( $_records ) )
 		{
-			return ResourceStore::insert( $_records, Option::getBool( $_payload, 'rollback' ) );
+			$_rollback = Option::getBool( $_payload, 'rollback' );
+			$_continue = Option::getBool( $_payload, 'continue' );
+			return ResourceStore::insert( $_records, $_rollback, null, null, $_continue );
 		}
 
 		if ( empty( $_payload ) )
@@ -425,14 +428,16 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 		$_payload = $this->_determineRequestedResource( $_ids, $_records );
 
+		$_rollback = Option::getBool( $_payload, 'rollback' );
+		$_continue = Option::getBool( $_payload, 'continue' );
 		if ( !empty( $_ids ) )
 		{
-			return ResourceStore::bulkDeleteById( $_ids );
+			return ResourceStore::bulkDeleteById( $_ids, $_rollback, null, null, false, $_continue );
 		}
 
 		if ( !empty( $_records ) )
 		{
-			return ResourceStore::delete( $_records );
+			return ResourceStore::delete( $_records, $_rollback, null, null, $_continue );
 		}
 
 		if ( empty( $_payload ) )

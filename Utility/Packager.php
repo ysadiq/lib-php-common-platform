@@ -294,7 +294,7 @@ class Packager
 		try
 		{
 			ResourceStore::setResourceName( 'app' );
-			$returnData = ResourceStore::insert( $_record, 'id,api_name' );
+			$returnData = ResourceStore::insertOne( $_record, 'id,api_name' );
 		}
 		catch ( \Exception $ex )
 		{

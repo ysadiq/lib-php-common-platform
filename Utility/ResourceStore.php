@@ -140,25 +140,25 @@ class ResourceStore implements UtilityLike
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
+	 * @param bool   $continue_on_error
 	 *
 	 * @return array
 	 */
-	public static function insert( $records, $rollback = false, $fields = null, $extras = null )
+	public static function insert( $records, $rollback = false, $fields = null, $extras = null, $continue_on_error = false )
 	{
-		return static::bulkInsert( $records, $rollback, $fields, $extras );
+		return static::bulkInsert( $records, $rollback, $fields, $extras, false, $continue_on_error );
 	}
 
 	/**
 	 * @param array  $record
-	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @return array
 	 */
-	public static function insertOne( $record, $rollback = false, $fields = null, $extras = null )
+	public static function insertOne( $record, $fields = null, $extras = null )
 	{
-		return static::bulkInsert( array( $record ), $rollback, $fields, $extras, true );
+		return static::bulkInsert( array( $record ), false, $fields, $extras, true );
 	}
 
 	/**
@@ -166,37 +166,39 @@ class ResourceStore implements UtilityLike
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
+	 * @param bool   $continue_on_error
 	 *
 	 * @return array
 	 */
-	public static function update( $records, $rollback = false, $fields = null, $extras = null )
+	public static function update( $records, $rollback = false, $fields = null, $extras = null, $continue_on_error = false )
 	{
-		return static::bulkUpdate( $records, $rollback, $fields, $extras );
+		return static::bulkUpdate( $records, $rollback, $fields, $extras, false, $continue_on_error );
 	}
 
 	/**
 	 * @param array  $record
-	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @return array
 	 */
-	public static function updateOne( $record, $rollback = false, $fields = null, $extras = null )
+	public static function updateOne( $record, $fields = null, $extras = null )
 	{
-		return static::bulkUpdate( array( $record ), $rollback, $fields, $extras, true );
+		return static::bulkUpdate( array( $record ), false, $fields, $extras, true );
 	}
 
 	/**
 	 * @param array  $records
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
+	 * @param bool   $continue_on_error
 	 *
 	 * @return array
 	 */
-	public static function delete( $records, $fields = null, $extras = null )
+	public static function delete( $records, $rollback = false, $fields = null, $extras = null, $continue_on_error = false )
 	{
-		return static::bulkDelete( $records, true, $fields, $extras );
+		return static::bulkDelete( $records, $rollback, $fields, $extras, false, $continue_on_error );
 	}
 
 	/**
@@ -208,7 +210,7 @@ class ResourceStore implements UtilityLike
 	 */
 	public static function deleteOne( $record, $fields = null, $extras = null )
 	{
-		return static::bulkDelete( array( $record ), true, $fields, $extras, true );
+		return static::bulkDelete( array( $record ), false, $fields, $extras, true );
 	}
 
 	/**
