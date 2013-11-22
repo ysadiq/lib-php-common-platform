@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Oasys\Enums\Flows;
 use DreamFactory\Oasys\Oasys;
+use DreamFactory\Oasys\Providers\BaseOAuthProvider;
 use DreamFactory\Oasys\Providers\BaseProvider;
 use DreamFactory\Oasys\Stores\Session;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -37,6 +38,8 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Curl;
+use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Storage;
@@ -84,9 +87,13 @@ class Portal extends BaseSystemRestService
 	 */
 	protected $_urlParameters;
 	/**
-	 * @var  ProviderUserStore
+	 * @var ProviderUserStore
 	 */
 	protected $_store;
+	/**
+	 * @var string The requested control command
+	 */
+	protected $_controlCommand;
 
 	//*************************************************************************
 	//* Methods
@@ -97,14 +104,58 @@ class Portal extends BaseSystemRestService
 	 */
 	public function __construct( $settings = array() )
 	{
-		if ( null !== ( $_flow = Option::request( 'interactive', null, true ) ) )
-		{
-			$settings['interactive'] = ( Flows::CLIENT_SIDE == $_flow );
-		}
+		$settings['interactive'] = Option::getBool( $_REQUEST, 'interactive', Option::getBool( $_REQUEST, 'flow_type', $this->_interactive, true ), true );
+		$this->_urlParameters = $this->_parseRequest();
+		$this->_controlCommand = FilterInput::request( 'control', null, FILTER_SANITIZE_STRING );
 
 		parent::__construct( $settings );
 
 		$this->_mapServices();
+	}
+
+	/**
+	 * Handle a service request
+	 *
+	 * Comes in like this:
+	 *
+	 *                Resource        Action
+	 * /rest/portal/{service_name}/{service request string}
+	 *
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
+	 * @return bool
+	 */
+	protected function _handleResource()
+	{
+		if ( empty( $this->_resource ) && $this->_action == HttpMethod::Get )
+		{
+			$_providers = array();
+
+			foreach ( $this->_serviceMap as $_row )
+			{
+				$_providers[] = array(
+					'id'            => $_row['id'],
+					'api_name'      => $_row['api_name'],
+					'provider_name' => $_row['provider_name'],
+					'config_text'   => $_row['config_text'],
+				);
+			}
+
+			return array( 'resource' => $_providers );
+		}
+
+		//	1. Validate portal
+		$this->_validatePortal();
+
+		//	2. Authorize user
+		$this->_validateRequest();
+
+		//	3. Build provider
+		$_provider = $this->_getProvider();
+
+		//	4. Dispatch request
+		return $this->_dispatchRequest( $_provider );
 	}
 
 	/**
@@ -116,8 +167,6 @@ class Portal extends BaseSystemRestService
 
 		//	Clean up the resource path
 		$this->_resourcePath = trim( str_replace( $this->_apiName, null, $this->_resourcePath ), ' /' );
-		$this->_interactive = Option::getBool( $_REQUEST, 'interactive', $this->_interactive, true );
-		$this->_urlParameters = $this->_parseRequest();
 	}
 
 	/**
@@ -229,8 +278,6 @@ class Portal extends BaseSystemRestService
 				'Portal "' . $this->_resource . '" not found. Acceptable portals are: ' . implode( ', ', array_keys( $this->_serviceMap ) )
 			);
 		}
-
-		Log::debug( 'Portal service "' . $this->_resource . '" called' );
 	}
 
 	/**
@@ -264,7 +311,7 @@ class Portal extends BaseSystemRestService
 		$this->_requestPayload = array_merge( $this->_urlParameters, Option::clean( RestData::getPostedData( false, true ) ) );
 
 		//	Set the flow type
-		$_config['flow_type'] = Option::get( $_REQUEST, 'flow_type', $this->_interactive ? Flows::CLIENT_SIDE : Flows::SERVER_SIDE );
+		$_config['flow_type'] = $this->_interactive ? Flows::CLIENT_SIDE : Flows::SERVER_SIDE;
 
 		//	Set the store for this portal
 		if ( empty( $this->_store ) )
@@ -283,48 +330,52 @@ class Portal extends BaseSystemRestService
 	}
 
 	/**
-	 * Handle a service request
+	 * @param BaseOAuthProvider|BaseProvider $provider
 	 *
-	 * Comes in like this:
-	 *
-	 *                Resource        Action
-	 * /rest/portal/{service_name}/{service request string}
-	 *
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
-	 * @return bool
+	 * @return array
 	 */
-	protected function _handleResource()
+	protected function _handleAuthorizeUrl( $provider )
 	{
-		if ( empty( $this->_resource ) && $this->_action == HttpMethod::Get )
+		return array(
+			'authorize_url' => $provider->getAuthorizationUrl(),
+		);
+	}
+
+	/**
+	 * @param BaseProvider $provider
+	 *
+	 * @return mixed
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 */
+	protected function _dispatchRequest( $provider )
+	{
+		$this->_cleanRequestPayload();
+
+		if ( !empty( $this->_controlCommand ) )
 		{
-			$_providers = array();
+			$_method = str_replace( static::ACTION_TOKEN, Inflector::deneutralize( $this->_controlCommand ), static::DEFAULT_HANDLER_PATTERN );
 
-			foreach ( $this->_serviceMap as $_row )
+			if ( is_callable( array( $this, $_method ) ) )
 			{
-				$_providers[] = array(
-					'id'            => $_row['id'],
-					'api_name'      => $_row['api_name'],
-					'provider_name' => $_row['provider_name'],
-					'config_text'   => $_row['config_text'],
-				);
+				return call_user_func( array( $this, $_method ), $provider );
 			}
-
-			return array( 'resource' => $_providers );
 		}
 
-		//	1. Validate portal
-		$this->_validatePortal();
+		return $this->_relayRequest( $provider );
+	}
 
-		//	2. Authorize user
-		$this->_validateRequest();
-
-		//	3. Build provider
-		$_provider = $this->_getProvider();
-
-		//	3. Relay call
-		if ( $_provider->authorized( true ) )
+	/**
+	 * Relays an inbound portal request to the desired provider
+	 *
+	 * @param BaseProvider $provider
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \Exception
+	 * @return mixed
+	 */
+	protected function _relayRequest( $provider )
+	{
+		if ( $provider->authorized( true ) )
 		{
 			//	The REAL request
 			$_resource = '/' . implode( '/', array_slice( $this->_uriPath, 3 ) );
@@ -346,29 +397,30 @@ class Portal extends BaseSystemRestService
 				}
 
 				//	Update user profile while we're here...
-				$this->_updateUserProfile( $_provider );
-
-				//	Go back to whence you came!
-				header( 'Location: ' . $_origin );
-				Pii::end();
+				$this->_updateUserProfile( $provider );
 			}
 
-			Log::debug( 'Requesting portal resource "' . $_resource . '"' );
+//			Log::debug( 'Requesting portal resource "' . $_resource . '"' );
 
 			try
 			{
-				$this->_cleanRequestPayload();
-
-				$_response = $_provider->fetch( $_resource, $this->_requestPayload, $this->_action );
+				$_response = $provider->fetch( $_resource, $this->_requestPayload, $this->_action );
 
 				if ( false === $_response )
 				{
 					throw new InternalServerErrorException( 'Network error', $_response['code'] );
 				}
 
-				if ( empty( $_response ) || $_provider->getLastResponseCode() > HttpResponse::PartialContent )
+				if ( empty( $_response ) || $provider->getLastResponseCode() > HttpResponse::PartialContent )
 				{
-					throw new RestException( $_provider->getLastResponseCode(), $_provider->getLastError() );
+					if ( isset( $_response, $_response['result'], $_response['result']->error ) )
+					{
+						$_code = Option::get( $_response['result']->error, 'code', $provider->getLastResponseCode() );
+						$_message = Option::get( $_response['result']->error, 'message', $provider->getLastError() );
+						throw new RestException( $provider->getLastResponseCode(), $_message . ' (' . $_code . ')' );
+					}
+
+					throw new RestException( $provider->getLastResponseCode(), $provider->getLastError() );
 				}
 
 				return $_response;
@@ -378,8 +430,7 @@ class Portal extends BaseSystemRestService
 				Log::error( 'Portal request exception: ' . $_ex->getMessage() );
 
 				//	No soup for you!
-				header( 'Location: /?error=' . urlencode( $_ex->getMessage() ) );
-				Pii::end();
+				throw $_ex;
 			}
 		}
 
@@ -388,28 +439,43 @@ class Portal extends BaseSystemRestService
 
 	/**
 	 * Cleans out the request parameters from the payload
+	 *
+	 * @return array|bool
 	 */
 	protected function _cleanRequestPayload()
 	{
+		//	This is a list of possible query string options to be removed from the request payload
+		static $_internalOptions = array( 'dfpapikey', 'path', 'interactive', 'flow_type', 'app_name', 'control', '_', 'path' );
+
 		if ( empty( $this->_requestPayload ) )
 		{
-			return;
+			return false;
 		}
 
 		//	Merge in request stuff if there
-		$this->_requestPayload = array_merge( $this->_requestPayload, is_array( $_REQUEST ) ? $_REQUEST : array() );
+		$_payload = array_merge( $this->_requestPayload, is_array( $_REQUEST ) ? $_REQUEST : array() );
 
-		foreach ( $this->_requestPayload as $_key => $_value )
+		$_removed = $_rebuild = array();
+
+		foreach ( $_payload as $_key => $_value )
 		{
-			switch ( strtolower( $_key ) )
+			if ( !in_array( Inflector::neutralize( $_key ), $_internalOptions ) )
 			{
-				case 'dfpapikey':
-				case 'path':
-				case 'interactive':
-					unset( $this->_requestPayload[$_key] );
-					break;
+				$_rebuild[$_key] = $_value;
+			}
+			else
+			{
+				$_removed[] = $_key;
 			}
 		}
+
+		if ( !empty( $_removed ) )
+		{
+//			Log::debug( 'Removed reserved keys from payload: ' . implode( ', ', $_removed ) );
+		}
+
+		//	Set it and forget it!
+		return $this->_requestPayload = $_rebuild;
 	}
 
 	/**
@@ -425,7 +491,7 @@ class Portal extends BaseSystemRestService
 
 			if ( !empty( $_profile ) )
 			{
-				return $this->_store->setProviderUserId( $_profile->getUserId() )->merge( $provider->getConfigForStorage() )->sync();
+				return $provider->setConfig( 'provider_user_id', $_profile->getUserId() );
 			}
 		}
 
@@ -443,7 +509,7 @@ class Portal extends BaseSystemRestService
 			throw new ForbiddenException( 'No valid session for user.', 401 );
 		}
 
-		Log::info( 'Portal request validated: ' . $_user->email );
+		Log::info( 'Portal request "' . $this->_resource . '/' . implode( '/', array_slice( $this->_uriPath, 3 ) ) . '" validated: ' . $_user->email );
 
 		$this->_portalUser = $_user;
 	}
@@ -622,6 +688,26 @@ class Portal extends BaseSystemRestService
 	public function getStore()
 	{
 		return $this->_store;
+	}
+
+	/**
+	 * @param string $controlCommand
+	 *
+	 * @return Portal
+	 */
+	public function setControlCommand( $controlCommand )
+	{
+		$this->_controlCommand = $controlCommand;
+
+		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getControlCommand()
+	{
+		return $this->_controlCommand;
 	}
 
 }

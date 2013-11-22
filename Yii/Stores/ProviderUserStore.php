@@ -127,10 +127,7 @@ class ProviderUserStore extends BaseOasysStore
 
 		try
 		{
-			$_creds->save();
-			Log::debug( 'User credentials stored' );
-
-			return true;
+			return $_creds->save();
 		}
 		catch ( \CDbException $_ex )
 		{

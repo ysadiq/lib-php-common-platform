@@ -36,7 +36,6 @@ use Kisma\Core\Utility\Option;
 /**
  * BasePlatformRestService
  * A base class for all DSP REST services
- *
  */
 abstract class BasePlatformRestService extends BasePlatformService implements RestServiceLike
 {
@@ -157,8 +156,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	}
 
 	/**
-	 * @param string $resource Optional resource for the REST call
-	 * @param string $action HTTP action for this request
+	 * @param string $resource      Optional resource for the REST call
+	 * @param string $action        HTTP action for this request
 	 * @param string $output_format Optional override for detecting output format
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
@@ -342,25 +341,16 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _respond()
 	{
-		$_result = $this->_response;
-		if ( ( null == $this->_nativeFormat ) && ( 'csv' == $this->_outputFormat ) )
+		$_result = DataFormat::reformatData( $this->_response, $this->_nativeFormat, $this->_outputFormat );
+
+		if ( !empty( $this->_outputFormat ) )
 		{
-			// need to strip 'record' wrapper before reformatting to csv
-			// todo move this logic elsewhere
-			$_result = Option::get( $_result, 'record', $_result );
+			//	No return from here...
+			RestResponse::sendResults( $_result, $this->_responseCode, $this->_outputFormat, $this->_outputAsFile );
 		}
 
-		$_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
-
-		if ( empty( $this->_outputFormat ) )
-		{
-			// native arrays must be staying local, just return
-			return $_result;
-		}
-
-		RestResponse::sendResults( $_result, $this->_responseCode, $this->_outputFormat, $this->_outputAsFile );
-
-		return null; // to keep editor happy, processing dies in response
+		//	Native arrays must stay local, just return
+		return $_result;
 	}
 
 	/**
@@ -372,6 +362,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	{
 		// 	Determine application if any
 		$_appName = FilterInput::request( 'app_name', null, FILTER_SANITIZE_STRING );
+
 		if ( empty( $_appName ) )
 		{
 			if ( null === ( $_appName = Option::get( $_SERVER, 'HTTP_X_DREAMFACTORY_APPLICATION_NAME' ) ) )
@@ -405,13 +396,17 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		$GLOBALS['app_name'] = $_appName;
 	}
 
+	/**
+	 * @param string $output_format
+	 */
 	protected function _detectResponseMembers( $output_format = null )
 	{
-		// determine output format, inner and outer formatting if necessary
+		//	Determine output format, inner and outer formatting if necessary
 		$this->_outputFormat = RestResponse::detectResponseFormat( $output_format, $this->_responseFormat );
 
-		// determine if output as file is enabled
+		//	Determine if output as file is enabled
 		$_file = FilterInput::request( 'file', null, FILTER_SANITIZE_STRING );
+
 		if ( !empty( $_file ) )
 		{
 			if ( DataFormat::boolval( $_file ) )

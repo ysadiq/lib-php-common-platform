@@ -25,6 +25,7 @@ use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
@@ -276,16 +277,33 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			return ResourceStore::bulkSelectById( $_ids );
 		}
 
-		$_criteria = null;
+		//	Build our criteria
+		$_criteria = array(
+			'params' => array(),
+		);
 
 		if ( !empty( $this->_fields ) )
 		{
 			$_criteria['select'] = $this->_fields;
 		}
 
+		if ( null !== ( $_value = Option::get( $_payload, 'params' ) ) )
+		{
+			$_criteria['params'] = $_value;
+		}
+
 		if ( null !== ( $_value = Option::get( $_payload, 'filter' ) ) )
 		{
 			$_criteria['condition'] = $_value;
+
+			//	Add current user ID into parameter array if in condition, but not specified.
+			if ( false !== stripos( $_value, ':user_id' ) )
+			{
+				if ( !isset( $_criteria['params'][':user_id'] ) )
+				{
+					$_criteria['params'][':user_id'] = Session::getCurrentUserId();
+				}
+			}
 		}
 
 		if ( null !== ( $_value = Option::get( $_payload, 'limit' ) ) )
