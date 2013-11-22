@@ -376,7 +376,9 @@ class ResourceStore implements UtilityLike
 						throw $_ex;
 					}
 
-					$_errors[$_key] = $_ex->getMessage();
+					// track the index of the error and copy error to results
+					$_errors[] = $_key;
+					$_response[$_key] = $_ex->getMessage();
 					if ( !$continue_on_error )
 					{
 						break;
@@ -393,16 +395,23 @@ class ResourceStore implements UtilityLike
 			throw new InternalServerErrorException( $_ex->getMessage(), $_ex->getCode() );
 		}
 
-		//	Commit
-		if ( $_transaction )
-		{
-			$_transaction->commit();
-		}
-
 		if ( !empty( $_errors ) )
 		{
 			$_msg = array( 'errors' => $_errors, 'record' => $_response );
 			throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
+		}
+
+		//	Commit
+		if ( $_transaction )
+		{
+			try
+			{
+				$_transaction->commit();
+			}
+			catch ( \Exception $_ex )
+			{
+				throw new InternalServerErrorException( $_ex->getMessage(), $_ex->getCode() );
+			}
 		}
 
 		return $single_row ? current( $_response ) : array( 'record' => $_response );
@@ -499,7 +508,9 @@ class ResourceStore implements UtilityLike
 						throw $_ex;
 					}
 
-					$_errors[$_key] = $_ex->getMessage();
+					// track the index of the error and copy error to results
+					$_errors[] = $_key;
+					$_response[$_key] = $_ex->getMessage();
 					if ( !$continue_on_error )
 					{
 						break;
@@ -554,38 +565,40 @@ class ResourceStore implements UtilityLike
 
 		try
 		{
-		//	Start a transaction
+			//	Start a transaction
 			if ( !$single_row && $rollback )
-		{
-			$_transaction = Pii::db()->beginTransaction();
-		}
-
-		foreach ( $_ids as $_key => $_id )
-		{
-			try
 			{
-				$_response[$_key] = static::_deleteInternal( $_id, $fields, $extras );
+				$_transaction = Pii::db()->beginTransaction();
 			}
-			catch ( \Exception $_ex )
+
+			foreach ( $_ids as $_key => $_id )
 			{
+				try
+				{
+					$_response[$_key] = static::_deleteInternal( $_id, $fields, $extras );
+				}
+				catch ( \Exception $_ex )
+				{
 					if ( $single_row )
 					{
 						throw $_ex;
 					}
 
 					if ( $rollback && $_transaction )
-				{
+					{
 						$_transaction->rollBack();
 						throw $_ex;
 					}
 
-					$_errors[$_key] = $_ex->getMessage();
+					// track the index of the error and copy error to results
+					$_errors[] = $_key;
+					$_response[$_key] = $_ex->getMessage();
 					if ( !$continue_on_error )
 					{
 						break;
+					}
 				}
 			}
-		}
 		}
 		catch ( RestException $_ex )
 		{
@@ -635,32 +648,32 @@ class ResourceStore implements UtilityLike
 
 		try
 		{
-		//	Start a transaction
+			//	Start a transaction
 			if ( !$single_row && $rollback )
-		{
-			$_transaction = Pii::db()->beginTransaction();
-		}
-
-		$_pk = static::model()->tableSchema->primaryKey;
-
-		foreach ( $records as $_key => $_record )
-		{
-			// records could be an array of ids or records containing an id field-value
-
-			if ( is_array( $_record ) )
 			{
-				$_id = Option::get( $_record, $_pk );
+				$_transaction = Pii::db()->beginTransaction();
 			}
-			else
+
+			$_pk = static::model()->tableSchema->primaryKey;
+
+			foreach ( $records as $_key => $_record )
 			{
-				$_id = $_record;
-			}
-			try
-			{
-				$_response[$_key] = static::_deleteInternal( $_id, $fields, $extras );
-			}
-			catch ( \Exception $_ex )
-			{
+				// records could be an array of ids or records containing an id field-value
+
+				if ( is_array( $_record ) )
+				{
+					$_id = Option::get( $_record, $_pk );
+				}
+				else
+				{
+					$_id = $_record;
+				}
+				try
+				{
+					$_response[$_key] = static::_deleteInternal( $_id, $fields, $extras );
+				}
+				catch ( \Exception $_ex )
+				{
 					if ( $single_row )
 					{
 						throw $_ex;
@@ -672,13 +685,15 @@ class ResourceStore implements UtilityLike
 						throw $_ex;
 					}
 
-					$_errors[$_key] = $_ex->getMessage();
+					// track the index of the error and copy error to results
+					$_errors[] = $_key;
+					$_response[$_key] = $_ex->getMessage();
 					if ( !$continue_on_error )
 					{
 						break;
 					}
+				}
 			}
-		}
 		}
 		catch ( RestException $_ex )
 		{

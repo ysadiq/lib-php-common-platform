@@ -392,9 +392,9 @@ class SqlDbSvc extends BaseDbSvc
 						throw new InternalServerErrorException( "Record [$_key] insert failed for table '$table'." );
 					}
 
+					$_id = null;
 					if ( !empty( $_idFieldsInfo ) )
 					{
-						$_id = null;
 						foreach ( $_idFieldsInfo as $_info )
 						{
 							// todo support multi-field keys
@@ -410,8 +410,9 @@ class SqlDbSvc extends BaseDbSvc
 						}
 
 						$this->updateRelations( $table, $_record, $_id, $_relatedInfo );
-						$_ids[$_key] = $_id;
 					}
+
+					$_ids[$_key] = $_id;
 				}
 				catch ( \Exception $ex )
 				{
@@ -419,12 +420,15 @@ class SqlDbSvc extends BaseDbSvc
 					{
 						throw $ex;
 					}
+
 					if ( $_rollback && $_transaction )
 					{
 						$_transaction->rollBack();
 						throw $ex;
 					}
-					$_errors[$_key] = $ex->getMessage();
+
+					$_errors[] = $_key;
+					$_ids[$_key] = $ex->getMessage();
 					if ( !$_continue )
 					{
 						break;
@@ -550,7 +554,8 @@ class SqlDbSvc extends BaseDbSvc
 						throw $ex;
 					}
 
-					$_errors[$_key] = $ex->getMessage();
+					$_errors[] = $_key;
+					$_ids[$_key] = $ex->getMessage();
 					if ( !$_continue )
 					{
 						break;
@@ -712,7 +717,8 @@ class SqlDbSvc extends BaseDbSvc
 						throw $ex;
 					}
 
-					$_errors[$_key] = $ex->getMessage();
+					$_errors[] = $_key;
+					$ids[$_key] = $ex->getMessage();
 					if ( !$_continue )
 					{
 						break;
@@ -949,7 +955,8 @@ class SqlDbSvc extends BaseDbSvc
 						throw $ex;
 					}
 
-					$_errors[$_key] = $ex->getMessage();
+					$_errors[] = $_key;
+					$ids[$_key] = $ex->getMessage();
 					if ( !$_continue )
 					{
 						break;

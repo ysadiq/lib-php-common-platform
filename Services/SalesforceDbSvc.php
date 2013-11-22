@@ -476,7 +476,8 @@ class SalesforceDbSvc extends BaseDbSvc
 					throw $ex;
 				}
 
-				$_errors[$_key] = $ex->getMessage();
+				$_errors[] = $_key;
+				$_ids[$_key] = $ex->getMessage();
 				if ( !$_continue )
 				{
 					break;
@@ -560,7 +561,8 @@ class SalesforceDbSvc extends BaseDbSvc
 					throw $ex;
 				}
 
-				$_errors[$_key] = $ex->getMessage();
+				$_errors[] = $_key;
+				$_ids[$_key] = $ex->getMessage();
 				if ( !$_continue )
 				{
 					break;
@@ -686,7 +688,8 @@ class SalesforceDbSvc extends BaseDbSvc
 						throw $ex;
 					}
 
-					$_errors[$_key] = $ex->getMessage();
+					$_errors[] = $_key;
+					$ids[$_key] = $ex->getMessage();
 					if ( !$_continue )
 					{
 						break;
@@ -856,7 +859,8 @@ class SalesforceDbSvc extends BaseDbSvc
 						throw $ex;
 					}
 
-					$_errors[$_key] = $ex->getMessage();
+					$_errors[] = $_key;
+					$ids[$_key] = $ex->getMessage();
 					if ( !$_continue )
 					{
 						break;
