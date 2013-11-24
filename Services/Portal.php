@@ -395,9 +395,6 @@ class Portal extends BaseSystemRestService
 					Log::error( 'Received inbound relay but Oasys key mismatch: ' . $_REQUEST['oasys'] . ' != ' . sha1( $_origin ) );
 					throw new BadRequestException( 'Possible forged token.' );
 				}
-
-				//	Update user profile while we're here...
-				$this->_updateUserProfile( $provider );
 			}
 
 //			Log::debug( 'Requesting portal resource "' . $_resource . '"' );
@@ -476,26 +473,6 @@ class Portal extends BaseSystemRestService
 
 		//	Set it and forget it!
 		return $this->_requestPayload = $_rebuild;
-	}
-
-	/**
-	 * @param BaseProvider $provider
-	 *
-	 * @return bool
-	 */
-	protected function _updateUserProfile( $provider )
-	{
-		if ( !empty( $this->_store ) )
-		{
-			$_profile = $provider->getUserData();
-
-			if ( !empty( $_profile ) )
-			{
-				return $provider->setConfig( 'provider_user_id', $_profile->getUserId() );
-			}
-		}
-
-		return false;
 	}
 
 	/**
