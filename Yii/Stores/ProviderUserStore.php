@@ -121,7 +121,17 @@ class ProviderUserStore extends BaseOasysStore
 			$_creds->auth_text = array();
 		}
 
-		$_creds->provider_user_id = $this->_providerUserId;
+		if ( empty( $this->_providerUserId ) )
+		{
+			//	Check the bag...
+			$this->_providerUserId = $this->get( 'provider_user_id' );
+		}
+
+		if ( !empty( $this->_providerUserId ) )
+		{
+			$_creds->provider_user_id = $this->_providerUserId;
+		}
+
 		$_creds->auth_text = array_merge( !is_array( $_creds->auth_text ) ? array() : $_creds->auth_text, $this->contents() );
 		$_creds->last_use_date = date( 'c' );
 
@@ -227,5 +237,4 @@ class ProviderUserStore extends BaseOasysStore
 	{
 		return $this->_userId;
 	}
-
 }
