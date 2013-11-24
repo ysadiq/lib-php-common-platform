@@ -22,7 +22,6 @@ namespace DreamFactory\Platform\Yii\Stores;
 use DreamFactory\Oasys\Stores\BaseOasysStore;
 use DreamFactory\Platform\Yii\Models\ProviderUser;
 use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
 
 /**
  * ProviderUserStore.php
@@ -60,13 +59,12 @@ class ProviderUserStore extends BaseOasysStore
 	 */
 	public function __construct( $userId, $providerId, $contents = array() )
 	{
-		$this->_providerId = $providerId;
-		$this->_userId = $userId;
-		$this->_providerUserId = $this->_providerUserId ? : Option::get( $contents, 'provider_user_id', null, true );
+		parent::__construct( $contents );
+
+		$this->_providerId = $providerId ? : $this->_providerUserId;
+		$this->_userId = $userId ? : $this->_userId;
 
 		$this->_load();
-
-		parent::__construct( $contents );
 	}
 
 	/**
@@ -113,6 +111,13 @@ class ProviderUserStore extends BaseOasysStore
 	 */
 	public function sync()
 	{
+		if ( empty( $this->_providerUserId ) )
+		{
+			Log::info( 'Provider user not stored. Need provider\'s ID for user. See ProviderUserStore::setProviderUserId().' );
+
+			return true;
+		}
+
 		if ( null === ( $_creds = $this->_load( false ) ) )
 		{
 			$_creds = new ProviderUser();
