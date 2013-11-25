@@ -104,7 +104,8 @@ class Portal extends BaseSystemRestService
 	 */
 	public function __construct( $settings = array() )
 	{
-		$settings['interactive'] = Option::getBool( $_REQUEST, 'interactive', Option::getBool( $_REQUEST, 'flow_type', $this->_interactive, true ), true );
+		$settings['interactive'] =
+			Option::getBool( $_REQUEST, 'interactive', Option::getBool( $_REQUEST, 'flow_type', $this->_interactive, true ), true );
 		$this->_urlParameters = $this->_parseRequest();
 		$this->_controlCommand = FilterInput::request( 'control', null, FILTER_SANITIZE_STRING );
 
@@ -281,7 +282,10 @@ class Portal extends BaseSystemRestService
 	}
 
 	/**
-	 * Creates the configuration settings, sets the Oasys store and returns a provider
+	 * Creates the configuration settings, sets the Oasys store and returns a provider.
+	 *
+	 * Looks for a local config file in /path/to/config/portal/{provider_id}.config.php and merges
+	 * with default and stored configurations.
 	 *
 	 * @return BaseProvider
 	 */
@@ -326,7 +330,6 @@ class Portal extends BaseSystemRestService
 		Oasys::setStore( $this->_store, true );
 
 		return Oasys::getProvider( $this->_resource, Oasys::getStore()->get() );
-
 	}
 
 	/**
@@ -384,6 +387,7 @@ class Portal extends BaseSystemRestService
 			if ( isset( $_REQUEST, $_REQUEST['code'], $_REQUEST['state'], $_REQUEST['oasys'] ) )
 			{
 				$_state = Storage::defrost( Option::request( 'state' ) );
+				$_referrer = Option::getDeep( $_state, 'request', 'referrer' );
 
 				if ( null === ( $_origin = Option::get( $_state, 'origin' ) ) )
 				{
@@ -394,6 +398,13 @@ class Portal extends BaseSystemRestService
 				{
 					Log::error( 'Received inbound relay but Oasys key mismatch: ' . $_REQUEST['oasys'] . ' != ' . sha1( $_origin ) );
 					throw new BadRequestException( 'Possible forged token.' );
+				}
+
+				//	Referred? Redirect!
+				if ( !empty( $_referrer ) )
+				{
+					header( 'Location: ' . $_referrer );
+					die();
 				}
 			}
 
@@ -486,7 +497,9 @@ class Portal extends BaseSystemRestService
 			throw new ForbiddenException( 'No valid session for user.', 401 );
 		}
 
-		Log::info( 'Portal request "' . $this->_resource . '/' . implode( '/', array_slice( $this->_uriPath, 3 ) ) . '" validated: ' . $_user->email );
+		Log::info(
+			'Portal request "' . $this->_resource . '/' . implode( '/', array_slice( $this->_uriPath, 3 ) ) . '" validated: ' . $_user->email
+		);
 
 		$this->_portalUser = $_user;
 	}
@@ -512,7 +525,7 @@ class Portal extends BaseSystemRestService
 			/** @var Provider[] $_providers */
 			foreach ( $_providers as $_provider )
 			{
-				$_services[] = $_provider->getAttributes();
+				$_services[$_provider->api_name] = $_provider->getAttributes();
 				unset( $_provider );
 			}
 
@@ -539,11 +552,7 @@ class Portal extends BaseSystemRestService
 //			Log::debug( 'Portal aliases set: ' . print_r( $_aliases, true ) );
 		}
 
-		foreach ( $_services as $_service )
-		{
-			$this->_serviceMap[$_service['api_name']] = $_service;
-		}
-
+		$this->_serviceMap = $_services;
 		$this->_aliases = $_aliases;
 	}
 
@@ -686,5 +695,4 @@ class Portal extends BaseSystemRestService
 	{
 		return $this->_controlCommand;
 	}
-
 }
