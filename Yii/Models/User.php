@@ -48,6 +48,7 @@ use Kisma\Core\Utility\Log;
  * @property boolean    $is_active
  * @property boolean    $is_sys_admin
  * @property string     $confirm_code
+ * @property boolean    $confirmed
  * @property integer    $default_app_id
  * @property integer    $role_id
  * @property string     $security_question
@@ -77,6 +78,10 @@ class User extends BasePlatformSystemModel
 	//	Members
 	//*************************************************************************
 
+	/**
+	 * @var bool Is this service a system service that should not be deleted or modified in certain ways, i.e. api name and type.
+	 */
+	protected $confirmed = false;
 	/**
 	 * @var Config This DSP's configuration
 	 */
@@ -176,6 +181,7 @@ class User extends BasePlatformSystemModel
 			'is_active'         => 'Is Active',
 			'is_sys_admin'      => 'Is System Admin',
 			'confirm_code'      => 'Confirmation Code',
+			'confirmed'         => 'Registration Confirmed',
 			'default_app_id'    => 'Default App',
 			'role_id'           => 'Role',
 			'security_question' => 'Security Question',
@@ -287,6 +293,26 @@ class User extends BasePlatformSystemModel
 	}
 
 	/**
+	 * {@InheritDoc}
+	 */
+	public function afterFind()
+	{
+		$this->confirmed = ( 'y' == $this->confirm_code );
+	}
+
+	public function refresh()
+	{
+		if ( parent::refresh() )
+		{
+			$this->confirmed = ( 'y' == $this->confirm_code );
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
 	 * @param string $requested
 	 * @param array  $columns
 	 * @param array  $hidden
@@ -305,6 +331,7 @@ class User extends BasePlatformSystemModel
 				 'last_name',
 				 'email',
 				 'phone',
+				 'confirmed',
 				 'is_active',
 				 'is_sys_admin',
 				 'role_id',
@@ -314,11 +341,6 @@ class User extends BasePlatformSystemModel
 			),
 			$columns
 		);
-
-		if ( Session::isSystemAdmin() && !in_array( 'confirm_code', $_myColumns ) )
-		{
-			$_myColumns[] = 'confirm_code';
-		}
 
 		return parent::getRetrievableAttributes(
 			$requested,
@@ -448,7 +470,7 @@ class User extends BasePlatformSystemModel
 	 */
 	public static function getByEmail( $email )
 	{
-		return static::model()->find( 'email = :email',	array( ':email' => $email )	);
+		return static::model()->find( 'email = :email', array( ':email' => $email ) );
 	}
 
 	/**

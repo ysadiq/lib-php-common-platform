@@ -273,7 +273,7 @@ class Session extends BasePlatformRestResource
 
 		if ( 'y' !== $_user->confirm_code )
 		{
-			throw new BadRequestException( 'Login registration has not been confirmed.' );
+			throw new BadRequestException( 'User registration or password reset request has not been confirmed.' );
 		}
 
 		$_result = static::generateSessionDataFromUser( $_user->id, $_user );
