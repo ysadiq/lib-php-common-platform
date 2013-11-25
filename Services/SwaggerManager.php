@@ -119,7 +119,7 @@ class SwaggerManager extends BasePlatformRestService
 		}
 
 		// generate swagger output from file annotations
-		$_scanPath = rtrim( __DIR__, '/') . '/';
+		$_scanPath = rtrim( __DIR__, '/' ) . '/';
 
 		$_baseSwagger = array(
 			'swaggerVersion' => '1.2',
@@ -130,9 +130,9 @@ class SwaggerManager extends BasePlatformRestService
 		// build services from database
 		$_command = Pii::db()->createCommand();
 		$_result = $_command->select( 'api_name,type_id,storage_type_id,description' )
-				   ->from( 'df_sys_service' )
-				   ->order( 'api_name' )
-				   ->queryAll();
+			->from( 'df_sys_service' )
+			->order( 'api_name' )
+			->queryAll();
 
 		// add static services
 		$_other = array(
@@ -201,8 +201,7 @@ class SwaggerManager extends BasePlatformRestService
 				$_filePath = $_storePath . $_apiName . '.json';
 				if ( !file_exists( $_filePath ) )
 				{
-					$_defaultPath = Pii::getParam( 'base_path' ) . '/vendor/dreamfactory/lib-php-common-platform/DreamFactory/Platform';
-					$_defaultPath .= '/Templates/Swagger/default_service_swagger.json';
+					$_defaultPath = dirname( __DIR__ ) . '/Templates/Swagger/default_service_swagger.json';
 					if ( !file_exists( $_defaultPath ) )
 					{
 						Log::error( "No default swagger file at $_defaultPath." );
@@ -257,7 +256,8 @@ class SwaggerManager extends BasePlatformRestService
 		}
 
 		// cache main api listing file
-		$_resourceListing = require( $_scanPath . 'SwaggerManager.swagger.php' );
+		$_main = $_scanPath . 'SwaggerManager.swagger.php';
+		$_resourceListing = require( $_main );
 		$_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
 		$_filePath = $_swaggerPath . '_.json';
 		if ( false === file_put_contents( $_filePath, json_encode( $_out ) ) )

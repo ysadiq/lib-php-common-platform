@@ -29,7 +29,6 @@ use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\User;
-use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Option;
@@ -197,8 +196,7 @@ class Register extends BasePlatformRestResource
 				}
 				else
 				{
-					$_defaultPath = Pii::getParam( 'base_path' ) . '/vendor/dreamfactory/lib-php-common-platform/DreamFactory/Platform';
-					$_defaultPath .= '/Templates/Email/confirm_user_registration.json';
+					$_defaultPath = dirname( dirname( __DIR__ ) ) . '/Templates/Email/confirm_user_registration.json';
 					if ( !file_exists( $_defaultPath ) )
 					{
 						throw new \Exception( "No default email template for user registration." );
