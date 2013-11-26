@@ -297,6 +297,8 @@ class User extends BasePlatformSystemModel
 	 */
 	public function afterFind()
 	{
+		parent::afterFind();
+
 		$this->confirmed = ( 'y' == $this->confirm_code );
 	}
 
