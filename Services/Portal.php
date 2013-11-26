@@ -23,7 +23,6 @@ use DreamFactory\Oasys\Enums\Flows;
 use DreamFactory\Oasys\Oasys;
 use DreamFactory\Oasys\Providers\BaseOAuthProvider;
 use DreamFactory\Oasys\Providers\BaseProvider;
-use DreamFactory\Oasys\Stores\Session;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
@@ -31,7 +30,6 @@ use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\Provider;
-use DreamFactory\Platform\Yii\Models\ProviderUser;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Platform\Yii\Stores\ProviderUserStore;
 use DreamFactory\Yii\Utility\Pii;
@@ -329,7 +327,11 @@ class Portal extends BaseSystemRestService
 
 		Oasys::setStore( $this->_store, true );
 
-		return Oasys::getProvider( $this->_resource, Oasys::getStore()->get() );
+		/** @noinspection PhpUndefinedMethodInspection */
+
+		//	See if we need the user's profile ID
+		return Oasys::getProvider( $this->_resource, Oasys::getStore()->get() )
+			->setNeedProfileUserId( null === $this->_store->getProviderUserId() );
 	}
 
 	/**
@@ -368,6 +370,68 @@ class Portal extends BaseSystemRestService
 	}
 
 	/**
+	 * Checks for and validates an inbound relay from a proxied request.
+	 * If a referrer is provided, a redirect is issued.
+	 *
+	 * @return bool
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 */
+	protected function _validateRelay()
+	{
+		if ( isset( $_REQUEST, $_REQUEST['code'], $_REQUEST['state'], $_REQUEST['oasys'] ) )
+		{
+			$_state = Storage::defrost( Option::request( 'state' ) );
+			$_referrer = Option::getDeep( $_state, 'request', 'referrer' );
+
+			if ( null === ( $_origin = Option::get( $_state, 'origin' ) ) )
+			{
+				$_origin = Curl::currentUrl( false );
+			}
+
+			if ( $_REQUEST['oasys'] != sha1( $_origin ) )
+			{
+				Log::error( 'Received inbound relay but Oasys key mismatch: ' . $_REQUEST['oasys'] . ' != ' . sha1( $_origin ) );
+				throw new BadRequestException( 'Possible forged token.' );
+			}
+
+			//	Referred? Redirect!
+			if ( !empty( $_referrer ) )
+			{
+				header( 'Location: ' . $_referrer );
+				die();
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * @param string       $response
+	 * @param BaseProvider $provider
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\RestException
+	 */
+	protected function _validateResponse( $response, $provider )
+	{
+		$_code = $provider->getLastResponseCode();
+		$_message = $provider->getLastError();
+
+		if ( empty( $response ) || $_code > HttpResponse::PartialContent )
+		{
+			if ( null !== ( $_error = Option::getDeep( $response, 'result', 'error' ) ) )
+			{
+				$_message = '[' . $_message . '] ' .
+							Option::get( $_error, 'message', 'Not specified.' ) . ' (' .
+							Option::get( $_error, 'code', 'Unknown' ) . ')';
+			}
+
+			throw new RestException( $_code, $_message );
+		}
+	}
+
+	/**
 	 * Relays an inbound portal request to the desired provider
 	 *
 	 * @param BaseProvider $provider
@@ -380,33 +444,11 @@ class Portal extends BaseSystemRestService
 	{
 		if ( $provider->authorized( true ) )
 		{
+			//	if this is a bounce, pull the original request out of the state...
+			$this->_validateRelay();
+
 			//	The REAL request
 			$_resource = '/' . implode( '/', array_slice( $this->_uriPath, 3 ) );
-
-			//	if this is a bounce, pull the original request out of the state...
-			if ( isset( $_REQUEST, $_REQUEST['code'], $_REQUEST['state'], $_REQUEST['oasys'] ) )
-			{
-				$_state = Storage::defrost( Option::request( 'state' ) );
-				$_referrer = Option::getDeep( $_state, 'request', 'referrer' );
-
-				if ( null === ( $_origin = Option::get( $_state, 'origin' ) ) )
-				{
-					$_origin = Curl::currentUrl( false );
-				}
-
-				if ( $_REQUEST['oasys'] != sha1( $_origin ) )
-				{
-					Log::error( 'Received inbound relay but Oasys key mismatch: ' . $_REQUEST['oasys'] . ' != ' . sha1( $_origin ) );
-					throw new BadRequestException( 'Possible forged token.' );
-				}
-
-				//	Referred? Redirect!
-				if ( !empty( $_referrer ) )
-				{
-					header( 'Location: ' . $_referrer );
-					die();
-				}
-			}
 
 //			Log::debug( 'Requesting portal resource "' . $_resource . '"' );
 
@@ -419,17 +461,7 @@ class Portal extends BaseSystemRestService
 					throw new InternalServerErrorException( 'Network error', $_response['code'] );
 				}
 
-				if ( empty( $_response ) || $provider->getLastResponseCode() > HttpResponse::PartialContent )
-				{
-					if ( isset( $_response, $_response['result'], $_response['result']->error ) )
-					{
-						$_code = Option::get( $_response['result']->error, 'code', $provider->getLastResponseCode() );
-						$_message = Option::get( $_response['result']->error, 'message', $provider->getLastError() );
-						throw new RestException( $provider->getLastResponseCode(), $_message . ' (' . $_code . ')' );
-					}
-
-					throw new RestException( $provider->getLastResponseCode(), $provider->getLastError() );
-				}
+				$this->_validateResponse( $_response, $provider );
 
 				return $_response;
 			}
@@ -497,7 +529,7 @@ class Portal extends BaseSystemRestService
 			throw new ForbiddenException( 'No valid session for user.', 401 );
 		}
 
-		Log::info(
+		Log::debug(
 			'Portal request "' . $this->_resource . '/' . implode( '/', array_slice( $this->_uriPath, 3 ) ) . '" validated: ' . $_user->email
 		);
 
