@@ -106,9 +106,14 @@ class SalesforceDbSvc extends BaseDbSvc
 		$this->_username = Option::get( $_credentials, 'username' );
 		$this->_password = Option::get( $_credentials, 'password' );
 		$this->_securityToken = Option::get( $_credentials, 'security_token' );
-		if ( empty( $this->_username ) || empty( $this->_password ) || empty( $this->_securityToken ) )
+		if ( empty( $_token ) )
 		{
-			throw new \InvalidArgumentException( 'A Salesforce username, password, and security token are required for this service.' );
+			$this->_securityToken = ''; // gets appended to password
+		}
+
+		if ( empty( $this->_username ) || empty( $this->_password ) )
+		{
+			throw new \InvalidArgumentException( 'A Salesforce username and password are required for this service.' );
 		}
 
 		$_version = Option::get( $_credentials, 'version' );

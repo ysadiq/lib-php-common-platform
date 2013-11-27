@@ -423,6 +423,10 @@ class SystemManager extends BaseSystemRestService
 		{
 			throw $ex;
 		}
+
+
+		// clear out swagger cache, easiest place to catch it
+		SwaggerManager::clearCache();
 	}
 
 	/**
@@ -775,6 +779,9 @@ class SystemManager extends BaseSystemRestService
 
 		// back to normal
 		chdir( $_oldWorkingDir );
+
+		// clear out swagger cache
+		SwaggerManager::clearCache();
 	}
 
 	/**

@@ -29,15 +29,11 @@ use DreamFactory\Platform\Utility\Fabric;
 /**
  * @var string
  */
-const DSP_VERSION = '1.1.2.1';
+const DSP_VERSION = '1.2.0';
 /**
  * @var string
  */
 const API_VERSION = '1.0';
-/**
- * @var string
- */
-const BLOB_CONFIG_PATH = '/blob.config.php';
 /**
  * @var string
  */
@@ -77,8 +73,6 @@ $_vendorPath = dirname( $_basePath ) . '/vendor';
 $_dbCacheEnabled = false;
 //	The name of the default controller. "site" just sucks
 $_defaultController = 'web';
-//	Load the BLOB storage configuration settings
-$_blobConfig = ( file_exists( __DIR__ . BLOB_CONFIG_PATH ) ? require_once( __DIR__ . BLOB_CONFIG_PATH ) : array() );
 //	Where the log files go and the name...
 $_logFilePath = $_basePath . '/log';
 $_logFileName = basename( \Kisma::get( 'app.log_file' ) );
@@ -161,7 +155,6 @@ return array_merge(
 		 /**
 		  * User data
 		  */
-		 'blobStorageConfig'             => $_blobConfig,
 		 'adminEmail'                    => DEFAULT_SUPPORT_EMAIL,
 		 /**
 		  * The default service configuration
@@ -182,7 +175,13 @@ return array_merge(
 		  */
 		 'dsp.default_app'               => '/launchpad/index.html',
 		 /**
-		  * The default application to start
+		  * The default landing pages for email confirmations
+		  */
+		 'dsp.confirm_invite_url'        => '/confirm_invite.html',
+		 'dsp.confirm_register_url'      => '/confirm_reg.html',
+		 'dsp.confirm_reset_url'         => '/confirm_reset.html',
+		 /**
+		  * The default number of records to return at once for database queries
 		  */
 		 'dsp.db_max_records_returned'   => 1000,
 		 /**
