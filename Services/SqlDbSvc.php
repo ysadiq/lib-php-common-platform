@@ -125,7 +125,7 @@ class SqlDbSvc extends BaseDbSvc
 				break;
 
 			case SqlDbUtilities::DRV_SQLSRV:
-				$this->_sqlConn->setAttribute( constant( '\\PDO::SQLSRV_ATTR_DIRECT_QUERY' ), true );
+				//$this->_sqlConn->setAttribute( constant( '\\PDO::SQLSRV_ATTR_DIRECT_QUERY' ), true );
 
 				//	These need to be on the dsn
 //				$this->_sqlConn->setAttribute( 'MultipleActiveResultSets', false );
