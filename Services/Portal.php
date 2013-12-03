@@ -28,6 +28,7 @@ use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
+use DreamFactory\Platform\Resources\System\ProviderUser;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Platform\Yii\Models\User;
@@ -102,8 +103,7 @@ class Portal extends BaseSystemRestService
 	 */
 	public function __construct( $settings = array() )
 	{
-		$settings['interactive'] =
-			Option::getBool( $_REQUEST, 'interactive', Option::getBool( $_REQUEST, 'flow_type', $this->_interactive, true ), true );
+		$settings['interactive'] = Option::getBool( $_REQUEST, 'interactive', Option::getBool( $_REQUEST, 'flow_type', $this->_interactive, true ), true );
 		$this->_urlParameters = $this->_parseRequest();
 		$this->_controlCommand = FilterInput::request( 'control', null, FILTER_SANITIZE_STRING );
 
@@ -273,9 +273,10 @@ class Portal extends BaseSystemRestService
 		if ( !in_array( $this->_resource, array_keys( $this->_serviceMap ) ) )
 		{
 			Log::error( 'Portal service "' . $this->_resource . '" not found' );
-			throw new NotFoundException(
-				'Portal "' . $this->_resource . '" not found. Acceptable portals are: ' . implode( ', ', array_keys( $this->_serviceMap ) )
-			);
+			throw new NotFoundException( 'Portal "' .
+										 $this->_resource .
+										 '" not found. Acceptable portals are: ' .
+										 implode( ', ', array_keys( $this->_serviceMap ) ) );
 		}
 	}
 
@@ -318,11 +319,7 @@ class Portal extends BaseSystemRestService
 		//	Set the store for this portal
 		if ( empty( $this->_store ) )
 		{
-			$this->_store = new ProviderUserStore(
-				$this->_currentUserId,
-				$this->_serviceMap[$this->_resource]['id'],
-				$_config
-			);
+			$this->_store = new ProviderUserStore( $this->_currentUserId, $this->_serviceMap[$this->_resource]['id'], $_config );
 		}
 
 		Oasys::setStore( $this->_store, true );
@@ -330,8 +327,7 @@ class Portal extends BaseSystemRestService
 		/** @noinspection PhpUndefinedMethodInspection */
 
 		//	See if we need the user's profile ID
-		return Oasys::getProvider( $this->_resource, Oasys::getStore()->get() )
-			->setNeedProfileUserId( null === $this->_store->getProviderUserId() );
+		return Oasys::getProvider( $this->_resource, Oasys::getStore()->get() )->setNeedProfileUserId( null === $this->_store->getProviderUserId() );
 	}
 
 	/**
@@ -344,6 +340,38 @@ class Portal extends BaseSystemRestService
 		return array(
 			'authorize_url' => $provider->getAuthorizationUrl(),
 		);
+	}
+
+	/**
+	 * @param BaseOAuthProvider|BaseProvider $provider
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @return array
+	 */
+	protected function _handleRevoke( $provider )
+	{
+		$_providerUserId = FilterInput::request( 'provider_user_id', null, FILTER_SANITIZE_STRING );
+
+		if ( empty( $_providerUserId ) )
+		{
+			throw new BadRequestException( 'No provider user ID specified.' );
+		}
+
+		//	Revoke at the provider
+		$provider->revoke( $_providerUserId );
+
+		/** @var ProviderUserStore $_store */
+		$_store = Oasys::getStore();
+
+		if ( null === $_store->getProviderUserId() )
+		{
+			$_store->setProviderUserId( $_providerUserId );
+		}
+
+		//	Revoke from the store...
+		$_store->revoke();
+
+		return array();
 	}
 
 	/**
@@ -422,9 +450,8 @@ class Portal extends BaseSystemRestService
 		{
 			if ( null !== ( $_error = Option::getDeep( $response, 'result', 'error' ) ) )
 			{
-				$_message = '[' . $_message . '] ' .
-							Option::get( $_error, 'message', 'Not specified.' ) . ' (' .
-							Option::get( $_error, 'code', 'Unknown' ) . ')';
+				$_message =
+					'[' . $_message . '] ' . Option::get( $_error, 'message', 'Not specified.' ) . ' (' . Option::get( $_error, 'code', 'Unknown' ) . ')';
 			}
 
 			throw new RestException( $_code, $_message );
@@ -485,7 +512,16 @@ class Portal extends BaseSystemRestService
 	protected function _cleanRequestPayload()
 	{
 		//	This is a list of possible query string options to be removed from the request payload
-		static $_internalOptions = array( 'dfpapikey', 'path', 'interactive', 'flow_type', 'app_name', 'control', '_', 'path' );
+		static $_internalOptions = array(
+			'_',
+			'app_name',
+			'control',
+			'dfpapikey',
+			'interactive',
+			'flow_type',
+			'oasys',
+			'path',
+		);
 
 		if ( empty( $this->_requestPayload ) )
 		{
