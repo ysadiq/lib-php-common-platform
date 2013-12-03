@@ -46,30 +46,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 	 */
 	public static function getDbDriverType( $db )
 	{
-		switch ( $db->driverName )
-		{
-			case PlatformStorageDrivers::MS_SQL:
-			case PlatformStorageDrivers::SYBASE:
-			case PlatformStorageDrivers::SQL_SERVER:
-				return static::DRV_SQLSRV;
-
-			case PlatformStorageDrivers::MYSQL:
-			case PlatformStorageDrivers::MYSQLI:
-				return static::DRV_MYSQL;
-
-			case PlatformStorageDrivers::SQLITE:
-			case PlatformStorageDrivers::SQLITE2:
-				return static::DRV_SQLITE;
-
-			case PlatformStorageDrivers::ORACLE:
-				return static::DRV_OCSQL;
-
-			case PlatformStorageDrivers::POSTGRESQL:
-				return static::DRV_PGSQL;
-
-			default:
-				return static::DRV_OTHER;
-		}
+		return PlatformStorageDrivers::driverType( $db->driverName );
 	}
 
 	/**
@@ -872,10 +849,15 @@ class SqlDbUtilities implements SqlDbDriverTypes
 				case 'int':
 				case 'bigint':
 				case 'integer':
-					$definition = ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) && ( 'mediumint' == $type ) ) ? 'int' : $type;
+					$definition =
+						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( 'mediumint' == $type ) )
+							? 'int' : $type;
 					if ( isset( $length ) )
 					{
-						if ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length <= 255 ) && ( $length > 0 ) )
+						if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) &&
+							 ( $length <= 255 ) &&
+							 ( $length > 0 )
+						)
 						{
 							$definition .= '(' . intval( $length ) . ')'; // sets the viewable length
 						}
@@ -896,7 +878,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					{
 						$length = intval( $length );
 						if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 65 ) ) ||
-							 ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) && ( $length > 38 ) )
+							 ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 38 ) )
 						)
 						{
 							throw new BadRequestException( "Decimal precision '$length' is out of valid range." );
@@ -909,7 +891,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 						if ( !empty( $scale ) )
 						{
 							if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $scale > 30 ) ) ||
-								 ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) && ( $scale > 18 ) ) ||
+								 ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $scale > 18 ) ) ||
 								 ( $scale > $length )
 							)
 							{
@@ -927,7 +909,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					break;
 				case 'float':
 				case 'double':
-					$definition = ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) ) ? 'float' : $type;
+					$definition = ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'float' : $type;
 					if ( !isset( $length ) )
 					{
 						$length = Utilities::getArrayValue( 'precision', $field, null ); // alias
@@ -936,7 +918,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					{
 						$length = intval( $length );
 						if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 53 ) ) ||
-							 ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) && ( $length > 38 ) )
+							 ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 38 ) )
 						)
 						{
 							throw new BadRequestException( "Decimal precision '$length' is out of valid range." );
@@ -946,7 +928,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 						{
 							$scale = Utilities::getArrayValue( 'decimals', $field, null ); // alias
 						}
-						if ( !empty( $scale ) && !( SqlDbUtilities::DRV_SQLSRV == $driver_type ) )
+						if ( !empty( $scale ) && !( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) )
 						{
 							if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $scale > 30 ) ) ||
 								 ( $scale > $length )
@@ -966,7 +948,9 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					break;
 				case 'money':
 				case 'smallmoney':
-					$definition = ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) ) ? $type : 'money'; // let yii handle it
+					$definition =
+						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? $type
+							: 'money'; // let yii handle it
 					// convert to float
 					$default = ( isset( $default ) ) ? floatval( $default ) : $default;
 					break;
@@ -1011,7 +995,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 							if ( isset( $length ) )
 							{
 								$length = intval( $length );
-								if ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) && ( $length > 8000 ) )
+								if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 8000 ) )
 								{
 									$length = 'max';
 								}
@@ -1028,7 +1012,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 							if ( isset( $length ) )
 							{
 								$length = intval( $length );
-								if ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) && ( $length > 8000 ) )
+								if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 8000 ) )
 								{
 									throw new BadRequestException( "String length '$length' is out of valid range." );
 								}
@@ -1043,7 +1027,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 							if ( isset( $length ) )
 							{
 								$length = intval( $length );
-								if ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) && ( $length > 4000 ) )
+								if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 4000 ) )
 								{
 									$length = 'max';
 								}
@@ -1059,7 +1043,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 							if ( isset( $length ) )
 							{
 								$length = intval( $length );
-								if ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) && ( $length > 4000 ) )
+								if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 4000 ) )
 								{
 									throw new BadRequestException( "String length '$length' is out of valid range." );
 								}
@@ -1074,15 +1058,21 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					$quoteDefault = true;
 					break;
 				case 'text':
-					$definition = ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) ) ? 'varchar(max)' : 'text'; // microsoft recommended
+					$definition =
+						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varchar(max)'
+							: 'text'; // microsoft recommended
 					$quoteDefault = true;
 					break;
 				case 'blob':
-					$definition = ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) ) ? 'varbinary(max)' : 'blob'; // microsoft recommended
+					$definition =
+						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varbinary(max)'
+							: 'blob'; // microsoft recommended
 					$quoteDefault = true;
 					break;
 				case 'datetime':
-					$definition = ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) ? 'datetime2' : 'datetime'; // microsoft recommends
+					$definition =
+						( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ? 'datetime2'
+							: 'datetime'; // microsoft recommends
 					break;
 				default:
 					// blind copy of column type
