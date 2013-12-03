@@ -132,6 +132,10 @@ class SchemaSvc extends BasePlatformRestService
 //				$this->_sqlConn->setAttribute( 'ReturnDatesAsStrings', true );
 				$this->_sqlConn->setAttribute( 'CharacterSet', 'UTF-8' );
 				break;
+
+			case SqlDbUtilities::DRV_DBLIB:
+				$this->_sqlConn->setAttribute( \PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION );
+				break;
 		}
 
 		$_attributes = Option::clean( Option::get( $config, 'parameters' ) );
