@@ -113,7 +113,7 @@ class ProviderUserStore extends BaseOasysStore
 	{
 		if ( empty( $this->_providerUserId ) )
 		{
-			Log::info( 'Provider user not stored. Need provider\'s ID for user. See ProviderUserStore::setProviderUserId().' );
+//			Log::info( 'Provider user not stored. Need provider\'s ID for user. See ProviderUserStore::setProviderUserId().' );
 
 			return true;
 		}
@@ -168,12 +168,22 @@ class ProviderUserStore extends BaseOasysStore
 
 			if ( true === $delete )
 			{
-				return $_pu->delete();
+				if ( !$_pu->delete() )
+				{
+					Log::error( 'Error deleting provider user row: ' . $this->_userId . '/' . $this->_providerId . '/' . $this->_providerUserId );
+				}
+			}
+			else
+			{
+				$_pu->auth_text = null;
+
+				$_pu->save();
 			}
 
-			$_pu->auth_text = null;
+			$this->_userId = $this->_providerId = $this->_providerUserId = null;
+			$this->clear();
 
-			return $_pu->save();
+			return true;
 		}
 		catch ( \CDbException $_ex )
 		{

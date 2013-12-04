@@ -324,10 +324,16 @@ class Portal extends BaseSystemRestService
 
 		Oasys::setStore( $this->_store, true );
 
-		/** @noinspection PhpUndefinedMethodInspection */
+		/** @var BaseOAuthProvider $_provider */
+		$_provider = Oasys::getProvider( $this->_resource, Oasys::getStore()->get() );
 
 		//	See if we need the user's profile ID
-		return Oasys::getProvider( $this->_resource, Oasys::getStore()->get() )->setNeedProfileUserId( null === $this->_store->getProviderUserId() );
+		if ( null === $_provider->getConfig( 'provider_user_id' ) )
+		{
+			$_provider->setNeedProfileUserId( true );
+		}
+
+		return $_provider;
 	}
 
 	/**
@@ -371,7 +377,8 @@ class Portal extends BaseSystemRestService
 		//	Revoke from the store...
 		$_store->revoke();
 
-		return array();
+		//	Return an authorization URL to save a call...
+		return $this->_handleAuthorizeUrl( $provider );
 	}
 
 	/**
@@ -406,7 +413,7 @@ class Portal extends BaseSystemRestService
 	 */
 	protected function _validateRelay()
 	{
-		if ( isset( $_REQUEST, $_REQUEST['code'], $_REQUEST['state'], $_REQUEST['oasys'] ) )
+		if ( isset( $_REQUEST, $_REQUEST['code'], $_REQUEST['state'] ) )
 		{
 			$_state = Storage::defrost( Option::request( 'state' ) );
 			$_referrer = Option::getDeep( $_state, 'request', 'referrer' );
@@ -416,7 +423,7 @@ class Portal extends BaseSystemRestService
 				$_origin = Curl::currentUrl( false );
 			}
 
-			if ( $_REQUEST['oasys'] != sha1( $_origin ) )
+			if ( isset( $_REQUEST['oasys'] ) && $_REQUEST['oasys'] != sha1( $_origin ) )
 			{
 				Log::error( 'Received inbound relay but Oasys key mismatch: ' . $_REQUEST['oasys'] . ' != ' . sha1( $_origin ) );
 				throw new BadRequestException( 'Possible forged token.' );
@@ -564,10 +571,6 @@ class Portal extends BaseSystemRestService
 		{
 			throw new ForbiddenException( 'No valid session for user.', 401 );
 		}
-
-		Log::debug(
-			'Portal request "' . $this->_resource . '/' . implode( '/', array_slice( $this->_uriPath, 3 ) ) . '" validated: ' . $_user->email
-		);
 
 		$this->_portalUser = $_user;
 	}
