@@ -21,12 +21,14 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Oasys\Enums\Flows;
 use DreamFactory\Oasys\Oasys;
+use DreamFactory\Oasys\Providers\BaseOAuthProvider;
 use DreamFactory\Oasys\Providers\BaseProvider;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
+use DreamFactory\Platform\Resources\System\ProviderUser;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Platform\Yii\Models\User;
@@ -34,8 +36,12 @@ use DreamFactory\Platform\Yii\Stores\ProviderUserStore;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
+use Kisma\Core\Utility\Curl;
+use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Storage;
 
 /**
  * Portal
@@ -79,6 +85,14 @@ class Portal extends BaseSystemRestService
 	 * @var array
 	 */
 	protected $_urlParameters;
+	/**
+	 * @var ProviderUserStore
+	 */
+	protected $_store;
+	/**
+	 * @var string The requested control command
+	 */
+	protected $_controlCommand;
 
 	//*************************************************************************
 	//* Methods
@@ -89,9 +103,58 @@ class Portal extends BaseSystemRestService
 	 */
 	public function __construct( $settings = array() )
 	{
+		$settings['interactive'] = Option::getBool( $_REQUEST, 'interactive', Option::getBool( $_REQUEST, 'flow_type', $this->_interactive, true ), true );
+		$this->_urlParameters = $this->_parseRequest();
+		$this->_controlCommand = FilterInput::request( 'control', null, FILTER_SANITIZE_STRING );
+
 		parent::__construct( $settings );
 
 		$this->_mapServices();
+	}
+
+	/**
+	 * Handle a service request
+	 *
+	 * Comes in like this:
+	 *
+	 *                Resource        Action
+	 * /rest/portal/{service_name}/{service request string}
+	 *
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
+	 * @return bool
+	 */
+	protected function _handleResource()
+	{
+		if ( empty( $this->_resource ) && $this->_action == HttpMethod::Get )
+		{
+			$_providers = array();
+
+			foreach ( $this->_serviceMap as $_row )
+			{
+				$_providers[] = array(
+					'id'            => $_row['id'],
+					'api_name'      => $_row['api_name'],
+					'provider_name' => $_row['provider_name'],
+					'config_text'   => $_row['config_text'],
+				);
+			}
+
+			return array( 'resource' => $_providers );
+		}
+
+		//	1. Validate portal
+		$this->_validatePortal();
+
+		//	2. Authorize user
+		$this->_validateRequest();
+
+		//	3. Build provider
+		$_provider = $this->_getProvider();
+
+		//	4. Dispatch request
+		return $this->_dispatchRequest( $_provider );
 	}
 
 	/**
@@ -103,8 +166,6 @@ class Portal extends BaseSystemRestService
 
 		//	Clean up the resource path
 		$this->_resourcePath = trim( str_replace( $this->_apiName, null, $this->_resourcePath ), ' /' );
-		$this->_interactive = Option::getBool( $_REQUEST, 'interactive', $this->_interactive, true );
-		$this->_urlParameters = $this->_parseRequest();
 	}
 
 	/**
@@ -212,53 +273,24 @@ class Portal extends BaseSystemRestService
 		if ( !in_array( $this->_resource, array_keys( $this->_serviceMap ) ) )
 		{
 			Log::error( 'Portal service "' . $this->_resource . '" not found' );
-			throw new NotFoundException(
-				'Portal "' . $this->_resource . '" not found. Acceptable portals are: ' . implode( ', ', array_keys( $this->_serviceMap ) )
-			);
+			throw new NotFoundException( 'Portal "' .
+										 $this->_resource .
+										 '" not found. Acceptable portals are: ' .
+										 implode( ', ', array_keys( $this->_serviceMap ) ) );
 		}
-
-		Log::debug( 'Portal service "' . $this->_resource . '" called' );
 	}
 
 	/**
-	 * Handle a service request
+	 * Creates the configuration settings, sets the Oasys store and returns a provider.
 	 *
-	 * Comes in like this:
+	 * Looks for a local config file in /path/to/config/portal/{provider_id}.config.php and merges
+	 * with default and stored configurations.
 	 *
-	 *                Resource        Action
-	 * /rest/portal/{service_name}/{service request string}
-	 *
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
-	 * @return bool
+	 * @return BaseProvider
 	 */
-	protected function _handleResource()
+	protected function _getProvider()
 	{
 		$_config = array();
-
-		if ( empty( $this->_resource ) && $this->_action == HttpMethod::Get )
-		{
-			$_providers = array();
-
-			foreach ( $this->_serviceMap as $_row )
-			{
-				$_providers[] = array(
-					'id'            => $_row['id'],
-					'api_name'      => $_row['api_name'],
-					'provider_name' => $_row['provider_name'],
-					'config_text'   => $_row['config_text'],
-				);
-			}
-
-			return array( 'resource' => $_providers );
-		}
-
-		//	1. Validate portal
-		$this->_validatePortal();
-
-		//	2. Authorize user
-		$this->_validateRequest();
 
 		//	Load any local configuration files for this provider...
 		$_configPath = \Kisma::get( 'app.config_path' ) . '/portal/' . $this->_resource . '.config.php';
@@ -279,87 +311,254 @@ class Portal extends BaseSystemRestService
 			)
 		);
 
-		if ( $this->_interactive )
+		$this->_requestPayload = array_merge( $this->_urlParameters, Option::clean( RestData::getPostedData( false, true ) ) );
+
+		//	Set the flow type
+		$_config['flow_type'] = $this->_interactive ? Flows::CLIENT_SIDE : Flows::SERVER_SIDE;
+
+		//	Set the store for this portal
+		if ( empty( $this->_store ) )
 		{
-			$_config['flow_type'] = Flows::CLIENT_SIDE;
+			$this->_store = new ProviderUserStore( $this->_currentUserId, $this->_serviceMap[$this->_resource]['id'], $_config );
 		}
 
-		$_config['payload'] = $_payload = array_merge( $this->_urlParameters, Option::clean( RestData::getPostDataAsArray() ) );
+		Oasys::setStore( $this->_store, true );
 
-		//	2. Get provider and store
-		Oasys::setStore( new ProviderUserStore( $this->_portalUser->id, $this->_serviceMap[$this->_resource]['id'], $_config ), true );
-
-		/** @var BaseProvider $_provider */
+		/** @var BaseOAuthProvider $_provider */
 		$_provider = Oasys::getProvider( $this->_resource, Oasys::getStore()->get() );
 
-		//	3. Relay call
-		$_resource = '/' . implode( '/', array_slice( $this->_uriPath, 3 ) );
-
-		if ( $_provider->authorized( true ) )
+		//	See if we need the user's profile ID
+		if ( null === $_provider->getConfig( 'provider_user_id' ) )
 		{
-			/** @var ProviderUserStore $_store */
-			$_store = Oasys::getStore();
-			if ( null === $_store->getProviderUserId() )
+			$_provider->setNeedProfileUserId( true );
+		}
+
+		return $_provider;
+	}
+
+	/**
+	 * @param BaseOAuthProvider|BaseProvider $provider
+	 *
+	 * @return array
+	 */
+	protected function _handleAuthorizeUrl( $provider )
+	{
+		return array(
+			'authorize_url' => $provider->getAuthorizationUrl(),
+		);
+	}
+
+	/**
+	 * @param BaseOAuthProvider|BaseProvider $provider
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @return array
+	 */
+	protected function _handleRevoke( $provider )
+	{
+		$_providerUserId = FilterInput::request( 'provider_user_id', null, FILTER_SANITIZE_STRING );
+
+		if ( empty( $_providerUserId ) )
+		{
+			throw new BadRequestException( 'No provider user ID specified.' );
+		}
+
+		//	Revoke at the provider
+		$provider->revoke( $_providerUserId );
+
+		/** @var ProviderUserStore $_store */
+		$_store = Oasys::getStore();
+
+		if ( null === $_store->getProviderUserId() )
+		{
+			$_store->setProviderUserId( $_providerUserId );
+		}
+
+		//	Revoke from the store...
+		$_store->revoke();
+
+		//	Return an authorization URL to save a call...
+		return $this->_handleAuthorizeUrl( $provider );
+	}
+
+	/**
+	 * @param BaseProvider $provider
+	 *
+	 * @return mixed
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 */
+	protected function _dispatchRequest( $provider )
+	{
+		$this->_cleanRequestPayload();
+
+		if ( !empty( $this->_controlCommand ) )
+		{
+			$_method = str_replace( static::ACTION_TOKEN, Inflector::deneutralize( $this->_controlCommand ), static::DEFAULT_HANDLER_PATTERN );
+
+			if ( is_callable( array( $this, $_method ) ) )
 			{
-				$_payload = $_provider->getConfig()->getPayload();
-				$_profile = $_provider->getUserData();
+				return call_user_func( array( $this, $_method ), $provider );
+			}
+		}
 
-				if ( !empty( $_profile ) )
-				{
-					$_store->setProviderUserId( $_profile->getUserId() );
-					$_store->sync();
-				}
+		return $this->_relayRequest( $provider );
+	}
 
-				$_provider->getConfig()->setPayload( $_payload );
+	/**
+	 * Checks for and validates an inbound relay from a proxied request.
+	 * If a referrer is provided, a redirect is issued.
+	 *
+	 * @return bool
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 */
+	protected function _validateRelay()
+	{
+		if ( isset( $_REQUEST, $_REQUEST['code'], $_REQUEST['state'] ) )
+		{
+			$_state = Storage::defrost( Option::request( 'state' ) );
+			$_referrer = Option::getDeep( $_state, 'request', 'referrer' );
+
+			if ( null === ( $_origin = Option::get( $_state, 'origin' ) ) )
+			{
+				$_origin = Curl::currentUrl( false );
 			}
 
-			Log::debug( 'Requesting portal resource "' . $_resource . '"' );
+			if ( isset( $_REQUEST['oasys'] ) && $_REQUEST['oasys'] != sha1( $_origin ) )
+			{
+				Log::error( 'Received inbound relay but Oasys key mismatch: ' . $_REQUEST['oasys'] . ' != ' . sha1( $_origin ) );
+				throw new BadRequestException( 'Possible forged token.' );
+			}
+
+			//	Referred? Redirect!
+			if ( !empty( $_referrer ) )
+			{
+				header( 'Location: ' . $_referrer );
+				die();
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * @param string       $response
+	 * @param BaseProvider $provider
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\RestException
+	 */
+	protected function _validateResponse( $response, $provider )
+	{
+		$_code = $provider->getLastResponseCode();
+		$_message = $provider->getLastError();
+
+		if ( empty( $response ) || $_code > HttpResponse::PartialContent )
+		{
+			if ( null !== ( $_error = Option::getDeep( $response, 'result', 'error' ) ) )
+			{
+				$_message =
+					'[' . $_message . '] ' . Option::get( $_error, 'message', 'Not specified.' ) . ' (' . Option::get( $_error, 'code', 'Unknown' ) . ')';
+			}
+
+			throw new RestException( $_code, $_message );
+		}
+	}
+
+	/**
+	 * Relays an inbound portal request to the desired provider
+	 *
+	 * @param BaseProvider $provider
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \Exception
+	 * @return mixed
+	 */
+	protected function _relayRequest( $provider )
+	{
+		if ( $provider->authorized( true ) )
+		{
+			//	if this is a bounce, pull the original request out of the state...
+			$this->_validateRelay();
+
+			//	The REAL request
+			$_resource = '/' . implode( '/', array_slice( $this->_uriPath, 3 ) );
+
+//			Log::debug( 'Requesting portal resource "' . $_resource . '"' );
 
 			try
 			{
-				$_response = $_provider->fetch( $_resource, $_payload, $this->_action );
+				$_response = $provider->fetch( $_resource, $this->_requestPayload, $this->_action );
 
 				if ( false === $_response )
 				{
 					throw new InternalServerErrorException( 'Network error', $_response['code'] );
 				}
 
-				/**
-				 * Results from fetch always come back like this:
-				 *
-				 *  array(
-				 *            'result'       => the actual result of the request from the provider
-				 *            'code'         => the HTTP response code of the request
-				 *            'content_type' => the content type returned
-				 * )
-				 *
-				 * If the content type is json, the 'result' has already been decoded.
-				 */
-				if ( isset( $_response, $_response['result'] ) && is_string( $_response['result'] ) &&
-					 false !== stripos( $_response['content_type'], 'application/json', 0 )
-				)
-				{
-					return json_decode( $_response['result'] );
-				}
+				$this->_validateResponse( $_response, $provider );
 
-				if ( HttpResponse::Ok != $_response['code'] )
-				{
-					throw new RestException( $_response['code'] );
-				}
-
-				return $_response['result'];
+				return $_response;
 			}
 			catch ( \Exception $_ex )
 			{
 				Log::error( 'Portal request exception: ' . $_ex->getMessage() );
 
 				//	No soup for you!
-				header( 'Location: /?error=' . urlencode( $_ex->getMessage() ) );
-				Pii::end();
+				throw $_ex;
 			}
 		}
 
 		throw new BadRequestException( 'The request you submitted is confusing.' );
+	}
+
+	/**
+	 * Cleans out the request parameters from the payload
+	 *
+	 * @return array|bool
+	 */
+	protected function _cleanRequestPayload()
+	{
+		//	This is a list of possible query string options to be removed from the request payload
+		static $_internalOptions = array(
+			'_',
+			'app_name',
+			'control',
+			'dfpapikey',
+			'interactive',
+			'flow_type',
+			'oasys',
+			'path',
+		);
+
+		if ( empty( $this->_requestPayload ) )
+		{
+			return false;
+		}
+
+		//	Merge in request stuff if there
+		$_payload = array_merge( $this->_requestPayload, is_array( $_REQUEST ) ? $_REQUEST : array() );
+
+		$_removed = $_rebuild = array();
+
+		foreach ( $_payload as $_key => $_value )
+		{
+			if ( !in_array( Inflector::neutralize( $_key ), $_internalOptions ) )
+			{
+				$_rebuild[$_key] = $_value;
+			}
+			else
+			{
+				$_removed[] = $_key;
+			}
+		}
+
+		if ( !empty( $_removed ) )
+		{
+//			Log::debug( 'Removed reserved keys from payload: ' . implode( ', ', $_removed ) );
+		}
+
+		//	Set it and forget it!
+		return $this->_requestPayload = $_rebuild;
 	}
 
 	/**
@@ -372,8 +571,6 @@ class Portal extends BaseSystemRestService
 		{
 			throw new ForbiddenException( 'No valid session for user.', 401 );
 		}
-
-		Log::info( 'Portal request validated: ' . $_user->email );
 
 		$this->_portalUser = $_user;
 	}
@@ -399,7 +596,7 @@ class Portal extends BaseSystemRestService
 			/** @var Provider[] $_providers */
 			foreach ( $_providers as $_provider )
 			{
-				$_services[] = $_provider->getAttributes();
+				$_services[$_provider->api_name] = $_provider->getAttributes();
 				unset( $_provider );
 			}
 
@@ -426,11 +623,7 @@ class Portal extends BaseSystemRestService
 //			Log::debug( 'Portal aliases set: ' . print_r( $_aliases, true ) );
 		}
 
-		foreach ( $_services as $_service )
-		{
-			$this->_serviceMap[$_service['api_name']] = $_service;
-		}
-
+		$this->_serviceMap = $_services;
 		$this->_aliases = $_aliases;
 	}
 
@@ -534,4 +727,43 @@ class Portal extends BaseSystemRestService
 		return $this->_urlParameters;
 	}
 
+	/**
+	 * @param \DreamFactory\Platform\Yii\Stores\ProviderUserStore $store
+	 *
+	 * @return Portal
+	 */
+	public function setStore( $store )
+	{
+		$this->_store = $store;
+
+		return $this;
+	}
+
+	/**
+	 * @return \DreamFactory\Platform\Yii\Stores\ProviderUserStore
+	 */
+	public function getStore()
+	{
+		return $this->_store;
+	}
+
+	/**
+	 * @param string $controlCommand
+	 *
+	 * @return Portal
+	 */
+	public function setControlCommand( $controlCommand )
+	{
+		$this->_controlCommand = $controlCommand;
+
+		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getControlCommand()
+	{
+		return $this->_controlCommand;
+	}
 }

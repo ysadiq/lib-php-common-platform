@@ -25,6 +25,7 @@ use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
@@ -135,12 +136,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	public static function select( $ids = null, $fields = null, $extras = array(), $singleRow = false, $includeSchema = false, $includeCount = false )
 	{
 		return ResourceStore::bulkSelectById(
-							$ids,
-							empty( $fields ) ? null : array( 'select' => $fields ),
-							$extras,
-							$singleRow,
-							$includeSchema,
-							$includeCount
+			$ids,
+			empty( $fields ) ? null : array( 'select' => $fields ),
+			$extras,
+			$singleRow,
+			$includeSchema,
+			$includeCount
 		);
 	}
 
@@ -191,17 +192,17 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		}
 
 		ResourceStore::reset(
-					 array(
-						  'service'          => $this->_serviceName,
-						  'resource_name'    => $this->_apiName,
-						  'resource_id'      => $this->_resourceId,
-						  'resource_array'   => $this->_resourceArray,
-						  'related_resource' => $this->_relatedResource,
-						  'fields'           => $this->_fields,
-						  'extras'           => $this->_extras,
-						  'include_count'    => $this->_includeCount,
-						  'include_schema'   => $this->_includeSchema,
-					 )
+			array(
+				 'service'          => $this->_serviceName,
+				 'resource_name'    => $this->_apiName,
+				 'resource_id'      => $this->_resourceId,
+				 'resource_array'   => $this->_resourceArray,
+				 'related_resource' => $this->_relatedResource,
+				 'fields'           => $this->_fields,
+				 'extras'           => $this->_extras,
+				 'include_count'    => $this->_includeCount,
+				 'include_schema'   => $this->_includeSchema,
+			)
 		);
 	}
 
@@ -225,7 +226,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	protected function _determineRequestedResource( &$ids = null, &$records = null )
 	{
 		//	Which payload do we love?
-		$_payload = RestData::getPostDataAsArray();
+		$_payload = RestData::getPostedData( true, true );
 
 		//	Use $_REQUEST instead of POSTed data
 		if ( empty( $_payload ) )
@@ -276,16 +277,33 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 			return ResourceStore::bulkSelectById( $_ids );
 		}
 
-		$_criteria = null;
+		//	Build our criteria
+		$_criteria = array(
+			'params' => array(),
+		);
 
 		if ( !empty( $this->_fields ) )
 		{
 			$_criteria['select'] = $this->_fields;
 		}
 
+		if ( null !== ( $_value = Option::get( $_payload, 'params' ) ) )
+		{
+			$_criteria['params'] = $_value;
+		}
+
 		if ( null !== ( $_value = Option::get( $_payload, 'filter' ) ) )
 		{
 			$_criteria['condition'] = $_value;
+
+			//	Add current user ID into parameter array if in condition, but not specified.
+			if ( false !== stripos( $_value, ':user_id' ) )
+			{
+				if ( !isset( $_criteria['params'][':user_id'] ) )
+				{
+					$_criteria['params'][':user_id'] = Session::getCurrentUserId();
+				}
+			}
 		}
 
 		if ( null !== ( $_value = Option::get( $_payload, 'limit' ) ) )
@@ -304,12 +322,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		}
 
 		return ResourceStore::select(
-							null,
-							$_criteria,
-							array(),
-							$_singleRow,
-							Option::getBool( $_payload, 'include_count' ),
-							Option::getBool( $_payload, 'include_schema' )
+			null,
+			$_criteria,
+			array(),
+			$_singleRow,
+			Option::getBool( $_payload, 'include_count' ),
+			Option::getBool( $_payload, 'include_schema' )
 		);
 	}
 
@@ -323,20 +341,21 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	{
 		$_payload = $this->_determineRequestedResource( $_ids, $_records );
 		$_rollback = Option::getBool( $_payload, 'rollback' );
+		$_continue = Option::getBool( $_payload, 'continue' );
 
 		if ( !empty( $this->_resourceId ) )
 		{
-			return ResourceStore::bulkUpdateById( $this->_resourceId, $_payload, $_rollback, null, null, true );
+			return ResourceStore::bulkUpdateById( $this->_resourceId, $_payload, $_rollback, null, null, true, $_continue );
 		}
 
 		if ( !empty( $_ids ) )
 		{
-			return ResourceStore::bulkUpdateById( $_ids, $_payload, $_rollback );
+			return ResourceStore::bulkUpdateById( $_ids, $_payload, $_rollback, null, null, false, $_continue );
 		}
 
 		if ( !empty( $_records ) )
 		{
-			return ResourceStore::bulkUpdate( $_records, $_rollback );
+			return ResourceStore::bulkUpdate( $_records, $_rollback, null, null, false, $_continue );
 		}
 
 		if ( empty( $_payload ) )
@@ -381,7 +400,9 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 		if ( !empty( $_records ) )
 		{
-			return ResourceStore::insert( $_records, Option::getBool( $_payload, 'rollback' ) );
+			$_rollback = Option::getBool( $_payload, 'rollback' );
+			$_continue = Option::getBool( $_payload, 'continue' );
+			return ResourceStore::insert( $_records, $_rollback, null, null, $_continue );
 		}
 
 		if ( empty( $_payload ) )
@@ -407,14 +428,16 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 		$_payload = $this->_determineRequestedResource( $_ids, $_records );
 
+		$_rollback = Option::getBool( $_payload, 'rollback' );
+		$_continue = Option::getBool( $_payload, 'continue' );
 		if ( !empty( $_ids ) )
 		{
-			return ResourceStore::bulkDeleteById( $_ids );
+			return ResourceStore::bulkDeleteById( $_ids, $_rollback, null, null, false, $_continue );
 		}
 
 		if ( !empty( $_records ) )
 		{
-			return ResourceStore::delete( $_records );
+			return ResourceStore::delete( $_records, $_rollback, null, null, $_continue );
 		}
 
 		if ( empty( $_payload ) )

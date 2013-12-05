@@ -76,7 +76,7 @@ class Register extends BasePlatformRestResource
 	 */
 	protected function _handlePost()
 	{
-		$_data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostedData( false, true );
 		$_result = $this->userRegister( $_data );
 
 		return $_result;
@@ -196,13 +196,18 @@ class Register extends BasePlatformRestResource
 				}
 				else
 				{
-					$_data = array(
-						'subject'   => 'Registration Confirmation',
-						'body_html' => "Hi {first_name},<br/>\nYou have registered to become a {dsp.name} user. " .
-									   "Go to the following url, enter the code below, and set your password to confirm your account.<br/>\n<br/>\n" .
-									   "{dsp.host_url}/public/launchpad/confirm_reg.html<br/>\n<br/>\n" .
-									   "Confirmation Code: {confirm_code}<br/>\n<br/>\nThanks,<br/>\n{from_name}",
-					);
+					$_defaultPath = dirname( dirname( __DIR__ ) ) . '/Templates/Email/confirm_user_registration.json';
+					if ( !file_exists( $_defaultPath ) )
+					{
+						throw new \Exception( "No default email template for user registration." );
+					}
+
+					$_data = file_get_contents( $_defaultPath );
+					$_data = json_decode( $_data, true );
+					if ( empty( $_data ) || !is_array( $_data ) )
+					{
+						throw new \Exception( "No data found in default email template for user registration." );
+					}
 				}
 
 				$_data['to'] = $_email;

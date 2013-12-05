@@ -22,32 +22,15 @@ namespace DreamFactory\Platform\Resources\System;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
+use DreamFactory\Platform\Utility\ResourceStore;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
 use DreamFactory\Common\Utility\DataFormat;
 
 /**
  * ProviderUser
  * DSP service/provider interface
- *
- * @SWG\Resource(
- *   resourcePath="/system"
- * )
- *
- * @SWG\Model(id="ProviderUsers",
- * @SWG\Property(name="record",type="Array",items="$ref:ProviderUser",description="Array of provider user records of the given resource.")
- * )
- * @SWG\Model(id="ProviderUser",
- * @SWG\Property(name="id",type="int",description="Identifier of this account."),
- * @SWG\Property(name="user_id",type="int",description="The user who owns this account."),
- * @SWG\Property(name="api_name",type="string",description="The portal which issued this account."),
- * @SWG\Property(name="account_type",type="int",description="The type of account."),
- * @SWG\Property(name="auth_text",type="string",description="The authorization for this account/provider."),
- * @SWG\Property(name="created_date",type="string",description="Date this application group was created."),
- * @SWG\Property(name="created_by_id",type="int",description="User Id of who created this application group."),
- * @SWG\Property(name="last_modified_date",type="string",description="Date this application group was last modified."),
- * @SWG\Property(name="last_modified_by_id",type="int",description="User Id of who last modified this application group.")
- *
  */
 class ProviderUser extends BaseSystemRestResource
 {
@@ -64,239 +47,23 @@ class ProviderUser extends BaseSystemRestResource
 		parent::__construct(
 			$consumer,
 			array(
-				 'name'           => 'Provider User',
-				 'type'           => 'Service',
-				 'service_name'   => 'system',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
 				 'api_name'       => 'provider_user',
-				 'description'    => 'Provider User Configuration',
 				 'is_active'      => true,
+				 'name'           => 'Provider User',
+				 'type'           => 'System',
+				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
 				 'resource_array' => $resourceArray,
-				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-					 static::Put   => static::Post,
-					 static::Merge => static::Post,
-				 )
 			)
 		);
 	}
-	//*************************************************************************
-	//* Doc
-	//*************************************************************************
 
 	/**
-	 * @SWG\Api(
-	 *             path="/system/provider_user", description="Operations for provider user administration.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve multiple provider users.",
-	 *             notes="Use the 'ids' or 'filter' parameter to limit records that are returned. Use the 'fields' and 'related' parameters to limit properties returned for each record. By default, all fields and no relations are returned for all records.",
-	 *             responseClass="ProviderUsers", nickname="getProviderUsers",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="filter", description="SQL-like filter to limit the records to retrieve.",
-	 *             paramType="query", required="false", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="limit", description="Set to limit the filter results.",
-	 *             paramType="query", required="false", allowMultiple=false, dataType="int"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="order", description="SQL-like order containing field and direction for filter results.",
-	 *             paramType="query", required="false", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="offset", description="Set to offset the filter results to a particular record count.",
-	 *             paramType="query", required="false", allowMultiple=false, dataType="int"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="include_count", description="Include the total number of filter results.",
-	 *             paramType="query", required="false", allowMultiple=false, dataType="boolean"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="include_schema", description="Include the schema of the table queried.",
-	 *             paramType="query", required="false", allowMultiple=false, dataType="boolean"
-	 *           )
-	 *         ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *         )
-	 *       ),
-	 * @SWG\Operation(
-	 *             httpMethod="POST", summary="Create one or more provider users.",
-	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="createProviderUsers",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *             name="record", description="Data containing name-value pairs of records to create.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="ProviderUsers"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           )
-	 *         ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *         )
-	 *       ),
-	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one or more provider users.",
-	 *             notes="Post data should be a single record or an array of records (shown). By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="updateProviderUsers",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="ProviderUsers"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           )
-	 *         ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *         )
-	 *       ),
-	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one or more provider users.",
-	 *             notes="Use 'ids' or post data should be a single record or an array of records (shown) containing an id. By default, only the id property of the record is returned on success, use 'fields' and 'related' to return more info.",
-	 *             responseClass="Success", nickname="deleteProviderUsers",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *             name="ids", description="Comma-delimited list of the identifiers of the records to retrieve.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="record", description="Data containing name-value pairs of records to delete.",
-	 *             paramType="body", required="false", allowMultiple=false, dataType="ProviderUsers"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           )
-	 *         ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *         )
-	 *       )
-	 *     )
-	 *   )
-	 *
-	 * @SWG\Api(
-	 *             path="/system/provider_user/{id}", description="Operations for individual provider user administration.",
-	 * @SWG\Operations(
-	 * @SWG\Operation(
-	 *             httpMethod="GET", summary="Retrieve one provider user by identifier.",
-	 *             notes="Use the 'fields' and/or 'related' parameter to limit properties that are returned. By default, all fields and no relations are returned.",
-	 *             responseClass="ProviderUser", nickname="getProviderUser",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *             name="id", description="Identifier of the record to retrieve.",
-	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           )
-	 *         ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *         )
-	 *       ),
-	 * @SWG\Operation(
-	 *             httpMethod="PUT", summary="Update one provider user.",
-	 *             notes="Post data should be an array of fields for a single record. Use the 'fields' and/or 'related' parameter to return more properties. By default, the id is returned.",
-	 *             responseClass="Success", nickname="updateProviderUser",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *             name="id", description="Identifier of the record to retrieve.",
-	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="record", description="Data containing name-value pairs of records to update.",
-	 *             paramType="body", required="true", allowMultiple=false, dataType="ProviderUser"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           )
-	 *         ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *         )
-	 *       ),
-	 * @SWG\Operation(
-	 *             httpMethod="DELETE", summary="Delete one provider user.",
-	 *             notes="Use the 'fields' and/or 'related' parameter to return deleted properties. By default, the id is returned.",
-	 *             responseClass="Success", nickname="deleteProviderUser",
-	 * @SWG\Parameters(
-	 * @SWG\Parameter(
-	 *             name="id", description="Identifier of the record to retrieve.",
-	 *             paramType="path", required="true", allowMultiple=false, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="fields", description="Comma-delimited list of field names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           ),
-	 * @SWG\Parameter(
-	 *             name="related", description="Comma-delimited list of related names to retrieve for each record.",
-	 *             paramType="query", required="false", allowMultiple=true, dataType="string"
-	 *           )
-	 *         ),
-	 * @SWG\ErrorResponses(
-	 * @SWG\ErrorResponse(code="400", reason="Bad Request - Request does not have a valid format, all required parameters, etc."),
-	 * @SWG\ErrorResponse(code="401", reason="Unauthorized Access - No currently valid session available."),
-	 * @SWG\ErrorResponse(code="500", reason="System Error - Specific reason is included in the error message.")
-	 *         )
-	 *       )
-	 *     )
-	 *   )
-	 *
-	 * @return array|bool
+	 * @return bool
 	 */
+	protected function _handleGet()
+	{
+		return parent::_handleGet();
+	}
 }
+
+

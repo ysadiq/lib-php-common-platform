@@ -29,9 +29,11 @@ class UnauthorizedException extends RestException
 	 *
 	 * @param string  $message error message
 	 * @param integer $code    error code
+	 * @param mixed   $previous
+	 * @param mixed   $context Additional information for downstream consumers
 	 */
-	public function __construct( $message = null, $code = null )
+	public function __construct( $message = null, $code = null, $previous = null, $context = null )
 	{
-		parent::__construct( static::Unauthorized, $message, $code ? : static::Unauthorized );
+		parent::__construct( static::Unauthorized, $message, $code ? : static::Unauthorized, $previous, $context );
 	}
 }

@@ -19,13 +19,15 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
-use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
@@ -33,8 +35,7 @@ use Kisma\Core\Utility\Option;
 
 /**
  * BasePlatformRestService
- * A base class for all DSP reset services
- *
+ * A base class for all DSP REST services
  */
 abstract class BasePlatformRestService extends BasePlatformService implements RestServiceLike
 {
@@ -72,15 +73,13 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected $_action = self::Get;
 	/**
-	 * @var mixed The response to the request
-	 */
-	protected $_response = null;
-	/**
-	 * @var bool If true, _handleResource() dispatches a call to _handle[Action]() methods if defined. For example, a GET request would be dispatched to _handleGet().
+	 * @var bool If true, _handleResource() dispatches a call to _handle[Action]() methods if defined.
+	 * For example, a GET request would be dispatched to _handleGet().
 	 */
 	protected $_autoDispatch = true;
 	/**
-	 * @var string The pattern to search for dispatch methods. The string {action} will be replaced by the inbound action (i.e. Get, Put, Post, etc.)
+	 * @var string The pattern to search for dispatch methods.
+	 * The string {action} will be replaced by the inbound action (i.e. Get, Put, Post, etc.)
 	 */
 	protected $_autoDispatchPattern = self::DEFAULT_HANDLER_PATTERN;
 	/**
@@ -107,10 +106,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected $_originalAction = null;
 	/**
-	 * @var int
-	 */
-	protected $_serviceId = null;
-	/**
 	 * @var array Additional actions that this resource will respond to
 	 */
 	protected $_extraActions = null;
@@ -118,6 +113,31 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @var array The data that came in on the request
 	 */
 	protected $_requestPayload = null;
+	/**
+	 * @var mixed The response to the request
+	 */
+	protected $_response = null;
+	/**
+	 * @var int The HTTP response code returned for this request
+	 */
+	protected $_responseCode = RestResponse::Ok;
+	/**
+	 * @var int The inner payload response format, used for table formatting, etc.
+	 */
+	protected $_responseFormat = ResponseFormats::RAW;
+	/**
+	 * @var string Default output format, either null (native), 'json' or 'xml'.
+	 * NOTE: Output format is different from RESPONSE format (inner payload format vs. envelope)
+	 */
+	protected $_outputFormat = null;
+	/**
+	 * @var string If set, prompt browser to download response as a file.
+	 */
+	protected $_outputAsFile = null;
+	/**
+	 * @var int
+	 */
+	protected $_serviceId = null;
 
 	//*************************************************************************
 	//* Methods
@@ -136,16 +156,21 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	}
 
 	/**
-	 * @param string $resource
-	 * @param string $action
+	 * @param string $resource      Optional resource for the REST call
+	 * @param string $action        HTTP action for this request
+	 * @param string $output_format Optional override for detecting output format
 	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return mixed
-	 * @throws BadRequestException
 	 */
-	public function processRequest( $resource = null, $action = self::Get )
+	public function processRequest( $resource = null, $action = self::Get, $output_format = null )
 	{
 		$this->_setAction( $action );
+
+		// required app name for security check
+		$this->_detectAppName();
 		$this->_detectResourceMembers( $resource );
+		$this->_detectResponseMembers( $output_format );
 
 		$this->_preProcess();
 
@@ -161,7 +186,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 		$this->_postProcess();
 
-		return $this->_response;
+		return $this->_respond();
 	}
 
 	/**
@@ -308,6 +333,99 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	protected function _postProcess()
 	{
 		// throw exception here to stop processing
+	}
+
+	/**
+	 * @return mixed|null If response is for internal use, returns result of operation.
+	 *                    Otherwise, responds to REST client in desired format and ends processing.
+	 */
+	protected function _respond()
+	{
+		$_result = $this->_response;
+
+		if ( null === $this->_nativeFormat && DataFormat::CSV == $this->_outputFormat )
+		{
+			// need to strip 'record' wrapper before reformatting to csv
+			//@todo move this logic elsewhere
+			$_result = Option::get( $_result, 'record', $_result );
+		}
+
+		$_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
+
+		if ( !empty( $this->_outputFormat ) )
+		{
+			//	No return from here...
+			RestResponse::sendResults( $_result, $this->_responseCode, $this->_outputFormat, $this->_outputAsFile );
+		}
+
+		//	Native arrays must stay local, just return
+		return $_result;
+	}
+
+	/**
+	 * Determine the app_name/API key of this request
+	 *
+	 * @return mixed
+	 */
+	protected function _detectAppName()
+	{
+		// 	Determine application if any
+		$_appName = FilterInput::request( 'app_name', null, FILTER_SANITIZE_STRING );
+
+		if ( empty( $_appName ) )
+		{
+			if ( null === ( $_appName = Option::get( $_SERVER, 'HTTP_X_DREAMFACTORY_APPLICATION_NAME' ) ) )
+			{
+				//	Old non-name-spaced header
+				$_appName = Option::get( $_SERVER, 'HTTP_X_APPLICATION_NAME' );
+			}
+		}
+
+		//	Still empty?
+		if ( empty( $_appName ) )
+		{
+			//	We give portal requests a break, as well as inbound OAuth redirects
+			if ( false !== stripos( Option::server( 'REQUEST_URI' ), '/rest/portal', 0 ) )
+			{
+				$_appName = 'portal';
+			}
+			elseif ( isset( $_REQUEST, $_REQUEST['code'], $_REQUEST['state'], $_REQUEST['oasys'] ) )
+			{
+				$_appName = 'auth_redirect';
+			}
+			else
+			{
+				RestResponse::sendErrors(
+					new BadRequestException( 'No application name header or parameter value in request.' )
+				);
+			}
+		}
+
+		// assign to global for system usage, todo improve this
+		$GLOBALS['app_name'] = $_appName;
+	}
+
+	/**
+	 * @param string $output_format
+	 */
+	protected function _detectResponseMembers( $output_format = null )
+	{
+		//	Determine output format, inner and outer formatting if necessary
+		$this->_outputFormat = RestResponse::detectResponseFormat( $output_format, $this->_responseFormat );
+
+		//	Determine if output as file is enabled
+		$_file = FilterInput::request( 'file', null, FILTER_SANITIZE_STRING );
+
+		if ( !empty( $_file ) )
+		{
+			if ( DataFormat::boolval( $_file ) )
+			{
+				$_file = $this->getApiName();
+				$_file .= '.' . $this->_outputFormat;
+			}
+
+			$this->_outputAsFile = $_file;
+		}
 	}
 
 	/**
@@ -697,5 +815,57 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function getRequestPayload()
 	{
 		return $this->_requestPayload;
+	}
+
+	/**
+	 * @param array $responseCode
+	 */
+	public function setResponseCode( $responseCode )
+	{
+		$this->_responseCode = $responseCode;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getResponseCode()
+	{
+		return $this->_responseCode;
+	}
+
+	/**
+	 * @param string $outputFormat
+	 */
+	public function setOutputFormat( $outputFormat )
+	{
+		$this->_outputFormat = $outputFormat;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getOutputFormat()
+	{
+		return $this->_outputFormat;
+	}
+
+	/**
+	 * @param int $responseFormat
+	 *
+	 * @return BasePlatformRestService
+	 */
+	public function setResponseFormat( $responseFormat )
+	{
+		$this->_responseFormat = $responseFormat;
+
+		return $this;
+	}
+
+	/**
+	 * @return int
+	 */
+	public function getResponseFormat()
+	{
+		return $this->_responseFormat;
 	}
 }

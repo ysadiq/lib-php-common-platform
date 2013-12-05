@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Common\Utility\DataFormat;
 use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Option;
 
 /**
  * REST Request Utilities
@@ -31,26 +32,75 @@ class RestData
 	//	Methods
 	//*************************************************************************
 
-	// xml helper functions
-
 	/**
-	 * @return array|mixed|null
+	 * Checks for post data and performs gunzip functions
+	 * Also checks for single uploaded data in a file if requested
+	 * Also converts output to native php array if requested
+	 *
+	 * @param bool $from_file
+	 * @param bool $as_array
+	 *
 	 * @throws \Exception
+	 * @return string|array
 	 */
-	public static function getPostDataAsArray()
+	public static function getPostedData( $from_file = false, $as_array = false )
 	{
-		$_postData = static::getPostData();
-
-		$_data = null;
-
-		if ( !empty( $_postData ) )
+		if ( 'gzip' === FilterInput::server( 'HTTP_CONTENT_ENCODING' ) )
 		{
-			$_contentType = ( isset( $_SERVER['CONTENT_TYPE'] ) ) ? $_SERVER['CONTENT_TYPE'] : '';
+			// Until PHP 6.0 is installed where gzunencode() is supported we must use the temp file support
+			$_data = "";
+			$_gzfp = gzopen( 'php://input', 'r' );
 
+			while ( !gzeof( $_gzfp ) )
+			{
+				$_data .= gzread( $_gzfp, 1024 );
+			}
+			gzclose( $_gzfp );
+		}
+		else
+		{
+			$_data = file_get_contents( 'php://input' );
+		}
+
+		if ( empty( $_data ) && $from_file )
+		{
+			$_file = Option::get( $_FILES, 'files' );
+			if ( empty( $_file ) )
+			{
+				return null; // can't find anything to return
+			}
+
+			//	Older html multi-part/form-data post, single or multiple files
+			if ( is_array( $_file['error'] ) )
+			{
+				throw new \Exception( 'Only a single file is allowed for import of data.' );
+			}
+
+			$_name = $_file['name'];
+			if ( UPLOAD_ERR_OK !== ( $_error = $_file['error'] ) )
+			{
+				throw new \Exception( "Failed to receive upload of \"$_name\": $_error" );
+			}
+
+			$_contentType = $_file['type'];
+			$_extension = strtolower( pathinfo( $_name, PATHINFO_EXTENSION ) );
+			$_filename = $_file['tmp_name'];
+			$_data = file_get_contents( $_filename );
+		}
+		else
+		{
+			$_contentType = FilterInput::server( 'CONTENT_TYPE' );
+		}
+
+		if ( !empty( $_data ) && $as_array )
+		{
+			$_postData = $_data;
+			$_data = array();
 			if ( !empty( $_contentType ) )
 			{
 				if ( false !== stripos( $_contentType, '/json' ) )
 				{
+					// application/json
 					$_data = DataFormat::jsonToArray( $_postData );
 				}
 				elseif ( false !== stripos( $_contentType, '/xml' ) )
@@ -58,60 +108,28 @@ class RestData
 					// application/xml or text/xml
 					$_data = DataFormat::xmlToArray( $_postData );
 				}
-			}
-
-			if ( !isset( $_data ) )
-			{
-				try
+				elseif ( false !== stripos( $_contentType, '/csv' ) )
 				{
-					$_data = DataFormat::jsonToArray( $_postData );
-				}
-				catch ( \Exception $ex )
-				{
-					try
+					// text/csv
+					$_data = DataFormat::csvToArray( $_postData );
+					// expected record array format is wrapped with 'record'
+					if ( !empty( $_data ) )
 					{
-						$_data = DataFormat::xmlToArray( $_postData );
-					}
-					catch ( \Exception $ex )
-					{
-						throw new \Exception( 'Invalid Format Requested. ' . $ex->getMessage() );
+						$_data = array( 'record' => $_data );
 					}
 				}
 			}
 
-			if ( !empty( $_data ) && is_array( $_data ) )
+			if ( empty( $_data ) )
 			{
-				$_data = ( isset( $_data['dfapi'] ) ) ? $_data['dfapi'] : $_data;
+				// last chance, assume it is json
+				$_data = DataFormat::jsonToArray( $_postData );
 			}
+
+			// get rid of xml wrapper if present
+			$_data = Option::get( $_data, 'dfapi', $_data );
 		}
 
 		return $_data;
-	}
-
-	/**
-	 * Checks for post data and performs gunzip functions
-	 *
-	 * @return string
-	 */
-	public static function getPostData()
-	{
-		if ( 'gzip' === FilterInput::server( 'HTTP_CONTENT_ENCODING' ) )
-		{
-			// Until PHP 6.0 is installed where gzunencode() is supported we must use the temp file support
-			$data = "";
-			$gzfp = gzopen( 'php://input', 'r' );
-
-			while ( !gzeof( $gzfp ) )
-			{
-				$data .= gzread( $gzfp, 1024 );
-			}
-			gzclose( $gzfp );
-		}
-		else
-		{
-			$data = file_get_contents( 'php://input' );
-		}
-
-		return $data;
 	}
 }

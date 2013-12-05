@@ -106,9 +106,14 @@ class SalesforceDbSvc extends BaseDbSvc
 		$this->_username = Option::get( $_credentials, 'username' );
 		$this->_password = Option::get( $_credentials, 'password' );
 		$this->_securityToken = Option::get( $_credentials, 'security_token' );
-		if ( empty( $this->_username ) || empty( $this->_password) || empty( $this->_securityToken ) )
+		if ( empty( $_token ) )
 		{
-			throw new \InvalidArgumentException( 'A Salesforce username, password, and security token are required for this service.' );
+			$this->_securityToken = ''; // gets appended to password
+		}
+
+		if ( empty( $this->_username ) || empty( $this->_password ) )
+		{
+			throw new \InvalidArgumentException( 'A Salesforce username and password are required for this service.' );
 		}
 
 		$_version = Option::get( $_credentials, 'version' );
@@ -125,8 +130,7 @@ class SalesforceDbSvc extends BaseDbSvc
 	protected function _getSoapLoginResult()
 	{
 		// todo use client provided Salesforce wsdl for the different versions
-		$_scanPath = Pii::getParam( 'base_path' ) . '/vendor/dreamfactory/lib-php-common-platform/DreamFactory/Platform';
-		$_wsdl = $_scanPath . '/Templates/Salesforce/salesforce.enterprise.wsdl.xml';
+		$_wsdl = dirname( __DIR__ ) . '/Templates/Salesforce/salesforce.enterprise.wsdl.xml';
 
 		$_builder = new SoapClient\ClientBuilder( $_wsdl, $this->_username, $this->_password, $this->_securityToken );
 		$_soapClient = $_builder->build();
@@ -246,7 +250,7 @@ class SalesforceDbSvc extends BaseDbSvc
 					$_error = $_response->json();
 					$_error = Option::get( $_error, 0, array() );
 					$_message = Option::get( $_error, 'message', $_response->getMessage() );
-					$_code = Option::get( $_error, 'errorCode', 'ERROR');
+					$_code = Option::get( $_error, 'errorCode', 'ERROR' );
 					throw new RestException( $_status, $_code . ' ' . $_message );
 				}
 				catch ( \Exception $ex )
@@ -259,7 +263,7 @@ class SalesforceDbSvc extends BaseDbSvc
 			$_error = $_response->json();
 			$_error = Option::get( $_error, 0, array() );
 			$_message = Option::get( $_error, 'message', $_response->getMessage() );
-			$_code = Option::get( $_error, 'errorCode', 'ERROR');
+			$_code = Option::get( $_error, 'errorCode', 'ERROR' );
 			throw new RestException( $_status, $_code . ' ' . $_message );
 		}
 		catch ( \Exception $ex )
@@ -267,7 +271,6 @@ class SalesforceDbSvc extends BaseDbSvc
 			throw new InternalServerErrorException( $ex->getMessage(), $ex->getCode() ? : null );
 		}
 	}
-
 
 	protected function getBaseUrl()
 	{
@@ -306,7 +309,7 @@ class SalesforceDbSvc extends BaseDbSvc
 
 		// get possible paging parameter for large requests
 		$_next = FilterInput::request( 'next' );
-		if ( empty( $_next) && !empty( $post_data ) )
+		if ( empty( $_next ) && !empty( $post_data ) )
 		{
 			$_next = Option::get( $post_data, 'next' );
 		}
@@ -476,7 +479,8 @@ class SalesforceDbSvc extends BaseDbSvc
 					throw $ex;
 				}
 
-				$_errors[$_key] = $ex->getMessage();
+				$_errors[] = $_key;
+				$_ids[$_key] = $ex->getMessage();
 				if ( !$_continue )
 				{
 					break;
@@ -487,7 +491,7 @@ class SalesforceDbSvc extends BaseDbSvc
 		if ( !empty( $_errors ) )
 		{
 			$_msg = array( 'errors' => $_errors, 'ids' => $_ids );
-			throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+			throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 		}
 
 		$_results = array();
@@ -560,7 +564,8 @@ class SalesforceDbSvc extends BaseDbSvc
 					throw $ex;
 				}
 
-				$_errors[$_key] = $ex->getMessage();
+				$_errors[] = $_key;
+				$_ids[$_key] = $ex->getMessage();
 				if ( !$_continue )
 				{
 					break;
@@ -571,7 +576,7 @@ class SalesforceDbSvc extends BaseDbSvc
 		if ( !empty( $_errors ) )
 		{
 			$_msg = array( 'errors' => $_errors, 'ids' => $_ids );
-			throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+			throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 		}
 
 		$_results = array();
@@ -686,7 +691,8 @@ class SalesforceDbSvc extends BaseDbSvc
 						throw $ex;
 					}
 
-					$_errors[$_key] = $ex->getMessage();
+					$_errors[] = $_key;
+					$ids[$_key] = $ex->getMessage();
 					if ( !$_continue )
 					{
 						break;
@@ -697,7 +703,7 @@ class SalesforceDbSvc extends BaseDbSvc
 			if ( !empty( $_errors ) )
 			{
 				$_msg = array( 'errors' => $_errors, 'ids' => $ids );
-				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+				throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 			}
 
 			$_results = array();
@@ -856,7 +862,8 @@ class SalesforceDbSvc extends BaseDbSvc
 						throw $ex;
 					}
 
-					$_errors[$_key] = $ex->getMessage();
+					$_errors[] = $_key;
+					$ids[$_key] = $ex->getMessage();
 					if ( !$_continue )
 					{
 						break;
@@ -867,7 +874,7 @@ class SalesforceDbSvc extends BaseDbSvc
 			if ( !empty( $_errors ) )
 			{
 				$_msg = array( 'errors' => $_errors, 'ids' => $ids );
-				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+				throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 			}
 
 			$_results = array();
@@ -1153,6 +1160,7 @@ class SalesforceDbSvc extends BaseDbSvc
 	 * @param      $table
 	 * @param null $fields
 	 * @param null $id_field
+	 *
 	 * @return array|null|string
 	 */
 	protected function _buildFieldList( $table, $fields = null, $id_field = null )
@@ -1178,10 +1186,14 @@ class SalesforceDbSvc extends BaseDbSvc
 			}
 
 			// make sure the Id field is always returned
-			if ( false === array_search( strtolower( $id_field ),
-										 array_map( 'trim',
-													explode( ',', strtolower( $fields ) )
-										 ) ) )
+			if ( false === array_search(
+					strtolower( $id_field ),
+					array_map(
+						'trim',
+						explode( ',', strtolower( $fields ) )
+					)
+				)
+			)
 			{
 				$fields = array_map( 'trim', explode( ',', $fields ) );
 				$fields[] = $id_field;

@@ -132,6 +132,10 @@ class SchemaSvc extends BasePlatformRestService
 //				$this->_sqlConn->setAttribute( 'ReturnDatesAsStrings', true );
 				$this->_sqlConn->setAttribute( 'CharacterSet', 'UTF-8' );
 				break;
+
+			case SqlDbUtilities::DRV_DBLIB:
+				$this->_sqlConn->setAttribute( \PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION );
+				break;
 		}
 
 		$_attributes = Option::clean( Option::get( $config, 'parameters' ) );
@@ -160,7 +164,7 @@ class SchemaSvc extends BasePlatformRestService
 	{
 		parent::_preProcess();
 
-		$this->_payload = RestData::getPostDataAsArray();
+		$this->_payload = RestData::getPostedData( false, true );
 		$this->_tables = Option::get(
 			$this->_payload,
 			'table',

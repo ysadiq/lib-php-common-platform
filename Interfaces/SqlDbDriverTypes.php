@@ -53,4 +53,8 @@ interface SqlDbDriverTypes
 	 * @var int
 	 */
 	const DRV_OCSQL = 5;
+	/**
+	 * @var int
+	 */
+	const DRV_DBLIB = 6;
 }

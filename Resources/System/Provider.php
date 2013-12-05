@@ -47,18 +47,10 @@ class Provider extends BaseSystemRestResource
 			$consumer,
 			array(
 				 'name'           => 'Provider',
-				 'type'           => 'Service',
-				 'service_name'   => 'system',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'provider',
-				 'description'    => 'Provider Configuration',
 				 'is_active'      => true,
+				 'type'           => 'System',
+				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
 				 'resource_array' => $resourceArray,
-				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-					 static::Put   => static::Post,
-					 static::Merge => static::Post,
-				 ),
 			)
 		);
 	}

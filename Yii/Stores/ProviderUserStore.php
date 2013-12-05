@@ -22,7 +22,6 @@ namespace DreamFactory\Platform\Yii\Stores;
 use DreamFactory\Oasys\Stores\BaseOasysStore;
 use DreamFactory\Platform\Yii\Models\ProviderUser;
 use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
 
 /**
  * ProviderUserStore.php
@@ -60,13 +59,12 @@ class ProviderUserStore extends BaseOasysStore
 	 */
 	public function __construct( $userId, $providerId, $contents = array() )
 	{
-		$this->_providerId = $providerId;
-		$this->_userId = $userId;
-		$this->_providerUserId = Option::get( $contents, 'provider_user_id', $this->_providerUserId, true );
+		parent::__construct( $contents );
+
+		$this->_providerId = $providerId ? : $this->_providerUserId;
+		$this->_userId = $userId ? : $this->_userId;
 
 		$this->_load();
-
-		parent::__construct( $contents );
 	}
 
 	/**
@@ -78,25 +76,29 @@ class ProviderUserStore extends BaseOasysStore
 	 */
 	protected function _load( $fill = true )
 	{
-		$_condition = 'user_id = :user_id AND provider_id = :provider_id';
-		$_params = array(
-			':user_id'     => $this->_userId,
-			':provider_id' => $this->_providerId,
+		$_criteria = new \CDbCriteria();
+		$_criteria->order = 'id';
+		$_criteria->limit = 1;
+		$_criteria->condition = 'user_id = :user_id AND provider_id = :provider_id';
+		$_criteria->params = array(
+			'user_id'     => $this->_userId,
+			'provider_id' => $this->_providerId,
 		);
 
 		if ( !empty( $this->_providerUserId ) )
 		{
-			$_condition .= ' AND provider_user_id = :provider_user_id';
-			$_params[':provider_user_id'] = $this->_providerUserId;
+			$_criteria->condition .= ' AND provider_user_id = :provider_user_id';
+			$_criteria->params[':provider_user_id'] = $this->_providerUserId;
 		}
 
 		/** @var ProviderUser $_pu */
-		$_pu = ProviderUser::model()->find( $_condition, $_params );
-
-		//	Load prior auth stuff...
-		if ( null !== $_pu && !empty( $_pu->auth_text ) && true === $fill )
+		if ( null !== ( $_pu = ProviderUser::model()->find( $_criteria ) ) )
 		{
-			$this->merge( $_pu->auth_text );
+			//	Load prior auth stuff...
+			if ( !empty( $_pu->auth_text ) && true === $fill )
+			{
+				$this->merge( $_pu->auth_text );
+			}
 		}
 
 		return $_pu;
@@ -109,28 +111,45 @@ class ProviderUserStore extends BaseOasysStore
 	 */
 	public function sync()
 	{
-		try
+		if ( empty( $this->_providerUserId ) )
 		{
-			if ( null === ( $_pu = $this->_load( false ) ) )
-			{
-				$_pu = new ProviderUser();
-				$_pu->user_id = $this->_userId;
-				$_pu->provider_id = $this->_providerId;
-			}
-
-			$_pu->provider_user_id = $this->_providerUserId;
-			$_pu->auth_text = array_merge( empty( $_pu->auth_text ) ? array() : $_pu->auth_text, $this->contents() );
-			$_pu->last_use_date = date( 'c' );
-			$_pu->save();
+//			Log::info( 'Provider user not stored. Need provider\'s ID for user. See ProviderUserStore::setProviderUserId().' );
 
 			return true;
 		}
+
+		if ( null === ( $_creds = $this->_load( false ) ) )
+		{
+			$_creds = new ProviderUser();
+			$_creds->user_id = $this->_userId;
+			$_creds->provider_id = $this->_providerId;
+			$_creds->auth_text = array();
+		}
+
+		if ( empty( $this->_providerUserId ) )
+		{
+			//	Check the bag...
+			$this->_providerUserId = $this->get( 'provider_user_id' );
+		}
+
+		if ( !empty( $this->_providerUserId ) )
+		{
+			$_creds->provider_user_id = $this->_providerUserId;
+		}
+
+		$_creds->auth_text = array_merge( !is_array( $_creds->auth_text ) ? array() : $_creds->auth_text, $this->contents() );
+		$_creds->last_use_date = date( 'c' );
+
+		try
+		{
+			return $_creds->save();
+		}
 		catch ( \CDbException $_ex )
 		{
-			Log::error( 'Exception saving provider user row: ' . $_ex->getMessage() );
-
-			return false;
+			Log::error( $_ex->getMessage() );
 		}
+
+		return true;
 	}
 
 	/**
@@ -149,12 +168,22 @@ class ProviderUserStore extends BaseOasysStore
 
 			if ( true === $delete )
 			{
-				return $_pu->delete();
+				if ( !$_pu->delete() )
+				{
+					Log::error( 'Error deleting provider user row: ' . $this->_userId . '/' . $this->_providerId . '/' . $this->_providerUserId );
+				}
+			}
+			else
+			{
+				$_pu->auth_text = null;
+
+				$_pu->save();
 			}
 
-			$_pu->auth_text = null;
+			$this->_userId = $this->_providerId = $this->_providerUserId = null;
+			$this->clear();
 
-			return $_pu->save();
+			return true;
 		}
 		catch ( \CDbException $_ex )
 		{
@@ -223,5 +252,4 @@ class ProviderUserStore extends BaseOasysStore
 	{
 		return $this->_userId;
 	}
-
 }

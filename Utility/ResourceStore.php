@@ -140,25 +140,25 @@ class ResourceStore implements UtilityLike
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
+	 * @param bool   $continue_on_error
 	 *
 	 * @return array
 	 */
-	public static function insert( $records, $rollback = false, $fields = null, $extras = null )
+	public static function insert( $records, $rollback = false, $fields = null, $extras = null, $continue_on_error = false )
 	{
-		return static::bulkInsert( $records, $rollback, $fields, $extras );
+		return static::bulkInsert( $records, $rollback, $fields, $extras, false, $continue_on_error );
 	}
 
 	/**
 	 * @param array  $record
-	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @return array
 	 */
-	public static function insertOne( $record, $rollback = false, $fields = null, $extras = null )
+	public static function insertOne( $record, $fields = null, $extras = null )
 	{
-		return static::bulkInsert( array($record), $rollback, $fields, $extras, true );
+		return static::bulkInsert( array( $record ), false, $fields, $extras, true );
 	}
 
 	/**
@@ -166,37 +166,39 @@ class ResourceStore implements UtilityLike
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
+	 * @param bool   $continue_on_error
 	 *
 	 * @return array
 	 */
-	public static function update( $records, $rollback = false, $fields = null, $extras = null )
+	public static function update( $records, $rollback = false, $fields = null, $extras = null, $continue_on_error = false )
 	{
-		return static::bulkUpdate( $records, $rollback, $fields, $extras );
+		return static::bulkUpdate( $records, $rollback, $fields, $extras, false, $continue_on_error );
 	}
 
 	/**
 	 * @param array  $record
-	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
 	 *
 	 * @return array
 	 */
-	public static function updateOne( $record, $rollback = false, $fields = null, $extras = null )
+	public static function updateOne( $record, $fields = null, $extras = null )
 	{
-		return static::bulkUpdate( array($record), $rollback, $fields, $extras, true );
+		return static::bulkUpdate( array( $record ), false, $fields, $extras, true );
 	}
 
 	/**
 	 * @param array  $records
+	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
+	 * @param bool   $continue_on_error
 	 *
 	 * @return array
 	 */
-	public static function delete( $records, $fields = null, $extras = null )
+	public static function delete( $records, $rollback = false, $fields = null, $extras = null, $continue_on_error = false )
 	{
-		return static::bulkDelete( $records, true, $fields, $extras );
+		return static::bulkDelete( $records, $rollback, $fields, $extras, false, $continue_on_error );
 	}
 
 	/**
@@ -208,7 +210,7 @@ class ResourceStore implements UtilityLike
 	 */
 	public static function deleteOne( $record, $fields = null, $extras = null )
 	{
-		return static::bulkDelete( array($record), true, $fields, $extras, true );
+		return static::bulkDelete( array( $record ), false, $fields, $extras, true );
 	}
 
 	/**
@@ -224,7 +226,7 @@ class ResourceStore implements UtilityLike
 		//	Passed in a comma-delimited string of ids...
 		if ( $criteria && is_string( $criteria ) && $criteria !== '*' )
 		{
-			$criteria = array('select' => $criteria);
+			$criteria = array( 'select' => $criteria );
 		}
 
 		//	Extract proper criteria from third-party library AJAX calls/parameters
@@ -239,7 +241,7 @@ class ResourceStore implements UtilityLike
 				break;
 		}
 
-		return static::bulkSelectById( null !== $id ? array($id) : null, $criteria, $params, $singleRow );
+		return static::bulkSelectById( null !== $id ? array( $id ) : null, $criteria, $params, $singleRow );
 	}
 
 	/**
@@ -256,7 +258,7 @@ class ResourceStore implements UtilityLike
 	 */
 	public static function bulkSelectById( $ids, $criteria = null, $params = array(), $single = false )
 	{
-		if ( empty( $ids ) || array(null) == $ids )
+		if ( empty( $ids ) || array( null ) == $ids )
 		{
 			$ids = null;
 		}
@@ -301,7 +303,7 @@ class ResourceStore implements UtilityLike
 				}
 			}
 
-			$_response = array('record' => $_response);
+			$_response = array( 'record' => $_response );
 		}
 
 		if ( false !== static::$_includeSchema )
@@ -333,47 +335,56 @@ class ResourceStore implements UtilityLike
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
-	 * @param bool   $singleRow
+	 * @param bool   $single_row
+	 * @param bool   $continue_on_error
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @throws \DreamFactory\Platform\Exceptions\RestException
 	 * @throws \Exception
 	 * @return array
 	 */
-	public static function bulkInsert( $records, $rollback = false, $fields = null, $extras = null, $singleRow = false )
+	public static function bulkInsert( $records, $rollback = false, $fields = null, $extras = null, $single_row = false, $continue_on_error = false )
 	{
 		static::_validateRecords( $records );
 
 		$_response = array();
 		$_transaction = null;
+		$_errors = array();
 
 		try
 		{
 			//	Start a transaction
-			if ( !$singleRow && $rollback )
+			if ( !$single_row && $rollback )
 			{
 				$_transaction = Pii::db()->beginTransaction();
 			}
 
-			foreach ( $records as $_record )
+			foreach ( $records as $_key => $_record )
 			{
 				try
 				{
-					$_response[] = static::_insertInternal( $_record, $fields, $extras );
+					$_response[$_key] = static::_insertInternal( $_record, $fields, $extras );
 				}
 				catch ( \Exception $_ex )
 				{
-					if ( $singleRow )
+					if ( $single_row )
 					{
 						throw $_ex;
 					}
+
 					if ( $rollback && $_transaction )
 					{
 						$_transaction->rollBack();
 						throw $_ex;
 					}
 
-					$_response[] = array('error' => array('message' => $_ex->getMessage(), 'code' => $_ex->getCode()));
+					// track the index of the error and copy error to results
+					$_errors[] = $_key;
+					$_response[$_key] = $_ex->getMessage();
+					if ( !$continue_on_error )
+					{
+						break;
+					}
 				}
 			}
 		}
@@ -386,13 +397,26 @@ class ResourceStore implements UtilityLike
 			throw new InternalServerErrorException( $_ex->getMessage(), $_ex->getCode() );
 		}
 
+		if ( !empty( $_errors ) )
+		{
+			$_msg = array( 'errors' => $_errors, 'record' => $_response );
+			throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
+		}
+
 		//	Commit
 		if ( $_transaction )
 		{
-			$_transaction->commit();
+			try
+			{
+				$_transaction->commit();
+			}
+			catch ( \Exception $_ex )
+			{
+				throw new InternalServerErrorException( $_ex->getMessage(), $_ex->getCode() );
+			}
 		}
 
-		return $singleRow ? current( $_response ) : array('record' => $_response);
+		return $single_row ? current( $_response ) : array( 'record' => $_response );
 	}
 
 	/**
@@ -401,12 +425,13 @@ class ResourceStore implements UtilityLike
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param array  $extras
-	 * @param bool   $singleRow
+	 * @param bool   $single_row
+	 * @param bool   $continue_on_error
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
-	public static function bulkUpdateById( $ids, $record, $rollback = false, $fields = null, $extras = null, $singleRow = false )
+	public static function bulkUpdateById( $ids, $record, $rollback = false, $fields = null, $extras = null, $single_row = false, $continue_on_error = false )
 	{
 		static::_validateRecords( $record );
 
@@ -431,7 +456,7 @@ class ResourceStore implements UtilityLike
 			unset( $_record );
 		}
 
-		return static::bulkUpdate( $_records, $rollback, $fields, $extras, $singleRow );
+		return static::bulkUpdate( $_records, $rollback, $fields, $extras, $single_row, $continue_on_error );
 	}
 
 	/**
@@ -439,43 +464,69 @@ class ResourceStore implements UtilityLike
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param string $extras
-	 * @param bool   $singleRow
+	 * @param bool   $single_row
+	 * @param bool   $continue_on_error
 	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\RestException
+	 * @throws \Exception
 	 * @return array
 	 */
-	public static function bulkUpdate( $records, $rollback = false, $fields = null, $extras = null, $singleRow = false )
+	public static function bulkUpdate( $records, $rollback = false, $fields = null, $extras = null, $single_row = false, $continue_on_error = false )
 	{
 		static::_validateRecords( $records );
 
 		$_response = array();
 		$_transaction = null;
+		$_errors = array();
 
-		//	Start a transaction
-		if ( false !== $rollback )
+		try
 		{
-			$_transaction = Pii::db()->beginTransaction();
-		}
-
-		$_pk = static::model()->tableSchema->primaryKey;
-
-		foreach ( $records as $_record )
-		{
-			try
+			//	Start a transaction
+			if ( !$single_row && $rollback )
 			{
-				$_response[] = static::_updateInternal( Option::get( $_record, $_pk ), $_record, $fields, $extras );
+				$_transaction = Pii::db()->beginTransaction();
 			}
-			catch ( \CDbException $_ex )
+
+			$_pk = static::model()->tableSchema->primaryKey;
+
+			foreach ( $records as $_key => $_record )
 			{
-				$_response[] = array('error' => array('message' => $_ex->getMessage(), 'code' => $_ex->getCode()));
-
-				if ( false !== $rollback && $_transaction )
+				try
 				{
-					//	Rollback
-					$_transaction->rollback();
+					$_response[$_key] = static::_updateInternal( Option::get( $_record, $_pk ), $_record, $fields, $extras );
+				}
+				catch ( \Exception $_ex )
+				{
+					if ( $single_row )
+					{
+						throw $_ex;
+					}
 
-					return $singleRow ? current( $_response ) : array('record' => $_response);
+					if ( $rollback && $_transaction )
+					{
+						$_transaction->rollBack();
+						throw $_ex;
+					}
+
+					// track the index of the error and copy error to results
+					$_errors[] = $_key;
+					$_response[$_key] = $_ex->getMessage();
+					if ( !$continue_on_error )
+					{
+						break;
+					}
 				}
 			}
+		}
+		catch ( RestException $_ex )
+		{
+			throw $_ex;
+		}
+		catch ( \Exception $_ex )
+		{
+			throw new InternalServerErrorException( $_ex->getMessage(), $_ex->getCode() );
 		}
 
 		//	Commit
@@ -484,7 +535,13 @@ class ResourceStore implements UtilityLike
 			$_transaction->commit();
 		}
 
-		return $singleRow ? current( $_response ) : array('record' => $_response);
+		if ( !empty( $_errors ) )
+		{
+			$_msg = array( 'errors' => $_errors, 'record' => $_response );
+			throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
+		}
+
+		return $single_row ? current( $_response ) : array( 'record' => $_response );
 	}
 
 	/**
@@ -492,41 +549,66 @@ class ResourceStore implements UtilityLike
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param string $extras
-	 * @param bool   $singleRow
+	 * @param bool   $single_row
+	 * @param bool   $continue_on_error
 	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\RestException
+	 * @throws \Exception
 	 * @return array
 	 */
-	public static function bulkDeleteById( $ids, $rollback = false, $fields = null, $extras = null, $singleRow = false )
+	public static function bulkDeleteById( $ids, $rollback = false, $fields = null, $extras = null, $single_row = false, $continue_on_error = false )
 	{
 		$_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
 		$_response = array();
 		$_transaction = null;
+		$_errors = array();
 
-		//	Start a transaction
-		if ( false !== $rollback )
+		try
 		{
-			$_transaction = Pii::db()->beginTransaction();
-		}
-
-		foreach ( $_ids as $_id )
-		{
-			// records could be an array of ids or records containing an id field-value
-			try
+			//	Start a transaction
+			if ( !$single_row && $rollback )
 			{
-				$_response[] = static::_deleteInternal( $_id, $fields, $extras );
+				$_transaction = Pii::db()->beginTransaction();
 			}
-			catch ( \CDbException $_ex )
+
+			foreach ( $_ids as $_key => $_id )
 			{
-				$_response[] = array('error' => array('message' => $_ex->getMessage(), 'code' => $_ex->getCode()));
-
-				if ( false !== $rollback && $_transaction )
+				try
 				{
-					//	Rollback
-					$_transaction->rollback();
+					$_response[$_key] = static::_deleteInternal( $_id, $fields, $extras );
+				}
+				catch ( \Exception $_ex )
+				{
+					if ( $single_row )
+					{
+						throw $_ex;
+					}
 
-					return $singleRow ? current( $_response ) : array('record' => $_response);
+					if ( $rollback && $_transaction )
+					{
+						$_transaction->rollBack();
+						throw $_ex;
+					}
+
+					// track the index of the error and copy error to results
+					$_errors[] = $_key;
+					$_response[$_key] = $_ex->getMessage();
+					if ( !$continue_on_error )
+					{
+						break;
+					}
 				}
 			}
+		}
+		catch ( RestException $_ex )
+		{
+			throw $_ex;
+		}
+		catch ( \Exception $_ex )
+		{
+			throw new InternalServerErrorException( $_ex->getMessage(), $_ex->getCode() );
 		}
 
 		//	Commit
@@ -535,7 +617,13 @@ class ResourceStore implements UtilityLike
 			$_transaction->commit();
 		}
 
-		return $singleRow ? current( $_response ) : array('record' => $_response);
+		if ( !empty( $_errors ) )
+		{
+			$_msg = array( 'errors' => $_errors, 'record' => $_response );
+			throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
+		}
+
+		return $single_row ? current( $_response ) : array( 'record' => $_response );
 	}
 
 	/**
@@ -543,53 +631,79 @@ class ResourceStore implements UtilityLike
 	 * @param bool   $rollback
 	 * @param string $fields
 	 * @param string $extras
-	 * @param bool   $singleRow
+	 * @param bool   $single_row
+	 * @param bool   $continue_on_error
 	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\RestException
+	 * @throws \Exception
 	 * @return array
 	 */
-	public static function bulkDelete( $records, $rollback = false, $fields = null, $extras = null, $singleRow = false )
+	public static function bulkDelete( $records, $rollback = false, $fields = null, $extras = null, $single_row = false, $continue_on_error = false )
 	{
 		static::_validateRecords( $records );
 
 		$_response = array();
 		$_transaction = null;
+		$_errors = array();
 
-		//	Start a transaction
-		if ( false !== $rollback )
+		try
 		{
-			$_transaction = Pii::db()->beginTransaction();
-		}
-
-		$_pk = static::model()->tableSchema->primaryKey;
-
-		foreach ( $records as $_record )
-		{
-			// records could be an array of ids or records containing an id field-value
-
-			if ( is_array( $_record ) )
+			//	Start a transaction
+			if ( !$single_row && $rollback )
 			{
-				$_id = Option::get( $_record, $_pk );
+				$_transaction = Pii::db()->beginTransaction();
 			}
-			else
-			{
-				$_id = $_record;
-			}
-			try
-			{
-				$_response[] = static::_deleteInternal( $_id, $fields, $extras );
-			}
-			catch ( \CDbException $_ex )
-			{
-				$_response[] = array('error' => array('message' => $_ex->getMessage(), 'code' => $_ex->getCode()));
 
-				if ( false !== $rollback && $_transaction )
+			$_pk = static::model()->tableSchema->primaryKey;
+
+			foreach ( $records as $_key => $_record )
+			{
+				// records could be an array of ids or records containing an id field-value
+
+				if ( is_array( $_record ) )
 				{
-					//	Rollback
-					$_transaction->rollback();
+					$_id = Option::get( $_record, $_pk );
+				}
+				else
+				{
+					$_id = $_record;
+				}
+				try
+				{
+					$_response[$_key] = static::_deleteInternal( $_id, $fields, $extras );
+				}
+				catch ( \Exception $_ex )
+				{
+					if ( $single_row )
+					{
+						throw $_ex;
+					}
 
-					return $singleRow ? current( $_response ) : array('record' => $_response);
+					if ( $rollback && $_transaction )
+					{
+						$_transaction->rollBack();
+						throw $_ex;
+					}
+
+					// track the index of the error and copy error to results
+					$_errors[] = $_key;
+					$_response[$_key] = $_ex->getMessage();
+					if ( !$continue_on_error )
+					{
+						break;
+					}
 				}
 			}
+		}
+		catch ( RestException $_ex )
+		{
+			throw $_ex;
+		}
+		catch ( \Exception $_ex )
+		{
+			throw new InternalServerErrorException( $_ex->getMessage(), $_ex->getCode() );
 		}
 
 		//	Commit
@@ -598,7 +712,13 @@ class ResourceStore implements UtilityLike
 			$_transaction->commit();
 		}
 
-		return $singleRow ? current( $_response ) : array('record' => $_response);
+		if ( !empty( $_errors ) )
+		{
+			$_msg = array( 'errors' => $_errors, 'record' => $_response );
+			throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
+		}
+
+		return $single_row ? current( $_response ) : array( 'record' => $_response );
 	}
 
 	/**
@@ -619,7 +739,7 @@ class ResourceStore implements UtilityLike
 		{
 			$_pk = static::model()->tableSchema->primaryKey;
 
-			return array($_pk => $resource->getAttribute( $_pk ));
+			return array( $_pk => $resource->getAttribute( $_pk ) );
 		}
 
 		//	Refresh requested?
@@ -789,7 +909,7 @@ class ResourceStore implements UtilityLike
 				return new $_className();
 			}
 
-			return call_user_func( array($_className, 'model') );
+			return call_user_func( array( $_className, 'model' ) );
 		}
 		catch ( \Exception $_ex )
 		{
@@ -830,7 +950,7 @@ class ResourceStore implements UtilityLike
 		if ( !isset( $records[0] ) )
 		{
 			// conversion from xml can pull single record out of array format
-			$records = array($records);
+			$records = array( $records );
 		}
 	}
 

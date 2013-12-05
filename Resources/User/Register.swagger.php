@@ -18,9 +18,9 @@
  * limitations under the License.
  */
 
-$_base = array();
+$_register = array();
 
-$_base['apis'] = array(
+$_register['apis'] = array(
 	array(
 		'path'        => '/{api_name}/register',
 		'operations'  =>
@@ -61,7 +61,7 @@ $_base['apis'] = array(
 	),
 );
 
-$_base['models'] = array(
+$_register['models'] = array(
 	'Register'          =>
 	array(
 		'id'         => 'Register',
@@ -102,4 +102,4 @@ $_base['models'] = array(
 	),
 );
 
-return $_base;
+return $_register;

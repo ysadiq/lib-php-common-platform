@@ -42,12 +42,12 @@ use Kisma\Core\Utility\Sql;
  * @property string               $url
  * @property boolean              $is_url_external
  * @property string               $import_url
- * @property string               $storage_service_id
+ * @property int                  $storage_service_id
  * @property string               $storage_container
  * @property string               $launch_url
  * @property boolean              $requires_fullscreen
  * @property boolean              $allow_fullscreen_toggle
- * @property boolean              $toggle_location
+ * @property string               $toggle_location
  * @property boolean              $requires_plugin
  *
  * Relations:
@@ -88,21 +88,18 @@ class App extends BasePlatformSystemModel
 	 */
 	public function rules()
 	{
-		return
+		return array_merge(
+			parent::rules(),
 			array(
-				array( 'name, api_name', 'required' ),
-				array( 'name, api_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
-				array( 'storage_service_id', 'numerical', 'integerOnly' => true ),
-				array( 'name, api_name', 'length', 'max' => 64 ),
-				array( 'storage_container', 'length', 'max' => 255 ),
-				array(
-					'name, api_name, description, is_active, ' .
-					'url, is_url_external, import_url, launch_url, ' .
-					'storage_service_id, storage_container, ' .
-					'requires_fullscreen, allow_fullscreen_toggle, toggle_location, requires_plugin',
-					'safe'
-				),
-			);
+				 array( 'name, api_name', 'required' ),
+				 array( 'name, api_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
+				 array( 'storage_service_id', 'numerical', 'integerOnly' => true ),
+				 array( 'name, api_name', 'length', 'max' => 64 ),
+				 array( 'storage_container', 'length', 'max' => 255 ),
+				 array( 'is_active, is_url_external, requires_fullscreen, allow_fullscreen_toggle, requires_plugin', 'boolean' ),
+				 array( 'description, url, import_url, launch_url, storage_container, toggle_location', 'safe' )
+			)
+		);
 	}
 
 	/**
@@ -169,6 +166,17 @@ class App extends BasePlatformSystemModel
 		}
 	}
 
+	/** {@InheritDoc} */
+	protected function beforeValidate()
+	{
+		if ( empty( $this->storage_service_id ) )
+		{
+			$this->storage_service_id = null;
+		}
+
+		return parent::beforeValidate();
+	}
+
 	/**
 	 * {@InheritDoc}
 	 */
@@ -191,7 +199,7 @@ class App extends BasePlatformSystemModel
 		{
 			if ( !empty( $this->storage_service_id ) )
 			{
-				$this->launch_url = Curl::currentUrl( false, false )  . '/';
+				$this->launch_url = Curl::currentUrl( false, false ) . '/';
 				/** @var $_service Service */
 				$_service = $this->getRelated( 'storage_service' );
 				if ( !empty( $_service ) )
@@ -242,7 +250,7 @@ class App extends BasePlatformSystemModel
 		{
 			if ( !empty( $this->storage_service_id ) )
 			{
-				$this->launch_url = Curl::currentUrl( false, false )  . '/';
+				$this->launch_url = Curl::currentUrl( false, false ) . '/';
 				/** @var $_service Service */
 				$_service = $this->getRelated( 'storage_service' );
 				if ( !empty( $_service ) )
@@ -582,67 +590,6 @@ MYSQL
 		catch ( \Exception $_ex )
 		{
 			throw new \CDbException( 'Error updating application service assignment: ' . $_ex->getMessage(), $_ex->getCode() );
-		}
-	}
-
-	/**
-	 * @param string      $api_name
-	 * @param BaseFileSvc $storage
-	 * @param string      $container
-	 * @param string      $root_folder
-	 *
-	 * @throws \Exception
-	 */
-	protected static function _initHostedAppStorage( $api_name, $storage, $container, $root_folder = null )
-	{
-		$_templateBaseDir = \Kisma::get( 'app.vendor_path' ) . '/dreamfactory/javascript-sdk';
-		if ( is_dir( $_templateBaseDir ) )
-		{
-			$_files = array_diff(
-				scandir( $_templateBaseDir ),
-				array( '.', '..', '.gitignore', 'composer.json', 'README.md' )
-			);
-			if ( !empty( $_files ) )
-			{
-				foreach ( $_files as $_file )
-				{
-					$_templatePath = $_templateBaseDir . '/' . $_file;
-					if ( is_dir( $_templatePath ) )
-					{
-						$_storePath = ( empty( $root_folder ) ? : $root_folder . '/' ) . $_file;
-						$storage->createFolder( $container, $_storePath );
-						$_subFiles = array_diff( scandir( $_templatePath ), array( '.', '..' ) );
-						if ( !empty( $_subFiles ) )
-						{
-							foreach ( $_subFiles as $_subFile )
-							{
-								$_templateSubPath = $_templatePath . '/' . $_subFile;
-								if ( is_dir( $_templateSubPath ) )
-								{
-									// support this deep?
-								}
-								else if ( file_exists( $_templateSubPath ) )
-								{
-									$_content = file_get_contents( $_templateSubPath );
-									if ( 'sdk-init.js' == $_subFile )
-									{
-										$_dspHost = Curl::currentUrl( false, false );
-										$_content = str_replace( 'https://_your_dsp_hostname_here_', $_dspHost, $_content );
-										$_content = str_replace( '_your_app_api_name_here_', $api_name, $_content );
-									}
-									$storage->writeFile( $container, $_storePath . '/' . $_subFile, $_content, false );
-								}
-							}
-						}
-					}
-					else if ( file_exists( $_templatePath ) )
-					{
-						$_content = file_get_contents( $_templatePath );
-						$_storePath = ( empty( $root_folder ) ? : $root_folder . '/' ) . $_file;
-						$storage->writeFile( $container, $_storePath, $_content, false );
-					}
-				}
-			}
 		}
 	}
 }

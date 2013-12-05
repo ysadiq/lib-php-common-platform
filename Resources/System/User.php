@@ -21,6 +21,15 @@ namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
+use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Services\EmailSvc;
+use DreamFactory\Platform\Utility\ServiceHandler;
+use DreamFactory\Platform\Yii\Models\Config;
+use Kisma\Core\Utility\Hasher;
+use Kisma\Core\Utility\Option;
 
 /**
  * User
@@ -50,5 +59,150 @@ class User extends BaseSystemRestResource
 		);
 
 		parent::__construct( $consumer, $config, $resources );
+	}
+
+	/**
+	 * {@InheritDoc}
+	 */
+	protected function _postProcess()
+	{
+		parent::_postProcess();
+
+		switch ( $this->_action )
+		{
+			case static::Post:
+			case static::Put:
+			case static::Patch:
+				if ( Option::getBool( $_REQUEST, 'send_invite' ) )
+				{
+					if ( is_array( $this->_response ) )
+					{
+						if ( null !== ( $_records = Option::get( $this->_response, 'record' ) ) )
+						{
+							if ( 1 == count( $_records ) )
+							{
+								$_record = Option::get( $_records, 0 );
+								if ( $_record )
+								{
+									$_id = Option::get( $_record, 'id' );
+									static::_sendInvite( $_id, ( static::Post == $this->_action ) );
+								}
+							}
+							else
+							{
+								foreach ( $_records as $_record )
+								{
+									$_id = Option::get( $_record, 'id' );
+									try
+									{
+										static::_sendInvite( $_id );
+									}
+									catch ( \Exception $ex )
+									{
+										// log it but don't error on batch
+										error_log( "Error processing user invite.\n{$ex->getMessage()}" );
+									}
+								}
+							}
+						}
+						else
+						{
+							// should be one
+							$_id = Option::get( $this->_response, 'id' );
+							static::_sendInvite( $_id, ( static::Post == $this->_action ) );
+						}
+					}
+				}
+				break;
+		}
+	}
+
+	protected static function _sendInvite( $user_id, $delete_on_error = false )
+	{
+		$_model = ResourceStore::model( 'user' );
+
+		$_theUser = $_model->findByPk( $user_id );
+
+		if ( null === $_theUser )
+		{
+			throw new NotFoundException( "No database entry exists for a user with id '$user_id'." );
+		}
+
+		// if already a confirmed user, error out
+		if ( 'y' == $_theUser->confirm_code )
+		{
+			throw new BadRequestException( 'User with this identifier has already confirmed this account.' );
+		}
+
+		try
+		{
+			// otherwise, is email confirmation required?
+			/** @var $_config Config */
+			$_fields = 'invite_email_service_id, invite_email_template_id';
+			if ( null === ( $_config = Config::model()->find( array( 'select' => $_fields ) ) ) )
+			{
+				throw new InternalServerErrorException( 'Unable to load system configuration.' );
+			}
+
+			$_serviceId = $_config->invite_email_service_id;
+			if ( empty( $_serviceId ) )
+			{
+				throw new InternalServerErrorException( 'No email service configured for user invite. See system configuration.' );
+			}
+
+			/** @var EmailSvc $_emailService */
+			$_emailService = ServiceHandler::getServiceObject( $_serviceId );
+			if ( !$_emailService )
+			{
+				throw new InternalServerErrorException( "Bad service identifier '$_serviceId' for configured user invite email service." );
+			}
+
+			$_data = array();
+			$_template = $_config->invite_email_template_id;
+			if ( !empty( $_template ) )
+			{
+				$_data['template_id'] = $_template;
+			}
+			else
+			{
+				$_defaultPath = __DIR__ . '/../../Templates/Email/confirm_user_invitation.json';
+				if ( !file_exists( $_defaultPath ) )
+				{
+					throw new InternalServerErrorException( "No default email template for user invite." );
+				}
+
+				$_data = file_get_contents( $_defaultPath );
+				$_data = json_decode( $_data, true );
+				if ( empty( $_data ) || !is_array( $_data ) )
+				{
+					throw new InternalServerErrorException( "No data found in default email template for user invite." );
+				}
+			}
+
+			$_code = Hasher::generateUnique( $_theUser->email, 32 );
+			try
+			{
+				$_theUser->setAttribute( 'confirm_code', $_code );
+				$_theUser->save();
+
+				$_data['to'] = $_theUser->email;
+				$_userFields = array( 'first_name', 'last_name', 'display_name', 'confirm_code' );
+				$_data = array_merge( $_data, $_theUser->getAttributes( $_userFields ) );
+			}
+			catch ( \Exception $ex )
+			{
+				throw new InternalServerErrorException( "Error creating user invite.\n{$ex->getMessage()}", $ex->getCode() );
+			}
+
+			$_emailService->sendEmail( $_data );
+		}
+		catch ( \Exception $ex )
+		{
+			if ( $delete_on_error )
+			{
+				$_model->deleteByPk( $user_id );
+			}
+			throw new InternalServerErrorException( "Error processing user invite.\n{$ex->getMessage()}", $ex->getCode() );
+		}
 	}
 }

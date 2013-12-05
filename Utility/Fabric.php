@@ -16,7 +16,6 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\DateTime;
 use Kisma\Core\Enums\HttpResponse;
@@ -168,7 +167,10 @@ class Fabric extends SeedUtility
 				exit();
 			}
 
-			if ( is_object( $_response ) && isset( $_response->details, $_response->details->code ) && HttpResponse::NotFound == $_response->details->code )
+			if ( is_object(
+					 $_response
+				 ) && isset( $_response->details, $_response->details->code ) && HttpResponse::NotFound == $_response->details->code
+			)
 			{
 				Log::setDefaultLog( \Kisma::get( 'app.log_path' ) . '/error.log' );
 				Log::error( 'Instance "' . $_dspName . '" not found during web initialize.' );
@@ -192,7 +194,8 @@ class Fabric extends SeedUtility
 			\Kisma::set( 'platform.private_storage_key', $_privateKey );
 			\Kisma::set( 'platform.db_config_file', $_privatePath . '/' . $_dbConfigFileName );
 
-			//	File should be there from provisioning... If not, tenemos un problema!
+			/** @noinspection PhpIncludeInspection */
+			//	File should be there from provisioning... If not, tenemos una problema!
 			$_settings = require( $_privatePath . '/' . $_dbConfigFileName );
 
 			if ( !empty( $_settings ) )
@@ -213,8 +216,7 @@ class Fabric extends SeedUtility
 			return $_settings;
 		}
 
-//		Log::error( 'Unable to find private path or database config: ' . $_dbConfigFileName );
-		throw new \CHttpException( HttpResponse::BadRequest );
+		throw new \CHttpException( HttpResponse::BadRequest, 'Unable to find database configuration' );
 	}
 
 	/**
@@ -288,7 +290,7 @@ class Fabric extends SeedUtility
 	{
 		if ( !static::fabricHosted() && !static::hostedPrivatePlatform() )
 		{
-			Log::error( 'Global provider credential pull failure: not hosted entity.' );
+			Log::info( 'Global provider credential pull skipped: not hosted entity.' );
 
 			return array();
 		}
@@ -305,12 +307,10 @@ class Fabric extends SeedUtility
 
 		if ( HttpResponse::Ok != Curl::getLastHttpCode() || !$_response->success )
 		{
-			Log::error( 'Global provider credential pull failure: ' . Curl::getLastHttpCode() . PHP_EOL . print_r( $_response, true ) );
+			Log::error( 'Global provider credential pull failed: ' . Curl::getLastHttpCode() . PHP_EOL . print_r( $_response, true ) );
 
 			return array();
 		}
-
-		Log::debug( 'Global providers pulled: ' . print_r( Option::get( $_response, 'details', array() ), true ) );
 
 		return Option::get( $_response, 'details', array() );
 	}

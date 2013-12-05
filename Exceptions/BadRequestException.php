@@ -29,9 +29,11 @@ class BadRequestException extends RestException
 	 *
 	 * @param string  $message error message
 	 * @param integer $code    error code
+	 * @param mixed   $previous
+	 * @param mixed   $context Additional information for downstream consumers
 	 */
-	public function __construct( $message = null, $code = null )
+	public function __construct( $message = null, $code = null, $previous = null, $context = null )
 	{
-		parent::__construct( static::BadRequest, $message, $code ? : static::BadRequest );
+		parent::__construct( static::BadRequest, $message, $code ? : static::BadRequest, $previous, $context );
 	}
 }

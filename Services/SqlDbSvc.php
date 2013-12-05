@@ -125,12 +125,15 @@ class SqlDbSvc extends BaseDbSvc
 				break;
 
 			case SqlDbUtilities::DRV_SQLSRV:
-				$this->_sqlConn->setAttribute( constant( '\\PDO::SQLSRV_ATTR_DIRECT_QUERY' ), true );
-
+//				$this->_sqlConn->setAttribute( constant( '\\PDO::SQLSRV_ATTR_DIRECT_QUERY' ), true );
 				//	These need to be on the dsn
 //				$this->_sqlConn->setAttribute( 'MultipleActiveResultSets', false );
 //				$this->_sqlConn->setAttribute( 'ReturnDatesAsStrings', true );
 //				$this->_sqlConn->setAttribute( 'CharacterSet', 'UTF-8' );
+				break;
+
+			case SqlDbUtilities::DRV_DBLIB:
+				$this->_sqlConn->setAttribute( \PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION );
 				break;
 		}
 
@@ -392,9 +395,9 @@ class SqlDbSvc extends BaseDbSvc
 						throw new InternalServerErrorException( "Record [$_key] insert failed for table '$table'." );
 					}
 
+					$_id = null;
 					if ( !empty( $_idFieldsInfo ) )
 					{
-						$_id = null;
 						foreach ( $_idFieldsInfo as $_info )
 						{
 							// todo support multi-field keys
@@ -410,8 +413,9 @@ class SqlDbSvc extends BaseDbSvc
 						}
 
 						$this->updateRelations( $table, $_record, $_id, $_relatedInfo );
-						$_ids[$_key] = $_id;
 					}
+
+					$_ids[$_key] = $_id;
 				}
 				catch ( \Exception $ex )
 				{
@@ -419,12 +423,15 @@ class SqlDbSvc extends BaseDbSvc
 					{
 						throw $ex;
 					}
+
 					if ( $_rollback && $_transaction )
 					{
 						$_transaction->rollBack();
 						throw $ex;
 					}
-					$_errors[$_key] = $ex->getMessage();
+
+					$_errors[] = $_key;
+					$_ids[$_key] = $ex->getMessage();
 					if ( !$_continue )
 					{
 						break;
@@ -440,7 +447,7 @@ class SqlDbSvc extends BaseDbSvc
 			if ( !empty( $_errors ) )
 			{
 				$_msg = array( 'errors' => $_errors, 'ids' => $_ids );
-				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+				throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 			}
 
 			$_results = array();
@@ -550,7 +557,8 @@ class SqlDbSvc extends BaseDbSvc
 						throw $ex;
 					}
 
-					$_errors[$_key] = $ex->getMessage();
+					$_errors[] = $_key;
+					$_ids[$_key] = $ex->getMessage();
 					if ( !$_continue )
 					{
 						break;
@@ -566,7 +574,7 @@ class SqlDbSvc extends BaseDbSvc
 			if ( !empty( $_errors ) )
 			{
 				$_msg = array( 'errors' => $_errors, 'ids' => $_ids );
-				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+				throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 			}
 
 			$_results = array();
@@ -712,7 +720,8 @@ class SqlDbSvc extends BaseDbSvc
 						throw $ex;
 					}
 
-					$_errors[$_key] = $ex->getMessage();
+					$_errors[] = $_key;
+					$ids[$_key] = $ex->getMessage();
 					if ( !$_continue )
 					{
 						break;
@@ -728,7 +737,7 @@ class SqlDbSvc extends BaseDbSvc
 			if ( !empty( $_errors ) )
 			{
 				$_msg = array( 'errors' => $_errors, 'ids' => $ids );
-				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+				throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 			}
 
 			$_results = array();
@@ -949,7 +958,8 @@ class SqlDbSvc extends BaseDbSvc
 						throw $ex;
 					}
 
-					$_errors[$_key] = $ex->getMessage();
+					$_errors[] = $_key;
+					$ids[$_key] = $ex->getMessage();
 					if ( !$_continue )
 					{
 						break;
@@ -965,7 +975,7 @@ class SqlDbSvc extends BaseDbSvc
 			if ( !empty( $_errors ) )
 			{
 				$_msg = array( 'errors' => $_errors, 'ids' => $ids );
-				throw new BadRequestException( "Batch Error: " . json_encode( $_msg ) );
+				throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
 			}
 
 			$_results = array();
@@ -1364,6 +1374,7 @@ class SqlDbSvc extends BaseDbSvc
 					{
 						switch ( $this->_driverType )
 						{
+							case SqlDbUtilities::DRV_DBLIB:
 							case SqlDbUtilities::DRV_SQLSRV:
 								switch ( $dbType )
 								{
@@ -1435,6 +1446,7 @@ class SqlDbSvc extends BaseDbSvc
 					{
 						switch ( $this->_driverType )
 						{
+							case SqlDbUtilities::DRV_DBLIB:
 							case SqlDbUtilities::DRV_SQLSRV:
 								$parsed[$name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
 								break;
@@ -1447,6 +1459,7 @@ class SqlDbSvc extends BaseDbSvc
 				case 'timestamp_on_update':
 					switch ( $this->_driverType )
 					{
+						case SqlDbUtilities::DRV_DBLIB:
 						case SqlDbUtilities::DRV_SQLSRV:
 							$parsed[$name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
 							break;
@@ -1647,6 +1660,7 @@ class SqlDbSvc extends BaseDbSvc
 				case 'datetimeoffset':
 					switch ( $this->_driverType )
 					{
+						case SqlDbUtilities::DRV_DBLIB:
 						case SqlDbUtilities::DRV_SQLSRV:
 							if ( !$as_quoted_string )
 							{

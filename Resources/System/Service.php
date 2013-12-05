@@ -58,7 +58,7 @@ class Service extends BaseSystemRestResource
 	/**
 	 * @param mixed $results
 	 */
-	protected function _postProcess( $results = null )
+	protected function _postProcess()
 	{
 		if ( static::Get != $this->_action )
 		{
@@ -66,6 +66,6 @@ class Service extends BaseSystemRestResource
 			SwaggerManager::clearCache();
 		}
 
-		parent::_postProcess( $results );
+		parent::_postProcess();
 	}
 }

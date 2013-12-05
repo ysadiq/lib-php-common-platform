@@ -63,7 +63,11 @@ class Provider extends BasePlatformSystemModel
 	public function rules()
 	{
 		$_rules = array(
-			array('api_name, provider_name, base_provider_id, config_text, is_active, is_system, is_login_provider', 'safe'),
+			array( 'api_name, provider_name, is_active, is_system, is_login_provider', 'required' ),
+			array( 'api_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
+			array( 'is_active, is_login_provider, is_system', 'numerical', 'integerOnly' => true ),
+			array( 'provider_name, api_name', 'length', 'max' => 64 ),
+			array( 'api_name, provider_name, base_provider_id, config_text, is_active, is_system, is_login_provider', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -123,7 +127,7 @@ class Provider extends BasePlatformSystemModel
 		$this->getDbCriteria()->mergeWith(
 			array(
 				 'condition' => 'lower(provider_name) = lower(:provider_name) or lower(api_name) = lower(:api_name)',
-				 'params'    => array(':provider_name' => $portal, ':api_name' => Inflector::neutralize( $portal )),
+				 'params'    => array( ':provider_name' => $portal, ':api_name' => Inflector::neutralize( $portal ) ),
 			)
 		);
 
@@ -164,12 +168,14 @@ class Provider extends BasePlatformSystemModel
 
 		if ( !Pii::guest() )
 		{
-			if ( null !==
-				 ( $_auth =
-					 ProviderUser::model()->byUserProviderUserId( Session::getCurrentUserId(), Option::get( $provider, 'id' ) )->find(
-						 array('select' => 'auth_text')
-					 ) )
-			)
+			$_auth = ProviderUser::model()->byUserProviderUserId(
+				Session::getCurrentUserId(),
+				Option::get( $provider, 'id' )
+			)->find(
+					array( 'select' => 'auth_text' )
+				);
+
+			if ( null !== $_auth )
 			{
 				$_userConfig = $_auth->auth_text;
 				unset( $_auth );
@@ -203,8 +209,7 @@ class Provider extends BasePlatformSystemModel
 		}
 
 		//	Now simmer...
-		return array_merge(
-		//	My configuration
+		return array_merge( //	My configuration
 			(array)Option::get( $provider, 'config_text', array() ),
 			//	Then base from consumer
 			Option::clean( $baseConfig ),

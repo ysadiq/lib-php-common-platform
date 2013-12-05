@@ -76,7 +76,7 @@ class Password extends BasePlatformRestResource
 	 */
 	protected function _handlePost()
 	{
-		$_data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostedData( false, true );
 		$_old = Option::get( $_data, 'old_password' );
 		$_new = Option::get( $_data, 'new_password' );
 
@@ -253,6 +253,11 @@ class Password extends BasePlatformRestResource
 			throw new BadRequestException( "Missing new password for reset." );
 		}
 
+		if ( empty( $answer ) )
+		{
+			throw new BadRequestException( "Missing security answer." );
+		}
+
 		$_theUser = User::model()->find( 'email=:email', array( ':email' => $email ) );
 		if ( null === $_theUser )
 		{
@@ -362,13 +367,18 @@ class Password extends BasePlatformRestResource
 				}
 				else
 				{
-					$_data = array(
-						'subject'   => 'Password Reset',
-						'body_html' => "Hi {first_name},<br/>\n<br/>\nYou have requested to reset your password. " .
-									   "Go to the following url, enter the code below, and set your new password.<br/>\n<br/>\n" .
-									   "{dsp.host_url}/public/launchpad/confirm_reset.html<br/>\n<br/>\n" .
-									   "Confirmation Code: {confirm_code}<br/>\n<br/>\nEnjoy!<br/>\n{from_name}",
-					);
+					$_defaultPath = dirname( dirname( __DIR__ ) ) . '/Templates/Email/confirm_password_reset.json';
+					if ( !file_exists( $_defaultPath ) )
+					{
+						throw new \Exception( "No default email template for password reset." );
+					}
+
+					$_data = file_get_contents( $_defaultPath );
+					$_data = json_decode( $_data, true );
+					if ( empty( $_data ) || !is_array( $_data ) )
+					{
+						throw new \Exception( "No data found in default email template for password reset." );
+					}
 				}
 
 				$_data['to'] = $email;

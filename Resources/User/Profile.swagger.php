@@ -18,9 +18,9 @@
  * limitations under the License.
  */
 
-$_base = array();
+$_profile = array();
 
-$_base['apis'] = array(
+$_profile['apis'] = array(
 	array(
 		'path'        => '/{api_name}/profile',
 		'operations'  =>
@@ -116,7 +116,7 @@ $_commonProfile = array(
 	),
 );
 
-$_base['models'] = array(
+$_profile['models'] = array(
 	'ProfileRequest'  =>
 	array(
 		'id'         => 'ProfileRequest',
@@ -138,4 +138,4 @@ $_base['models'] = array(
 	),
 );
 
-return $_base;
+return $_profile;

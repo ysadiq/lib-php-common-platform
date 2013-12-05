@@ -91,8 +91,8 @@ return array(
 		//	Asset management
 		'assetManager' => array(
 			'class'      => 'CAssetManager',
-			'basePath'   => 'public/assets',
-			'baseUrl'    => '/public/assets',
+			'basePath'   => 'assets',
+			'baseUrl'    => '/assets',
 			'linkAssets' => true,
 		),
 		//	Database configuration

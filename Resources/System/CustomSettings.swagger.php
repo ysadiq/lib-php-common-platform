@@ -18,9 +18,9 @@
  * limitations under the License.
  */
 
-$_base = array();
+$_custom = array();
 
-$_base['apis'] = array(
+$_custom['apis'] = array(
 	array(
 		'path'        => '/{api_name}/custom',
 		'operations'  =>
@@ -143,7 +143,7 @@ $_base['apis'] = array(
 	),
 );
 
-$_base['models'] = array(
+$_custom['models'] = array(
 	'CustomSettings'   =>
 	array(
 		'id'         => 'CustomSettings',
@@ -174,4 +174,4 @@ $_base['models'] = array(
 	),
 );
 
-return $_base;
+return $_custom;

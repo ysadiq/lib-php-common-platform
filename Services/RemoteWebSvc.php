@@ -201,7 +201,7 @@ class RemoteWebSvc extends BasePlatformRestService
 		$this->_response = Curl::request(
 			$this->_action,
 			$this->_url,
-			RestData::getPostData() ? : array(),
+			RestData::getPostedData() ? : array(),
 			$this->_curlOptions
 		);
 

@@ -109,7 +109,7 @@ class Session extends BasePlatformRestResource
 	 */
 	protected function _handlePost()
 	{
-		$_data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostedData( false, true );
 
 		return $this->userLogin( Option::get( $_data, 'email' ), Option::get( $_data, 'password' ) );
 	}
@@ -273,7 +273,7 @@ class Session extends BasePlatformRestResource
 
 		if ( 'y' !== $_user->confirm_code )
 		{
-			throw new BadRequestException( 'Login registration has not been confirmed.' );
+			throw new BadRequestException( 'User registration or password reset request has not been confirmed.' );
 		}
 
 		$_result = static::generateSessionDataFromUser( $_user->id, $_user );

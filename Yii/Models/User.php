@@ -21,7 +21,6 @@ use DreamFactory\Platform\Yii\Models\ProviderUser;
  */
 namespace DreamFactory\Platform\Yii\Models;
 
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Oasys\Components\GenericUser;
 use DreamFactory\Oasys\Interfaces\ProviderLike;
 use DreamFactory\Oasys\Oasys;
@@ -30,13 +29,9 @@ use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\Exceptions\HttpException;
 use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Sql;
 
 /**
  * User.php
@@ -50,9 +45,10 @@ use Kisma\Core\Utility\Sql;
  * @property string     $last_name
  * @property string     $display_name
  * @property string     $phone
- * @property integer    $is_active
- * @property integer    $is_sys_admin
+ * @property boolean    $is_active
+ * @property boolean    $is_sys_admin
  * @property string     $confirm_code
+ * @property boolean    $confirmed
  * @property integer    $default_app_id
  * @property integer    $role_id
  * @property string     $security_question
@@ -82,6 +78,10 @@ class User extends BasePlatformSystemModel
 	//	Members
 	//*************************************************************************
 
+	/**
+	 * @var bool Is this service a system service that should not be deleted or modified in certain ways, i.e. api name and type.
+	 */
+	protected $confirmed = false;
 	/**
 	 * @var Config This DSP's configuration
 	 */
@@ -133,7 +133,8 @@ class User extends BasePlatformSystemModel
 			array( 'password, first_name, last_name, security_answer', 'length', 'max' => 64 ),
 			array( 'phone', 'length', 'max' => 32 ),
 			array( 'confirm_code, display_name, security_question', 'length', 'max' => 128 ),
-			array( 'user_source, user_data, is_active, is_sys_admin', 'safe' ),
+			array( 'is_active, is_sys_admin', 'boolean' ),
+			array( 'user_data', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -180,6 +181,7 @@ class User extends BasePlatformSystemModel
 			'is_active'         => 'Is Active',
 			'is_sys_admin'      => 'Is System Admin',
 			'confirm_code'      => 'Confirmation Code',
+			'confirmed'         => 'Registration Confirmed',
 			'default_app_id'    => 'Default App',
 			'role_id'           => 'Role',
 			'security_question' => 'Security Question',
@@ -241,6 +243,14 @@ class User extends BasePlatformSystemModel
 	/** {@InheritDoc} */
 	protected function beforeValidate()
 	{
+		if ( empty( $this->default_app_id ) )
+		{
+			$this->default_app_id = null;
+		}
+		if ( empty( $this->role_id ) )
+		{
+			$this->role_id = null;
+		}
 		if ( empty( $this->confirm_code ) && ( !empty( $this->password ) ) )
 		{
 			$this->confirm_code = 'y';
@@ -283,6 +293,28 @@ class User extends BasePlatformSystemModel
 	}
 
 	/**
+	 * {@InheritDoc}
+	 */
+	public function afterFind()
+	{
+		parent::afterFind();
+
+		$this->confirmed = ( 'y' == $this->confirm_code );
+	}
+
+	public function refresh()
+	{
+		if ( parent::refresh() )
+		{
+			$this->confirmed = ( 'y' == $this->confirm_code );
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
 	 * @param string $requested
 	 * @param array  $columns
 	 * @param array  $hidden
@@ -301,6 +333,7 @@ class User extends BasePlatformSystemModel
 				 'last_name',
 				 'email',
 				 'phone',
+				 'confirmed',
 				 'is_active',
 				 'is_sys_admin',
 				 'role_id',
@@ -311,15 +344,10 @@ class User extends BasePlatformSystemModel
 			$columns
 		);
 
-		if ( Session::isSystemAdmin() && !in_array( 'confirm_code', $_myColumns ) )
-		{
-			$_myColumns[] = 'confirm_code';
-		}
-
 		return parent::getRetrievableAttributes(
-					 $requested,
-					 $_myColumns,
-					 $hidden
+			$requested,
+			$_myColumns,
+			$hidden
 		);
 	}
 
@@ -335,7 +363,7 @@ class User extends BasePlatformSystemModel
 			'default_app_id',
 		);
 
-		if ($writable)
+		if ( $writable )
 		{
 			$_fields[] = 'security_answer';
 		}
@@ -352,8 +380,8 @@ class User extends BasePlatformSystemModel
 	public static function authenticate( $userName, $password )
 	{
 		$_user = static::model()
-					   ->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
-					   ->findByAttributes( array( 'email' => $userName ) );
+			->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
+			->findByAttributes( array( 'email' => $userName ) );
 
 		if ( empty( $_user ) )
 		{
@@ -444,12 +472,7 @@ class User extends BasePlatformSystemModel
 	 */
 	public static function getByEmail( $email )
 	{
-		return static::model()->find(
-					 'email = :email',
-					 array(
-						  ':email' => $email,
-					 )
-		);
+		return static::model()->find( 'email = :email', array( ':email' => $email ) );
 	}
 
 	/**

@@ -116,7 +116,7 @@ class CustomSettings extends BasePlatformRestResource
 	 */
 	protected function _handlePost()
 	{
-		$_data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostedData( true, true );
 
 		return $this->setCustomSettings( $_data, $this->_setting );
 	}

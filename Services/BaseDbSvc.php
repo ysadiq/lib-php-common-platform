@@ -129,7 +129,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 				$_ids = FilterInput::request( 'names' );
 				if ( empty( $_ids ) )
 				{
-					$_data = RestData::getPostDataAsArray();
+					$_data = RestData::getPostedData( false, true );
 					$_ids = Option::get( $_data, 'names' );
 				}
 
@@ -143,7 +143,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 				break;
 
 			case self::Post:
-				$_data = RestData::getPostDataAsArray();
+				$_data = RestData::getPostedData( false, true );
 				$_tables = Option::get( $_data, 'table', null );
 				if ( empty( $_tables ) )
 				{
@@ -163,7 +163,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 			case self::Put:
 			case self::Patch:
 			case self::Merge:
-				$_data = RestData::getPostDataAsArray();
+				$_data = RestData::getPostedData( false, true );
 				$_tables = Option::get( $_data, 'table', null );
 				if ( empty( $_tables ) )
 				{
@@ -181,7 +181,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 				}
 				break;
 			case self::Delete:
-				$_data = RestData::getPostDataAsArray();
+				$_data = RestData::getPostedData( false, true );
 				$_ids = FilterInput::request( 'names' );
 				if ( empty( $_ids ) )
 				{
@@ -228,7 +228,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 */
 	protected function _handleGet()
 	{
-		$_data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostedData( false, true );
 		// Most requests contain 'returned fields' parameter, all by default
 		$_fields = FilterInput::request( 'fields', '*' );
 		$_extras = $this->_gatherExtrasFromRequest( $_data );
@@ -302,7 +302,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 */
 	protected function _handlePost()
 	{
-		$_data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostedData( false, true );
 		if ( empty( $_data ) )
 		{
 			throw new BadRequestException( 'No record(s) in create request.' );
@@ -336,7 +336,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 */
 	protected function _handlePut()
 	{
-		$_data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostedData( false, true );
 		if ( empty( $_data ) )
 		{
 			throw new BadRequestException( 'No record(s) in update request.' );
@@ -403,7 +403,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 */
 	protected function _handleMerge()
 	{
-		$_data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostedData( false, true );
 		if ( empty( $_data ) )
 		{
 			throw new BadRequestException( 'No record(s) in merge request.' );
@@ -470,7 +470,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 */
 	protected function _handleDelete()
 	{
-		$_data = RestData::getPostDataAsArray();
+		$_data = RestData::getPostedData( false, true );
 		// Most requests contain 'returned fields' parameter
 		$_fields = FilterInput::request( 'fields', '' );
 		$_extras = $this->_gatherExtrasFromRequest( $_data );

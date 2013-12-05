@@ -22,10 +22,11 @@ namespace DreamFactory\Platform\Utility;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Oasys\Exceptions\RedirectRequiredException;
+use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -46,6 +47,114 @@ class RestResponse extends HttpResponse
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
+
+	/**
+	 * @param string $requested Optional requested set format
+	 * @param string $internal  Reference returned internal formatting (jtables, etc.)
+	 *
+	 * @return string output format, outer envelope
+	 */
+	public static function detectResponseFormat( $requested, &$internal )
+	{
+		$internal = ResponseFormats::RAW;
+		$_format = $requested;
+
+		if ( empty( $_format ) )
+		{
+			$_format = FilterInput::request( 'format', null, FILTER_SANITIZE_STRING );
+
+			if ( empty( $_format ) )
+			{
+				$_accepted = RestResponse::parseAcceptHeader(
+					FilterInput::server( 'HTTP_ACCEPT', null, FILTER_SANITIZE_STRING )
+				);
+				$_accepted = array_values( $_accepted );
+				$_format = Option::get( $_accepted, 0 );
+			}
+		}
+		$_format = trim( strtolower( $_format ) );
+		switch ( $_format )
+		{
+			case 'json':
+			case 'application/json':
+				$_format = 'json';
+				break;
+
+			case 'xml':
+			case 'application/xml':
+			case 'text/xml':
+				$_format = 'xml';
+				break;
+
+			case 'csv':
+			case 'text/csv':
+				$_format = 'csv';
+				break;
+
+			default:
+				if ( ResponseFormats::contains( $_format ) )
+				{
+					//	Set the response format here and in the store
+					ResourceStore::setResponseFormat( $internal = $_format );
+				}
+
+				//	Set envelope to JSON
+				$_format = 'json';
+				break;
+		}
+
+		return $_format;
+	}
+
+	public static function parseAcceptHeader( $header )
+	{
+		$accept = array();
+		foreach ( preg_split( '/\s*,\s*/', $header ) as $i => $term )
+		{
+			$o = new \stdclass;
+			$o->pos = $i;
+			if ( preg_match( ",^(\S+)\s*;\s*(?:q|level)=([0-9\.]+),i", $term, $M ) )
+			{
+				$o->type = $M[1];
+				$o->q = (double)$M[2];
+			}
+			else
+			{
+				$o->type = $term;
+				$o->q = 1;
+			}
+			$accept[] = $o;
+		}
+		usort(
+			$accept,
+			function ( $a, $b )
+			{ /* first tier: highest q factor wins */
+				$diff = $b->q - $a->q;
+				if ( $diff > 0 )
+				{
+					$diff = 1;
+				}
+				else if ( $diff < 0 )
+				{
+					$diff = -1;
+				}
+				else
+				{ /* tie-breaker: first listed item wins */
+					$diff = $a->pos - $b->pos;
+				}
+
+				return $diff;
+			}
+		);
+
+		$_result = array();
+		foreach ( $accept as $a )
+		{
+			$_result[$a->type] = $a->type;
+		}
+
+		return $_result;
+	}
 
 	/**
 	 * @param int $code
@@ -75,23 +184,26 @@ class RestResponse extends HttpResponse
 	public static function sendErrors( $ex, $desired_format = 'json' )
 	{
 		$_status = $ex->getCode();
-
-		if ( $ex instanceof RestException || $ex instanceOf \CHttpException )
-		{
-			$_status = property_exists( $ex, 'statusCode' ) ? $ex->statusCode : $ex->getStatusCode();
-		}
-
 		$_errorInfo = array(
 			'message' => htmlentities( $ex->getMessage() ),
 			'code'    => $ex->getCode()
 		);
 
-		if ( $ex instanceof RedirectRequiredException )
+		if ( $ex instanceof RestException )
+		{
+			$_status = $ex->getStatusCode();
+			$_errorInfo['context'] = $ex->getContext();
+		}
+		elseif ( $ex instanceOf \CHttpException )
+		{
+			$_status = $ex->statusCode;
+		}
+		elseif ( $ex instanceof RedirectRequiredException )
 		{
 			$_errorInfo['location'] = $ex->getRedirectUri();
 		}
 
-		$result = array(
+		$_result = array(
 			'error' => array( $_errorInfo )
 		);
 
@@ -107,122 +219,110 @@ class RestResponse extends HttpResponse
 			}
 		}
 
-		static::sendResults( $result, $_status, null, $desired_format );
+		$_result = DataFormat::reformatData( $_result, null, $desired_format );
+		static::sendResults( $_result, $_status, $desired_format );
 	}
 
 	/**
-	 * @param        $result
+	 * @param mixed  $result
 	 * @param int    $code
-	 * @param null   $result_format
-	 * @param string $desired_format
+	 * @param string $format
+	 * @param string $as_file
 	 */
-	public static function sendResults( $result, $code = RestResponse::Ok, $result_format = null, $desired_format = 'json' )
+	public static function sendResults( $result, $code = RestResponse::Ok, $format = 'json', $as_file = null )
 	{
 		//	Some REST services may handle the response, they just return null
-		if ( !is_null( $result ) )
+		if ( is_null( $result ) )
 		{
+			Pii::end();
+
+			return;
+		}
+
+		switch ( $format )
+		{
+			case OutputFormats::JSON:
+			case 'json':
+				$_contentType = 'application/json; charset=utf-8';
+
+				// JSON if no callback
+				if ( isset( $_GET['callback'] ) )
+				{
+					// JSONP if valid callback
+					if ( !static::is_valid_callback( $_GET['callback'] ) )
+					{
+						// Otherwise, bad request
+						header( 'status: 400 Bad Request', true, static::BadRequest );
+						Pii::end();
+
+						return;
+					}
+
+					$result = "{$_GET['callback']}($result);";
+				}
+				break;
+
+			case OutputFormats::XML:
+			case 'xml':
+				$_contentType = 'application/xml';
+				$result = '<?xml version="1.0" ?>' . "<dfapi>$result</dfapi>";
+				break;
+
+			case 'csv':
+				$_contentType = 'text/csv';
+				break;
+
+			default:
+				$_contentType = 'application/octet-stream';
+				break;
+		}
+
+		/* gzip handling output if necessary */
+		ob_start();
+		ob_implicit_flush( 0 );
+
+		if ( !headers_sent() )
+		{
+			// headers
 			$code = static::getHttpStatusCode( $code );
-			$title = static::getHttpStatusCodeTitle( $code );
-			header( "HTTP/1.1 $code $title" );
+			$_title = static::getHttpStatusCodeTitle( $code );
+			header( "HTTP/1.1 $code $_title" );
+			header( "Content-Type: $_contentType" );
+			//	IE 9 requires hoop for session cookies in iframes
+			header( 'P3P:CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"' );
 
-			$result = DataFormat::reformatData( $result, $result_format, $desired_format );
-
-			switch ( $desired_format )
+			if ( !empty( $as_file ) )
 			{
-				case OutputFormats::JSON:
-				case 'json':
-					static::sendJsonResponse( $result );
-					break;
-
-				case OutputFormats::XML:
-				case 'xml':
-					static::sendXmlResponse( $result );
-					break;
+				header( "Content-Disposition: attachment; filename=\"$as_file\";" );
 			}
 
 			//	Add additional headers for CORS support
 			Pii::app()->addCorsHeaders();
 		}
 
-		Pii::end();
-	}
+		// send it out
+		echo $result;
 
-	/**
-	 * @todo this function needs to be revisited
-	 */
-	public static function sendResponse()
-	{
-		$_encoding = ( !headers_sent() && false !== strpos( Option::server( 'HTTP_ACCEPT_ENCODING' ), 'gzip' ) );
-
-		//	IE 9 requires hoop for session cookies in iframes
-		if ( !headers_sent() )
-		{
-			header( 'P3P:CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"' );
-		}
-
-		if ( $_encoding )
+		if ( false !== strpos( Option::server( 'HTTP_ACCEPT_ENCODING' ), 'gzip' ) )
 		{
 			$_output = ob_get_clean();
 
-			if ( strlen( $_output ) < static::GZIP_THRESHOLD )
-			{
-				//	no need to waste resources in compressing very little data
-				echo $_output;
-			}
-			else
+			if ( strlen( $_output ) >= static::GZIP_THRESHOLD )
 			{
 				header( 'Content-Encoding: gzip' );
-				echo gzencode( $_output, 9 );
+				$_output = gzencode( $_output, 9 );
 			}
 
-			return;
+			// compressed or not, dump it out as the buffer is destroyed already
+			echo $_output;
 		}
-
-		ob_end_flush();
-	}
-
-	/**
-	 * @param $data
-	 */
-	public static function sendXmlResponse( $data )
-	{
-		/* gzip handling output if necessary */
-		ob_start();
-		ob_implicit_flush( 0 );
-
-		header( 'Content-type: application/xml' );
-		echo "<?xml version=\"1.0\" ?>\n<dfapi>\n" . $data . "</dfapi>";
-
-		self::sendResponse();
-	}
-
-	/**
-	 * @param string $data Data already in json format - see uses
-	 */
-	public static function sendJsonResponse( $data )
-	{
-		/* gzip handling output if necessary */
-		ob_start();
-		ob_implicit_flush( 0 );
-
-		header( 'Content-type: application/json; charset=utf-8' );
-
-		// JSON if no callback
-		if ( isset( $_GET['callback'] ) )
+		else
 		{
-			// JSONP if valid callback
-			if ( static::is_valid_callback( $_GET['callback'] ) )
-			{
-				$data = "{$_GET['callback']}($data);";
-			}
-			else
-			{
-				// Otherwise, bad request
-				header( 'status: 400 Bad Request', true, static::BadRequest );
-			}
+			// flush output and destroy buffer
+			ob_end_flush();
 		}
 
-		echo $data;
+		Pii::end();
 	}
 
 	/**
@@ -285,15 +385,5 @@ class RestResponse extends HttpResponse
 
 		return preg_match( $identifier_syntax, $subject )
 			   && !in_array( mb_strtolower( $subject, 'UTF-8' ), $reserved_words );
-	}
-
-	/**
-	 * @param array $data
-	 *
-	 * @return mixed
-	 */
-	public static function sendDataTablesResponse( $data )
-	{
-		return DataTablesFormatter::format( $data );
 	}
 }

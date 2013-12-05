@@ -18,9 +18,9 @@
  * limitations under the License.
  */
 
-$_base = array();
+$_password = array();
 
-$_base['apis'] = array(
+$_password['apis'] = array(
 	array(
 		'path'        => '/{api_name}/password',
 		'operations'  =>
@@ -75,7 +75,7 @@ $_base['apis'] = array(
 	),
 );
 
-$_base['models'] = array(
+$_password['models'] = array(
 	'PasswordRequest'  =>
 	array(
 		'id'         => 'PasswordRequest',
@@ -122,4 +122,4 @@ $_base['models'] = array(
 	),
 );
 
-return $_base;
+return $_password;
