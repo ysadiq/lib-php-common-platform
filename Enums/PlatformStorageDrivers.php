@@ -81,9 +81,11 @@ class PlatformStorageDrivers extends SeedEnum implements SqlDbDriverTypes
 		switch ( $driverType )
 		{
 			case static::MS_SQL:
-			case static::SYBASE:
 			case static::SQL_SERVER:
 				return static::DRV_SQLSRV;
+
+			case static::SYBASE:
+				return static::DRV_DBLIB;
 
 			case static::MYSQL:
 			case static::MYSQLI:

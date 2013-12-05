@@ -1118,7 +1118,7 @@ class FileUtilities
 	{
 		if ( static::url_exist( $url ) )
 		{
-			$readFrom = fopen( $url, 'rb' );
+			$readFrom = @fopen( $url, 'rb' );
 			if ( $readFrom )
 			{
 				$directory = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR;

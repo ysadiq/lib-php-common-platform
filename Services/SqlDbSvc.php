@@ -125,12 +125,15 @@ class SqlDbSvc extends BaseDbSvc
 				break;
 
 			case SqlDbUtilities::DRV_SQLSRV:
-				//$this->_sqlConn->setAttribute( constant( '\\PDO::SQLSRV_ATTR_DIRECT_QUERY' ), true );
-
+//				$this->_sqlConn->setAttribute( constant( '\\PDO::SQLSRV_ATTR_DIRECT_QUERY' ), true );
 				//	These need to be on the dsn
 //				$this->_sqlConn->setAttribute( 'MultipleActiveResultSets', false );
 //				$this->_sqlConn->setAttribute( 'ReturnDatesAsStrings', true );
 //				$this->_sqlConn->setAttribute( 'CharacterSet', 'UTF-8' );
+				break;
+
+			case SqlDbUtilities::DRV_DBLIB:
+				$this->_sqlConn->setAttribute( \PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION );
 				break;
 		}
 
@@ -1371,6 +1374,7 @@ class SqlDbSvc extends BaseDbSvc
 					{
 						switch ( $this->_driverType )
 						{
+							case SqlDbUtilities::DRV_DBLIB:
 							case SqlDbUtilities::DRV_SQLSRV:
 								switch ( $dbType )
 								{
@@ -1442,6 +1446,7 @@ class SqlDbSvc extends BaseDbSvc
 					{
 						switch ( $this->_driverType )
 						{
+							case SqlDbUtilities::DRV_DBLIB:
 							case SqlDbUtilities::DRV_SQLSRV:
 								$parsed[$name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
 								break;
@@ -1454,6 +1459,7 @@ class SqlDbSvc extends BaseDbSvc
 				case 'timestamp_on_update':
 					switch ( $this->_driverType )
 					{
+						case SqlDbUtilities::DRV_DBLIB:
 						case SqlDbUtilities::DRV_SQLSRV:
 							$parsed[$name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
 							break;
@@ -1654,6 +1660,7 @@ class SqlDbSvc extends BaseDbSvc
 				case 'datetimeoffset':
 					switch ( $this->_driverType )
 					{
+						case SqlDbUtilities::DRV_DBLIB:
 						case SqlDbUtilities::DRV_SQLSRV:
 							if ( !$as_quoted_string )
 							{
