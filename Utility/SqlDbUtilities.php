@@ -265,7 +265,8 @@ class SqlDbUtilities implements SqlDbDriverTypes
 			{
 				throw new NotFoundException( "Table '$name' does not exist in the database." );
 			}
-			$query = $db->quoteColumnName( 'table' ) . ' = :tn';
+			$localdb = Pii::db();
+			$query = $localdb->quoteColumnName( 'table' ) . ' = :tn';
 			$labels = static::getLabels( $query, array( ':tn' => $name ) );
 			$labels = static::reformatFieldLabelArray( $labels );
 			$labelInfo = Option::get( $labels, '', array() );
@@ -318,7 +319,8 @@ class SqlDbUtilities implements SqlDbDriverTypes
 		{
 			if ( empty( $labels ) )
 			{
-				$query = $db->quoteColumnName( 'table' ) . ' = :tn';
+				$localdb = Pii::db();
+				$query = $localdb->quoteColumnName( 'table' ) . ' = :tn';
 				$labels = static::getLabels( $query, array( ':tn' => $name ) );
 				$labels = static::reformatFieldLabelArray( $labels );
 			}
@@ -363,7 +365,8 @@ class SqlDbUtilities implements SqlDbDriverTypes
 				{
 					continue;
 				}
-				$query = $db->quoteColumnName( 'table' ) . ' = :tn and ' . $db->quoteColumnName( 'field' ) . ' = :fn';
+				$localdb = Pii::db();
+				$query = $localdb->quoteColumnName( 'table' ) . ' = :tn and ' . $localdb->quoteColumnName( 'field' ) . ' = :fn';
 				$labels = static::getLabels( $query, array( ':tn' => $table_name, ':fn' => $column->name ) );
 				$labelInfo = Option::get( $labels, 0, array() );
 				$field[] = static::describeFieldInternal( $column, $table->foreignKeys, $labelInfo );
@@ -408,7 +411,8 @@ class SqlDbUtilities implements SqlDbDriverTypes
 				{
 					continue;
 				}
-				$query = $db->quoteColumnName( 'table' ) . ' = :tn and ' . $db->quoteColumnName( 'field' ) . ' = :fn';
+				$localdb = Pii::db();
+				$query = $localdb->quoteColumnName( 'table' ) . ' = :tn and ' . $localdb->quoteColumnName( 'field' ) . ' = :fn';
 				$labels = static::getLabels( $query, array( ':tn' => $table_name, ':fn' => $field_name ) );
 				$labelInfo = Option::get( $labels, 0, array() );
 				$field = static::describeFieldInternal( $column, $table->foreignKeys, $labelInfo );
