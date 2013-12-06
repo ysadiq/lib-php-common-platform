@@ -133,8 +133,9 @@ class SqlDbSvc extends BaseDbSvc
 					'connectionString'      => $dsn,
 					'username'              => $user,
 					'password'              => $password,
-					'enableProfiling'       => true,
-					'enableParamLogging'    => true,
+					'charset'               => 'utf8',
+					'enableProfiling'       => defined( YII_DEBUG ),
+					'enableParamLogging'    => defined( YII_DEBUG ),
 					'schemaCachingDuration' => 3600,
 					'schemaCacheID'         => ( !$this->_isNative && static::ENABLE_REMOTE_CACHE ) ? static::REMOTE_CACHE_ID : 'cache',
 				)
