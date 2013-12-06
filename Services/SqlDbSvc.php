@@ -1009,8 +1009,8 @@ class SqlDbSvc extends BaseDbSvc
 		{
 			// parse filter
 			$availFields = $this->describeTableFields( $table );
-			$relations = $this->describeTableRelated( $table );
 			$related = Option::get( $extras, 'related' );
+			$relations = ( empty( $related ) ? array() : $this->describeTableRelated( $table ) );
 			$result = $this->parseFieldsForSqlSelect( $fields, $availFields );
 			$bindings = $result['bindings'];
 			$fields = $result['fields'];
@@ -1073,7 +1073,7 @@ class SqlDbSvc extends BaseDbSvc
 					$temp[$_name] = $_value;
 				}
 
-				if ( !empty( $related ) )
+				if ( !empty( $relations ) )
 				{
 					$temp = $this->retrieveRelatedRecords( $relations, $temp, $related );
 				}
@@ -1184,8 +1184,8 @@ class SqlDbSvc extends BaseDbSvc
 		try
 		{
 			$availFields = $this->describeTableFields( $table );
-			$relations = $this->describeTableRelated( $table );
 			$related = Option::get( $extras, 'related' );
+			$relations = ( empty( $related ) ? array() : $this->describeTableRelated( $table ) );
 			if ( empty( $_idField ) )
 			{
 				$_idField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $availFields );
@@ -1233,7 +1233,7 @@ class SqlDbSvc extends BaseDbSvc
 					$temp[$_name] = $_value;
 				}
 
-				if ( !empty( $related ) )
+				if ( !empty( $relations ) )
 				{
 					$temp = $this->retrieveRelatedRecords( $relations, $temp, $related );
 				}
