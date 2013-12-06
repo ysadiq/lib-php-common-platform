@@ -1674,6 +1674,24 @@ class SqlDbSvc extends BaseDbSvc
 							break;
 					}
 					break;
+				case 'geometry':
+				case 'geography':
+					switch ( $this->_driverType )
+					{
+						case SqlDbUtilities::DRV_DBLIB:
+						case SqlDbUtilities::DRV_SQLSRV:
+							if ( !$as_quoted_string )
+							{
+								$context = $this->_sqlConn->quoteColumnName( $context );
+								$out_as = $this->_sqlConn->quoteColumnName( $out_as );
+							}
+							$out = "($context.ToString()) AS $out_as";
+							break;
+						default:
+							$out = $context;
+							break;
+					}
+					break;
 				default :
 					$out = $context;
 					if ( !empty( $as ) )
