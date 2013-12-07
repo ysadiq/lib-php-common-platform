@@ -23,11 +23,11 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\User\Session;
-use DreamFactory\Platform\Services\BaseDbSvc;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -37,6 +37,19 @@ use Kisma\Core\Utility\Option;
  */
 class SqlDbSvc extends BaseDbSvc
 {
+	//*************************************************************************
+	//	Constants
+	//*************************************************************************
+
+	/**
+	 * @var bool If true, a database cache will be created for remote databases
+	 */
+	const ENABLE_REMOTE_CACHE = true;
+	/**
+	 * @var string The name of the remote cache component
+	 */
+	const REMOTE_CACHE_ID = 'cache.remote';
+
 	//*************************************************************************
 	//	Members
 	//*************************************************************************
@@ -72,7 +85,7 @@ class SqlDbSvc extends BaseDbSvc
 	 * @param array $config
 	 * @param bool  $native
 	 *
-	 * @throws \InvalidArgumentException
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 */
 	public function __construct( $config, $native = false )
 	{
@@ -113,8 +126,54 @@ class SqlDbSvc extends BaseDbSvc
 				throw new InternalServerErrorException( 'DB admin password can not be empty.' );
 			}
 
+			/** @var \CDbConnection $_db */
+			$_db = Pii::createComponent(
+				array(
+					'class'                 => 'CDbConnection',
+					'connectionString'      => $dsn,
+					'username'              => $user,
+					'password'              => $password,
+					'charset'               => 'utf8',
+					'enableProfiling'       => defined( YII_DEBUG ),
+					'enableParamLogging'    => defined( YII_DEBUG ),
+					'schemaCachingDuration' => 3600,
+					'schemaCacheID'         => ( !$this->_isNative && static::ENABLE_REMOTE_CACHE ) ? static::REMOTE_CACHE_ID : 'cache',
+				)
+			);
+
+			Pii::app()->setComponent( 'db.' . $this->_apiName, $_db );
+
 			// 	Create pdo connection, activate later
-			$this->_sqlConn = new \CDbConnection( $dsn, $user, $password );
+			if ( !$this->_isNative && static::ENABLE_REMOTE_CACHE )
+			{
+				$_cache = Pii::createComponent(
+					array(
+						'class'                => 'CDbCache',
+						'connectionID'         => 'db' /* . $this->_apiName*/,
+						'cacheTableName'       => 'df_sys_cache_remote',
+						'autoCreateCacheTable' => true,
+						'keyPrefix'            => $this->_apiName,
+					)
+				);
+
+				try
+				{
+					Pii::app()->setComponent( static::REMOTE_CACHE_ID, $_cache );
+				}
+				catch ( \CDbException $_ex )
+				{
+					Log::error( 'Exception setting cache: ' . $_ex->getMessage() );
+
+					//	Disable caching...
+					$_db->schemaCachingDuration = 0;
+					$_db->schemaCacheID = null;
+
+					unset( $_cache );
+				}
+
+				//	Save
+				$this->_sqlConn = $_db;
+			}
 		}
 
 		switch ( $this->_driverType = SqlDbUtilities::getDbDriverType( $this->_sqlConn ) )
@@ -177,12 +236,10 @@ class SqlDbSvc extends BaseDbSvc
 		{
 			throw new InternalServerErrorException( 'Database driver has not been initialized.' );
 		}
+
 		try
 		{
-			if ( !$this->_sqlConn->active )
-			{
-				$this->_sqlConn->active = true;
-			}
+			$this->_sqlConn->setActive( true );
 		}
 		catch ( \PDOException $ex )
 		{
@@ -1009,8 +1066,8 @@ class SqlDbSvc extends BaseDbSvc
 		{
 			// parse filter
 			$availFields = $this->describeTableFields( $table );
-			$relations = $this->describeTableRelated( $table );
 			$related = Option::get( $extras, 'related' );
+			$relations = ( empty( $related ) ? array() : $this->describeTableRelated( $table ) );
 			$result = $this->parseFieldsForSqlSelect( $fields, $availFields );
 			$bindings = $result['bindings'];
 			$fields = $result['fields'];
@@ -1073,7 +1130,7 @@ class SqlDbSvc extends BaseDbSvc
 					$temp[$_name] = $_value;
 				}
 
-				if ( !empty( $related ) )
+				if ( !empty( $relations ) )
 				{
 					$temp = $this->retrieveRelatedRecords( $relations, $temp, $related );
 				}
@@ -1184,8 +1241,8 @@ class SqlDbSvc extends BaseDbSvc
 		try
 		{
 			$availFields = $this->describeTableFields( $table );
-			$relations = $this->describeTableRelated( $table );
 			$related = Option::get( $extras, 'related' );
+			$relations = ( empty( $related ) ? array() : $this->describeTableRelated( $table ) );
 			if ( empty( $_idField ) )
 			{
 				$_idField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $availFields );
@@ -1233,7 +1290,7 @@ class SqlDbSvc extends BaseDbSvc
 					$temp[$_name] = $_value;
 				}
 
-				if ( !empty( $related ) )
+				if ( !empty( $relations ) )
 				{
 					$temp = $this->retrieveRelatedRecords( $relations, $temp, $related );
 				}
@@ -1253,10 +1310,7 @@ class SqlDbSvc extends BaseDbSvc
 						break;
 					}
 				}
-				$results[] = ( isset( $foundRecord )
-					? $foundRecord
-					:
-					( "Could not find record for id = '$id'" ) );
+				$results[] = ( isset( $foundRecord ) ? $foundRecord : ( "Could not find record for id = '$id'" ) );
 			}
 
 			return $results;
@@ -1668,6 +1722,24 @@ class SqlDbSvc extends BaseDbSvc
 								$out_as = $this->_sqlConn->quoteColumnName( $out_as );
 							}
 							$out = "(CONVERT(nvarchar(30), $context, 127)) AS $out_as";
+							break;
+						default:
+							$out = $context;
+							break;
+					}
+					break;
+				case 'geometry':
+				case 'geography':
+					switch ( $this->_driverType )
+					{
+						case SqlDbUtilities::DRV_DBLIB:
+						case SqlDbUtilities::DRV_SQLSRV:
+							if ( !$as_quoted_string )
+							{
+								$context = $this->_sqlConn->quoteColumnName( $context );
+								$out_as = $this->_sqlConn->quoteColumnName( $out_as );
+							}
+							$out = "($context.ToString()) AS $out_as";
 							break;
 						default:
 							$out = $context;
