@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
-use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Resources\User\Session;
@@ -29,6 +28,7 @@ use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -55,17 +55,17 @@ class Config extends BaseSystemRestResource
 		parent::__construct(
 			$consumer,
 			array(
-				 'name'           => 'Configuration',
-				 'type'           => 'System',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'config',
-				 'description'    => 'Service general configuration',
-				 'is_active'      => true,
-				 'resource_array' => $resourceArray,
-				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-					 static::Merge => static::Post,
-				 )
+				'name'           => 'Configuration',
+				'type'           => 'System',
+				'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				'api_name'       => 'config',
+				'description'    => 'Service general configuration',
+				'is_active'      => true,
+				'resource_array' => $resourceArray,
+				'verb_aliases'   => array(
+					static::Patch => static::Post,
+					static::Merge => static::Post,
+				)
 			)
 		);
 	}
@@ -204,7 +204,7 @@ class Config extends BaseSystemRestResource
 				{
 					if ( 1 == $_row->login_provider_ind )
 					{
-						$_config = $this->_sanitizeProviderConfig( $_row->config_text );
+						$_config = $this->_sanitizeProviderConfig( $_row->config_text, true );
 
 						$_remoteProviders[] = array(
 							'id'            => $_row->id,
@@ -266,14 +266,27 @@ class Config extends BaseSystemRestResource
 	 * Strictly for your protection!
 	 *
 	 * @param array $config
+	 * @param bool  $force
 	 *
+	 * @throws \Exception
 	 * @return array
 	 */
-	protected function _sanitizeProviderConfig( $config )
+	protected function _sanitizeProviderConfig( $config, $force = false )
 	{
-		if ( Session::isSystemAdmin() )
+		try
 		{
-			return $config;
+			if ( false === $force && Session::isSystemAdmin() )
+			{
+				return $config;
+			}
+		}
+		catch ( \Exception $_ex )
+		{
+			//	Ignored 401
+			if ( HttpResponse::Unauthorized != $_ex->getCode() )
+			{
+				throw $_ex;
+			}
 		}
 
 		$_config = Option::clean( $config );
@@ -286,5 +299,3 @@ class Config extends BaseSystemRestResource
 		return $_config;
 	}
 }
-
-
