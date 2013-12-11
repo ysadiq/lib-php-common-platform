@@ -68,6 +68,14 @@ class Fabric extends SeedUtility
 	 */
 	const FABRIC_MARKER = '/var/www/.fabric_hosted';
 	/**
+	 * @var string
+	 */
+	const MAINTENANCE_MARKER = '/var/www/.fabric_maintenance';
+	/**
+	 * @var string
+	 */
+	const MAINTENANCE_URI = '/web/maintenance';
+	/**
 	 * @var int
 	 */
 	const EXPIRATION_THRESHOLD = 30;
@@ -168,8 +176,8 @@ class Fabric extends SeedUtility
 			}
 
 			if ( is_object(
-					 $_response
-				 ) && isset( $_response->details, $_response->details->code ) && HttpResponse::NotFound == $_response->details->code
+					$_response
+				) && isset( $_response->details, $_response->details->code ) && HttpResponse::NotFound == $_response->details->code
 			)
 			{
 				Log::setDefaultLog( \Kisma::get( 'app.log_path' ) . '/error.log' );
@@ -239,7 +247,7 @@ class Fabric extends SeedUtility
 
 			if ( false !== ( $_data = json_decode( file_get_contents( $_cacheFile ), true ) ) )
 			{
-				return array( $_data['settings'], $_data['instance'] );
+				return array($_data['settings'], $_data['instance']);
 			}
 		}
 
@@ -315,3 +323,14 @@ class Fabric extends SeedUtility
 		return Option::get( $_response, 'details', array() );
 	}
 }
+
+//********************************************************************************
+//* Check for maintenance mode...
+//********************************************************************************
+
+if ( Fabric::MAINTENANCE_URI != Option::server( 'REQUEST_URI' ) && is_file( Fabric::FABRIC_MARKER ) && is_file( Fabric::MAINTENANCE_MARKER ) )
+{
+	header( 'Location: ' . Fabric::MAINTENANCE_URI );
+	die();
+}
+

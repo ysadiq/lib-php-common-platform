@@ -85,17 +85,17 @@ class SystemManager extends BaseSystemRestService
 		static::$_configPath = \Kisma::get( 'app.config_path' );
 
 		parent::__construct(
-			  array_merge(
-				  array(
-					   'name'        => 'System Configuration Management',
-					   'api_name'    => 'system',
-					   'type'        => 'System',
-					   'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-					   'description' => 'Service for system administration.',
-					   'is_active'   => true,
-				  ),
-				  $settings
-			  )
+			array_merge(
+				array(
+					'name'        => 'System Configuration Management',
+					'api_name'    => 'system',
+					'type'        => 'System',
+					'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+					'description' => 'Service for system administration.',
+					'is_active'   => true,
+				),
+				$settings
+			)
 		);
 	}
 
@@ -356,11 +356,7 @@ class SystemManager extends BaseSystemRestService
 					try
 					{
 						$command->reset();
-						$serviceId = $command
-							->select( 'id' )
-							->from( 'df_sys_service' )
-							->where( 'api_name = :name', array( ':name' => 'app' ) )
-							->queryScalar();
+						$serviceId = $command->select( 'id' )->from( 'df_sys_service' )->where( 'api_name = :name', array( ':name' => 'app' ) )->queryScalar();
 						if ( false === $serviceId )
 						{
 							throw new \Exception( 'Could not find local file storage service id.' );
@@ -423,7 +419,6 @@ class SystemManager extends BaseSystemRestService
 		{
 			throw $ex;
 		}
-
 
 		// clear out swagger cache, easiest place to catch it
 		SwaggerManager::clearCache();
@@ -523,8 +518,8 @@ class SystemManager extends BaseSystemRestService
 				$_firstName = Pii::getState( 'first_name', Option::get( $_model, 'firstName' ) );
 				$_lastName = Pii::getState( 'last_name', Option::get( $_model, 'lastName' ) );
 				$_displayName = Pii::getState(
-								   'display_name',
-								   Option::get( $_model, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
+					'display_name',
+					Option::get( $_model, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
 				);
 
 				$_fields = array(
@@ -560,6 +555,11 @@ class SystemManager extends BaseSystemRestService
 			$_identity->setState( 'email', $_email );
 			$_identity->setState( 'df_authenticated', false ); // removes catch
 			$_identity->setState( 'password', $_password, $_password ); // removes password
+
+			if ( true === Pii::getState( 'app.registration_skipped' ) )
+			{
+				static::_createDrupalAccount( $_user );
+			}
 		}
 		catch ( \Exception $_ex )
 		{
@@ -790,9 +790,9 @@ class SystemManager extends BaseSystemRestService
 	public static function getDspVersions()
 	{
 		$_results = Curl::get(
-						'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags',
-						array(),
-						array( CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' ) )
+			'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags',
+			array(),
+			array( CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' ) )
 		);
 
 		if ( HttpResponse::Ok != ( $_code = Curl::getLastHttpCode() ) )
@@ -906,6 +906,15 @@ class SystemManager extends BaseSystemRestService
 		return true;
 	}
 
+	/**
+	 * Creates an account for the admin user in Drupal
+	 *
+	 * @param User $_user
+	 */
+	protected static function _createDrupalAccount( $_user )
+	{
+	}
+
 	//.........................................................................
 	//. REST interface implementation
 	//.........................................................................
@@ -951,6 +960,7 @@ class SystemManager extends BaseSystemRestService
 		if ( 'custom' == $this->_resource )
 		{
 			$_obj = new CustomSettings( $this, $this->_resourceArray );
+
 			return $_obj->processRequest( null, $this->_action );
 		}
 
@@ -1057,7 +1067,7 @@ class SystemManager extends BaseSystemRestService
 		try
 		{
 			$_admins = Sql::scalar(
-						  <<<SQL
+				<<<SQL
 				SELECT
 	COUNT(id)
 FROM
@@ -1066,10 +1076,10 @@ WHERE
 	is_sys_admin = 1 AND
 	is_deleted = 0
 SQL
-							  ,
-							  0,
-							  array(),
-							  Pii::pdo()
+				,
+				0,
+				array(),
+				Pii::pdo()
 			);
 
 			return ( 0 == $_admins ? false : ( $_admins > 1 ? $_admins : true ) );
@@ -1094,8 +1104,8 @@ SQL
 			/** @var User $_user */
 			$_user = $user
 				? : User::model()->find(
-						'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
-						array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
+					'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
+					array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
 				);
 
 			if ( !empty( $_user ) )
