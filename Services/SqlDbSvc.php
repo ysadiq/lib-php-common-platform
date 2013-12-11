@@ -1824,11 +1824,12 @@ class SqlDbSvc extends BaseDbSvc
 				$relatedField = $relation['ref_field'];
 				$field = $relation['field'];
 				$extraFields = $extra['fields'];
+				$relatedExtras = array( 'limit' => static::DB_MAX_RECORDS_RETURNED );
 				switch ( $relationType )
 				{
 					case 'belongs_to':
 						$fieldVal = Option::get( $data, $field );
-						$relatedRecords = $this->retrieveRecordsByFilter( $relatedTable, "$relatedField = '$fieldVal'", $extraFields );
+						$relatedRecords = $this->retrieveRecordsByFilter( $relatedTable, "$relatedField = '$fieldVal'", $extraFields, $relatedExtras );
 						if ( !empty( $relatedRecords ) )
 						{
 							$tempData = $relatedRecords[0];
@@ -1840,7 +1841,7 @@ class SqlDbSvc extends BaseDbSvc
 						break;
 					case 'has_many':
 						$fieldVal = Option::get( $data, $field );
-						$tempData = $this->retrieveRecordsByFilter( $relatedTable, "$relatedField = '$fieldVal'", $extraFields );
+						$tempData = $this->retrieveRecordsByFilter( $relatedTable, "$relatedField = '$fieldVal'", $extraFields, $relatedExtras );
 						break;
 					case 'many_many':
 						$fieldVal = Option::get( $data, $field );
