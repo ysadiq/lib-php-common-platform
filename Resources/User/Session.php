@@ -154,11 +154,11 @@ class Session extends BasePlatformRestResource
 
 				//	Special case for guest user
 				$_config = ResourceStore::model( 'config' )->with(
-							   'guest_role.role_service_accesses',
-							   'guest_role.role_system_accesses',
-							   'guest_role.apps',
-							   'guest_role.services'
-						   )->find();
+					'guest_role.role_service_accesses',
+					'guest_role.role_system_accesses',
+					'guest_role.apps',
+					'guest_role.services'
+				)->find();
 
 				if ( !empty( $_config ) )
 				{
@@ -180,11 +180,11 @@ class Session extends BasePlatformRestResource
 		try
 		{
 			$_user = ResourceStore::model( 'user' )->with(
-						 'role.role_service_accesses',
-						 'role.role_system_accesses',
-						 'role.apps',
-						 'role.services'
-					 )->findByPk( $_userId );
+				'role.role_service_accesses',
+				'role.role_system_accesses',
+				'role.apps',
+				'role.services'
+			)->findByPk( $_userId );
 		}
 		catch ( \Exception $ex )
 		{
@@ -292,7 +292,28 @@ class Session extends BasePlatformRestResource
 	 */
 	public static function userLogout()
 	{
-		Pii::user()->logout();
+		// helper for non-browser-managed sessions
+		$_sessionId = FilterInput::server( 'HTTP_X_DREAMFACTORY_SESSION_TOKEN' );
+
+		if ( !empty( $_sessionId ) )
+		{
+			session_write_close();
+			session_id( $_sessionId );
+
+			if ( session_start() )
+			{
+				if ( session_id() !== '' )
+				{
+					@session_unset();
+					@session_destroy();
+				}
+			}
+		}
+		else
+		{
+			// otherwise logout browser session
+			Pii::user()->logout();
+		}
 	}
 
 	/**
@@ -312,11 +333,11 @@ class Session extends BasePlatformRestResource
 		/** @var User $_user */
 		$_user = $user
 			? : ResourceStore::model( 'user' )->with(
-					'role.role_service_accesses',
-					'role.role_system_accesses',
-					'role.apps',
-					'role.services'
-				)->findByPk( $userId );
+				'role.role_service_accesses',
+				'role.role_system_accesses',
+				'role.apps',
+				'role.services'
+			)->findByPk( $userId );
 
 		if ( empty( $_user ) )
 		{
@@ -406,11 +427,11 @@ class Session extends BasePlatformRestResource
 		/** @var Role $_role */
 		$_role = $role
 			? : ResourceStore::model( 'role' )->with(
-					'role_service_accesses',
-					'role_system_accesses',
-					'apps',
-					'services'
-				)->findByPk( $roleId );
+				'role_service_accesses',
+				'role_system_accesses',
+				'apps',
+				'services'
+			)->findByPk( $roleId );
 
 		if ( empty( $_role ) )
 		{
@@ -748,11 +769,11 @@ class Session extends BasePlatformRestResource
 			{
 				// special case for possible guest user
 				$_config = ResourceStore::model( 'config' )->with(
-							   'guest_role.role_service_accesses',
-							   'guest_role.role_system_accesses',
-							   'guest_role.apps',
-							   'guest_role.services'
-						   )->find();
+					'guest_role.role_service_accesses',
+					'guest_role.role_system_accesses',
+					'guest_role.apps',
+					'guest_role.services'
+				)->find();
 
 				if ( !empty( $_config ) )
 				{
