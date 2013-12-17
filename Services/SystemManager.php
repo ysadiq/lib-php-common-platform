@@ -87,12 +87,12 @@ class SystemManager extends BaseSystemRestService
 		parent::__construct(
 			array_merge(
 				array(
-					'name'        => 'System Configuration Management',
-					'api_name'    => 'system',
-					'type'        => 'System',
-					'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-					'description' => 'Service for system administration.',
-					'is_active'   => true,
+					 'name'        => 'System Configuration Management',
+					 'api_name'    => 'system',
+					 'type'        => 'System',
+					 'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+					 'description' => 'Service for system administration.',
+					 'is_active'   => true,
 				),
 				$settings
 			)
@@ -676,7 +676,7 @@ class SystemManager extends BaseSystemRestService
 										if ( 0 === strcasecmp( 'dfpkg', FileUtilities::getFileExtension( $fileUrl ) ) )
 										{
 											Log::debug( 'Importing application: ' . $fileUrl );
-
+											$filename = null;
 											try
 											{
 												// need to download and extract zip file and move contents to storage
@@ -686,6 +686,11 @@ class SystemManager extends BaseSystemRestService
 											catch ( \Exception $ex )
 											{
 												Log::error( "Failed to import application package $fileUrl.\n{$ex->getMessage()}" );
+											}
+
+											if ( !empty( $filename ) )
+											{
+												unlink( $filename );
 											}
 										}
 									}
@@ -743,6 +748,7 @@ class SystemManager extends BaseSystemRestService
 
 		// need to download and extract zip file of latest version
 		$_tempDir = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR;
+		$_tempZip = null;
 		try
 		{
 			$_tempZip = FileUtilities::importUrlFileToTemp( $_versionUrl );
@@ -755,9 +761,15 @@ class SystemManager extends BaseSystemRestService
 			{
 				throw new \Exception( "Error extracting zip contents to temp directory - $_tempDir." );
 			}
+
+			unlink( $_tempZip );
 		}
 		catch ( \Exception $ex )
 		{
+			if ( !empty( $_tempZip ) )
+			{
+				unlink( $_tempZip );
+			}
 			throw new \Exception( "Failed to import dsp package $_versionUrl.\n{$ex->getMessage()}" );
 		}
 
@@ -913,6 +925,7 @@ class SystemManager extends BaseSystemRestService
 	 */
 	protected static function _createDrupalAccount( $_user )
 	{
+		//	http://cerberus.fabric.dreamfactory.com/api/drupal/register/
 	}
 
 	//.........................................................................

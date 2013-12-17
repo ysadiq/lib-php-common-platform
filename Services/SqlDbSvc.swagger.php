@@ -68,141 +68,6 @@ $_base['apis'] = array(
 									  'By default, all tables are listed, use \'names\' parameter to get specific tables. ' .
 									  'Use \'include_properties\' to include any properties of the tables.',
 			),
-			array(
-				'method'           => 'POST',
-				'summary'          => 'createTables() - Create one or more tables.',
-				'nickname'         => 'createTables',
-				'type'             => 'Tables',
-				'parameters'       =>
-				array(
-					array(
-						'name'          => 'tables',
-						'description'   => 'Array of tables to create.',
-						'allowMultiple' => false,
-						'type'          => 'Tables',
-						'paramType'     => 'body',
-						'required'      => true,
-					),
-					array(
-						'name'          => 'check_exist',
-						'description'   => 'If true, the request fails when the table to create already exists.',
-						'allowMultiple' => false,
-						'type'          => 'boolean',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'X-HTTP-METHOD',
-						'description'   => 'Override request using POST to tunnel other http request, such as DELETE.',
-						'enum'          => array( 'GET', 'PUT', 'PATCH', 'DELETE' ),
-						'allowMultiple' => false,
-						'type'          => 'string',
-						'paramType'     => 'header',
-						'required'      => false,
-					),
-				),
-				'responseMessages' =>
-				array(
-					array(
-						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-						'code'    => 400,
-					),
-					array(
-						'message' => 'Unauthorized Access - No currently valid session available.',
-						'code'    => 401,
-					),
-					array(
-						'message' => 'System Error - Specific reason is included in the error message.',
-						'code'    => 500,
-					),
-				),
-				'notes'            => 'Post body should be a single table definition or an array of table definitions.',
-			),
-			array(
-				'method'           => 'PATCH',
-				'summary'          => 'updateTableProperties() - Update properties of one or more tables.',
-				'nickname'         => 'updateTableProperties',
-				'type'             => 'Tables',
-				'parameters'       =>
-				array(
-					array(
-						'name'          => 'body',
-						'description'   => 'Array of tables with properties to update.',
-						'allowMultiple' => false,
-						'type'          => 'Tables',
-						'paramType'     => 'body',
-						'required'      => true,
-					),
-				),
-				'responseMessages' =>
-				array(
-					array(
-						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-						'code'    => 400,
-					),
-					array(
-						'message' => 'Unauthorized Access - No currently valid session available.',
-						'code'    => 401,
-					),
-					array(
-						'message' => 'Not Found - Requested table does not exist.',
-						'code'    => 404,
-					),
-					array(
-						'message' => 'System Error - Specific reason is included in the error message.',
-						'code'    => 500,
-					),
-				),
-				'notes'            => 'Post body should be a single table definition or an array of table definitions.',
-			),
-			array(
-				'method'           => 'DELETE',
-				'summary'          => 'deleteTables() - Delete one or more tables.',
-				'nickname'         => 'deleteTables',
-				'type'             => 'Tables',
-				'parameters'       =>
-				array(
-					array(
-						'name'          => 'names',
-						'description'   => 'Comma-delimited list of the table names to delete.',
-						'allowMultiple' => true,
-						'type'          => 'string',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
-						'name'          => 'force',
-						'description'   => 'Set force to true to delete all tables in this database, otherwise \'names\' parameter is required.',
-						'allowMultiple' => false,
-						'type'          => 'boolean',
-						'paramType'     => 'query',
-						'required'      => false,
-						'default'       => false,
-					),
-				),
-				'responseMessages' =>
-				array(
-					array(
-						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-						'code'    => 400,
-					),
-					array(
-						'message' => 'Unauthorized Access - No currently valid session available.',
-						'code'    => 401,
-					),
-					array(
-						'message' => 'Not Found - Requested table does not exist.',
-						'code'    => 404,
-					),
-					array(
-						'message' => 'System Error - Specific reason is included in the error message.',
-						'code'    => 500,
-					),
-				),
-				'notes'            => 'Set the names of the tables to delete or set \'force\' to true to clear the database.' .
-									  'Alternatively, to delete by table definitions or a large list of names, ' .
-									  'use the POST request with X-HTTP-METHOD = DELETE header and post array of definitions or names.',
-			),
 		),
 		'description' => 'Operations available for database tables.',
 	),
@@ -276,8 +141,24 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 					array(
+						'name'          => 'related',
+						'description'   => 'Comma-delimited list of relationship names to retrieve for each record.',
+						'allowMultiple' => true,
+						'type'          => 'string',
+						'paramType'     => 'query',
+						'required'      => false,
+					),
+					array(
 						'name'          => 'include_count',
-						'description'   => 'Include the total number of filter results.',
+						'description'   => 'Include the total number of filter results as meta data.',
+						'allowMultiple' => false,
+						'type'          => 'boolean',
+						'paramType'     => 'query',
+						'required'      => false,
+					),
+					array(
+						'name'          => 'include_schema',
+						'description'   => 'Include the table schema as meta data.',
 						'allowMultiple' => false,
 						'type'          => 'boolean',
 						'paramType'     => 'query',
@@ -314,6 +195,8 @@ $_base['apis'] = array(
 				'notes'            => 'Use the \'ids\' or \'filter\' parameter to limit resources that are returned. ' .
 									  'Use the \'fields\' parameter to limit properties returned for each resource. ' .
 									  'By default, all fields are returned for all resources. ' .
+									  'Use the \'related\' parameter to return related records for each resource. ' .
+									  'By default, no related records are returned. ' .
 									  'Alternatively, to send the \'ids\' or \'filter\' as posted data ' .
 									  'use the POST request with X-HTTP-METHOD = GET header and post array of ids or a filter.',
 			),
@@ -351,6 +234,14 @@ $_base['apis'] = array(
 					array(
 						'name'          => 'fields',
 						'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+						'allowMultiple' => true,
+						'type'          => 'string',
+						'paramType'     => 'query',
+						'required'      => false,
+					),
+					array(
+						'name'          => 'related',
+						'description'   => 'Comma-delimited list of relationship names to retrieve for each record.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
@@ -444,6 +335,14 @@ $_base['apis'] = array(
 						'paramType'     => 'query',
 						'required'      => false,
 					),
+					array(
+						'name'          => 'related',
+						'description'   => 'Comma-delimited list of relationship names to retrieve for each record.',
+						'allowMultiple' => true,
+						'type'          => 'string',
+						'paramType'     => 'query',
+						'required'      => false,
+					),
 				),
 				'responseMessages' =>
 				array(
@@ -524,6 +423,14 @@ $_base['apis'] = array(
 						'paramType'     => 'query',
 						'required'      => false,
 					),
+					array(
+						'name'          => 'related',
+						'description'   => 'Comma-delimited list of relationship names to retrieve for each record.',
+						'allowMultiple' => true,
+						'type'          => 'string',
+						'paramType'     => 'query',
+						'required'      => false,
+					),
 				),
 				'responseMessages' =>
 				array(
@@ -580,14 +487,6 @@ $_base['apis'] = array(
 						'required'      => true,
 					),
 					array(
-						'name'          => 'properties_only',
-						'description'   => 'Return just the properties of the record.',
-						'allowMultiple' => true,
-						'type'          => 'boolean',
-						'paramType'     => 'query',
-						'required'      => false,
-					),
-					array(
 						'name'          => 'id_field',
 						'description'   => 'Comma-delimited list of the fields used as identifiers or primary keys for the table.',
 						'allowMultiple' => true,
@@ -598,6 +497,14 @@ $_base['apis'] = array(
 					array(
 						'name'          => 'fields',
 						'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+						'allowMultiple' => true,
+						'type'          => 'string',
+						'paramType'     => 'query',
+						'required'      => false,
+					),
+					array(
+						'name'          => 'related',
+						'description'   => 'Comma-delimited list of relationship names to retrieve for each record.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
@@ -623,7 +530,10 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Use the \'fields\' parameter to limit properties that are returned. By default, all fields are returned.',
+				'notes'            => 'Use the \'fields\' parameter to limit properties that are returned. ' .
+									  'By default, all fields are returned. ' .
+									  'Use the \'related\' parameter to return related records. ' .
+									  'By default, no related records are returned.',
 			),
 			array(
 				'method'           => 'POST',
@@ -667,6 +577,14 @@ $_base['apis'] = array(
 					array(
 						'name'          => 'fields',
 						'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+						'allowMultiple' => true,
+						'type'          => 'string',
+						'paramType'     => 'query',
+						'required'      => false,
+					),
+					array(
+						'name'          => 'related',
+						'description'   => 'Comma-delimited list of relationship names to retrieve for each record.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',
@@ -742,6 +660,14 @@ $_base['apis'] = array(
 						'paramType'     => 'query',
 						'required'      => false,
 					),
+					array(
+						'name'          => 'related',
+						'description'   => 'Comma-delimited list of relationship names to retrieve for each record.',
+						'allowMultiple' => true,
+						'type'          => 'string',
+						'paramType'     => 'query',
+						'required'      => false,
+					),
 				),
 				'responseMessages' =>
 				array(
@@ -799,6 +725,14 @@ $_base['apis'] = array(
 					array(
 						'name'          => 'fields',
 						'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+						'allowMultiple' => true,
+						'type'          => 'string',
+						'paramType'     => 'query',
+						'required'      => false,
+					),
+					array(
+						'name'          => 'related',
+						'description'   => 'Comma-delimited list of relationship names to retrieve for each record.',
 						'allowMultiple' => true,
 						'type'          => 'string',
 						'paramType'     => 'query',

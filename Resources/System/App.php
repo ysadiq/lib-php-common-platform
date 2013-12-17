@@ -25,7 +25,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BaseFileSvc;
-use DreamFactory\Platform\Utility\FileSystem;
+use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\Packager;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\ServiceHandler;
@@ -111,16 +111,26 @@ class App extends BaseSystemRestResource
 			$_extension = strtolower( pathinfo( $_importUrl, PATHINFO_EXTENSION ) );
 			if ( 'dfpkg' == $_extension )
 			{
-				// need to download and extract zip file and move contents to storage
-				$_filename = FileSystem::importUrlFileToTemp( $_importUrl );
-
+				$_filename = null;
 				try
 				{
+					// need to download and extract zip file and move contents to storage
+					$_filename = FileUtilities::importUrlFileToTemp( $_importUrl );
 					$_results = Packager::importAppFromPackage( $_filename, $_importUrl );
 				}
 				catch ( \Exception $ex )
 				{
+					if ( !empty( $_filename ) )
+					{
+						unlink( $_filename );
+					}
+
 					throw new InternalServerErrorException( "Failed to import application package $_importUrl.\n{$ex->getMessage()}" );
+				}
+
+				if ( !empty( $_filename ) )
+				{
+					unlink( $_filename );
 				}
 			}
 			else
