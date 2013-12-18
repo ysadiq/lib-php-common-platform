@@ -141,7 +141,7 @@ class Portal extends BaseSystemRestService
 				);
 			}
 
-			return array('resource' => $_providers);
+			return array( 'resource' => $_providers );
 		}
 
 		//	1. Validate portal
@@ -273,6 +273,7 @@ class Portal extends BaseSystemRestService
 		if ( !in_array( $this->_resource, array_keys( $this->_serviceMap ) ) )
 		{
 			Log::error( 'Portal service "' . $this->_resource . '" not found' );
+
 			throw new NotFoundException( 'Portal "' .
 										 $this->_resource .
 										 '" not found. Acceptable portals are: ' .
@@ -291,7 +292,7 @@ class Portal extends BaseSystemRestService
 	protected function _getProvider()
 	{
 		$_config = array();
-		$_template = null;
+		$_template = $this->_resource;
 
 		//	Load any local configuration files for this provider...
 		$_configPath = \Kisma::get( 'app.config_path' ) . '/portal/' . $this->_resource . '.config.php';
@@ -334,7 +335,7 @@ class Portal extends BaseSystemRestService
 
 		/** @var BaseOAuthProvider $_provider */
 		{
-			$_provider = Oasys::getProvider( $this->_resource, Oasys::getStore()->get(), $_template );
+			$_provider = Oasys::getProvider( $_template, Oasys::getStore()->get() );
 		}
 
 		//	See if we need the user's profile ID
@@ -405,9 +406,9 @@ class Portal extends BaseSystemRestService
 		{
 			$_method = str_replace( static::ACTION_TOKEN, Inflector::deneutralize( $this->_controlCommand ), static::DEFAULT_HANDLER_PATTERN );
 
-			if ( is_callable( array($this, $_method) ) )
+			if ( is_callable( array( $this, $_method ) ) )
 			{
-				return call_user_func( array($this, $_method), $provider );
+				return call_user_func( array( $this, $_method ), $provider );
 			}
 		}
 
