@@ -336,11 +336,11 @@ class Portal extends BaseSystemRestService
 		/** @var BaseOAuthProvider $_provider */
 		$_provider = Oasys::getProvider( $_template, Oasys::getStore()->get() );
 
-		//	See if we need the user's profile ID
-		if ( null === $_provider->getConfig( 'provider_user_id' ) )
-		{
-			$_provider->setNeedProfileUserId( true );
-		}
+//		//	See if we need the user's profile ID
+//		if ( null === $_provider->getConfig( 'provider_user_id' ) && null === $this->_store->getProviderUserId() )
+//		{
+//			$_provider->setNeedProfileUserId( true );
+//		}
 
 		return $_provider;
 	}
