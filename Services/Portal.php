@@ -141,7 +141,7 @@ class Portal extends BaseSystemRestService
 				);
 			}
 
-			return array( 'resource' => $_providers );
+			return array('resource' => $_providers);
 		}
 
 		//	1. Validate portal
@@ -334,15 +334,13 @@ class Portal extends BaseSystemRestService
 		Oasys::setStore( $this->_store, true );
 
 		/** @var BaseOAuthProvider $_provider */
-		{
-			$_provider = Oasys::getProvider( $_template, Oasys::getStore()->get() );
-		}
+		$_provider = Oasys::getProvider( $_template, Oasys::getStore()->get() );
 
-		//	See if we need the user's profile ID
-		if ( null === $_provider->getConfig( 'provider_user_id' ) )
-		{
-			$_provider->setNeedProfileUserId( true );
-		}
+//		//	See if we need the user's profile ID
+//		if ( null === $_provider->getConfig( 'provider_user_id' ) && null === $this->_store->getProviderUserId() )
+//		{
+//			$_provider->setNeedProfileUserId( true );
+//		}
 
 		return $_provider;
 	}
@@ -406,9 +404,9 @@ class Portal extends BaseSystemRestService
 		{
 			$_method = str_replace( static::ACTION_TOKEN, Inflector::deneutralize( $this->_controlCommand ), static::DEFAULT_HANDLER_PATTERN );
 
-			if ( is_callable( array( $this, $_method ) ) )
+			if ( is_callable( array($this, $_method) ) )
 			{
-				return call_user_func( array( $this, $_method ), $provider );
+				return call_user_func( array($this, $_method), $provider );
 			}
 		}
 
