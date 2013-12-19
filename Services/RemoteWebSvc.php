@@ -19,11 +19,9 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\RestData;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Curl;
 

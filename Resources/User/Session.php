@@ -27,6 +27,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\UnauthorizedException;
 use DreamFactory\Platform\Interfaces\PermissionTypes;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
@@ -77,17 +78,17 @@ class Session extends BasePlatformRestResource
 		parent::__construct(
 			$consumer,
 			array(
-				 'name'           => 'User Session',
-				 'service_name'   => 'user',
-				 'type'           => 'System',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'session',
-				 'description'    => 'Resource for a user to manage their session.',
-				 'is_active'      => true,
-				 'resource_array' => $resources,
-				 'verb_aliases'   => array(
-					 static::Put => static::Post,
-				 )
+				'name'           => 'User Session',
+				'service_name'   => 'user',
+				'type'           => 'System',
+				'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				'api_name'       => 'session',
+				'description'    => 'Resource for a user to manage their session.',
+				'is_active'      => true,
+				'resource_array' => $resources,
+				'verb_aliases'   => array(
+					static::Put => static::Post,
+				)
 			)
 		);
 	}
@@ -283,6 +284,9 @@ class Session extends BasePlatformRestResource
 
 		static::$_userId = $_user->id;
 
+		//	Check registration...
+		SystemManager::registerAdmin( $_user, Pii::getState( 'app.registration_skipped' ) );
+
 		// 	Additional stuff for session - launchpad mainly
 		return static::addSessionExtras( $_result, $_user->is_sys_admin, true );
 	}
@@ -317,12 +321,11 @@ class Session extends BasePlatformRestResource
 	}
 
 	/**
-	 * @param      $userId
+	 * @param int  $userId
 	 * @param User $user
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\UnauthorizedException
 	 * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
-	 * @internal param int $user_id
 	 * @return array
 	 */
 	public static function generateSessionDataFromUser( $userId, $user = null )
