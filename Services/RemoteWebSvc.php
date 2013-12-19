@@ -64,11 +64,7 @@ class RemoteWebSvc extends BasePlatformRestService
 	/**
 	 * @var array
 	 */
-	protected $_curlOptions
-		= array(
-			CURLOPT_RETURNTRANSFER => false,
-			CURLOPT_HEADER         => false,
-		);
+	protected $_curlOptions = array();
 
 	//*************************************************************************
 	//* Methods
@@ -110,7 +106,8 @@ class RemoteWebSvc extends BasePlatformRestService
 				case '_': // timestamp added by jquery
 				case 'app_name': // app_name required by our api
 				case 'method': // method option for our api
-				case 'format':
+				case 'format': //	Output format
+				case 'path': //	Added by Yii router
 					break;
 				default:
 					$param_str .= ( !empty( $param_str ) ) ? '&' : '';
@@ -168,8 +165,8 @@ class RemoteWebSvc extends BasePlatformRestService
 				$key = Option::get( $header, 'name' );
 				$value = Option::get( $header, 'value' );
 
-				$options[CURLOPT_HTTPHEADER] = !isset( $options[CURLOPT_HTTPHEADER] ) ? array( $key . ': ' . $value )
-					: $options[CURLOPT_HTTPHEADER][] = $key . ': ' . $value;
+				$options[CURLOPT_HTTPHEADER] =
+					!isset( $options[CURLOPT_HTTPHEADER] ) ? array( $key . ': ' . $value ) : $options[CURLOPT_HTTPHEADER][] = $key . ': ' . $value;
 			}
 		}
 
@@ -181,8 +178,8 @@ class RemoteWebSvc extends BasePlatformRestService
 		parent::_preProcess();
 
 		$this->_query = $this->buildParameterString( $this->_action );
-		$this->_url
-			= rtrim( $this->_baseUrl, '/' ) . ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null ) . '?' . $this->_query;
+		$this->_url =
+			rtrim( $this->_baseUrl, '/' ) . ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null ) . '?' . $this->_query;
 
 		//	set additional headers
 		$this->_curlOptions = $this->addHeaders( $this->_action, $this->_curlOptions );
@@ -198,18 +195,20 @@ class RemoteWebSvc extends BasePlatformRestService
 	{
 //		Log::debug( 'Outbound HTTP request: ' . $this->_action . ': ' . $this->_url );
 
-		$this->_response = Curl::request(
-			$this->_action,
-			$this->_url,
-			RestData::getPostedData() ? : array(),
-			$this->_curlOptions
+		$_result = Curl::request(
+					   $this->_action,
+					   $this->_url,
+					   RestData::getPostedData() ? : array(),
+					   $this->_curlOptions
 		);
 
-		if ( false === $this->_response )
+		if ( false === $_result )
 		{
 			$_error = Curl::getError();
 			throw new RestException( Option::get( $_error, 'code', 500 ), Option::get( $_error, 'message' ) );
 		}
+
+		return $_result;
 	}
 
 	/**

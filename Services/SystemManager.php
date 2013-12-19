@@ -62,6 +62,10 @@ class SystemManager extends BaseSystemRestService
 	 * @var string The private CORS configuration file
 	 */
 	const CORS_DEFAULT_CONFIG_FILE = '/cors.config.json';
+	/**
+	 * @var string The registration marker
+	 */
+	const REGISTRATION_MARKER = '/.dsp.registered';
 
 	//*************************************************************************
 	//* Members
@@ -85,17 +89,17 @@ class SystemManager extends BaseSystemRestService
 		static::$_configPath = \Kisma::get( 'app.config_path' );
 
 		parent::__construct(
-			array_merge(
-				array(
-					 'name'        => 'System Configuration Management',
-					 'api_name'    => 'system',
-					 'type'        => 'System',
-					 'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-					 'description' => 'Service for system administration.',
-					 'is_active'   => true,
-				),
-				$settings
-			)
+			  array_merge(
+				  array(
+					  'name'        => 'System Configuration Management',
+					  'api_name'    => 'system',
+					  'type'        => 'System',
+					  'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+					  'description' => 'Service for system administration.',
+					  'is_active'   => true,
+				  ),
+				  $settings
+			  )
 		);
 	}
 
@@ -518,8 +522,8 @@ class SystemManager extends BaseSystemRestService
 				$_firstName = Pii::getState( 'first_name', Option::get( $_model, 'firstName' ) );
 				$_lastName = Pii::getState( 'last_name', Option::get( $_model, 'lastName' ) );
 				$_displayName = Pii::getState(
-					'display_name',
-					Option::get( $_model, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
+								   'display_name',
+								   Option::get( $_model, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
 				);
 
 				$_fields = array(
@@ -556,10 +560,7 @@ class SystemManager extends BaseSystemRestService
 			$_identity->setState( 'df_authenticated', false ); // removes catch
 			$_identity->setState( 'password', $_password, $_password ); // removes password
 
-			if ( true === Pii::getState( 'app.registration_skipped' ) )
-			{
-				static::_createDrupalAccount( $_user );
-			}
+			static::_createDrupalAccount( $_user, Pii::getState( 'app.registration_skipped' ) );
 		}
 		catch ( \Exception $_ex )
 		{
@@ -802,9 +803,9 @@ class SystemManager extends BaseSystemRestService
 	public static function getDspVersions()
 	{
 		$_results = Curl::get(
-			'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags',
-			array(),
-			array( CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' ) )
+						'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags',
+						array(),
+						array( CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' ) )
 		);
 
 		if ( HttpResponse::Ok != ( $_code = Curl::getLastHttpCode() ) )
@@ -919,13 +920,18 @@ class SystemManager extends BaseSystemRestService
 	}
 
 	/**
-	 * Creates an account for the admin user in Drupal
+	 * Queues a registration record
 	 *
 	 * @param User $_user
+	 * @param bool $skipped
 	 */
-	protected static function _createDrupalAccount( $_user )
+	protected static function _createDrupalAccount( $_user, $skipped = true )
 	{
 		//	http://cerberus.fabric.dreamfactory.com/api/drupal/register/
+		if ( !file_exists( static::REGISTRATION_MARKER ) )
+		{
+
+		}
 	}
 
 	//.........................................................................
@@ -1080,8 +1086,8 @@ class SystemManager extends BaseSystemRestService
 		try
 		{
 			$_admins = Sql::scalar(
-				<<<SQL
-				SELECT
+						  <<<SQL
+						SELECT
 	COUNT(id)
 FROM
 	df_sys_user
@@ -1089,10 +1095,10 @@ WHERE
 	is_sys_admin = 1 AND
 	is_deleted = 0
 SQL
-				,
-				0,
-				array(),
-				Pii::pdo()
+							  ,
+							  0,
+							  array(),
+							  Pii::pdo()
 			);
 
 			return ( 0 == $_admins ? false : ( $_admins > 1 ? $_admins : true ) );
@@ -1117,8 +1123,8 @@ SQL
 			/** @var User $_user */
 			$_user = $user
 				? : User::model()->find(
-					'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
-					array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
+						'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
+						array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
 				);
 
 			if ( !empty( $_user ) )
