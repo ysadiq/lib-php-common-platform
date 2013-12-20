@@ -39,12 +39,12 @@ class SwaggerManager extends BasePlatformRestService
 	/**
 	 * @var string The private caching directory
 	 */
-	const SWAGGER_CACHE_DIR = '/swagger/';
+	const SWAGGER_CACHE_DIR = '/swagger/cache/';
 
 	/**
 	 * @var string The private storage directory for non-generated files
 	 */
-	const SWAGGER_STORE_DIR = '/swagger_store/';
+	const SWAGGER_CUSTOM_DIR = '/swagger/custom/';
 
 	//*************************************************************************
 	//	Methods
@@ -110,16 +110,22 @@ class SwaggerManager extends BasePlatformRestService
 	protected static function buildSwagger()
 	{
 		$_basePath = Pii::request()->getHostInfo() . '/rest';
-		$_swaggerPath = Pii::getParam( 'storage_base_path' ) . static::SWAGGER_CACHE_DIR;
-
-		// create root directory if it doesn't exists
-		if ( !file_exists( $_swaggerPath ) )
+		// create cache directory if it doesn't exists
+		$_cachePath = Pii::getParam( 'storage_base_path' ) . static::SWAGGER_CACHE_DIR;
+		if ( !file_exists( $_cachePath ) )
 		{
-			@\mkdir( $_swaggerPath, 0777, true );
+			@mkdir( $_cachePath, 0777, true );
+		}
+		// create custom directory if it doesn't exists
+		$_customPath = Pii::getParam( 'storage_base_path' ) . static::SWAGGER_CUSTOM_DIR;
+		if ( !file_exists( $_customPath ) )
+		{
+			@mkdir( $_customPath, 0777, true );
 		}
 
 		// generate swagger output from file annotations
 		$_scanPath = rtrim( __DIR__, '/' ) . '/';
+		$_templatePath = dirname( __DIR__ ) . '/Templates/Swagger/';
 
 		$_baseSwagger = array(
 			'swaggerVersion' => '1.2',
@@ -148,101 +154,54 @@ class SwaggerManager extends BasePlatformRestService
 		{
 			$_apiName = Option::get( $_service, 'api_name' );
 			$_typeId = Option::get( $_service, 'type_id' );
-			$_fileName = $_apiName;
-
-			switch ( $_typeId )
-			{
-				case PlatformServiceTypes::SYSTEM_SERVICE:
-					if ( 0 == strcasecmp( $_apiName, 'system' ) )
-					{
-						$_fileName = 'SystemManager';
-					}
-					else
-					{
-						$_fileName = 'UserManager';
-					}
-					break;
-				case PlatformServiceTypes::LOCAL_PORTAL_SERVICE:
-					$_fileName = 'Portal';
-					break;
-				case PlatformServiceTypes::REMOTE_WEB_SERVICE:
-					$_fileName = 'RemoteWebSvc';
-					break;
-				case PlatformServiceTypes::LOCAL_FILE_STORAGE:
-					$_fileName = 'LocalFileSvc';
-					break;
-				case PlatformServiceTypes::REMOTE_FILE_STORAGE:
-					$_fileName = 'RemoteFileSvc';
-					break;
-				case PlatformServiceTypes::LOCAL_SQL_DB:
-				case PlatformServiceTypes::REMOTE_SQL_DB:
-					$_fileName = 'SqlDbSvc';
-					break;
-				case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
-				case PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA:
-					$_fileName = 'SchemaSvc';
-					break;
-				case PlatformServiceTypes::EMAIL_SERVICE:
-					$_fileName = 'EmailSvc';
-					break;
-				case PlatformServiceTypes::NOSQL_DB:
-					$_fileName = 'NoSqlDbSvc';
-					break;
-				case PlatformServiceTypes::SALESFORCE:
-					$_fileName = 'SalesforceDbSvc';
-					break;
-			}
+			$_fileName = PlatformServiceTypes::getFileName( $_typeId, $_apiName );
 
 			$_content = null;
-			$_fileName = $_scanPath . $_fileName . '.swagger.php';
-			if ( !file_exists( $_fileName ) )
+			$_filePath = $_scanPath . $_fileName . '.swagger.php';
+			if ( file_exists( $_filePath ) )
 			{
-				$_storePath = Pii::getParam( 'storage_base_path' ) . static::SWAGGER_STORE_DIR;
-				$_filePath = $_storePath . $_apiName . '.json';
-				if ( !file_exists( $_filePath ) )
+				$_fromFile = require( $_filePath );
+				if ( is_array( $_fromFile ) )
 				{
-					$_defaultPath = dirname( __DIR__ ) . '/Templates/Swagger/default_service_swagger.json';
-					if ( !file_exists( $_defaultPath ) )
-					{
-						Log::error( "No default swagger file at $_defaultPath." );
-						continue;
-					}
-					if ( false === ( $_content = file_get_contents( $_defaultPath ) ) )
-					{
-						Log::error( "Failed to get default swagger file contents." );
-						continue;
-					}
-				}
-				else
-				{
-					if ( false === ( $_content = file_get_contents( $_filePath ) ) )
-					{
-						Log::error( "Failed to get default swagger file contents for service $_apiName." );
-						continue;
-					}
+					$_content = array_merge( $_baseSwagger, $_fromFile );
+					$_content = json_encode( $_content );
 				}
 			}
 			else
 			{
-				$_fromFile = require( $_fileName );
-				if ( is_array( $_fromFile ) )
+				$_filePath = $_customPath . $_fileName . '.json';
+				if ( file_exists( $_filePath ) )
 				{
-					$_content = array_merge( $_baseSwagger, $_fromFile );
+					$_fromFile = file_get_contents( $_filePath );
+					if ( !empty( $_fromFile ) )
+					{
+						$_content = $_fromFile;
+					}
 				}
-				$_content = json_encode( $_content );
 			}
 
 			if ( empty( $_content ) )
 			{
-				Log::error( "Empty swagger file contents for service $_apiName." );
-				continue;
+				Log::error( "No available swagger file contents for service $_apiName." );
+
+				// nothing exists for this service, build from the default base service
+				$_filePath = $_scanPath . 'BasePlatformRestSvc.swagger.php';
+				$_fromFile = require( $_filePath );
+				if ( !is_array( $_fromFile ) )
+				{
+					Log::error( "Failed to get default swagger file contents for service $_apiName." );
+					continue;
+				}
+
+				$_content = array_merge( $_baseSwagger, $_fromFile );
+				$_content = json_encode( $_content );
 			}
 
 			// replace service type placeholder with api name for this service instance
 			$_content = str_replace( '/{api_name}', '/' . $_apiName, $_content );
 
 			// cache it to a file for later access
-			$_filePath = $_swaggerPath . $_apiName . '.json';
+			$_filePath = $_cachePath . $_apiName . '.json';
 			if ( false === file_put_contents( $_filePath, $_content ) )
 			{
 				Log::error( "Failed to write cache file $_filePath." );
@@ -259,10 +218,21 @@ class SwaggerManager extends BasePlatformRestService
 		$_main = $_scanPath . 'SwaggerManager.swagger.php';
 		$_resourceListing = require( $_main );
 		$_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
-		$_filePath = $_swaggerPath . '_.json';
+		$_filePath = $_cachePath . '_.json';
 		if ( false === file_put_contents( $_filePath, json_encode( $_out ) ) )
 		{
 			Log::error( "Failed to write cache file $_filePath." );
+		}
+
+		$_exampleFile = 'example_service_swagger.json';
+		if ( !file_exists( $_customPath . $_exampleFile ) &&
+			 file_exists( $_templatePath . $_exampleFile )
+		)
+		{
+			file_put_contents(
+				$_customPath . $_exampleFile,
+				file_get_contents( $_templatePath . $_exampleFile )
+			);
 		}
 
 		return $_out;

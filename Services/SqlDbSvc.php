@@ -515,7 +515,7 @@ class SqlDbSvc extends BaseDbSvc
 				{
 					foreach ( $_idFields as $_field )
 					{
-						$_temp[] = array( $_field => $_id );
+						$_temp[$_field] = $_id;
 					}
 				}
 				$_results[] = $_temp;
