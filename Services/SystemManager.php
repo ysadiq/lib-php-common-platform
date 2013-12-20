@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Enums\InstallationTypes;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
@@ -27,7 +28,7 @@ use DreamFactory\Platform\Exceptions\PlatformServiceException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Platform\Resources\System\CustomSettings;
-use Kisma\Core\Enums\HttpMethod;
+use DreamFactory\Platform\Utility\Fabric;
 use Kisma\Core\Utility\Curl;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\Packager;
@@ -41,6 +42,7 @@ use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Interfaces\HttpResponse;
+use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -67,7 +69,23 @@ class SystemManager extends BaseSystemRestService
 	/**
 	 * @var string The registration marker
 	 */
-	const REGISTRATION_MARKER = '/.dsp.registered';
+	const REGISTRATION_MARKER = '/.registration_complete';
+	/**
+	 * @var string
+	 */
+	const BITNAMI_PACKAGE_MARKER = '/apps/dreamfactory/htdocs/web';
+	/**
+	 * @var string
+	 */
+	const DEB_PACKAGE_MARKER = '/opt/dreamfactory/platform/etc/apache2';
+	/**
+	 * @var string All packages have this doc root
+	 */
+	const PACKAGE_DOCUMENT_ROOT = '/opt/dreamfactory/platform/var/www/launchpad';
+	/**
+	 * @var string
+	 */
+	const RPM_PACKAGE_MARKER = '/opt/dreamfactory/platform/etc/httpd';
 	/**
 	 * @var string Our registration endpoint
 	 */
@@ -134,6 +152,7 @@ class SystemManager extends BaseSystemRestService
 	 */
 	public static function getSystemState()
 	{
+		static $_lastState = null;
 		static $_isReady = false;
 
 		if ( !$_isReady )
@@ -149,7 +168,7 @@ class SystemManager extends BaseSystemRestService
 			// if there is no config table, we have to initialize
 			if ( empty( $tables ) || ( false === array_search( 'df_sys_config', $tables ) ) )
 			{
-				return PlatformStates::INIT_REQUIRED;
+				return $_lastState = PlatformStates::INIT_REQUIRED;
 			}
 
 			// need to check for db upgrade, based on tables or version
@@ -167,7 +186,7 @@ class SystemManager extends BaseSystemRestService
 					$name = Option::get( $table, 'name' );
 					if ( !empty( $name ) && !in_array( $name, $tables ) )
 					{
-						return PlatformStates::SCHEMA_REQUIRED;
+						return $_lastState = PlatformStates::SCHEMA_REQUIRED;
 					}
 				}
 
@@ -176,24 +195,31 @@ class SystemManager extends BaseSystemRestService
 
 				if ( static::doesDbVersionRequireUpgrade( $_oldVersion, $_version ) )
 				{
-					return PlatformStates::SCHEMA_REQUIRED;
+					return $_lastState = PlatformStates::SCHEMA_REQUIRED;
 				}
 			}
 
 			// Check for at least one system admin user
 			if ( !static::activated() )
 			{
-				return PlatformStates::ADMIN_REQUIRED;
+				return $_lastState = PlatformStates::ADMIN_REQUIRED;
 			}
 
 			//	Need to check for the default services
 			if ( 0 == Service::model()->count() )
 			{
-				return PlatformStates::DATA_REQUIRED;
+				return $_lastState = PlatformStates::DATA_REQUIRED;
 			}
 		}
 
+		//	And redirect to welcome screen
+		if ( !Pii::guest() && !SystemManager::registrationComplete() )
+		{
+			Pii::controller()->redirect( '/web/welcome' );
+		}
+
 		$_isReady = true;
+		$_lastState = null;
 
 		return PlatformStates::READY;
 	}
@@ -565,8 +591,6 @@ class SystemManager extends BaseSystemRestService
 			$_identity->setState( 'email', $_email );
 			$_identity->setState( 'df_authenticated', false ); // removes catch
 			$_identity->setState( 'password', $_password, $_password ); // removes password
-
-			static::registerAdmin( $_user, Pii::getState( 'app.registration_skipped' ) );
 		}
 		catch ( \Exception $_ex )
 		{
@@ -932,70 +956,109 @@ class SystemManager extends BaseSystemRestService
 	}
 
 	/**
-	 * Queues a registration record
+	 * @param array $paths If specified, paths will be returned in this variable
 	 *
-	 * @param User $_user
-	 * @param bool $skipped
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\RestException
+	 * @return bool
 	 */
-	public static function registerAdmin( $_user, $skipped = true )
+	public static function registrationComplete( &$paths = null )
 	{
-		if ( !$_user->is_sys_admin )
-		{
-			return;
-		}
-
 		$_privatePath = Pii::getParam( 'private_path' );
 		$_marker = $_privatePath . static::REGISTRATION_MARKER;
 
+		$paths = array( '_privatePath' => $_privatePath, '_marker' => $_marker );
+
 		if ( !file_exists( $_marker ) )
 		{
-			$_payload = $_user->getAttributes();
-			$_payload['registration_skipped_ind'] = ( $skipped ? 1 : 0 );
-
-			try
-			{
-				$_payload = array(
-					'user_id'          => $_user->id,
-					'name'             => $_user->display_name,
-					'email'            => $_user->email,
-					'pass'             => $_user->password,
-					'field_first_name' => $_user->first_name,
-					'field_last_name'  => $_user->last_name,
-				);
-
-				$_response = Curl::post( static::REGISTRATION_ENDPOINT, $_payload );
-
-				if ( false === $_response )
-				{
-					throw new RestException( Curl::getLastHttpCode(), Curl::getErrorAsString() );
-				}
-
-				if ( $_response && $_response->success )
-				{
-					//Log::debug( 'Touching marker: ' . $_marker );
-
-					if ( !is_dir( $_privatePath ) && false === @mkdir( $_privatePath, 0777, true ) )
-					{
-						throw new InternalServerErrorException( 'Unable to create private path directory.' );
-					}
-
-					if ( 0 != ( $_returnCode = `touch {$_marker}` ) )
-					{
-						throw new InternalServerErrorException( 'Error touching registration marker: ' . $_marker );
-					}
-
-					//Log::debug( '  * Touch returned ' . $_returnCode );
-				}
-
-				Log::info( 'Skipped registration queued for processing.' );
-			}
-			catch ( Exception $_ex )
-			{
-				Log::error( 'Exception while posting skipped registration: ' . $_ex->getMessage() );
-			}
+			return false;
 		}
+
+		return true;
+	}
+
+	/**
+	 * Queues a registration record
+	 *
+	 * @param User|\CActiveRecord $_user
+	 * @param bool                $skipped
+	 *
+	 * @return bool TRUE if registration was queued (i.e. first-time used), FALSE otherwise
+	 */
+	public static function registerPlatform( $_user, $skipped = true )
+	{
+		$_privatePath = $_marker = null;
+
+		//	Only want non-hosted admin logins...
+		if ( Fabric::fabricHosted() || !$_user->is_sys_admin )
+		{
+			return false;
+		}
+
+		if ( static::registrationComplete( $_paths ) )
+		{
+			return true;
+		}
+
+		extract( $_paths );
+
+		try
+		{
+			$_payload = array(
+				//	Requirements
+				'user_id'                    => $_user->id,
+				'email'                      => $_user->email,
+				'name'                       => $_user->display_name,
+				'pass'                       => $_user->password,
+				//	Extras
+				'field_first_name'           => $_user->first_name,
+				'field_last_name'            => $_user->last_name,
+				'field_installation_type'    => Inflector::display( strtolower( InstallationTypes::nameOf( static::_determinePackageSource() ) ) ),
+				'field_registration_skipped' => ( $skipped ? 1 : 0 ),
+			);
+
+			//	Re-key the attributes and settings and jam them in the payload
+			foreach ( $_user->getAttributes() as $_key => $_value )
+			{
+				$_payload['admin.' . $_key] = is_scalar( $_value ) ? $_value : json_encode( $_value );
+			}
+
+			foreach ( Pii::params() as $_key => $_value )
+			{
+				$_payload['dsp.' . $_key] = is_scalar( $_value ) ? $_value : json_encode( $_value );
+			}
+
+			$_response = Curl::post( static::REGISTRATION_ENDPOINT, $_payload );
+
+			if ( false === $_response )
+			{
+				throw new RestException( Curl::getLastHttpCode(), Curl::getErrorAsString() );
+			}
+
+			if ( $_response && property_exists( $_response, 'success' ) && $_response->success )
+			{
+				//	Make directory if not there
+				if ( !is_dir( $_privatePath ) && false === @mkdir( $_privatePath, 0777, true ) )
+				{
+					throw new InternalServerErrorException( 'Unable to create private path directory.' );
+				}
+
+				//	Get touchy
+				if ( false === @system( 'touch ' . $_marker, $_returnCode ) || 0 != $_returnCode )
+				{
+					//	Kill any file there...
+					system( 'rm -f ' . $_marker );
+
+					throw new InternalServerErrorException( 'Error touching DSP registration marker "' . $_marker . '": ' . $_returnCode );
+				}
+			}
+
+			return true;
+		}
+		catch ( \Exception $_ex )
+		{
+			Log::error( 'Exception while posting DSP registration: ' . $_ex->getMessage() );
+		}
+
+		return false;
 	}
 
 	//.........................................................................
@@ -1210,78 +1273,117 @@ SQL
 	}
 
 	/**
-	 * @param string $apiName
+	 * Determine from whence this installation came...
 	 *
-	 * @return BasePlatformService|void
-	 * @throws \Exception
+	 * @return int
 	 */
-	public function setApiName( $apiName )
+	protected static function _determinePackageSource()
 	{
-		throw new \Exception( 'SystemManager API name can not be changed.' );
+		//	Hosted?
+		if ( Fabric::fabricHosted() )
+		{
+			return InstallationTypes::FABRIC_HOSTED;
+		}
+
+		//	BitNami?
+		if ( false !== stripos( Option::server( 'DOCUMENT_ROOT' ), static::BITNAMI_PACKAGE_MARKER ) )
+		{
+			return InstallationTypes::BITNAMI_PACKAGE;
+		}
+
+		//	BitNami?
+		if ( false !== stripos( Option::server( 'DOCUMENT_ROOT' ), static::PACKAGE_DOCUMENT_ROOT ) )
+		{
+			//	DEB?
+			if ( is_dir( static::DEB_PACKAGE_MARKER ) && Option::server( 'DOCUMENT_ROOT' ) )
+			{
+				return InstallationTypes::DEB_PACKAGE;
+			}
+
+			//	RPM?
+			if ( is_dir( static::RPM_PACKAGE_MARKER ) )
+			{
+				return InstallationTypes::RPM_PACKAGE;
+			}
+		}
+
+		//	Otherwise this guy is running on his own system
+		return InstallationTypes::STANDALONE_PACKAGE;
 	}
 
-	/**
-	 * @param string $type
-	 *
-	 * @return BasePlatformService|void
-	 * @throws \Exception
-	 */
-	public function setType( $type )
-	{
-		throw new \Exception( 'SystemManager type can not be changed.' );
-	}
-
-	/**
-	 * @param string $description
-	 *
-	 * @return BasePlatformService
-	 * @throws \Exception
-	 */
-	public function setDescription( $description )
-	{
-		throw new \Exception( 'SystemManager description can not be changed.' );
-	}
-
-	/**
-	 * @param boolean $isActive
-	 *
-	 * @return BasePlatformService|void
-	 * @throws \Exception
-	 */
-	public function setIsActive( $isActive = false )
-	{
-		throw new \Exception( 'SystemManager active flag can not be changed.' );
-	}
-
-	/**
-	 * @return boolean
-	 */
-	public function getIsActive()
-	{
-		return $this->_isActive;
-	}
-
-	/**
-	 * @param string $name
-	 *
-	 * @return BasePlatformService|void
-	 * @throws \Exception
-	 */
-	public function setName( $name )
-	{
-		throw new \Exception( 'SystemManager name can not be changed.' );
-	}
-
-	/**
-	 * @param string $nativeFormat
-	 *
-	 * @return BasePlatformService|void
-	 * @throws \Exception
-	 */
-	public function setNativeFormat( $nativeFormat )
-	{
-		throw new \Exception( 'SystemManager native format can not be changed.' );
-	}
+//	/**
+//	 * @param string $apiName
+//	 *
+//	 * @return BasePlatformService|void
+//	 * @throws \Exception
+//	 */
+//	public function setApiName( $apiName )
+//	{
+//		throw new \Exception( 'SystemManager API name can not be changed.' );
+//	}
+//
+//	/**
+//	 * @param string $type
+//	 *
+//	 * @return BasePlatformService|void
+//	 * @throws \Exception
+//	 */
+//	public function setType( $type )
+//	{
+//		throw new \Exception( 'SystemManager type can not be changed.' );
+//	}
+//
+//	/**
+//	 * @param string $description
+//	 *
+//	 * @return BasePlatformService
+//	 * @throws \Exception
+//	 */
+//	public function setDescription( $description )
+//	{
+//		throw new \Exception( 'SystemManager description can not be changed.' );
+//	}
+//
+//	/**
+//	 * @param boolean $isActive
+//	 *
+//	 * @return BasePlatformService|void
+//	 * @throws \Exception
+//	 */
+//	public function setIsActive( $isActive = false )
+//	{
+//		throw new \Exception( 'SystemManager active flag can not be changed.' );
+//	}
+//
+//	/**
+//	 * @return boolean
+//	 */
+//	public function getIsActive()
+//	{
+//		return $this->_isActive;
+//	}
+//
+//	/**
+//	 * @param string $name
+//	 *
+//	 * @return BasePlatformService|void
+//	 * @throws \Exception
+//	 */
+//	public function setName( $name )
+//	{
+//		throw new \Exception( 'SystemManager name can not be changed.' );
+//	}
+//
+//	/**
+//	 * @param string $nativeFormat
+//	 *
+//	 * @return BasePlatformService|void
+//	 * @throws \Exception
+//	 */
+//	public function setNativeFormat( $nativeFormat )
+//	{
+//		throw new \Exception( 'SystemManager native format can not be changed.' );
+//	}
 
 	/**
 	 * @return string
@@ -1298,6 +1400,7 @@ SQL
 	{
 		self::$_configPath = $configPath;
 	}
+
 }
 
 //	Set the config path...

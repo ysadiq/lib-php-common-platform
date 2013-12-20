@@ -285,7 +285,7 @@ class Session extends BasePlatformRestResource
 		static::$_userId = $_user->id;
 
 		//	Check registration...
-		SystemManager::registerAdmin( $_user, Pii::getState( 'app.registration_skipped' ) );
+//		SystemManager::registerPlatform( $_user, Pii::getState( 'app.registration_skipped' ) );
 
 		// 	Additional stuff for session - launchpad mainly
 		return static::addSessionExtras( $_result, $_user->is_sys_admin, true );
