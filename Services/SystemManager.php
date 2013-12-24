@@ -113,17 +113,17 @@ class SystemManager extends BaseSystemRestService
 		static::$_configPath = \Kisma::get( 'app.config_path' );
 
 		parent::__construct(
-			array_merge(
-				array(
-					'name'        => 'System Configuration Management',
-					'api_name'    => 'system',
-					'type'        => 'System',
-					'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-					'description' => 'Service for system administration.',
-					'is_active'   => true,
-				),
-				$settings
-			)
+			  array_merge(
+				  array(
+					  'name'        => 'System Configuration Management',
+					  'api_name'    => 'system',
+					  'type'        => 'System',
+					  'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+					  'description' => 'Service for system administration.',
+					  'is_active'   => true,
+				  ),
+				  $settings
+			  )
 		);
 	}
 
@@ -152,63 +152,67 @@ class SystemManager extends BaseSystemRestService
 	 */
 	public static function getSystemState()
 	{
-		static $_lastState = null;
 		static $_isReady = false;
 
 		if ( !$_isReady )
 		{
-			// Refresh the schema that we just added
-			$_db = Pii::db();
-			$_schema = $_db->getSchema();
-
-			Sql::setConnection( $_db->pdoInstance );
-
-			$tables = $_schema->getTableNames();
-
-			// if there is no config table, we have to initialize
-			if ( empty( $tables ) || ( false === array_search( 'df_sys_config', $tables ) ) )
+			if ( !Pii::getState( 'dsp.init_check_complete', false ) )
 			{
-				return $_lastState = PlatformStates::INIT_REQUIRED;
-			}
+				//	Refresh the schema that we just added
+				$_db = Pii::db();
+				$_schema = $_db->getSchema();
 
-			// need to check for db upgrade, based on tables or version
-			$contents = file_get_contents( static::$_configPath . '/schema/system_schema.json' );
+				Sql::setConnection( $_db->pdoInstance );
 
-			if ( !empty( $contents ) )
-			{
-				$contents = DataFormat::jsonToArray( $contents );
+				$tables = $_schema->getTableNames();
 
-				// check for any missing necessary tables
-				$needed = Option::get( $contents, 'table', array() );
-
-				foreach ( $needed as $table )
+				// if there is no config table, we have to initialize
+				if ( empty( $tables ) || ( false === array_search( 'df_sys_config', $tables ) ) )
 				{
-					$name = Option::get( $table, 'name' );
-					if ( !empty( $name ) && !in_array( $name, $tables ) )
+					return PlatformStates::INIT_REQUIRED;
+				}
+
+				// need to check for db upgrade, based on tables or version
+				$contents = file_get_contents( static::$_configPath . '/schema/system_schema.json' );
+
+				if ( !empty( $contents ) )
+				{
+					$contents = DataFormat::jsonToArray( $contents );
+
+					// check for any missing necessary tables
+					$needed = Option::get( $contents, 'table', array() );
+
+					foreach ( $needed as $table )
 					{
-						return $_lastState = PlatformStates::SCHEMA_REQUIRED;
+						$name = Option::get( $table, 'name' );
+						if ( !empty( $name ) && !in_array( $name, $tables ) )
+						{
+							return PlatformStates::SCHEMA_REQUIRED;
+						}
+					}
+
+					$_version = Option::get( $contents, 'version' );
+					$_oldVersion = Sql::scalar( 'SELECT db_version FROM df_sys_config ORDER BY id DESC' );
+
+					if ( static::doesDbVersionRequireUpgrade( $_oldVersion, $_version ) )
+					{
+						return PlatformStates::SCHEMA_REQUIRED;
 					}
 				}
 
-				$_version = Option::get( $contents, 'version' );
-				$_oldVersion = Sql::scalar( 'SELECT db_version FROM df_sys_config ORDER BY id DESC' );
-
-				if ( static::doesDbVersionRequireUpgrade( $_oldVersion, $_version ) )
-				{
-					return $_lastState = PlatformStates::SCHEMA_REQUIRED;
-				}
+				Pii::setState( 'dsp.init_check_complete', true );
 			}
 
 			// Check for at least one system admin user
 			if ( !static::activated() )
 			{
-				return $_lastState = PlatformStates::ADMIN_REQUIRED;
+				return PlatformStates::ADMIN_REQUIRED;
 			}
 
 			//	Need to check for the default services
 			if ( 0 == Service::model()->count() )
 			{
-				return $_lastState = PlatformStates::DATA_REQUIRED;
+				return PlatformStates::DATA_REQUIRED;
 			}
 		}
 
@@ -219,7 +223,6 @@ class SystemManager extends BaseSystemRestService
 		}
 
 		$_isReady = true;
-		$_lastState = null;
 
 		return PlatformStates::READY;
 	}
@@ -276,7 +279,7 @@ class SystemManager extends BaseSystemRestService
 			{
 				$command->reset();
 				// first time is troublesome with session user id
-				$rows = $command->insert( 'df_sys_config', array( 'db_version' => $version ) );
+				$rows = $command->insert( 'df_sys_config', array('db_version' => $version) );
 
 				if ( 0 >= $rows )
 				{
@@ -392,16 +395,16 @@ class SystemManager extends BaseSystemRestService
 					try
 					{
 						$command->reset();
-						$serviceId = $command->select( 'id' )->from( 'df_sys_service' )->where( 'api_name = :name', array( ':name' => 'app' ) )->queryScalar();
+						$serviceId = $command->select( 'id' )->from( 'df_sys_service' )->where( 'api_name = :name', array(':name' => 'app') )->queryScalar();
 						if ( false === $serviceId )
 						{
 							throw new \Exception( 'Could not find local file storage service id.' );
 						}
 
 						$command->reset();
-						$attributes = array( 'storage_service_id' => $serviceId, 'storage_container' => 'applications' );
+						$attributes = array('storage_service_id' => $serviceId, 'storage_container' => 'applications');
 						$condition = 'is_url_external = :external and storage_service_id is null';
-						$params = array( ':external' => 0 );
+						$params = array(':external' => 0);
 						$command->update( 'df_sys_app', $attributes, $condition, $params );
 					}
 					catch ( \Exception $_ex )
@@ -418,11 +421,11 @@ class SystemManager extends BaseSystemRestService
 				if ( empty( $oldVersion ) )
 				{
 					// first time is troublesome with session user id
-					$rows = $command->insert( 'df_sys_config', array( 'db_version' => $version ) );
+					$rows = $command->insert( 'df_sys_config', array('db_version' => $version) );
 				}
 				else
 				{
-					$rows = $command->update( 'df_sys_config', array( 'db_version' => $version ) );
+					$rows = $command->update( 'df_sys_config', array('db_version' => $version) );
 				}
 
 				if ( 0 >= $rows )
@@ -554,8 +557,8 @@ class SystemManager extends BaseSystemRestService
 				$_firstName = Pii::getState( 'first_name', Option::get( $_model, 'firstName' ) );
 				$_lastName = Pii::getState( 'last_name', Option::get( $_model, 'lastName' ) );
 				$_displayName = Pii::getState(
-					'display_name',
-					Option::get( $_model, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
+								   'display_name',
+								   Option::get( $_model, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
 				);
 
 				$_fields = array(
@@ -625,7 +628,7 @@ class SystemManager extends BaseSystemRestService
 						foreach ( $content as $service )
 						{
 							$_apiName = Option::get( $service, 'api_name' );
-							if ( !Service::model()->exists( 'api_name = :name', array( ':name' => $_apiName ) ) )
+							if ( !Service::model()->exists( 'api_name = :name', array(':name' => $_apiName) ) )
 							{
 								try
 								{
@@ -647,7 +650,7 @@ class SystemManager extends BaseSystemRestService
 						foreach ( $content as $template )
 						{
 							$_name = Option::get( $template, 'name' );
-							if ( !EmailTemplate::model()->exists( 'name = :name', array( ':name' => $_name ) ) )
+							if ( !EmailTemplate::model()->exists( 'name = :name', array(':name' => $_name) ) )
 							{
 								try
 								{
@@ -763,7 +766,7 @@ class SystemManager extends BaseSystemRestService
 		{
 			throw new \Exception( 'Error opening zip file.' );
 		}
-		$_skip = array( '.', '..', '.git', '.idea', 'log', 'vendor', 'shared', 'storage' );
+		$_skip = array('.', '..', '.git', '.idea', 'log', 'vendor', 'shared', 'storage');
 		try
 		{
 			FileUtilities::addTreeToZip( $_backupZip, $_upgradeDir, '', $_skip );
@@ -837,11 +840,11 @@ class SystemManager extends BaseSystemRestService
 	public static function getDspVersions()
 	{
 		$_results = Curl::get(
-			'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags',
-			array(),
-			array(
-				CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' )
-			)
+						'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags',
+						array(),
+						array(
+							CURLOPT_HTTPHEADER => array('User-Agent: dreamfactory')
+						)
 		);
 
 		if ( HttpResponse::Ok != ( $_code = Curl::getLastHttpCode() ) )
@@ -965,7 +968,7 @@ class SystemManager extends BaseSystemRestService
 		$_privatePath = Pii::getParam( 'private_path' );
 		$_marker = $_privatePath . static::REGISTRATION_MARKER;
 
-		$paths = array( '_privatePath' => $_privatePath, '_marker' => $_marker );
+		$paths = array('_privatePath' => $_privatePath, '_marker' => $_marker);
 
 		if ( !file_exists( $_marker ) )
 		{
@@ -1013,6 +1016,7 @@ class SystemManager extends BaseSystemRestService
 				'field_last_name'            => $_user->last_name,
 				'field_installation_type'    => Inflector::display( strtolower( InstallationTypes::nameOf( static::_determinePackageSource() ) ) ),
 				'field_registration_skipped' => ( $skipped ? 1 : 0 ),
+				'dsp-auth-key'               => md5( microtime( true ) ),
 			);
 
 			//	Re-key the attributes and settings and jam them in the payload
@@ -1049,9 +1053,11 @@ class SystemManager extends BaseSystemRestService
 
 					throw new InternalServerErrorException( 'Error touching DSP registration marker "' . $_marker . '": ' . $_returnCode );
 				}
+
+				return true;
 			}
 
-			return true;
+			throw new InternalServerErrorException( 'Unexpected response from registration server' );
 		}
 		catch ( \Exception $_ex )
 		{
@@ -1072,16 +1078,16 @@ class SystemManager extends BaseSystemRestService
 	{
 		return array(
 			'resource' => array(
-				array( 'name' => 'app', 'label' => 'Application' ),
-				array( 'name' => 'app_group', 'label' => 'Application Group' ),
-				array( 'name' => 'config', 'label' => 'Configuration' ),
-				array( 'name' => 'custom', 'label' => 'Custom Settings' ),
-				array( 'name' => 'email_template', 'label' => 'Email Template' ),
-				array( 'name' => 'provider', 'label' => 'Provider' ),
-				array( 'name' => 'provider_user', 'label' => 'Provider User' ),
-				array( 'name' => 'role', 'label' => 'Role' ),
-				array( 'name' => 'service', 'label' => 'Service' ),
-				array( 'name' => 'user', 'label' => 'User' ),
+				array('name' => 'app', 'label' => 'Application'),
+				array('name' => 'app_group', 'label' => 'Application Group'),
+				array('name' => 'config', 'label' => 'Configuration'),
+				array('name' => 'custom', 'label' => 'Custom Settings'),
+				array('name' => 'email_template', 'label' => 'Email Template'),
+				array('name' => 'provider', 'label' => 'Provider'),
+				array('name' => 'provider_user', 'label' => 'Provider User'),
+				array('name' => 'role', 'label' => 'Role'),
+				array('name' => 'service', 'label' => 'Service'),
+				array('name' => 'user', 'label' => 'User'),
 			)
 		);
 	}
@@ -1172,7 +1178,7 @@ class SystemManager extends BaseSystemRestService
 		{
 			try
 			{
-				$app = App::model()->find( 'name=:name', array( ':name' => $name ) );
+				$app = App::model()->find( 'name=:name', array(':name' => $name) );
 				if ( isset( $app ) )
 				{
 					return $app->getPrimaryKey();
@@ -1213,8 +1219,8 @@ class SystemManager extends BaseSystemRestService
 		try
 		{
 			$_admins = Sql::scalar(
-				<<<SQL
-SELECT
+						  <<<SQL
+		SELECT
 	COUNT(id)
 FROM
 	df_sys_user
@@ -1222,10 +1228,10 @@ WHERE
 	is_sys_admin = 1 AND
 	is_deleted = 0
 SQL
-				,
-				0,
-				array(),
-				Pii::pdo()
+							  ,
+							  0,
+							  array(),
+							  Pii::pdo()
 			);
 
 			return ( 0 == $_admins ? false : ( $_admins > 1 ? $_admins : true ) );
@@ -1248,11 +1254,10 @@ SQL
 		try
 		{
 			/** @var User $_user */
-			$_user = $user
-				? : User::model()->find(
-					'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
-					array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
-				);
+			$_user = $user ? : User::model()->find(
+								   'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
+								   array(':is_sys_admin' => 1, ':is_deleted' => 0)
+			);
 
 			if ( !empty( $_user ) )
 			{
@@ -1400,7 +1405,6 @@ SQL
 	{
 		self::$_configPath = $configPath;
 	}
-
 }
 
 //	Set the config path...
