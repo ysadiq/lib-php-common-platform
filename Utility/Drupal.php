@@ -19,6 +19,8 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Yii\Models\User;
 use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\Option;

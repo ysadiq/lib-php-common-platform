@@ -25,7 +25,6 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\PlatformServiceException;
-use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Platform\Resources\System\CustomSettings;
 use DreamFactory\Platform\Utility\Drupal;
@@ -67,22 +66,6 @@ class SystemManager extends BaseSystemRestService
 	 * @var string The private CORS configuration file
 	 */
 	const CORS_DEFAULT_CONFIG_FILE = '/cors.config.json';
-	/**
-	 * @var string
-	 */
-	const BITNAMI_PACKAGE_MARKER = '/apps/dreamfactory/htdocs/web';
-	/**
-	 * @var string
-	 */
-	const DEB_PACKAGE_MARKER = '/opt/dreamfactory/platform/etc/apache2';
-	/**
-	 * @var string All packages have this doc root
-	 */
-	const PACKAGE_DOCUMENT_ROOT = '/opt/dreamfactory/platform/var/www/launchpad';
-	/**
-	 * @var string
-	 */
-	const RPM_PACKAGE_MARKER = '/opt/dreamfactory/platform/etc/httpd';
 
 	//*************************************************************************
 	//* Members
@@ -959,7 +942,7 @@ class SystemManager extends BaseSystemRestService
 	public static function registrationComplete( &$paths = null )
 	{
 		$_privatePath = Pii::getParam( 'private_path' );
-		$_marker = $_privatePath . static::REGISTRATION_MARKER;
+		$_marker = $_privatePath . Drupal::REGISTRATION_MARKER;
 
 		$paths = array('_privatePath' => $_privatePath, '_marker' => $_marker);
 
@@ -973,7 +956,7 @@ class SystemManager extends BaseSystemRestService
 
 	/**
 	 * Queues a registration record
-	 * Call like "SystemManager::registerPlatform(null, null)" to have the registration file removed
+	 * Call like "SystemManager::registerPlatform($user, 'force_remove')" to have the registration file removed
 	 *
 	 * @param User|\CActiveRecord $user
 	 * @param bool                $skipped
@@ -986,42 +969,41 @@ class SystemManager extends BaseSystemRestService
 		$_paths = $_privatePath = $_marker = null;
 
 		//	Only want non-hosted admin logins...
-		if ( Fabric::fabricHosted() || ( null !== $user && !$user->is_sys_admin ) )
+		if ( Fabric::fabricHosted() || !$user->is_sys_admin )
 		{
 			return false;
 		}
 
-		$_complete = static::registrationComplete( $_paths = null );
+		$_complete = static::registrationComplete( $_paths );
 
 		extract( $_paths );
 
 		if ( $_complete )
 		{
-			if ( null === $user && null === $skipped )
+			if ( 'force_remove' === $skipped )
 			{
 				//	Remove registration file
 				if ( false === @unlink( $_paths ) )
 				{
+					//	Log it
 					Log::error( 'System error removing registration marker: ' . $_marker );
-					//	But do nothing...
+					//	But do nothing. Like the goggles...
 				}
 			}
 
 			return true;
 		}
 
-		$_client = new Drupal();
-
-		return $_client->registerPlatform(
-					   $user,
-					   $_paths,
-					   array(
-						   'field_first_name'           => $user->first_name,
-						   'field_last_name'            => $user->last_name,
-						   'field_installation_type'    => Inflector::display( strtolower( InstallationTypes::nameOf( static::_determinePackageSource() ) ) ),
-						   'field_registration_skipped' => ( $skipped ? 1 : 0 ),
-						   'dsp-auth-key'               => md5( microtime( true ) ),
-					   )
+		//	Call the API
+		return Drupal::registerPlatform(
+					 $user,
+					 $_paths,
+					 array(
+						 'field_first_name'           => $user->first_name,
+						 'field_last_name'            => $user->last_name,
+						 'field_installation_type'    => InstallationTypes::determineType( true ),
+						 'field_registration_skipped' => ( $skipped ? 1 : 0 ),
+					 )
 		);
 	}
 
@@ -1233,45 +1215,6 @@ SQL
 		{
 			return false;
 		}
-	}
-
-	/**
-	 * Determine from whence this installation came...
-	 *
-	 * @return int
-	 */
-	protected static function _determinePackageSource()
-	{
-		//	Hosted?
-		if ( Fabric::fabricHosted() )
-		{
-			return InstallationTypes::FABRIC_HOSTED;
-		}
-
-		//	BitNami?
-		if ( false !== stripos( Option::server( 'DOCUMENT_ROOT' ), static::BITNAMI_PACKAGE_MARKER ) )
-		{
-			return InstallationTypes::BITNAMI_PACKAGE;
-		}
-
-		//	BitNami?
-		if ( false !== stripos( Option::server( 'DOCUMENT_ROOT' ), static::PACKAGE_DOCUMENT_ROOT ) )
-		{
-			//	DEB?
-			if ( is_dir( static::DEB_PACKAGE_MARKER ) && Option::server( 'DOCUMENT_ROOT' ) )
-			{
-				return InstallationTypes::DEB_PACKAGE;
-			}
-
-			//	RPM?
-			if ( is_dir( static::RPM_PACKAGE_MARKER ) )
-			{
-				return InstallationTypes::RPM_PACKAGE;
-			}
-		}
-
-		//	Otherwise this guy is running on his own system
-		return InstallationTypes::STANDALONE_PACKAGE;
 	}
 
 //	/**

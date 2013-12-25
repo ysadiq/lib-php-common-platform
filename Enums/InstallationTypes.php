@@ -19,7 +19,10 @@
  */
 namespace DreamFactory\Platform\Enums;
 
+use DreamFactory\Platform\Utility\Fabric;
 use Kisma\Core\Enums\SeedEnum;
+use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Option;
 
 /**
  * InstallationTypes
@@ -30,6 +33,15 @@ class InstallationTypes extends SeedEnum
 	//*************************************************************************
 	//	Constants
 	//*************************************************************************
+
+	/**
+	 * @var string All packages have this doc root
+	 */
+	const PACKAGE_DOCUMENT_ROOT = '/opt/dreamfactory/platform/var/www/launchpad';
+
+	/**
+	 * Package Types
+	 */
 
 	/**
 	 * @var int
@@ -52,4 +64,71 @@ class InstallationTypes extends SeedEnum
 	 */
 	const RPM_PACKAGE = 4;
 
+	/**
+	 * Package Markers
+	 */
+
+	/**
+	 * @var string
+	 */
+	const BITNAMI_PACKAGE_MARKER = '/apps/dreamfactory/htdocs/web';
+	/**
+	 * @var string
+	 */
+	const DEB_PACKAGE_MARKER = '/opt/dreamfactory/platform/etc/apache2';
+	/**
+	 * @var string
+	 */
+	const RPM_PACKAGE_MARKER = '/opt/dreamfactory/platform/etc/httpd';
+
+	//*************************************************************************
+	//	Methods
+	//*************************************************************************
+
+	/**
+	 * Determine the type of installation this is
+	 *
+	 * @param bool $prettyPrint
+	 *
+	 * @return int
+	 */
+	public static function determineType( $prettyPrint = false )
+	{
+		//	Default to stand-alone
+		$_type = static::STANDALONE_PACKAGE;
+
+		//	Hosted?
+		if ( Fabric::fabricHosted() )
+		{
+			$_type = static::FABRIC_HOSTED;
+		}
+		//	BitNami?
+		else if ( false !== stripos( Option::server( 'DOCUMENT_ROOT' ), static::BITNAMI_PACKAGE_MARKER ) )
+		{
+			$_type = static::BITNAMI_PACKAGE;
+		}
+		//	Packaged?
+		else if ( false !== stripos( Option::server( 'DOCUMENT_ROOT' ), static::PACKAGE_DOCUMENT_ROOT ) )
+		{
+			//	DEB?
+			if ( is_dir( static::DEB_PACKAGE_MARKER ) && Option::server( 'DOCUMENT_ROOT' ) )
+			{
+				$_type = static::DEB_PACKAGE;
+			}
+
+			//	RPM?
+			if ( is_dir( static::RPM_PACKAGE_MARKER ) )
+			{
+				$_type = static::RPM_PACKAGE;
+			}
+		}
+
+		//	Kajigger the name if wanted...
+		if ( $prettyPrint )
+		{
+			$_type = Inflector::display( strtolower( satic::nameOf( $_type ) ) );
+		}
+
+		return $_type;
+	}
 }
