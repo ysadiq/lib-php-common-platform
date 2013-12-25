@@ -28,6 +28,7 @@ use DreamFactory\Platform\Exceptions\PlatformServiceException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Platform\Resources\System\CustomSettings;
+use DreamFactory\Platform\Utility\Drupal;
 use DreamFactory\Platform\Utility\Fabric;
 use Kisma\Core\Utility\Curl;
 use DreamFactory\Platform\Utility\FileUtilities;
@@ -67,10 +68,6 @@ class SystemManager extends BaseSystemRestService
 	 */
 	const CORS_DEFAULT_CONFIG_FILE = '/cors.config.json';
 	/**
-	 * @var string The registration marker
-	 */
-	const REGISTRATION_MARKER = '/.registration_complete';
-	/**
 	 * @var string
 	 */
 	const BITNAMI_PACKAGE_MARKER = '/apps/dreamfactory/htdocs/web';
@@ -86,10 +83,6 @@ class SystemManager extends BaseSystemRestService
 	 * @var string
 	 */
 	const RPM_PACKAGE_MARKER = '/opt/dreamfactory/platform/etc/httpd';
-	/**
-	 * @var string Our registration endpoint
-	 */
-	const REGISTRATION_ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api/drupal/register';
 
 	//*************************************************************************
 	//* Members
@@ -980,91 +973,56 @@ class SystemManager extends BaseSystemRestService
 
 	/**
 	 * Queues a registration record
+	 * Call like "SystemManager::registerPlatform(null, null)" to have the registration file removed
 	 *
-	 * @param User|\CActiveRecord $_user
+	 * @param User|\CActiveRecord $user
 	 * @param bool                $skipped
+	 *
 	 *
 	 * @return bool TRUE if registration was queued (i.e. first-time used), FALSE otherwise
 	 */
-	public static function registerPlatform( $_user, $skipped = true )
+	public static function registerPlatform( $user, $skipped = true )
 	{
-		$_privatePath = $_marker = null;
+		$_paths = $_privatePath = $_marker = null;
 
 		//	Only want non-hosted admin logins...
-		if ( Fabric::fabricHosted() || !$_user->is_sys_admin )
+		if ( Fabric::fabricHosted() || ( null !== $user && !$user->is_sys_admin ) )
 		{
 			return false;
 		}
 
-		if ( static::registrationComplete( $_paths ) )
-		{
-			return true;
-		}
+		$_complete = static::registrationComplete( $_paths = null );
 
 		extract( $_paths );
 
-		try
+		if ( $_complete )
 		{
-			$_payload = array(
-				//	Requirements
-				'user_id'                    => $_user->id,
-				'email'                      => $_user->email,
-				'name'                       => $_user->display_name,
-				'pass'                       => $_user->password,
-				//	Extras
-				'field_first_name'           => $_user->first_name,
-				'field_last_name'            => $_user->last_name,
-				'field_installation_type'    => Inflector::display( strtolower( InstallationTypes::nameOf( static::_determinePackageSource() ) ) ),
-				'field_registration_skipped' => ( $skipped ? 1 : 0 ),
-				'dsp-auth-key'               => md5( microtime( true ) ),
-			);
-
-			//	Re-key the attributes and settings and jam them in the payload
-			foreach ( $_user->getAttributes() as $_key => $_value )
+			if ( null === $user && null === $skipped )
 			{
-				$_payload['admin.' . $_key] = is_scalar( $_value ) ? $_value : json_encode( $_value );
-			}
-
-			foreach ( Pii::params() as $_key => $_value )
-			{
-				$_payload['dsp.' . $_key] = is_scalar( $_value ) ? $_value : json_encode( $_value );
-			}
-
-			$_response = Curl::post( static::REGISTRATION_ENDPOINT, $_payload );
-
-			if ( false === $_response )
-			{
-				throw new RestException( Curl::getLastHttpCode(), Curl::getErrorAsString() );
-			}
-
-			if ( $_response && property_exists( $_response, 'success' ) && $_response->success )
-			{
-				//	Make directory if not there
-				if ( !is_dir( $_privatePath ) && false === @mkdir( $_privatePath, 0777, true ) )
+				//	Remove registration file
+				if ( false === @unlink( $_paths ) )
 				{
-					throw new InternalServerErrorException( 'Unable to create private path directory.' );
+					Log::error( 'System error removing registration marker: ' . $_marker );
+					//	But do nothing...
 				}
-
-				//	Get touchy
-				if ( false === @system( 'touch ' . $_marker, $_returnCode ) || 0 != $_returnCode )
-				{
-					//	Kill any file there...
-					system( 'rm -f ' . $_marker );
-
-					throw new InternalServerErrorException( 'Error touching DSP registration marker "' . $_marker . '": ' . $_returnCode );
-				}
-
-				return true;
 			}
 
-			throw new InternalServerErrorException( 'Unexpected response from registration server' );
-		}
-		catch ( \Exception $_ex )
-		{
-			Log::error( 'Exception while posting DSP registration: ' . $_ex->getMessage() );
+			return true;
 		}
 
-		return false;
+		$_client = new Drupal();
+
+		return $_client->registerPlatform(
+					   $user,
+					   $_paths,
+					   array(
+						   'field_first_name'           => $user->first_name,
+						   'field_last_name'            => $user->last_name,
+						   'field_installation_type'    => Inflector::display( strtolower( InstallationTypes::nameOf( static::_determinePackageSource() ) ) ),
+						   'field_registration_skipped' => ( $skipped ? 1 : 0 ),
+						   'dsp-auth-key'               => md5( microtime( true ) ),
+					   )
+		);
 	}
 
 	//.........................................................................
@@ -1220,7 +1178,7 @@ class SystemManager extends BaseSystemRestService
 		{
 			$_admins = Sql::scalar(
 						  <<<SQL
-		SELECT
+SELECT
 	COUNT(id)
 FROM
 	df_sys_user

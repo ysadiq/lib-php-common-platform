@@ -19,7 +19,9 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Platform\Yii\Models\User;
 use Kisma\Core\Utility\Curl;
+use Kisma\Core\Utility\Option;
 
 /**
  * Drupal
@@ -32,9 +34,13 @@ class Drupal
 	//*************************************************************************
 
 	/**
-	 * @var string
+	 * @var string The registration marker
 	 */
-	const Endpoint = 'http://cerberus.fabric.dreamfactory.com/api/drupal';
+	const REGISTRATION_MARKER = '/.registration_complete';
+	/**
+	 * @var string Our registration endpoint
+	 */
+	const ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api/drupal';
 
 	//*************************************************************************
 	//* Methods
@@ -59,7 +65,7 @@ class Drupal
 
 		if ( !isset( $options[CURLOPT_HTTPHEADER] ) )
 		{
-			$options[CURLOPT_HTTPHEADER] = array( 'Content-Type: application/json' );
+			$options[CURLOPT_HTTPHEADER] = array('Content-Type: application/json');
 		}
 		else
 		{
@@ -76,7 +82,7 @@ class Drupal
 
 //		$payload = json_encode( $payload );
 
-		return Curl::request( $method, static::Endpoint . $_url, json_encode( $payload ), $options );
+		return Curl::request( $method, static::ENDPOINT . $_url, json_encode( $payload ), $options );
 	}
 
 	/**
@@ -98,6 +104,78 @@ class Drupal
 			{
 				return $_response->details;
 			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * @param User  $user
+	 * @param array $paths
+	 * @param array $payload
+	 *
+	 * @throws InternalServerErrorException
+	 * @throws RestException
+	 * @return bool
+	 */
+	public static function registerPlatform( $user, $paths, $payload = array() )
+	{
+		try
+		{
+			$_payload = array_merge(
+				array(
+					//	Requirements
+					'user_id' => $user->id,
+					'email'   => $user->email,
+					'name'    => $user->display_name,
+					'pass'    => $user->password,
+				),
+				Option::clean( $payload )
+			);
+
+			//	Re-key the attributes and settings and jam them in the payload
+			foreach ( $user->getAttributes() as $_key => $_value )
+			{
+				$_payload['admin.' . $_key] = $_value;
+			}
+
+			foreach ( Pii::params() as $_key => $_value )
+			{
+				$_payload['dsp.' . $_key] = is_scalar( $_value ) ? $_value : json_encode( $_value );
+			}
+
+			if ( false !== ( $_response = static::_drupal( 'register', $_payload ) ) )
+			{
+				if ( $_response && $_response->success )
+				{
+					$_privatePath = $_marker = null;
+
+					extract( $paths );
+
+					//	Make directory if not there
+					if ( !is_dir( $_privatePath ) && false === @mkdir( $_privatePath, 0777, true ) )
+					{
+						throw new InternalServerErrorException( 'Unable to create private path directory.' );
+					}
+
+					//	Get touchy
+					if ( false === @file_put_contents( $_marker, null ) )
+					{
+						//	Kill any file there...
+						@unlink( $_marker );
+
+						throw new InternalServerErrorException( 'Error creating DSP registration marker "' . $_marker . '"' );
+					}
+
+					return true;
+				}
+			}
+
+			throw new InternalServerErrorException( 'Unexpected response from registration server' );
+		}
+		catch ( \Exception $_ex )
+		{
+			Log::error( 'Exception while posting DSP registration: ' . $_ex->getMessage() );
 		}
 
 		return false;
