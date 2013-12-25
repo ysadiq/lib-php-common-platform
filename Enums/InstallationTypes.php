@@ -126,7 +126,7 @@ class InstallationTypes extends SeedEnum
 		//	Kajigger the name if wanted...
 		if ( $prettyPrint )
 		{
-			$_type = Inflector::display( strtolower( satic::nameOf( $_type ) ) );
+			$_type = Inflector::display( strtolower( static::nameOf( $_type ) ) );
 		}
 
 		return $_type;

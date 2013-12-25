@@ -42,7 +42,6 @@ use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Interfaces\HttpResponse;
-use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -255,7 +254,7 @@ class SystemManager extends BaseSystemRestService
 			{
 				$command->reset();
 				// first time is troublesome with session user id
-				$rows = $command->insert( 'df_sys_config', array('db_version' => $version) );
+				$rows = $command->insert( 'df_sys_config', array( 'db_version' => $version ) );
 
 				if ( 0 >= $rows )
 				{
@@ -371,16 +370,16 @@ class SystemManager extends BaseSystemRestService
 					try
 					{
 						$command->reset();
-						$serviceId = $command->select( 'id' )->from( 'df_sys_service' )->where( 'api_name = :name', array(':name' => 'app') )->queryScalar();
+						$serviceId = $command->select( 'id' )->from( 'df_sys_service' )->where( 'api_name = :name', array( ':name' => 'app' ) )->queryScalar();
 						if ( false === $serviceId )
 						{
 							throw new \Exception( 'Could not find local file storage service id.' );
 						}
 
 						$command->reset();
-						$attributes = array('storage_service_id' => $serviceId, 'storage_container' => 'applications');
+						$attributes = array( 'storage_service_id' => $serviceId, 'storage_container' => 'applications' );
 						$condition = 'is_url_external = :external and storage_service_id is null';
-						$params = array(':external' => 0);
+						$params = array( ':external' => 0 );
 						$command->update( 'df_sys_app', $attributes, $condition, $params );
 					}
 					catch ( \Exception $_ex )
@@ -397,11 +396,11 @@ class SystemManager extends BaseSystemRestService
 				if ( empty( $oldVersion ) )
 				{
 					// first time is troublesome with session user id
-					$rows = $command->insert( 'df_sys_config', array('db_version' => $version) );
+					$rows = $command->insert( 'df_sys_config', array( 'db_version' => $version ) );
 				}
 				else
 				{
-					$rows = $command->update( 'df_sys_config', array('db_version' => $version) );
+					$rows = $command->update( 'df_sys_config', array( 'db_version' => $version ) );
 				}
 
 				if ( 0 >= $rows )
@@ -604,7 +603,7 @@ class SystemManager extends BaseSystemRestService
 						foreach ( $content as $service )
 						{
 							$_apiName = Option::get( $service, 'api_name' );
-							if ( !Service::model()->exists( 'api_name = :name', array(':name' => $_apiName) ) )
+							if ( !Service::model()->exists( 'api_name = :name', array( ':name' => $_apiName ) ) )
 							{
 								try
 								{
@@ -626,7 +625,7 @@ class SystemManager extends BaseSystemRestService
 						foreach ( $content as $template )
 						{
 							$_name = Option::get( $template, 'name' );
-							if ( !EmailTemplate::model()->exists( 'name = :name', array(':name' => $_name) ) )
+							if ( !EmailTemplate::model()->exists( 'name = :name', array( ':name' => $_name ) ) )
 							{
 								try
 								{
@@ -742,7 +741,7 @@ class SystemManager extends BaseSystemRestService
 		{
 			throw new \Exception( 'Error opening zip file.' );
 		}
-		$_skip = array('.', '..', '.git', '.idea', 'log', 'vendor', 'shared', 'storage');
+		$_skip = array( '.', '..', '.git', '.idea', 'log', 'vendor', 'shared', 'storage' );
 		try
 		{
 			FileUtilities::addTreeToZip( $_backupZip, $_upgradeDir, '', $_skip );
@@ -819,7 +818,7 @@ class SystemManager extends BaseSystemRestService
 						'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags',
 						array(),
 						array(
-							CURLOPT_HTTPHEADER => array('User-Agent: dreamfactory')
+							CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' )
 						)
 		);
 
@@ -944,7 +943,7 @@ class SystemManager extends BaseSystemRestService
 		$_privatePath = Pii::getParam( 'private_path' );
 		$_marker = $_privatePath . Drupal::REGISTRATION_MARKER;
 
-		$paths = array('_privatePath' => $_privatePath, '_marker' => $_marker);
+		$paths = array( '_privatePath' => $_privatePath, '_marker' => $_marker );
 
 		if ( !file_exists( $_marker ) )
 		{
@@ -975,6 +974,7 @@ class SystemManager extends BaseSystemRestService
 		}
 
 		$_complete = static::registrationComplete( $_paths );
+		Pii::setState( 'app.registration_skipped', $skipped );
 
 		extract( $_paths );
 
@@ -1018,16 +1018,16 @@ class SystemManager extends BaseSystemRestService
 	{
 		return array(
 			'resource' => array(
-				array('name' => 'app', 'label' => 'Application'),
-				array('name' => 'app_group', 'label' => 'Application Group'),
-				array('name' => 'config', 'label' => 'Configuration'),
-				array('name' => 'custom', 'label' => 'Custom Settings'),
-				array('name' => 'email_template', 'label' => 'Email Template'),
-				array('name' => 'provider', 'label' => 'Provider'),
-				array('name' => 'provider_user', 'label' => 'Provider User'),
-				array('name' => 'role', 'label' => 'Role'),
-				array('name' => 'service', 'label' => 'Service'),
-				array('name' => 'user', 'label' => 'User'),
+				array( 'name' => 'app', 'label' => 'Application' ),
+				array( 'name' => 'app_group', 'label' => 'Application Group' ),
+				array( 'name' => 'config', 'label' => 'Configuration' ),
+				array( 'name' => 'custom', 'label' => 'Custom Settings' ),
+				array( 'name' => 'email_template', 'label' => 'Email Template' ),
+				array( 'name' => 'provider', 'label' => 'Provider' ),
+				array( 'name' => 'provider_user', 'label' => 'Provider User' ),
+				array( 'name' => 'role', 'label' => 'Role' ),
+				array( 'name' => 'service', 'label' => 'Service' ),
+				array( 'name' => 'user', 'label' => 'User' ),
 			)
 		);
 	}
@@ -1118,7 +1118,7 @@ class SystemManager extends BaseSystemRestService
 		{
 			try
 			{
-				$app = App::model()->find( 'name=:name', array(':name' => $name) );
+				$app = App::model()->find( 'name=:name', array( ':name' => $name ) );
 				if ( isset( $app ) )
 				{
 					return $app->getPrimaryKey();
@@ -1196,7 +1196,7 @@ SQL
 			/** @var User $_user */
 			$_user = $user ? : User::model()->find(
 								   'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
-								   array(':is_sys_admin' => 1, ':is_deleted' => 0)
+								   array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
 			);
 
 			if ( !empty( $_user ) )

@@ -22,7 +22,9 @@ namespace DreamFactory\Platform\Utility;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Yii\Models\User;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Curl;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -67,7 +69,7 @@ class Drupal
 
 		if ( !isset( $options[CURLOPT_HTTPHEADER] ) )
 		{
-			$options[CURLOPT_HTTPHEADER] = array('Content-Type: application/json');
+			$options[CURLOPT_HTTPHEADER] = array( 'Content-Type: application/json' );
 		}
 		else
 		{
@@ -127,10 +129,11 @@ class Drupal
 			$_payload = array_merge(
 				array(
 					//	Requirements
-					'user_id' => $user->id,
-					'email'   => $user->email,
-					'name'    => $user->display_name,
-					'pass'    => $user->password,
+					'user_id'      => $user->id,
+					'access_token' => $user->password,
+					'email'        => $user->email,
+					'name'         => $user->display_name,
+					'pass'         => $user->password,
 				),
 				Option::clean( $payload )
 			);
@@ -143,7 +146,7 @@ class Drupal
 
 			foreach ( Pii::params() as $_key => $_value )
 			{
-				$_payload['dsp.' . $_key] = is_scalar( $_value ) ? $_value : json_encode( $_value );
+				$_payload['dsp.' . $_key] = $_value;
 			}
 
 			if ( false !== ( $_response = static::_drupal( 'register', $_payload ) ) )
