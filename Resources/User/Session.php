@@ -27,6 +27,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\UnauthorizedException;
 use DreamFactory\Platform\Interfaces\PermissionTypes;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
@@ -77,17 +78,17 @@ class Session extends BasePlatformRestResource
 		parent::__construct(
 			$consumer,
 			array(
-				 'name'           => 'User Session',
-				 'service_name'   => 'user',
-				 'type'           => 'System',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'session',
-				 'description'    => 'Resource for a user to manage their session.',
-				 'is_active'      => true,
-				 'resource_array' => $resources,
-				 'verb_aliases'   => array(
-					 static::Put => static::Post,
-				 )
+				'name'           => 'User Session',
+				'service_name'   => 'user',
+				'type'           => 'System',
+				'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				'api_name'       => 'session',
+				'description'    => 'Resource for a user to manage their session.',
+				'is_active'      => true,
+				'resource_array' => $resources,
+				'verb_aliases'   => array(
+					static::Put => static::Post,
+				)
 			)
 		);
 	}
@@ -154,11 +155,11 @@ class Session extends BasePlatformRestResource
 
 				//	Special case for guest user
 				$_config = ResourceStore::model( 'config' )->with(
-							   'guest_role.role_service_accesses',
-							   'guest_role.role_system_accesses',
-							   'guest_role.apps',
-							   'guest_role.services'
-						   )->find();
+					'guest_role.role_service_accesses',
+					'guest_role.role_system_accesses',
+					'guest_role.apps',
+					'guest_role.services'
+				)->find();
 
 				if ( !empty( $_config ) )
 				{
@@ -180,11 +181,11 @@ class Session extends BasePlatformRestResource
 		try
 		{
 			$_user = ResourceStore::model( 'user' )->with(
-						 'role.role_service_accesses',
-						 'role.role_system_accesses',
-						 'role.apps',
-						 'role.services'
-					 )->findByPk( $_userId );
+				'role.role_service_accesses',
+				'role.role_system_accesses',
+				'role.apps',
+				'role.services'
+			)->findByPk( $_userId );
 		}
 		catch ( \Exception $ex )
 		{
@@ -283,6 +284,9 @@ class Session extends BasePlatformRestResource
 
 		static::$_userId = $_user->id;
 
+		//	Check registration...
+//		SystemManager::registerPlatform( $_user, Pii::getState( 'app.registration_skipped' ) );
+
 		// 	Additional stuff for session - launchpad mainly
 		return static::addSessionExtras( $_result, $_user->is_sys_admin, true );
 	}
@@ -292,16 +296,36 @@ class Session extends BasePlatformRestResource
 	 */
 	public static function userLogout()
 	{
-		Pii::user()->logout();
+		// helper for non-browser-managed sessions
+		$_sessionId = FilterInput::server( 'HTTP_X_DREAMFACTORY_SESSION_TOKEN' );
+
+		if ( !empty( $_sessionId ) )
+		{
+			session_write_close();
+			session_id( $_sessionId );
+
+			if ( session_start() )
+			{
+				if ( session_id() !== '' )
+				{
+					@session_unset();
+					@session_destroy();
+				}
+			}
+		}
+		else
+		{
+			// otherwise logout browser session
+			Pii::user()->logout();
+		}
 	}
 
 	/**
-	 * @param      $userId
+	 * @param int  $userId
 	 * @param User $user
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\UnauthorizedException
 	 * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
-	 * @internal param int $user_id
 	 * @return array
 	 */
 	public static function generateSessionDataFromUser( $userId, $user = null )
@@ -312,11 +336,11 @@ class Session extends BasePlatformRestResource
 		/** @var User $_user */
 		$_user = $user
 			? : ResourceStore::model( 'user' )->with(
-					'role.role_service_accesses',
-					'role.role_system_accesses',
-					'role.apps',
-					'role.services'
-				)->findByPk( $userId );
+				'role.role_service_accesses',
+				'role.role_system_accesses',
+				'role.apps',
+				'role.services'
+			)->findByPk( $userId );
 
 		if ( empty( $_user ) )
 		{
@@ -406,11 +430,11 @@ class Session extends BasePlatformRestResource
 		/** @var Role $_role */
 		$_role = $role
 			? : ResourceStore::model( 'role' )->with(
-					'role_service_accesses',
-					'role_system_accesses',
-					'apps',
-					'services'
-				)->findByPk( $roleId );
+				'role_service_accesses',
+				'role_system_accesses',
+				'apps',
+				'services'
+			)->findByPk( $roleId );
 
 		if ( empty( $_role ) )
 		{
@@ -748,11 +772,11 @@ class Session extends BasePlatformRestResource
 			{
 				// special case for possible guest user
 				$_config = ResourceStore::model( 'config' )->with(
-							   'guest_role.role_service_accesses',
-							   'guest_role.role_system_accesses',
-							   'guest_role.apps',
-							   'guest_role.services'
-						   )->find();
+					'guest_role.role_service_accesses',
+					'guest_role.role_system_accesses',
+					'guest_role.apps',
+					'guest_role.services'
+				)->find();
 
 				if ( !empty( $_config ) )
 				{

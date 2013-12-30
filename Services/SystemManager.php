@@ -20,12 +20,15 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Enums\InstallationTypes;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\PlatformServiceException;
 use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Platform\Resources\System\CustomSettings;
+use DreamFactory\Platform\Utility\Drupal;
+use DreamFactory\Platform\Utility\Fabric;
 use Kisma\Core\Utility\Curl;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\Packager;
@@ -85,17 +88,17 @@ class SystemManager extends BaseSystemRestService
 		static::$_configPath = \Kisma::get( 'app.config_path' );
 
 		parent::__construct(
-			array_merge(
-				array(
-					'name'        => 'System Configuration Management',
-					'api_name'    => 'system',
-					'type'        => 'System',
-					'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-					'description' => 'Service for system administration.',
-					'is_active'   => true,
-				),
-				$settings
-			)
+			  array_merge(
+				  array(
+					  'name'        => 'System Configuration Management',
+					  'api_name'    => 'system',
+					  'type'        => 'System',
+					  'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+					  'description' => 'Service for system administration.',
+					  'is_active'   => true,
+				  ),
+				  $settings
+			  )
 		);
 	}
 
@@ -128,46 +131,51 @@ class SystemManager extends BaseSystemRestService
 
 		if ( !$_isReady )
 		{
-			// Refresh the schema that we just added
-			$_db = Pii::db();
-			$_schema = $_db->getSchema();
-
-			Sql::setConnection( $_db->pdoInstance );
-
-			$tables = $_schema->getTableNames();
-
-			// if there is no config table, we have to initialize
-			if ( empty( $tables ) || ( false === array_search( 'df_sys_config', $tables ) ) )
+			if ( !Pii::getState( 'dsp.init_check_complete', false ) )
 			{
-				return PlatformStates::INIT_REQUIRED;
-			}
+				//	Refresh the schema that we just added
+				$_db = Pii::db();
+				$_schema = $_db->getSchema();
 
-			// need to check for db upgrade, based on tables or version
-			$contents = file_get_contents( static::$_configPath . '/schema/system_schema.json' );
+				Sql::setConnection( $_db->pdoInstance );
 
-			if ( !empty( $contents ) )
-			{
-				$contents = DataFormat::jsonToArray( $contents );
+				$tables = $_schema->getTableNames();
 
-				// check for any missing necessary tables
-				$needed = Option::get( $contents, 'table', array() );
-
-				foreach ( $needed as $table )
+				// if there is no config table, we have to initialize
+				if ( empty( $tables ) || ( false === array_search( 'df_sys_config', $tables ) ) )
 				{
-					$name = Option::get( $table, 'name' );
-					if ( !empty( $name ) && !in_array( $name, $tables ) )
+					return PlatformStates::INIT_REQUIRED;
+				}
+
+				// need to check for db upgrade, based on tables or version
+				$contents = file_get_contents( static::$_configPath . '/schema/system_schema.json' );
+
+				if ( !empty( $contents ) )
+				{
+					$contents = DataFormat::jsonToArray( $contents );
+
+					// check for any missing necessary tables
+					$needed = Option::get( $contents, 'table', array() );
+
+					foreach ( $needed as $table )
+					{
+						$name = Option::get( $table, 'name' );
+						if ( !empty( $name ) && !in_array( $name, $tables ) )
+						{
+							return PlatformStates::SCHEMA_REQUIRED;
+						}
+					}
+
+					$_version = Option::get( $contents, 'version' );
+					$_oldVersion = Sql::scalar( 'SELECT db_version FROM df_sys_config ORDER BY id DESC' );
+
+					if ( static::doesDbVersionRequireUpgrade( $_oldVersion, $_version ) )
 					{
 						return PlatformStates::SCHEMA_REQUIRED;
 					}
 				}
 
-				$_version = Option::get( $contents, 'version' );
-				$_oldVersion = Sql::scalar( 'SELECT db_version FROM df_sys_config ORDER BY id DESC' );
-
-				if ( static::doesDbVersionRequireUpgrade( $_oldVersion, $_version ) )
-				{
-					return PlatformStates::SCHEMA_REQUIRED;
-				}
+				Pii::setState( 'dsp.init_check_complete', true );
 			}
 
 			// Check for at least one system admin user
@@ -181,6 +189,12 @@ class SystemManager extends BaseSystemRestService
 			{
 				return PlatformStates::DATA_REQUIRED;
 			}
+		}
+
+		//	And redirect to welcome screen
+		if ( !Pii::guest() && !SystemManager::registrationComplete() )
+		{
+			Pii::controller()->redirect( '/web/welcome' );
 		}
 
 		$_isReady = true;
@@ -518,8 +532,8 @@ class SystemManager extends BaseSystemRestService
 				$_firstName = Pii::getState( 'first_name', Option::get( $_model, 'firstName' ) );
 				$_lastName = Pii::getState( 'last_name', Option::get( $_model, 'lastName' ) );
 				$_displayName = Pii::getState(
-					'display_name',
-					Option::get( $_model, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
+								   'display_name',
+								   Option::get( $_model, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
 				);
 
 				$_fields = array(
@@ -555,11 +569,6 @@ class SystemManager extends BaseSystemRestService
 			$_identity->setState( 'email', $_email );
 			$_identity->setState( 'df_authenticated', false ); // removes catch
 			$_identity->setState( 'password', $_password, $_password ); // removes password
-
-			if ( true === Pii::getState( 'app.registration_skipped' ) )
-			{
-				static::_createDrupalAccount( $_user );
-			}
 		}
 		catch ( \Exception $_ex )
 		{
@@ -676,7 +685,7 @@ class SystemManager extends BaseSystemRestService
 										if ( 0 === strcasecmp( 'dfpkg', FileUtilities::getFileExtension( $fileUrl ) ) )
 										{
 											Log::debug( 'Importing application: ' . $fileUrl );
-
+											$filename = null;
 											try
 											{
 												// need to download and extract zip file and move contents to storage
@@ -686,6 +695,11 @@ class SystemManager extends BaseSystemRestService
 											catch ( \Exception $ex )
 											{
 												Log::error( "Failed to import application package $fileUrl.\n{$ex->getMessage()}" );
+											}
+
+											if ( !empty( $filename ) && false === @unlink( $filename ) )
+											{
+												Log::error( 'Unable to remove package file "' . $filename . '"' );
 											}
 										}
 									}
@@ -743,6 +757,7 @@ class SystemManager extends BaseSystemRestService
 
 		// need to download and extract zip file of latest version
 		$_tempDir = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR;
+		$_tempZip = null;
 		try
 		{
 			$_tempZip = FileUtilities::importUrlFileToTemp( $_versionUrl );
@@ -755,9 +770,19 @@ class SystemManager extends BaseSystemRestService
 			{
 				throw new \Exception( "Error extracting zip contents to temp directory - $_tempDir." );
 			}
+
+			if ( false === @unlink( $_tempZip ) )
+			{
+				Log::error( 'Unable to remove zip file "' . $_tempZip . '"' );
+			}
 		}
 		catch ( \Exception $ex )
 		{
+			if ( !empty( $_tempZip ) && false === @unlink( $_tempZip ) )
+			{
+				Log::error( 'Unable to remove zip file "' . $_tempZip . '"' );
+			}
+
 			throw new \Exception( "Failed to import dsp package $_versionUrl.\n{$ex->getMessage()}" );
 		}
 
@@ -790,9 +815,11 @@ class SystemManager extends BaseSystemRestService
 	public static function getDspVersions()
 	{
 		$_results = Curl::get(
-			'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags',
-			array(),
-			array( CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' ) )
+						'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags',
+						array(),
+						array(
+							CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' )
+						)
 		);
 
 		if ( HttpResponse::Ok != ( $_code = Curl::getLastHttpCode() ) )
@@ -907,12 +934,77 @@ class SystemManager extends BaseSystemRestService
 	}
 
 	/**
-	 * Creates an account for the admin user in Drupal
+	 * @param array $paths If specified, paths will be returned in this variable
 	 *
-	 * @param User $_user
+	 * @return bool
 	 */
-	protected static function _createDrupalAccount( $_user )
+	public static function registrationComplete( &$paths = null )
 	{
+		$_privatePath = Pii::getParam( 'private_path' );
+		$_marker = $_privatePath . Drupal::REGISTRATION_MARKER;
+
+		$paths = array( '_privatePath' => $_privatePath, '_marker' => $_marker );
+
+		if ( !file_exists( $_marker ) )
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Queues a registration record
+	 * Call like "SystemManager::registerPlatform($user, 'force_remove')" to have the registration file removed
+	 *
+	 * @param User|\CActiveRecord $user
+	 * @param bool                $skipped
+	 *
+	 *
+	 * @return bool TRUE if registration was queued (i.e. first-time used), FALSE otherwise
+	 */
+	public static function registerPlatform( $user, $skipped = true )
+	{
+		$_paths = $_privatePath = $_marker = null;
+
+		//	Only want non-hosted admin logins...
+		if ( Fabric::fabricHosted() || !$user->is_sys_admin )
+		{
+			return false;
+		}
+
+		$_complete = static::registrationComplete( $_paths );
+		Pii::setState( 'app.registration_skipped', $skipped );
+
+		extract( $_paths );
+
+		if ( $_complete )
+		{
+			if ( 'force_remove' === $skipped )
+			{
+				//	Remove registration file
+				if ( false === @unlink( $_paths ) )
+				{
+					//	Log it
+					Log::error( 'System error removing registration marker: ' . $_marker );
+					//	But do nothing. Like the goggles...
+				}
+			}
+
+			return true;
+		}
+
+		//	Call the API
+		return Drupal::registerPlatform(
+					 $user,
+					 $_paths,
+					 array(
+						 'field_first_name'           => $user->first_name,
+						 'field_last_name'            => $user->last_name,
+						 'field_installation_type'    => InstallationTypes::determineType( true ),
+						 'field_registration_skipped' => ( $skipped ? 1 : 0 ),
+					 )
+		);
 	}
 
 	//.........................................................................
@@ -1067,8 +1159,8 @@ class SystemManager extends BaseSystemRestService
 		try
 		{
 			$_admins = Sql::scalar(
-				<<<SQL
-				SELECT
+						  <<<SQL
+SELECT
 	COUNT(id)
 FROM
 	df_sys_user
@@ -1076,10 +1168,10 @@ WHERE
 	is_sys_admin = 1 AND
 	is_deleted = 0
 SQL
-				,
-				0,
-				array(),
-				Pii::pdo()
+							  ,
+							  0,
+							  array(),
+							  Pii::pdo()
 			);
 
 			return ( 0 == $_admins ? false : ( $_admins > 1 ? $_admins : true ) );
@@ -1102,11 +1194,10 @@ SQL
 		try
 		{
 			/** @var User $_user */
-			$_user = $user
-				? : User::model()->find(
-					'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
-					array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
-				);
+			$_user = $user ? : User::model()->find(
+								   'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
+								   array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
+			);
 
 			if ( !empty( $_user ) )
 			{
@@ -1126,79 +1217,79 @@ SQL
 		}
 	}
 
-	/**
-	 * @param string $apiName
-	 *
-	 * @return BasePlatformService|void
-	 * @throws \Exception
-	 */
-	public function setApiName( $apiName )
-	{
-		throw new \Exception( 'SystemManager API name can not be changed.' );
-	}
-
-	/**
-	 * @param string $type
-	 *
-	 * @return BasePlatformService|void
-	 * @throws \Exception
-	 */
-	public function setType( $type )
-	{
-		throw new \Exception( 'SystemManager type can not be changed.' );
-	}
-
-	/**
-	 * @param string $description
-	 *
-	 * @return BasePlatformService
-	 * @throws \Exception
-	 */
-	public function setDescription( $description )
-	{
-		throw new \Exception( 'SystemManager description can not be changed.' );
-	}
-
-	/**
-	 * @param boolean $isActive
-	 *
-	 * @return BasePlatformService|void
-	 * @throws \Exception
-	 */
-	public function setIsActive( $isActive = false )
-	{
-		throw new \Exception( 'SystemManager active flag can not be changed.' );
-	}
-
-	/**
-	 * @return boolean
-	 */
-	public function getIsActive()
-	{
-		return $this->_isActive;
-	}
-
-	/**
-	 * @param string $name
-	 *
-	 * @return BasePlatformService|void
-	 * @throws \Exception
-	 */
-	public function setName( $name )
-	{
-		throw new \Exception( 'SystemManager name can not be changed.' );
-	}
-
-	/**
-	 * @param string $nativeFormat
-	 *
-	 * @return BasePlatformService|void
-	 * @throws \Exception
-	 */
-	public function setNativeFormat( $nativeFormat )
-	{
-		throw new \Exception( 'SystemManager native format can not be changed.' );
-	}
+//	/**
+//	 * @param string $apiName
+//	 *
+//	 * @return BasePlatformService|void
+//	 * @throws \Exception
+//	 */
+//	public function setApiName( $apiName )
+//	{
+//		throw new \Exception( 'SystemManager API name can not be changed.' );
+//	}
+//
+//	/**
+//	 * @param string $type
+//	 *
+//	 * @return BasePlatformService|void
+//	 * @throws \Exception
+//	 */
+//	public function setType( $type )
+//	{
+//		throw new \Exception( 'SystemManager type can not be changed.' );
+//	}
+//
+//	/**
+//	 * @param string $description
+//	 *
+//	 * @return BasePlatformService
+//	 * @throws \Exception
+//	 */
+//	public function setDescription( $description )
+//	{
+//		throw new \Exception( 'SystemManager description can not be changed.' );
+//	}
+//
+//	/**
+//	 * @param boolean $isActive
+//	 *
+//	 * @return BasePlatformService|void
+//	 * @throws \Exception
+//	 */
+//	public function setIsActive( $isActive = false )
+//	{
+//		throw new \Exception( 'SystemManager active flag can not be changed.' );
+//	}
+//
+//	/**
+//	 * @return boolean
+//	 */
+//	public function getIsActive()
+//	{
+//		return $this->_isActive;
+//	}
+//
+//	/**
+//	 * @param string $name
+//	 *
+//	 * @return BasePlatformService|void
+//	 * @throws \Exception
+//	 */
+//	public function setName( $name )
+//	{
+//		throw new \Exception( 'SystemManager name can not be changed.' );
+//	}
+//
+//	/**
+//	 * @param string $nativeFormat
+//	 *
+//	 * @return BasePlatformService|void
+//	 * @throws \Exception
+//	 */
+//	public function setNativeFormat( $nativeFormat )
+//	{
+//		throw new \Exception( 'SystemManager native format can not be changed.' );
+//	}
 
 	/**
 	 * @return string

@@ -69,6 +69,7 @@ class Packager
 
 		$_appApiName = $_app->api_name;
 
+		$_zipFileName = null;
 		try
 		{
 			$_zip = new \ZipArchive();
@@ -185,8 +186,8 @@ class Packager
 				if ( empty( $_storageServiceId ) )
 				{
 					$_service = Service::model()->find(
-									   'type_id = :type',
-									   array( ':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE )
+						'type_id = :type',
+						array( ':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE )
 					);
 					$_storageServiceId = ( $_service ) ? $_service->getPrimaryKey() : null;
 					$_container = 'applications';
@@ -244,6 +245,11 @@ class Packager
 		}
 		catch ( \Exception $ex )
 		{
+			if ( !empty( $_zipFileName ) )
+			{
+				unlink( $_zipFileName );
+			}
+
 			throw $ex;
 		}
 	}
@@ -280,8 +286,8 @@ class Packager
 		{
 			// must be set or defaulted to local
 			$_model = Service::model()->find(
-							 'type_id = :type',
-							 array( ':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE )
+				'type_id = :type',
+				array( ':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE )
 			);
 			$_storageServiceId = ( $_model ) ? $_model->getPrimaryKey() : null;
 			$_record['storage_service_id'] = $_storageServiceId;

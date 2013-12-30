@@ -269,16 +269,29 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 					elseif ( !empty( $fileUrl ) )
 					{
 						// upload a file from a url, could be expandable zip
-						$tmpName = FileUtilities::importUrlFileToTemp( $fileUrl );
-						$result = $this->_handleFile(
-							$this->_folderPath,
-							'',
-							$tmpName,
-							'',
-							$extract,
-							$clean,
-							$checkExist
-						);
+						$tmpName = null;
+						try
+						{
+							$tmpName = FileUtilities::importUrlFileToTemp( $fileUrl );
+							$result = $this->_handleFile(
+								$this->_folderPath,
+								'',
+								$tmpName,
+								'',
+								$extract,
+								$clean,
+								$checkExist
+							);
+							unlink( $tmpName );
+						}
+						catch ( \Exception $ex )
+						{
+							if ( !empty( $tmpName ) )
+							{
+								unlink( $tmpName );
+							}
+							throw $ex;
+						}
 					}
 					elseif ( isset( $_FILES['files'] ) && !empty( $_FILES['files'] ) )
 					{
@@ -486,7 +499,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 * @return array
 	 */
 	protected function _handleFile( $dest_path, $dest_name, $source_file, $contentType = '',
-									$extract = false, $clean = false, $check_exist = false )
+		$extract = false, $clean = false, $check_exist = false )
 	{
 		$ext = FileUtilities::getFileExtension( $source_file );
 		if ( empty( $contentType ) )
@@ -529,7 +542,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 * @return array
 	 */
 	protected function _handleFileContent( $dest_path, $dest_name, $content, $contentType = '',
-										   $extract = false, $clean = false, $check_exist = false )
+		$extract = false, $clean = false, $check_exist = false )
 	{
 		$ext = FileUtilities::getFileExtension( $dest_name );
 		if ( empty( $contentType ) )
@@ -543,14 +556,18 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 			$tmpName = $tempDir . $dest_name;
 			file_put_contents( $tmpName, $content );
 			$zip = new \ZipArchive();
-			if ( true === $zip->open( $tmpName ) )
+			$code = $zip->open( $tmpName );
+			if ( true !== $code )
 			{
-				return $this->extractZipFile( $this->_container, $dest_path, $zip, $clean );
+				unlink( $tmpName );
+
+				throw new InternalServerErrorException( 'Error opening temporary zip file. code = ' . $code );
 			}
-			else
-			{
-				throw new InternalServerErrorException( 'Error opening temporary zip file.' );
-			}
+
+			$results = $this->extractZipFile( $this->_container, $dest_path, $zip, $clean );
+			unlink( $tmpName );
+
+			return $results;
 		}
 		else
 		{

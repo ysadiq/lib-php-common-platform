@@ -129,15 +129,15 @@ class SqlDbSvc extends BaseDbSvc
 			/** @var \CDbConnection $_db */
 			$_db = Pii::createComponent(
 				array(
-					'class'                 => 'CDbConnection',
-					'connectionString'      => $dsn,
-					'username'              => $user,
-					'password'              => $password,
-					'charset'               => 'utf8',
-					'enableProfiling'       => defined( YII_DEBUG ),
-					'enableParamLogging'    => defined( YII_DEBUG ),
-					'schemaCachingDuration' => 3600,
-					'schemaCacheID'         => ( !$this->_isNative && static::ENABLE_REMOTE_CACHE ) ? static::REMOTE_CACHE_ID : 'cache',
+					 'class'                 => 'CDbConnection',
+					 'connectionString'      => $dsn,
+					 'username'              => $user,
+					 'password'              => $password,
+					 'charset'               => 'utf8',
+					 'enableProfiling'       => defined( YII_DEBUG ),
+					 'enableParamLogging'    => defined( YII_DEBUG ),
+					 'schemaCachingDuration' => 3600,
+					 'schemaCacheID'         => ( !$this->_isNative && static::ENABLE_REMOTE_CACHE ) ? static::REMOTE_CACHE_ID : 'cache',
 				)
 			);
 
@@ -148,11 +148,11 @@ class SqlDbSvc extends BaseDbSvc
 			{
 				$_cache = Pii::createComponent(
 					array(
-						'class'                => 'CDbCache',
-						'connectionID'         => 'db' /* . $this->_apiName*/,
-						'cacheTableName'       => 'df_sys_cache_remote',
-						'autoCreateCacheTable' => true,
-						'keyPrefix'            => $this->_apiName,
+						 'class'                => 'CDbCache',
+						 'connectionID'         => 'db' /* . $this->_apiName*/,
+						 'cacheTableName'       => 'df_sys_cache_remote',
+						 'autoCreateCacheTable' => true,
+						 'keyPrefix'            => $this->_apiName,
 					)
 				);
 
@@ -409,7 +409,7 @@ class SqlDbSvc extends BaseDbSvc
 				$_idFields = array();
 				foreach ( $_idFieldsInfo as $_temp )
 				{
-					$_idFields[] = $_temp['name'];
+					$_idFields[] = Option::get( $_temp, 'name' );
 				}
 			}
 			else
@@ -515,7 +515,7 @@ class SqlDbSvc extends BaseDbSvc
 				{
 					foreach ( $_idFields as $_field )
 					{
-						$_temp[] = array( $_field => $_id );
+						$_temp[$_field] = $_id;
 					}
 				}
 				$_results[] = $_temp;
@@ -597,7 +597,8 @@ class SqlDbSvc extends BaseDbSvc
 
 					// simple update request
 					$command->reset();
-					$rows = $command->update( $table, $_parsed, array( 'in', $_idField, $_id ) );
+					/*$rows = */
+					$command->update( $table, $_parsed, array( 'in', $_idField, $_id ) );
 					$_ids[$_key] = $_id;
 					$this->updateRelations( $table, $_record, $_id, $_relatedInfo );
 				}
@@ -668,7 +669,7 @@ class SqlDbSvc extends BaseDbSvc
 		try
 		{
 			$fieldInfo = $this->describeTableFields( $table );
-			$relatedInfo = $this->describeTableRelated( $table );
+//			$relatedInfo = $this->describeTableRelated( $table );
 			// simple update request
 			$parsed = $this->parseRecord( $record, $fieldInfo, true );
 			if ( empty( $parsed ) )
@@ -678,7 +679,8 @@ class SqlDbSvc extends BaseDbSvc
 			// parse filter
 			/** @var \CDbCommand $command */
 			$command = $this->_sqlConn->createCommand();
-			$rows = $command->update( $table, $parsed, $filter );
+			/*$rows = */
+			$command->update( $table, $parsed, $filter );
 			// todo how to update relations here?
 
 			$results = array();
@@ -761,7 +763,8 @@ class SqlDbSvc extends BaseDbSvc
 					}
 					// simple update request
 					$command->reset();
-					$rows = $command->update( $table, $_parsed, array( 'in', $_idField, $_id ) );
+					/*$rows = */
+					$command->update( $table, $_parsed, array( 'in', $_idField, $_id ) );
 					$this->updateRelations( $table, $record, $_id, $_relatedInfo );
 				}
 				catch ( \Exception $ex )
@@ -861,7 +864,8 @@ class SqlDbSvc extends BaseDbSvc
 					/** @var \CDbCommand $command */
 					$command = $this->_sqlConn->createCommand();
 					$results = array();
-					$rows = $command->truncateTable( $table );
+					/*$rows = */
+					$command->truncateTable( $table );
 
 					return $results;
 				}
@@ -927,7 +931,8 @@ class SqlDbSvc extends BaseDbSvc
 
 			// parse filter
 			$command->reset();
-			$rows = $command->delete( $table, $filter );
+			/*$rows = */
+			$command->delete( $table, $filter );
 
 			return $results;
 		}
@@ -1069,8 +1074,8 @@ class SqlDbSvc extends BaseDbSvc
 			$related = Option::get( $extras, 'related' );
 			$relations = ( empty( $related ) ? array() : $this->describeTableRelated( $table ) );
 			$result = $this->parseFieldsForSqlSelect( $fields, $availFields );
-			$bindings = $result['bindings'];
-			$fields = $result['fields'];
+			$bindings = Option::get( $result, 'bindings' );
+			$fields = Option::get( $result, 'fields' );
 			if ( empty( $fields ) )
 			{
 				$fields = '*';
@@ -1112,7 +1117,9 @@ class SqlDbSvc extends BaseDbSvc
 			$dummy = array();
 			foreach ( $bindings as $binding )
 			{
-				$reader->bindColumn( $binding['name'], $dummy[$binding['name']], $binding['pdo_type'] );
+				$_name = Option::get( $binding, 'name' );
+				$_type = Option::get( $binding, 'pdo_type' );
+				$reader->bindColumn( $_name, $dummy[$_name], $_type );
 			}
 			$reader->setFetchMode( \PDO::FETCH_BOUND );
 			$count = 0;
@@ -1121,9 +1128,10 @@ class SqlDbSvc extends BaseDbSvc
 				$temp = array();
 				foreach ( $bindings as $binding )
 				{
-					$_name = $binding['name'];
-					$_value = $dummy[$_name];
-					if ( 'float' == $binding['php_type'] )
+					$_name = Option::get( $binding, 'name' );
+					$_type = Option::get( $binding, 'php_type' );
+					$_value = Option::get( $dummy, $_name );
+					if ( 'float' == $_type )
 					{
 						$_value = floatval( $_value );
 					}
@@ -1257,8 +1265,8 @@ class SqlDbSvc extends BaseDbSvc
 				$fields = Utilities::addOnceToList( $fields, $_idField, ',' );
 			}
 			$result = $this->parseFieldsForSqlSelect( $fields, $availFields );
-			$bindings = $result['bindings'];
-			$fields = $result['fields'];
+			$bindings = Option::get( $result, 'bindings' );
+			$fields = Option::get( $result, 'fields' );
 			// use query builder
 			/** @var \CDbCommand $command */
 			$command = $this->_sqlConn->createCommand();
@@ -1272,7 +1280,9 @@ class SqlDbSvc extends BaseDbSvc
 			$dummy = array();
 			foreach ( $bindings as $binding )
 			{
-				$reader->bindColumn( $binding['name'], $dummy[$binding['name']], $binding['pdo_type'] );
+				$_name = Option::get( $binding, 'name' );
+				$_type = Option::get( $binding, 'pdo_type' );
+				$reader->bindColumn( $_name, $dummy[$_name], $_type );
 			}
 			$reader->setFetchMode( \PDO::FETCH_BOUND );
 			$count = 0;
@@ -1281,9 +1291,10 @@ class SqlDbSvc extends BaseDbSvc
 				$temp = array();
 				foreach ( $bindings as $binding )
 				{
-					$_name = $binding['name'];
-					$_value = $dummy[$_name];
-					if ( 'float' == $binding['php_type'] )
+					$_name = Option::get( $binding, 'name' );
+					$_type = Option::get( $binding, 'php_type' );
+					$_value = Option::get( $dummy, $_name );
+					if ( 'float' == $_type )
 					{
 						$_value = floatval( $_value );
 					}
@@ -1389,13 +1400,13 @@ class SqlDbSvc extends BaseDbSvc
 		$values = array_values( $record );
 		foreach ( $avail_fields as $field_info )
 		{
-			$name = mb_strtolower( $field_info['name'] );
-			$type = $field_info['type'];
-			$dbType = $field_info['db_type'];
+			$name = mb_strtolower( Option::get( $field_info, 'name', '' ) );
+			$type = Option::get( $field_info, 'type' );
+			$dbType = Option::get( $field_info, 'db_type' );
 			$pos = array_search( $name, $keys );
 			if ( false !== $pos )
 			{
-				$fieldVal = $values[$pos];
+				$fieldVal = Option::get( $values, $pos );
 				// due to conversion from XML to array, null or empty xml elements have the array value of an empty array
 				if ( is_array( $fieldVal ) && empty( $fieldVal ) )
 				{
@@ -1414,7 +1425,7 @@ class SqlDbSvc extends BaseDbSvc
 					unset( $values[$pos] );
 					continue; // should I error this?
 				}
-				if ( is_null( $fieldVal ) && !$field_info['allow_null'] )
+				if ( is_null( $fieldVal ) && !Option::getBool( $field_info, 'allow_null' ) )
 				{
 					if ( $for_update )
 					{
@@ -1451,7 +1462,7 @@ class SqlDbSvc extends BaseDbSvc
 							case 'integer':
 								if ( !is_int( $fieldVal ) )
 								{
-									if ( ( '' === $fieldVal ) && $field_info['allow_null'] )
+									if ( ( '' === $fieldVal ) && Option::getBool( $field_info, 'allow_null' ) )
 									{
 										$fieldVal = null;
 									}
@@ -1485,7 +1496,7 @@ class SqlDbSvc extends BaseDbSvc
 						break;
 					default:
 						// if field is required, kick back error
-						if ( $field_info['required'] && !$for_update )
+						if ( Option::getBool( $field_info, 'required' ) && !$for_update )
 						{
 							throw new BadRequestException( "Required field '$name' can not be NULL." );
 						}
@@ -1561,12 +1572,12 @@ class SqlDbSvc extends BaseDbSvc
 		$values = array_values( $record );
 		foreach ( $avail_relations as $relationInfo )
 		{
-			$name = mb_strtolower( $relationInfo['name'] );
+			$name = mb_strtolower( Option::get( $relationInfo, 'name' ) );
 			$pos = array_search( $name, $keys );
 			if ( false !== $pos )
 			{
-				$relations = $values[$pos];
-				$relationType = $relationInfo['type'];
+				$relations = Option::get( $values, $pos );
+				$relationType = Option::get( $relationInfo, 'type' );
 				switch ( $relationType )
 				{
 					case 'belongs_to':
@@ -1587,8 +1598,8 @@ class SqlDbSvc extends BaseDbSvc
                     "ref_field": "last_modified_by_id",
                     "field": "id"
                     */
-						$relatedTable = $relationInfo['ref_table'];
-						$relatedField = $relationInfo['ref_field'];
+						$relatedTable = Option::get( $relationInfo, 'ref_table' );
+						$relatedField = Option::get( $relationInfo, 'ref_field' );
 						$this->assignManyToOne( $table, $id, $relatedTable, $relatedField, $relations );
 						break;
 					case 'many_many':
@@ -1599,12 +1610,12 @@ class SqlDbSvc extends BaseDbSvc
                     "ref_field": "id",
                     "join": "user(default_app_id,role_id)"
                     */
-						$relatedTable = $relationInfo['ref_table'];
-						$join = $relationInfo['join'];
+						$relatedTable = Option::get( $relationInfo, 'ref_table' );
+						$join = Option::get( $relationInfo, 'join', '' );
 						$joinTable = substr( $join, 0, strpos( $join, '(' ) );
 						$other = explode( ',', substr( $join, strpos( $join, '(' ) + 1, -1 ) );
-						$joinLeftField = trim( $other[0] );
-						$joinRightField = trim( $other[1] );
+						$joinLeftField = trim( Option::get( $other, 0, '' ) );
+						$joinRightField = trim( Option::get( $other, 1, '' ) );
 						$this->assignManyToOneByMap(
 							$table,
 							$id,
@@ -1633,7 +1644,7 @@ class SqlDbSvc extends BaseDbSvc
 	protected function parseRecordForSqlInsert( $record )
 	{
 		$values = '';
-		foreach ( $record as $key => $value )
+		foreach ( $record as $value )
 		{
 			$fieldVal = ( is_null( $value ) ) ? "NULL" : $this->_sqlConn->quoteValue( $value );
 			$values .= ( !empty( $values ) ) ? ',' : '';
@@ -1682,7 +1693,6 @@ class SqlDbSvc extends BaseDbSvc
 		{
 			// yii will not quote anything if any of the fields are expressions
 		}
-		$outString = '';
 		$outArray = array();
 		$bindArray = array();
 		for ( $i = 0, $size = sizeof( $field_arr ); $i < $size; $i++ )
@@ -1813,18 +1823,19 @@ class SqlDbSvc extends BaseDbSvc
 			$relatedData = array();
 			foreach ( $extras as $extra )
 			{
-				$extraName = $extra['name'];
-				if ( !isset( $relations[$extraName] ) )
+				$extraName = Option::get( $extra, 'name' );
+				$relation = Option::get( $relations, $extraName );
+				if ( empty( $relation ) )
 				{
-					throw new BadRequestException( "Invalid relation '$extraName' requested." );
+					throw new BadRequestException( "Invalid relationship '$extraName' requested." );
 				}
-				$relation = $relations[$extraName];
-				$relationType = $relation['type'];
-				$relatedTable = $relation['ref_table'];
-				$relatedField = $relation['ref_field'];
-				$field = $relation['field'];
-				$extraFields = $extra['fields'];
+				$relationType = Option::get( $relation, 'type' );
+				$relatedTable = Option::get( $relation, 'ref_table' );
+				$relatedField = Option::get( $relation, 'ref_field' );
+				$field = Option::get( $relation, 'field' );
+				$extraFields = Option::get( $extra, 'fields' );
 				$relatedExtras = array( 'limit' => static::DB_MAX_RECORDS_RETURNED );
+				$tempData = null;
 				switch ( $relationType )
 				{
 					case 'belongs_to':
@@ -1832,11 +1843,7 @@ class SqlDbSvc extends BaseDbSvc
 						$relatedRecords = $this->retrieveRecordsByFilter( $relatedTable, "$relatedField = '$fieldVal'", $extraFields, $relatedExtras );
 						if ( !empty( $relatedRecords ) )
 						{
-							$tempData = $relatedRecords[0];
-						}
-						else
-						{
-							$tempData = null;
+							$tempData = Option::get( $relatedRecords, 0 );
 						}
 						break;
 					case 'has_many':
@@ -1845,24 +1852,27 @@ class SqlDbSvc extends BaseDbSvc
 						break;
 					case 'many_many':
 						$fieldVal = Option::get( $data, $field );
-						$join = $relation['join'];
+						$join = Option::get( $relation, 'join', '' );
 						$joinTable = substr( $join, 0, strpos( $join, '(' ) );
 						$other = explode( ',', substr( $join, strpos( $join, '(' ) + 1, -1 ) );
-						$joinLeftField = trim( $other[0] );
-						$joinRightField = trim( $other[1] );
-						$joinData = $this->retrieveRecordsByFilter( $joinTable, "$joinLeftField = '$fieldVal'", $joinRightField );
-						$tempData = array();
-						if ( !empty( $joinData ) )
+						$joinLeftField = trim( Option::get( $other, 0 ) );
+						$joinRightField = trim( Option::get( $other, 1 ) );
+						if ( !empty( $joinLeftField ) && !empty( $joinRightField ) )
 						{
-							$relatedIds = array();
-							foreach ( $joinData as $record )
+							$joinData = $this->retrieveRecordsByFilter( $joinTable, "$joinLeftField = '$fieldVal'", $joinRightField, $relatedExtras );
+							if ( !empty( $joinData ) )
 							{
-								$relatedIds[] = $record[$joinRightField];
-							}
-							if ( !empty( $relatedIds ) )
-							{
-								$relatedIds = implode( ',', $relatedIds );
-								$tempData = $this->retrieveRecordsByIds( $relatedTable, $relatedIds, $relatedField, $extraFields );
+								$relatedIds = array();
+								foreach ( $joinData as $record )
+								{
+									$relatedIds[] = Option::get( $record, $joinRightField );
+								}
+								if ( !empty( $relatedIds ) )
+								{
+									$relatedIds = implode( ',', $relatedIds );
+									$relatedExtras['id_field'] = $relatedField;
+									$tempData = $this->retrieveRecordsByIds( $relatedTable, $relatedIds, $extraFields, $relatedExtras );
+								}
 							}
 						}
 						break;
@@ -2041,10 +2051,12 @@ class SqlDbSvc extends BaseDbSvc
 			/** @var \CDbCommand $command */
 			$command = $this->_sqlConn->createCommand( $query );
 			$reader = $command->query();
-			$dummy = null;
+			$dummy = array();
 			foreach ( $bindings as $binding )
 			{
-				$reader->bindColumn( $binding['name'], $dummy, $binding['pdo_type'] );
+				$_name = Option::get( $binding, 'name' );
+				$_type = Option::get( $binding, 'pdo_type' );
+				$reader->bindColumn( $_name, $dummy[$_name], $_type );
 			}
 
 			$data = array();

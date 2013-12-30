@@ -1,33 +1,44 @@
 {
-    "resourcePath": "/{service_api_name}",
+	"swaggerVersion": "1.2",
+	"apiVersion": "1.0",
+	"basePath": "http://localhost/rest",
+    "resourcePath": "/{api_name}",
+	"produces": [
+		"application/json",
+		"application/xml"
+	],
+	"consumes": [
+		"application/json",
+		"application/xml"
+	],
     "apis": [
         {
-            "path": "/{service_api_name}",
+            "path": "/{api_name}",
             "operations": [
                 {
-                    "httpMethod": "GET",
+                    "method": "GET",
                     "summary": "List resource types available for this service.",
                     "nickname": "getResources",
-                    "responseClass": "Resources",
+                    "type": "Resources",
                     "notes": "See listed operations for each resource type available."
                 }
             ],
             "description": "Operations available for this service."
         },
         {
-            "path": "/{service_api_name}/{resource_type}",
+            "path": "/{api_name}/{resource_type}",
             "operations": [
                 {
-                    "httpMethod": "GET",
+                    "method": "GET",
                     "summary": "Retrieve multiple items of a resource type.",
                     "nickname": "getItems",
-                    "responseClass": "Items",
+                    "type": "Items",
                     "parameters": [
                         {
                             "name": "resource_type",
                             "description": "Type of the resource to retrieve.",
                             "allowMultiple": false,
-                            "dataType": "string",
+                            "type": "string",
                             "paramType": "path",
                             "required": true
                         },
@@ -35,7 +46,7 @@
                             "name": "ids",
                             "description": "Comma-delimited list of the identifiers of the resources to retrieve.",
                             "allowMultiple": true,
-                            "dataType": "string",
+                            "type": "string",
                             "paramType": "query",
                             "required": false
                         },
@@ -43,34 +54,34 @@
                             "name": "include_count",
                             "description": "Include the total number of items in the returned metadata results.",
                             "allowMultiple": false,
-                            "dataType": "boolean",
+                            "type": "boolean",
                             "paramType": "query",
                             "required": false
                         }
                     ],
-                    "errorResponses": [
+                    "responseMessages": [
                         {
-                            "reason": "Bad Request - Request does not have a valid format, all required parameters, etc.",
+                            "message": "Bad Request - Request does not have a valid format, all required parameters, etc.",
                             "code": 400
                         },
                         {
-                            "reason": "System Error - Specific reason is included in the error message.",
+                            "message": "System Error - Specific reason is included in the error message.",
                             "code": 500
                         }
                     ],
                     "notes": "Use the 'ids' parameter to limit items that are returned."
                 },
                 {
-                    "httpMethod": "POST",
+                    "method": "POST",
                     "summary": "Create one or more items.",
                     "nickname": "createItems",
-                    "responseClass": "Success",
+                    "type": "Success",
                     "parameters": [
                         {
                             "name": "resource_type",
                             "description": "Type of the resource to retrieve.",
                             "allowMultiple": false,
-                            "dataType": "string",
+                            "type": "string",
                             "paramType": "path",
                             "required": true
                         },
@@ -78,34 +89,34 @@
                             "name": "items",
                             "description": "JSON array of objects containing name-value pairs of items to create.",
                             "allowMultiple": false,
-                            "dataType": "Items",
+                            "type": "Items",
                             "paramType": "body",
                             "required": true
                         }
                     ],
-                    "errorResponses": [
+                    "responseMessages": [
                         {
-                            "reason": "Bad Request - Request does not have a valid format, all required parameters, etc.",
+                            "message": "Bad Request - Request does not have a valid format, all required parameters, etc.",
                             "code": 400
                         },
                         {
-                            "reason": "System Error - Specific reason is included in the error message.",
+                            "message": "System Error - Specific reason is included in the error message.",
                             "code": 500
                         }
                     ],
                     "notes": "Post data should be a single object or an array of objects (shown)."
                 },
                 {
-                    "httpMethod": "DELETE",
+                    "method": "DELETE",
                     "summary": "Delete one or more items.",
                     "nickname": "deleteItems",
-                    "responseClass": "Success",
+                    "type": "Success",
                     "parameters": [
                         {
                             "name": "resource_type",
                             "description": "Type of the resource to retrieve.",
                             "allowMultiple": false,
-                            "dataType": "string",
+                            "type": "string",
                             "paramType": "path",
                             "required": true
                         },
@@ -113,18 +124,18 @@
                             "name": "ids",
                             "description": "Comma-delimited list of the identifiers of the resources to retrieve.",
                             "allowMultiple": true,
-                            "dataType": "string",
+                            "type": "string",
                             "paramType": "query",
                             "required": false
                         }
                     ],
-                    "errorResponses": [
+                    "responseMessages": [
                         {
-                            "reason": "Bad Request - Request does not have a valid format, all required parameters, etc.",
+                            "message": "Bad Request - Request does not have a valid format, all required parameters, etc.",
                             "code": 400
                         },
                         {
-                            "reason": "System Error - Specific reason is included in the error message.",
+                            "message": "System Error - Specific reason is included in the error message.",
                             "code": 500
                         }
                     ],
@@ -134,19 +145,19 @@
             "description": "Operations for resource type administration."
         },
         {
-            "path": "/{service_api_name}/{resource_type}/{id}",
+            "path": "/{api_name}/{resource_type}/{id}",
             "operations": [
                 {
-                    "httpMethod": "GET",
+                    "method": "GET",
                     "summary": "Retrieve one item by identifier.",
                     "nickname": "getItem",
-                    "responseClass": "Item",
+                    "type": "Item",
                     "parameters": [
                         {
                             "name": "resource_type",
                             "description": "Type of the resource to retrieve.",
                             "allowMultiple": false,
-                            "dataType": "string",
+                            "type": "string",
                             "paramType": "path",
                             "required": true
                         },
@@ -154,34 +165,34 @@
                             "name": "id",
                             "description": "Identifier of the resource to retrieve.",
                             "allowMultiple": false,
-                            "dataType": "string",
+                            "type": "string",
                             "paramType": "path",
                             "required": true
                         }
                     ],
-                    "errorResponses": [
+                    "responseMessages": [
                         {
-                            "reason": "Bad Request - Request does not have a valid format, all required parameters, etc.",
+                            "message": "Bad Request - Request does not have a valid format, all required parameters, etc.",
                             "code": 400
                         },
                         {
-                            "reason": "System Error - Specific reason is included in the error message.",
+                            "message": "System Error - Specific reason is included in the error message.",
                             "code": 500
                         }
                     ],
                     "notes": "All name-value pairs are returned for that item."
                 },
                 {
-                    "httpMethod": "PUT",
+                    "method": "PUT",
                     "summary": "Update one item by identifier.",
                     "nickname": "updateItem",
-                    "responseClass": "Success",
+                    "type": "Success",
                     "parameters": [
                         {
                             "name": "resource_type",
                             "description": "Type of the resource to retrieve.",
                             "allowMultiple": false,
-                            "dataType": "string",
+                            "type": "string",
                             "paramType": "path",
                             "required": true
                         },
@@ -189,7 +200,7 @@
                             "name": "id",
                             "description": "Identifier of the resource to retrieve.",
                             "allowMultiple": false,
-                            "dataType": "string",
+                            "type": "string",
                             "paramType": "path",
                             "required": true
                         },
@@ -197,34 +208,34 @@
                             "name": "item",
                             "description": "Data containing name-value pairs to update in the item.",
                             "allowMultiple": false,
-                            "dataType": "Item",
+                            "type": "Item",
                             "paramType": "body",
                             "required": true
                         }
                     ],
-                    "errorResponses": [
+                    "responseMessages": [
                         {
-                            "reason": "Bad Request - Request does not have a valid format, all required parameters, etc.",
+                            "message": "Bad Request - Request does not have a valid format, all required parameters, etc.",
                             "code": 400
                         },
                         {
-                            "reason": "System Error - Specific reason is included in the error message.",
+                            "message": "System Error - Specific reason is included in the error message.",
                             "code": 500
                         }
                     ],
                     "notes": "Post data should be a single object of name-value pairs for a single item."
                 },
                 {
-                    "httpMethod": "DELETE",
+                    "method": "DELETE",
                     "summary": "Delete one item by identifier.",
                     "nickname": "deleteItem",
-                    "responseClass": "Success",
+                    "type": "Success",
                     "parameters": [
                         {
                             "name": "resource_type",
                             "description": "Type of the resource to delete.",
                             "allowMultiple": false,
-                            "dataType": "string",
+                            "type": "string",
                             "paramType": "path",
                             "required": true
                         },
@@ -232,18 +243,18 @@
                             "name": "id",
                             "description": "Identifier of the resource to delete.",
                             "allowMultiple": false,
-                            "dataType": "string",
+                            "type": "string",
                             "paramType": "path",
                             "required": true
                         }
                     ],
-                    "errorResponses": [
+                    "responseMessages": [
                         {
-                            "reason": "Bad Request - Request does not have a valid format, all required parameters, etc.",
+                            "message": "Bad Request - Request does not have a valid format, all required parameters, etc.",
                             "code": 400
                         },
                         {
-                            "reason": "System Error - Specific reason is included in the error message.",
+                            "message": "System Error - Specific reason is included in the error message.",
                             "code": 500
                         }
                     ],

@@ -66,7 +66,14 @@ class RestException extends PlatformServiceException implements HttpResponse
 
 		parent::__construct( $message, $code, $previous, $context );
 
-		Log::error( 'REST Exception #' . $code . ' > ' . $message );
+		Log::error(
+		   'REST Exception #' . $code . ' > ' . $message,
+		   array(
+			   'host'        => $_SERVER['HTTP_HOST'],
+			   'request_uri' => $_SERVER['REQUEST_URI'],
+			   'source_ip'   => $_SERVER['REMOTE_ADDR'],
+		   )
+		);
 	}
 
 	/**
