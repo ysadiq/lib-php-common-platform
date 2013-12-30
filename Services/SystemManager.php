@@ -27,8 +27,8 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\PlatformServiceException;
 use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Platform\Resources\System\CustomSettings;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Drupal;
-use DreamFactory\Platform\Utility\Fabric;
 use Kisma\Core\Utility\Curl;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\Packager;
@@ -934,19 +934,55 @@ class SystemManager extends BaseSystemRestService
 	}
 
 	/**
-	 * @param array $paths If specified, paths will be returned in this variable
+	 * @param array  $paths   If specified, paths will be returned in this variable
+	 * @param string $userTag The user tag
 	 *
 	 * @return bool
 	 */
-	public static function registrationComplete( &$paths = null )
+	public static function registrationComplete( &$paths = null, $userTag = null )
 	{
 		$_privatePath = Pii::getParam( 'private_path' );
-		$_marker = $_privatePath . Drupal::REGISTRATION_MARKER;
+		$_tag = $userTag;
+		$_userId = Session::getCurrentUserId();
 
+		/** @var User $_user */
+		if ( empty( $_userId ) || null === ( $_user = User::model()->findByPk( $_userId ) ) )
+		{
+			return false;
+		}
+
+		//	Not an admin? Ignore...
+		if ( !$_user->is_sys_admin )
+		{
+			return true;
+		}
+
+		//	Make sure we have a tag
+		if ( null === $_tag )
+		{
+			$_tag = $_user->email;
+		}
+
+		$_marker = $_privatePath . Drupal::REGISTRATION_MARKER . '.' . sha1( $_tag );
 		$paths = array( '_privatePath' => $_privatePath, '_marker' => $_marker );
 
 		if ( !file_exists( $_marker ) )
 		{
+			//	Test if directory is not writeable
+			if ( false === @file_put_contents( $_marker . '.test', null ) )
+			{
+				Log::error( 'Unable to write marker file. Ignoring.' );
+
+				return true;
+			}
+			else
+			{
+				if ( false === @unlink( $_marker . '.test' ) )
+				{
+					Log::error( 'Unable to remove test file created for check.' );
+				}
+			}
+
 			return false;
 		}
 
@@ -955,39 +991,36 @@ class SystemManager extends BaseSystemRestService
 
 	/**
 	 * Queues a registration record
-	 * Call like "SystemManager::registerPlatform($user, 'force_remove')" to have the registration file removed
 	 *
 	 * @param User|\CActiveRecord $user
 	 * @param bool                $skipped
-	 *
+	 * @param bool                $forceRemove Set to true to remove the registration marker
 	 *
 	 * @return bool TRUE if registration was queued (i.e. first-time used), FALSE otherwise
 	 */
-	public static function registerPlatform( $user, $skipped = true )
+	public static function registerPlatform( $user, $skipped = true, $forceRemove = false )
 	{
 		$_paths = $_privatePath = $_marker = null;
 
-		//	Only want non-hosted admin logins...
-		if ( Fabric::fabricHosted() || !$user->is_sys_admin )
-		{
-			return false;
-		}
-
-		$_complete = static::registrationComplete( $_paths );
+		$_complete = static::registrationComplete( $_paths, $user->email );
 		Pii::setState( 'app.registration_skipped', $skipped );
 
 		extract( $_paths );
 
 		if ( $_complete )
 		{
-			if ( 'force_remove' === $skipped )
+			if ( false !== $forceRemove )
 			{
 				//	Remove registration file
-				if ( false === @unlink( $_paths ) )
+				if ( false === @unlink( $_marker ) )
 				{
 					//	Log it
 					Log::error( 'System error removing registration marker: ' . $_marker );
 					//	But do nothing. Like the goggles...
+				}
+				else
+				{
+					Log::info( 'Forced removal of registration marker: ' . $_marker );
 				}
 			}
 
