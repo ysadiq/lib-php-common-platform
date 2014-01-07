@@ -444,6 +444,7 @@ class SqlDbSvc extends BaseDbSvc
 					{
 						throw new BadRequestException( "No valid fields were passed in the record [$_key] request." );
 					}
+
 					// simple insert request
 					$command->reset();
 					$rows = $command->insert( $table, $_parsed );
@@ -460,7 +461,7 @@ class SqlDbSvc extends BaseDbSvc
 							// todo support multi-field keys
 							if ( Option::getBool( $_info, 'auto_increment' ) )
 							{
-								$_id = $this->_sqlConn->lastInsertID;
+								$_id = (int)$this->_sqlConn->lastInsertID;
 							}
 							else
 							{
@@ -590,15 +591,14 @@ class SqlDbSvc extends BaseDbSvc
 
 					$_record = Utilities::removeOneFromArray( $_idField, $_record );
 					$_parsed = $this->parseRecord( $_record, $_fieldInfo, true );
-					if ( 0 >= count( $_parsed ) )
+					if ( !empty( $_parsed ) )
 					{
-						throw new BadRequestException( "No valid fields were passed in the record [$_key] request." );
+						// simple update request
+						$command->reset();
+						/*$rows = */
+						$command->update( $table, $_parsed, array( 'in', $_idField, $_id ) );
 					}
 
-					// simple update request
-					$command->reset();
-					/*$rows = */
-					$command->update( $table, $_parsed, array( 'in', $_idField, $_id ) );
 					$_ids[$_key] = $_id;
 					$this->updateRelations( $table, $_record, $_id, $_relatedInfo );
 				}
@@ -738,10 +738,6 @@ class SqlDbSvc extends BaseDbSvc
 			$record = Utilities::removeOneFromArray( $_idField, $record );
 			// simple update request
 			$_parsed = $this->parseRecord( $record, $_fieldInfo, true );
-			if ( empty( $_parsed ) )
-			{
-				throw new BadRequestException( "No valid field values were passed in the request." );
-			}
 
 			/** @var \CDbCommand $command */
 			$command = $this->_sqlConn->createCommand();
@@ -761,10 +757,14 @@ class SqlDbSvc extends BaseDbSvc
 					{
 						throw new BadRequestException( "Identifying field '$_idField' can not be empty for update record request." );
 					}
-					// simple update request
-					$command->reset();
-					/*$rows = */
-					$command->update( $table, $_parsed, array( 'in', $_idField, $_id ) );
+
+					if ( !empty( $_parsed ) )
+					{
+						// simple update request
+						$command->reset();
+						/*$rows = */
+						$command->update( $table, $_parsed, array( 'in', $_idField, $_id ) );
+					}
 					$this->updateRelations( $table, $record, $_id, $_relatedInfo );
 				}
 				catch ( \Exception $ex )
@@ -1457,9 +1457,9 @@ class SqlDbSvc extends BaseDbSvc
 								}
 								break;
 						}
-						switch ( $type )
+						switch ( SqlDbUtilities::determinePhpConversionType( $type, $dbType ) )
 						{
-							case 'integer':
+							case 'int':
 								if ( !is_int( $fieldVal ) )
 								{
 									if ( ( '' === $fieldVal ) && Option::getBool( $field_info, 'allow_null' ) )
@@ -1567,12 +1567,11 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	protected function updateRelations( $table, $record, $id, $avail_relations )
 	{
-		$record = Utilities::array_key_lower( $record );
 		$keys = array_keys( $record );
 		$values = array_values( $record );
 		foreach ( $avail_relations as $relationInfo )
 		{
-			$name = mb_strtolower( Option::get( $relationInfo, 'name' ) );
+			$name = Option::get( $relationInfo, 'name' );
 			$pos = array_search( $name, $keys );
 			if ( false !== $pos )
 			{
@@ -1907,56 +1906,63 @@ class SqlDbSvc extends BaseDbSvc
 		{
 			throw new BadRequestException( "The $one_table id can not be empty." );
 		}
+
 		try
 		{
 			$manyFields = $this->describeTableFields( $many_table );
 			$pkField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $manyFields );
-			$oldMany = $this->retrieveRecordsByFilter( $many_table, $many_field . " = '$one_id'", "$pkField,$many_field" );
-			foreach ( $oldMany as $oldKey => $old )
+			$disownMany = array();
+			$createMany = array();
+			$updateMany = array();
+//			$relatedExtras = array( 'limit' => static::DB_MAX_RECORDS_RETURNED );
+//			$oldMany = $this->retrieveRecordsByFilter( $many_table, $many_field . " = '$one_id'", "$pkField,$many_field", $relatedExtras );
+//			foreach ( $oldMany as $oldKey => $old )
+//			{
+//				$oldId = Option::get( $old, $pkField );
+//			}
+			foreach ( $many_records as $item )
 			{
-				$oldId = Option::get( $old, $pkField );
-				foreach ( $many_records as $key => $item )
+				$id = Option::get( $item, $pkField );
+				if ( empty( $id ) )
 				{
-					$id = Option::get( $item, $pkField, '' );
-					if ( $id == $oldId )
+					// create new child record
+					$item[$many_field] = $one_id; // assign relationship
+					$createMany[] = $item;
+				}
+				else
+				{
+					if ( array_key_exists( $many_field, $item ) )
 					{
-						// found it, keeping it, so remove it from the list, as this becomes adds
-						unset( $many_records[$key] );
-						unset( $oldMany[$oldKey] );
-						continue;
+						if ( null == Option::get( $item, $many_field ) )
+						{
+							// disown this child
+							$disownMany[] = $id;
+							continue;
+						}
 					}
+
+					// update this child
+					$item[$many_field] = $one_id; // assign relationship
+					$updateMany[] = $item;
 				}
 			}
-			// reset arrays
-			$many_records = array_values( $many_records );
-			$oldMany = array_values( $oldMany );
-			if ( !empty( $oldMany ) )
+
+			if ( !empty( $createMany ) )
 			{
-				// un-assign any left over old ones
-				$ids = array();
-				foreach ( $oldMany as $item )
-				{
-					$ids[] = Option::get( $item, $pkField );
-				}
-				if ( !empty( $ids ) )
-				{
-					$ids = implode( ',', $ids );
-					$this->updateRecordsByIds( $many_table, array( $many_field => null ), $ids, $pkField );
-				}
+				// create new children
+				$this->createRecords( $many_table, $createMany );
 			}
-			if ( !empty( $many_records ) )
+
+			if ( !empty( $updateMany ) )
 			{
-				// assign what is leftover
-				$ids = array();
-				foreach ( $many_records as $item )
-				{
-					$ids[] = Option::get( $item, $pkField );
-				}
-				if ( !empty( $ids ) )
-				{
-					$ids = implode( ',', $ids );
-					$this->updateRecordsByIds( $many_table, array( $many_field => $one_id ), $ids, $pkField );
-				}
+				// update existing and adopt new children
+				$this->updateRecords( $many_table, $updateMany );
+			}
+
+			if ( !empty( $disownMany ) )
+			{
+				// disown/unrelated/unlink existing linked children
+				$this->updateRecordsByIds( $many_table, array( $many_field => null ), $disownMany );
 			}
 		}
 		catch ( \Exception $ex )
@@ -1966,18 +1972,20 @@ class SqlDbSvc extends BaseDbSvc
 	}
 
 	/**
-	 * @param       $one_table
-	 * @param       $one_id
-	 * @param       $many_table
-	 * @param       $map_table
-	 * @param       $one_field
-	 * @param       $many_field
-	 * @param array $many_records
+	 * @param string $one_table
+	 * @param mixed  $one_id
+	 * @param string $many_table
+	 * @param string $map_table
+	 * @param string $one_field
+	 * @param string $many_field
+	 * @param array  $many_records
+	 * @param bool   $allow_update_many
 	 *
-	 * @throws \Exception
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
-	protected function assignManyToOneByMap( $one_table, $one_id, $many_table, $map_table, $one_field, $many_field, $many_records = array() )
+	protected function assignManyToOneByMap( $one_table, $one_id, $many_table, $map_table, $one_field, $many_field, $many_records = array(), $allow_update_many = false )
 	{
 		if ( empty( $one_id ) )
 		{
@@ -1985,47 +1993,89 @@ class SqlDbSvc extends BaseDbSvc
 		}
 		try
 		{
+			$oneFields = $this->describeTableFields( $one_table );
+			$pkOneField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $oneFields );
 			$manyFields = $this->describeTableFields( $many_table );
 			$pkManyField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $manyFields );
-			$mapFields = $this->describeTableFields( $map_table );
-			$pkMapField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $mapFields );
-			$maps = $this->retrieveRecordsByFilter( $map_table, "$one_field = '$one_id'", $pkMapField . ',' . $many_field );
-			$toDelete = array();
-			foreach ( $maps as $map )
+//			$mapFields = $this->describeTableFields( $map_table );
+//			$pkMapField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $mapFields );
+			$relatedExtras = array( 'limit' => static::DB_MAX_RECORDS_RETURNED );
+			$maps = $this->retrieveRecordsByFilter( $map_table, "$one_field = '$one_id'", $many_field, $relatedExtras );
+			$createMap = array(); // map records to create
+			$deleteMap = array(); // ids of 'many' records to delete from maps
+			$createMany = array();
+			$updateMany = array();
+			foreach ( $many_records as $item )
 			{
-				$manyId = Option::get( $map, $many_field, '' );
-				$id = Option::get( $map, $pkMapField, '' );
-				$found = false;
-				foreach ( $many_records as $key => $item )
+				$id = Option::get( $item, $pkManyField );
+				if ( empty( $id ) )
 				{
-					$assignId = Option::get( $item, $pkManyField, '' );
-					if ( $assignId == $manyId )
+					// create new many record, relationship created later
+					$createMany[] = $item;
+				}
+				else
+				{
+					// pk fields exists, must be dealing with existing 'many' record
+					$oneLookup = "$one_table.$pkOneField";
+					if ( array_key_exists( $oneLookup, $item ) )
 					{
-						// found it, keeping it, so remove it from the list, as this becomes adds
-						unset( $many_records[$key] );
-						$found = true;
-						continue;
+						if ( null == Option::get( $item, $oneLookup ) )
+						{
+							// delete this relationship
+							$deleteMap[] = $id;
+							continue;
+						}
+					}
+
+					// update the 'many' record if necessary
+					if ( $allow_update_many )
+					{
+						$updateMany[] = $item;
+					}
+					// if relationship doesn't exist, create it
+					foreach ( $maps as $map )
+					{
+						if ( Option::get( $map, $many_field ) == $id )
+						{
+							continue 2; // got what we need from this one
+						}
+					}
+
+					$createMap[] = array( $many_field => $id, $one_field => $one_id );
+				}
+			}
+
+			if ( !empty( $createMany ) )
+			{
+				// create new many records
+				$results = $this->createRecords( $many_table, $createMany );
+				// create new relationships for results
+				foreach ( $results as $item )
+				{
+					$itemId = Option::get( $item, $pkManyField );
+					if ( !empty( $itemId ) )
+					{
+						$createMap[] = array( $many_field => $itemId, $one_field => $one_id );
 					}
 				}
-				if ( !$found )
-				{
-					$toDelete[] = $id;
-					continue;
-				}
 			}
-			if ( !empty( $toDelete ) )
+
+			if ( !empty( $updateMany ) )
 			{
-				$this->deleteRecordsByIds( $map_table, implode( ',', $toDelete ), $pkMapField );
+				// update existing many records
+				$this->updateRecords( $many_table, $updateMany );
 			}
-			if ( !empty( $many_records ) )
+
+			if ( !empty( $createMap ) )
 			{
-				$maps = array();
-				foreach ( $many_records as $item )
-				{
-					$itemId = Option::get( $item, $pkManyField, '' );
-					$maps[] = array( $many_field => $itemId, $one_field => $one_id );
-				}
-				$this->createRecords( $map_table, $maps );
+				$this->createRecords( $map_table, $createMap );
+			}
+
+			if ( !empty( $deleteMap ) )
+			{
+				$mapList = "'" . implode( "','", $deleteMap ) . "'";
+				$filter = "$one_field = '$one_id' && $many_field IN ($mapList)";
+				$this->deleteRecordsByFilter( $map_table, $filter );
 			}
 		}
 		catch ( \Exception $ex )
