@@ -27,14 +27,14 @@ $_base['apis'] = array(
 			array(
 				array(
 					'method'   => 'GET',
-					'summary'  => 'List resources available for database schema.',
+					'summary'  => 'getResources() - List resources available for database schema.',
 					'nickname' => 'getResources',
 					'type'     => 'Resources',
 					'notes'    => 'See listed operations for each resource available.',
 				),
 				array(
 					'method'           => 'POST',
-					'summary'          => 'Create one or more tables.',
+					'summary'          => 'createTables() - Create one or more tables.',
 					'nickname'         => 'createTables',
 					'type'             => 'Resources',
 					'parameters'       =>
@@ -67,7 +67,7 @@ $_base['apis'] = array(
 				),
 				array(
 					'method'           => 'PUT',
-					'summary'          => 'Update one or more tables.',
+					'summary'          => 'updateTables() - Update one or more tables.',
 					'nickname'         => 'updateTables',
 					'type'             => 'Resources',
 					'parameters'       =>
@@ -107,7 +107,7 @@ $_base['apis'] = array(
 			array(
 				array(
 					'method'           => 'GET',
-					'summary'          => 'Retrieve table definition for the given table.',
+					'summary'          => 'describeTable() - Retrieve table definition for the given table.',
 					'nickname'         => 'describeTable',
 					'type'             => 'TableSchema',
 					'parameters'       =>
@@ -140,29 +140,27 @@ $_base['apis'] = array(
 				),
 				array(
 					'method'           => 'POST',
-					'summary'          => 'Create one or more fields in the given table.',
+					'summary'          => 'createFields() - Create one or more fields in the given table.',
 					'nickname'         => 'createFields',
 					'type'             => 'Success',
 					'parameters'       =>
 						array(
-							0 =>
-								array(
-									'name'          => 'table_name',
-									'description'   => 'Name of the table to perform operations on.',
-									'allowMultiple' => false,
-									'type'          => 'string',
-									'paramType'     => 'path',
-									'required'      => true,
-								),
-							1 =>
-								array(
-									'name'          => 'fields',
-									'description'   => 'Array of field definitions.',
-									'allowMultiple' => false,
-									'type'          => 'Fields',
-									'paramType'     => 'body',
-									'required'      => true,
-								),
+							array(
+								'name'          => 'table_name',
+								'description'   => 'Name of the table to perform operations on.',
+								'allowMultiple' => false,
+								'type'          => 'string',
+								'paramType'     => 'path',
+								'required'      => true,
+							),
+							array(
+								'name'          => 'fields',
+								'description'   => 'Array of field definitions.',
+								'allowMultiple' => false,
+								'type'          => 'Fields',
+								'paramType'     => 'body',
+								'required'      => true,
+							),
 						),
 					'responseMessages' =>
 						array(
@@ -183,7 +181,7 @@ $_base['apis'] = array(
 				),
 				array(
 					'method'           => 'PUT',
-					'summary'          => 'Update one or more fields in the given table.',
+					'summary'          => 'updateFields() - Update one or more fields in the given table.',
 					'nickname'         => 'updateFields',
 					'type'             => 'Success',
 					'parameters'       =>
@@ -207,27 +205,24 @@ $_base['apis'] = array(
 						),
 					'responseMessages' =>
 						array(
-							0 =>
-								array(
-									'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-									'code'    => 400,
-								),
-							1 =>
-								array(
-									'message' => 'Unauthorized Access - No currently valid session available.',
-									'code'    => 401,
-								),
-							2 =>
-								array(
-									'message' => 'System Error - Specific reason is included in the error message.',
-									'code'    => 500,
-								),
+							array(
+								'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+								'code'    => 400,
+							),
+							array(
+								'message' => 'Unauthorized Access - No currently valid session available.',
+								'code'    => 401,
+							),
+							array(
+								'message' => 'System Error - Specific reason is included in the error message.',
+								'code'    => 500,
+							),
 						),
 					'notes'            => 'Post data should be an array of field properties for a single record or an array of fields.',
 				),
 				array(
 					'method'           => 'DELETE',
-					'summary'          => 'Delete (aka drop) the given table.',
+					'summary'          => 'deleteTable() - Delete (aka drop) the given table.',
 					'nickname'         => 'deleteTable',
 					'type'             => 'Success',
 					'parameters'       =>
@@ -267,7 +262,7 @@ $_base['apis'] = array(
 			array(
 				array(
 					'method'           => 'GET',
-					'summary'          => 'Retrieve the definition of the given field for the given table.',
+					'summary'          => 'describeField() - Retrieve the definition of the given field for the given table.',
 					'nickname'         => 'describeField',
 					'type'             => 'FieldSchema',
 					'parameters'       =>
@@ -308,7 +303,7 @@ $_base['apis'] = array(
 				),
 				array(
 					'method'           => 'PUT',
-					'summary'          => 'Update one record by identifier.',
+					'summary'          => 'updateField() - Update one record by identifier.',
 					'nickname'         => 'updateField',
 					'type'             => 'Success',
 					'parameters'       =>
@@ -357,7 +352,7 @@ $_base['apis'] = array(
 				),
 				array(
 					'method'           => 'DELETE',
-					'summary'          => 'Remove the given field from the given table.',
+					'summary'          => 'deleteField() - Remove the given field from the given table.',
 					'nickname'         => 'deleteField',
 					'type'             => 'Success',
 					'parameters'       =>
@@ -400,34 +395,8 @@ $_base['apis'] = array(
 		'description' => 'Operations for single field administration.',
 	),
 );
-$_base['models'] = array(
+$_models = array(
 	array(
-		'Resources'     =>
-			array(
-				'id'         => 'Resources',
-				'properties' =>
-					array(
-						'resource' =>
-							array(
-								'type'  => 'Array',
-								'items' =>
-									array(
-										'$ref' => 'Resource',
-									),
-							),
-					),
-			),
-		'Resource'      =>
-			array(
-				'id'         => 'Resource',
-				'properties' =>
-					array(
-						'name' =>
-							array(
-								'type' => 'string',
-							),
-					),
-			),
 		'Tables'        =>
 			array(
 				'id'         => 'Tables',
@@ -494,17 +463,6 @@ $_base['models'] = array(
 							),
 					),
 			),
-		'Success'       =>
-			array(
-				'id'         => 'Success',
-				'properties' =>
-					array(
-						'success' =>
-							array(
-								'type' => 'boolean',
-							),
-					),
-			),
 		'Fields'        =>
 			array(
 				'id'         => 'Fields',
@@ -518,23 +476,6 @@ $_base['models'] = array(
 									array(
 										'$ref' => 'FieldSchema',
 									),
-							),
-					),
-			),
-		'EmailAddress'  =>
-			array(
-				'id'         => 'EmailAddress',
-				'properties' =>
-					array(
-						'name'  =>
-							array(
-								'type'        => 'string',
-								'description' => 'Optional name displayed along with the email address.',
-							),
-						'email' =>
-							array(
-								'type'        => 'string',
-								'description' => 'Required email address.',
 							),
 					),
 			),
@@ -687,5 +628,7 @@ $_base['models'] = array(
 			),
 	),
 );
+
+$_base['models'] = array_merge( $_base['models'], $_models );
 
 return $_base;
