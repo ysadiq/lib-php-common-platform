@@ -841,6 +841,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					$allowNull = ( isset( $field['allow_null'] ) ) ? $allowNull : false;
 					break;
 				// numbers
+				case 'bit': // ms sql alias
 				case 'bool': // alias
 				case 'boolean': // alias
 					$definition = 'boolean';
@@ -2066,6 +2067,7 @@ SQL;
 
 		switch ( $_simpleType )
 		{
+			case 'bit':
 			case 'bool':
 				return 'boolean';
 
