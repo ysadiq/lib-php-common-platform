@@ -19,16 +19,17 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
-use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Scalar;
 
 /**
  * SqlDbSvc.php
@@ -331,20 +332,36 @@ class SqlDbSvc extends BaseDbSvc
 		$_extras['include_schema'] = FilterInput::request( 'include_schema', false, FILTER_VALIDATE_BOOLEAN );
 
 		// rollback all db changes in a transaction, if applicable
-		$_rollback = FilterInput::request( 'rollback', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
-		if ( empty( $_rollback ) && !empty( $post_data ) )
+		$_value = FilterInput::request( 'rollback', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+		if ( empty( $_value ) && !empty( $post_data ) )
 		{
-			$_rollback = Option::getBool( $post_data, 'rollback' );
+			$_value = Option::getBool( $post_data, 'rollback' );
 		}
-		$_extras['rollback'] = $_rollback;
+		$_extras['rollback'] = $_value;
 
 		// continue batch processing if an error occurs, if applicable
-		$_continue = FilterInput::request( 'continue', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
-		if ( empty( $_continue ) && !empty( $post_data ) )
+		$_value = FilterInput::request( 'continue', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+		if ( empty( $_value ) && !empty( $post_data ) )
 		{
-			$_continue = Option::getBool( $post_data, 'continue' );
+			$_value = Option::getBool( $post_data, 'continue' );
 		}
-		$_extras['continue'] = $_continue;
+		$_extras['continue'] = $_value;
+
+		// allow updating fields of related records in update requests, if applicable
+		$_value = FilterInput::request( 'allow_related_update', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+		if ( empty( $_value ) && !empty( $post_data ) )
+		{
+			$_value = Option::getBool( $post_data, 'allow_related_update' );
+		}
+		$_extras['allow_related_update'] = $_value;
+
+		// allow deleting related records in update requests, if applicable
+		$_value = FilterInput::request( 'allow_related_delete', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+		if ( empty( $_value ) && !empty( $post_data ) )
+		{
+			$_value = Option::getBool( $post_data, 'allow_related_delete' );
+		}
+		$_extras['allow_related_delete'] = $_value;
 
 		return $_extras;
 	}
@@ -397,6 +414,8 @@ class SqlDbSvc extends BaseDbSvc
 		$_isSingle = ( 1 == count( $records ) );
 		$_rollback = Option::getBool( $extras, 'rollback', false );
 		$_continue = Option::getBool( $extras, 'continue', false );
+		$_allowRelatedUpdate = Option::getBool( $extras, 'allow_related_update', false );
+		$_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
 		$_idFields = Option::get( $extras, 'id_field' );
 		try
 		{
@@ -470,7 +489,7 @@ class SqlDbSvc extends BaseDbSvc
 							}
 						}
 
-						$this->updateRelations( $table, $_record, $_id, $_relatedInfo );
+						$this->updateRelations( $table, $_record, $_id, $_relatedInfo, $_allowRelatedUpdate, $_allowRelatedDelete );
 					}
 
 					$_ids[$_key] = $_id;
@@ -553,6 +572,8 @@ class SqlDbSvc extends BaseDbSvc
 		$_isSingle = ( 1 == count( $records ) );
 		$_rollback = Option::getBool( $extras, 'rollback', false );
 		$_continue = Option::getBool( $extras, 'continue', false );
+		$_allowRelatedUpdate = Option::getBool( $extras, 'allow_related_update', false );
+		$_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
 		$_idField = Option::get( $extras, 'id_field' );
 		try
 		{
@@ -589,7 +610,7 @@ class SqlDbSvc extends BaseDbSvc
 						throw new BadRequestException( "Identifying field '$_idField' can not be empty for update record [$_key] request." );
 					}
 
-					$_record = Utilities::removeOneFromArray( $_idField, $_record );
+					$_record = DataFormat::removeOneFromArray( $_idField, $_record );
 					$_parsed = $this->parseRecord( $_record, $_fieldInfo, true );
 					if ( !empty( $_parsed ) )
 					{
@@ -600,7 +621,7 @@ class SqlDbSvc extends BaseDbSvc
 					}
 
 					$_ids[$_key] = $_id;
-					$this->updateRelations( $table, $_record, $_id, $_relatedInfo );
+					$this->updateRelations( $table, $_record, $_id, $_relatedInfo, $_allowRelatedUpdate, $_allowRelatedDelete );
 				}
 				catch ( \Exception $ex )
 				{
@@ -710,6 +731,8 @@ class SqlDbSvc extends BaseDbSvc
 		$table = $this->correctTableName( $table );
 		$_rollback = Option::getBool( $extras, 'rollback', false );
 		$_continue = Option::getBool( $extras, 'continue', false );
+		$_allowRelatedUpdate = Option::getBool( $extras, 'allow_related_update', false );
+		$_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
 		$_idField = Option::get( $extras, 'id_field' );
 		$_isSingle = ( 1 == count( $ids ) );
 		if ( !is_array( $ids ) )
@@ -735,7 +758,7 @@ class SqlDbSvc extends BaseDbSvc
 				}
 			}
 
-			$record = Utilities::removeOneFromArray( $_idField, $record );
+			$record = DataFormat::removeOneFromArray( $_idField, $record );
 			// simple update request
 			$_parsed = $this->parseRecord( $record, $_fieldInfo, true );
 
@@ -765,7 +788,7 @@ class SqlDbSvc extends BaseDbSvc
 						/*$rows = */
 						$command->update( $table, $_parsed, array( 'in', $_idField, $_id ) );
 					}
-					$this->updateRelations( $table, $record, $_id, $_relatedInfo );
+					$this->updateRelations( $table, $record, $_id, $_relatedInfo, $_allowRelatedUpdate, $_allowRelatedDelete );
 				}
 				catch ( \Exception $ex )
 				{
@@ -1262,7 +1285,7 @@ class SqlDbSvc extends BaseDbSvc
 			if ( !empty( $fields ) && ( '*' !== $fields ) )
 			{
 				// add id field to field list
-				$fields = Utilities::addOnceToList( $fields, $_idField, ',' );
+				$fields = DataFormat::addOnceToList( $fields, $_idField, ',' );
 			}
 			$result = $this->parseFieldsForSqlSelect( $fields, $availFields );
 			$bindings = Option::get( $result, 'bindings' );
@@ -1395,7 +1418,7 @@ class SqlDbSvc extends BaseDbSvc
 	protected function parseRecord( $record, $avail_fields, $for_update = false )
 	{
 		$parsed = array();
-		$record = Utilities::array_key_lower( $record );
+		$record = DataFormat::arrayKeyLower( $record );
 		$keys = array_keys( $record );
 		$values = array_values( $record );
 		foreach ( $avail_fields as $field_info )
@@ -1419,7 +1442,7 @@ class SqlDbSvc extends BaseDbSvc
 					unset( $values[$pos] );
 					continue; // should I error this?
 				}
-				if ( Utilities::isInList( Option::get( $field_info, 'validation', '' ), 'api_read_only', ',' ) )
+				if ( DataFormat::isInList( Option::get( $field_info, 'validation', '' ), 'api_read_only', ',' ) )
 				{
 					unset( $keys[$pos] );
 					unset( $values[$pos] );
@@ -1444,7 +1467,7 @@ class SqlDbSvc extends BaseDbSvc
 								switch ( $dbType )
 								{
 									case 'bit':
-										$fieldVal = ( Utilities::boolval( $fieldVal ) ? 1 : 0 );
+										$fieldVal = ( Scalar::boolval( $fieldVal ) ? 1 : 0 );
 										break;
 								}
 								break;
@@ -1452,7 +1475,7 @@ class SqlDbSvc extends BaseDbSvc
 								switch ( $dbType )
 								{
 									case 'tinyint(1)':
-										$fieldVal = ( Utilities::boolval( $fieldVal ) ? 1 : 0 );
+										$fieldVal = ( Scalar::boolval( $fieldVal ) ? 1 : 0 );
 										break;
 								}
 								break;
@@ -1557,15 +1580,17 @@ class SqlDbSvc extends BaseDbSvc
 	}
 
 	/**
-	 * @param $table
-	 * @param $record
-	 * @param $id
-	 * @param $avail_relations
+	 * @param string $table
+	 * @param array  $record
+	 * @param mixed  $id
+	 * @param array  $avail_relations
+	 * @param bool   $allow_update
+	 * @param bool   $allow_delete
 	 *
-	 * @throws \Exception
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @return void
 	 */
-	protected function updateRelations( $table, $record, $id, $avail_relations )
+	protected function updateRelations( $table, $record, $id, $avail_relations, $allow_update = false, $allow_delete = false )
 	{
 		$keys = array_keys( $record );
 		$values = array_values( $record );
@@ -1599,7 +1624,15 @@ class SqlDbSvc extends BaseDbSvc
                     */
 						$relatedTable = Option::get( $relationInfo, 'ref_table' );
 						$relatedField = Option::get( $relationInfo, 'ref_field' );
-						$this->assignManyToOne( $table, $id, $relatedTable, $relatedField, $relations );
+						$this->assignManyToOne(
+							$table,
+							$id,
+							$relatedTable,
+							$relatedField,
+							$relations,
+							$allow_update,
+							$allow_delete
+						);
 						break;
 					case 'many_many':
 						/*
@@ -1622,7 +1655,9 @@ class SqlDbSvc extends BaseDbSvc
 							$joinTable,
 							$joinLeftField,
 							$joinRightField,
-							$relations
+							$relations,
+							$allow_update,
+							$allow_delete
 						);
 						break;
 					default:
@@ -1896,11 +1931,13 @@ class SqlDbSvc extends BaseDbSvc
 	 * @param string $many_table
 	 * @param string $many_field
 	 * @param array  $many_records
+	 * @param bool   $allow_update
+	 * @param bool   $allow_delete
 	 *
-	 * @throws \Exception
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
-	protected function assignManyToOne( $one_table, $one_id, $many_table, $many_field, $many_records = array() )
+	protected function assignManyToOne( $one_table, $one_id, $many_table, $many_field, $many_records = array(), $allow_update = false, $allow_delete = false )
 	{
 		if ( empty( $one_id ) )
 		{
@@ -1911,23 +1948,25 @@ class SqlDbSvc extends BaseDbSvc
 		{
 			$manyFields = $this->describeTableFields( $many_table );
 			$pkField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $manyFields );
+			$fieldInfo = SqlDbUtilities::getFieldFromDescribe( $many_field, $manyFields );
+			$deleteRelated = ( !Option::getBool( $fieldInfo, 'allow_null' ) && $allow_delete );
+			$relateMany = array();
 			$disownMany = array();
 			$createMany = array();
 			$updateMany = array();
-//			$relatedExtras = array( 'limit' => static::DB_MAX_RECORDS_RETURNED );
-//			$oldMany = $this->retrieveRecordsByFilter( $many_table, $many_field . " = '$one_id'", "$pkField,$many_field", $relatedExtras );
-//			foreach ( $oldMany as $oldKey => $old )
-//			{
-//				$oldId = Option::get( $old, $pkField );
-//			}
+			$deleteMany = array();
+
 			foreach ( $many_records as $item )
 			{
 				$id = Option::get( $item, $pkField );
 				if ( empty( $id ) )
 				{
 					// create new child record
-					$item[$many_field] = $one_id; // assign relationship
-					$createMany[] = $item;
+					if ( $allow_update )
+					{
+						$item[$many_field] = $one_id; // assign relationship
+						$createMany[] = $item;
+					}
 				}
 				else
 				{
@@ -1935,15 +1974,34 @@ class SqlDbSvc extends BaseDbSvc
 					{
 						if ( null == Option::get( $item, $many_field ) )
 						{
-							// disown this child
-							$disownMany[] = $id;
+							// disown this child or delete them
+							if ( $deleteRelated )
+							{
+								$deleteMany[] = $id;
+							}
+							elseif ( $allow_update )
+							{
+								$updateMany[] = $item;
+							}
+							else
+							{
+								$disownMany[] = $id;
+							}
+
 							continue;
 						}
 					}
 
 					// update this child
-					$item[$many_field] = $one_id; // assign relationship
-					$updateMany[] = $item;
+					if ( $allow_update )
+					{
+						$item[$many_field] = $one_id; // assign relationship
+						$updateMany[] = $item;
+					}
+					else
+					{
+						$relateMany[] = $id;
+					}
 				}
 			}
 
@@ -1959,9 +2017,21 @@ class SqlDbSvc extends BaseDbSvc
 				$this->updateRecords( $many_table, $updateMany );
 			}
 
+			if ( !empty( $deleteMany ) )
+			{
+				// destroy linked children that can't stand alone - sounds sinister
+				$this->deleteRecordsByIds( $many_table, $deleteMany );
+			}
+
+			if ( !empty( $relateMany ) )
+			{
+				// adopt/relate/link unlinked children
+				$this->updateRecordsByIds( $many_table, array( $many_field => $one_id ), $relateMany );
+			}
+
 			if ( !empty( $disownMany ) )
 			{
-				// disown/unrelated/unlink existing linked children
+				// disown/unrelate/unlink linked children
 				$this->updateRecordsByIds( $many_table, array( $many_field => null ), $disownMany );
 			}
 		}
@@ -1979,13 +2049,13 @@ class SqlDbSvc extends BaseDbSvc
 	 * @param string $one_field
 	 * @param string $many_field
 	 * @param array  $many_records
-	 * @param bool   $allow_update_many
+	 * @param bool   $allow_update
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
-	protected function assignManyToOneByMap( $one_table, $one_id, $many_table, $map_table, $one_field, $many_field, $many_records = array(), $allow_update_many = false )
+	protected function assignManyToOneByMap( $one_table, $one_id, $many_table, $map_table, $one_field, $many_field, $many_records = array(), $allow_update = false )
 	{
 		if ( empty( $one_id ) )
 		{
@@ -2028,10 +2098,11 @@ class SqlDbSvc extends BaseDbSvc
 					}
 
 					// update the 'many' record if necessary
-					if ( $allow_update_many )
+					if ( $allow_update )
 					{
 						$updateMany[] = $item;
 					}
+
 					// if relationship doesn't exist, create it
 					foreach ( $maps as $map )
 					{
@@ -2096,8 +2167,6 @@ class SqlDbSvc extends BaseDbSvc
 		$this->checkConnection();
 		try
 		{
-			Utilities::markTimeStart( 'DB_TIME' );
-
 			/** @var \CDbCommand $command */
 			$command = $this->_sqlConn->createCommand( $query );
 			$reader = $command->query();
@@ -2136,14 +2205,11 @@ class SqlDbSvc extends BaseDbSvc
 				$data[] = $rowData;
 			}
 
-			Utilities::markTimeStop( 'DB_TIME' );
-
 			return $data;
 		}
 		catch ( \Exception $ex )
 		{
 			error_log( 'batchquery: ' . $ex->getMessage() . PHP_EOL . $query );
-			Utilities::markTimeStop( 'DB_TIME' );
 			/*
                 $msg = '[QUERYFAILED]: ' . implode(':', $this->_sqlConn->errorInfo()) . "\n";
                 if (isset($GLOBALS['DB_DEBUG'])) {
@@ -2166,8 +2232,6 @@ class SqlDbSvc extends BaseDbSvc
 		$this->checkConnection();
 		try
 		{
-			Utilities::markTimeStart( 'DB_TIME' );
-
 			/** @var \CDbCommand $command */
 			$command = $this->_sqlConn->createCommand( $query );
 			if ( isset( $params ) && !empty( $params ) )
@@ -2179,14 +2243,11 @@ class SqlDbSvc extends BaseDbSvc
 				$data = $command->queryAll();
 			}
 
-			Utilities::markTimeStop( 'DB_TIME' );
-
 			return $data;
 		}
 		catch ( \Exception $ex )
 		{
 			error_log( 'singlequery: ' . $ex->getMessage() . PHP_EOL . $query . PHP_EOL . print_r( $params, true ) );
-			Utilities::markTimeStop( 'DB_TIME' );
 			/*
                     $msg = '[QUERYFAILED]: ' . implode(':', $this->_sqlConn->errorInfo()) . "\n";
                     if (isset($GLOBALS['DB_DEBUG'])) {
@@ -2209,8 +2270,6 @@ class SqlDbSvc extends BaseDbSvc
 		$this->checkConnection();
 		try
 		{
-			Utilities::markTimeStart( 'DB_TIME' );
-
 			/** @var \CDbCommand $command */
 			$command = $this->_sqlConn->createCommand( $query );
 			if ( isset( $params ) && !empty( $params ) )
@@ -2222,14 +2281,11 @@ class SqlDbSvc extends BaseDbSvc
 				$data = $command->execute();
 			}
 
-			Utilities::markTimeStop( 'DB_TIME' );
-
 			return $data;
 		}
 		catch ( \Exception $ex )
 		{
 			error_log( 'singleexecute: ' . $ex->getMessage() . PHP_EOL . $query . PHP_EOL . print_r( $params, true ) );
-			Utilities::markTimeStop( 'DB_TIME' );
 			/*
                     $msg = '[QUERYFAILED]: ' . implode(':', $this->_sqlConn->errorInfo()) . "\n";
                     if (isset($GLOBALS['DB_DEBUG'])) {
