@@ -141,7 +141,7 @@ class Portal extends BaseSystemRestService
 				);
 			}
 
-			return array( 'resource' => $_providers );
+			return array('resource' => $_providers);
 		}
 
 		//	1. Validate portal
@@ -273,6 +273,7 @@ class Portal extends BaseSystemRestService
 		if ( !in_array( $this->_resource, array_keys( $this->_serviceMap ) ) )
 		{
 			Log::error( 'Portal service "' . $this->_resource . '" not found' );
+
 			throw new NotFoundException( 'Portal "' .
 										 $this->_resource .
 										 '" not found. Acceptable portals are: ' .
@@ -291,6 +292,7 @@ class Portal extends BaseSystemRestService
 	protected function _getProvider()
 	{
 		$_config = array();
+		$_template = $this->_resource;
 
 		//	Load any local configuration files for this provider...
 		$_configPath = \Kisma::get( 'app.config_path' ) . '/portal/' . $this->_resource . '.config.php';
@@ -301,13 +303,20 @@ class Portal extends BaseSystemRestService
 			$_config = @include( $_configPath );
 		}
 
+		$_service = Option::get( $this->_serviceMap, $this->_resource, array() );
+
+		if ( $_service['provider_name'] != $_service['api_name'] )
+		{
+			$_template = $_service['provider_name'];
+		}
+
 		$_config = array_merge(
 			$_config,
 			Option::getDeep(
-				$this->_serviceMap,
-				$this->_resource,
-				'config_text',
-				array()
+				  $this->_serviceMap,
+				  $this->_resource,
+				  'config_text',
+				  array()
 			)
 		);
 
@@ -325,13 +334,13 @@ class Portal extends BaseSystemRestService
 		Oasys::setStore( $this->_store, true );
 
 		/** @var BaseOAuthProvider $_provider */
-		$_provider = Oasys::getProvider( $this->_resource, Oasys::getStore()->get() );
+		$_provider = Oasys::getProvider( $_template, Oasys::getStore()->get() );
 
-		//	See if we need the user's profile ID
-		if ( null === $_provider->getConfig( 'provider_user_id' ) )
-		{
-			$_provider->setNeedProfileUserId( true );
-		}
+//		//	See if we need the user's profile ID
+//		if ( null === $_provider->getConfig( 'provider_user_id' ) && null === $this->_store->getProviderUserId() )
+//		{
+//			$_provider->setNeedProfileUserId( true );
+//		}
 
 		return $_provider;
 	}
@@ -395,9 +404,9 @@ class Portal extends BaseSystemRestService
 		{
 			$_method = str_replace( static::ACTION_TOKEN, Inflector::deneutralize( $this->_controlCommand ), static::DEFAULT_HANDLER_PATTERN );
 
-			if ( is_callable( array( $this, $_method ) ) )
+			if ( is_callable( array($this, $_method) ) )
 			{
-				return call_user_func( array( $this, $_method ), $provider );
+				return call_user_func( array($this, $_method), $provider );
 			}
 		}
 

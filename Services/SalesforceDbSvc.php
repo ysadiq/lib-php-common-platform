@@ -106,7 +106,7 @@ class SalesforceDbSvc extends BaseDbSvc
 		$this->_username = Option::get( $_credentials, 'username' );
 		$this->_password = Option::get( $_credentials, 'password' );
 		$this->_securityToken = Option::get( $_credentials, 'security_token' );
-		if ( empty( $_token ) )
+		if ( empty( $this->_securityToken ) )
 		{
 			$this->_securityToken = ''; // gets appended to password
 		}

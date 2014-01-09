@@ -78,4 +78,51 @@ class PlatformServiceTypes extends SeedEnum
 	 * @var int
 	 */
 	const REMOTE_WEB_SERVICE = 0x1020;
+
+	/**
+	 * @param int $value enumerated type value
+	 * @param string $service_name given name of the service, also returned as default
+	 *
+	 * @return string - associated file name of native service
+	 */
+	public static function getFileName( $value, $service_name )
+	{
+		switch ( $value )
+		{
+			case static::SYSTEM_SERVICE:
+				if ( !empty( $service_name ) )
+				{
+					switch ( strtolower( $service_name ) )
+					{
+						case 'system':
+							return 'SystemManager';
+						case 'user':
+							return 'UserManager';
+					}
+				}
+
+				return 'SystemManager';
+			case static::LOCAL_PORTAL_SERVICE:
+				return 'Portal';
+			case static::LOCAL_FILE_STORAGE:
+				return 'LocalFileSvc';
+			case static::REMOTE_FILE_STORAGE:
+				return 'RemoteFileSvc';
+			case static::LOCAL_SQL_DB:
+			case static::REMOTE_SQL_DB:
+				return 'SqlDbSvc';
+			case static::LOCAL_SQL_DB_SCHEMA:
+			case static::REMOTE_SQL_DB_SCHEMA:
+				return 'SchemaSvc';
+			case static::EMAIL_SERVICE:
+				return 'EmailSvc';
+			case static::NOSQL_DB:
+				return 'NoSqlDbSvc';
+			case static::SALESFORCE:
+				return 'SalesforceDbSvc';
+			case static::REMOTE_WEB_SERVICE:
+			default:
+				return $service_name;
+		}
+	}
 }

@@ -786,6 +786,7 @@ abstract class RemoteFileSvc extends BaseFileSvc
 				throw new InternalServerErrorException( "Can not create zip file for directory '$path'." );
 			}
 		}
+
 		$_results = $this->listBlobs( $container, $path, $_delimiter );
 		foreach ( $_results as $_blob )
 		{

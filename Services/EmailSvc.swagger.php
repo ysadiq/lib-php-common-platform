@@ -18,181 +18,183 @@
  * limitations under the License.
  */
 
-return array(
-	'resourcePath' => '/{api_name}',
-	'apis'         =>
-		array(
+$_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
+
+$_base['apis'] = array(
+	array(
+		'path'        => '/{api_name}',
+		'operations'  =>
 			array(
-				'path'        => '/{api_name}',
-				'operations'  =>
-					array(
+				array(
+					'method'           => 'POST',
+					'summary'          => 'sendEmail() - Send an email created from posted data and/or a template.',
+					'nickname'         => 'sendEmail',
+					'type'             => 'EmailResponse',
+					'parameters'       =>
 						array(
-							'method'           => 'POST',
-							'summary'          => 'sendEmail() - Send an email created from posted data and/or a template.',
-							'nickname'         => 'sendEmail',
-							'type'             => 'EmailResponse',
-							'parameters'       =>
-								array(
-									array(
-										'name'          => 'template',
-										'description'   => 'Optional template name to base email on.',
-										'allowMultiple' => false,
-										'type'          => 'string',
-										'paramType'     => 'query',
-										'required'      => false,
-									),
-									array(
-										'name'          => 'template_id',
-										'description'   => 'Optional template id to base email on.',
-										'allowMultiple' => false,
-										'type'          => 'integer',
-										'paramType'     => 'query',
-										'required'      => false,
-									),
-									array(
-										'name'          => 'data',
-										'description'   => 'Data containing name-value pairs used for provisioning emails.',
-										'allowMultiple' => false,
-										'type'          => 'EmailRequest',
-										'paramType'     => 'body',
-										'required'      => false,
-									),
-								),
-							'responseMessages' =>
-								array(
-									array(
-										'message' => 'Bad Request - Request is not complete or valid.',
-										'code'    => 400,
-									),
-									array(
-										'message' => 'Unauthorized Access - No currently valid session available.',
-										'code'    => 401,
-									),
-									array(
-										'message' => 'Not Found - Email template or system resource not found.',
-										'code'    => 404,
-									),
-									array(
-										'message' => 'System Error - Specific reason is included in the error message.',
-										'code'    => 500,
-									),
-								),
-							'notes'            => 'If a template is not used with all required fields, then they must be included in the request. ' .
-												  'If the \'from\' address is not provisioned in the service, then it must be included in the request.',
+							array(
+								'name'          => 'template',
+								'description'   => 'Optional template name to base email on.',
+								'allowMultiple' => false,
+								'type'          => 'string',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'template_id',
+								'description'   => 'Optional template id to base email on.',
+								'allowMultiple' => false,
+								'type'          => 'integer',
+								'paramType'     => 'query',
+								'required'      => false,
+							),
+							array(
+								'name'          => 'data',
+								'description'   => 'Data containing name-value pairs used for provisioning emails.',
+								'allowMultiple' => false,
+								'type'          => 'EmailRequest',
+								'paramType'     => 'body',
+								'required'      => false,
+							),
 						),
-					),
-				'description' => 'Operations on a email service.',
+					'responseMessages' =>
+						array(
+							array(
+								'message' => 'Bad Request - Request is not complete or valid.',
+								'code'    => 400,
+							),
+							array(
+								'message' => 'Unauthorized Access - No currently valid session available.',
+								'code'    => 401,
+							),
+							array(
+								'message' => 'Not Found - Email template or system resource not found.',
+								'code'    => 404,
+							),
+							array(
+								'message' => 'System Error - Specific reason is included in the error message.',
+								'code'    => 500,
+							),
+						),
+					'notes'            => 'If a template is not used with all required fields, then they must be included in the request. ' .
+										  'If the \'from\' address is not provisioned in the service, then it must be included in the request.',
+				),
 			),
-		),
-	'models'       =>
+		'description' => 'Operations on a email service.',
+	),
+);
+
+$_models = array(
+	'EmailResponse' =>
 		array(
-			'EmailResponse' =>
+			'id'         => 'EmailResponse',
+			'properties' =>
 				array(
-					'id'         => 'EmailResponse',
-					'properties' =>
+					'count' =>
 						array(
-							'count' =>
-								array(
-									'type'        => 'integer',
-									'description' => 'Number of emails successfully sent.',
-								),
+							'type'        => 'integer',
+							'description' => 'Number of emails successfully sent.',
 						),
 				),
-			'EmailRequest'  =>
+		),
+	'EmailRequest'  =>
+		array(
+			'id'         => 'Email',
+			'properties' =>
 				array(
-					'id'         => 'Email',
-					'properties' =>
+					'template'       =>
 						array(
-							'template'       =>
+							'type'        => 'string',
+							'description' => 'Email Template name to base email on.',
+						),
+					'template_id'    =>
+						array(
+							'type'        => 'integer',
+							'description' => 'Email Template id to base email on.',
+						),
+					'to'             =>
+						array(
+							'type'        => 'Array',
+							'description' => 'Required single or multiple receiver addresses.',
+							'items'       =>
 								array(
-									'type'        => 'string',
-									'description' => 'Email Template name to base email on.',
-								),
-							'template_id'    =>
-								array(
-									'type'        => 'integer',
-									'description' => 'Email Template id to base email on.',
-								),
-							'to'             =>
-								array(
-									'type'        => 'Array',
-									'description' => 'Required single or multiple receiver addresses.',
-									'items'       =>
-										array(
-											'$ref' => 'EmailAddress',
-										),
-								),
-							'cc'             =>
-								array(
-									'type'        => 'Array',
-									'description' => 'Optional CC receiver addresses.',
-									'items'       =>
-										array(
-											'$ref' => 'EmailAddress',
-										),
-								),
-							'bcc'            =>
-								array(
-									'type'        => 'Array',
-									'description' => 'Optional BCC receiver addresses.',
-									'items'       =>
-										array(
-											'$ref' => 'EmailAddress',
-										),
-								),
-							'subject'        =>
-								array(
-									'type'        => 'string',
-									'description' => 'Text only subject line.',
-								),
-							'body_text'      =>
-								array(
-									'type'        => 'string',
-									'description' => 'Text only version of the body.',
-								),
-							'body_html'      =>
-								array(
-									'type'        => 'string',
-									'description' => 'Escaped HTML version of the body.',
-								),
-							'from_name'      =>
-								array(
-									'type'        => 'string',
-									'description' => 'Required sender name.',
-								),
-							'from_email'     =>
-								array(
-									'type'        => 'string',
-									'description' => 'Required sender email.',
-								),
-							'reply_to_name'  =>
-								array(
-									'type'        => 'string',
-									'description' => 'Optional reply to name.',
-								),
-							'reply_to_email' =>
-								array(
-									'type'        => 'string',
-									'description' => 'Optional reply to email.',
+									'$ref' => 'EmailAddress',
 								),
 						),
-				),
-			'EmailAddress'  =>
-				array(
-					'id'         => 'EmailAddress',
-					'properties' =>
+					'cc'             =>
 						array(
-							'name'  =>
+							'type'        => 'Array',
+							'description' => 'Optional CC receiver addresses.',
+							'items'       =>
 								array(
-									'type'        => 'string',
-									'description' => 'Optional name displayed along with the email address.',
+									'$ref' => 'EmailAddress',
 								),
-							'email' =>
+						),
+					'bcc'            =>
+						array(
+							'type'        => 'Array',
+							'description' => 'Optional BCC receiver addresses.',
+							'items'       =>
 								array(
-									'type'        => 'string',
-									'description' => 'Required email address.',
+									'$ref' => 'EmailAddress',
 								),
+						),
+					'subject'        =>
+						array(
+							'type'        => 'string',
+							'description' => 'Text only subject line.',
+						),
+					'body_text'      =>
+						array(
+							'type'        => 'string',
+							'description' => 'Text only version of the body.',
+						),
+					'body_html'      =>
+						array(
+							'type'        => 'string',
+							'description' => 'Escaped HTML version of the body.',
+						),
+					'from_name'      =>
+						array(
+							'type'        => 'string',
+							'description' => 'Required sender name.',
+						),
+					'from_email'     =>
+						array(
+							'type'        => 'string',
+							'description' => 'Required sender email.',
+						),
+					'reply_to_name'  =>
+						array(
+							'type'        => 'string',
+							'description' => 'Optional reply to name.',
+						),
+					'reply_to_email' =>
+						array(
+							'type'        => 'string',
+							'description' => 'Optional reply to email.',
+						),
+				),
+		),
+	'EmailAddress'  =>
+		array(
+			'id'         => 'EmailAddress',
+			'properties' =>
+				array(
+					'name'  =>
+						array(
+							'type'        => 'string',
+							'description' => 'Optional name displayed along with the email address.',
+						),
+					'email' =>
+						array(
+							'type'        => 'string',
+							'description' => 'Required email address.',
 						),
 				),
 		),
 );
+
+$_base['models'] = array_merge( $_base['models'], $_models );
+
+return $_base;

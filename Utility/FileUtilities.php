@@ -19,8 +19,8 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Platform\Exceptions\NotFoundException;
 use Kisma\Core\Utility\Option;
-use Platform\Exceptions\NotFoundException;
 
 /**
  * FileUtilities
@@ -1048,7 +1048,9 @@ class FileUtilities
 	public static function getParentFolder( $path )
 	{
 		$path = rtrim( $path, '/' ); // may be a folder
+
 		$marker = strrpos( $path, '/' );
+
 		if ( false === $marker )
 		{
 			return '';
@@ -1080,25 +1082,25 @@ class FileUtilities
 	}
 
 	/**
-	 * @param $path
+	 * @param string $path
 	 *
 	 * @return string
 	 */
 	public static function getFileExtension( $path )
 	{
-		$marker = strrpos( $path, '.' );
-		if ( false === $marker )
-		{
-			return '';
-		}
-
-		return substr( $path, $marker + 1 );
+		return pathinfo( $path, PATHINFO_EXTENSION );
 	}
 
+	/**
+	 * @param string $url
+	 *
+	 * @return bool
+	 */
 	public static function url_exist( $url )
 	{
-		$file_headers = @get_headers( $url );
-		if ( $file_headers[0] == 'HTTP/1.1 404 Not Found' )
+		$_headers = @get_headers( $url );
+
+		if ( empty( $_headers ) || 'HTTP/1.1 404 Not Found' == $_headers[0] )
 		{
 			return false;
 		}
@@ -1122,11 +1124,12 @@ class FileUtilities
 			if ( $readFrom )
 			{
 				$directory = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR;
-				$ext = FileUtilities::getFileExtension( basename( $url ) );
-//                $validTypes = array('zip','dfpkg'); // default zip and package extensions
-//                if (!in_array($ext, $validTypes)) {
-//                    throw new Exception('Invalid file type. Currently only URLs to repository zip files are accepted.');
-//                }
+//				$ext = FileUtilities::getFileExtension( basename( $url ) );
+//              $validTypes = array( 'zip', 'dfpkg' ); // default zip and package extensions
+//              if ( !in_array( $ext, $validTypes ) )
+//				{
+//                  throw new Exception( 'Invalid file type. Currently only URLs to repository zip files are accepted.' );
+//              }
 				if ( empty( $name ) )
 				{
 					$name = basename( $url );
@@ -1173,7 +1176,8 @@ class FileUtilities
 	 *
 	 * @return string
 	 */
-	public static function determineContentType( $ext = '', $content = '', $local_file = '', $default = '' )
+	public
+	static function determineContentType( $ext = '', $content = '', $local_file = '', $default = '' )
 	{
 		$defaultMime = 'application/octet-stream';
 		if ( !empty( $default ) )
@@ -1344,6 +1348,11 @@ class FileUtilities
 		}
 	}
 
+	/**
+	 * @param $arr
+	 *
+	 * @return array
+	 */
 	public static function rearrangePostedFiles( $arr )
 	{
 		$new = array();
