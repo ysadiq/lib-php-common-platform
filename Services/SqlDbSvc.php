@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Common\Exceptions\RestException;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
@@ -2310,6 +2311,40 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function getTables( $tables = array() )
 	{
+		if ( !is_array( $tables ) )
+		{
+			$tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
+		}
+
+		//	Check for system tables and deny
+		$_sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
+		$_length = strlen( $_sysPrefix );
+
+		foreach ( $tables as $_table )
+		{
+			if ( $this->_isNative )
+			{
+				if ( 0 === substr_compare( $_table, $_sysPrefix, 0, $_length ) )
+				{
+					throw new NotFoundException( "Table '$_table' not found." );
+				}
+			}
+
+			$this->checkPermission( 'read', $_table );
+		}
+
+		try
+		{
+			return SqlDbUtilities::describeTables( $this->_sqlConn, $tables );
+		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
+		catch ( \Exception $ex )
+		{
+			throw new InternalServerErrorException( "Error describing database tables '$table_list'.\n{$ex->getMessage()}", $ex->getCode() );
+		}
 	}
 
 	/**
@@ -2322,6 +2357,34 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function getTable( $table )
 	{
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( 'Table name can not be empty.' );
+		}
+
+		if ( $this->_isNative )
+		{
+			// check for system tables and deny
+			if ( 0 === substr_compare( $table, SystemManager::SYSTEM_TABLE_PREFIX, 0, strlen( SystemManager::SYSTEM_TABLE_PREFIX ) ) )
+			{
+				throw new NotFoundException( "Table '$table' not found." );
+			}
+		}
+
+		$this->checkPermission( 'read', $table );
+
+		try
+		{
+			return SqlDbUtilities::describeTable( $this->_sqlConn, $table );
+		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
+		catch ( \Exception $ex )
+		{
+			throw new InternalServerErrorException( "Error describing database table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
+		}
 	}
 
 	/**
@@ -2334,6 +2397,7 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function createTables( $tables = array() )
 	{
+		throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
 	}
 
 	/**
@@ -2345,6 +2409,7 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function createTable( $properties = array() )
 	{
+		throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
 	}
 
 	/**
@@ -2357,6 +2422,7 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function updateTables( $tables = array() )
 	{
+		throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
 	}
 
 	/**
@@ -2369,6 +2435,7 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function updateTable( $properties = array() )
 	{
+		throw new BadRequestException( 'Creating database schema is only allowed through a SQL DB Schema service.' );
 	}
 
 	/**
@@ -2382,6 +2449,7 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function deleteTables( $tables = array(), $check_empty = false )
 	{
+		throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
 	}
 
 	/**
@@ -2395,6 +2463,7 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function deleteTable( $table, $check_empty = false )
 	{
+		throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
 	}
 
 	/**
