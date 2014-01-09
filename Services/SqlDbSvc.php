@@ -2343,7 +2343,7 @@ class SqlDbSvc extends BaseDbSvc
 		}
 		catch ( \Exception $ex )
 		{
-			throw new InternalServerErrorException( "Error describing database tables '$table_list'.\n{$ex->getMessage()}", $ex->getCode() );
+			throw new InternalServerErrorException( "Error describing database tables.\n{$ex->getMessage()}", $ex->getCode() );
 		}
 	}
 
