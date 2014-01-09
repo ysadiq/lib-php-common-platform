@@ -347,14 +347,6 @@ class SqlDbSvc extends BaseDbSvc
 		}
 		$_extras['continue'] = $_value;
 
-		// allow updating fields of related records in update requests, if applicable
-		$_value = FilterInput::request( 'allow_related_update', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
-		if ( empty( $_value ) && !empty( $post_data ) )
-		{
-			$_value = Option::getBool( $post_data, 'allow_related_update' );
-		}
-		$_extras['allow_related_update'] = $_value;
-
 		// allow deleting related records in update requests, if applicable
 		$_value = FilterInput::request( 'allow_related_delete', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
 		if ( empty( $_value ) && !empty( $post_data ) )
@@ -414,7 +406,6 @@ class SqlDbSvc extends BaseDbSvc
 		$_isSingle = ( 1 == count( $records ) );
 		$_rollback = Option::getBool( $extras, 'rollback', false );
 		$_continue = Option::getBool( $extras, 'continue', false );
-		$_allowRelatedUpdate = Option::getBool( $extras, 'allow_related_update', false );
 		$_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
 		$_idFields = Option::get( $extras, 'id_field' );
 		try
@@ -489,7 +480,7 @@ class SqlDbSvc extends BaseDbSvc
 							}
 						}
 
-						$this->updateRelations( $table, $_record, $_id, $_relatedInfo, $_allowRelatedUpdate, $_allowRelatedDelete );
+						$this->updateRelations( $table, $_record, $_id, $_relatedInfo, $_allowRelatedDelete );
 					}
 
 					$_ids[$_key] = $_id;
@@ -572,7 +563,6 @@ class SqlDbSvc extends BaseDbSvc
 		$_isSingle = ( 1 == count( $records ) );
 		$_rollback = Option::getBool( $extras, 'rollback', false );
 		$_continue = Option::getBool( $extras, 'continue', false );
-		$_allowRelatedUpdate = Option::getBool( $extras, 'allow_related_update', false );
 		$_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
 		$_idField = Option::get( $extras, 'id_field' );
 		try
@@ -621,7 +611,7 @@ class SqlDbSvc extends BaseDbSvc
 					}
 
 					$_ids[$_key] = $_id;
-					$this->updateRelations( $table, $_record, $_id, $_relatedInfo, $_allowRelatedUpdate, $_allowRelatedDelete );
+					$this->updateRelations( $table, $_record, $_id, $_relatedInfo, $_allowRelatedDelete );
 				}
 				catch ( \Exception $ex )
 				{
@@ -731,7 +721,6 @@ class SqlDbSvc extends BaseDbSvc
 		$table = $this->correctTableName( $table );
 		$_rollback = Option::getBool( $extras, 'rollback', false );
 		$_continue = Option::getBool( $extras, 'continue', false );
-		$_allowRelatedUpdate = Option::getBool( $extras, 'allow_related_update', false );
 		$_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
 		$_idField = Option::get( $extras, 'id_field' );
 		$_isSingle = ( 1 == count( $ids ) );
@@ -788,7 +777,7 @@ class SqlDbSvc extends BaseDbSvc
 						/*$rows = */
 						$command->update( $table, $_parsed, array( 'in', $_idField, $_id ) );
 					}
-					$this->updateRelations( $table, $record, $_id, $_relatedInfo, $_allowRelatedUpdate, $_allowRelatedDelete );
+					$this->updateRelations( $table, $record, $_id, $_relatedInfo, $_allowRelatedDelete );
 				}
 				catch ( \Exception $ex )
 				{
@@ -1423,7 +1412,7 @@ class SqlDbSvc extends BaseDbSvc
 		$values = array_values( $record );
 		foreach ( $avail_fields as $field_info )
 		{
-			$name = mb_strtolower( Option::get( $field_info, 'name', '' ) );
+			$name = strtolower( Option::get( $field_info, 'name', '' ) );
 			$type = Option::get( $field_info, 'type' );
 			$dbType = Option::get( $field_info, 'db_type' );
 			$pos = array_search( $name, $keys );
@@ -1584,13 +1573,12 @@ class SqlDbSvc extends BaseDbSvc
 	 * @param array  $record
 	 * @param mixed  $id
 	 * @param array  $avail_relations
-	 * @param bool   $allow_update
 	 * @param bool   $allow_delete
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @return void
 	 */
-	protected function updateRelations( $table, $record, $id, $avail_relations, $allow_update = false, $allow_delete = false )
+	protected function updateRelations( $table, $record, $id, $avail_relations, $allow_delete = false )
 	{
 		$keys = array_keys( $record );
 		$values = array_values( $record );
@@ -1630,7 +1618,6 @@ class SqlDbSvc extends BaseDbSvc
 							$relatedTable,
 							$relatedField,
 							$relations,
-							$allow_update,
 							$allow_delete
 						);
 						break;
@@ -1655,9 +1642,7 @@ class SqlDbSvc extends BaseDbSvc
 							$joinTable,
 							$joinLeftField,
 							$joinRightField,
-							$relations,
-							$allow_update,
-							$allow_delete
+							$relations
 						);
 						break;
 					default:
@@ -1867,6 +1852,9 @@ class SqlDbSvc extends BaseDbSvc
 				$relatedTable = Option::get( $relation, 'ref_table' );
 				$relatedField = Option::get( $relation, 'ref_field' );
 				$field = Option::get( $relation, 'field' );
+				// do we have permission to do so?
+				$this->validateTableAccess( $relatedTable, 'read' );
+
 				$extraFields = Option::get( $extra, 'fields' );
 				$relatedExtras = array( 'limit' => static::DB_MAX_RECORDS_RETURNED );
 				$tempData = null;
@@ -1931,13 +1919,12 @@ class SqlDbSvc extends BaseDbSvc
 	 * @param string $many_table
 	 * @param string $many_field
 	 * @param array  $many_records
-	 * @param bool   $allow_update
 	 * @param bool   $allow_delete
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
-	protected function assignManyToOne( $one_table, $one_id, $many_table, $many_field, $many_records = array(), $allow_update = false, $allow_delete = false )
+	protected function assignManyToOne( $one_table, $one_id, $many_table, $many_field, $many_records = array(), $allow_delete = false )
 	{
 		if ( empty( $one_id ) )
 		{
@@ -1962,25 +1949,23 @@ class SqlDbSvc extends BaseDbSvc
 				if ( empty( $id ) )
 				{
 					// create new child record
-					if ( $allow_update )
-					{
-						$item[$many_field] = $one_id; // assign relationship
-						$createMany[] = $item;
-					}
+					$item[$many_field] = $one_id; // assign relationship
+					$createMany[] = $item;
 				}
 				else
 				{
 					if ( array_key_exists( $many_field, $item ) )
 					{
-						if ( null == Option::get( $item, $many_field ) )
+						if ( null == Option::get( $item, $many_field, null, true ) )
 						{
 							// disown this child or delete them
 							if ( $deleteRelated )
 							{
 								$deleteMany[] = $id;
 							}
-							elseif ( $allow_update )
+							elseif ( count( $item ) > 1 )
 							{
+								$item[$many_field] = null; // assign relationship
 								$updateMany[] = $item;
 							}
 							else
@@ -1993,7 +1978,7 @@ class SqlDbSvc extends BaseDbSvc
 					}
 
 					// update this child
-					if ( $allow_update )
+					if ( count( $item ) > 1 )
 					{
 						$item[$many_field] = $one_id; // assign relationship
 						$updateMany[] = $item;
@@ -2008,31 +1993,41 @@ class SqlDbSvc extends BaseDbSvc
 			if ( !empty( $createMany ) )
 			{
 				// create new children
+				// do we have permission to do so?
+				$this->validateTableAccess( $many_table, 'create' );
 				$this->createRecords( $many_table, $createMany );
-			}
-
-			if ( !empty( $updateMany ) )
-			{
-				// update existing and adopt new children
-				$this->updateRecords( $many_table, $updateMany );
 			}
 
 			if ( !empty( $deleteMany ) )
 			{
 				// destroy linked children that can't stand alone - sounds sinister
+				// do we have permission to do so?
+				$this->validateTableAccess( $many_table, 'delete' );
 				$this->deleteRecordsByIds( $many_table, $deleteMany );
 			}
 
-			if ( !empty( $relateMany ) )
+			if ( !empty( $updateMany ) || !empty( $relateMany ) || !empty( $disownMany ) )
 			{
-				// adopt/relate/link unlinked children
-				$this->updateRecordsByIds( $many_table, array( $many_field => $one_id ), $relateMany );
-			}
+				// do we have permission to do so?
+				$this->validateTableAccess( $many_table, 'update' );
 
-			if ( !empty( $disownMany ) )
-			{
-				// disown/unrelate/unlink linked children
-				$this->updateRecordsByIds( $many_table, array( $many_field => null ), $disownMany );
+				if ( !empty( $updateMany ) )
+				{
+					// update existing and adopt new children
+					$this->updateRecords( $many_table, $updateMany );
+				}
+
+				if ( !empty( $relateMany ) )
+				{
+					// adopt/relate/link unlinked children
+					$this->updateRecordsByIds( $many_table, array( $many_field => $one_id ), $relateMany );
+				}
+
+				if ( !empty( $disownMany ) )
+				{
+					// disown/un-relate/unlink linked children
+					$this->updateRecordsByIds( $many_table, array( $many_field => null ), $disownMany );
+				}
 			}
 		}
 		catch ( \Exception $ex )
@@ -2049,13 +2044,12 @@ class SqlDbSvc extends BaseDbSvc
 	 * @param string $one_field
 	 * @param string $many_field
 	 * @param array  $many_records
-	 * @param bool   $allow_update
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
-	protected function assignManyToOneByMap( $one_table, $one_id, $many_table, $map_table, $one_field, $many_field, $many_records = array(), $allow_update = false )
+	protected function assignManyToOneByMap( $one_table, $one_id, $many_table, $map_table, $one_field, $many_field, $many_records = array() )
 	{
 		if ( empty( $one_id ) )
 		{
@@ -2089,7 +2083,7 @@ class SqlDbSvc extends BaseDbSvc
 					$oneLookup = "$one_table.$pkOneField";
 					if ( array_key_exists( $oneLookup, $item ) )
 					{
-						if ( null == Option::get( $item, $oneLookup ) )
+						if ( null == Option::get( $item, $oneLookup, null, true ) )
 						{
 							// delete this relationship
 							$deleteMap[] = $id;
@@ -2097,8 +2091,8 @@ class SqlDbSvc extends BaseDbSvc
 						}
 					}
 
-					// update the 'many' record if necessary
-					if ( $allow_update )
+					// update the 'many' record if more than the above fields
+					if ( count( $item ) > 1 )
 					{
 						$updateMany[] = $item;
 					}
@@ -2118,6 +2112,8 @@ class SqlDbSvc extends BaseDbSvc
 
 			if ( !empty( $createMany ) )
 			{
+				// do we have permission to do so?
+				$this->validateTableAccess( $many_table, 'create' );
 				// create new many records
 				$results = $this->createRecords( $many_table, $createMany );
 				// create new relationships for results
@@ -2134,16 +2130,22 @@ class SqlDbSvc extends BaseDbSvc
 			if ( !empty( $updateMany ) )
 			{
 				// update existing many records
+				// do we have permission to do so?
+				$this->validateTableAccess( $many_table, 'update' );
 				$this->updateRecords( $many_table, $updateMany );
 			}
 
 			if ( !empty( $createMap ) )
 			{
+				// do we have permission to do so?
+				$this->validateTableAccess( $map_table, 'create' );
 				$this->createRecords( $map_table, $createMap );
 			}
 
 			if ( !empty( $deleteMap ) )
 			{
+				// do we have permission to do so?
+				$this->validateTableAccess( $map_table, 'delete' );
 				$mapList = "'" . implode( "','", $deleteMap ) . "'";
 				$filter = "$one_field = '$one_id' && $many_field IN ($mapList)";
 				$this->deleteRecordsByFilter( $map_table, $filter );
