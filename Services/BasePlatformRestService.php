@@ -819,6 +819,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 	/**
 	 * @param array $responseCode
+	 *
+	 * @return $this
 	 */
 	public function setResponseCode( $responseCode )
 	{
@@ -837,6 +839,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 	/**
 	 * @param string $outputFormat
+	 *
+	 * @return $this
 	 */
 	public function setOutputFormat( $outputFormat )
 	{
