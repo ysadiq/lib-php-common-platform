@@ -19,16 +19,18 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Common\Exceptions\RestException;
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
-use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Scalar;
 
 /**
  * SqlDbSvc.php
@@ -331,20 +333,28 @@ class SqlDbSvc extends BaseDbSvc
 		$_extras['include_schema'] = FilterInput::request( 'include_schema', false, FILTER_VALIDATE_BOOLEAN );
 
 		// rollback all db changes in a transaction, if applicable
-		$_rollback = FilterInput::request( 'rollback', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
-		if ( empty( $_rollback ) && !empty( $post_data ) )
+		$_value = FilterInput::request( 'rollback', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+		if ( empty( $_value ) && !empty( $post_data ) )
 		{
-			$_rollback = Option::getBool( $post_data, 'rollback' );
+			$_value = Option::getBool( $post_data, 'rollback' );
 		}
-		$_extras['rollback'] = $_rollback;
+		$_extras['rollback'] = $_value;
 
 		// continue batch processing if an error occurs, if applicable
-		$_continue = FilterInput::request( 'continue', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
-		if ( empty( $_continue ) && !empty( $post_data ) )
+		$_value = FilterInput::request( 'continue', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+		if ( empty( $_value ) && !empty( $post_data ) )
 		{
-			$_continue = Option::getBool( $post_data, 'continue' );
+			$_value = Option::getBool( $post_data, 'continue' );
 		}
-		$_extras['continue'] = $_continue;
+		$_extras['continue'] = $_value;
+
+		// allow deleting related records in update requests, if applicable
+		$_value = FilterInput::request( 'allow_related_delete', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+		if ( empty( $_value ) && !empty( $post_data ) )
+		{
+			$_value = Option::getBool( $post_data, 'allow_related_delete' );
+		}
+		$_extras['allow_related_delete'] = $_value;
 
 		return $_extras;
 	}
@@ -397,6 +407,7 @@ class SqlDbSvc extends BaseDbSvc
 		$_isSingle = ( 1 == count( $records ) );
 		$_rollback = Option::getBool( $extras, 'rollback', false );
 		$_continue = Option::getBool( $extras, 'continue', false );
+		$_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
 		$_idFields = Option::get( $extras, 'id_field' );
 		try
 		{
@@ -444,6 +455,7 @@ class SqlDbSvc extends BaseDbSvc
 					{
 						throw new BadRequestException( "No valid fields were passed in the record [$_key] request." );
 					}
+
 					// simple insert request
 					$command->reset();
 					$rows = $command->insert( $table, $_parsed );
@@ -460,7 +472,7 @@ class SqlDbSvc extends BaseDbSvc
 							// todo support multi-field keys
 							if ( Option::getBool( $_info, 'auto_increment' ) )
 							{
-								$_id = $this->_sqlConn->lastInsertID;
+								$_id = (int)$this->_sqlConn->lastInsertID;
 							}
 							else
 							{
@@ -469,7 +481,7 @@ class SqlDbSvc extends BaseDbSvc
 							}
 						}
 
-						$this->updateRelations( $table, $_record, $_id, $_relatedInfo );
+						$this->updateRelations( $table, $_record, $_id, $_relatedInfo, $_allowRelatedDelete );
 					}
 
 					$_ids[$_key] = $_id;
@@ -552,6 +564,7 @@ class SqlDbSvc extends BaseDbSvc
 		$_isSingle = ( 1 == count( $records ) );
 		$_rollback = Option::getBool( $extras, 'rollback', false );
 		$_continue = Option::getBool( $extras, 'continue', false );
+		$_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
 		$_idField = Option::get( $extras, 'id_field' );
 		try
 		{
@@ -588,19 +601,18 @@ class SqlDbSvc extends BaseDbSvc
 						throw new BadRequestException( "Identifying field '$_idField' can not be empty for update record [$_key] request." );
 					}
 
-					$_record = Utilities::removeOneFromArray( $_idField, $_record );
+					$_record = DataFormat::removeOneFromArray( $_idField, $_record );
 					$_parsed = $this->parseRecord( $_record, $_fieldInfo, true );
-					if ( 0 >= count( $_parsed ) )
+					if ( !empty( $_parsed ) )
 					{
-						throw new BadRequestException( "No valid fields were passed in the record [$_key] request." );
+						// simple update request
+						$command->reset();
+						/*$rows = */
+						$command->update( $table, $_parsed, array( 'in', $_idField, $_id ) );
 					}
 
-					// simple update request
-					$command->reset();
-					/*$rows = */
-					$command->update( $table, $_parsed, array( 'in', $_idField, $_id ) );
 					$_ids[$_key] = $_id;
-					$this->updateRelations( $table, $_record, $_id, $_relatedInfo );
+					$this->updateRelations( $table, $_record, $_id, $_relatedInfo, $_allowRelatedDelete );
 				}
 				catch ( \Exception $ex )
 				{
@@ -710,6 +722,7 @@ class SqlDbSvc extends BaseDbSvc
 		$table = $this->correctTableName( $table );
 		$_rollback = Option::getBool( $extras, 'rollback', false );
 		$_continue = Option::getBool( $extras, 'continue', false );
+		$_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
 		$_idField = Option::get( $extras, 'id_field' );
 		$_isSingle = ( 1 == count( $ids ) );
 		if ( !is_array( $ids ) )
@@ -735,13 +748,9 @@ class SqlDbSvc extends BaseDbSvc
 				}
 			}
 
-			$record = Utilities::removeOneFromArray( $_idField, $record );
+			$record = DataFormat::removeOneFromArray( $_idField, $record );
 			// simple update request
 			$_parsed = $this->parseRecord( $record, $_fieldInfo, true );
-			if ( empty( $_parsed ) )
-			{
-				throw new BadRequestException( "No valid field values were passed in the request." );
-			}
 
 			/** @var \CDbCommand $command */
 			$command = $this->_sqlConn->createCommand();
@@ -761,11 +770,15 @@ class SqlDbSvc extends BaseDbSvc
 					{
 						throw new BadRequestException( "Identifying field '$_idField' can not be empty for update record request." );
 					}
-					// simple update request
-					$command->reset();
-					/*$rows = */
-					$command->update( $table, $_parsed, array( 'in', $_idField, $_id ) );
-					$this->updateRelations( $table, $record, $_id, $_relatedInfo );
+
+					if ( !empty( $_parsed ) )
+					{
+						// simple update request
+						$command->reset();
+						/*$rows = */
+						$command->update( $table, $_parsed, array( 'in', $_idField, $_id ) );
+					}
+					$this->updateRelations( $table, $record, $_id, $_relatedInfo, $_allowRelatedDelete );
 				}
 				catch ( \Exception $ex )
 				{
@@ -1262,7 +1275,7 @@ class SqlDbSvc extends BaseDbSvc
 			if ( !empty( $fields ) && ( '*' !== $fields ) )
 			{
 				// add id field to field list
-				$fields = Utilities::addOnceToList( $fields, $_idField, ',' );
+				$fields = DataFormat::addOnceToList( $fields, $_idField, ',' );
 			}
 			$result = $this->parseFieldsForSqlSelect( $fields, $availFields );
 			$bindings = Option::get( $result, 'bindings' );
@@ -1395,12 +1408,12 @@ class SqlDbSvc extends BaseDbSvc
 	protected function parseRecord( $record, $avail_fields, $for_update = false )
 	{
 		$parsed = array();
-		$record = Utilities::array_key_lower( $record );
+		$record = DataFormat::arrayKeyLower( $record );
 		$keys = array_keys( $record );
 		$values = array_values( $record );
 		foreach ( $avail_fields as $field_info )
 		{
-			$name = mb_strtolower( Option::get( $field_info, 'name', '' ) );
+			$name = strtolower( Option::get( $field_info, 'name', '' ) );
 			$type = Option::get( $field_info, 'type' );
 			$dbType = Option::get( $field_info, 'db_type' );
 			$pos = array_search( $name, $keys );
@@ -1419,7 +1432,7 @@ class SqlDbSvc extends BaseDbSvc
 					unset( $values[$pos] );
 					continue; // should I error this?
 				}
-				if ( Utilities::isInList( Option::get( $field_info, 'validation', '' ), 'api_read_only', ',' ) )
+				if ( DataFormat::isInList( Option::get( $field_info, 'validation', '' ), 'api_read_only', ',' ) )
 				{
 					unset( $keys[$pos] );
 					unset( $values[$pos] );
@@ -1444,7 +1457,7 @@ class SqlDbSvc extends BaseDbSvc
 								switch ( $dbType )
 								{
 									case 'bit':
-										$fieldVal = ( Utilities::boolval( $fieldVal ) ? 1 : 0 );
+										$fieldVal = ( Scalar::boolval( $fieldVal ) ? 1 : 0 );
 										break;
 								}
 								break;
@@ -1452,14 +1465,14 @@ class SqlDbSvc extends BaseDbSvc
 								switch ( $dbType )
 								{
 									case 'tinyint(1)':
-										$fieldVal = ( Utilities::boolval( $fieldVal ) ? 1 : 0 );
+										$fieldVal = ( Scalar::boolval( $fieldVal ) ? 1 : 0 );
 										break;
 								}
 								break;
 						}
-						switch ( $type )
+						switch ( SqlDbUtilities::determinePhpConversionType( $type, $dbType ) )
 						{
-							case 'integer':
+							case 'int':
 								if ( !is_int( $fieldVal ) )
 								{
 									if ( ( '' === $fieldVal ) && Option::getBool( $field_info, 'allow_null' ) )
@@ -1557,22 +1570,22 @@ class SqlDbSvc extends BaseDbSvc
 	}
 
 	/**
-	 * @param $table
-	 * @param $record
-	 * @param $id
-	 * @param $avail_relations
+	 * @param string $table
+	 * @param array  $record
+	 * @param mixed  $id
+	 * @param array  $avail_relations
+	 * @param bool   $allow_delete
 	 *
-	 * @throws \Exception
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @return void
 	 */
-	protected function updateRelations( $table, $record, $id, $avail_relations )
+	protected function updateRelations( $table, $record, $id, $avail_relations, $allow_delete = false )
 	{
-		$record = Utilities::array_key_lower( $record );
 		$keys = array_keys( $record );
 		$values = array_values( $record );
 		foreach ( $avail_relations as $relationInfo )
 		{
-			$name = mb_strtolower( Option::get( $relationInfo, 'name' ) );
+			$name = Option::get( $relationInfo, 'name' );
 			$pos = array_search( $name, $keys );
 			if ( false !== $pos )
 			{
@@ -1600,7 +1613,14 @@ class SqlDbSvc extends BaseDbSvc
                     */
 						$relatedTable = Option::get( $relationInfo, 'ref_table' );
 						$relatedField = Option::get( $relationInfo, 'ref_field' );
-						$this->assignManyToOne( $table, $id, $relatedTable, $relatedField, $relations );
+						$this->assignManyToOne(
+							$table,
+							$id,
+							$relatedTable,
+							$relatedField,
+							$relations,
+							$allow_delete
+						);
 						break;
 					case 'many_many':
 						/*
@@ -1833,6 +1853,9 @@ class SqlDbSvc extends BaseDbSvc
 				$relatedTable = Option::get( $relation, 'ref_table' );
 				$relatedField = Option::get( $relation, 'ref_field' );
 				$field = Option::get( $relation, 'field' );
+				// do we have permission to do so?
+				$this->validateTableAccess( $relatedTable, 'read' );
+
 				$extraFields = Option::get( $extra, 'fields' );
 				$relatedExtras = array( 'limit' => static::DB_MAX_RECORDS_RETURNED );
 				$tempData = null;
@@ -1897,65 +1920,114 @@ class SqlDbSvc extends BaseDbSvc
 	 * @param string $many_table
 	 * @param string $many_field
 	 * @param array  $many_records
+	 * @param bool   $allow_delete
 	 *
-	 * @throws \Exception
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
-	protected function assignManyToOne( $one_table, $one_id, $many_table, $many_field, $many_records = array() )
+	protected function assignManyToOne( $one_table, $one_id, $many_table, $many_field, $many_records = array(), $allow_delete = false )
 	{
 		if ( empty( $one_id ) )
 		{
 			throw new BadRequestException( "The $one_table id can not be empty." );
 		}
+
 		try
 		{
 			$manyFields = $this->describeTableFields( $many_table );
 			$pkField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $manyFields );
-			$oldMany = $this->retrieveRecordsByFilter( $many_table, $many_field . " = '$one_id'", "$pkField,$many_field" );
-			foreach ( $oldMany as $oldKey => $old )
+			$fieldInfo = SqlDbUtilities::getFieldFromDescribe( $many_field, $manyFields );
+			$deleteRelated = ( !Option::getBool( $fieldInfo, 'allow_null' ) && $allow_delete );
+			$relateMany = array();
+			$disownMany = array();
+			$createMany = array();
+			$updateMany = array();
+			$deleteMany = array();
+
+			foreach ( $many_records as $item )
 			{
-				$oldId = Option::get( $old, $pkField );
-				foreach ( $many_records as $key => $item )
+				$id = Option::get( $item, $pkField );
+				if ( empty( $id ) )
 				{
-					$id = Option::get( $item, $pkField, '' );
-					if ( $id == $oldId )
+					// create new child record
+					$item[$many_field] = $one_id; // assign relationship
+					$createMany[] = $item;
+				}
+				else
+				{
+					if ( array_key_exists( $many_field, $item ) )
 					{
-						// found it, keeping it, so remove it from the list, as this becomes adds
-						unset( $many_records[$key] );
-						unset( $oldMany[$oldKey] );
-						continue;
+						if ( null == Option::get( $item, $many_field, null, true ) )
+						{
+							// disown this child or delete them
+							if ( $deleteRelated )
+							{
+								$deleteMany[] = $id;
+							}
+							elseif ( count( $item ) > 1 )
+							{
+								$item[$many_field] = null; // assign relationship
+								$updateMany[] = $item;
+							}
+							else
+							{
+								$disownMany[] = $id;
+							}
+
+							continue;
+						}
+					}
+
+					// update this child
+					if ( count( $item ) > 1 )
+					{
+						$item[$many_field] = $one_id; // assign relationship
+						$updateMany[] = $item;
+					}
+					else
+					{
+						$relateMany[] = $id;
 					}
 				}
 			}
-			// reset arrays
-			$many_records = array_values( $many_records );
-			$oldMany = array_values( $oldMany );
-			if ( !empty( $oldMany ) )
+
+			if ( !empty( $createMany ) )
 			{
-				// un-assign any left over old ones
-				$ids = array();
-				foreach ( $oldMany as $item )
-				{
-					$ids[] = Option::get( $item, $pkField );
-				}
-				if ( !empty( $ids ) )
-				{
-					$ids = implode( ',', $ids );
-					$this->updateRecordsByIds( $many_table, array( $many_field => null ), $ids, $pkField );
-				}
+				// create new children
+				// do we have permission to do so?
+				$this->validateTableAccess( $many_table, 'create' );
+				$this->createRecords( $many_table, $createMany );
 			}
-			if ( !empty( $many_records ) )
+
+			if ( !empty( $deleteMany ) )
 			{
-				// assign what is leftover
-				$ids = array();
-				foreach ( $many_records as $item )
+				// destroy linked children that can't stand alone - sounds sinister
+				// do we have permission to do so?
+				$this->validateTableAccess( $many_table, 'delete' );
+				$this->deleteRecordsByIds( $many_table, $deleteMany );
+			}
+
+			if ( !empty( $updateMany ) || !empty( $relateMany ) || !empty( $disownMany ) )
+			{
+				// do we have permission to do so?
+				$this->validateTableAccess( $many_table, 'update' );
+
+				if ( !empty( $updateMany ) )
 				{
-					$ids[] = Option::get( $item, $pkField );
+					// update existing and adopt new children
+					$this->updateRecords( $many_table, $updateMany );
 				}
-				if ( !empty( $ids ) )
+
+				if ( !empty( $relateMany ) )
 				{
-					$ids = implode( ',', $ids );
-					$this->updateRecordsByIds( $many_table, array( $many_field => $one_id ), $ids, $pkField );
+					// adopt/relate/link unlinked children
+					$this->updateRecordsByIds( $many_table, array( $many_field => $one_id ), $relateMany );
+				}
+
+				if ( !empty( $disownMany ) )
+				{
+					// disown/un-relate/unlink linked children
+					$this->updateRecordsByIds( $many_table, array( $many_field => null ), $disownMany );
 				}
 			}
 		}
@@ -1966,15 +2038,16 @@ class SqlDbSvc extends BaseDbSvc
 	}
 
 	/**
-	 * @param       $one_table
-	 * @param       $one_id
-	 * @param       $many_table
-	 * @param       $map_table
-	 * @param       $one_field
-	 * @param       $many_field
-	 * @param array $many_records
+	 * @param string $one_table
+	 * @param mixed  $one_id
+	 * @param string $many_table
+	 * @param string $map_table
+	 * @param string $one_field
+	 * @param string $many_field
+	 * @param array  $many_records
 	 *
-	 * @throws \Exception
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return void
 	 */
 	protected function assignManyToOneByMap( $one_table, $one_id, $many_table, $map_table, $one_field, $many_field, $many_records = array() )
@@ -1985,47 +2058,98 @@ class SqlDbSvc extends BaseDbSvc
 		}
 		try
 		{
+			$oneFields = $this->describeTableFields( $one_table );
+			$pkOneField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $oneFields );
 			$manyFields = $this->describeTableFields( $many_table );
 			$pkManyField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $manyFields );
-			$mapFields = $this->describeTableFields( $map_table );
-			$pkMapField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $mapFields );
-			$maps = $this->retrieveRecordsByFilter( $map_table, "$one_field = '$one_id'", $pkMapField . ',' . $many_field );
-			$toDelete = array();
-			foreach ( $maps as $map )
+//			$mapFields = $this->describeTableFields( $map_table );
+//			$pkMapField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $mapFields );
+			$relatedExtras = array( 'limit' => static::DB_MAX_RECORDS_RETURNED );
+			$maps = $this->retrieveRecordsByFilter( $map_table, "$one_field = '$one_id'", $many_field, $relatedExtras );
+			$createMap = array(); // map records to create
+			$deleteMap = array(); // ids of 'many' records to delete from maps
+			$createMany = array();
+			$updateMany = array();
+			foreach ( $many_records as $item )
 			{
-				$manyId = Option::get( $map, $many_field, '' );
-				$id = Option::get( $map, $pkMapField, '' );
-				$found = false;
-				foreach ( $many_records as $key => $item )
+				$id = Option::get( $item, $pkManyField );
+				if ( empty( $id ) )
 				{
-					$assignId = Option::get( $item, $pkManyField, '' );
-					if ( $assignId == $manyId )
+					// create new many record, relationship created later
+					$createMany[] = $item;
+				}
+				else
+				{
+					// pk fields exists, must be dealing with existing 'many' record
+					$oneLookup = "$one_table.$pkOneField";
+					if ( array_key_exists( $oneLookup, $item ) )
 					{
-						// found it, keeping it, so remove it from the list, as this becomes adds
-						unset( $many_records[$key] );
-						$found = true;
-						continue;
+						if ( null == Option::get( $item, $oneLookup, null, true ) )
+						{
+							// delete this relationship
+							$deleteMap[] = $id;
+							continue;
+						}
+					}
+
+					// update the 'many' record if more than the above fields
+					if ( count( $item ) > 1 )
+					{
+						$updateMany[] = $item;
+					}
+
+					// if relationship doesn't exist, create it
+					foreach ( $maps as $map )
+					{
+						if ( Option::get( $map, $many_field ) == $id )
+						{
+							continue 2; // got what we need from this one
+						}
+					}
+
+					$createMap[] = array( $many_field => $id, $one_field => $one_id );
+				}
+			}
+
+			if ( !empty( $createMany ) )
+			{
+				// do we have permission to do so?
+				$this->validateTableAccess( $many_table, 'create' );
+				// create new many records
+				$results = $this->createRecords( $many_table, $createMany );
+				// create new relationships for results
+				foreach ( $results as $item )
+				{
+					$itemId = Option::get( $item, $pkManyField );
+					if ( !empty( $itemId ) )
+					{
+						$createMap[] = array( $many_field => $itemId, $one_field => $one_id );
 					}
 				}
-				if ( !$found )
-				{
-					$toDelete[] = $id;
-					continue;
-				}
 			}
-			if ( !empty( $toDelete ) )
+
+			if ( !empty( $updateMany ) )
 			{
-				$this->deleteRecordsByIds( $map_table, implode( ',', $toDelete ), $pkMapField );
+				// update existing many records
+				// do we have permission to do so?
+				$this->validateTableAccess( $many_table, 'update' );
+				$this->updateRecords( $many_table, $updateMany );
 			}
-			if ( !empty( $many_records ) )
+
+			if ( !empty( $createMap ) )
 			{
-				$maps = array();
-				foreach ( $many_records as $item )
-				{
-					$itemId = Option::get( $item, $pkManyField, '' );
-					$maps[] = array( $many_field => $itemId, $one_field => $one_id );
-				}
-				$this->createRecords( $map_table, $maps );
+				// do we have permission to do so?
+				$this->validateTableAccess( $map_table, 'create' );
+				$this->createRecords( $map_table, $createMap );
+			}
+
+			if ( !empty( $deleteMap ) )
+			{
+				// do we have permission to do so?
+				$this->validateTableAccess( $map_table, 'delete' );
+				$mapList = "'" . implode( "','", $deleteMap ) . "'";
+				$filter = "$one_field = '$one_id' && $many_field IN ($mapList)";
+				$this->deleteRecordsByFilter( $map_table, $filter );
 			}
 		}
 		catch ( \Exception $ex )
@@ -2046,8 +2170,6 @@ class SqlDbSvc extends BaseDbSvc
 		$this->checkConnection();
 		try
 		{
-			Utilities::markTimeStart( 'DB_TIME' );
-
 			/** @var \CDbCommand $command */
 			$command = $this->_sqlConn->createCommand( $query );
 			$reader = $command->query();
@@ -2086,14 +2208,11 @@ class SqlDbSvc extends BaseDbSvc
 				$data[] = $rowData;
 			}
 
-			Utilities::markTimeStop( 'DB_TIME' );
-
 			return $data;
 		}
 		catch ( \Exception $ex )
 		{
 			error_log( 'batchquery: ' . $ex->getMessage() . PHP_EOL . $query );
-			Utilities::markTimeStop( 'DB_TIME' );
 			/*
                 $msg = '[QUERYFAILED]: ' . implode(':', $this->_sqlConn->errorInfo()) . "\n";
                 if (isset($GLOBALS['DB_DEBUG'])) {
@@ -2116,8 +2235,6 @@ class SqlDbSvc extends BaseDbSvc
 		$this->checkConnection();
 		try
 		{
-			Utilities::markTimeStart( 'DB_TIME' );
-
 			/** @var \CDbCommand $command */
 			$command = $this->_sqlConn->createCommand( $query );
 			if ( isset( $params ) && !empty( $params ) )
@@ -2129,14 +2246,11 @@ class SqlDbSvc extends BaseDbSvc
 				$data = $command->queryAll();
 			}
 
-			Utilities::markTimeStop( 'DB_TIME' );
-
 			return $data;
 		}
 		catch ( \Exception $ex )
 		{
 			error_log( 'singlequery: ' . $ex->getMessage() . PHP_EOL . $query . PHP_EOL . print_r( $params, true ) );
-			Utilities::markTimeStop( 'DB_TIME' );
 			/*
                     $msg = '[QUERYFAILED]: ' . implode(':', $this->_sqlConn->errorInfo()) . "\n";
                     if (isset($GLOBALS['DB_DEBUG'])) {
@@ -2159,8 +2273,6 @@ class SqlDbSvc extends BaseDbSvc
 		$this->checkConnection();
 		try
 		{
-			Utilities::markTimeStart( 'DB_TIME' );
-
 			/** @var \CDbCommand $command */
 			$command = $this->_sqlConn->createCommand( $query );
 			if ( isset( $params ) && !empty( $params ) )
@@ -2172,14 +2284,11 @@ class SqlDbSvc extends BaseDbSvc
 				$data = $command->execute();
 			}
 
-			Utilities::markTimeStop( 'DB_TIME' );
-
 			return $data;
 		}
 		catch ( \Exception $ex )
 		{
 			error_log( 'singleexecute: ' . $ex->getMessage() . PHP_EOL . $query . PHP_EOL . print_r( $params, true ) );
-			Utilities::markTimeStop( 'DB_TIME' );
 			/*
                     $msg = '[QUERYFAILED]: ' . implode(':', $this->_sqlConn->errorInfo()) . "\n";
                     if (isset($GLOBALS['DB_DEBUG'])) {
@@ -2202,6 +2311,40 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function getTables( $tables = array() )
 	{
+		if ( !is_array( $tables ) )
+		{
+			$tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
+		}
+
+		//	Check for system tables and deny
+		$_sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
+		$_length = strlen( $_sysPrefix );
+
+		foreach ( $tables as $_table )
+		{
+			if ( $this->_isNative )
+			{
+				if ( 0 === substr_compare( $_table, $_sysPrefix, 0, $_length ) )
+				{
+					throw new NotFoundException( "Table '$_table' not found." );
+				}
+			}
+
+			$this->checkPermission( 'read', $_table );
+		}
+
+		try
+		{
+			return SqlDbUtilities::describeTables( $this->_sqlConn, $tables );
+		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
+		catch ( \Exception $ex )
+		{
+			throw new InternalServerErrorException( "Error describing database tables.\n{$ex->getMessage()}", $ex->getCode() );
+		}
 	}
 
 	/**
@@ -2214,6 +2357,34 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function getTable( $table )
 	{
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( 'Table name can not be empty.' );
+		}
+
+		if ( $this->_isNative )
+		{
+			// check for system tables and deny
+			if ( 0 === substr_compare( $table, SystemManager::SYSTEM_TABLE_PREFIX, 0, strlen( SystemManager::SYSTEM_TABLE_PREFIX ) ) )
+			{
+				throw new NotFoundException( "Table '$table' not found." );
+			}
+		}
+
+		$this->checkPermission( 'read', $table );
+
+		try
+		{
+			return SqlDbUtilities::describeTable( $this->_sqlConn, $table );
+		}
+		catch ( RestException $ex )
+		{
+			throw $ex;
+		}
+		catch ( \Exception $ex )
+		{
+			throw new InternalServerErrorException( "Error describing database table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
+		}
 	}
 
 	/**
@@ -2226,6 +2397,7 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function createTables( $tables = array() )
 	{
+		throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
 	}
 
 	/**
@@ -2237,6 +2409,7 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function createTable( $properties = array() )
 	{
+		throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
 	}
 
 	/**
@@ -2249,6 +2422,7 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function updateTables( $tables = array() )
 	{
+		throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
 	}
 
 	/**
@@ -2261,6 +2435,7 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function updateTable( $properties = array() )
 	{
+		throw new BadRequestException( 'Creating database schema is only allowed through a SQL DB Schema service.' );
 	}
 
 	/**
@@ -2274,6 +2449,7 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function deleteTables( $tables = array(), $check_empty = false )
 	{
+		throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
 	}
 
 	/**
@@ -2287,6 +2463,7 @@ class SqlDbSvc extends BaseDbSvc
 	 */
 	public function deleteTable( $table, $check_empty = false )
 	{
+		throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
 	}
 
 	/**
