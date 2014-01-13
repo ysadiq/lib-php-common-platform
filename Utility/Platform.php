@@ -21,6 +21,9 @@ namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\SeedUtility;
+use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -36,31 +39,37 @@ class Platform extends SeedUtility
 	/**
 	 * Constructs a virtual platform path
 	 *
-	 * @param string $type The type of path, used as a key into config
+	 * @param string $type            The type of path, used as a key into config
 	 * @param string $append
+	 * @param bool   $createIfMissing If true and final directory does not exist, it is created.
 	 *
 	 * @throws \InvalidArgumentException
 	 * @return string
 	 */
-	protected static function _getPlatformPath( $type, $append = null )
+	protected static function _getPlatformPath( $type, $append = null, $createIfMissing = true )
 	{
 		static $_cache = array();
 
-		if ( !LocalStorageTypes::contains( Inflector::neutralize( $type ) ) )
+		if ( !LocalStorageTypes::contains( $_tag = Inflector::neutralize( $type ) ) )
 		{
 			throw new \InvalidArgumentException( 'Type "' . $type . '" is invalid.' );
 		}
 
-		if ( null === ( $_path = Option::get( $_cache, $type ) ) )
+		if ( null === ( $_path = Option::get( $_cache, $_tag ) ) )
 		{
-			$_base = Pii::getParam( $type . '_path' );
+			$_base = Pii::getParam( $_tag );
+			$_path = $_base . ( $append ? '/' . $append : null );
 
-			if ( !file_exists( $_base ) )
+			if ( !file_exists( $_path ) && true === $createIfMissing )
 			{
-				@\mkdir( $_base, 0777, true );
+				if ( false === @\mkdir( $_path, 0777, true ) )
+				{
+					Log::error( 'File system error creating directory: ' . $_path );
+				}
 			}
 
-			$_path = $_base . ( $append ? '/' . $append : null );
+			//	Store path for next time...
+			Option::set( $_cache, $_tag, $_path );
 		}
 
 		return $_path;
@@ -75,21 +84,7 @@ class Platform extends SeedUtility
 	 */
 	public static function getStoragePath( $append = null )
 	{
-		static $_path = null;
-
-		if ( null === $_path )
-		{
-			$_base = Pii::getParam( 'storage_path' );
-
-			if ( !file_exists( $_base ) )
-			{
-				@\mkdir( $_base, 0777, true );
-			}
-
-			$_path = $_base . ( $append ? '/' . $append : null );
-		}
-
-		return $_path;
+		return static::_getPlatformPath( LocalStorageTypes::STORAGE_PATH );
 	}
 
 	/**
@@ -101,14 +96,31 @@ class Platform extends SeedUtility
 	 */
 	public static function getPrivatePath( $append = null )
 	{
-		$_base = Pii::getParam( 'storage_path' );
+		return static::_getPlatformPath( LocalStorageTypes::PRIVATE_PATH );
+	}
 
-		if ( !file_exists( $_base ) )
-		{
-			@\mkdir( $_base, 0777, true );
-		}
+	/**
+	 * Constructs the virtual private path
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getSnapshotPath( $append = null )
+	{
+		return static::_getPlatformPath( LocalStorageTypes::SNAPSHOT_PATH );
+	}
 
-		return $_base . ( $append ? '/' . $append : null );
+	/**
+	 * Constructs the virtual private path
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getLibraryPath( $append = null )
+	{
+		return static::_getPlatformPath( LocalStorageTypes::LIBRARY_PATH );
 	}
 
 	/**

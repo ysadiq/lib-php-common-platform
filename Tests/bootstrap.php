@@ -7,7 +7,7 @@ use DreamFactory\Yii\Utility\Pii;
  */
 
 //	Composer
-$_loader = require_once dirname( __DIR__ ) . '/vendor/autoload.php';
+$_loader = require_once __DIR__ . '/../vendor/autoload.php';
 
 \Kisma::set( 'app.autoloader', $_loader );
 
