@@ -21,7 +21,6 @@ namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -40,14 +39,14 @@ class Platform extends SeedUtility
 	 * @param string $type The type of path, used as a key into config
 	 * @param string $append
 	 *
-	 * @throws InvalidArgumentException
+	 * @throws \InvalidArgumentException
 	 * @return string
 	 */
 	protected static function _getPlatformPath( $type, $append = null )
 	{
 		static $_cache = array();
 
-		if ( !LocalStorageTypes::contains( $type ) )
+		if ( !LocalStorageTypes::contains( Inflector::neutralize( $type ) ) )
 		{
 			throw new \InvalidArgumentException( 'Type "' . $type . '" is invalid.' );
 		}
