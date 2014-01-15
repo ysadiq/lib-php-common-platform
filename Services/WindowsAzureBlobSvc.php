@@ -20,8 +20,8 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use DreamFactory\Platform\Exceptions\BlobServiceException;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -347,19 +347,18 @@ class WindowsAzureBlobSvc extends RemoteFileSvc
 	 * @param string $localFileName
 	 * @param string $type
 	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @return void
 	 */
 	public function putBlobFromFile( $container, $name, $localFileName = '', $type = '' )
 	{
-		$this->checkConnection();
-		$options = new CreateBlobOptions();
-
-		if ( !empty( $type ) )
+		$_blob = file_get_contents( $localFileName );
+		if ( false === $_blob )
 		{
-			$options->setContentType( $type );
+			throw new InternalServerErrorException( "Failed to get contents of uploaded file." );
 		}
 
-		$this->_blobConn->createBlockBlob( $container, $this->fixBlobName( $name ), $localFileName, $options );
+		$this->putBlobData( $container, $name, $_blob, $type );
 	}
 
 	/**
