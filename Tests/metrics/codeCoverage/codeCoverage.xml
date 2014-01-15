@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage generated="1389583702">
+  <project timestamp="1389583702">
+    <package name="DreamFactory\Tests\Services">
+      <file name="/opt/dreamfactory/lib/lib-php-common-platform/Tests/Services/SystemManagerTest.php">
+        <class name="SystemManagerTest" namespace="DreamFactory\Tests\Services">
+          <metrics methods="3" coveredmethods="3" conditionals="0" coveredconditionals="0" statements="8" coveredstatements="8" elements="11" coveredelements="11"/>
+        </class>
+        <line num="12" type="method" name="setUp" crap="1" count="1"/>
+        <line num="14" type="stmt" count="1"/>
+        <line num="16" type="stmt" count="1"/>
+        <line num="17" type="stmt" count="1"/>
+        <line num="19" type="method" name="testSystemManager" crap="1" count="1"/>
+        <line num="21" type="stmt" count="1"/>
+        <line num="23" type="stmt" count="1"/>
+        <line num="24" type="stmt" count="1"/>
+        <line num="26" type="method" name="tearDown" crap="1" count="1"/>
+        <line num="28" type="stmt" count="1"/>
+        <line num="29" type="stmt" count="1"/>
+        <metrics loc="30" ncloc="27" classes="1" methods="3" coveredmethods="3" conditionals="0" coveredconditionals="0" statements="8" coveredstatements="8" elements="11" coveredelements="11"/>
+      </file>
+      <file name="/opt/dreamfactory/lib/lib-php-common-platform/Tests/Services/UserManagerTest.php">
+        <class name="UserManagerTest" namespace="DreamFactory\Tests\Services">
+          <metrics methods="3" coveredmethods="3" conditionals="0" coveredconditionals="0" statements="8" coveredstatements="8" elements="11" coveredelements="11"/>
+        </class>
+        <line num="12" type="method" name="setUp" crap="1" count="1"/>
+        <line num="14" type="stmt" count="1"/>
+        <line num="16" type="stmt" count="1"/>
+        <line num="17" type="stmt" count="1"/>
+        <line num="19" type="method" name="testUserManager" crap="1" count="1"/>
+        <line num="21" type="stmt" count="1"/>
+        <line num="23" type="stmt" count="1"/>
+        <line num="24" type="stmt" count="1"/>
+        <line num="26" type="method" name="tearDown" crap="1" count="1"/>
+        <line num="28" type="stmt" count="1"/>
+        <line num="29" type="stmt" count="1"/>
+        <metrics loc="30" ncloc="27" classes="1" methods="3" coveredmethods="3" conditionals="0" coveredconditionals="0" statements="8" coveredstatements="8" elements="11" coveredelements="11"/>
+      </file>
+    </package>
+    <package name="DreamFactory\Platform\Tests\Utility">
+      <file name="/opt/dreamfactory/lib/lib-php-common-platform/Tests/Utility/PlatformTest.php">
+        <class name="PlatformTest" namespace="DreamFactory\Platform\Tests\Utility">
+          <metrics methods="4" coveredmethods="0" conditionals="0" coveredconditionals="0" statements="12" coveredstatements="0" elements="16" coveredelements="0"/>
+        </class>
+        <line num="36" type="method" name="testGetStoragePath" crap="2" count="0"/>
+        <line num="38" type="stmt" count="0"/>
+        <line num="39" type="stmt" count="0"/>
+        <line num="40" type="stmt" count="0"/>
+        <line num="45" type="method" name="testGetPrivatePath" crap="2" count="0"/>
+        <line num="47" type="stmt" count="0"/>
+        <line num="48" type="stmt" count="0"/>
+        <line num="49" type="stmt" count="0"/>
+        <line num="54" type="method" name="testGetSnapshotPath" crap="2" count="0"/>
+        <line num="56" type="stmt" count="0"/>
+        <line num="57" type="stmt" count="0"/>
+        <line num="58" type="stmt" count="0"/>
+        <line num="63" type="method" name="testGetLibraryPath" crap="2" count="0"/>
+        <line num="65" type="stmt" count="0"/>
+        <line num="66" type="stmt" count="0"/>
+        <line num="67" type="stmt" count="0"/>
+        <metrics loc="68" ncloc="35" classes="1" methods="4" coveredmethods="0" conditionals="0" coveredconditionals="0" statements="12" coveredstatements="0" elements="16" coveredelements="0"/>
+      </file>
+      <file name="/opt/dreamfactory/lib/lib-php-common-platform/Tests/Utility/ResourceStoreTest.php">
+        <class name="ResourceStoreTest" namespace="DreamFactory\Platform\Tests\Utility">
+          <metrics methods="4" coveredmethods="4" conditionals="0" coveredconditionals="0" statements="7" coveredstatements="7" elements="11" coveredelements="11"/>
+        </class>
+        <line num="12" type="method" name="setUp" crap="1" count="2"/>
+        <line num="14" type="stmt" count="2"/>
+        <line num="15" type="stmt" count="2"/>
+        <line num="16" type="stmt" count="2"/>
+        <line num="18" type="method" name="testGetProvider" crap="1" count="1"/>
+        <line num="22" type="stmt" count="1"/>
+        <line num="24" type="method" name="testGetUser" crap="1" count="1"/>
+        <line num="28" type="stmt" count="1"/>
+        <line num="30" type="method" name="tearDown" crap="1" count="2"/>
+        <line num="32" type="stmt" count="2"/>
+        <line num="33" type="stmt" count="2"/>
+        <metrics loc="34" ncloc="23" classes="1" methods="4" coveredmethods="4" conditionals="0" coveredconditionals="0" statements="7" coveredstatements="7" elements="11" coveredelements="11"/>
+      </file>
+    </package>
+    <metrics files="4" loc="162" ncloc="112" classes="4" methods="14" coveredmethods="10" conditionals="0" coveredconditionals="0" statements="35" coveredstatements="23" elements="49" coveredelements="33"/>
+  </project>
+</coverage>

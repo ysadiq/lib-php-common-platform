@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit bootstrap="./tests/bootstrap.php"
+<phpunit bootstrap="./Tests/bootstrap.php"
 		 backupGlobals="true"
 		 colors="true"
 		 convertErrorsToExceptions="true"
@@ -17,26 +17,26 @@
 		<ini name="memory_limit" value="2048M"/>
 	</php>
 	<testsuite name="Release">
-		<directory>./tests</directory>
+		<directory>./Tests</directory>
 		<exclude>
-			<directory>./tests/metrics</directory>
+			<directory>./Tests/metrics</directory>
 		</exclude>
 	</testsuite>
 	<filter>
 		<whitelist>
-			<directory suffix="Test.php">./tests</directory>
+			<directory suffix="Test.php">./Tests</directory>
 		</whitelist>
 		<exclude>
-			<directory>./tests/metrics</directory>
-			<directory>./tests/config</directory>
-			<directory>./tests/web</directory>
-			<directory>./tests/log</directory>
+			<directory>./Tests/metrics</directory>
+			<directory>./Tests/config</directory>
+			<directory>./Tests/web</directory>
+			<directory>./Tests/log</directory>
 		</exclude>
 	</filter>
 	<logging>
-		<log type="coverage-html" target="./tests/metrics/codeCoverage" charset="UTF-8" yui="true" highlight="false" lowUpperBound="35" highLowerBound="70"/>
-		<log type="coverage-clover" target="./tests/metrics/codeCoverage/codeCoverage.xml"/>
-		<log type="metrics-xml" target="./tests/metrics/metrics.xml"/>
-		<log type="test-xml" target="./tests/metrics/logfile.xml" logIncompleteSkipped="false"/>
+		<log type="coverage-html" target="./Tests/metrics/codeCoverage" charset="UTF-8" yui="true" highlight="false" lowUpperBound="35" highLowerBound="70"/>
+		<log type="coverage-clover" target="./Tests/metrics/codeCoverage/codeCoverage.xml"/>
+		<log type="metrics-xml" target="./Tests/metrics/metrics.xml"/>
+		<log type="test-xml" target="./Tests/metrics/logfile.xml" logIncompleteSkipped="false"/>
 	</logging>
 </phpunit>

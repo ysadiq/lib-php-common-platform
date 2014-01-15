@@ -19,8 +19,12 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\SeedUtility;
+use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 
 /**
  * Platform
@@ -33,6 +37,45 @@ class Platform extends SeedUtility
 	//*************************************************************************
 
 	/**
+	 * Constructs a virtual platform path
+	 *
+	 * @param string $type            The type of path, used as a key into config
+	 * @param string $append
+	 * @param bool   $createIfMissing If true and final directory does not exist, it is created.
+	 *
+	 * @throws \InvalidArgumentException
+	 * @return string
+	 */
+	protected static function _getPlatformPath( $type, $append = null, $createIfMissing = true )
+	{
+		static $_cache = array();
+
+		if ( !LocalStorageTypes::contains( $_tag = Inflector::neutralize( $type ) ) )
+		{
+			throw new \InvalidArgumentException( 'Type "' . $type . '" is invalid.' );
+		}
+
+		if ( null === ( $_path = Option::get( $_cache, $_tag ) ) )
+		{
+			$_base = Pii::getParam( $_tag );
+			$_path = $_base . ( $append ? '/' . $append : null );
+
+			if ( !file_exists( $_path ) && true === $createIfMissing )
+			{
+				if ( false === @\mkdir( $_path, 0777, true ) )
+				{
+					Log::error( 'File system error creating directory: ' . $_path );
+				}
+			}
+
+			//	Store path for next time...
+			Option::set( $_cache, $_tag, $_path );
+		}
+
+		return $_path;
+	}
+
+	/**
 	 * Constructs the virtual storage path
 	 *
 	 * @param string $append
@@ -41,14 +84,43 @@ class Platform extends SeedUtility
 	 */
 	public static function getStoragePath( $append = null )
 	{
-		$_base = Pii::getParam( 'storage_path' );
+		return static::_getPlatformPath( LocalStorageTypes::STORAGE_PATH );
+	}
 
-		if ( !file_exists( $_base ) )
-		{
-			@\mkdir( $_base, 0777, true );
-		}
+	/**
+	 * Constructs the virtual private path
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getPrivatePath( $append = null )
+	{
+		return static::_getPlatformPath( LocalStorageTypes::PRIVATE_PATH );
+	}
 
-		return $_base . ( $append ? '/' . $append : null );
+	/**
+	 * Constructs the virtual private path
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getSnapshotPath( $append = null )
+	{
+		return static::_getPlatformPath( LocalStorageTypes::SNAPSHOT_PATH );
+	}
+
+	/**
+	 * Constructs the virtual private path
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getLibraryPath( $append = null )
+	{
+		return static::_getPlatformPath( LocalStorageTypes::LIBRARY_PATH );
 	}
 
 	/**
@@ -64,27 +136,13 @@ class Platform extends SeedUtility
 			hash(
 				'ripemd128',
 				uniqid( '', true ) . ( $_uuid ? : microtime( true ) ) . md5(
-					$namespace . $_SERVER['REQUEST_TIME']
-					. $_SERVER['HTTP_USER_AGENT']
-					. $_SERVER['LOCAL_ADDR']
-					. $_SERVER['LOCAL_PORT']
-					. $_SERVER['REMOTE_ADDR']
-					. $_SERVER['REMOTE_PORT']
+					$namespace . $_SERVER['REQUEST_TIME'] . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['LOCAL_ADDR'] . $_SERVER['LOCAL_PORT'] . $_SERVER['REMOTE_ADDR'] .
+					$_SERVER['REMOTE_PORT']
 				)
 			)
 		);
 
-		$_uuid = '{' .
-				 substr( $_hash, 0, 8 ) .
-				 '-' .
-				 substr( $_hash, 8, 4 ) .
-				 '-' .
-				 substr( $_hash, 12, 4 ) .
-				 '-' .
-				 substr( $_hash, 16, 4 ) .
-				 '-' .
-				 substr( $_hash, 20, 12 ) .
-				 '}';
+		$_uuid = '{' . substr( $_hash, 0, 8 ) . '-' . substr( $_hash, 8, 4 ) . '-' . substr( $_hash, 12, 4 ) . '-' . substr( $_hash, 16, 4 ) . '-' . substr( $_hash, 20, 12 ) . '}';
 
 		return $_uuid;
 	}

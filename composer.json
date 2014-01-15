@@ -34,7 +34,7 @@
 		"rackspace/php-opencloud":         "1.5.*",
 		"dready92/php-on-couch":           "dev-master",
 		"phpforce/soap-client":            "dev-master",
-		"microsoft/windowsazure":          "*"
+		"dreamfactory/azure-sdk-for-php":  "~0.3.1"
 	},
 	"repositories":      [
 		{

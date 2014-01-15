@@ -28,14 +28,166 @@ use Kisma\Core\Utility\Option;
 class FileUtilities
 {
 	//*************************************************************************
-	//	Members
+	//	Methods
 	//*************************************************************************
 
 	/**
-	 * @var array of file extensions to mime types
+	 * @param $path
+	 *
+	 * @return string
 	 */
-	protected static $_mimeTypes
-		= array(
+	public static function fixFolderPath( $path )
+	{
+		if ( !empty( $path ) )
+		{
+			$path = rtrim( $path, '/' ) . '/';
+		}
+
+		return $path;
+	}
+
+	/**
+	 * @param $path
+	 *
+	 * @return string
+	 */
+	public static function getParentFolder( $path )
+	{
+		$path = rtrim( $path, '/' ); // may be a folder
+
+		$marker = strrpos( $path, '/' );
+
+		if ( false === $marker )
+		{
+			return '';
+		}
+
+		return substr( $path, 0, $marker );
+	}
+
+	/**
+	 * @param $path
+	 *
+	 * @return string
+	 */
+	public static function getNameFromPath( $path )
+	{
+		$path = rtrim( $path, '/' ); // may be a folder
+		if ( empty( $path ) )
+		{
+			return '.';
+		} // self directory
+
+		$marker = strrpos( $path, '/' );
+		if ( false === $marker )
+		{
+			return $path;
+		}
+
+		return substr( $path, $marker + 1 );
+	}
+
+	/**
+	 * @param string $path
+	 *
+	 * @return string
+	 */
+	public static function getFileExtension( $path )
+	{
+		return pathinfo( $path, PATHINFO_EXTENSION );
+	}
+
+	/**
+	 * @param string $url
+	 *
+	 * @return bool
+	 */
+	public static function url_exist( $url )
+	{
+		$_headers = @get_headers( $url );
+
+		if ( empty( $_headers ) || 'HTTP/1.1 404 Not Found' == $_headers[0] )
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * @param string $url
+	 * @param string $name name of the temporary file to create
+	 *
+	 * @throws NotFoundException
+	 * @throws \Exception
+	 * @return string temporary file path
+	 */
+	public static function importUrlFileToTemp( $url, $name = '' )
+	{
+		if ( static::url_exist( $url ) )
+		{
+			$readFrom = @fopen( $url, 'rb' );
+			if ( $readFrom )
+			{
+				$directory = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR;
+//				$ext = FileUtilities::getFileExtension( basename( $url ) );
+//              $validTypes = array( 'zip', 'dfpkg' ); // default zip and package extensions
+//              if ( !in_array( $ext, $validTypes ) )
+//				{
+//                  throw new Exception( 'Invalid file type. Currently only URLs to repository zip files are accepted.' );
+//              }
+				if ( empty( $name ) )
+				{
+					$name = basename( $url );
+				}
+				$newFile = $directory . $name;
+				$writeTo = fopen( $newFile, 'wb' ); // creating new file on local server
+				if ( $writeTo )
+				{
+					while ( !feof( $readFrom ) )
+					{
+						// Write the url file to the directory.
+						fwrite(
+							$writeTo,
+							fread( $readFrom, 1024 * 8 ),
+							1024 * 8
+						); // write the file to the new directory at a rate of 8kb/sec. until we reach the end.
+					}
+					fclose( $readFrom );
+					fclose( $writeTo );
+
+					return $newFile;
+				}
+				else
+				{
+					throw new \Exception( "Could not establish new file ($directory$name) on local server." );
+				}
+			}
+			else
+			{
+				throw new \Exception( "Could not read the file: $url" );
+			}
+		}
+		else
+		{
+			throw new NotFoundException( 'Invalid URL entered. File not found.' );
+		}
+	}
+
+	/**
+	 * @param string $ext
+	 * @param string $content
+	 * @param string $local_file
+	 * @param string $default
+	 *
+	 * @return string
+	 */
+	public static function determineContentType( $ext = '', $content = '', $local_file = '', $default = '' )
+	{
+		/**
+		 * @var array of file extensions to mime types
+		 */
+		static $_mimeTypes = array(
 			'123'         => 'application/vnd.lotus-1-2-3',
 			'3dml'        => 'text/vnd.in3d.3dml',
 			'3ds'         => 'image/x-3ds',
@@ -789,7 +941,7 @@ class FileUtilities
 			'str'         => 'application/vnd.pg.format',
 			'stw'         => 'application/vnd.sun.xml.writer.template',
 			'sub'         => 'image/vnd.dvb.subtitle',
-//                     'sub' => 'text/vnd.dvb.subtitle',
+			//                     'sub' => 'text/vnd.dvb.subtitle',
 			'sus'         => 'application/vnd.sus-calendar',
 			'susp'        => 'application/vnd.sus-calendar',
 			'sv4cpio'     => 'application/x-sv4cpio',
@@ -932,7 +1084,7 @@ class FileUtilities
 			'wmv'         => 'video/x-ms-wmv',
 			'wmx'         => 'video/x-ms-wmx',
 			'wmz'         => 'application/x-ms-wmz',
-//                     'wmz' => 'application/x-msmetafile',
+			//                     'wmz' => 'application/x-msmetafile',
 			'woff'        => 'application/x-font-woff',
 			'wpd'         => 'application/vnd.wordperfect',
 			'wpl'         => 'application/vnd.ms-wpl',
@@ -1021,170 +1173,15 @@ class FileUtilities
 			'zmm'         => 'application/vnd.handheld-entertainment+xml'
 		);
 
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
-
-	/**
-	 * @param $path
-	 *
-	 * @return string
-	 */
-	public static function fixFolderPath( $path )
-	{
-		if ( !empty( $path ) )
-		{
-			$path = rtrim( $path, '/' ) . '/';
-		}
-
-		return $path;
-	}
-
-	/**
-	 * @param $path
-	 *
-	 * @return string
-	 */
-	public static function getParentFolder( $path )
-	{
-		$path = rtrim( $path, '/' ); // may be a folder
-
-		$marker = strrpos( $path, '/' );
-
-		if ( false === $marker )
-		{
-			return '';
-		}
-
-		return substr( $path, 0, $marker );
-	}
-
-	/**
-	 * @param $path
-	 *
-	 * @return string
-	 */
-	public static function getNameFromPath( $path )
-	{
-		$path = rtrim( $path, '/' ); // may be a folder
-		if ( empty( $path ) )
-		{
-			return '.';
-		} // self directory
-
-		$marker = strrpos( $path, '/' );
-		if ( false === $marker )
-		{
-			return $path;
-		}
-
-		return substr( $path, $marker + 1 );
-	}
-
-	/**
-	 * @param string $path
-	 *
-	 * @return string
-	 */
-	public static function getFileExtension( $path )
-	{
-		return pathinfo( $path, PATHINFO_EXTENSION );
-	}
-
-	/**
-	 * @param string $url
-	 *
-	 * @return bool
-	 */
-	public static function url_exist( $url )
-	{
-		$_headers = @get_headers( $url );
-
-		if ( empty( $_headers ) || 'HTTP/1.1 404 Not Found' == $_headers[0] )
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	/**
-	 * @param string $url
-	 * @param string $name name of the temporary file to create
-	 *
-	 * @throws NotFoundException
-	 * @throws \Exception
-	 * @return string temporary file path
-	 */
-	public static function importUrlFileToTemp( $url, $name = '' )
-	{
-		if ( static::url_exist( $url ) )
-		{
-			$readFrom = @fopen( $url, 'rb' );
-			if ( $readFrom )
-			{
-				$directory = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR;
-//				$ext = FileUtilities::getFileExtension( basename( $url ) );
-//              $validTypes = array( 'zip', 'dfpkg' ); // default zip and package extensions
-//              if ( !in_array( $ext, $validTypes ) )
-//				{
-//                  throw new Exception( 'Invalid file type. Currently only URLs to repository zip files are accepted.' );
-//              }
-				if ( empty( $name ) )
-				{
-					$name = basename( $url );
-				}
-				$newFile = $directory . $name;
-				$writeTo = fopen( $newFile, 'wb' ); // creating new file on local server
-				if ( $writeTo )
-				{
-					while ( !feof( $readFrom ) )
-					{
-						// Write the url file to the directory.
-						fwrite(
-							$writeTo,
-							fread( $readFrom, 1024 * 8 ),
-							1024 * 8
-						); // write the file to the new directory at a rate of 8kb/sec. until we reach the end.
-					}
-					fclose( $readFrom );
-					fclose( $writeTo );
-
-					return $newFile;
-				}
-				else
-				{
-					throw new \Exception( "Could not establish new file ($directory$name) on local server." );
-				}
-			}
-			else
-			{
-				throw new \Exception( "Could not read the file: $url" );
-			}
-		}
-		else
-		{
-			throw new NotFoundException( 'Invalid URL entered. File not found.' );
-		}
-	}
-
-	/**
-	 * @param string $ext
-	 * @param string $content
-	 * @param string $local_file
-	 * @param string $default
-	 *
-	 * @return string
-	 */
-	public
-	static function determineContentType( $ext = '', $content = '', $local_file = '', $default = '' )
-	{
 		$defaultMime = 'application/octet-stream';
+
 		if ( !empty( $default ) )
 		{
 			$defaultMime = $default;
 		}
+
 		$mime = '';
+
 		if ( class_exists( 'finfo' ) )
 		{
 			$file_info = new \finfo( FILEINFO_MIME_TYPE );
@@ -1197,9 +1194,13 @@ class FileUtilities
 				$mime = $file_info->file( $local_file );
 			}
 		}
-		if ( empty( $mime ) || ( 0 === strcasecmp( $mime, $defaultMime ) ) ||
-			 ( 0 === strcasecmp( 'text/plain', $mime ) ) || ( 0 === strcasecmp( 'text/x-c', $mime ) ) ||
-			 ( 0 === strcasecmp( 'text/x-c++', $mime ) ) || ( 0 === strcasecmp( 'text/x-java', $mime ) )
+
+		if ( empty( $mime ) ||
+			 ( 0 === strcasecmp( $mime, $defaultMime ) ) ||
+			 ( 0 === strcasecmp( 'text/plain', $mime ) ) ||
+			 ( 0 === strcasecmp( 'text/x-c', $mime ) ) ||
+			 ( 0 === strcasecmp( 'text/x-c++', $mime ) ) ||
+			 ( 0 === strcasecmp( 'text/x-java', $mime ) )
 		)
 		{
 			// need further guidance on these, as they are sometimes incorrect
@@ -1209,7 +1210,7 @@ class FileUtilities
 			}
 			else
 			{
-				$mime = Option::get( static::$_mimeTypes, $ext );
+				$mime = Option::get( $_mimeTypes, $ext );
 			}
 		}
 		if ( empty( $mime ) )
@@ -1227,8 +1228,7 @@ class FileUtilities
 	 */
 	public static function isZipContent( $content_type )
 	{
-		return ( ( 0 == strcasecmp( $content_type, 'application/zip' ) ) ||
-				 ( 0 == strcasecmp( $content_type, 'application/x-zip-compressed' ) ) );
+		return ( ( 0 == strcasecmp( $content_type, 'application/zip' ) ) || ( 0 == strcasecmp( $content_type, 'application/x-zip-compressed' ) ) );
 	}
 
 	/**

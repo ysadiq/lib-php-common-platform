@@ -49,13 +49,18 @@ class RestResponse extends HttpResponse
 	//*************************************************************************
 
 	/**
-	 * @param string $requested Optional requested set format
+	 * @param string $requested Optional requested set format, FALSE for raw formatting
 	 * @param string $internal  Reference returned internal formatting (jtables, etc.)
 	 *
 	 * @return string output format, outer envelope
 	 */
 	public static function detectResponseFormat( $requested, &$internal )
 	{
+		if ( false === $requested )
+		{
+			return $requested;
+		}
+
 		$internal = ResponseFormats::RAW;
 		$_format = $requested;
 
@@ -332,8 +337,7 @@ class RestResponse extends HttpResponse
 	 */
 	public static function is_valid_callback( $subject )
 	{
-		$identifier_syntax
-			= '/^[$_\p{L}][$_\p{L}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]*+$/u';
+		$identifier_syntax = '/^[$_\p{L}][$_\p{L}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]*+$/u';
 
 		$reserved_words = array(
 			'break',
@@ -383,7 +387,6 @@ class RestResponse extends HttpResponse
 			'false'
 		);
 
-		return preg_match( $identifier_syntax, $subject )
-			   && !in_array( mb_strtolower( $subject, 'UTF-8' ), $reserved_words );
+		return preg_match( $identifier_syntax, $subject ) && !in_array( mb_strtolower( $subject, 'UTF-8' ), $reserved_words );
 	}
 }
