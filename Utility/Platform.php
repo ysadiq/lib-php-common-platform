@@ -55,7 +55,10 @@ class Platform extends SeedUtility
 			throw new \InvalidArgumentException( 'Type "' . $type . '" is invalid.' );
 		}
 
-		if ( null === ( $_path = Option::get( $_cache, $_tag ) ) )
+		//	Make a cache tag that includes the requested path...
+		$_cacheTag = Inflector::neutralize( $type . ( $append ? '/' . $append : null ) );
+
+		if ( null === ( $_path = Option::get( $_cache, $_cacheTag ) ) )
 		{
 			$_base = Pii::getParam( $_tag );
 			$_path = $_base . ( $append ? '/' . $append : null );
@@ -69,7 +72,7 @@ class Platform extends SeedUtility
 			}
 
 			//	Store path for next time...
-			Option::set( $_cache, $_tag, $_path );
+			Option::set( $_cache, $_cacheTag, $_path );
 		}
 
 		return $_path;
@@ -84,7 +87,7 @@ class Platform extends SeedUtility
 	 */
 	public static function getStoragePath( $append = null )
 	{
-		return static::_getPlatformPath( LocalStorageTypes::STORAGE_PATH );
+		return static::_getPlatformPath( LocalStorageTypes::STORAGE_PATH, $append );
 	}
 
 	/**
@@ -96,7 +99,7 @@ class Platform extends SeedUtility
 	 */
 	public static function getPrivatePath( $append = null )
 	{
-		return static::_getPlatformPath( LocalStorageTypes::PRIVATE_PATH );
+		return static::_getPlatformPath( LocalStorageTypes::PRIVATE_PATH, $append );
 	}
 
 	/**
@@ -108,7 +111,7 @@ class Platform extends SeedUtility
 	 */
 	public static function getSnapshotPath( $append = null )
 	{
-		return static::_getPlatformPath( LocalStorageTypes::SNAPSHOT_PATH );
+		return static::_getPlatformPath( LocalStorageTypes::SNAPSHOT_PATH, $append );
 	}
 
 	/**
@@ -120,7 +123,7 @@ class Platform extends SeedUtility
 	 */
 	public static function getLibraryPath( $append = null )
 	{
-		return static::_getPlatformPath( LocalStorageTypes::LIBRARY_PATH );
+		return static::_getPlatformPath( LocalStorageTypes::LIBRARY_PATH, $append );
 	}
 
 	/**

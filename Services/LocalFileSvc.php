@@ -657,6 +657,7 @@ class LocalFileSvc extends BaseFileSvc
 	public function streamFile( $container, $path, $download = false )
 	{
 		$_file = static::addContainerToName( $container, $path );
+
 		if ( is_file( $_file ) )
 		{
 			$_ext = FileUtilities::getFileExtension( $_file );
