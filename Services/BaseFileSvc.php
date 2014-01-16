@@ -150,6 +150,8 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 						}
 						fclose( $fd );
 						unlink( $zipFileName );
+						// output handled by file handler, short the response here
+						$this->setOutputFormat( null );
 						$result = null;
 					}
 					else
@@ -183,6 +185,8 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 						}
 						fclose( $fd );
 						unlink( $zipFileName );
+						// output handled by file handler, short the response here
+						$this->setOutputFormat( null );
 						$result = null;
 					}
 					else
@@ -205,7 +209,9 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 						$download = FilterInput::request( 'download', false, FILTER_VALIDATE_BOOLEAN );
 						// stream the file, exits processing
 						$this->streamFile( $this->_container, $this->_filePath, $download );
-						$result = null; // output handled by file handler
+						// output handled by file handler, short the response here
+						$this->setOutputFormat( null );
+						$result = null;
 					}
 				}
 				break;
