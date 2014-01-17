@@ -60,8 +60,7 @@ class Platform extends SeedUtility
 
 		if ( null === ( $_path = Option::get( $_cache, $_cacheTag ) ) )
 		{
-			$_base = Pii::getParam( $_tag );
-			$_path = $_base . ( $append ? '/' . $append : null );
+			$_path = Pii::getParam( $_tag );
 
 			if ( !file_exists( $_path ) && true === $createIfMissing )
 			{
@@ -75,7 +74,7 @@ class Platform extends SeedUtility
 			Option::set( $_cache, $_cacheTag, $_path );
 		}
 
-		return $_path;
+		return $_path . ( $append ? '/' . ltrim( $append, '/' ) : null );
 	}
 
 	/**
@@ -124,6 +123,30 @@ class Platform extends SeedUtility
 	public static function getLibraryPath( $append = null )
 	{
 		return static::_getPlatformPath( LocalStorageTypes::LIBRARY_PATH, $append );
+	}
+
+	/**
+	 * Constructs the virtual private path
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getApplicationsPath( $append = null )
+	{
+		return static::_getPlatformPath( LocalStorageTypes::APPLICATIONS_PATH, $append );
+	}
+
+	/**
+	 * Constructs the virtual private path
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getPluginsPath( $append = null )
+	{
+		return static::_getPlatformPath( LocalStorageTypes::PLUGINS_PATH, $append );
 	}
 
 	/**
