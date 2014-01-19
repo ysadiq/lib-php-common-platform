@@ -328,9 +328,7 @@ class PlatformWebApplication extends \CWebApplication
 	 */
 	protected function _compareUris( $first, $second )
 	{
-		return ( $first['scheme'] == $second['scheme'] ) &&
-			   ( $first['host'] == $second['host'] ) &&
-			   ( $first['port'] == $second['port'] );
+		return ( $first['scheme'] == $second['scheme'] ) && ( $first['host'] == $second['host'] ) && ( $first['port'] == $second['port'] );
 	}
 
 	/**
@@ -375,12 +373,9 @@ class PlatformWebApplication extends \CWebApplication
 	 */
 	protected function _normalizeUri( $parts )
 	{
-		return
-			is_array( $parts )
-				?
-				( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
-				:
-				$parts;
+		return is_array( $parts ) ?
+			( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
+			: $parts;
 	}
 
 	/**
@@ -468,16 +463,23 @@ class PlatformWebApplication extends \CWebApplication
 
 	/**
 	 * @param string|array $namespace
+	 * @param bool         $prepend If true, the namespace(s) will be placed at the beginning of the list
 	 *
 	 * @return PlatformWebApplication
 	 */
-	public function addResourceNamespace( $namespace )
+	public function addResourceNamespace( $namespace, $prepend = false )
 	{
 		foreach ( Option::clean( $namespace ) as $_entry )
 		{
 			if ( !in_array( $_entry, $this->_resourceNamespaces ) )
 			{
-				$this->_resourceNamespaces[] = $_entry;
+				if ( false === $prepend )
+				{
+					$this->_resourceNamespaces[] = $_entry;
+					continue;
+				}
+
+				array_unshift( $this->_resourceNamespaces, $_entry );
 			}
 		}
 
@@ -506,16 +508,23 @@ class PlatformWebApplication extends \CWebApplication
 
 	/**
 	 * @param string|array $namespace
+	 * @param bool         $prepend If true, the namespace(s) will be placed at the beginning of the list
 	 *
 	 * @return PlatformWebApplication
 	 */
-	public function addModelNamespace( $namespace )
+	public function addModelNamespace( $namespace, $prepend = false )
 	{
 		foreach ( Option::clean( $namespace ) as $_entry )
 		{
 			if ( !in_array( $_entry, $this->_modelNamespaces ) )
 			{
-				$this->_modelNamespaces[] = $_entry;
+				if ( false === $prepend )
+				{
+					$this->_modelNamespaces[] = $_entry;
+					continue;
+				}
+
+				array_unshift( $this->_modelNamespaces, $_entry );
 			}
 		}
 
