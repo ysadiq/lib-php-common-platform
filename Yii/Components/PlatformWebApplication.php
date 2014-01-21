@@ -268,21 +268,22 @@ class PlatformWebApplication extends \CWebApplication
 	 */
 	protected function _loadPlugins()
 	{
-		static $_autoloadPath;
-
 		if ( null === ( $_autoloadPath = Pii::getState( 'dsp.plugin_autoload_path' ) ) )
 		{
 			//	Locate plug-in directory...
-			$_path = Pii::getParam( 'dsp.plugins_path', Pii::getParam( 'base_path' ) . static::DEFAULT_PLUGINS_PATH );
+			$_path = Pii::getParam( 'dsp.plugins_path', Pii::getParam( 'dsp.base_path' ) . static::DEFAULT_PLUGINS_PATH );
 
 			if ( !is_dir( $_path ) )
 			{
+				Log::debug( 'No plug-ins installed.' );
+
 				return false;
 			}
 
 			if ( file_exists( $_path . '/autoload.php' ) && is_readable( $_path . '/autoload.php' ) )
 			{
 				$_autoloadPath = $_path . '/autoload.php';
+				Log::debug( 'Found plug-in autoload.php' );
 			}
 			else
 			{
@@ -301,6 +302,8 @@ class PlatformWebApplication extends \CWebApplication
 
 			return false;
 		}
+
+		Log::debug( 'Plug-ins loaded.' );
 
 		return true;
 	}
@@ -424,7 +427,8 @@ class PlatformWebApplication extends \CWebApplication
 	 */
 	protected function _normalizeUri( $parts )
 	{
-		return is_array( $parts ) ? ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
+		return is_array( $parts ) ?
+			( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
 			: $parts;
 	}
 
