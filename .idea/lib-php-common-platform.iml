@@ -2,6 +2,7 @@
 <module type="WEB_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/log" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/aws/aws-sdk-php" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/composer" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/dready92/php-on-couch" />
@@ -99,26 +100,18 @@
     <orderEntry type="module-library">
       <library name="PHARS">
         <CLASSES>
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/nosig.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/modified.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/test.phar" />
-          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/symfony/dependency-injection/Symfony/Component/DependencyInjection/Tests/Fixtures/includes/ProjectWithXsdExtensionInPhar.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/nosigmodified.phar" />
+          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/phpdocumentor/fileset/tests/data/test.phar" />
           <root url="phar:///usr/local/bin/composer.phar" />
           <root url="phar:///usr/share/php/phpDocumentor/tests/data/test.phar" />
-          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/phpdocumentor/fileset/tests/data/test.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/wrongsig.phar" />
+          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/symfony/dependency-injection/Symfony/Component/DependencyInjection/Tests/Fixtures/includes/ProjectWithXsdExtensionInPhar.phar" />
+          <root url="phar:///usr/share/php/data/phpDocumentor/composer.phar" />
         </CLASSES>
         <SOURCES>
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/nosig.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/modified.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/test.phar" />
-          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/symfony/dependency-injection/Symfony/Component/DependencyInjection/Tests/Fixtures/includes/ProjectWithXsdExtensionInPhar.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/nosigmodified.phar" />
+          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/phpdocumentor/fileset/tests/data/test.phar" />
           <root url="phar:///usr/local/bin/composer.phar" />
           <root url="phar:///usr/share/php/phpDocumentor/tests/data/test.phar" />
-          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/phpdocumentor/fileset/tests/data/test.phar" />
-          <root url="phar:///usr/share/php/test/PharUtil/test/PharUtil/data/phar/wrongsig.phar" />
+          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/symfony/dependency-injection/Symfony/Component/DependencyInjection/Tests/Fixtures/includes/ProjectWithXsdExtensionInPhar.phar" />
+          <root url="phar:///usr/share/php/data/phpDocumentor/composer.phar" />
         </SOURCES>
       </library>
     </orderEntry>
