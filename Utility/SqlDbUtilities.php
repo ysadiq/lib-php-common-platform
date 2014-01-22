@@ -155,7 +155,6 @@ class SqlDbUtilities implements SqlDbDriverTypes
 	 */
 	public static function describeDatabase( $db, $include_prefix = '', $exclude_prefix = '' )
 	{
-		// todo need to assess schemas in ms sql and load them separately.
 		try
 		{
 			$_names = $db->schema->getTableNames();
@@ -270,7 +269,16 @@ class SqlDbUtilities implements SqlDbDriverTypes
 			$labels = static::getLabels( $query, array( ':tn' => $name ) );
 			$labels = static::reformatFieldLabelArray( $labels );
 			$labelInfo = Option::get( $labels, '', array() );
-			$publicName = $table->name;
+			$schemaName = $table->schemaName;
+			if ( !empty( $schemaName ) && 'dbo' !== $schemaName )
+			{
+				$publicName = $schemaName . '.' . $table->name;
+			}
+			else
+			{
+				$publicName = $table->name;
+			}
+
 			if ( !empty( $remove_prefix ) )
 			{
 				if ( substr( $publicName, 0, strlen( $remove_prefix ) ) == $remove_prefix )
@@ -501,6 +509,10 @@ class SqlDbUtilities implements SqlDbDriverTypes
 		foreach ( $names as $name )
 		{
 			$table = $db->schema->getTable( $name );
+			if ( !$table )
+			{
+				throw new NotFoundException( "Table '$name' does not exist in the database." );
+			}
 			$fks = $fks2 = $table->foreignKeys;
 			foreach ( $fks as $key => $value )
 			{
@@ -1490,6 +1502,10 @@ class SqlDbUtilities implements SqlDbDriverTypes
 		}
 
 		$schema = $db->schema->getTable( $table_name );
+		if ( !$table_name )
+		{
+			throw new NotFoundException( "Table '$table_name' does not exist in the database." );
+		}
 		try
 		{
 			$names = array();
@@ -1650,6 +1666,10 @@ class SqlDbUtilities implements SqlDbDriverTypes
 			if ( !empty( $fields ) )
 			{
 				$schema = $db->schema->getTable( $table_name );
+				if ( !$table_name )
+				{
+					throw new NotFoundException( "Table '$table_name' does not exist in the database." );
+				}
 				$results = static::buildTableFields( $table_name, $fields, true, $schema );
 				$columns = Utilities::getArrayValue( 'columns', $results, array() );
 				foreach ( $columns as $name => $definition )

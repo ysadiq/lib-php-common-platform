@@ -317,15 +317,28 @@ class SqlDbSvc extends BaseDbSvc
 
 		$_relations = array();
 		$_related = FilterInput::request( 'related' );
-
+		if ( empty( $_related ) )
+		{
+			$_related = Option::get( $post_data, 'related' );
+		}
 		if ( !empty( $_related ) )
 		{
-			$_related = array_map( 'trim', explode( ',', $_related ) );
-			foreach ( $_related as $_relative )
+			if ( '*' == $_related )
 			{
-				$_extraFields = FilterInput::request( $_relative . '_fields', '*' );
-				$_extraOrder = FilterInput::request( $_relative . '_order', '' );
-				$_relations[] = array( 'name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder );
+				$_relations = '*';
+			}
+			else
+			{
+				if ( !is_array( $_related ) )
+				{
+					$_related = array_map( 'trim', explode( ',', $_related ) );
+				}
+				foreach ( $_related as $_relative )
+				{
+					$_extraFields = FilterInput::request( $_relative . '_fields', '*' );
+					$_extraOrder = FilterInput::request( $_relative . '_order', '' );
+					$_relations[] = array( 'name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder );
+				}
 			}
 		}
 
@@ -1151,11 +1164,15 @@ class SqlDbSvc extends BaseDbSvc
 					$temp[$_name] = $_value;
 				}
 
-				if ( !empty( $relations ) )
-				{
-					$temp = $this->retrieveRelatedRecords( $relations, $temp, $related );
-				}
 				$data[$count++] = $temp;
+			}
+
+			if ( !empty( $relations ) )
+			{
+				foreach ( $data as $key => $temp )
+				{
+					$data[$key] = $this->retrieveRelatedRecords( $temp, $relations, $related );
+				}
 			}
 
 			$_includeCount = Option::getBool( $extras, 'include_count', false );
@@ -1316,7 +1333,7 @@ class SqlDbSvc extends BaseDbSvc
 
 				if ( !empty( $relations ) )
 				{
-					$temp = $this->retrieveRelatedRecords( $relations, $temp, $related );
+					$temp = $this->retrieveRelatedRecords( $temp, $relations, $related );
 				}
 				$data[$count++] = $temp;
 			}
@@ -1760,6 +1777,7 @@ class SqlDbSvc extends BaseDbSvc
 					break;
 				case 'geometry':
 				case 'geography':
+				case 'hierarchyid':
 					switch ( $this->_driverType )
 					{
 						case SqlDbUtilities::DRV_DBLIB:
@@ -1836,11 +1854,29 @@ class SqlDbSvc extends BaseDbSvc
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return array
 	 */
-	protected function retrieveRelatedRecords( $relations, $data, $extras )
+	protected function retrieveRelatedRecords( $data, $relations, $extras )
 	{
-		if ( !empty( $extras ) )
+		if ( empty( $relations ) || empty( $extras ) )
 		{
-			$relatedData = array();
+			return $data;
+		}
+
+		$relatedData = array();
+		$relatedExtras = array( 'limit' => static::DB_MAX_RECORDS_RETURNED );
+		if ( '*' == $extras )
+		{
+			$extraFields = '*';
+			foreach ( $relations as $_name => $relation )
+			{
+				if ( empty( $relation ) )
+				{
+					throw new BadRequestException( "Empty relationship '$_name' found." );
+				}
+				$relatedData[$_name] = $this->retrieveRelationRecords( $data, $relation, $extraFields, $relatedExtras );
+			}
+		}
+		else
+		{
 			foreach ( $extras as $extra )
 			{
 				$extraName = Option::get( $extra, 'name' );
@@ -1849,69 +1885,79 @@ class SqlDbSvc extends BaseDbSvc
 				{
 					throw new BadRequestException( "Invalid relationship '$extraName' requested." );
 				}
-				$relationType = Option::get( $relation, 'type' );
-				$relatedTable = Option::get( $relation, 'ref_table' );
-				$relatedField = Option::get( $relation, 'ref_field' );
-				$field = Option::get( $relation, 'field' );
-				// do we have permission to do so?
-				$this->validateTableAccess( $relatedTable, 'read' );
 
 				$extraFields = Option::get( $extra, 'fields' );
-				$relatedExtras = array( 'limit' => static::DB_MAX_RECORDS_RETURNED );
-				$tempData = null;
-				switch ( $relationType )
-				{
-					case 'belongs_to':
-						$fieldVal = Option::get( $data, $field );
-						$relatedRecords = $this->retrieveRecordsByFilter( $relatedTable, "$relatedField = '$fieldVal'", $extraFields, $relatedExtras );
-						if ( !empty( $relatedRecords ) )
-						{
-							$tempData = Option::get( $relatedRecords, 0 );
-						}
-						break;
-					case 'has_many':
-						$fieldVal = Option::get( $data, $field );
-						$tempData = $this->retrieveRecordsByFilter( $relatedTable, "$relatedField = '$fieldVal'", $extraFields, $relatedExtras );
-						break;
-					case 'many_many':
-						$fieldVal = Option::get( $data, $field );
-						$join = Option::get( $relation, 'join', '' );
-						$joinTable = substr( $join, 0, strpos( $join, '(' ) );
-						$other = explode( ',', substr( $join, strpos( $join, '(' ) + 1, -1 ) );
-						$joinLeftField = trim( Option::get( $other, 0 ) );
-						$joinRightField = trim( Option::get( $other, 1 ) );
-						if ( !empty( $joinLeftField ) && !empty( $joinRightField ) )
-						{
-							$joinData = $this->retrieveRecordsByFilter( $joinTable, "$joinLeftField = '$fieldVal'", $joinRightField, $relatedExtras );
-							if ( !empty( $joinData ) )
-							{
-								$relatedIds = array();
-								foreach ( $joinData as $record )
-								{
-									$relatedIds[] = Option::get( $record, $joinRightField );
-								}
-								if ( !empty( $relatedIds ) )
-								{
-									$relatedIds = implode( ',', $relatedIds );
-									$relatedExtras['id_field'] = $relatedField;
-									$tempData = $this->retrieveRecordsByIds( $relatedTable, $relatedIds, $extraFields, $relatedExtras );
-								}
-							}
-						}
-						break;
-					default:
-						throw new InternalServerErrorException( 'Invalid relationship type detected.' );
-						break;
-				}
-				$relatedData[$extraName] = $tempData;
+				$relatedData[$extraName] = $this->retrieveRelationRecords( $data, $relation, $extraFields, $relatedExtras );
 			}
-			if ( !empty( $relatedData ) )
-			{
-				$data = array_merge( $data, $relatedData );
-			}
+		}
+		if ( !empty( $relatedData ) )
+		{
+			$data = array_merge( $data, $relatedData );
 		}
 
 		return $data;
+	}
+
+	protected function retrieveRelationRecords( $data, $relation, $fields, $extras )
+	{
+		if ( empty( $relation ) )
+		{
+			return null;
+		}
+
+		$relationType = Option::get( $relation, 'type' );
+		$relatedTable = Option::get( $relation, 'ref_table' );
+		$relatedField = Option::get( $relation, 'ref_field' );
+		$field = Option::get( $relation, 'field' );
+		$fieldVal = Option::get( $data, $field );
+
+		// do we have permission to do so?
+		$this->validateTableAccess( $relatedTable, 'read' );
+
+		switch ( $relationType )
+		{
+			case 'belongs_to':
+				$relatedRecords = $this->retrieveRecordsByFilter( $relatedTable, "$relatedField = '$fieldVal'", $fields, $extras );
+				if ( !empty( $relatedRecords ) )
+				{
+					return Option::get( $relatedRecords, 0 );
+				}
+				break;
+			case 'has_many':
+				return $this->retrieveRecordsByFilter( $relatedTable, "$relatedField = '$fieldVal'", $fields, $extras );
+				break;
+			case 'many_many':
+				$join = Option::get( $relation, 'join', '' );
+				$joinTable = substr( $join, 0, strpos( $join, '(' ) );
+				$other = explode( ',', substr( $join, strpos( $join, '(' ) + 1, -1 ) );
+				$joinLeftField = trim( Option::get( $other, 0 ) );
+				$joinRightField = trim( Option::get( $other, 1 ) );
+				if ( !empty( $joinLeftField ) && !empty( $joinRightField ) )
+				{
+					$joinData = $this->retrieveRecordsByFilter( $joinTable, "$joinLeftField = '$fieldVal'", $joinRightField, $extras );
+					if ( !empty( $joinData ) )
+					{
+						$relatedIds = array();
+						foreach ( $joinData as $record )
+						{
+							$relatedIds[] = Option::get( $record, $joinRightField );
+						}
+						if ( !empty( $relatedIds ) )
+						{
+							$relatedIds = implode( ',', $relatedIds );
+							$relatedExtras['id_field'] = $relatedField;
+
+							return $this->retrieveRecordsByIds( $relatedTable, $relatedIds, $fields, $extras );
+						}
+					}
+				}
+				break;
+			default:
+				throw new InternalServerErrorException( 'Invalid relationship type detected.' );
+				break;
+		}
+
+		return null;
 	}
 
 	/**
