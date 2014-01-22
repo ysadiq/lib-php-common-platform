@@ -24,7 +24,7 @@
 	],
 	"require":           {
 		"php":                             ">=5.3.10",
-		"kisma/kisma":                     "~0.2.5",
+		"kisma/kisma":                     "=0.2.7",
 		"dreamfactory/lib-php-common":     "~1.1.4",
 		"dreamfactory/lib-php-common-yii": "~1.1.5",
 		"dreamfactory/oasys":              "~0.4.0",
