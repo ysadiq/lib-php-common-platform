@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Exceptions;
 use Kisma\Core\Interfaces\HttpResponse;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 
 /**
  * RestException
@@ -69,9 +70,10 @@ class RestException extends PlatformServiceException implements HttpResponse
 		Log::error(
 		   'REST Exception #' . $code . ' > ' . $message,
 		   array(
-			   'host'        => $_SERVER['HTTP_HOST'],
-			   'request_uri' => $_SERVER['REQUEST_URI'],
-			   'source_ip'   => $_SERVER['REMOTE_ADDR'],
+			   'host'        => Option::server( 'HTTP_HOST', \gethostname() ),
+			   'request_uri' => Option::server( 'REQUEST_URI' ),
+			   'source_ip'   => Option::server( 'REMOTE_ADDR' ),
+			   'sapi_name'   => \php_sapi_name(),
 		   )
 		);
 	}

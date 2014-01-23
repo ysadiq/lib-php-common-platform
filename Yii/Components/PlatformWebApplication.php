@@ -64,6 +64,10 @@ class PlatformWebApplication extends \CWebApplication
 	 * @var string The default DSP model namespace
 	 */
 	const DEFAULT_MODEL_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Yii\\Models';
+	/**
+	 * @var string The default path (sub-path) of installed plug-ins
+	 */
+	const DEFAULT_PLUGINS_PATH = '/storage/plugins';
 
 	//*************************************************************************
 	//	Members
@@ -158,6 +162,9 @@ class PlatformWebApplication extends \CWebApplication
 		{
 			$this->addCorsHeaders();
 		}
+
+		//	Load any plug-ins
+		$this->_loadPlugins();
 	}
 
 	/**
@@ -255,6 +262,53 @@ class PlatformWebApplication extends \CWebApplication
 	}
 
 	/**
+	 * Loads up any plug-ins configured
+	 *
+	 * @return bool
+	 */
+	protected function _loadPlugins()
+	{
+		if ( null === ( $_autoloadPath = Pii::getState( 'dsp.plugin_autoload_path' ) ) )
+		{
+			//	Locate plug-in directory...
+			$_path = Pii::getParam( 'dsp.plugins_path', Pii::getParam( 'dsp.base_path' ) . static::DEFAULT_PLUGINS_PATH );
+
+			if ( !is_dir( $_path ) )
+			{
+				Log::debug( 'No plug-ins installed.' );
+
+				return false;
+			}
+
+			if ( file_exists( $_path . '/autoload.php' ) && is_readable( $_path . '/autoload.php' ) )
+			{
+				$_autoloadPath = $_path . '/autoload.php';
+				Log::debug( 'Found plug-in autoload.php' );
+			}
+			else
+			{
+				Log::debug( 'No autoload.php file found for installed plug-ins.' );
+
+				return false;
+			}
+
+			Pii::setState( 'dsp.plugin_autoload_path', $_autoloadPath );
+		}
+
+		/** @noinspection PhpIncludeInspection */
+		if ( false === @require( $_autoloadPath ) )
+		{
+			Log::error( 'Error reading plug-in autoload.php file. Some plug-ins may not function properly.' );
+
+			return false;
+		}
+
+		Log::debug( 'Plug-ins loaded.' );
+
+		return true;
+	}
+
+	/**
 	 * @param string|array $origin     The parse_url value of origin
 	 * @param array        $additional Additional origins to allow
 	 *
@@ -328,9 +382,7 @@ class PlatformWebApplication extends \CWebApplication
 	 */
 	protected function _compareUris( $first, $second )
 	{
-		return ( $first['scheme'] == $second['scheme'] ) &&
-			   ( $first['host'] == $second['host'] ) &&
-			   ( $first['port'] == $second['port'] );
+		return ( $first['scheme'] == $second['scheme'] ) && ( $first['host'] == $second['host'] ) && ( $first['port'] == $second['port'] );
 	}
 
 	/**
@@ -375,12 +427,9 @@ class PlatformWebApplication extends \CWebApplication
 	 */
 	protected function _normalizeUri( $parts )
 	{
-		return
-			is_array( $parts )
-				?
-				( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
-				:
-				$parts;
+		return is_array( $parts ) ?
+			( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
+			: $parts;
 	}
 
 	/**
@@ -468,16 +517,23 @@ class PlatformWebApplication extends \CWebApplication
 
 	/**
 	 * @param string|array $namespace
+	 * @param bool         $prepend If true, the namespace(s) will be placed at the beginning of the list
 	 *
 	 * @return PlatformWebApplication
 	 */
-	public function addResourceNamespace( $namespace )
+	public function addResourceNamespace( $namespace, $prepend = false )
 	{
 		foreach ( Option::clean( $namespace ) as $_entry )
 		{
 			if ( !in_array( $_entry, $this->_resourceNamespaces ) )
 			{
-				$this->_resourceNamespaces[] = $_entry;
+				if ( false === $prepend )
+				{
+					$this->_resourceNamespaces[] = $_entry;
+					continue;
+				}
+
+				array_unshift( $this->_resourceNamespaces, $_entry );
 			}
 		}
 
@@ -506,16 +562,23 @@ class PlatformWebApplication extends \CWebApplication
 
 	/**
 	 * @param string|array $namespace
+	 * @param bool         $prepend If true, the namespace(s) will be placed at the beginning of the list
 	 *
 	 * @return PlatformWebApplication
 	 */
-	public function addModelNamespace( $namespace )
+	public function addModelNamespace( $namespace, $prepend = false )
 	{
 		foreach ( Option::clean( $namespace ) as $_entry )
 		{
 			if ( !in_array( $_entry, $this->_modelNamespaces ) )
 			{
-				$this->_modelNamespaces[] = $_entry;
+				if ( false === $prepend )
+				{
+					$this->_modelNamespaces[] = $_entry;
+					continue;
+				}
+
+				array_unshift( $this->_modelNamespaces, $_entry );
 			}
 		}
 

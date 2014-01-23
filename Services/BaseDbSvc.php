@@ -701,7 +701,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 			$_id = Option::get( $_record, $id_field );
 			if ( empty( $_id ) )
 			{
-				throw new BadRequestException( "Identifying field '$id_field' can not be empty for retrieve record index '$_key' request." );
+				throw new BadRequestException( "Identifying field '$id_field' can not be empty for record index '$_key' request." );
 			}
 			$_ids[] = $_id;
 		}

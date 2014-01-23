@@ -177,8 +177,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		//	Inherent failure?
 		if ( false === ( $this->_response = $this->_handleResource() ) )
 		{
-			$_message = $this->_action . ' requests' .
-				( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
+			$_message =
+				$this->_action . ' requests' . ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
 				' are not currently supported by the "' . $this->_apiName . '" service.';
 
 			throw new BadRequestException( $_message );
@@ -286,7 +286,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 		if ( $this->_autoDispatch && method_exists( $this, $_method ) )
 		{
-			return call_user_func( array($this, $_method) );
+			return call_user_func( array( $this, $_method ) );
 		}
 
 		//	Otherwise just return false
@@ -396,7 +396,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 			else
 			{
 				RestResponse::sendErrors(
-							new BadRequestException( 'No application name header or parameter value in request.' )
+					new BadRequestException( 'No application name header or parameter value in request.' )
 				);
 			}
 		}
@@ -819,10 +819,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 	/**
 	 * @param array $responseCode
+	 *
+	 * @return $this
 	 */
 	public function setResponseCode( $responseCode )
 	{
 		$this->_responseCode = $responseCode;
+
+		return $this;
 	}
 
 	/**
@@ -835,10 +839,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 	/**
 	 * @param string $outputFormat
+	 *
+	 * @return $this
 	 */
 	public function setOutputFormat( $outputFormat )
 	{
 		$this->_outputFormat = $outputFormat;
+
+		return $this;
 	}
 
 	/**
