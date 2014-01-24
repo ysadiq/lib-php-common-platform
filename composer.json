@@ -3,13 +3,9 @@
 	"description":       "DreamFactory Services Platform(tm) Components Library/SDK for PHP",
 	"version":           "1.3.5",
 	"homepage":          "http://dreamfactorysoftware.github.io",
-	"keywords":          [
-		"php5", "framework", "library", "dreamfactory"
-	],
+	"keywords":          ["php5", "framework", "library", "dreamfactory", "dsp"],
 	"type":              "library",
-	"license":           [
-		"Apache-2.0"
-	],
+	"license":           ["Apache-2.0"],
 	"authors":           [
 		{
 			"name":  "Jerry Ablan",
@@ -20,6 +16,13 @@
 			"name":  "Lee Hicks",
 			"email": "leehicks@dreamfactory.com",
 			"role":  "Lead Developer, server-side/client-side"
+		}
+	],
+	"minimum-stability": "dev",
+	"repositories":      [
+		{
+			"type": "pear",
+			"url":  "http://pear.php.net"
 		}
 	],
 	"require":           {
@@ -36,17 +39,10 @@
 		"phpforce/soap-client":            "dev-master",
 		"dreamfactory/azure-sdk-for-php":  "~0.3.1"
 	},
-	"repositories":      [
-		{
-			"type": "pear",
-			"url":  "http://pear.php.net"
-		}
-	],
 	"autoload":          {
 		"psr-0": {
 			"DreamFactory\\Platform\\": ""
 		}
 	},
-	"target-dir":        "DreamFactory/Platform",
-	"minimum-stability": "dev"
+	"target-dir":        "DreamFactory/Platform"
 }
