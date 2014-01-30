@@ -2,34 +2,8 @@
 <module type="WEB_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/log" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/aws/aws-sdk-php" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/composer" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/dready92/php-on-couch" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/dreamfactory/javascript-sdk" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common-yii" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/dreamfactory/oasys" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/dreamfactory/yii" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/guzzle/guzzle" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/hybridauth/hybridauth" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/kisma/kisma" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/microsoft/windowsazure" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Archive_Tar" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Console_Getopt" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/pear-pear.php.net/HTTP_Request2" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Mail_Mime" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Mail_mimeDecode" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Net_URL2" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/pear-pear.php.net/PEAR" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Structures_Graph" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/pear-pear.php.net/XML_Util" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/phpforce/common" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/phpforce/soap-client" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/psr/log" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/rackspace/php-opencloud" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/swiftmailer/swiftmailer" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/symfony/event-dispatcher" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
