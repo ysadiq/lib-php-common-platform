@@ -11,6 +11,7 @@ class ResourceStoreTest extends BaseLibraryTestCase
 	protected function setUp()
 	{
 		parent::setUp();
+		
 		ResourceStore::reset( array( 'resource_name' => 'provider' ) );
 	}
 

@@ -29,7 +29,6 @@ use DreamFactory\Yii\Utility\Pii;
  */
 class PlatformTest extends BaseLibraryTestCase
 {
-
 	/**
 	 * @covers DreamFactory\Platform\Utility\Platform::getStoragePath()
 	 */
