@@ -19,8 +19,8 @@
  */
 namespace DreamFactory\Platform\Tests\Utility;
 
+use DreamFactory\Platform\Components\BaseLibraryTestCase;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
-use DreamFactory\Platform\Tests\BaseLibraryTestCase;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 
