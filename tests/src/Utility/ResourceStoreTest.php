@@ -1,8 +1,7 @@
 <?php
-namespace DreamFactory\Platform\Tests\Utility;
+namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Platform\Tests\BaseLibraryTestCase;
-use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Components\BaseLibraryTestCase;
 
 /**
  * ResourceStoreTest

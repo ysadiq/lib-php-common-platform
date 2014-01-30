@@ -4,5 +4,6 @@ vendor
 composer.lock
 .composer
 tests/log
+tests/src/log
 tests/config/keys.php
 tests/metrics

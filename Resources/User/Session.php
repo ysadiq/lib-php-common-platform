@@ -49,6 +49,15 @@ use Kisma\Core\Utility\Scalar;
 class Session extends BasePlatformRestResource
 {
 	//*************************************************************************
+	//	Constants
+	//*************************************************************************
+
+	/**
+	 * @const bool
+	 */
+	const CHECK_REGISTRATION_AT_LOGIN = false;
+
+	//*************************************************************************
 	//* Members
 	//*************************************************************************
 
@@ -56,6 +65,10 @@ class Session extends BasePlatformRestResource
 	 * @var int
 	 */
 	protected static $_userId = null;
+	/**
+	 * @var string
+	 */
+	protected static $_ownerId = null;
 	/**
 	 * @var array
 	 */
@@ -283,9 +296,13 @@ class Session extends BasePlatformRestResource
 		$_user->update( array( 'last_login_date' => date( 'c' ) ) );
 
 		static::$_userId = $_user->id;
+		static::$_ownerId = $_user->owner_id;
 
 		//	Check registration...
-//		SystemManager::registerPlatform( $_user, Pii::getState( 'app.registration_skipped' ) );
+		if ( static::CHECK_REGISTRATION_AT_LOGIN )
+		{
+			SystemManager::registerPlatform( $_user, Pii::getState( 'app.registration_skipped' ) );
+		}
 
 		// 	Additional stuff for session - launchpad mainly
 		return static::addSessionExtras( $_result, $_user->is_sys_admin, true );

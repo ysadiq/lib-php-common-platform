@@ -17,10 +17,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Tests;
+namespace DreamFactory\Platform\Components;
 
 use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
 
 /**
  * BaseLibraryTestCase
