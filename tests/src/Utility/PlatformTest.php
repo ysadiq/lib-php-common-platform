@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Tests\Utility;
 
-use DreamFactory\Platform\Components\BaseLibraryTestCase;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
@@ -27,7 +26,7 @@ use DreamFactory\Yii\Utility\Pii;
 /**
  * PlatformTest
  */
-class PlatformTest extends BaseLibraryTestCase
+class PlatformTest extends \PHPUnit_Framework_TestCase
 {
 	/**
 	 * @covers DreamFactory\Platform\Utility\Platform::getStoragePath()

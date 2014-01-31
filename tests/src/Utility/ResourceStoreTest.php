@@ -1,17 +1,15 @@
 <?php
 namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Platform\Components\BaseLibraryTestCase;
-
 /**
  * ResourceStoreTest
  */
-class ResourceStoreTest extends BaseLibraryTestCase
+class ResourceStoreTest extends \PHPUnit_Framework_TestCase
 {
 	protected function setUp()
 	{
 		parent::setUp();
-		
+
 		ResourceStore::reset( array( 'resource_name' => 'provider' ) );
 	}
 
