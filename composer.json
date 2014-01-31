@@ -51,9 +51,13 @@
 		"phpunit/php-invoker":          "@stable"
 	},
 	"autoload":          {
-		"psr-0": {
+		"psr-4": {
 			"DreamFactory\\Platform\\": ""
 		}
 	},
-	"target-dir":        "DreamFactory/Platform"
+	"extra":             {
+		"branch-alias": {
+			"dev-develop": "1.4.x-dev"
+		}
+	}
 }
