@@ -20,6 +20,7 @@
       <w>simpledb</w>
       <w>strtolower</w>
       <w>sybase</w>
+      <w>testdox</w>
     </words>
   </dictionary>
 </component>
