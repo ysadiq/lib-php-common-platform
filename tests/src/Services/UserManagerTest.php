@@ -1,7 +1,5 @@
 <?php
-namespace DreamFactory\Tests\Services;
-
-use DreamFactory\Platform\Services\UserManager;
+namespace DreamFactory\Platform\Services;
 
 /**
  * UserManagerTest

@@ -60,9 +60,15 @@ class Platform extends SeedUtility
 
 		if ( null === ( $_path = Option::get( $_cache, $_cacheTag ) ) )
 		{
-			$_path = Pii::getParam( $_tag );
+			$_path = trim( Pii::getParam( $_tag ) );
 
-			if ( !file_exists( $_path ) && true === $createIfMissing )
+			if ( empty( $_path ) )
+			{
+				$_path = \Kisma::get( 'app.project_root' ) . '/storage';
+				Log::notice( 'Empty path for platform path type "' . $type . '". Defaulting to "' . $_path . '"' );
+			}
+
+			if ( !is_dir( $_path ) && true === $createIfMissing )
 			{
 				if ( false === @\mkdir( $_path, 0777, true ) )
 				{
@@ -162,13 +168,24 @@ class Platform extends SeedUtility
 			hash(
 				'ripemd128',
 				uniqid( '', true ) . ( $_uuid ? : microtime( true ) ) . md5(
-					$namespace . $_SERVER['REQUEST_TIME'] . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['LOCAL_ADDR'] . $_SERVER['LOCAL_PORT'] . $_SERVER['REMOTE_ADDR'] .
-					$_SERVER['REMOTE_PORT']
+					$namespace . $_SERVER['REQUEST_TIME'] . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['LOCAL_ADDR'] . $_SERVER['LOCAL_PORT'] .
+					$_SERVER['REMOTE_ADDR'] . $_SERVER['REMOTE_PORT']
 				)
 			)
 		);
 
-		$_uuid = '{' . substr( $_hash, 0, 8 ) . '-' . substr( $_hash, 8, 4 ) . '-' . substr( $_hash, 12, 4 ) . '-' . substr( $_hash, 16, 4 ) . '-' . substr( $_hash, 20, 12 ) . '}';
+		$_uuid =
+			'{' .
+			substr( $_hash, 0, 8 ) .
+			'-' .
+			substr( $_hash, 8, 4 ) .
+			'-' .
+			substr( $_hash, 12, 4 ) .
+			'-' .
+			substr( $_hash, 16, 4 ) .
+			'-' .
+			substr( $_hash, 20, 12 ) .
+			'}';
 
 		return $_uuid;
 	}

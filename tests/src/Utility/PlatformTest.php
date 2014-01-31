@@ -17,10 +17,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Tests\Utility;
+namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\LocalStorageTypes;
-use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 
 /**

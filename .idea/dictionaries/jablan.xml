@@ -4,6 +4,7 @@
       <w>appgroup</w>
       <w>cloudfiles</w>
       <w>datetimeoffset</w>
+      <w>dbunit</w>
       <w>deserialize</w>
       <w>deserialized</w>
       <w>dfpkg</w>
@@ -13,6 +14,7 @@
       <w>nosql</w>
       <w>ocsql</w>
       <w>openstack</w>
+      <w>phpcov</w>
       <w>phpforce</w>
       <w>postgresql</w>
       <w>simpledb</w>
