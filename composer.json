@@ -1,7 +1,6 @@
 {
 	"name":              "dreamfactory/lib-php-common-platform",
 	"description":       "DreamFactory Services Platform(tm) Components Library/SDK for PHP",
-	"version":           "1.3.5",
 	"homepage":          "http://dreamfactorysoftware.github.io",
 	"keywords":          ["php5", "framework", "library", "dreamfactory", "dsp"],
 	"type":              "library",
@@ -27,10 +26,10 @@
 	],
 	"require":           {
 		"php":                             ">=5.3.10",
-		"kisma/kisma":                     "~0.2.5",
+		"kisma/kisma":                     "~0.2.13",
 		"dreamfactory/lib-php-common":     "~1.1.4",
 		"dreamfactory/lib-php-common-yii": "~1.1.5",
-		"dreamfactory/oasys":              "~0.4.0",
+		"dreamfactory/oasys":              "~0.4.5",
 		"dreamfactory/javascript-sdk":     "1.*",
 		"swiftmailer/swiftmailer":         "4.3.*",
 		"aws/aws-sdk-php":                 "2.4.*",
@@ -38,6 +37,9 @@
 		"dready92/php-on-couch":           "dev-master",
 		"phpforce/soap-client":            "dev-master",
 		"dreamfactory/azure-sdk-for-php":  "~0.3.1"
+	},
+	"require-dev":       {
+		"phpunit/phpunit": "*"
 	},
 	"autoload":          {
 		"psr-0": {
