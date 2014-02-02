@@ -3,5 +3,4 @@ vendor
 .idea/tasks.xml
 .composer
 tests/config/keys.php
-tests/metrics
 tests/storage

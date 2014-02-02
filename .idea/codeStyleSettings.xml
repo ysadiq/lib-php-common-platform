@@ -3,11 +3,266 @@
   <component name="ProjectCodeStyleSettingsManager">
     <option name="PER_PROJECT_SETTINGS">
       <value>
+        <option name="USE_SAME_INDENTS" value="true" />
+        <option name="IGNORE_SAME_INDENTS_FOR_LANGUAGES" value="true" />
+        <option name="OTHER_INDENT_OPTIONS">
+          <value>
+            <option name="INDENT_SIZE" value="4" />
+            <option name="CONTINUATION_INDENT_SIZE" value="4" />
+            <option name="TAB_SIZE" value="4" />
+            <option name="USE_TAB_CHARACTER" value="true" />
+            <option name="SMART_TABS" value="false" />
+            <option name="LABEL_INDENT_SIZE" value="0" />
+            <option name="LABEL_INDENT_ABSOLUTE" value="false" />
+            <option name="USE_RELATIVE_INDENTS" value="false" />
+          </value>
+        </option>
+        <option name="RIGHT_MARGIN" value="160" />
+        <option name="HTML_ATTRIBUTE_WRAP" value="4" />
+        <option name="HTML_TEXT_WRAP" value="0" />
+        <option name="HTML_KEEP_LINE_BREAKS_IN_TEXT" value="false" />
+        <option name="HTML_KEEP_BLANK_LINES" value="1" />
+        <option name="HTML_ALIGN_ATTRIBUTES" value="false" />
+        <option name="HTML_SPACE_INSIDE_EMPTY_TAG" value="true" />
+        <option name="HTML_ELEMENTS_TO_INSERT_NEW_LINE_BEFORE" value="body,p,form,h1,h2,h3,span,div,ul,table,input,label,/div,/span,![endif]--,img" />
+        <option name="HTML_DO_NOT_INDENT_CHILDREN_OF" value="html,script" />
+        <option name="HTML_KEEP_WHITESPACES_INSIDE" value="span,pre,code" />
+        <option name="HTML_INLINE_ELEMENTS" value="a,abbr,acronym,b,basefont,bdo,big,br,cite,cite,code,dfn,em,font,i,img,kbd,q,s,samp,select,span,strike,strong,sub,sup,textarea,tt,u,var" />
+        <option name="KEEP_CONTROL_STATEMENT_IN_ONE_LINE" value="false" />
+        <option name="CATCH_ON_NEW_LINE" value="true" />
+        <option name="FINALLY_ON_NEW_LINE" value="true" />
+        <option name="ALIGN_MULTILINE_CHAINED_METHODS" value="true" />
+        <option name="ALIGN_MULTILINE_PARAMETERS_IN_CALLS" value="true" />
+        <option name="ALIGN_MULTILINE_BINARY_OPERATION" value="true" />
+        <option name="ALIGN_MULTILINE_ASSIGNMENT" value="true" />
+        <option name="ALIGN_MULTILINE_TERNARY_OPERATION" value="true" />
+        <option name="ALIGN_MULTILINE_PARENTHESIZED_EXPRESSION" value="true" />
+        <option name="ALIGN_MULTILINE_ARRAY_INITIALIZER_EXPRESSION" value="true" />
+        <option name="SPACE_WITHIN_METHOD_CALL_PARENTHESES" value="true" />
+        <option name="SPACE_WITHIN_METHOD_PARENTHESES" value="true" />
+        <option name="SPACE_WITHIN_IF_PARENTHESES" value="true" />
+        <option name="SPACE_WITHIN_WHILE_PARENTHESES" value="true" />
+        <option name="SPACE_WITHIN_FOR_PARENTHESES" value="true" />
+        <option name="SPACE_WITHIN_CATCH_PARENTHESES" value="true" />
+        <option name="SPACE_WITHIN_SWITCH_PARENTHESES" value="true" />
+        <option name="BINARY_OPERATION_WRAP" value="5" />
+        <option name="TERNARY_OPERATION_WRAP" value="5" />
+        <option name="FOR_STATEMENT_WRAP" value="1" />
+        <option name="ARRAY_INITIALIZER_WRAP" value="5" />
+        <option name="ARRAY_INITIALIZER_LBRACE_ON_NEXT_LINE" value="true" />
+        <option name="ARRAY_INITIALIZER_RBRACE_ON_NEXT_LINE" value="true" />
+        <option name="ASSIGNMENT_WRAP" value="5" />
+        <option name="PLACE_ASSIGNMENT_SIGN_ON_NEXT_LINE" value="true" />
+        <option name="ASSERT_STATEMENT_WRAP" value="5" />
+        <option name="IF_BRACE_FORCE" value="1" />
+        <option name="DOWHILE_BRACE_FORCE" value="1" />
+        <option name="WHILE_BRACE_FORCE" value="1" />
+        <option name="FOR_BRACE_FORCE" value="1" />
+        <option name="WRAP_LONG_LINES" value="true" />
+        <option name="METHOD_ANNOTATION_WRAP" value="5" />
+        <option name="CLASS_ANNOTATION_WRAP" value="5" />
+        <option name="FIELD_ANNOTATION_WRAP" value="5" />
+        <option name="PARAMETER_ANNOTATION_WRAP" value="5" />
+        <option name="VARIABLE_ANNOTATION_WRAP" value="5" />
+        <option name="ENUM_CONSTANTS_WRAP" value="5" />
+        <CssCodeStyleSettings>
+          <option name="VALUE_ALIGNMENT" value="2" />
+        </CssCodeStyleSettings>
+        <JSCodeStyleSettings>
+          <option name="SPACE_BEFORE_TYPE_COLON" value="true" />
+          <option name="SPACE_AFTER_TYPE_COLON" value="true" />
+          <option name="PROPERTY_PREFIX" value="_" />
+          <option name="ALIGN_OBJECT_PROPERTIES" value="1" />
+          <option name="SPACE_BEFORE_FUNCTION_LEFT_PARENTH" value="false" />
+        </JSCodeStyleSettings>
+        <PHPCodeStyleSettings>
+          <option name="ALIGN_KEY_VALUE_PAIRS" value="true" />
+          <option name="ALIGN_PHPDOC_PARAM_NAMES" value="true" />
+          <option name="ALIGN_PHPDOC_COMMENTS" value="true" />
+          <option name="PHPDOC_BLANK_LINE_BEFORE_TAGS" value="true" />
+          <option name="PHPDOC_BLANK_LINES_AROUND_PARAMETERS" value="true" />
+          <option name="LOWER_CASE_BOOLEAN_CONST" value="true" />
+          <option name="LOWER_CASE_NULL_CONST" value="true" />
+          <option name="BLANK_LINE_BEFORE_RETURN_STATEMENT" value="true" />
+          <option name="KEEP_RPAREN_AND_LBRACE_ON_ONE_LINE" value="true" />
+        </PHPCodeStyleSettings>
         <XML>
+          <option name="XML_ATTRIBUTE_WRAP" value="4" />
+          <option name="XML_KEEP_LINE_BREAKS" value="false" />
+          <option name="XML_SPACE_INSIDE_EMPTY_TAG" value="true" />
           <option name="XML_LEGACY_SETTINGS_IMPORTED" value="true" />
         </XML>
+        <ADDITIONAL_INDENT_OPTIONS fileType="haml">
+          <option name="INDENT_SIZE" value="2" />
+        </ADDITIONAL_INDENT_OPTIONS>
+        <ADDITIONAL_INDENT_OPTIONS fileType="lua">
+          <option name="INDENT_SIZE" value="2" />
+        </ADDITIONAL_INDENT_OPTIONS>
+        <codeStyleSettings language="CSS">
+          <indentOptions>
+            <option name="CONTINUATION_INDENT_SIZE" value="4" />
+            <option name="USE_TAB_CHARACTER" value="true" />
+          </indentOptions>
+        </codeStyleSettings>
+        <codeStyleSettings language="CoffeeScript">
+          <option name="ALIGN_MULTILINE_PARAMETERS_IN_CALLS" value="true" />
+          <option name="SPACE_WITHIN_METHOD_CALL_PARENTHESES" value="true" />
+          <option name="SPACE_WITHIN_METHOD_PARENTHESES" value="true" />
+          <option name="ARRAY_INITIALIZER_WRAP" value="5" />
+          <option name="ARRAY_INITIALIZER_LBRACE_ON_NEXT_LINE" value="true" />
+          <option name="ARRAY_INITIALIZER_RBRACE_ON_NEXT_LINE" value="true" />
+          <option name="PARENT_SETTINGS_INSTALLED" value="true" />
+        </codeStyleSettings>
+        <codeStyleSettings language="HTML">
+          <indentOptions>
+            <option name="CONTINUATION_INDENT_SIZE" value="4" />
+            <option name="USE_TAB_CHARACTER" value="true" />
+          </indentOptions>
+        </codeStyleSettings>
+        <codeStyleSettings language="JavaScript">
+          <option name="KEEP_LINE_BREAKS" value="false" />
+          <option name="KEEP_BLANK_LINES_IN_CODE" value="1" />
+          <option name="ELSE_ON_NEW_LINE" value="true" />
+          <option name="WHILE_ON_NEW_LINE" value="true" />
+          <option name="CATCH_ON_NEW_LINE" value="true" />
+          <option name="FINALLY_ON_NEW_LINE" value="true" />
+          <option name="ALIGN_MULTILINE_PARAMETERS_IN_CALLS" value="true" />
+          <option name="ALIGN_MULTILINE_BINARY_OPERATION" value="true" />
+          <option name="ALIGN_MULTILINE_TERNARY_OPERATION" value="true" />
+          <option name="ALIGN_MULTILINE_ARRAY_INITIALIZER_EXPRESSION" value="true" />
+          <option name="CALL_PARAMETERS_WRAP" value="5" />
+          <option name="CALL_PARAMETERS_LPAREN_ON_NEXT_LINE" value="true" />
+          <option name="CALL_PARAMETERS_RPAREN_ON_NEXT_LINE" value="true" />
+          <option name="METHOD_PARAMETERS_WRAP" value="5" />
+          <option name="METHOD_PARAMETERS_LPAREN_ON_NEXT_LINE" value="true" />
+          <option name="METHOD_PARAMETERS_RPAREN_ON_NEXT_LINE" value="true" />
+          <option name="PARENTHESES_EXPRESSION_LPAREN_WRAP" value="true" />
+          <option name="PARENTHESES_EXPRESSION_RPAREN_WRAP" value="true" />
+          <option name="BINARY_OPERATION_WRAP" value="5" />
+          <option name="TERNARY_OPERATION_WRAP" value="5" />
+          <option name="TERNARY_OPERATION_SIGNS_ON_NEXT_LINE" value="true" />
+          <option name="FOR_STATEMENT_WRAP" value="5" />
+          <option name="FOR_STATEMENT_LPAREN_ON_NEXT_LINE" value="true" />
+          <option name="FOR_STATEMENT_RPAREN_ON_NEXT_LINE" value="true" />
+          <option name="ARRAY_INITIALIZER_WRAP" value="5" />
+          <option name="ARRAY_INITIALIZER_LBRACE_ON_NEXT_LINE" value="true" />
+          <option name="ARRAY_INITIALIZER_RBRACE_ON_NEXT_LINE" value="true" />
+          <option name="ASSIGNMENT_WRAP" value="5" />
+          <option name="IF_BRACE_FORCE" value="3" />
+          <option name="DOWHILE_BRACE_FORCE" value="3" />
+          <option name="WHILE_BRACE_FORCE" value="3" />
+          <option name="FOR_BRACE_FORCE" value="3" />
+          <option name="PARENT_SETTINGS_INSTALLED" value="true" />
+          <indentOptions>
+            <option name="USE_TAB_CHARACTER" value="true" />
+          </indentOptions>
+        </codeStyleSettings>
+        <codeStyleSettings language="PHP">
+          <option name="KEEP_LINE_BREAKS" value="false" />
+          <option name="KEEP_CONTROL_STATEMENT_IN_ONE_LINE" value="false" />
+          <option name="KEEP_BLANK_LINES_IN_DECLARATIONS" value="1" />
+          <option name="KEEP_BLANK_LINES_IN_CODE" value="1" />
+          <option name="KEEP_BLANK_LINES_BEFORE_RBRACE" value="1" />
+          <option name="BLANK_LINES_AFTER_PACKAGE" value="1" />
+          <option name="BRACE_STYLE" value="2" />
+          <option name="ELSE_ON_NEW_LINE" value="true" />
+          <option name="WHILE_ON_NEW_LINE" value="true" />
+          <option name="CATCH_ON_NEW_LINE" value="true" />
+          <option name="FINALLY_ON_NEW_LINE" value="true" />
+          <option name="SPECIAL_ELSE_IF_TREATMENT" value="true" />
+          <option name="ALIGN_MULTILINE_CHAINED_METHODS" value="true" />
+          <option name="ALIGN_MULTILINE_PARAMETERS_IN_CALLS" value="true" />
+          <option name="ALIGN_MULTILINE_BINARY_OPERATION" value="true" />
+          <option name="ALIGN_MULTILINE_TERNARY_OPERATION" value="true" />
+          <option name="ALIGN_MULTILINE_EXTENDS_LIST" value="true" />
+          <option name="ALIGN_MULTILINE_ARRAY_INITIALIZER_EXPRESSION" value="true" />
+          <option name="SPACE_WITHIN_METHOD_CALL_PARENTHESES" value="true" />
+          <option name="SPACE_WITHIN_METHOD_PARENTHESES" value="true" />
+          <option name="SPACE_WITHIN_IF_PARENTHESES" value="true" />
+          <option name="SPACE_WITHIN_WHILE_PARENTHESES" value="true" />
+          <option name="SPACE_WITHIN_FOR_PARENTHESES" value="true" />
+          <option name="SPACE_WITHIN_CATCH_PARENTHESES" value="true" />
+          <option name="SPACE_WITHIN_SWITCH_PARENTHESES" value="true" />
+          <option name="SPACE_BEFORE_CLASS_LBRACE" value="false" />
+          <option name="SPACE_BEFORE_METHOD_LBRACE" value="false" />
+          <option name="SPACE_BEFORE_TRY_LBRACE" value="false" />
+          <option name="SPACE_BEFORE_CATCH_LBRACE" value="false" />
+          <option name="SPACE_BEFORE_FINALLY_LBRACE" value="false" />
+          <option name="CALL_PARAMETERS_WRAP" value="5" />
+          <option name="CALL_PARAMETERS_LPAREN_ON_NEXT_LINE" value="true" />
+          <option name="CALL_PARAMETERS_RPAREN_ON_NEXT_LINE" value="true" />
+          <option name="METHOD_PARAMETERS_WRAP" value="5" />
+          <option name="METHOD_PARAMETERS_LPAREN_ON_NEXT_LINE" value="true" />
+          <option name="METHOD_PARAMETERS_RPAREN_ON_NEXT_LINE" value="true" />
+          <option name="METHOD_CALL_CHAIN_WRAP" value="5" />
+          <option name="BINARY_OPERATION_WRAP" value="5" />
+          <option name="TERNARY_OPERATION_WRAP" value="5" />
+          <option name="TERNARY_OPERATION_SIGNS_ON_NEXT_LINE" value="true" />
+          <option name="FOR_STATEMENT_WRAP" value="5" />
+          <option name="FOR_STATEMENT_LPAREN_ON_NEXT_LINE" value="true" />
+          <option name="FOR_STATEMENT_RPAREN_ON_NEXT_LINE" value="true" />
+          <option name="ARRAY_INITIALIZER_WRAP" value="5" />
+          <option name="ARRAY_INITIALIZER_LBRACE_ON_NEXT_LINE" value="true" />
+          <option name="ARRAY_INITIALIZER_RBRACE_ON_NEXT_LINE" value="true" />
+          <option name="ASSIGNMENT_WRAP" value="5" />
+          <option name="IF_BRACE_FORCE" value="3" />
+          <option name="DOWHILE_BRACE_FORCE" value="3" />
+          <option name="WHILE_BRACE_FORCE" value="3" />
+          <option name="FOR_BRACE_FORCE" value="3" />
+          <option name="PARENT_SETTINGS_INSTALLED" value="true" />
+          <indentOptions>
+            <option name="USE_TAB_CHARACTER" value="true" />
+          </indentOptions>
+        </codeStyleSettings>
+        <codeStyleSettings language="SQL">
+          <indentOptions>
+            <option name="INDENT_SIZE" value="4" />
+            <option name="USE_TAB_CHARACTER" value="true" />
+          </indentOptions>
+        </codeStyleSettings>
+        <codeStyleSettings language="Twig">
+          <indentOptions>
+            <option name="USE_TAB_CHARACTER" value="true" />
+          </indentOptions>
+        </codeStyleSettings>
+        <codeStyleSettings language="TypeScript">
+          <option name="CATCH_ON_NEW_LINE" value="true" />
+          <option name="FINALLY_ON_NEW_LINE" value="true" />
+          <option name="ALIGN_MULTILINE_PARAMETERS_IN_CALLS" value="true" />
+          <option name="ALIGN_MULTILINE_BINARY_OPERATION" value="true" />
+          <option name="ALIGN_MULTILINE_TERNARY_OPERATION" value="true" />
+          <option name="ALIGN_MULTILINE_ARRAY_INITIALIZER_EXPRESSION" value="true" />
+          <option name="SPACE_WITHIN_METHOD_CALL_PARENTHESES" value="true" />
+          <option name="SPACE_WITHIN_METHOD_PARENTHESES" value="true" />
+          <option name="SPACE_WITHIN_IF_PARENTHESES" value="true" />
+          <option name="SPACE_WITHIN_WHILE_PARENTHESES" value="true" />
+          <option name="SPACE_WITHIN_FOR_PARENTHESES" value="true" />
+          <option name="SPACE_WITHIN_CATCH_PARENTHESES" value="true" />
+          <option name="SPACE_WITHIN_SWITCH_PARENTHESES" value="true" />
+          <option name="BINARY_OPERATION_WRAP" value="5" />
+          <option name="TERNARY_OPERATION_WRAP" value="5" />
+          <option name="FOR_STATEMENT_WRAP" value="1" />
+          <option name="ARRAY_INITIALIZER_WRAP" value="5" />
+          <option name="ARRAY_INITIALIZER_LBRACE_ON_NEXT_LINE" value="true" />
+          <option name="ARRAY_INITIALIZER_RBRACE_ON_NEXT_LINE" value="true" />
+          <option name="ASSIGNMENT_WRAP" value="5" />
+          <option name="PLACE_ASSIGNMENT_SIGN_ON_NEXT_LINE" value="true" />
+          <option name="IF_BRACE_FORCE" value="1" />
+          <option name="DOWHILE_BRACE_FORCE" value="1" />
+          <option name="WHILE_BRACE_FORCE" value="1" />
+          <option name="FOR_BRACE_FORCE" value="1" />
+          <option name="PARENT_SETTINGS_INSTALLED" value="true" />
+        </codeStyleSettings>
+        <codeStyleSettings language="XML">
+          <indentOptions>
+            <option name="CONTINUATION_INDENT_SIZE" value="4" />
+            <option name="USE_TAB_CHARACTER" value="true" />
+          </indentOptions>
+        </codeStyleSettings>
       </value>
     </option>
+    <option name="USE_PER_PROJECT_SETTINGS" value="true" />
+    <option name="PREFERRED_PROJECT_CODE_STYLE" value="gha.2014" />
   </component>
 </project>
 
