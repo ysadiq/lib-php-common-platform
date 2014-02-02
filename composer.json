@@ -54,6 +54,7 @@
 			"DreamFactory\\Platform\\": ""
 		}
 	},
+	"target-dir":        "DreamFactory/Platform",
 	"extra":             {
 		"branch-alias": {
 			"dev-develop": "1.4.x-dev"
