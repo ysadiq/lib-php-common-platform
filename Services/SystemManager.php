@@ -94,12 +94,12 @@ class SystemManager extends BaseSystemRestService
 		parent::__construct(
 			array_merge(
 				array(
-					'name'        => 'System Configuration Management',
-					'api_name'    => 'system',
-					'type'        => 'System',
-					'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-					'description' => 'Service for system administration.',
-					'is_active'   => true,
+					 'name'        => 'System Configuration Management',
+					 'api_name'    => 'system',
+					 'type'        => 'System',
+					 'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+					 'description' => 'Service for system administration.',
+					 'is_active'   => true,
 				),
 				$settings
 			)
@@ -198,7 +198,7 @@ class SystemManager extends BaseSystemRestService
 		//	And redirect to welcome screen
 		if ( !Pii::guest() && !Fabric::fabricHosted() && !SystemManager::registrationComplete() )
 		{
-			Pii::controller()->redirect( '/web/welcome' );
+			return PlatformStates::WELCOME_REQUIRED;
 		}
 
 		$_isReady = true;
@@ -214,8 +214,6 @@ class SystemManager extends BaseSystemRestService
 	public static function initSystem()
 	{
 		static::initSchema();
-		static::initAdmin();
-		static::initData();
 	}
 
 	/**
@@ -509,20 +507,21 @@ class SystemManager extends BaseSystemRestService
 	/**
 	 * Configures the system.
 	 *
-	 * @throws \Exception
+	 * @param array|null $attributes
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return null
 	 */
-	public static function initAdmin()
+	public static function initAdmin( $attributes = null )
 	{
-		//	Create and login first admin user
-		$_model = Option::get( $_POST, 'InitAdminForm' );
-
-		$_email = Pii::getState( 'email', Option::get( $_model, 'email' ) );
-		$_password = Pii::getState( 'password', Option::get( $_model, 'password' ) );
+		// Create and login first admin user
+		// Use the model attributes, or check system state variables
+		$_email = Pii::getState( 'email', Option::get( $attributes, 'email' ) );
+		$_password = Pii::getState( 'password', Option::get( $attributes, 'password' ) );
 
 		if ( empty( $_email ) || empty( $_password ) )
 		{
-			Pii::redirect( '/web/activate' );
+			throw new BadRequestException( 'Valid email address and password required to create a user.' );
 		}
 
 		try
@@ -533,11 +532,11 @@ class SystemManager extends BaseSystemRestService
 			if ( empty( $_user ) )
 			{
 				$_user = new User();
-				$_firstName = Pii::getState( 'first_name', Option::get( $_model, 'firstName' ) );
-				$_lastName = Pii::getState( 'last_name', Option::get( $_model, 'lastName' ) );
+				$_firstName = Pii::getState( 'first_name', Option::get( $attributes, 'firstName' ) );
+				$_lastName = Pii::getState( 'last_name', Option::get( $attributes, 'lastName' ) );
 				$_displayName = Pii::getState(
 					'display_name',
-					Option::get( $_model, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
+					Option::get( $attributes, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
 				);
 
 				$_fields = array(
@@ -1042,10 +1041,10 @@ class SystemManager extends BaseSystemRestService
 			$user,
 			$_paths,
 			array(
-				'field_first_name'           => $user->first_name,
-				'field_last_name'            => $user->last_name,
-				'field_installation_type'    => InstallationTypes::determineType( true ),
-				'field_registration_skipped' => ( $skipped ? 1 : 0 ),
+				 'field_first_name'           => $user->first_name,
+				 'field_last_name'            => $user->last_name,
+				 'field_installation_type'    => InstallationTypes::determineType( true ),
+				 'field_registration_skipped' => ( $skipped ? 1 : 0 ),
 			)
 		);
 	}

@@ -21,7 +21,7 @@ namespace DreamFactory\Platform\Interfaces;
 
 /**
  * PlatformStates
- * Defines the various states in which a platforms may exist
+ * Defines the various states in which a platform may exist
  */
 interface PlatformStates
 {
@@ -53,4 +53,8 @@ interface PlatformStates
 	 * @var string
 	 */
 	const UPGRADE_REQUIRED = 5;
+	/**
+	 * @var string
+	 */
+	const WELCOME_REQUIRED = 6;
 }
