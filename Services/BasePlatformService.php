@@ -20,7 +20,6 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\ServiceHandler;
-use DreamFactory\Platform\Yii\Models\Service;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Seed;
@@ -42,17 +41,13 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	protected $_apiName;
 	/**
+	 * @var int current user ID
+	 */
+	protected $_currentUserId;
+	/**
 	 * @var string Description of this service
 	 */
 	protected $_description;
-	/**
-	 * @var string Designated type of this service
-	 */
-	protected $_type;
-	/**
-	 * @var int Designated type ID of this service
-	 */
-	protected $_typeId;
 	/**
 	 * @var boolean Is this service activated for use?
 	 */
@@ -66,9 +61,13 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	protected $_proxyClient;
 	/**
-	 * @var int current user ID
+	 * @var string Designated type of this service
 	 */
-	protected $_currentUserId;
+	protected $_type;
+	/**
+	 * @var int Designated type ID of this service
+	 */
+	protected $_typeId;
 
 	//*************************************************************************
 	//* Methods
@@ -84,6 +83,9 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	public function __construct( $settings = array() )
 	{
+		//	We do our own events...
+		$settings['event_manager'] = false;
+
 		parent::__construct( $settings );
 
 		// Validate basic settings
@@ -125,6 +127,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 			$this->_description = $this->_name;
 		}
 
+		//	Get the current user ID if one...
 		$this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
 	}
 

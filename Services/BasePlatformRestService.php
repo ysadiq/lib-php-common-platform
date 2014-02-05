@@ -21,6 +21,9 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\ResponseFormats;
+use DreamFactory\Platform\Events\Enums\RestServiceEvents;
+use DreamFactory\Platform\Events\Enums\RestServiceEventsTypes;
+use DreamFactory\Platform\Events\RestEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
@@ -32,6 +35,7 @@ use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 /**
  * BasePlatformRestService
@@ -138,6 +142,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @var int
 	 */
 	protected $_serviceId = null;
+	/**
+	 * @var EventDispatcher
+	 */
+	protected $_dispatcher = null;
 
 	//*************************************************************************
 	//* Methods
@@ -151,6 +159,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function __construct( $settings = array() )
 	{
 		$this->_serviceId = Option::get( $settings, 'id', null, true );
+		$this->_dispatcher = new EventDispatcher();
 
 		parent::__construct( $settings );
 	}
@@ -165,9 +174,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	public function processRequest( $resource = null, $action = self::Get, $output_format = null )
 	{
+		$this->trigger( RestServiceEvents::REQUEST_RECEIVED );
+
 		$this->_setAction( $action );
 
-		// required app name for security check
+		//	Require app name for security check
 		$this->_detectAppName();
 		$this->_detectResourceMembers( $resource );
 		$this->_detectResponseMembers( $output_format );
@@ -178,15 +189,23 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		if ( false === ( $this->_response = $this->_handleResource() ) )
 		{
 			$_message =
-				$this->_action . ' requests' . ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
-				' are not currently supported by the "' . $this->_apiName . '" service.';
+				$this->_action .
+				' requests' .
+				( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
+				' are not currently supported by the "' .
+				$this->_apiName .
+				'" service.';
 
 			throw new BadRequestException( $_message );
 		}
 
 		$this->_postProcess();
 
-		return $this->_respond();
+		$_response = $this->_respond();
+
+		$this->trigger( RestServiceEvents::REQUEST_COMPLETE );
+
+		return $_response;
 	}
 
 	/**
@@ -243,11 +262,26 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	}
 
 	/**
+	 * @param string $eventName
+	 * @param mixed  $eventData
+	 *
+	 * @return bool|int|void
+	 */
+	public function trigger( $eventName, $eventData = null )
+	{
+		$_event = new RestEvent( $this->_action, $this->_resource, $this->_requestPayload, $this->_response, $eventData );
+
+		return $this->_dispatcher->dispatch( $eventName, $_event );
+	}
+
+	/**
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return bool
 	 */
 	protected function _handleResource()
 	{
+		$this->trigger( RestServiceEvents::REQUEST_RECEIVED );
+
 		//	Allow verb sub-actions
 		try
 		{
@@ -321,6 +355,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _preProcess()
 	{
+		$this->trigger( RestServiceEvents::PRE_PROCESS );
 		// throw exception here to stop processing
 	}
 
@@ -332,6 +367,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _postProcess()
 	{
+		$this->trigger( RestServiceEvents::POST_PROCESS );
 		// throw exception here to stop processing
 	}
 
