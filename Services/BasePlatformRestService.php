@@ -22,7 +22,6 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Events\Enums\RestServiceEvents;
-use DreamFactory\Platform\Events\Enums\RestServiceEventsTypes;
 use DreamFactory\Platform\Events\RestEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
@@ -160,7 +159,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function __construct( $settings = array() )
 	{
 		$this->_serviceId = Option::get( $settings, 'id', null, true );
-		$this->_dispatcher = new EventDispatcher();
 
 		parent::__construct(
 			  array_merge(
@@ -196,8 +194,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	public function processRequest( $resource = null, $action = self::Get, $output_format = null )
 	{
-		$this->trigger( RestServiceEvents::REQUEST_RECEIVED );
-
 		$this->_setAction( $action );
 
 		//	Require app name for security check
@@ -210,8 +206,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		//	Inherent failure?
 		if ( false === ( $this->_response = $this->_handleResource() ) )
 		{
-			$_message =
-				$this->_action .
+			$_message
+				= $this->_action .
 				' requests' .
 				( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
 				' are not currently supported by the "' .
@@ -223,11 +219,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 		$this->_postProcess();
 
-		$_response = $this->_respond();
-
-		$this->trigger( RestServiceEvents::REQUEST_COMPLETE );
-
-		return $_response;
+		return $this->_respond();
 	}
 
 	/**
@@ -311,8 +303,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _handleResource()
 	{
-		$this->trigger( RestServiceEvents::REQUEST_RECEIVED );
-
 		//	Allow verb sub-actions
 		try
 		{
