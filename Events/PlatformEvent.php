@@ -16,9 +16,6 @@
  */
 namespace DreamFactory\Platform\Events;
 
-use Kisma\Core\Interfaces\PublisherLike;
-use Kisma\Core\Interfaces\SubscriberLike;
-use Kisma\Core\Utility\Inflector;
 use Symfony\Component\EventDispatcher\Event;
 
 /**
@@ -34,6 +31,15 @@ use Symfony\Component\EventDispatcher\Event;
  */
 class PlatformEvent extends Event
 {
+	//*************************************************************************
+	//	Constants
+	//*************************************************************************
+
+	/**
+	 * @type string The base of our event tree
+	 */
+	const EVENT_NAMESPACE = 'platform';
+
 	//**************************************************************************
 	//* Members
 	//**************************************************************************

@@ -19,17 +19,19 @@
  */
 namespace DreamFactory\Platform\Events\Enums;
 
+use Kisma\Core\Enums\SeedEnum;
+
 /**
- * RestServiceEvents
+ * Basic object events
  */
-class RestServiceEvents extends ObjectEvents
+class ObjectEvents extends SeedEnum
 {
 	/**
 	 * @var string
 	 */
-	const PRE_PROCESS = 'pre_process';
+	const AFTER_CONSTRUCT = 'after_construct';
 	/**
 	 * @var string
 	 */
-	const POST_PROCESS = 'post_process';
+	const BEFORE_DESTRUCT = 'before_destruct';
 }

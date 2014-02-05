@@ -22,7 +22,6 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Events\Enums\RestServiceEvents;
-use DreamFactory\Platform\Events\Enums\RestServiceEventsTypes;
 use DreamFactory\Platform\Events\RestEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
@@ -34,6 +33,7 @@ use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
@@ -159,9 +159,29 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function __construct( $settings = array() )
 	{
 		$this->_serviceId = Option::get( $settings, 'id', null, true );
-		$this->_dispatcher = new EventDispatcher();
 
-		parent::__construct( $settings );
+		parent::__construct(
+			  array_merge(
+				  Option::clean( $settings ),
+				  array(
+					  //	We'll manage the events up the chain
+					  'event_manager' => false,
+					  'auto_discover' => false,
+				  )
+			  )
+		);
+
+		//	Announce our arrival
+		$this->trigger( RestServiceEvents::AFTER_CONSTRUCT );
+	}
+
+	/**
+	 * The destructor has been chosen
+	 */
+	public function __destruct()
+	{
+		$this->trigger( RestServiceEvents::BEFORE_DESTRUCT );
+		parent::__destruct();
 	}
 
 	/**
@@ -174,8 +194,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	public function processRequest( $resource = null, $action = self::Get, $output_format = null )
 	{
-		$this->trigger( RestServiceEvents::REQUEST_RECEIVED );
-
 		$this->_setAction( $action );
 
 		//	Require app name for security check
@@ -188,8 +206,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		//	Inherent failure?
 		if ( false === ( $this->_response = $this->_handleResource() ) )
 		{
-			$_message =
-				$this->_action .
+			$_message
+				= $this->_action .
 				' requests' .
 				( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
 				' are not currently supported by the "' .
@@ -201,11 +219,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 		$this->_postProcess();
 
-		$_response = $this->_respond();
-
-		$this->trigger( RestServiceEvents::REQUEST_COMPLETE );
-
-		return $_response;
+		return $this->_respond();
 	}
 
 	/**
@@ -269,9 +283,18 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	public function trigger( $eventName, $eventData = null )
 	{
+		if ( empty( $this->_dispatcher ) )
+		{
+			$this->_dispatcher = new EventDispatcher();
+		}
+
+		$_name = Inflector::neutralize(
+						  RestEvent::EVENT_NAMESPACE . '.' . $this->_apiName . '.' . $this->_resource . '.' . $this->_action . '.' . $eventName
+		);
+
 		$_event = new RestEvent( $this->_action, $this->_resource, $this->_requestPayload, $this->_response, $eventData );
 
-		return $this->_dispatcher->dispatch( $eventName, $_event );
+		return $this->_dispatcher->dispatch( $_name, $_event );
 	}
 
 	/**
@@ -280,8 +303,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _handleResource()
 	{
-		$this->trigger( RestServiceEvents::REQUEST_RECEIVED );
-
 		//	Allow verb sub-actions
 		try
 		{
@@ -432,7 +453,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 			else
 			{
 				RestResponse::sendErrors(
-					new BadRequestException( 'No application name header or parameter value in request.' )
+							new BadRequestException( 'No application name header or parameter value in request.' )
 				);
 			}
 		}

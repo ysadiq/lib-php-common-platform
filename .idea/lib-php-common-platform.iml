@@ -61,9 +61,11 @@
     <orderEntry type="module-library">
       <library name="PHARS">
         <CLASSES>
+          <root url="phar:///usr/local/bin/composer.phar" />
           <root url="phar:///usr/share/php/composer.phar" />
         </CLASSES>
         <SOURCES>
+          <root url="phar:///usr/local/bin/composer.phar" />
           <root url="phar:///usr/share/php/composer.phar" />
         </SOURCES>
       </library>
