@@ -41,7 +41,6 @@ use DreamFactory\Platform\Yii\Models\EmailTemplate;
 use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
-use Guzzle\Http\Client;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -817,26 +816,29 @@ class SystemManager extends BaseSystemRestService
 	 */
 	public static function getDspVersions()
 	{
-		static $_client;
+		$_results = Curl::get(
+			static::VERSION_TAG_URL,
+			array(),
+			array(
+				CURLOPT_HTTPHEADER        => array( 'User-Agent: dreamfactory' ),
+				CURLOPT_CONNECTTIMEOUT_MS => 15000,
+			)
+		);
 
-		if ( null === $_client )
-		{
-			$_client = new Client( static::VERSION_TAGS_URL );
-			$_client->setUserAgent( 'dreamfactory' );
-		}
+        if ( HttpResponse::Ok != ( $_code = Curl::getLastHttpCode() ) )
+        {
+            //  log an error here, but don't stop config pull
+            Log::error( 'Error retrieving DSP versions from GitHub: ' . $_code );
 
-		$_request = $_client->createRequest();
-		$_response = $_request->send();
+            return null;
+        }
 
-		if ( !$_response->isSuccessful() )
-		{
-			//	log an error here, but don't stop config pull
-			Log::error( 'Error retrieving DSP versions from GitHub: ' . $_response->getReasonPhrase() );
+        if ( is_string( $_results ) && !empty( $_results ) )
+        {
+            $_results = json_decode( $_results, true );
+        }
 
-			return null;
-		}
-
-		return (array)$_response->json();
+        return $_results;
 	}
 
 	/**
@@ -859,7 +861,6 @@ class SystemManager extends BaseSystemRestService
 	 */
 	public static function getCurrentVersion()
 	{
-
 		return Pii::getParam( 'dsp.version' );
 	}
 

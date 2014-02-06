@@ -275,7 +275,7 @@ class PlatformWebApplication extends \CWebApplication
 
 			if ( !is_dir( $_path ) )
 			{
-				Log::debug( 'No plug-ins installed.' );
+//				Log::debug( 'No plug-ins installed.' );
 
 				return false;
 			}
