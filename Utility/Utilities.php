@@ -19,8 +19,6 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use Kisma\Core\Utility\FilterInput;
-
 /**
  * Utilities
  */
@@ -67,8 +65,12 @@ class Utilities
 	{
 		if ( is_array( $array ) )
 		{
-			for ($k = 0, reset($array) ; $k === key($array) ; next($array)) ++$k;
-			return is_null(key($array));
+			for ( $k = 0, reset( $array ); $k === key( $array ); next( $array ) )
+			{
+				++$k;
+			}
+
+			return is_null( key( $array ) );
 		}
 
 		return false;
@@ -122,7 +124,7 @@ class Utilities
 	 * @access    public
 	 * @static
 	 *
-	 * @param    string $word    English noun to pluralize
+	 * @param    string $word English noun to pluralize
 	 *
 	 * @return string Plural noun
 	 */
@@ -469,5 +471,60 @@ class Utilities
 		}
 
 		return $track;
+	}
+
+	/**+
+	 * Provides a diff of two arrays, recursively.
+	 * Any keys or values that do not match are returned in an array.
+	 * Empty results indicate no change obviously.
+	 *
+	 * @param array $array1
+	 * @param array $array2
+	 *
+	 * @return array
+	 */
+	public static function array_diff_recursive( array $array1, $array2 )
+	{
+		$_return = array();
+
+		if ( $array1 !== $array2 )
+		{
+			foreach ( $array1 as $_key => $_value )
+			{
+				//	Is the key is there...
+				if ( !array_key_exists( $_key, $array2 ) )
+				{
+					$_return[$_key] = $_value;
+					continue;
+				}
+
+				//	Not an array?
+				if ( !is_array( $_value ) )
+				{
+					if ( $_value !== $array2[$_key] )
+					{
+						$_return[$_key] = $_value;
+						continue;
+					}
+				}
+
+				//	If we've got two arrays, diff 'em
+				if ( is_array( $array2[$_key] ) )
+				{
+					$_diff = static::array_diff_recursive( $_value, $array2[$_key] );
+
+					if ( !empty( $_diff ) )
+					{
+						$_return[$_key] = $_diff;
+					}
+
+					continue;
+				}
+
+				$_return[$_key] = $_value;
+			}
+		}
+
+		return $_return;
 	}
 }
