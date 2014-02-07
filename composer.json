@@ -25,19 +25,18 @@
 		}
 	],
 	"require":           {
-		"php":                             ">=5.3.10",
+		"php":                             ">=5.3.18",
 		"kisma/kisma":                     "~0.2.13",
+		"dreamfactory/azure-sdk-for-php":  "~0.3.1",
 		"dreamfactory/lib-php-common":     "~1.1.4",
-		"dreamfactory/yii":                "~1.1.13@dev",
 		"dreamfactory/lib-php-common-yii": "~1.1.5",
 		"dreamfactory/oasys":              "~0.4.5",
 		"dreamfactory/javascript-sdk":     "1.*",
-		"swiftmailer/swiftmailer":         "4.3.*",
 		"aws/aws-sdk-php":                 "2.4.*",
-		"rackspace/php-opencloud":         "1.5.*",
 		"dready92/php-on-couch":           "dev-master",
-		"phpforce/soap-client":            "dev-master",
-		"dreamfactory/azure-sdk-for-php":  "~0.3.1"
+		"rackspace/php-opencloud":         "1.5.*",
+		"swiftmailer/swiftmailer":         "4.3.*",
+		"phpforce/soap-client":            "dev-master"
 	},
 	"require-dev":       {
 		"phpunit/phpunit":              "@stable",
