@@ -320,22 +320,25 @@
         },
         {
             "name": "dreamfactory/oasys",
-            "version": "0.4.5",
+            "version": "0.4.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/oasys.git",
-                "reference": "75c1242b042f36f26d616034f778c968e5684047"
+                "reference": "50e6670ea3177db351bc9431a185427fe3dee320"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/75c1242b042f36f26d616034f778c968e5684047",
-                "reference": "75c1242b042f36f26d616034f778c968e5684047",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/50e6670ea3177db351bc9431a185427fe3dee320",
+                "reference": "50e6670ea3177db351bc9431a185427fe3dee320",
                 "shasum": ""
             },
             "require": {
                 "ext-curl": "*",
-                "kisma/kisma": ">=0.2.0",
+                "kisma/kisma": ">=0.2.11",
                 "php": ">=5.3.18"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "*"
             },
             "type": "library",
             "autoload": {
@@ -363,7 +366,7 @@
                 "oauth",
                 "oauth2"
             ],
-            "time": "2014-01-24 19:50:02"
+            "time": "2014-01-30 19:59:56"
         },
         {
             "name": "dreamfactory/yii",
@@ -371,18 +374,26 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/yii.git",
-                "reference": "8aa0874416c14c6dd52f193e67cc57e8c0fa6982"
+                "reference": "23e4daf717fb48d88ceb40c97f707118295cbd0a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/8aa0874416c14c6dd52f193e67cc57e8c0fa6982",
-                "reference": "8aa0874416c14c6dd52f193e67cc57e8c0fa6982",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/23e4daf717fb48d88ceb40c97f707118295cbd0a",
+                "reference": "23e4daf717fb48d88ceb40c97f707118295cbd0a",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.1.0"
             },
+            "bin": [
+                "framework/yiic"
+            ],
             "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-develop": "1.1.14-dev"
+                }
+            },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "BSD-3-Clause"
@@ -417,17 +428,35 @@
                     "role": "Project site maintenance and development"
                 },
                 {
-                    "name": "Jerry Ablan",
-                    "email": "jerryablan@dreamfactory.com",
-                    "role": "Black Ops"
-                },
-                {
                     "name": "Sebastián Thierer",
+                    "email": "sebas@artfos.com",
                     "role": "Component development"
                 },
                 {
                     "name": "Jeffrey Winesett",
+                    "email": "jefftulsa@gmail.com",
                     "role": "Documentation and marketing"
+                },
+                {
+                    "name": "Jerry Ablan",
+                    "email": "jerryablan@dreamfactory.com",
+                    "role": "Exterminator"
+                },
+                {
+                    "name": "Lee Hicks",
+                    "email": "leehicks@dreamfactory.com",
+                    "role": "Exterminator"
+                },
+                {
+                    "name": "Timur Ruziev",
+                    "email": "resurtm@gmail.com",
+                    "homepage": "http://resurtm.com/",
+                    "role": "Core framework development"
+                },
+                {
+                    "name": "Paul Klimov",
+                    "email": "klimov.paul@gmail.com",
+                    "role": "Core framework development"
                 }
             ],
             "description": "Yii Web Programming Framework",
@@ -436,7 +465,7 @@
                 "framework",
                 "yii"
             ],
-            "time": "2014-01-22 20:40:45"
+            "time": "2014-02-07 16:45:39"
         },
         {
             "name": "guzzle/guzzle",
@@ -444,12 +473,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/guzzle.git",
-                "reference": "dce090bdeeea701bb95f68f2ea66b4e532c68207"
+                "reference": "246cd09118283dce6d2974ace71d666d8a9f26f6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/dce090bdeeea701bb95f68f2ea66b4e532c68207",
-                "reference": "dce090bdeeea701bb95f68f2ea66b4e532c68207",
+                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/246cd09118283dce6d2974ace71d666d8a9f26f6",
+                "reference": "246cd09118283dce6d2974ace71d666d8a9f26f6",
                 "shasum": ""
             },
             "require": {
@@ -528,24 +557,28 @@
                 "rest",
                 "web service"
             ],
-            "time": "2014-01-29 18:20:08"
+            "time": "2014-02-07 19:57:56"
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.13",
+            "version": "0.2.17",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "ae726947c1496ea501a2696d243ae92bb76e8776"
+                "reference": "50a1a0fa574b03edc66a65ca0508c04c9f20648d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/ae726947c1496ea501a2696d243ae92bb76e8776",
-                "reference": "ae726947c1496ea501a2696d243ae92bb76e8776",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/50a1a0fa574b03edc66a65ca0508c04c9f20648d",
+                "reference": "50a1a0fa574b03edc66a65ca0508c04c9f20648d",
                 "shasum": ""
             },
             "require": {
-                "php": ">=5.3.18"
+                "php": ">=5.3.10"
+            },
+            "require-dev": {
+                "phpunit/php-code-coverage": "@stable",
+                "phpunit/phpunit": "@stable"
             },
             "type": "library",
             "autoload": {
@@ -574,7 +607,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-01-31 00:09:54"
+            "time": "2014-02-06 19:58:02"
         },
         {
             "name": "pear-pear.php.net/Archive_Tar",
@@ -1066,12 +1099,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/EventDispatcher.git",
-                "reference": "a37a9430e2eafb6a66de240ac13f91b45b4c3d37"
+                "reference": "3a6d2d87fc7d25c773ffdeaa19210090ae1b593b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/a37a9430e2eafb6a66de240ac13f91b45b4c3d37",
-                "reference": "a37a9430e2eafb6a66de240ac13f91b45b4c3d37",
+                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/3a6d2d87fc7d25c773ffdeaa19210090ae1b593b",
+                "reference": "3a6d2d87fc7d25c773ffdeaa19210090ae1b593b",
                 "shasum": ""
             },
             "require": {
@@ -1113,7 +1146,7 @@
             ],
             "description": "Symfony EventDispatcher Component",
             "homepage": "http://symfony.com",
-            "time": "2014-01-07 13:29:57"
+            "time": "2014-02-04 15:16:44"
         }
     ],
     "packages-dev": [
@@ -1178,16 +1211,16 @@
         },
         {
             "name": "phpunit/php-code-coverage",
-            "version": "1.2.14",
+            "version": "1.2.15",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-                "reference": "d4b3bc1c4b905cd0b3b356e8608857f26a041c1b"
+                "reference": "6ba4ed2895d538a039d5d5866edc4ec0424c7852"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/d4b3bc1c4b905cd0b3b356e8608857f26a041c1b",
-                "reference": "d4b3bc1c4b905cd0b3b356e8608857f26a041c1b",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/6ba4ed2895d538a039d5d5866edc4ec0424c7852",
+                "reference": "6ba4ed2895d538a039d5d5866edc4ec0424c7852",
                 "shasum": ""
             },
             "require": {
@@ -1235,7 +1268,7 @@
                 "testing",
                 "xunit"
             ],
-            "time": "2014-01-31 08:51:59"
+            "time": "2014-02-03 07:44:47"
         },
         {
             "name": "phpunit/php-file-iterator",

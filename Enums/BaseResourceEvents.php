@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Events\Enums;
+namespace DreamFactory\Platform\Enums;
 
 use Kisma\Core\Enums\SeedEnum;
 
