@@ -110,6 +110,13 @@ class Config extends BaseSystemRestResource
 	 */
 	protected function _postProcess()
 	{
+		static $_fabricHosted = null;
+
+		if ( null === $_fabricHosted )
+		{
+			$_fabricHosted = Fabric::fabricHosted();
+		}
+
 		//	Only return a single row, not in an array
 		if ( null !== ( $_record = Option::getDeep( $this->_response, 'record', 0 ) ) )
 		{
@@ -130,21 +137,14 @@ class Config extends BaseSystemRestResource
 		{
 			$_versionInfo = array(
 				'dsp_version'       => $_currentVersion = SystemManager::getCurrentVersion(),
-				'latest_version'    => $_latestVersion = SystemManager::getLatestVersion(),
+				'latest_version'    => $_latestVersion = ( $_fabricHosted ? $_currentVersion : SystemManager::getLatestVersion() ),
 				'upgrade_available' => version_compare( $_currentVersion, $_latestVersion, '<' ),
 			);
 
 			Pii::setState( 'platform.version_info', $_versionInfo );
 		}
 
-		$this->_response['dsp_version'] = $_versionInfo['dsp_version'];
-
-		if ( !Fabric::fabricHosted() )
-		{
-			$this->_response['latest_version'] = $_versionInfo['latest_version'];
-			$this->_response['upgrade_available'] = $_versionInfo['upgrade_available'];
-		}
-
+		$this->_response = array_merge( $this->_response, $_versionInfo );
 		unset( $_versionInfo );
 
 		/**

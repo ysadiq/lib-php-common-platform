@@ -45,7 +45,7 @@ class LocalStorageTypes extends SeedEnum
 	/**
 	 * @type string
 	 */
-	const LIBRARY_PATH = 'library_path';
+	const LIBRARY_PATH = 'plugins_path';
 	/**
 	 * @type string
 	 */
@@ -58,4 +58,8 @@ class LocalStorageTypes extends SeedEnum
 	 * @type string
 	 */
 	const SNAPSHOT_PATH = 'snapshot_path';
+	/**
+	 * @type string
+	 */
+	const SWAGGER_PATH = 'swagger';
 }

@@ -36,11 +36,15 @@ class ResponseFormats extends SeedEnum
 	 */
 	const RAW = 0;
 	/**
-	 * @var int
+	 * @var int DataTables formatting {@ink http://datatables.net/}
 	 */
 	const DATATABLES = 100;
 	/**
-	 * @var int
+	 * @var int jTable formatting {@link http://www.jtable.org/}
 	 */
 	const JTABLE = 101;
+	/**
+	 * @var int aciTree formatting {@link http://plugins.jquery.com/aciTree/}
+	 */
+	const ACITREE = 102;
 }
