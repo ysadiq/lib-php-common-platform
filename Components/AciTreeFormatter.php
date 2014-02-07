@@ -21,9 +21,6 @@ namespace DreamFactory\Platform\Components;
 
 use DreamFactory\Platform\Interfaces\FormatterLike;
 use DreamFactory\Yii\Controllers\BaseWebController;
-use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Utility\FilterInput;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -39,6 +36,7 @@ class AciTreeFormatter implements FormatterLike
 	 */
 	public static function format( $dataToFormat, $options = array() )
 	{
+		$_startId = Option::get( $options, 'start_id', 2 );
 		$_response = array();
 
 		if ( null === ( $_data = Option::get( $dataToFormat, 'resource' ) ) )
@@ -53,14 +51,60 @@ class AciTreeFormatter implements FormatterLike
 		{
 			$_response[] = array(
 				'id'      => $_item->id,
+				'id-hash' => BaseWebController::hashId( $_item->id ),
 				'label'   => Option::get( $options, 'label', Option::get( $_item, 'api_name', 'A Resource' ) ),
 				'inode'   => false,
-				'my-hash' => BaseWebController::hashId( $_item->id ),
-				'my-url'  => null,
 			);
 		}
 
 		//	expected format
 		return $_response;
 	}
+
+	/**
+	 * Compiles swagger JSON files into event map format
+	 */
+	protected function _compileSwagger( $startId = 2 )
+	{
+		$_id = $startId ? : 2;
+		$_swaggerPath = Platform::getSwaggerPath();
+		$_masterPath = $_swaggerPath . '/_.json';
+		$_compiled = $_swaggerPath . '/.event-map.json';
+
+		if ( !file_exists( $_masterPath ) )
+		{
+			return false;
+		}
+
+		if ( false === ( $_master = json_decode( file_get_contents( $_masterPath ) ) ) )
+		{
+			return false;
+		}
+
+		$_apis = array();
+
+		foreach ( $_master->apis as $_api )
+		{
+			$_label = trim( $_api->path, '/' );
+
+			$_apis[] = array(
+				'id'     => $_id++,
+				'label'  => $_label,
+				'inode'  => true,
+				'open'   => false,
+				'branch' => $this->_loadSwaggerFile( $_label, $_swaggerPath . '/' . $_label . '.json', $_id ),
+			);
+		}
+
+		$_result = array(
+			'id'     => 2,
+			'label'  => 'platform',
+			'inode'  => true,
+			'open'   => true,
+			'branch' => $_apis,
+		);
+
+		return file_put_contents( $_compiled, json_encode( array( $_result ), JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT ) );
+	}
+
 }

@@ -22,8 +22,8 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 
 /**
  * SwaggerManager
@@ -57,15 +57,15 @@ class SwaggerManager extends BasePlatformRestService
 	public function __construct()
 	{
 		parent::__construct(
-			array(
-				 'name'          => 'Swagger Documentation Management',
-				 'apiName'       => 'api_docs',
-				 'type'          => 'Swagger',
-				 'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'description'   => 'Service for a user to see the API documentation provided via Swagger.',
-				 'is_active'     => true,
-				 'native_format' => 'json',
-			)
+			  array(
+				  'name'          => 'Swagger Documentation Management',
+				  'apiName'       => 'api_docs',
+				  'type'          => 'Swagger',
+				  'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
+				  'description'   => 'Service for a user to see the API documentation provided via Swagger.',
+				  'is_active'     => true,
+				  'native_format' => 'json',
+			  )
 		);
 	}
 
@@ -135,10 +135,7 @@ class SwaggerManager extends BasePlatformRestService
 
 		// build services from database
 		$_command = Pii::db()->createCommand();
-		$_result = $_command->select( 'api_name,type_id,storage_type_id,description' )
-			->from( 'df_sys_service' )
-			->order( 'api_name' )
-			->queryAll();
+		$_result = $_command->select( 'api_name,type_id,storage_type_id,description' )->from( 'df_sys_service' )->order( 'api_name' )->queryAll();
 
 		// add static services
 		$_other = array(
@@ -160,6 +157,7 @@ class SwaggerManager extends BasePlatformRestService
 			$_filePath = $_scanPath . $_fileName . '.swagger.php';
 			if ( file_exists( $_filePath ) )
 			{
+				/** @noinspection PhpIncludeInspection */
 				$_fromFile = require( $_filePath );
 				if ( is_array( $_fromFile ) )
 				{
@@ -186,6 +184,8 @@ class SwaggerManager extends BasePlatformRestService
 
 				// nothing exists for this service, build from the default base service
 				$_filePath = $_scanPath . 'BasePlatformRestSvc.swagger.php';
+
+				/** @noinspection PhpIncludeInspection */
 				$_fromFile = require( $_filePath );
 				if ( !is_array( $_fromFile ) )
 				{
@@ -216,6 +216,7 @@ class SwaggerManager extends BasePlatformRestService
 
 		// cache main api listing file
 		$_main = $_scanPath . 'SwaggerManager.swagger.php';
+		/** @noinspection PhpIncludeInspection */
 		$_resourceListing = require( $_main );
 		$_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
 		$_filePath = $_cachePath . '_.json';
@@ -225,8 +226,7 @@ class SwaggerManager extends BasePlatformRestService
 		}
 
 		$_exampleFile = 'example_service_swagger.json';
-		if ( !file_exists( $_customPath . $_exampleFile ) &&
-			 file_exists( $_templatePath . $_exampleFile )
+		if ( !file_exists( $_customPath . $_exampleFile ) && file_exists( $_templatePath . $_exampleFile )
 		)
 		{
 			file_put_contents(
@@ -310,4 +310,48 @@ class SwaggerManager extends BasePlatformRestService
 			}
 		}
 	}
+
+	public static function compileEvents( $startId = 2 )
+	{
+		$_id = $startId ? : 2;
+		$_swaggerPath = Platform::getSwaggerPath();
+		$_masterPath = $_swaggerPath . '/_.json';
+		$_compiled = $_swaggerPath . '/.event-map.json';
+
+		if ( !file_exists( $_masterPath ) )
+		{
+			return false;
+		}
+
+		if ( false === ( $_master = json_decode( file_get_contents( $_masterPath ) ) ) )
+		{
+			return false;
+		}
+
+		$_apis = array();
+
+		foreach ( $_master->apis as $_api )
+		{
+			$_label = trim( $_api->path, '/' );
+
+			$_apis[] = array(
+				'id'     => $_id++,
+				'label'  => $_label,
+				'inode'  => true,
+				'open'   => false,
+				'branch' => static::_loadSwaggerFile( $_label, $_swaggerPath . '/' . $_label . '.json', $_id ),
+			);
+		}
+
+		$_result = array(
+			'id'     => 2,
+			'label'  => 'platform',
+			'inode'  => true,
+			'open'   => true,
+			'branch' => $_apis,
+		);
+
+		return file_put_contents( $_compiled, json_encode( array( $_result ), JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT ) );
+	}
+
 }

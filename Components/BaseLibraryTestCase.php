@@ -45,8 +45,6 @@ class BaseLibraryTestCase extends \PHPUnit_Framework_TestCase
 
 		$this->_args[0] = 'index.php';
 
-		Log::setDefaultLog( __DIR__ . '/log/tests.log' );
-
 		$_SERVER['SCRIPT_NAME'] = $argv[0];
 		$_SERVER['REQUEST_URI'] = $_SERVER['SCRIPT_NAME'];
 		$_SERVER['SCRIPT_FILENAME'] = $argv[0];

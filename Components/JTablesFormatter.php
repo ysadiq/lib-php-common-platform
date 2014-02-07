@@ -21,8 +21,6 @@ namespace DreamFactory\Platform\Components;
 
 use DreamFactory\Platform\Interfaces\FormatterLike;
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Utility\FilterInput;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**

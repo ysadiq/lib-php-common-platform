@@ -120,15 +120,27 @@ class Platform extends SeedUtility
 	}
 
 	/**
-	 * Constructs the virtual private path
+	 * Constructs the virtual swagger path
 	 *
 	 * @param string $append
 	 *
 	 * @return string
 	 */
-	public static function getLibraryPath( $append = null )
+	public static function getSwaggerPath( $append = null )
 	{
-		return static::_getPlatformPath( LocalStorageTypes::LIBRARY_PATH, $append );
+		return static::_getPlatformPath( LocalStorageTypes::SWAGGER_PATH, $append );
+	}
+
+	/**
+	 * Constructs the virtual plugins path
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getPluginsPath( $append = null )
+	{
+		return static::_getPlatformPath( LocalStorageTypes::PLUGINS_PATH, $append );
 	}
 
 	/**
@@ -141,18 +153,6 @@ class Platform extends SeedUtility
 	public static function getApplicationsPath( $append = null )
 	{
 		return static::_getPlatformPath( LocalStorageTypes::APPLICATIONS_PATH, $append );
-	}
-
-	/**
-	 * Constructs the virtual private path
-	 *
-	 * @param string $append
-	 *
-	 * @return string
-	 */
-	public static function getPluginsPath( $append = null )
-	{
-		return static::_getPlatformPath( LocalStorageTypes::PLUGINS_PATH, $append );
 	}
 
 	/**

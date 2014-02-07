@@ -36,10 +36,9 @@ class Counter
 	/**
 	 * @var array
 	 */
-	protected $_counters
-		= array(
-			'total' => 0,
-		);
+	protected $_counters = array(
+		'total' => 0,
+	);
 
 	//*************************************************************************
 	//* Methods
@@ -94,9 +93,9 @@ class Counter
 	}
 
 	/**
-	 * @param string|array $name         The counter or counters to increment. Pass '*' to increment ALL counters.
-	 * @param int          $howMuch      How much to increment. Defaults to 1
-	 * @param int          $startValue   If a counter doesn't exist, create it with this starting value
+	 * @param string|array $name       The counter or counters to increment. Pass '*' to increment ALL counters.
+	 * @param int          $howMuch    How much to increment. Defaults to 1
+	 * @param int          $startValue If a counter doesn't exist, create it with this starting value
 	 *
 	 * @return $this
 	 */
