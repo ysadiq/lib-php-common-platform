@@ -32,6 +32,7 @@ use DreamFactory\Platform\Utility\Drupal;
 use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\Packager;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
@@ -733,7 +734,7 @@ class SystemManager extends BaseSystemRestService
 
 		// copy current directory to backup
 		$_upgradeDir = Pii::getParam( 'base_path' ) . '/';
-		$_backupDir = Pii::getParam( 'storage_base_path' ) . '/backups/';
+		$_backupDir = Platform::getStoragePath( '/backups/' );
 		if ( !file_exists( $_backupDir ) )
 		{
 			@\mkdir( $_backupDir, 0777, true );
