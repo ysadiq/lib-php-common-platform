@@ -473,12 +473,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/guzzle.git",
-                "reference": "246cd09118283dce6d2974ace71d666d8a9f26f6"
+                "reference": "90062ffc5ce51000fe10d86c3b65f88773031725"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/246cd09118283dce6d2974ace71d666d8a9f26f6",
-                "reference": "246cd09118283dce6d2974ace71d666d8a9f26f6",
+                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/90062ffc5ce51000fe10d86c3b65f88773031725",
+                "reference": "90062ffc5ce51000fe10d86c3b65f88773031725",
                 "shasum": ""
             },
             "require": {
@@ -557,7 +557,7 @@
                 "rest",
                 "web service"
             ],
-            "time": "2014-02-07 19:57:56"
+            "time": "2014-02-07 04:11:40"
         },
         {
             "name": "kisma/kisma",

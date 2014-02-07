@@ -28,6 +28,7 @@
 		"php":                             ">=5.3.10",
 		"kisma/kisma":                     "~0.2.13",
 		"dreamfactory/lib-php-common":     "~1.1.4",
+		"dreamfactory/yii":                "~1.1.13@dev",
 		"dreamfactory/lib-php-common-yii": "~1.1.5",
 		"dreamfactory/oasys":              "~0.4.5",
 		"dreamfactory/javascript-sdk":     "1.*",
@@ -40,6 +41,7 @@
 	},
 	"require-dev":       {
 		"phpunit/phpunit":              "@stable",
+		"phpunit/dbunit":               "@stable",
 		"phpunit/phpunit-mock-objects": "@stable",
 		"phpunit/phpunit-selenium":     "@stable",
 		"phpunit/phpunit-story":        "@stable",
@@ -47,8 +49,7 @@
 		"phpunit/php-text-template":    "@stable",
 		"phpunit/php-token-stream":     "@stable",
 		"phpunit/php-timer":            "@stable",
-		"phpunit/php-invoker":          "@stable",
-		"phpunit/dbunit":               "@stable"
+		"phpunit/php-invoker":          "@stable"
 	},
 	"autoload":          {
 		"psr-0": {
