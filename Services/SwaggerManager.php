@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Log;
@@ -111,13 +112,13 @@ class SwaggerManager extends BasePlatformRestService
 	{
 		$_basePath = Pii::request()->getHostInfo() . '/rest';
 		// create cache directory if it doesn't exists
-		$_cachePath = Pii::getParam( 'storage_base_path' ) . static::SWAGGER_CACHE_DIR;
+		$_cachePath = Platform::getStoragePath( static::SWAGGER_CACHE_DIR );
 		if ( !file_exists( $_cachePath ) )
 		{
 			@mkdir( $_cachePath, 0777, true );
 		}
 		// create custom directory if it doesn't exists
-		$_customPath = Pii::getParam( 'storage_base_path' ) . static::SWAGGER_CUSTOM_DIR;
+		$_customPath = Platform::getStoragePath( static::SWAGGER_CUSTOM_DIR );
 		if ( !file_exists( $_customPath ) )
 		{
 			@mkdir( $_customPath, 0777, true );
@@ -247,7 +248,7 @@ class SwaggerManager extends BasePlatformRestService
 	 */
 	public static function getSwagger()
 	{
-		$_swaggerPath = Pii::getParam( 'storage_base_path' ) . static::SWAGGER_CACHE_DIR;
+		$_swaggerPath = Platform::getStoragePath( static::SWAGGER_CACHE_DIR );
 		$_filePath = $_swaggerPath . '_.json';
 		if ( !file_exists( $_filePath ) )
 		{
@@ -276,7 +277,7 @@ class SwaggerManager extends BasePlatformRestService
 	 */
 	public static function getSwaggerForService( $service )
 	{
-		$_swaggerPath = Pii::getParam( 'storage_base_path' ) . static::SWAGGER_CACHE_DIR;
+		$_swaggerPath = Platform::getStoragePath( static::SWAGGER_CACHE_DIR );
 		$_filePath = $_swaggerPath . $service . '.json';
 		if ( !file_exists( $_filePath ) )
 		{
@@ -300,7 +301,7 @@ class SwaggerManager extends BasePlatformRestService
 	 */
 	public static function clearCache()
 	{
-		$_swaggerPath = Pii::getParam( 'storage_base_path' ) . static::SWAGGER_CACHE_DIR;
+		$_swaggerPath = Platform::getStoragePath( static::SWAGGER_CACHE_DIR );
 		if ( file_exists( $_swaggerPath ) )
 		{
 			$files = array_diff( scandir( $_swaggerPath ), array( '.', '..' ) );

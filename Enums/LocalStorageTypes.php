@@ -37,7 +37,7 @@ class LocalStorageTypes extends SeedEnum
 	/**
 	 * @type string
 	 */
-	const STORAGE_BASE_PATH = 'storage_base';
+	const STORAGE_BASE_PATH = 'storage_base_path';
 	/**
 	 * @type string
 	 */
