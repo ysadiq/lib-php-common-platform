@@ -802,7 +802,7 @@ class SystemManager extends BaseSystemRestService
 		// now run installer script
 		$_oldWorkingDir = getcwd();
 		chdir( $_upgradeDir );
-		$_installCommand = 'export COMPOSER_HOME=' . $_upgradeDir . '; /bin/bash ./scripts/installer.sh -cD 2>&1';
+		$_installCommand = 'export COMPOSER_HOME=' . $_upgradeDir . '; /bin/bash ./scripts/installer.sh -cDf 2>&1';
 		exec( $_installCommand, $_installOut );
 		Log::info( implode( PHP_EOL, $_installOut ) );
 
