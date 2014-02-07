@@ -16,14 +16,12 @@
  */
 namespace DreamFactory\Platform\Events;
 
-use Kisma\Core\Interfaces\PublisherLike;
-use Kisma\Core\Interfaces\SubscriberLike;
-use Kisma\Core\Utility\Inflector;
+use DreamFactory\Platform\Utility\Utilities;
 
 /**
- * Event type triggered by REST calls
+ * Represents an event involving a resource
  */
-class RestEvent extends PlatformEvent
+class ResourceEvent extends BasePlatformEvent
 {
 	//**************************************************************************
 	//* Members
@@ -42,9 +40,13 @@ class RestEvent extends PlatformEvent
 	 */
 	protected $_payload = false;
 	/**
-	 * @var mixed The response to the call as it stands right now
+	 * @var mixed The response to the original resource request, as it stands right now
 	 */
 	protected $_response = null;
+	/**
+	 * @var bool Used to indicate that the response has been altered by the listener
+	 */
+	protected $_dirty = false;
 
 	//**************************************************************************
 	//* Methods
@@ -100,15 +102,35 @@ class RestEvent extends PlatformEvent
 	}
 
 	/**
-	 * @param mixed $response
+	 * @param $response
 	 *
-	 * @return RestEvent
+	 * @return $this
 	 */
 	public function setResponse( $response )
 	{
+		//	If it hasn't changed, don't set it
+		if ( null !== $response && null !== $this->_response )
+		{
+			$_diff = Utilities::array_diff_recursive( $response, $this->_response );
+
+			if ( empty( $_diff ) )
+			{
+				return $this;
+			}
+		}
+
 		$this->_response = $response;
+		$this->_dirty = true;
 
 		return $this;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function isDirty()
+	{
+		return $this->_dirty;
 	}
 
 }

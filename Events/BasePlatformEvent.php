@@ -21,15 +21,17 @@ use Symfony\Component\EventDispatcher\Event;
 /**
  * The base event class for the server-side DSP events
  *
- * It encapsulates the parameters associated with an event.
- *
  * This object is modeled after jQuery's event object for
  * ease of client consumption.
  *
  * If an event handler calls an event's stopPropagation() method, no further
  * listeners will be called.
+ *
+ * BasePlatformEvent::preventDefault() and BasePlatformEvent::isDefaultPrevented()
+ * are provided in stub form, and do nothing by default. You may implement the
+ * response to a "preventDefault" in your services by overriding the methods.
  */
-class PlatformEvent extends Event
+class BasePlatformEvent extends Event
 {
 	//*************************************************************************
 	//	Constants
@@ -59,7 +61,7 @@ class PlatformEvent extends Event
 	/**
 	 * @var mixed The last value returned by an event handler that was triggered by this event, unless the value was null.
 	 */
-	protected $_result = null;
+	protected $_lastHandlerResult = null;
 
 	//**************************************************************************
 	//* Methods
@@ -111,18 +113,34 @@ class PlatformEvent extends Event
 	}
 
 	/**
-	 * @return mixed
-	 */
-	public function getResult()
-	{
-		return $this->_result;
-	}
-
-	/**
 	 * @return int
 	 */
 	public function getTimestamp()
 	{
 		return $this->_timestamp;
 	}
+
+	/**
+	 * @param mixed $lastHandlerResult
+	 *
+	 * @return BasePlatformEvent
+	 */
+	public function setLastHandlerResult( $lastHandlerResult )
+	{
+		if ( null !== $lastHandlerResult )
+		{
+			$this->_lastHandlerResult = $lastHandlerResult;
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function getLastHandlerResult()
+	{
+		return $this->_lastHandlerResult;
+	}
+
 }
