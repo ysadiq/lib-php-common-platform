@@ -37,81 +37,19 @@
       <library name="PHP">
         <CLASSES>
           <root url="file:///usr/share/php" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Console_Getopt" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Mail_Mime" />
-          <root url="file://$MODULE_DIR$/vendor/dreamfactory/oasys" />
-          <root url="file:///usr/local/bin/composer.phar" />
-          <root url="file://$MODULE_DIR$/vendor/guzzle/guzzle" />
-          <root url="file://$MODULE_DIR$/vendor/kisma/kisma" />
-          <root url="file://$MODULE_DIR$/vendor/dreamfactory/yii" />
-          <root url="file://$MODULE_DIR$/vendor/swiftmailer/swiftmailer" />
-          <root url="file://$MODULE_DIR$/vendor/composer" />
-          <root url="file://$MODULE_DIR$/vendor/phpforce/soap-client" />
-          <root url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Archive_Tar" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Mail_mimeDecode" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/XML_Util" />
-          <root url="file://$MODULE_DIR$/vendor/microsoft/windowsazure" />
-          <root url="file://$MODULE_DIR$/vendor/symfony/event-dispatcher" />
-          <root url="file://$MODULE_DIR$/vendor/phpforce/common" />
-          <root url="file://$MODULE_DIR$/vendor/dready92/php-on-couch" />
-          <root url="file://$MODULE_DIR$/vendor/aws/aws-sdk-php" />
-          <root url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common-yii" />
-          <root url="file://$MODULE_DIR$/vendor/dreamfactory/javascript-sdk" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/HTTP_Request2" />
-          <root url="file://$MODULE_DIR$/vendor/psr/log" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Structures_Graph" />
-          <root url="file://$MODULE_DIR$/vendor/rackspace/php-opencloud" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Net_URL2" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/PEAR" />
         </CLASSES>
         <SOURCES>
           <root url="file:///usr/share/php" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Console_Getopt" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Mail_Mime" />
-          <root url="file://$MODULE_DIR$/vendor/dreamfactory/oasys" />
-          <root url="file:///usr/local/bin/composer.phar" />
-          <root url="file://$MODULE_DIR$/vendor/guzzle/guzzle" />
-          <root url="file://$MODULE_DIR$/vendor/kisma/kisma" />
-          <root url="file://$MODULE_DIR$/vendor/dreamfactory/yii" />
-          <root url="file://$MODULE_DIR$/vendor/swiftmailer/swiftmailer" />
-          <root url="file://$MODULE_DIR$/vendor/composer" />
-          <root url="file://$MODULE_DIR$/vendor/phpforce/soap-client" />
-          <root url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Archive_Tar" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Mail_mimeDecode" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/XML_Util" />
-          <root url="file://$MODULE_DIR$/vendor/microsoft/windowsazure" />
-          <root url="file://$MODULE_DIR$/vendor/symfony/event-dispatcher" />
-          <root url="file://$MODULE_DIR$/vendor/phpforce/common" />
-          <root url="file://$MODULE_DIR$/vendor/dready92/php-on-couch" />
-          <root url="file://$MODULE_DIR$/vendor/aws/aws-sdk-php" />
-          <root url="file://$MODULE_DIR$/vendor/dreamfactory/lib-php-common-yii" />
-          <root url="file://$MODULE_DIR$/vendor/dreamfactory/javascript-sdk" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/HTTP_Request2" />
-          <root url="file://$MODULE_DIR$/vendor/psr/log" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Structures_Graph" />
-          <root url="file://$MODULE_DIR$/vendor/rackspace/php-opencloud" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/Net_URL2" />
-          <root url="file://$MODULE_DIR$/vendor/pear-pear.php.net/PEAR" />
         </SOURCES>
       </library>
     </orderEntry>
     <orderEntry type="module-library">
       <library name="PHARS">
         <CLASSES>
-          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/phpdocumentor/fileset/tests/data/test.phar" />
-          <root url="phar:///usr/local/bin/composer.phar" />
-          <root url="phar:///usr/share/php/phpDocumentor/tests/data/test.phar" />
-          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/symfony/dependency-injection/Symfony/Component/DependencyInjection/Tests/Fixtures/includes/ProjectWithXsdExtensionInPhar.phar" />
-          <root url="phar:///usr/share/php/data/phpDocumentor/composer.phar" />
+          <root url="phar:///usr/share/php/composer.phar" />
         </CLASSES>
         <SOURCES>
-          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/phpdocumentor/fileset/tests/data/test.phar" />
-          <root url="phar:///usr/local/bin/composer.phar" />
-          <root url="phar:///usr/share/php/phpDocumentor/tests/data/test.phar" />
-          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/symfony/dependency-injection/Symfony/Component/DependencyInjection/Tests/Fixtures/includes/ProjectWithXsdExtensionInPhar.phar" />
-          <root url="phar:///usr/share/php/data/phpDocumentor/composer.phar" />
+          <root url="phar:///usr/share/php/composer.phar" />
         </SOURCES>
       </library>
     </orderEntry>
