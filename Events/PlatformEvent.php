@@ -16,6 +16,9 @@
  */
 namespace DreamFactory\Platform\Events;
 
+use Kisma\Core\Interfaces\PublisherLike;
+use Kisma\Core\Interfaces\SubscriberLike;
+use Kisma\Core\Utility\Inflector;
 use Symfony\Component\EventDispatcher\Event;
 
 /**
