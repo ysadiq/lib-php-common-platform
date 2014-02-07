@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "6af0c2b2862146bfd2b314d02d24e48a",
+    "hash": "5a6ac31a7fce3b9e3141b70c70968ae6",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -1777,9 +1777,11 @@
     ],
     "minimum-stability": "dev",
     "stability-flags": {
+        "kisma/kisma": 20,
         "dready92/php-on-couch": 20,
         "phpforce/soap-client": 20,
         "phpunit/phpunit": 0,
+        "phpunit/dbunit": 0,
         "phpunit/phpunit-mock-objects": 0,
         "phpunit/phpunit-selenium": 0,
         "phpunit/phpunit-story": 0,
@@ -1787,11 +1789,10 @@
         "phpunit/php-text-template": 0,
         "phpunit/php-token-stream": 0,
         "phpunit/php-timer": 0,
-        "phpunit/php-invoker": 0,
-        "phpunit/dbunit": 0
+        "phpunit/php-invoker": 0
     },
     "platform": {
-        "php": ">=5.3.10"
+        "php": ">=5.3.18"
     },
     "platform-dev": [
 
