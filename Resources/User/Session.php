@@ -235,14 +235,15 @@ class Session extends BasePlatformRestResource
 	}
 
 	/**
-	 * @param string $email
-	 * @param string $password
+	 * @param string  $email
+	 * @param string  $password
+	 * @param boolean $return_identity
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
+	 * @return PlatformUserIdentity | array
 	 */
-	public static function userLogin( $email, $password )
+	public static function userLogin( $email, $password, $return_identity = false )
 	{
 		if ( empty( $email ) )
 		{
@@ -284,6 +285,11 @@ class Session extends BasePlatformRestResource
 		$_user->update( array( 'last_login_date' => date( 'c' ) ) );
 
 		static::$_userId = $_user->id;
+
+		if ( $return_identity )
+		{
+			return $_identity;
+		}
 
 		// 	Additional stuff for session - launchpad mainly
 		return static::addSessionExtras( $_result, $_user->is_sys_admin, true );
