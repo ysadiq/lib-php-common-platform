@@ -1,6 +1,5 @@
 vendor
-.idea/workspace.xml
-.idea/tasks.xml
+.idea
 .composer
 tests/config/keys.php
 tests/storage
