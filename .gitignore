@@ -1,8 +1,8 @@
 log
 vendor
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/*.iml
+.idea
+.idea
+.idea
 .composer
 tests/config/keys.php
 tests/storage
