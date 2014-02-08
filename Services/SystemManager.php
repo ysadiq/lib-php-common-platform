@@ -42,7 +42,6 @@ use DreamFactory\Platform\Yii\Models\EmailTemplate;
 use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
-use Guzzle\Http\Client;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -93,17 +92,17 @@ class SystemManager extends BaseSystemRestService
 		static::$_configPath = \Kisma::get( 'app.config_path' );
 
 		parent::__construct(
-			array_merge(
-				array(
-					 'name'        => 'System Configuration Management',
-					 'api_name'    => 'system',
-					 'type'        => 'System',
-					 'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-					 'description' => 'Service for system administration.',
-					 'is_active'   => true,
-				),
-				$settings
-			)
+			  array_merge(
+				  array(
+					  'name'        => 'System Configuration Management',
+					  'api_name'    => 'system',
+					  'type'        => 'System',
+					  'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+					  'description' => 'Service for system administration.',
+					  'is_active'   => true,
+				  ),
+				  $settings
+			  )
 		);
 	}
 
@@ -536,8 +535,8 @@ class SystemManager extends BaseSystemRestService
 				$_firstName = Pii::getState( 'first_name', Option::get( $attributes, 'firstName' ) );
 				$_lastName = Pii::getState( 'last_name', Option::get( $attributes, 'lastName' ) );
 				$_displayName = Pii::getState(
-					'display_name',
-					Option::get( $attributes, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
+								   'display_name',
+								   Option::get( $attributes, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
 				);
 
 				$_fields = array(
@@ -818,26 +817,28 @@ class SystemManager extends BaseSystemRestService
 	 */
 	public static function getDspVersions()
 	{
-		static $_client;
+		$_results = Curl::get(
+						static::VERSION_TAGS_URL,
+						array(),
+						array(
+							CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' )
+						)
+		);
 
-		if ( null === $_client )
-		{
-			$_client = new Client( static::VERSION_TAGS_URL );
-			$_client->setUserAgent( 'dreamfactory' );
-		}
-
-		$_request = $_client->createRequest();
-		$_response = $_request->send();
-
-		if ( !$_response->isSuccessful() )
+		if ( HttpResponse::Ok != ( $_code = Curl::getLastHttpCode() ) )
 		{
 			//	log an error here, but don't stop config pull
-			Log::error( 'Error retrieving DSP versions from GitHub: ' . $_response->getReasonPhrase() );
+			Log::error( 'Error retrieving DSP versions from GitHub: ' . $_code );
 
 			return null;
 		}
 
-		return (array)$_response->json();
+		if ( is_string( $_results ) && !empty( $_results ) )
+		{
+			$_results = json_decode( $_results, true );
+		}
+
+		return $_results;
 	}
 
 	/**
@@ -1039,14 +1040,14 @@ class SystemManager extends BaseSystemRestService
 
 		//	Call the API
 		return Drupal::registerPlatform(
-			$user,
-			$_paths,
-			array(
-				 'field_first_name'           => $user->first_name,
-				 'field_last_name'            => $user->last_name,
-				 'field_installation_type'    => InstallationTypes::determineType( true ),
-				 'field_registration_skipped' => ( $skipped ? 1 : 0 ),
-			)
+					 $user,
+					 $_paths,
+					 array(
+						 'field_first_name'           => $user->first_name,
+						 'field_last_name'            => $user->last_name,
+						 'field_installation_type'    => InstallationTypes::determineType( true ),
+						 'field_registration_skipped' => ( $skipped ? 1 : 0 ),
+					 )
 		);
 	}
 
@@ -1202,8 +1203,8 @@ class SystemManager extends BaseSystemRestService
 		try
 		{
 			$_admins = Sql::scalar(
-				<<<SQL
-		SELECT
+						  <<<SQL
+				SELECT
 	COUNT(id)
 FROM
 	df_sys_user
@@ -1211,10 +1212,10 @@ WHERE
 	is_sys_admin = 1 AND
 	is_deleted = 0
 SQL
-				,
-				0,
-				array(),
-				Pii::pdo()
+							  ,
+							  0,
+							  array(),
+							  Pii::pdo()
 			);
 
 			return ( 0 == $_admins ? false : ( $_admins > 1 ? $_admins : true ) );
@@ -1239,8 +1240,8 @@ SQL
 			/** @var User $_user */
 			$_user = $user
 				? : User::model()->find(
-					'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
-					array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
+						'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
+						array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
 				);
 
 			if ( !empty( $_user ) )
@@ -1261,86 +1262,12 @@ SQL
 		}
 	}
 
-//	/**
-//	 * @param string $apiName
-//	 *
-//	 * @return BasePlatformService|void
-//	 * @throws \Exception
-//	 */
-//	public function setApiName( $apiName )
-//	{
-//		throw new \Exception( 'SystemManager API name can not be changed.' );
-//	}
-//
-//	/**
-//	 * @param string $type
-//	 *
-//	 * @return BasePlatformService|void
-//	 * @throws \Exception
-//	 */
-//	public function setType( $type )
-//	{
-//		throw new \Exception( 'SystemManager type can not be changed.' );
-//	}
-//
-//	/**
-//	 * @param string $description
-//	 *
-//	 * @return BasePlatformService
-//	 * @throws \Exception
-//	 */
-//	public function setDescription( $description )
-//	{
-//		throw new \Exception( 'SystemManager description can not be changed.' );
-//	}
-//
-//	/**
-//	 * @param boolean $isActive
-//	 *
-//	 * @return BasePlatformService|void
-//	 * @throws \Exception
-//	 */
-//	public function setIsActive( $isActive = false )
-//	{
-//		throw new \Exception( 'SystemManager active flag can not be changed.' );
-//	}
-//
-//	/**
-//	 * @return boolean
-//	 */
-//	public function getIsActive()
-//	{
-//		return $this->_isActive;
-//	}
-//
-//	/**
-//	 * @param string $name
-//	 *
-//	 * @return BasePlatformService|void
-//	 * @throws \Exception
-//	 */
-//	public function setName( $name )
-//	{
-//		throw new \Exception( 'SystemManager name can not be changed.' );
-//	}
-//
-//	/**
-//	 * @param string $nativeFormat
-//	 *
-//	 * @return BasePlatformService|void
-//	 * @throws \Exception
-//	 */
-//	public function setNativeFormat( $nativeFormat )
-//	{
-//		throw new \Exception( 'SystemManager native format can not be changed.' );
-//	}
-
 	/**
 	 * @return string
 	 */
 	public static function getConfigPath()
 	{
-		return self::$_configPath;
+		return static::$_configPath;
 	}
 
 	/**
@@ -1348,7 +1275,7 @@ SQL
 	 */
 	public static function setConfigPath( $configPath )
 	{
-		self::$_configPath = $configPath;
+		static::$_configPath = $configPath;
 	}
 }
 
