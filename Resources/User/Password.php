@@ -235,13 +235,14 @@ class Password extends BasePlatformRestResource
 	 * @param string $answer
 	 * @param string $new_password
 	 * @param bool   $login
+	 * @param bool   $return_identity
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @return mixed
 	 */
-	public static function changePasswordBySecurityAnswer( $email, $answer, $new_password, $login = true )
+	public static function changePasswordBySecurityAnswer( $email, $answer, $new_password, $login = true, $return_identity = false )
 	{
 		if ( empty( $email ) )
 		{
@@ -294,7 +295,7 @@ class Password extends BasePlatformRestResource
 		{
 			try
 			{
-				return Session::userLogin( $_theUser->email, $new_password );
+				return Session::userLogin( $_theUser->email, $new_password, $return_identity );
 			}
 			catch ( \Exception $ex )
 			{
