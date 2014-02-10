@@ -42,6 +42,7 @@ use DreamFactory\Platform\Yii\Models\EmailTemplate;
 use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
