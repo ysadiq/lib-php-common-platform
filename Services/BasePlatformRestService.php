@@ -7,7 +7,9 @@
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,9 +20,7 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\Platform\Enums\ResourceServiceEvents;
 use DreamFactory\Platform\Enums\ResponseFormats;
-use DreamFactory\Platform\Events\ResourceEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
@@ -84,16 +84,20 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	protected $_autoDispatchPattern = self::DEFAULT_HANDLER_PATTERN;
 	/**
 	 * @var bool|array Array of verb aliases. Has no effect if $autoDispatch !== true
+	 *
 	 * Example:
+	 *
 	 * $this->_verbAliases = array(
 	 *     static::Put => static::Post,
 	 *     static::Patch => static::Post,
 	 *     static::Merge => static::Post,
+	 *
 	 *     // Use a closure too!
 	 *     static::Get => function($resource){
 	 *    ...
 	 *   },
 	 * );
+	 *
 	 *    The result will be that handleResource() will dispatch a PUT, PATCH, or MERGE request to the POST handler.
 	 */
 	protected $_verbAliases;
@@ -147,6 +151,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function __construct( $settings = array() )
 	{
 		$this->_serviceId = Option::get( $settings, 'id', null, true );
+
 		parent::__construct( $settings );
 	}
 
@@ -162,7 +167,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	{
 		$this->_setAction( $action );
 
-		//	Require app name for security check
+		// required app name for security check
 		$this->_detectAppName();
 		$this->_detectResourceMembers( $resource );
 		$this->_detectResponseMembers( $output_format );
@@ -172,8 +177,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		//	Inherent failure?
 		if ( false === ( $this->_response = $this->_handleResource() ) )
 		{
-			$_message = $this->_action . ' requests' . ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"'
-					: ' without a resource' ) . ' are not currently supported by the "' . $this->_apiName . '" service.';
+			$_message =
+				$this->_action . ' requests' . ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
+				' are not currently supported by the "' . $this->_apiName . '" service.';
 
 			throw new BadRequestException( $_message );
 		}
@@ -187,7 +193,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @param string $resourceName
 	 *
 	 * @return BasePlatformRestResource
-	 * @deprecated Use ResourceStore::resource(). Will be removed in v2.0
 	 */
 	public static function getNewResource( $resourceName = null )
 	{
@@ -198,7 +203,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @param string $resourceName
 	 *
 	 * @return BasePlatformSystemModel
-	 * @deprecated Use ResourceStore::model(). Will be removed in v2.0
 	 */
 	public static function getNewModel( $resourceName = null )
 	{
@@ -318,18 +322,17 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	protected function _preProcess()
 	{
 		// throw exception here to stop processing
-		$this->trigger( ResourceServiceEvents::PRE_PROCESS );
 	}
 
 	/**
-	 * Gets a mano in there before the response is sent back to the client
+	 * Handles all processing after a request.
+	 * Calls the default output formatter, which, like the goggles, does nothing.
 	 *
 	 * @return void
 	 */
 	protected function _postProcess()
 	{
 		// throw exception here to stop processing
-		$this->trigger( ResourceServiceEvents::POST_PROCESS );
 	}
 
 	/**
@@ -367,18 +370,16 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	protected function _detectAppName()
 	{
 		// 	Determine application if any
-		$_appName = FilterInput::request(
-							   'app_name',
-								   //	Default if app_name missing...
-							   Option::server(
-									 'HTTP_X_DREAMFACTORY_APPLICATION_NAME',
-									 Option::server(
-									 //	Default if X-DreamFactory-Application-Name is missing
-										   'HTTP_X_APPLICATION_NAME'
-									 )
-							   ),
-							   FILTER_SANITIZE_STRING
-		);
+		$_appName = FilterInput::request( 'app_name', null, FILTER_SANITIZE_STRING );
+
+		if ( empty( $_appName ) )
+		{
+			if ( null === ( $_appName = Option::get( $_SERVER, 'HTTP_X_DREAMFACTORY_APPLICATION_NAME' ) ) )
+			{
+				//	Old non-name-spaced header
+				$_appName = Option::get( $_SERVER, 'HTTP_X_APPLICATION_NAME' );
+			}
+		}
 
 		//	Still empty?
 		if ( empty( $_appName ) )
@@ -394,7 +395,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 			}
 			else
 			{
-				RestResponse::sendErrors( new BadRequestException( 'No application name header or parameter value in request.' ) );
+				RestResponse::sendErrors(
+					new BadRequestException( 'No application name header or parameter value in request.' )
+				);
 			}
 		}
 
@@ -568,32 +571,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		}
 
 		return $_criteria;
-	}
-
-	/**
-	 * Our event trigger method. Creates the event from the requested data
-	 *
-	 * @param string $eventName
-	 * @param mixed  $eventData
-	 *
-	 * @return $this
-	 */
-	public function trigger( $eventName, $eventData = null )
-	{
-		//	Library not installed? No events for you!
-		if ( !class_exists( 'DreamFactory\\Platform\\Events\\ResourceEvent', false ) )
-		{
-			return $this;
-		}
-
-		$_event = new ResourceEvent(
-			$this->_action,
-			$this->_resource,
-			$this->_response,
-			$eventData
-		);
-
-		return parent::trigger( $this->_namespaceEvent( $this->_resource, $eventName ), $_event );
 	}
 
 	/**

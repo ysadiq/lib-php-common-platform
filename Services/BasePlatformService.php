@@ -1,10 +1,13 @@
 <?php
 /**
  * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -13,13 +16,11 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Platform\Enums\BaseResourceEvents;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
-use DreamFactory\Platform\Events\BasePlatformEvent;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
-use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ServiceHandler;
+use DreamFactory\Platform\Yii\Models\Service;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Seed;
@@ -41,21 +42,17 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	protected $_apiName;
 	/**
-	 * @var int current user ID
-	 */
-	protected $_currentUserId;
-	/**
 	 * @var string Description of this service
 	 */
 	protected $_description;
 	/**
-	 * @var bool If false, no events will be generated.
+	 * @var string Designated type of this service
 	 */
-	protected $_enablePlatformEvents = false;
+	protected $_type;
 	/**
-	 * @var string A string pre-pended to the event name (i.e. "platform.system.user.pre_process")
+	 * @var int Designated type ID of this service
 	 */
-	protected $_eventPrefix;
+	protected $_typeId;
 	/**
 	 * @var boolean Is this service activated for use?
 	 */
@@ -69,13 +66,9 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	protected $_proxyClient;
 	/**
-	 * @var string Designated type of this service
+	 * @var int current user ID
 	 */
-	protected $_type;
-	/**
-	 * @var int Designated type ID of this service
-	 */
-	protected $_typeId;
+	protected $_currentUserId;
 
 	//*************************************************************************
 	//* Methods
@@ -91,15 +84,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	public function __construct( $settings = array() )
 	{
-		parent::__construct(
-			  Option::clean(
-					$settings,
-					array(
-						//	We're going to manage the events
-						'event_manager' => false,
-					)
-			  )
-		);
+		parent::__construct( $settings );
 
 		// Validate basic settings
 		if ( null === Option::get( $settings, 'api_name', $this->_apiName ) )
@@ -140,68 +125,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 			$this->_description = $this->_name;
 		}
 
-		//	Get the current user ID if one...
 		$this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
-
-		//	Set the prefix and trigger our creation
-		$this->_eventPrefix = BasePlatformEvent::EVENT_NAMESPACE . '.' . $this->_apiName;
-		$this->trigger( BaseResourceEvents::AFTER_CONSTRUCT );
-	}
-
-	/**
-	 * Destructor
-	 */
-	public function __destruct()
-	{
-		//	Save myself!
-		ServiceHandler::cacheService( $this->_apiName, $this );
-
-		//	Tell everyone that I'm outta here
-		$this->trigger( BaseResourceEvents::BEFORE_DESTRUCT );
-
-		parent::__destruct();
-	}
-
-	/**
-	 * @param string   $eventName
-	 * @param callable $callback
-	 *
-	 * @return $this
-	 */
-	public function on( $eventName, $callback )
-	{
-		Platform::on( $eventName, $callback );
-
-		return $this;
-	}
-
-	/**
-	 * @param string   $eventName
-	 * @param callable $callback
-	 *
-	 * @return $this
-	 */
-	public function off( $eventName, $callback )
-	{
-		Platform::off( $eventName, $callback );
-
-		return $this;
-	}
-
-	/**
-	 * @param string            $eventName
-	 * @param BasePlatformEvent $event
-	 *
-	 * @return $this
-	 */
-	public function trigger( $eventName, BasePlatformEvent $event = null )
-	{
-		if ( $this->_enablePlatformEvents )
-		{
-			Platform::trigger( $eventName, $event->setPublisher( $this ) );
-		}
-
-		return $this;
 	}
 
 	/**
@@ -241,6 +165,17 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	}
 
 	/**
+	 * Destructor
+	 */
+	public function __destruct()
+	{
+		//	Save myself!
+		ServiceHandler::cacheService( $this->_apiName, $this );
+
+		parent::__destruct();
+	}
+
+	/**
 	 * @param string $request
 	 * @param string $component
 	 *
@@ -249,19 +184,6 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	protected function _checkPermission( $request, $component )
 	{
 		throw new NotImplementedException();
-	}
-
-	/**
-	 * Build a complete namespaced event name
-	 *
-	 * @param string $resource  The name of the resource requested (i.e. user, app, db, etc.)
-	 * @param string $eventName The name of the event being thrown (i.e. pre_process)
-	 *
-	 * @return string
-	 */
-	protected function _namespaceEvent( $resource, $eventName )
-	{
-		return $this->_eventPrefix . '.' . Inflector::neutralize( $resource ) . '.' . Inflector::neutralize( $eventName );
 	}
 
 	/**
@@ -411,33 +333,4 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	{
 		return $this->_currentUserId;
 	}
-
-	/**
-	 * @return string
-	 */
-	public function getEventPrefix()
-	{
-		return $this->_eventPrefix;
-	}
-
-	/**
-	 * @param boolean $enablePlatformEvents
-	 *
-	 * @return BasePlatformService
-	 */
-	public function setEnablePlatformEvents( $enablePlatformEvents )
-	{
-		$this->_enablePlatformEvents = $enablePlatformEvents;
-
-		return $this;
-	}
-
-	/**
-	 * @return boolean
-	 */
-	public function getEnablePlatformEvents()
-	{
-		return $this->_enablePlatformEvents;
-	}
-
 }
