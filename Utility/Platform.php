@@ -21,7 +21,6 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Symfony\Component\EventDispatcher\EventDispatcher;
 
 /**
  * Platform
@@ -29,15 +28,6 @@ use Symfony\Component\EventDispatcher\EventDispatcher;
  */
 class Platform
 {
-	//*************************************************************************
-	//	Members
-	//*************************************************************************
-
-	/**
-	 * @var EventDispatcherInterface
-	 */
-	protected static $_eventManager = null;
-
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
@@ -190,48 +180,24 @@ class Platform
 	}
 
 	/**
-	 * Add a listener to an event
+	 * Attempts to require one or more autoload files.
+	 * fUseful for DSP apps written in PHP.
 	 *
-	 * @param string   $eventName
-	 * @param callable $callback
-	 */
-	public static function on( $eventName, $callback )
-	{
-		static::_getEventManager()->addListener( $eventName, $callback );
-	}
-
-	/**
-	 * Remove a listener from an event
+	 * @param array $autoloaders
 	 *
-	 * @param string   $eventName
-	 * @param callable $callback
+	 * @return mixed|bool
 	 */
-	public static function off( $eventName, $callback )
+	public static function registerAutoloaders( $autoloaders = array() )
 	{
-		static::_getEventManager()->removeListener( $eventName, $callback );
-	}
-
-	/**
-	 * @param string                                          $eventName
-	 * @param \DreamFactory\Platform\Events\BasePlatformEvent $event
-	 *
-	 * @return \Symfony\Component\EventDispatcher\Event
-	 */
-	public static function trigger( $eventName, BasePlatformEvent $event = null )
-	{
-		return static::_getEventManager()->dispatch( $eventName, $event );
-	}
-
-	/**
-	 * @return EventDispatcher
-	 */
-	protected static function _getEventManager()
-	{
-		if ( null === static::$_eventManager )
+		foreach ( Option::clean( $autoloaders ) as $_file )
 		{
-			static::$_eventManager = new EventDispatcher();
+			if ( file_exists( $_file ) )
+			{
+				/** @noinspection PhpIncludeInspection */
+				return require_once $_file;
+			}
 		}
 
-		return static::$_eventManager;
+		return false;
 	}
 }
