@@ -311,6 +311,13 @@ class SwaggerManager extends BasePlatformRestService
 		}
 	}
 
+	/**
+	 * Compiles the events from the swagger files into a event cache file for administrator
+	 *
+	 * @param int $startId
+	 *
+	 * @return bool|int
+	 */
 	public static function compileEvents( $startId = 2 )
 	{
 		$_id = $startId ? : 2;
