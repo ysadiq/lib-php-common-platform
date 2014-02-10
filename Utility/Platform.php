@@ -18,7 +18,6 @@ namespace DreamFactory\Platform\Utility;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Events\BasePlatformEvent;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -28,14 +27,14 @@ use Symfony\Component\EventDispatcher\EventDispatcher;
  * Platform
  * Generic platform helpers
  */
-class Platform extends SeedUtility
+class Platform
 {
     //*************************************************************************
     //	Members
     //*************************************************************************
 
     /**
-     * @var EventDispatcher
+	 * @var EventDispatcherInterface
      */
     protected static $_eventManager = null;
 
