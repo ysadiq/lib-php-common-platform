@@ -22,9 +22,9 @@ namespace DreamFactory\Platform\Events\Enums;
 use Kisma\Core\Enums\SeedEnum;
 
 /**
- * The base events raised by all resources
+ * The base events raised by all objects
  */
-class BaseResourceEvents extends SeedEnum
+class ObjectEvents extends SeedEnum
 {
 	/**
 	 * @var string

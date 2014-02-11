@@ -20,16 +20,16 @@
 namespace DreamFactory\Platform\Events\Enums;
 
 /**
- * The base events raised by resource services
+ * The base events raised by resources and services
  */
-class ResourceServiceEvents extends BaseResourceEvents
+class ResourceServiceEvents extends ObjectEvents
 {
 	/**
 	 * @var string Called before the resource request is dispatched
 	 */
-	const PRE_PROCESS = 'pre_process';
+	const PRE_PROCESS = '{resource}.{method}.pre_process';
 	/**
 	 * @var string Called after the resource handler has processed the request
 	 */
-	const POST_PROCESS = 'post_process';
+	const POST_PROCESS = '{resource}.{method}.post_process';
 }
