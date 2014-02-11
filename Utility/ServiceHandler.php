@@ -20,19 +20,16 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
-use DreamFactory\Platform\Enums\PlatformStorageTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\PlatformServiceException;
-use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Components\Map;
 use Kisma\Core\Utility\Inflector;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -141,7 +138,7 @@ class ServiceHandler
 				throw new NotFoundException( 'Service not found' );
 			}
 
-			$_service = static::_createService( $_config->getAttributes( null ) );
+			$_service = static::_createService( $_config->getAttributes() );
 
 			if ( $check_active && !$_service->getIsActive() )
 			{
@@ -254,7 +251,8 @@ class ServiceHandler
 			$_serviceClass = Option::get( $_config, 'class' );
 		}
 
-		unset( $record['native_format'] );
+//	Commented out as fix for DSP-57 20140211.GHA
+//		unset( $record['native_format'] );
 
 		$_arguments = array( $record, Option::get( $_config, 'local', true ) );
 
