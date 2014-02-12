@@ -21,6 +21,7 @@ namespace DreamFactory\EventPlatform\Utility;
 use DreamFactory\Platform\Events\BaseEventManagerEvent;
 use DreamFactory\Platform\Events\PlatformEvent;
 use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -55,16 +56,15 @@ class EventManager
 	 *     }
 	 *     echo 'continue with default behavior';
 	 *
-	 * @param EventPublisherLike                          $sender
 	 * @param string                                      $eventName
 	 * @param \DreamFactory\Platform\Events\PlatformEvent $event
 	 *
 	 * @return \Symfony\Component\EventDispatcher\Event
 	 */
-	public static function trigger( $sender, $eventName, PlatformEvent $event = null )
+	public static function trigger( $eventName, PlatformEvent $event = null )
 	{
 		return static::getDispatcher()->dispatch(
-					 static::_normalizeEventName( $eventName, $event ),
+					 static::_normalizeEventName( $eventName ),
 					 $event
 		);
 	}
@@ -126,19 +126,11 @@ class EventManager
 
 		foreach ( $_replacements as $_key )
 		{
-			$_macro = '{' . $_key . '}';
-
-			if ( false !== stripos( $_tag, $_key ) )
-			{
-				if ( property_exists( $_request, $_key ) )
-				{
-					$_tag = str_ireplace( $_macro, $_request->{$_key}, $_tag );
-				}
-				elseif ( is_callable( array( $_request, 'get' . $_key ) ) )
-				{
-					$_tag = str_ireplace( $_macro, $_request->{'get' . $_key}(), $_tag );
-				}
-			}
+			$_tag = str_ireplace(
+				'{' . $_key . '}',
+				Option::get( $_request, $_key ),
+				$_tag
+			);
 		}
 
 		return $_cache[$eventName] = $_tag;
