@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Services\BasePlatformService;
@@ -68,6 +69,24 @@ class Config extends BaseSystemRestResource
 				)
 			)
 		);
+	}
+
+	public static function getOpenRegistration()
+	{
+		/** @var $_config \DreamFactory\Platform\Yii\Models\Config */
+		$_fields = 'allow_open_registration, open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id';
+		$_config = ResourceStore::model( 'config' )->find( array( 'select' => $_fields ) );
+		if ( null === $_config )
+		{
+			throw new InternalServerErrorException( 'Unable to load system configuration.' );
+		}
+
+		if ( !$_config->allow_open_registration )
+		{
+			return false;
+		}
+
+		return $_config->getAttributes( null );
 	}
 
 	/**
