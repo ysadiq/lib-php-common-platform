@@ -29,9 +29,9 @@ class ObjectEvents extends SeedEnum
 	/**
 	 * @var string
 	 */
-	const AFTER_CONSTRUCT = 'after_construct';
+	const AFTER_CONSTRUCT = '{api_name}.after_construct';
 	/**
 	 * @var string
 	 */
-	const BEFORE_DESTRUCT = 'before_destruct';
+	const BEFORE_DESTRUCT = '{api_name}before_destruct';
 }

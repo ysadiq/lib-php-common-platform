@@ -13,11 +13,12 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\EventPlatform\Utility\EventManager;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Events\BasePlatformEvent;
+use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
-use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
@@ -31,344 +32,338 @@ use Kisma\Core\Utility\Option;
  */
 abstract class BasePlatformService extends Seed implements PlatformServiceLike, ConsumerLike
 {
-    //*************************************************************************
-    //* Members
-    //*************************************************************************
+	//*************************************************************************
+	//* Members
+	//*************************************************************************
 
-    /**
-     * @var string Name to be used in an API
-     */
-    protected $_apiName;
-    /**
-     * @var int current user ID
-     */
-    protected $_currentUserId;
-    /**
-     * @var string Description of this service
-     */
-    protected $_description;
-    /**
-     * @var boolean Is this service activated for use?
-     */
-    protected $_isActive = false;
-    /**
-     * @var string Native format of output of service, null for php, otherwise json, xml, etc.
-     */
-    protected $_nativeFormat = null;
-    /**
-     * @var mixed The local service client for proxying
-     */
-    protected $_proxyClient;
-    /**
-     * @var string Designated type of this service
-     */
-    protected $_type;
-    /**
-     * @var int Designated type ID of this service
-     */
-    protected $_typeId;
+	/**
+	 * @var string Name to be used in an API
+	 */
+	protected $_apiName;
+	/**
+	 * @var int current user ID
+	 */
+	protected $_currentUserId;
+	/**
+	 * @var string Description of this service
+	 */
+	protected $_description;
+	/**
+	 * @var boolean Is this service activated for use?
+	 */
+	protected $_isActive = false;
+	/**
+	 * @var string Native format of output of service, null for php, otherwise json, xml, etc.
+	 */
+	protected $_nativeFormat = null;
+	/**
+	 * @var mixed The local service client for proxying
+	 */
+	protected $_proxyClient;
+	/**
+	 * @var string Designated type of this service
+	 */
+	protected $_type;
+	/**
+	 * @var int Designated type ID of this service
+	 */
+	protected $_typeId;
 
-    //*************************************************************************
-    //* Methods
-    //*************************************************************************
+	//*************************************************************************
+	//* Methods
+	//*************************************************************************
 
-    /**
-     * Create a new service
-     *
-     * @param array $settings configuration array
-     *
-     * @throws \InvalidArgumentException
-     * @throws \Exception
-     */
-    public function __construct( $settings = array() )
-    {
-        parent::__construct( $settings );
+	/**
+	 * Create a new service
+	 *
+	 * @param array $settings configuration array
+	 *
+	 * @throws \InvalidArgumentException
+	 * @throws \Exception
+	 */
+	public function __construct( $settings = array() )
+	{
+		parent::__construct( $settings );
 
-        // Validate basic settings
-        if ( null === Option::get( $settings, 'api_name', $this->_apiName ) )
-        {
-            if ( null !== ( $_name = Option::get( $settings, 'name', $this->_name ) ) )
-            {
-                $this->_apiName = Inflector::neutralize( $_name );
-            }
-        }
+		// Validate basic settings
+		if ( null === Option::get( $settings, 'api_name', $this->_apiName ) )
+		{
+			if ( null !== ( $_name = Option::get( $settings, 'name', $this->_name ) ) )
+			{
+				$this->_apiName = Inflector::neutralize( $_name );
+			}
+		}
 
-        if ( empty( $this->_apiName ) )
-        {
-            throw new \InvalidArgumentException( '"api_name" can not be empty.' );
-        }
+		if ( empty( $this->_apiName ) )
+		{
+			throw new \InvalidArgumentException( '"api_name" can not be empty.' );
+		}
 
-        if ( null === $this->_typeId )
-        {
-            if ( false !== ( $_typeId = $this->_determineTypeId() ) )
-            {
-                $this->_typeId = $_typeId;
+		if ( null === $this->_typeId )
+		{
+			if ( false !== ( $_typeId = $this->_determineTypeId() ) )
+			{
+				$this->_typeId = $_typeId;
 
-                //	Set type from ID
-                if ( null === $this->_type )
-                {
-                    $this->_type = PlatformServiceTypes::nameOf( $this->_typeId );
-                }
-            }
-        }
+				//	Set type from ID
+				if ( null === $this->_type )
+				{
+					$this->_type = PlatformServiceTypes::nameOf( $this->_typeId );
+				}
+			}
+		}
 
-        if ( empty( $this->_type ) || null === $this->_typeId )
-        {
-            throw new \InvalidArgumentException( '"type" and/or "type_id" cannot be empty.' );
-        }
+		if ( empty( $this->_type ) || null === $this->_typeId )
+		{
+			throw new \InvalidArgumentException( '"type" and/or "type_id" cannot be empty.' );
+		}
 
-        //	Set description from name...
-        if ( empty( $this->_description ) )
-        {
-            $this->_description = $this->_name;
-        }
+		//	Set description from name...
+		if ( empty( $this->_description ) )
+		{
+			$this->_description = $this->_name;
+		}
 
-        //	Get the current user ID if one...
-        $this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
-    }
+		//	Get the current user ID if one...
+		$this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
+	}
 
-    /**
-     * @param string   $eventName
-     * @param callable $callback
-     *
-     * @return bool|void
-     */
-    public function on( $eventName, $callback )
-    {
-        Platform::on( $eventName, $callback );
+	/**
+	 * @param string   $eventName
+	 * @param callable $callback
+	 *
+	 * @return void
+	 */
+	public function on( $eventName, $callback )
+	{
+		EventManager::on( $eventName, $callback );
+	}
 
-        return true;
-    }
+	/**
+	 * @param string   $eventName
+	 * @param callable $callback
+	 *
+	 * @return void
+	 */
+	public function off( $eventName, $callback )
+	{
+		EventManager::off( $eventName, $callback );
+	}
 
-    /**
-     * @param string   $eventName
-     * @param callable $callback
-     *
-     * @return bool|void
-     */
-    public function off( $eventName, $callback )
-    {
-        Platform::off( $eventName, $callback );
+	/**
+	 * @param string                                      $eventName
+	 * @param \DreamFactory\Platform\Events\PlatformEvent $event
+	 *
+	 * @return \DreamFactory\Platform\Events\PlatformEvent
+	 */
+	public function trigger( $eventName, PlatformEvent $event = null )
+	{
+		return EventManager::trigger( $eventName, $event );
+	}
 
-        return true;
-    }
+	/**
+	 * Given an old string-based TYPE, determine new integer identifier
+	 *
+	 * @param string $type
+	 *
+	 * @return bool|int
+	 */
+	protected function _determineTypeId( $type = null )
+	{
+		$_type = str_replace( ' ', '_', trim( strtoupper( $type ? : $this->_type ) ) );
 
-    /**
-     * @param string            $eventName
-     * @param BasePlatformEvent $event
-     *
-     * @return bool|void
-     */
-    public function trigger( $eventName, BasePlatformEvent $event = null )
-    {
-        Platform::trigger( $eventName, $event );
+		if ( 'LOCAL_EMAIL_SERVICE' == $_type )
+		{
+			$_type = 'EMAIL_SERVICE';
+		}
 
-        return true;
-    }
+		try
+		{
+			//	Throws exception if type not defined...
+			return PlatformServiceTypes::defines( $_type, true );
+		}
+		catch ( \InvalidArgumentException $_ex )
+		{
+			if ( empty( $_type ) )
+			{
+				Log::notice( '  * Empty "type", assuming this is a system resource ( type_id == 0 )' );
 
-    /**
-     * Given an old string-based TYPE, determine new integer identifier
-     *
-     * @param string $type
-     *
-     * @return bool|int
-     */
-    protected function _determineTypeId( $type = null )
-    {
-        $_type = str_replace( ' ', '_', trim( strtoupper( $type ? : $this->_type ) ) );
+				return PlatformServiceTypes::SYSTEM_SERVICE;
+			}
 
-        if ( 'LOCAL_EMAIL_SERVICE' == $_type )
-        {
-            $_type = 'EMAIL_SERVICE';
-        }
+			Log::error( '  * Unknown service type ID request for "' . $type . '".' );
 
-        try
-        {
-            //	Throws exception if type not defined...
-            return PlatformServiceTypes::defines( $_type, true );
-        }
-        catch ( \InvalidArgumentException $_ex )
-        {
-            if ( empty( $_type ) )
-            {
-                Log::notice( '  * Empty "type", assuming this is a system resource ( type_id == 0 )' );
+			return false;
+		}
+	}
 
-                return PlatformServiceTypes::SYSTEM_SERVICE;
-            }
+	/**
+	 * Destructor
+	 */
+	public function __destruct()
+	{
+		//	Save myself!
+		ServiceHandler::cacheService( $this->_apiName, $this );
 
-            Log::error( '  * Unknown service type ID request for "' . $type . '".' );
+		parent::__destruct();
+	}
 
-            return false;
-        }
-    }
+	/**
+	 * @param string $request
+	 * @param string $component
+	 *
+	 * @throws \Kisma\Core\Exceptions\NotImplementedException
+	 */
+	protected function _checkPermission( $request, $component )
+	{
+		throw new NotImplementedException();
+	}
 
-    /**
-     * Destructor
-     */
-    public function __destruct()
-    {
-        //	Save myself!
-        ServiceHandler::cacheService( $this->_apiName, $this );
+	/**
+	 * @param string $apiName
+	 *
+	 * @return BasePlatformService
+	 */
+	public function setApiName( $apiName )
+	{
+		$this->_apiName = $apiName;
 
-        parent::__destruct();
-    }
+		return $this;
+	}
 
-    /**
-     * @param string $request
-     * @param string $component
-     *
-     * @throws \Kisma\Core\Exceptions\NotImplementedException
-     */
-    protected function _checkPermission( $request, $component )
-    {
-        throw new NotImplementedException();
-    }
+	/**
+	 * @return string
+	 */
+	public function getApiName()
+	{
+		return $this->_apiName;
+	}
 
-    /**
-     * @param string $apiName
-     *
-     * @return BasePlatformService
-     */
-    public function setApiName( $apiName )
-    {
-        $this->_apiName = $apiName;
+	/**
+	 * @param string $description
+	 *
+	 * @return BasePlatformService
+	 */
+	public function setDescription( $description )
+	{
+		$this->_description = $description;
 
-        return $this;
-    }
+		return $this;
+	}
 
-    /**
-     * @return string
-     */
-    public function getApiName()
-    {
-        return $this->_apiName;
-    }
+	/**
+	 * @return string
+	 */
+	public function getDescription()
+	{
+		return $this->_description;
+	}
 
-    /**
-     * @param string $description
-     *
-     * @return BasePlatformService
-     */
-    public function setDescription( $description )
-    {
-        $this->_description = $description;
+	/**
+	 * @param boolean $isActive
+	 *
+	 * @return BasePlatformService
+	 */
+	public function setIsActive( $isActive = false )
+	{
+		$this->_isActive = $isActive;
 
-        return $this;
-    }
+		return $this;
+	}
 
-    /**
-     * @return string
-     */
-    public function getDescription()
-    {
-        return $this->_description;
-    }
+	/**
+	 * @return boolean
+	 */
+	public function getIsActive()
+	{
+		return $this->_isActive;
+	}
 
-    /**
-     * @param boolean $isActive
-     *
-     * @return BasePlatformService
-     */
-    public function setIsActive( $isActive = false )
-    {
-        $this->_isActive = $isActive;
+	/**
+	 * @param string $nativeFormat
+	 *
+	 * @return BasePlatformService
+	 */
+	public function setNativeFormat( $nativeFormat )
+	{
+		$this->_nativeFormat = $nativeFormat;
 
-        return $this;
-    }
+		return $this;
+	}
 
-    /**
-     * @return boolean
-     */
-    public function getIsActive()
-    {
-        return $this->_isActive;
-    }
+	/**
+	 * @return string
+	 */
+	public function getNativeFormat()
+	{
+		return $this->_nativeFormat;
+	}
 
-    /**
-     * @param string $nativeFormat
-     *
-     * @return BasePlatformService
-     */
-    public function setNativeFormat( $nativeFormat )
-    {
-        $this->_nativeFormat = $nativeFormat;
+	/**
+	 * @param string $type
+	 *
+	 * @return BasePlatformService
+	 */
+	public function setType( $type )
+	{
+		$this->_type = $type;
 
-        return $this;
-    }
+		return $this;
+	}
 
-    /**
-     * @return string
-     */
-    public function getNativeFormat()
-    {
-        return $this->_nativeFormat;
-    }
+	/**
+	 * @return string
+	 */
+	public function getType()
+	{
+		return $this->_type;
+	}
 
-    /**
-     * @param string $type
-     *
-     * @return BasePlatformService
-     */
-    public function setType( $type )
-    {
-        $this->_type = $type;
+	/**
+	 * @param mixed $proxyClient
+	 *
+	 * @return BasePlatformService
+	 */
+	public function setProxyClient( $proxyClient )
+	{
+		$this->_proxyClient = $proxyClient;
 
-        return $this;
-    }
+		return $this;
+	}
 
-    /**
-     * @return string
-     */
-    public function getType()
-    {
-        return $this->_type;
-    }
+	/**
+	 * @return mixed
+	 */
+	public function getProxyClient()
+	{
+		return $this->_proxyClient;
+	}
 
-    /**
-     * @param mixed $proxyClient
-     *
-     * @return BasePlatformService
-     */
-    public function setProxyClient( $proxyClient )
-    {
-        $this->_proxyClient = $proxyClient;
+	/**
+	 * @param int $typeId
+	 *
+	 * @return BasePlatformService
+	 */
+	public function setTypeId( $typeId )
+	{
+		$this->_typeId = $typeId;
 
-        return $this;
-    }
+		return $this;
+	}
 
-    /**
-     * @return mixed
-     */
-    public function getProxyClient()
-    {
-        return $this->_proxyClient;
-    }
+	/**
+	 * @return int
+	 */
+	public function getTypeId()
+	{
+		return $this->_typeId;
+	}
 
-    /**
-     * @param int $typeId
-     *
-     * @return BasePlatformService
-     */
-    public function setTypeId( $typeId )
-    {
-        $this->_typeId = $typeId;
-
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getTypeId()
-    {
-        return $this->_typeId;
-    }
-
-    /**
-     * @return int
-     */
-    public function getUserId()
-    {
-        return $this->_currentUserId;
-    }
+	/**
+	 * @return int
+	 */
+	public function getUserId()
+	{
+		return $this->_currentUserId;
+	}
 }
