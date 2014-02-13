@@ -1,13 +1,10 @@
 <?php
 /**
  * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  * http://www.apache.org/licenses/LICENSE-2.0
- *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,11 +13,12 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\EventPlatform\Utility\EventManager;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Events\BasePlatformEvent;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\ServiceHandler;
-use DreamFactory\Platform\Yii\Models\Service;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Seed;
@@ -42,17 +40,13 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	protected $_apiName;
 	/**
+	 * @var int current user ID
+	 */
+	protected $_currentUserId;
+	/**
 	 * @var string Description of this service
 	 */
 	protected $_description;
-	/**
-	 * @var string Designated type of this service
-	 */
-	protected $_type;
-	/**
-	 * @var int Designated type ID of this service
-	 */
-	protected $_typeId;
 	/**
 	 * @var boolean Is this service activated for use?
 	 */
@@ -66,9 +60,13 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	protected $_proxyClient;
 	/**
-	 * @var int current user ID
+	 * @var string Designated type of this service
 	 */
-	protected $_currentUserId;
+	protected $_type;
+	/**
+	 * @var int Designated type ID of this service
+	 */
+	protected $_typeId;
 
 	//*************************************************************************
 	//* Methods
@@ -125,7 +123,24 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 			$this->_description = $this->_name;
 		}
 
+		//	Get the current user ID if one...
 		$this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
+	}
+
+	/**
+	 * {@InheritDoc}
+	 */
+	public function on( $eventName, $callback, $priority = 0 )
+	{
+		EventManager::on( $eventName, $callback, $priority );
+	}
+
+	/**
+	 * {@InheritDoc}
+	 */
+	public function off( $eventName, $callback )
+	{
+		EventManager::off( $eventName, $callback );
 	}
 
 	/**

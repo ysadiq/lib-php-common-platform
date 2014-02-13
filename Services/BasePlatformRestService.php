@@ -1,7 +1,6 @@
 <?php
 /**
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
- *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
  * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
@@ -20,7 +19,11 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\EventPlatform\Utility\EventManager;
 use DreamFactory\Platform\Enums\ResponseFormats;
+use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
+use DreamFactory\Platform\Events\ResourceEvent;
+use DreamFactory\Platform\Events\RestServiceEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
@@ -153,6 +156,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		$this->_serviceId = Option::get( $settings, 'id', null, true );
 
 		parent::__construct( $settings );
+
+		//	Announce our arrival
+		$this->trigger( ResourceServiceEvents::AFTER_CONSTRUCT );
 	}
 
 	/**
@@ -167,7 +173,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	{
 		$this->_setAction( $action );
 
-		// required app name for security check
+		//	Require app name for security check
 		$this->_detectAppName();
 		$this->_detectResourceMembers( $resource );
 		$this->_detectResponseMembers( $output_format );
@@ -178,8 +184,12 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		if ( false === ( $this->_response = $this->_handleResource() ) )
 		{
 			$_message =
-				$this->_action . ' requests' . ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
-				' are not currently supported by the "' . $this->_apiName . '" service.';
+				$this->_action .
+				' requests' .
+				( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
+				' are not currently supported by the "' .
+				$this->_apiName .
+				'" service.';
 
 			throw new BadRequestException( $_message );
 		}
@@ -193,6 +203,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @param string $resourceName
 	 *
 	 * @return BasePlatformRestResource
+	 * @deprecated Use ResourceStore::resource(). Will be removed in v2.0
 	 */
 	public static function getNewResource( $resourceName = null )
 	{
@@ -203,6 +214,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @param string $resourceName
 	 *
 	 * @return BasePlatformSystemModel
+	 * @deprecated Use ResourceStore::model(). Will be removed in v2.0
 	 */
 	public static function getNewModel( $resourceName = null )
 	{
@@ -240,6 +252,17 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 		//	Nada
 		throw new NoExtraActionsException();
+	}
+
+	/**
+	 * @param string $eventName
+	 * @param mixed  $eventData
+	 *
+	 * @return bool|int|void
+	 */
+	public function trigger( $eventName, $eventData = null )
+	{
+		return EventManager::trigger( $eventName, new RestServiceEvent( $this->_apiName, $this->_resource ) );
 	}
 
 	/**
@@ -321,6 +344,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _preProcess()
 	{
+		$this->trigger( ResourceServiceEvents::PRE_PROCESS );
 		// throw exception here to stop processing
 	}
 
@@ -332,6 +356,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _postProcess()
 	{
+		$this->trigger( ResourceServiceEvents::POST_PROCESS );
 		// throw exception here to stop processing
 	}
 
@@ -370,16 +395,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	protected function _detectAppName()
 	{
 		// 	Determine application if any
-		$_appName = FilterInput::request( 'app_name', null, FILTER_SANITIZE_STRING );
-
-		if ( empty( $_appName ) )
-		{
-			if ( null === ( $_appName = Option::get( $_SERVER, 'HTTP_X_DREAMFACTORY_APPLICATION_NAME' ) ) )
-			{
-				//	Old non-name-spaced header
-				$_appName = Option::get( $_SERVER, 'HTTP_X_APPLICATION_NAME' );
-			}
-		}
+		$_appName = FilterInput::request(
+							   'app_name',
+							   Option::server( 'HTTP_X_DREAMFACTORY_APPLICATION_NAME', Option::server( 'HTTP_X_APPLICATION_NAME' ) ),
+							   FILTER_SANITIZE_STRING
+		);
 
 		//	Still empty?
 		if ( empty( $_appName ) )
@@ -395,9 +415,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 			}
 			else
 			{
-				RestResponse::sendErrors(
-					new BadRequestException( 'No application name header or parameter value in request.' )
-				);
+				RestResponse::sendErrors( new BadRequestException( 'No application name header or parameter value in request.' ) );
 			}
 		}
 
