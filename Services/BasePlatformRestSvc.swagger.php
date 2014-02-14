@@ -29,56 +29,44 @@ return array(
 	'resourcePath' => '/{api_name}',
 	'produces'     => array( 'application/json', 'application/xml' ),
 	'consumes'     => array( 'application/json', 'application/xml' ),
-	'apis'         =>
+	'apis'         => array(
 		array(
-			array(
-				'path'        => '/{api_name}',
-				'operations'  =>
-					array(),
-				'description' => 'No operations currently defined for this service.',
+			'path'        => '/{api_name}',
+			'operations'  => array(),
+			'description' => 'No operations currently defined for this service.',
+			'event_name'  => 'service.called',
+		),
+	),
+	'models'       => array(
+		'Resources' => array(
+			'id'         => 'Resources',
+			'properties' => array(
+				'resource' => array(
+					'type'        => 'Array',
+					'description' => 'Array of resources available by this service.',
+					'items'       => array(
+						'$ref' => 'Resource',
+					),
+				),
 			),
 		),
-	'models'       =>
-		array(
-			'Resources' =>
-				array(
-					'id'         => 'Resources',
-					'properties' =>
-						array(
-							'resource' =>
-								array(
-									'type'        => 'Array',
-									'description' => 'Array of resources available by this service.',
-									'items'       =>
-										array(
-											'$ref' => 'Resource',
-										),
-								),
-						),
+		'Resource'  => array(
+			'id'         => 'Resource',
+			'properties' => array(
+				'name' => array(
+					'type'        => 'string',
+					'description' => 'Name of the resource.',
 				),
-			'Resource'  =>
-				array(
-					'id'         => 'Resource',
-					'properties' =>
-						array(
-							'name' =>
-								array(
-									'type'        => 'string',
-									'description' => 'Name of the resource.',
-								),
-						),
-				),
-			'Success'   =>
-				array(
-					'id'         => 'Success',
-					'properties' =>
-						array(
-							'success' =>
-								array(
-									'type'        => 'boolean',
-									'description' => 'True when API call was successful, false or error otherwise.',
-								),
-						),
-				),
+			),
 		),
+		'Success'   => array(
+			'id'         => 'Success',
+			'properties' => array(
+				'success' => array(
+					'type'        => 'boolean',
+					'description' => 'True when API call was successful, false or error otherwise.',
+				),
+			),
+		),
+	),
 );
