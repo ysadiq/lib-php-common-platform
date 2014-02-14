@@ -41,11 +41,14 @@ class SwaggerManager extends BasePlatformRestService
 	 * @var string The private caching directory
 	 */
 	const SWAGGER_CACHE_DIR = '/swagger/cache/';
-
 	/**
 	 * @var string The private storage directory for non-generated files
 	 */
 	const SWAGGER_CUSTOM_DIR = '/swagger/custom/';
+	/**
+	 * @var array The event map
+	 */
+	protected static $_eventMap;
 
 	//*************************************************************************
 	//	Methods
@@ -58,15 +61,15 @@ class SwaggerManager extends BasePlatformRestService
 	public function __construct()
 	{
 		parent::__construct(
-			  array(
-				  'name'          => 'Swagger Documentation Management',
-				  'apiName'       => 'api_docs',
-				  'type'          => 'Swagger',
-				  'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
-				  'description'   => 'Service for a user to see the API documentation provided via Swagger.',
-				  'is_active'     => true,
-				  'native_format' => 'json',
-			  )
+			array(
+				'name'          => 'Swagger Documentation Management',
+				'apiName'       => 'api_docs',
+				'type'          => 'Swagger',
+				'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
+				'description'   => 'Service for a user to see the API documentation provided via Swagger.',
+				'is_active'     => true,
+				'native_format' => 'json',
+			)
 		);
 	}
 
@@ -155,13 +158,18 @@ class SwaggerManager extends BasePlatformRestService
 			$_fileName = PlatformServiceTypes::getFileName( $_typeId, $_apiName );
 
 			$_content = null;
+
 			$_filePath = $_scanPath . $_fileName . '.swagger.php';
+
 			if ( file_exists( $_filePath ) )
 			{
 				/** @noinspection PhpIncludeInspection */
 				$_fromFile = require( $_filePath );
+
 				if ( is_array( $_fromFile ) )
 				{
+					static::$_eventMap[$_apiName] = $_events = static::_parseSwaggerEvents( $_apiName, $_fromFile );
+
 					$_content = array_merge( $_baseSwagger, $_fromFile );
 					$_content = json_encode( $_content );
 				}
@@ -226,6 +234,11 @@ class SwaggerManager extends BasePlatformRestService
 			Log::error( "Failed to write cache file $_filePath." );
 		}
 
+		if ( false === file_put_contents( $_cachePath . '_events.json', json_encode( static::$_eventMap ) ) )
+		{
+			Log::error( 'File system error writing events cache file: ' . $_cachePath . '_events.json' );
+		}
+
 		$_exampleFile = 'example_service_swagger.json';
 		if ( !file_exists( $_customPath . $_exampleFile ) && file_exists( $_templatePath . $_exampleFile )
 		)
@@ -237,6 +250,34 @@ class SwaggerManager extends BasePlatformRestService
 		}
 
 		return $_out;
+	}
+
+	/**
+	 * @param string          $apiName
+	 * @param array|\stdClass $data
+	 *
+	 * @return array
+	 */
+	protected static function _parseSwaggerEvents( $apiName, $data )
+	{
+		$_eventMap = $_events = array();
+
+		foreach ( Option::get( $data, 'apis', array() ) as $_api )
+		{
+			$_events = array();
+
+			foreach ( Option::get( $_api, 'operations', array() ) as $_operation )
+			{
+				if ( null !== ( $_eventName = Option::get( $_operation, 'event_name' ) ) )
+				{
+					$_events[Option::get( $_operation, 'method', 'GET' )] = str_ireplace( '{api_name}', $apiName, $_eventName );
+				}
+			}
+
+			$_eventMap[$_api['path']] = $_events;
+		}
+
+		return $_eventMap;
 	}
 
 	/**
