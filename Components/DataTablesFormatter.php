@@ -19,7 +19,7 @@
  */
 namespace DreamFactory\Platform\Components;
 
-use DreamFactory\Platform\Interfaces\FormatterLike;
+use DreamFactory\Platform\Interfaces\TransformerLike;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
@@ -27,7 +27,7 @@ use Kisma\Core\Utility\Option;
  * DataTablesFormatter
  * A simple data formatter
  */
-class DataTablesFormatter implements FormatterLike
+class DataTablesFormatter implements TransformerLike
 {
 	/**
 	 * @param mixed $dataToFormat
@@ -35,7 +35,7 @@ class DataTablesFormatter implements FormatterLike
 	 *
 	 * @return mixed The formatted data
 	 */
-	public static function format( $dataToFormat, $options = array() )
+	public function format( $dataToFormat, $options = array() )
 	{
 		if ( null === ( $_data = Option::get( $dataToFormat, 'resource' ) ) )
 		{
@@ -71,5 +71,56 @@ class DataTablesFormatter implements FormatterLike
 			'iTotalDisplayRecords' => $_count,
 			'aaData'               => $_response,
 		);
+	}
+
+	/**
+	 * Adds criteria garnered from the query string from DataTables
+	 *
+	 * @param array|\CDbCriteria $criteria
+	 * @param array              $columns
+	 *
+	 * @return array|\CDbCriteria
+	 */
+	public function buildCriteria( $columns, $criteria = null )
+	{
+		$criteria = $criteria ? : array();
+
+		$_criteria = ( !( $criteria instanceof \CDbCriteria ) ? new \CDbCriteria( $criteria ) : $criteria );
+
+		//	Columns
+		$_criteria->select = ( !empty( $_columns ) ? implode( ', ', $_columns ) : '*' );
+
+		//	Limits
+		$_limit = FilterInput::get( INPUT_GET, 'iDisplayLength', -1, FILTER_SANITIZE_NUMBER_INT );
+		$_limitStart = FilterInput::get( INPUT_GET, 'iDisplayStart', 0, FILTER_SANITIZE_NUMBER_INT );
+
+		if ( -1 != $_limit )
+		{
+			$_criteria->limit = $_limit;
+			$_criteria->offset = $_limitStart;
+		}
+
+		//	Sort
+		$_order = array();
+
+		if ( isset( $_GET['iSortCol_0'] ) )
+		{
+			for ( $_i = 0, $_count = FilterInput::get( INPUT_GET, 'iSortingCols', 0, FILTER_SANITIZE_NUMBER_INT ); $_i < $_count; $_i++ )
+			{
+				$_column = FilterInput::get( INPUT_GET, 'iSortCol_' . $_i, 0, FILTER_SANITIZE_NUMBER_INT );
+
+				if ( isset( $_GET['bSortable_' . $_column] ) && 'true' == $_GET['bSortable_' . $_column] )
+				{
+					$_order[] = $columns[$_column] . ' ' . FilterInput::get( INPUT_GET, 'sSortDir_' . $_i, null, FILTER_SANITIZE_STRING );
+				}
+			}
+		}
+
+		if ( !empty( $_order ) )
+		{
+			$_criteria->order = implode( ', ', $_order );
+		}
+
+		return $_criteria;
 	}
 }

@@ -19,17 +19,19 @@
  */
 namespace DreamFactory\Platform\Events\Enums;
 
+use Kisma\Core\Events\Enums\LifeEvents;
+
 /**
  * The base events raised by API controllers
  */
-class ApiEvents extends ObjectEvents
+class ApiEvents extends LifeEvents
 {
 	/**
 	 * @var string Called before the request is dispatched
 	 */
-	const BEFORE_REQUEST = '{request_uri}.{method}.before_request';
+	const BEFORE_REQUEST = '{api_name}.{method}.before_request';
 	/**
 	 * @var string Called after the dispatch request returns
 	 */
-	const AFTER_REQUEST = '{request_uri}.{method}.after_request';
+	const AFTER_REQUEST = '{api_name}.{method}.after_request';
 }

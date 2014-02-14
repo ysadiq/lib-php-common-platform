@@ -16,7 +16,7 @@
  */
 namespace DreamFactory\Platform\Events;
 
-use Symfony\Component\EventDispatcher\Event;
+use Kisma\Core\Events\SeedEvent;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -32,17 +32,8 @@ use Symfony\Component\HttpFoundation\Response;
  * are provided in stub form, and do nothing by default. You may implement the
  * response to a "preventDefault" in your services by overriding the methods.
  */
-class PlatformEvent extends Event
+class PlatformEvent extends SeedEvent
 {
-	//*************************************************************************
-	//	Constants
-	//*************************************************************************
-
-	/**
-	 * @type string The base of our event tree
-	 */
-	const EVENT_NAMESPACE = 'platform';
-
 	//**************************************************************************
 	//* Members
 	//**************************************************************************

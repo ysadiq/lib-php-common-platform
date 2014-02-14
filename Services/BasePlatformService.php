@@ -13,25 +13,36 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\EventPlatform\Utility\EventManager;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Events\BasePlatformEvent;
-use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
+use Kisma\Core\Interfaces\PublisherLike;
+use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Seed;
+use Kisma\Core\Utility\EventManager;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * BasePlatformService
  * The base class for all DSP services
  */
-abstract class BasePlatformService extends Seed implements PlatformServiceLike, ConsumerLike
+abstract class BasePlatformService extends Seed implements PlatformServiceLike, ConsumerLike, PublisherLike, SubscriberLike
 {
+	//*************************************************************************
+	//	Constants
+	//*************************************************************************
+
+	/**
+	 * @type string The base of our event tree
+	 */
+	const EVENT_NAMESPACE = 'platform.';
+
 	//*************************************************************************
 	//* Members
 	//*************************************************************************
@@ -129,36 +140,38 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	}
 
 	/**
-	 * @param string   $eventName
-	 * @param callable $callback
-	 *
-	 * @return void
+	 * Destructor
 	 */
-	public function on( $eventName, $callback )
+	public function __destruct()
 	{
-		EventManager::on( $eventName, $callback );
+		//	Save myself!
+		ServiceHandler::cacheService( $this->_apiName, $this );
+
+		parent::__destruct();
 	}
 
 	/**
-	 * @param string   $eventName
-	 * @param callable $callback
-	 *
-	 * @return void
+	 * {@InheritDoc}
+	 */
+	public function on( $eventName, $listener, $priority = 0 )
+	{
+		EventManager::on( $this->_normalizeEventName( $eventName ), $listener, $priority );
+	}
+
+	/**
+	 * {@InheritDoc}
 	 */
 	public function off( $eventName, $callback )
 	{
-		EventManager::off( $eventName, $callback );
+		EventManager::off( $this->_normalizeEventName( $eventName ), $callback );
 	}
 
 	/**
-	 * @param string                                      $eventName
-	 * @param \DreamFactory\Platform\Events\PlatformEvent $event
-	 *
-	 * @return \DreamFactory\Platform\Events\PlatformEvent
+	 * {@InheritDoc}
 	 */
-	public function trigger( $eventName, PlatformEvent $event = null )
+	public function trigger( $eventName, $event = null )
 	{
-		return EventManager::trigger( $eventName, $event );
+		return EventManager::trigger( $this->_normalizeEventName( $eventName ), $event );
 	}
 
 	/**
@@ -198,14 +211,42 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	}
 
 	/**
-	 * Destructor
+	 * @param string        $eventName
+	 * @param Request|array $values The values to use for replacements in the event name templates.
+	 *                              If none specified, the $_REQUEST variables will be used.
+	 *                              The current class's variables are also available for replacement.
+	 *
+	 * @return string
 	 */
-	public function __destruct()
+	protected function _normalizeEventName( $eventName, $values = null )
 	{
-		//	Save myself!
-		ServiceHandler::cacheService( $this->_apiName, $this );
+		static $_cache = array();
 
-		parent::__destruct();
+		if ( null !== ( $_name = Option::get( $_cache, $_tag = Inflector::neutralize( $eventName ) ) ) )
+		{
+			return $_name;
+		}
+
+		if ( null === $values )
+		{
+			$values = get_object_vars( Request::createFromGlobals() );
+		}
+
+		$_values = array_merge( get_object_vars( $this ), Option::clean( $values ) );
+
+		foreach ( $_values as $_key => $_value )
+		{
+			$_tag = str_ireplace(
+				array(
+					'{' . $_key . '}',
+					'{' . Inflector::neutralize( $_key ) . '}'
+				),
+				$_value,
+				$_tag
+			);
+		}
+
+		return $_cache[$eventName] = static::EVENT_NAMESPACE . $_tag;
 	}
 
 	/**

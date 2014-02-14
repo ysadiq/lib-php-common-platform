@@ -17,6 +17,7 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\EventPlatform\Utility\EventManager;
+use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
 use DreamFactory\Platform\Events\ResourceEvent;
@@ -32,6 +33,8 @@ use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * BasePlatformRestService
@@ -114,6 +117,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected $_response = null;
 	/**
+	 * @var Response The response to the request
+	 */
+	protected $_responseObject = null;
+	/**
+	 * @var Request The response to the request
+	 */
+	protected $_requestObject = null;
+	/**
 	 * @var int The HTTP response code returned for this request
 	 */
 	protected $_responseCode = RestResponse::Ok;
@@ -147,30 +158,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function __construct( $settings = array() )
 	{
 		$this->_serviceId = Option::get( $settings, 'id', null, true );
+		$this->_requestObject = Request::createFromGlobals();
+		$this->_responseObject = new Response();
 
-		parent::__construct(
-			array_merge(
-				Option::clean( $settings ),
-				array(
-					//	We'll manage the events up the chain
-					'event_manager' => false,
-					'auto_discover' => false,
-				)
-			)
-		);
-
-		//	Announce our arrival
-		$this->trigger( ResourceServiceEvents::AFTER_CONSTRUCT );
-	}
-
-	/**
-	 * The destructor has been chosen
-	 */
-	public function __destruct()
-	{
-		$this->trigger( ResourceServiceEvents::BEFORE_DESTRUCT );
-
-		parent::__destruct();
+		parent::__construct( Option::clean( $settings ) );
 	}
 
 	/**
@@ -267,16 +258,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	}
 
 	/**
-	 * @param string $eventName
-	 *
-	 * @return bool|\Symfony\Component\EventDispatcher\Event|void
-	 */
-	public function trigger( $eventName )
-	{
-		return EventManager::trigger( $eventName, new RestServiceEvent( $this->_apiName, $this->_resource ) );
-	}
-
-	/**
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return bool
 	 */
@@ -355,8 +336,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _preProcess()
 	{
-		$this->trigger( ResourceServiceEvents::PRE_PROCESS );
 		// throw exception here to stop processing
+		$this->trigger( ResourceServiceEvents::PRE_PROCESS );
 	}
 
 	/**
@@ -367,8 +348,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _postProcess()
 	{
-		$this->trigger( ResourceServiceEvents::POST_PROCESS );
 		// throw exception here to stop processing
+		$this->trigger( ResourceServiceEvents::POST_PROCESS );
 	}
 
 	/**
@@ -387,6 +368,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		}
 
 		$_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
+
+		$_response = new Response( $_result );
+
+		$this->trigger( ResourceServiceEvents::AFTER_DATA_FORMAT );
 
 		if ( !empty( $this->_outputFormat ) )
 		{
@@ -407,9 +392,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	{
 		// 	Determine application if any
 		$_appName = FilterInput::request(
-			'app_name',
-			Option::server( 'HTTP_X_DREAMFACTORY_APPLICATION_NAME', Option::server( 'HTTP_X_APPLICATION_NAME' ) ),
-			FILTER_SANITIZE_STRING
+							   'app_name',
+							   Option::server( 'HTTP_X_DREAMFACTORY_APPLICATION_NAME', Option::server( 'HTTP_X_APPLICATION_NAME' ) ),
+							   FILTER_SANITIZE_STRING
 		);
 
 		//	Still empty?
@@ -552,6 +537,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	}
 
 	/**
+	 * {@InheritDoc}
+	 */
+	public function trigger( $eventName, $event = null, $priority = 0 )
+	{
+		return parent::trigger( $eventName, new RestServiceEvent( $this->_apiName, $this->_resource ), $priority );
+	}
+
+	/**
 	 * Adds criteria garnered from the query string from DataTables
 	 *
 	 * @param array|\CDbCriteria $criteria
@@ -561,45 +554,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _buildCriteria( $columns, $criteria = null )
 	{
-		$criteria = $criteria ? : array();
+		$_formatter = new DataTablesFormatter();
 
-		$_criteria = ( !( $criteria instanceof \CDbCriteria ) ? new \CDbCriteria( $criteria ) : $criteria );
-
-		//	Columns
-		$_criteria->select = ( !empty( $_columns ) ? implode( ', ', $_columns ) : '*' );
-
-		//	Limits
-		$_limit = FilterInput::get( INPUT_GET, 'iDisplayLength', -1, FILTER_SANITIZE_NUMBER_INT );
-		$_limitStart = FilterInput::get( INPUT_GET, 'iDisplayStart', 0, FILTER_SANITIZE_NUMBER_INT );
-
-		if ( -1 != $_limit )
-		{
-			$_criteria->limit = $_limit;
-			$_criteria->offset = $_limitStart;
-		}
-
-		//	Sort
-		$_order = array();
-
-		if ( isset( $_GET['iSortCol_0'] ) )
-		{
-			for ( $_i = 0, $_count = FilterInput::get( INPUT_GET, 'iSortingCols', 0, FILTER_SANITIZE_NUMBER_INT ); $_i < $_count; $_i++ )
-			{
-				$_column = FilterInput::get( INPUT_GET, 'iSortCol_' . $_i, 0, FILTER_SANITIZE_NUMBER_INT );
-
-				if ( isset( $_GET['bSortable_' . $_column] ) && 'true' == $_GET['bSortable_' . $_column] )
-				{
-					$_order[] = $columns[$_column] . ' ' . FilterInput::get( INPUT_GET, 'sSortDir_' . $_i, null, FILTER_SANITIZE_STRING );
-				}
-			}
-		}
-
-		if ( !empty( $_order ) )
-		{
-			$_criteria->order = implode( ', ', $_order );
-		}
-
-		return $_criteria;
+		return $_formatter->buildCriteria( $columns, $criteria );
 	}
 
 	/**

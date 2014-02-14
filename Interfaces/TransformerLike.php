@@ -17,21 +17,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Events\Enums;
-
-use Kisma\Core\Enums\SeedEnum;
+namespace DreamFactory\Platform\Interfaces;
 
 /**
- * The base events raised by all objects
+ * Something that acts like a data transformer
  */
-class ObjectEvents extends SeedEnum
+interface TransformerLike
 {
+	//*************************************************************************
+	//* Methods
+	//*************************************************************************
+
 	/**
-	 * @var string
+	 * @param mixed $dataToFormat
+	 * @param array $options Any formatter-specific options
+	 *
+	 * @return mixed The formatted data
 	 */
-	const AFTER_CONSTRUCT = '{api_name}.after_construct';
+	public function format( $dataToFormat, $options = array() );
+
 	/**
-	 * @var string
+	 * Adds criteria garnered from the query string from DataTables
+	 *
+	 * @param array|\CDbCriteria $criteria
+	 * @param array              $columns
+	 *
+	 * @return array|\CDbCriteria
 	 */
-	const BEFORE_DESTRUCT = '{api_name}before_destruct';
+	public function buildCriteria( $columns, $criteria = null );
 }
