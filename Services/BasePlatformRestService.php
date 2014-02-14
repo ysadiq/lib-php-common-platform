@@ -3,13 +3,10 @@
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
  * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  * http://www.apache.org/licenses/LICENSE-2.0
- *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -87,20 +84,16 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	protected $_autoDispatchPattern = self::DEFAULT_HANDLER_PATTERN;
 	/**
 	 * @var bool|array Array of verb aliases. Has no effect if $autoDispatch !== true
-	 *
 	 * Example:
-	 *
 	 * $this->_verbAliases = array(
 	 *     static::Put => static::Post,
 	 *     static::Patch => static::Post,
 	 *     static::Merge => static::Post,
-	 *
 	 *     // Use a closure too!
 	 *     static::Get => function($resource){
 	 *    ...
 	 *   },
 	 * );
-	 *
 	 *    The result will be that handleResource() will dispatch a PUT, PATCH, or MERGE request to the POST handler.
 	 */
 	protected $_verbAliases;
@@ -120,6 +113,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @var mixed The response to the request
 	 */
 	protected $_response = null;
+	/**
+	 * @var Response The response to the request
+	 */
+	protected $_responseObject = null;
+	/**
+	 * @var Request The response to the request
+	 */
+	protected $_requestObject = null;
 	/**
 	 * @var int The HTTP response code returned for this request
 	 */
@@ -154,11 +155,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function __construct( $settings = array() )
 	{
 		$this->_serviceId = Option::get( $settings, 'id', null, true );
+		$this->_requestObject = Request::createFromGlobals();
+		$this->_responseObject = new Response();
 
-		parent::__construct( $settings );
-
-		//	Announce our arrival
-		$this->trigger( ResourceServiceEvents::AFTER_CONSTRUCT );
+		parent::__construct( Option::clean( $settings ) );
 	}
 
 	/**
@@ -252,17 +252,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 		//	Nada
 		throw new NoExtraActionsException();
-	}
-
-	/**
-	 * @param string $eventName
-	 * @param mixed  $eventData
-	 *
-	 * @return bool|int|void
-	 */
-	public function trigger( $eventName, $eventData = null )
-	{
-		return EventManager::trigger( $eventName, new RestServiceEvent( $this->_apiName, $this->_resource ) );
 	}
 
 	/**
@@ -376,6 +365,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		}
 
 		$_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
+
+		$_response = new Response( $_result );
+
+		$this->trigger( ResourceServiceEvents::AFTER_DATA_FORMAT );
 
 		if ( !empty( $this->_outputFormat ) )
 		{
@@ -550,45 +543,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _buildCriteria( $columns, $criteria = null )
 	{
-		$criteria = $criteria ? : array();
+		$_formatter = new DataTablesFormatter();
 
-		$_criteria = ( !( $criteria instanceof \CDbCriteria ) ? new \CDbCriteria( $criteria ) : $criteria );
-
-		//	Columns
-		$_criteria->select = ( !empty( $_columns ) ? implode( ', ', $_columns ) : '*' );
-
-		//	Limits
-		$_limit = FilterInput::get( INPUT_GET, 'iDisplayLength', -1, FILTER_SANITIZE_NUMBER_INT );
-		$_limitStart = FilterInput::get( INPUT_GET, 'iDisplayStart', 0, FILTER_SANITIZE_NUMBER_INT );
-
-		if ( -1 != $_limit )
-		{
-			$_criteria->limit = $_limit;
-			$_criteria->offset = $_limitStart;
-		}
-
-		//	Sort
-		$_order = array();
-
-		if ( isset( $_GET['iSortCol_0'] ) )
-		{
-			for ( $_i = 0, $_count = FilterInput::get( INPUT_GET, 'iSortingCols', 0, FILTER_SANITIZE_NUMBER_INT ); $_i < $_count; $_i++ )
-			{
-				$_column = FilterInput::get( INPUT_GET, 'iSortCol_' . $_i, 0, FILTER_SANITIZE_NUMBER_INT );
-
-				if ( isset( $_GET['bSortable_' . $_column] ) && 'true' == $_GET['bSortable_' . $_column] )
-				{
-					$_order[] = $columns[$_column] . ' ' . FilterInput::get( INPUT_GET, 'sSortDir_' . $_i, null, FILTER_SANITIZE_STRING );
-				}
-			}
-		}
-
-		if ( !empty( $_order ) )
-		{
-			$_criteria->order = implode( ', ', $_order );
-		}
-
-		return $_criteria;
+		return $_formatter->buildCriteria( $columns, $criteria );
 	}
 
 	/**
