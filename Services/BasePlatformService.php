@@ -236,6 +236,11 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 
 		foreach ( $_values as $_key => $_value )
 		{
+			if ( !is_scalar( $_value ) )
+			{
+				continue;
+			}
+
 			$_tag = str_ireplace(
 				array(
 					'{' . $_key . '}',
