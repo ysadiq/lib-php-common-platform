@@ -251,7 +251,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 			);
 		}
 
-		return $_cache[$eventName] = static::EVENT_NAMESPACE . $_tag;
+		return $_cache[$eventName] = $_tag;
 	}
 
 	/**
