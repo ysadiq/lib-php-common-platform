@@ -23,15 +23,13 @@ $_base = require( __DIR__ . '/BaseDbSvc.swagger.php' );
 $_base['apis'] = array(
 	array(
 		'path'        => '/{api_name}',
-		'operations'  =>
-		array(
+		'operations'  => array(
 			array(
 				'method'           => 'GET',
 				'summary'          => 'getTables() - List all tables.',
 				'nickname'         => 'getTables',
 				'type'             => 'Tables',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'include_properties',
 						'description'   => 'Return all properties of the tables, if any.',
@@ -49,8 +47,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -64,24 +61,24 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'List the names of the available tables in this storage. ' .
-									  'By default, all tables are listed, use \'names\' parameter to get specific tables. ' .
-									  'Use \'include_properties\' to include any properties of the tables.',
+				'notes'            =>
+					'List the names of the available tables in this storage. ' .
+					'By default, all tables are listed, use \'names\' parameter to get specific tables. ' .
+					'Use \'include_properties\' to include any properties of the tables.',
+				'event_name'       => '{api_name}.tables.list',
 			),
 		),
 		'description' => 'Operations available for database tables.',
 	),
 	array(
 		'path'        => '/{api_name}/{table_name}',
-		'operations'  =>
-		array(
+		'operations'  => array(
 			array(
 				'method'           => 'GET',
 				'summary'          => 'getRecords() - Retrieve one or more records.',
 				'nickname'         => 'getRecords',
 				'type'             => 'Records',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
 						'description'   => 'Name of the table to perform operations on.',
@@ -173,8 +170,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -192,21 +188,22 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Use the \'ids\' or \'filter\' parameter to limit resources that are returned. ' .
-									  'Use the \'fields\' parameter to limit properties returned for each resource. ' .
-									  'By default, all fields are returned for all resources. ' .
-									  'Use the \'related\' parameter to return related records for each resource. ' .
-									  'By default, no related records are returned. ' .
-									  'Alternatively, to send the \'ids\' or \'filter\' as posted data ' .
-									  'use the POST request with X-HTTP-METHOD = GET header and post array of ids or a filter.',
+				'notes'            =>
+					'Use the \'ids\' or \'filter\' parameter to limit resources that are returned. ' .
+					'Use the \'fields\' parameter to limit properties returned for each resource. ' .
+					'By default, all fields are returned for all resources. ' .
+					'Use the \'related\' parameter to return related records for each resource. ' .
+					'By default, no related records are returned. ' .
+					'Alternatively, to send the \'ids\' or \'filter\' as posted data ' .
+					'use the POST request with X-HTTP-METHOD = GET header and post array of ids or a filter.',
+				'event_name'       => '{api_name}.rows.get',
 			),
 			array(
 				'method'           => 'POST',
 				'summary'          => 'createRecords() - Create one or more records.',
 				'nickname'         => 'createRecords',
 				'type'             => 'Records',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
 						'description'   => 'Name of the table to perform operations on.',
@@ -257,8 +254,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -276,17 +272,18 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Post data should be a single record or an array of records (shown). ' .
-									  'By default, only the id property of the record is returned on success. '.
-									  'Use \'fields\' parameter to return more info.',
+				'notes'            =>
+					'Post data should be a single record or an array of records (shown). ' .
+					'By default, only the id property of the record is returned on success. ' .
+					'Use \'fields\' parameter to return more info.',
+				'event_name'       => '{api_name}.rows.create',
 			),
 			array(
 				'method'           => 'PATCH',
 				'summary'          => 'updateRecords() - Update (patch) one or more records.',
 				'nickname'         => 'updateRecords',
 				'type'             => 'Records',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
 						'description'   => 'Name of the table to perform operations on.',
@@ -344,8 +341,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -363,17 +359,18 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Post data should be a single record or an array of records (shown). ' .
-									  'By default, only the id property of the record is returned on success. '.
-									  'Use \'fields\' parameter to return more info.',
+				'notes'            =>
+					'Post data should be a single record or an array of records (shown). ' .
+					'By default, only the id property of the record is returned on success. ' .
+					'Use \'fields\' parameter to return more info.',
+				'event_name'       => '{api_name}.rows.update',
 			),
 			array(
 				'method'           => 'DELETE',
 				'summary'          => 'deleteRecords() - Delete one or more records.',
 				'nickname'         => 'deleteRecords',
 				'type'             => 'Records',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
 						'description'   => 'Name of the table to perform operations on.',
@@ -432,8 +429,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -451,25 +447,25 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Use \'ids\' or filter to delete specific records, otherwise set \'force\' to true to clear the table. ' .
-									  'By default, only the id property of the record is returned on success, use \'fields\' to return more info. '.
-									  'Alternatively, to delete by records, a complicated filter, or a large list of ids, ' .
-									  'use the POST request with X-HTTP-METHOD = DELETE header and post array of records, filter, or ids.',
+				'notes'            =>
+					'Use \'ids\' or filter to delete specific records, otherwise set \'force\' to true to clear the table. ' .
+					'By default, only the id property of the record is returned on success, use \'fields\' to return more info. ' .
+					'Alternatively, to delete by records, a complicated filter, or a large list of ids, ' .
+					'use the POST request with X-HTTP-METHOD = DELETE header and post array of records, filter, or ids.',
+				'event_name'       => '{api_name}.rows.delete',
 			),
 		),
 		'description' => 'Operations for table records administration.',
 	),
 	array(
 		'path'        => '/{api_name}/{table_name}/{id}',
-		'operations'  =>
-		array(
+		'operations'  => array(
 			array(
 				'method'           => 'GET',
 				'summary'          => 'getRecord() - Retrieve one record by identifier.',
 				'nickname'         => 'getRecord',
 				'type'             => 'Record',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
 						'description'   => 'Name of the table to perform operations on.',
@@ -511,8 +507,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -530,18 +525,19 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Use the \'fields\' parameter to limit properties that are returned. ' .
-									  'By default, all fields are returned. ' .
-									  'Use the \'related\' parameter to return related records. ' .
-									  'By default, no related records are returned.',
+				'notes'            =>
+					'Use the \'fields\' parameter to limit properties that are returned. ' .
+					'By default, all fields are returned. ' .
+					'Use the \'related\' parameter to return related records. ' .
+					'By default, no related records are returned.',
+				'event_name'       => '{api_name}.row.get',
 			),
 			array(
 				'method'           => 'POST',
 				'summary'          => 'createRecord() - Create one record with given identifier.',
 				'nickname'         => 'createRecord',
 				'type'             => 'Record',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
 						'description'   => 'Name of the table to perform operations on.',
@@ -591,8 +587,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -610,16 +605,17 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Post data should be an array of fields for a single record. '.
-									  'Use the \'fields\' parameter to return more properties. By default, the id is returned.',
+				'notes'            =>
+					'Post data should be an array of fields for a single record. ' .
+					'Use the \'fields\' parameter to return more properties. By default, the id is returned.',
+				'event_name'       => '{api_name}.row.create',
 			),
 			array(
 				'method'           => 'PATCH',
 				'summary'          => 'updateRecord() - Update (patch) one record by identifier.',
 				'nickname'         => 'updateRecord',
 				'type'             => 'Record',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
 						'description'   => 'The name of the table you want to update.',
@@ -669,8 +665,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -688,16 +683,17 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Post data should be an array of fields for a single record. '.
-									  'Use the \'fields\' parameter to return more properties. By default, the id is returned.',
+				'notes'            =>
+					'Post data should be an array of fields for a single record. ' .
+					'Use the \'fields\' parameter to return more properties. By default, the id is returned.',
+				'event_name'       => '{api_name}.row.update',
 			),
 			array(
 				'method'           => 'DELETE',
 				'summary'          => 'deleteRecord() - Delete one record by identifier.',
 				'nickname'         => 'deleteRecord',
 				'type'             => 'Record',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
 						'description'   => 'Name of the table to perform operations on.',
@@ -739,8 +735,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -759,6 +754,7 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'Use the \'fields\' parameter to return more deleted properties. By default, the id is returned.',
+				'event_name'       => '{api_name}.row.delete',
 			),
 		),
 		'description' => 'Operations for single record administration.',

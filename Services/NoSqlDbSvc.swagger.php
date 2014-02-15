@@ -65,7 +65,7 @@ $_base['apis'] = array(
 					'List the names of the available tables in this storage. ' .
 					'By default, all tables are listed, use \'names\' parameter to get specific tables. ' .
 					'Use \'include_properties\' to include any properties of the tables.',
-				'event_name'       => 'collection.list',
+				'event_name'       => '{api_name}.list',
 			),
 			array(
 				'method'           => 'POST',
@@ -114,7 +114,7 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'Post body should be a single table definition or an array of table definitions.',
-				'event_name'       => 'collection.create',
+				'event_name'       => '{api_name}.create',
 			),
 			array(
 				'method'           => 'PATCH',
@@ -150,6 +150,7 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'Post body should be a single table definition or an array of table definitions.',
+				'event_name'       => '{api_name}.update',
 			),
 			array(
 				'method'           => 'DELETE',
@@ -197,7 +198,7 @@ $_base['apis'] = array(
 					'Set the names of the tables to delete or set \'force\' to true to clear the database.' .
 					'Alternatively, to delete by table definitions or a large list of names, ' .
 					'use the POST request with X-HTTP-METHOD = DELETE header and post array of definitions or names.',
-				'event_name'       => 'collection.update',
+				'event_name'       => '{api_name}.delete',
 			),
 		),
 		'description' => 'Operations available for database tables.',
@@ -310,7 +311,7 @@ $_base['apis'] = array(
 					'By default, all fields are returned for all resources. ' .
 					'Alternatively, to send the \'ids\' or \'filter\' as posted data ' .
 					'use the POST request with X-HTTP-METHOD = GET header and post array of ids or a filter.',
-				'event_name'       => 'document.list',
+				'event_name'       => '{api_name}.rows.get',
 			),
 			array(
 				'method'           => 'POST',
@@ -382,7 +383,7 @@ $_base['apis'] = array(
 					'Post data should be a single record or an array of records (shown). ' .
 					'By default, only the id property of the record is returned on success. ' .
 					'Use \'fields\' parameter to return more info.',
-				'event_name'       => 'document.create',
+				'event_name'       => '{api_name}.rows.create',
 			),
 			array(
 				'method'           => 'PUT',
@@ -461,7 +462,7 @@ $_base['apis'] = array(
 					'Post data should be a single record or an array of records (shown). ' .
 					'By default, only the id property of the record is returned on success. ' .
 					'Use \'fields\' parameter to return more info.',
-				'event_name'       => 'document.replace',
+				'event_name'       => '{api_name}.rows.replace',
 			),
 			array(
 				'method'           => 'PATCH',
@@ -540,7 +541,7 @@ $_base['apis'] = array(
 					'Post data should be a single record or an array of records (shown). ' .
 					'By default, only the id property of the record is returned on success. ' .
 					'Use \'fields\' parameter to return more info.',
-				'event_name'       => 'document.update',
+				'event_name'       => '{api_name}.rows.update',
 			),
 			array(
 				'method'           => 'DELETE',
@@ -621,7 +622,7 @@ $_base['apis'] = array(
 					'By default, only the id property of the record is returned on success, use \'fields\' to return more info. ' .
 					'Alternatively, to delete by records, a complicated filter, or a large list of ids, ' .
 					'use the POST request with X-HTTP-METHOD = DELETE header and post array of records, filter, or ids.',
-				'event_name'       => 'document.delete',
+				'event_name'       => '{api_name}.rows.delete',
 			),
 		),
 		'description' => 'Operations for table records administration.',
@@ -695,7 +696,7 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'Use the \'fields\' parameter to limit properties that are returned. By default, all fields are returned.',
-				'event_name'       => 'document.read',
+				'event_name'       => '{api_name}.row.get',
 			),
 			array(
 				'method'           => 'POST',
@@ -765,7 +766,7 @@ $_base['apis'] = array(
 				'notes'            =>
 					'Post data should be an array of fields for a single record. ' .
 					'Use the \'fields\' parameter to return more properties. By default, the id is returned.',
-				'event_name'       => 'document.create',
+				'event_name'       => '{api_name}.row.create',
 			),
 			array(
 				'method'           => 'PUT',
@@ -833,7 +834,7 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'Post data should be an array of fields for a single record. Use the \'fields\' parameter to return more properties. By default, the id is returned.',
-				'event_name'       => 'document.replace',
+				'event_name'       => '{api_name}.row.replace',
 			),
 			array(
 				'method'           => 'PATCH',
@@ -903,7 +904,7 @@ $_base['apis'] = array(
 				'notes'            =>
 					'Post data should be an array of fields for a single record. ' .
 					'Use the \'fields\' parameter to return more properties. By default, the id is returned.',
-				'event_name'       => 'document.update',
+				'event_name'       => '{api_name}.row.update',
 			),
 			array(
 				'method'           => 'DELETE',
@@ -963,7 +964,7 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'Use the \'fields\' parameter to return more deleted properties. By default, the id is returned.',
-				'event_name'       => 'document.delete',
+				'event_name'       => '{api_name}.row.delete',
 			),
 		),
 		'description' => 'Operations for single record administration.',

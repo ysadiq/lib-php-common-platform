@@ -15,8 +15,10 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\EventPlatform\Utility\EventManager;
+use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
 use DreamFactory\Platform\Events\ResourceEvent;
@@ -25,6 +27,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
+use DreamFactory\Platform\Interfaces\TransformerLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestResponse;
@@ -32,6 +35,8 @@ use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * BasePlatformRestService
@@ -333,8 +338,12 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _preProcess()
 	{
-		$this->trigger( ResourceServiceEvents::PRE_PROCESS );
+		$this->_requestObject = $this->_requestObject ? : Request::createFromGlobals();
+
+		$_event = new RestServiceEvent( $this->_apiName, $this->_resource, $this->_requestObject );
+
 		// throw exception here to stop processing
+		$this->trigger( ResourceServiceEvents::PRE_PROCESS, $_event );
 	}
 
 	/**
@@ -345,8 +354,12 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _postProcess()
 	{
-		$this->trigger( ResourceServiceEvents::POST_PROCESS );
+		$this->_requestObject = $this->_requestObject ? : Request::createFromGlobals();
+
+		$_event = new RestServiceEvent( $this->_apiName, $this->_resource, $this->_requestObject );
+
 		// throw exception here to stop processing
+		$this->trigger( ResourceServiceEvents::POST_PROCESS, $_event );
 	}
 
 	/**
@@ -366,7 +379,12 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 		$_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
 
-		$_response = new Response( $_result );
+		if ( null === $this->_responseObject )
+		{
+			$this->_responseObject = new Response();
+		}
+
+		$this->_responseObject->setContent( $_result );
 
 		$this->trigger( ResourceServiceEvents::AFTER_DATA_FORMAT );
 
@@ -534,16 +552,37 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	}
 
 	/**
+	 * {@InheritDoc}
+	 */
+	public function trigger( $eventName, $event = null, $priority = 0 )
+	{
+		return parent::trigger( $eventName, $event ? : new RestServiceEvent( $this->_apiName, $this->_resource ), $priority );
+	}
+
+	/**
 	 * Adds criteria garnered from the query string from DataTables
 	 *
-	 * @param array|\CDbCriteria $criteria
 	 * @param array              $columns
+	 * @param array|\CDbCriteria $criteria
 	 *
 	 * @return array|\CDbCriteria
 	 */
 	protected function _buildCriteria( $columns, $criteria = null )
 	{
-		$_formatter = new DataTablesFormatter();
+		/** @var TransformerLike $_formatter */
+		$_formatter = null;
+
+		switch ( $this->_outputFormat )
+		{
+			case OutputFormats::DataTables:
+				$_formatter = new DataTablesFormatter();
+				break;
+		}
+
+		if ( null !== $_formatter )
+		{
+			return array();
+		}
 
 		return $_formatter->buildCriteria( $columns, $criteria );
 	}

@@ -32,13 +32,14 @@ $_base['apis'] = array_merge(
 		array(
 			'path'        => '/{api_name}',
 			'operations'  => array(
-				0 => array(
+				0            => array(
 					'method'   => 'GET',
 					'summary'  => 'getResources() - List resources available for user session management.',
 					'nickname' => 'getResources',
 					'type'     => 'Resources',
 					'notes'    => 'See listed operations for each resource available.',
 				),
+				'event_name' => '{api_name}.list',
 			),
 			'description' => 'Operations available for user session management.',
 			'event_name'  => 'user.read',
