@@ -23,15 +23,13 @@ $_profile = array();
 $_profile['apis'] = array(
 	array(
 		'path'        => '/{api_name}/profile',
-		'operations'  =>
-		array(
+		'operations'  => array(
 			array(
 				'method'           => 'GET',
 				'summary'          => 'getProfile() - Retrieve the current user\'s profile information.',
 				'nickname'         => 'getProfile',
 				'type'             => 'ProfileResponse',
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
 						'code'    => 401,
@@ -41,16 +39,17 @@ $_profile['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'A valid current session is required to use this API. ' .
-									  'This profile, along with password, is the only things that the user can directly change.',
+				'notes'            =>
+					'A valid current session is required to use this API. ' .
+					'This profile, along with password, is the only things that the user can directly change.',
+				'event_name'       => 'user.profile.get',
 			),
 			array(
 				'method'           => 'POST',
 				'summary'          => 'updateProfile() - Update the current user\'s profile information.',
 				'nickname'         => 'updateProfile',
 				'type'             => 'Success',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'body',
 						'description'   => 'Data containing name-value pairs for the user profile.',
@@ -60,8 +59,7 @@ $_profile['apis'] = array(
 						'required'      => true,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
 						'code'    => 401,
@@ -72,6 +70,7 @@ $_profile['apis'] = array(
 					),
 				),
 				'notes'            => 'Update the display name, phone, etc., as well as, security question and answer.',
+				'event_name'       => 'user.profile.update',
 			),
 		),
 		'description' => 'Operations on a user\'s profile.',
@@ -79,60 +78,50 @@ $_profile['apis'] = array(
 );
 
 $_commonProfile = array(
-	'email'             =>
-	array(
+	'email'             => array(
 		'type'        => 'string',
 		'description' => 'Email address of the current user.',
 	),
-	'first_name'        =>
-	array(
+	'first_name'        => array(
 		'type'        => 'string',
 		'description' => 'First name of the current user.',
 	),
-	'last_name'         =>
-	array(
+	'last_name'         => array(
 		'type'        => 'string',
 		'description' => 'Last name of the current user.',
 	),
-	'display_name'      =>
-	array(
+	'display_name'      => array(
 		'type'        => 'string',
 		'description' => 'Full display name of the current user.',
 	),
-	'phone'             =>
-	array(
+	'phone'             => array(
 		'type'        => 'string',
 		'description' => 'Phone number.',
 	),
-	'security_question' =>
-	array(
+	'security_question' => array(
 		'type'        => 'string',
 		'description' => 'Question to be answered to initiate password reset.',
 	),
-	'default_app_id'    =>
-	array(
+	'default_app_id'    => array(
 		'type'        => 'integer',
 		'description' => 'Id of the application to be launched at login.',
 	),
 );
 
 $_profile['models'] = array(
-	'ProfileRequest'  =>
-	array(
+	'ProfileRequest'  => array(
 		'id'         => 'ProfileRequest',
 		'properties' => array_merge(
 			$_commonProfile,
 			array(
-				 'security_answer' =>
-				 array(
-					 'type'        => 'string',
-					 'description' => 'Answer to the security question.',
-				 ),
+				'security_answer' => array(
+					'type'        => 'string',
+					'description' => 'Answer to the security question.',
+				),
 			)
 		),
 	),
-	'ProfileResponse' =>
-	array(
+	'ProfileResponse' => array(
 		'id'         => 'ProfileResponse',
 		'properties' => $_commonProfile,
 	),

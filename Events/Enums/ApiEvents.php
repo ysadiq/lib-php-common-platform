@@ -29,9 +29,9 @@ class ApiEvents extends LifeEvents
 	/**
 	 * @var string Called before the request is dispatched
 	 */
-	const BEFORE_REQUEST = '{api_name}.{method}.before_request';
+	const BEFORE_REQUEST = '{api_name}.{action}.before_request';
 	/**
 	 * @var string Called after the dispatch request returns
 	 */
-	const AFTER_REQUEST = '{api_name}.{method}.after_request';
+	const AFTER_REQUEST = '{api_name}.{action}.after_request';
 }

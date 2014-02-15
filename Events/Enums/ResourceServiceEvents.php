@@ -33,13 +33,13 @@ class ResourceServiceEvents extends LifeEvents
 	/**
 	 * @var string Called before the resource request is dispatched
 	 */
-	const PRE_PROCESS = '{resource}.{method}.pre_process';
+	const PRE_PROCESS = '{api_name}.{action}.pre_process';
 	/**
 	 * @var string Called after the resource handler has processed the request
 	 */
-	const POST_PROCESS = '{resource}.{method}.post_process';
+	const POST_PROCESS = '{api_name}.{action}.post_process';
 	/**
 	 * @var string Called after data has been formatted for caller but before send
 	 */
-	const AFTER_DATA_FORMAT = '{resource}.{method}.after_data_format';
+	const AFTER_DATA_FORMAT = '{api_name}.{action}.after_data_format';
 }

@@ -23,15 +23,13 @@ $_session = array();
 $_session['apis'] = array(
 	array(
 		'path'        => '/{api_name}/session',
-		'operations'  =>
-		array(
+		'operations'  => array(
 			array(
 				'method'           => 'GET',
 				'summary'          => 'getSession() - Retrieve the current user session information.',
 				'nickname'         => 'getSession',
 				'type'             => 'Session',
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
 						'code'    => 401,
@@ -42,14 +40,14 @@ $_session['apis'] = array(
 					),
 				),
 				'notes'            => 'Calling this refreshes the current session, or returns an error for timed-out or invalid sessions.',
+				'event_name'       => 'session.check',
 			),
 			array(
 				'method'           => 'POST',
 				'summary'          => 'login() - Login and create a new user session.',
 				'nickname'         => 'login',
 				'type'             => 'Session',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'body',
 						'description'   => 'Data containing name-value pairs used for logging into the system.',
@@ -59,8 +57,7 @@ $_session['apis'] = array(
 						'required'      => true,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -71,20 +68,21 @@ $_session['apis'] = array(
 					),
 				),
 				'notes'            => 'Calling this creates a new session and logs in the user.',
+				'event_name'       => 'session.login',
 			),
 			array(
 				'method'           => 'DELETE',
 				'summary'          => 'logout() - Logout and destroy the current user session.',
 				'nickname'         => 'logout',
 				'type'             => 'Success',
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'System Error - Specific reason is included in the error message.',
 						'code'    => 500,
 					),
 				),
 				'notes'            => 'Calling this deletes the current session and logs out the user.',
+				'event_name'       => 'session.logout',
 			),
 		),
 		'description' => 'Operations on a user\'s session.',
@@ -92,161 +90,127 @@ $_session['apis'] = array(
 );
 
 $_session['models'] = array(
-	'Session'           =>
-	array(
+	'Session' => array(
 		'id'         => 'Session',
-		'properties' =>
-		array(
-			'id'              =>
-			array(
+		'properties' => array(
+			'id'              => array(
 				'type'        => 'string',
 				'description' => 'Identifier for the current user.',
 			),
-			'email'           =>
-			array(
+			'email'           => array(
 				'type'        => 'string',
 				'description' => 'Email address of the current user.',
 			),
-			'first_name'      =>
-			array(
+			'first_name'      => array(
 				'type'        => 'string',
 				'description' => 'First name of the current user.',
 			),
-			'last_name'       =>
-			array(
+			'last_name'       => array(
 				'type'        => 'string',
 				'description' => 'Last name of the current user.',
 			),
-			'display_name'    =>
-			array(
+			'display_name'    => array(
 				'type'        => 'string',
 				'description' => 'Full display name of the current user.',
 			),
-			'is_sys_admin'    =>
-			array(
+			'is_sys_admin'    => array(
 				'type'        => 'boolean',
 				'description' => 'Is the current user a system administrator.',
 			),
-			'role'            =>
-			array(
+			'role'            => array(
 				'type'        => 'string',
 				'description' => 'Name of the role to which the current user is assigned.',
 			),
-			'last_login_date' =>
-			array(
+			'last_login_date' => array(
 				'type'        => 'string',
 				'description' => 'Date timestamp of the last login for the current user.',
 			),
-			'user_data'       =>
-			array(
+			'user_data'       => array(
 				'type'        => 'string',
 				'description' => 'Extra user data, potentially from remote login provider.',
 			),
-			'user_source'     =>
-			array(
+			'user_source'     => array(
 				'type'        => 'integer',
 				'description' => 'Where the user login originated, 0 = local, otherwise remote login provider_id.',
 			),
-			'app_groups'      =>
-			array(
+			'app_groups'      => array(
 				'type'        => 'Array',
 				'description' => 'App groups and the containing apps.',
-				'items'       =>
-				array(
+				'items'       => array(
 					'type' => 'App',
 				),
 			),
-			'no_group_apps'   =>
-			array(
+			'no_group_apps'   => array(
 				'type'        => 'Array',
 				'description' => 'Apps that are not in any app groups.',
-				'items'       =>
-				array(
+				'items'       => array(
 					'type' => 'App',
 				),
 			),
-			'session_id'      =>
-			array(
+			'session_id'      => array(
 				'type'        => 'string',
 				'description' => 'Id for the current session, used in X-DreamFactory-Session-Token header for API requests.',
 			),
-			'ticket'          =>
-			array(
+			'ticket'          => array(
 				'type'        => 'string',
 				'description' => 'Timed ticket that can be used to start a separate session.',
 			),
-			'ticket_expiry'   =>
-			array(
+			'ticket_expiry'   => array(
 				'type'        => 'string',
 				'description' => 'Expiration time for the given ticket.',
 			),
 		),
 	),
-	'Login'             =>
-	array(
+	'Login'   => array(
 		'id'         => 'Login',
-		'properties' =>
-		array(
-			'email'    =>
-			array(
+		'properties' => array(
+			'email'    => array(
 				'type'     => 'string',
 				'required' => true,
 			),
-			'password' =>
-			array(
+			'password' => array(
 				'type'     => 'string',
 				'required' => true,
 			),
 		),
 	),
-	'App'               =>
-	array(
+	'App'     => array(
 		'id'         => 'App',
-		'properties' =>
-		array(
-			'id'                      =>
-			array(
-				'type' => 'integer',
+		'properties' => array(
+			'id'                      => array(
+				'type'        => 'integer',
 				'description' => 'Id of the application.',
 			),
-			'name'                    =>
-			array(
-				'type' => 'string',
+			'name'                    => array(
+				'type'        => 'string',
 				'description' => 'Displayed name of the application.',
 			),
-			'description'             =>
-			array(
-				'type' => 'string',
+			'description'             => array(
+				'type'        => 'string',
 				'description' => 'Description of the application.',
 			),
-			'is_url_external'         =>
-			array(
-				'type' => 'boolean',
+			'is_url_external'         => array(
+				'type'        => 'boolean',
 				'description' => 'Does this application exist on a separate server.',
 			),
-			'launch_url'              =>
-			array(
-				'type' => 'string',
+			'launch_url'              => array(
+				'type'        => 'string',
 				'description' => 'URL at which this app can be accessed.',
 			),
-			'requires_fullscreen'     =>
-			array(
-				'type' => 'boolean',
+			'requires_fullscreen'     => array(
+				'type'        => 'boolean',
 				'description' => 'True if the application requires fullscreen to run.',
 			),
-			'allow_fullscreen_toggle' =>
-			array(
-				'type' => 'boolean',
+			'allow_fullscreen_toggle' => array(
+				'type'        => 'boolean',
 				'description' => 'True allows the fullscreen toggle widget to be displayed.',
 			),
-			'toggle_location' =>
-			array(
-				'type' => 'string',
+			'toggle_location'         => array(
+				'type'        => 'string',
 				'description' => 'Where the fullscreen toggle widget is to be displayed, defaults to top.',
 			),
-			'is_default'              =>
-			array(
-				'type' => 'boolean',
+			'is_default'              => array(
+				'type'        => 'boolean',
 				'description' => 'True if this app is set to launch by default at sign in.',
 			),
 		),

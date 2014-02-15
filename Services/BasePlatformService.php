@@ -26,6 +26,7 @@ use Kisma\Core\Seed;
 use Kisma\Core\Utility\EventManager;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\HttpFoundation\ParameterBag;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -220,7 +221,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	protected function _normalizeEventName( $eventName, $values = null )
 	{
-		static $_cache = array();
+		static $_cache = array(), $_replacements = null;
 
 		if ( null !== ( $_name = Option::get( $_cache, $_tag = Inflector::neutralize( $eventName ) ) ) )
 		{
@@ -232,24 +233,46 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 			$values = get_object_vars( Request::createFromGlobals() );
 		}
 
-		$_values = array_merge( get_object_vars( $this ), Option::clean( $values ) );
-
-		foreach ( $_values as $_key => $_value )
+		if ( null === $_replacements )
 		{
-			if ( !is_scalar( $_value ) )
-			{
-				continue;
-			}
+			$_replacements = array();
 
-			$_tag = str_ireplace(
-				array(
-					'{' . $_key . '}',
-					'{' . Inflector::neutralize( $_key ) . '}'
-				),
-				$_value,
-				$_tag
-			);
+			foreach ( array_merge( get_object_vars( $this ), Option::clean( $values ) ) as $_key => $_value )
+			{
+				$_key = Inflector::neutralize( ltrim( $_key, '_' ) );
+
+				if ( !is_scalar( $_value ) )
+				{
+					if ( $_value instanceof ParameterBag )
+					{
+						foreach ( $_value as $_bagKey => $_bagValue )
+						{
+							$_bagKey = Inflector::neutralize( ltrim( $_bagKey, '_' ) );
+
+							if ( !is_scalar( $_bagValue ) )
+							{
+								continue;
+							}
+
+							$_replacements['{' . $_key . '.' . $_bagKey . '}'] = $_bagValue;
+						}
+					}
+
+					continue;
+				}
+
+				$_replacements['{' . $_key . '}'] = $_value;
+			}
 		}
+
+		//	Construct and neutralize...
+		$_tag = Inflector::neutralize(
+			str_ireplace(
+				array_keys( $_replacements ),
+				array_values( $_replacements ),
+				$_tag
+			)
+		);
 
 		return $_cache[$eventName] = $_tag;
 	}
