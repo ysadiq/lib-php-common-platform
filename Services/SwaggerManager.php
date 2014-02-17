@@ -233,6 +233,7 @@ class SwaggerManager extends BasePlatformRestService
 			Log::error( "Failed to write cache file $_filePath." );
 		}
 
+		//	Write event cache file
 		if ( false === file_put_contents( $_cachePath . '_events.json', json_encode( static::$_eventMap ) ) )
 		{
 			Log::error( 'File system error writing events cache file: ' . $_cachePath . '_events.json' );
@@ -350,56 +351,6 @@ class SwaggerManager extends BasePlatformRestService
 				@unlink( $_swaggerPath . $file );
 			}
 		}
-	}
-
-	/**
-	 * Compiles the events from the swagger files into a event cache file for administrator
-	 *
-	 * @param int $startId
-	 *
-	 * @return bool|int
-	 */
-	public static function compileEvents( $startId = 2 )
-	{
-		$_id = $startId ? : 2;
-		$_swaggerPath = Platform::getSwaggerPath();
-		$_masterPath = $_swaggerPath . '/_.json';
-		$_compiled = $_swaggerPath . '/.event-map.json';
-
-		if ( !file_exists( $_masterPath ) )
-		{
-			return false;
-		}
-
-		if ( false === ( $_master = json_decode( file_get_contents( $_masterPath ) ) ) )
-		{
-			return false;
-		}
-
-		$_apis = array();
-
-		foreach ( $_master->apis as $_api )
-		{
-			$_label = trim( $_api->path, '/' );
-
-			$_apis[] = array(
-				'id'     => $_id++,
-				'label'  => $_label,
-				'inode'  => true,
-				'open'   => false,
-				'branch' => static::_loadSwaggerFile( $_label, $_swaggerPath . '/' . $_label . '.json', $_id ),
-			);
-		}
-
-		$_result = array(
-			'id'     => 2,
-			'label'  => 'platform',
-			'inode'  => true,
-			'open'   => true,
-			'branch' => $_apis,
-		);
-
-		return file_put_contents( $_compiled, json_encode( array( $_result ), JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT ) );
 	}
 
 }
