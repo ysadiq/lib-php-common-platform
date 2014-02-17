@@ -354,9 +354,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _postProcess()
 	{
-		$this->_requestObject = $this->_requestObject ? : Request::createFromGlobals();
+		$this->_responseObject = $this->_responseObject ? : new Response( $this->_response );
 
-		$_event = new RestServiceEvent( $this->_apiName, $this->_resource, $this->_requestObject );
+		$_event = new RestServiceEvent( $this->_apiName, $this->_resource, $this->_requestObject, $this->_responseObject );
 
 		// throw exception here to stop processing
 		$this->trigger( ResourceServiceEvents::POST_PROCESS, $_event );
