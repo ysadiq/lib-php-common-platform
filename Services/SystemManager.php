@@ -91,7 +91,7 @@ class SystemManager extends BaseSystemRestService
 	 */
 	public function __construct( $settings = array() )
 	{
-		static::$_configPath = \Kisma::get( 'app.config_path' );
+		static::$_configPath = dirname( __DIR__ ) . '/config';
 
 		parent::__construct(
 			  array_merge(
@@ -648,73 +648,6 @@ class SystemManager extends BaseSystemRestService
 					break;
 			}
 		}
-		// init system with sample setup
-		$contents = file_get_contents( \Kisma::get( 'app.config_path' ) . '/schema/sample_data.json' );
-		if ( !empty( $contents ) )
-		{
-			$contents = DataFormat::jsonToArray( $contents );
-			foreach ( $contents as $table => $content )
-			{
-				switch ( $table )
-				{
-					case 'df_sys_service':
-						if ( !empty( $content ) )
-						{
-							foreach ( $content as $service )
-							{
-								Log::debug( 'Importing service: ' . $service['api_name'] );
-
-								try
-								{
-									$obj = new Service();
-									$obj->setAttributes( $service );
-									$obj->save();
-								}
-								catch ( \Exception $ex )
-								{
-									Log::error( "Failed to create sample services.\n{$ex->getMessage()}" );
-								}
-							}
-						}
-						break;
-					case 'app_package':
-						$result = App::model()->findAll();
-						if ( empty( $result ) )
-						{
-							if ( !empty( $content ) )
-							{
-								foreach ( $content as $package )
-								{
-									if ( null !== ( $fileUrl = Option::get( $package, 'url' ) ) )
-									{
-										if ( 0 === strcasecmp( 'dfpkg', FileUtilities::getFileExtension( $fileUrl ) ) )
-										{
-											Log::debug( 'Importing application: ' . $fileUrl );
-											$filename = null;
-											try
-											{
-												// need to download and extract zip file and move contents to storage
-												$filename = FileUtilities::importUrlFileToTemp( $fileUrl );
-												Packager::importAppFromPackage( $filename, $fileUrl );
-											}
-											catch ( \Exception $ex )
-											{
-												Log::error( "Failed to import application package $fileUrl.\n{$ex->getMessage()}" );
-											}
-
-											if ( !empty( $filename ) && false === @unlink( $filename ) )
-											{
-												Log::error( 'Unable to remove package file "' . $filename . '"' );
-											}
-										}
-									}
-								}
-							}
-						}
-						break;
-				}
-			}
-		}
 	}
 
 	/**
@@ -1068,6 +1001,7 @@ class SystemManager extends BaseSystemRestService
 				array( 'name' => 'app_group', 'label' => 'Application Group' ),
 				array( 'name' => 'config', 'label' => 'Configuration' ),
 				array( 'name' => 'custom', 'label' => 'Custom Settings' ),
+				array( 'name' => 'device', 'label' => 'Device' ),
 				array( 'name' => 'email_template', 'label' => 'Email Template' ),
 				array( 'name' => 'provider', 'label' => 'Provider' ),
 				array( 'name' => 'provider_user', 'label' => 'Provider User' ),
@@ -1282,4 +1216,4 @@ SQL
 }
 
 //	Set the config path...
-SystemManager::setConfigPath( \Kisma::get( 'app.config_path' ) );
+SystemManager::setConfigPath( dirname( __DIR__ ) . '/config' );

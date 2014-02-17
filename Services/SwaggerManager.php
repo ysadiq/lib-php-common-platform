@@ -126,7 +126,7 @@ class SwaggerManager extends BasePlatformRestService
 
 		// generate swagger output from file annotations
 		$_scanPath = rtrim( __DIR__, '/' ) . '/';
-		$_templatePath = dirname( __DIR__ ) . '/Templates/Swagger/';
+		$_templatePath = dirname( __DIR__ ) . '/templates/swagger/';
 
 		$_baseSwagger = array(
 			'swaggerVersion' => '1.2',

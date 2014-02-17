@@ -191,7 +191,7 @@ class Register extends BasePlatformRestResource
 				}
 				else
 				{
-					$_defaultPath = dirname( dirname( __DIR__ ) ) . '/Templates/Email/confirm_user_registration.json';
+					$_defaultPath = dirname( dirname( __DIR__ ) ) . '/templates/email/confirm_user_registration.json';
 					if ( !file_exists( $_defaultPath ) )
 					{
 						throw new \Exception( "No default email template for user registration." );

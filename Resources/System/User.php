@@ -165,7 +165,7 @@ class User extends BaseSystemRestResource
 			}
 			else
 			{
-				$_defaultPath = __DIR__ . '/../../Templates/Email/confirm_user_invitation.json';
+				$_defaultPath = __DIR__ . '/../../templates/email/confirm_user_invitation.json';
 				if ( !file_exists( $_defaultPath ) )
 				{
 					throw new InternalServerErrorException( "No default email template for user invite." );
