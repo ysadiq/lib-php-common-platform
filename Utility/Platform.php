@@ -21,6 +21,7 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 /**
  * Platform
@@ -28,6 +29,15 @@ use Kisma\Core\Utility\Option;
  */
 class Platform
 {
+	//*************************************************************************
+	//	Members
+	//*************************************************************************
+
+	/**
+	 * @var EventDispatcherInterface
+	 */
+	protected static $_eventManager = null;
+
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
@@ -180,8 +190,54 @@ class Platform
 	}
 
 	/**
+	 * Add a listener to an event
+	 *
+	 * @param string   $eventName
+	 * @param callable $callback
+	 */
+	public static function on( $eventName, $callback )
+	{
+		static::_getEventManager()->addListener( $eventName, $callback );
+	}
+
+	/**
+	 * Remove a listener from an event
+	 *
+	 * @param string   $eventName
+	 * @param callable $callback
+	 */
+	public static function off( $eventName, $callback )
+	{
+		static::_getEventManager()->removeListener( $eventName, $callback );
+	}
+
+	/**
+	 * @param string                                          $eventName
+	 * @param \DreamFactory\Platform\Events\BasePlatformEvent $event
+	 *
+	 * @return \Symfony\Component\EventDispatcher\Event
+	 */
+	public static function trigger( $eventName, BasePlatformEvent $event = null )
+	{
+		return static::_getEventManager()->dispatch( $eventName, $event );
+	}
+
+	/**
+	 * @return EventDispatcher
+	 */
+	protected static function _getEventManager()
+	{
+		if ( null === static::$_eventManager )
+		{
+			static::$_eventManager = new EventDispatcher();
+		}
+
+		return static::$_eventManager;
+	}
+
+	/**
 	 * Attempts to require one or more autoload files.
-	 * fUseful for DSP apps written in PHP.
+	 * Useful for DSP apps written in PHP.
 	 *
 	 * @param array $autoloaders
 	 *
