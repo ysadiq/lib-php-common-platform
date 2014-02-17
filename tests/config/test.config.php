@@ -125,7 +125,7 @@ return array(
 		//	User configuration
 		'user'         => array(
 			'allowAutoLogin' => true,
-			'loginUrl'       => array( $_defaultController . '/activate' ),
+			'loginUrl'       => array( $_defaultController . '/login' ),
 		),
 		'clientScript' => array(
 			'scriptMap' => array(
