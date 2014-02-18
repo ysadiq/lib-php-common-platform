@@ -22,6 +22,7 @@ use Kisma\Core\Utility\Option;
 $_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
 
 $_custom = require( __DIR__ . '/../Resources/User/CustomSettings.swagger.php' );
+$_device = require( __DIR__ . '/../Resources/User/Device.swagger.php' );
 $_password = require( __DIR__ . '/../Resources/User/Password.swagger.php' );
 $_profile = require( __DIR__ . '/../Resources/User/Profile.swagger.php' );
 $_register = require( __DIR__ . '/../Resources/User/Register.swagger.php' );
@@ -46,6 +47,7 @@ $_base['apis'] = array_merge(
 		 ),
 	),
 	Option::get( $_custom, 'apis' ),
+	Option::get( $_device, 'apis' ),
 	Option::get( $_password, 'apis' ),
 	Option::get( $_profile, 'apis' ),
 	Option::get( $_register, 'apis' ),
@@ -54,6 +56,7 @@ $_base['apis'] = array_merge(
 
 $_base['models'] = array_merge(
 	Option::get( $_custom, 'models' ),
+	Option::get( $_device, 'models' ),
 	Option::get( $_password, 'models' ),
 	Option::get( $_profile, 'models' ),
 	Option::get( $_register, 'models' ),
