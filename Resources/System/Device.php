@@ -51,4 +51,48 @@ class Device extends BaseSystemRestResource
 
 		parent::__construct( $consumer, $_config, $resources );
 	}
+
+	/**
+	 * Default PUT implementation
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @return bool
+	 */
+	protected function _handlePut()
+	{
+		return false;
+	}
+
+	/**
+	 * Default PATCH implementation
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @return bool
+	 */
+	protected function _handlePatch()
+	{
+		return false;
+	}
+
+	/**
+	 * Default MERGE implementation
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @return bool
+	 */
+	protected function _handleMerge()
+	{
+		return false;
+	}
+
+	/**
+	 * Default POST implementation
+	 *
+	 * @return array|bool
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 */
+	protected function _handlePost()
+	{
+		return false;
+	}
 }
