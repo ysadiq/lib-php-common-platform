@@ -26,6 +26,7 @@ namespace DreamFactory\Platform\Yii\Models;
  * Columns:
  *
  * @property int                 $user_id
+ * @property string              $owner_id
  * @property string              $uuid
  * @property string              $platform
  * @property string              $version
@@ -69,7 +70,7 @@ class Device extends BasePlatformSystemModel
 		return array_merge(
 			parent::relations(),
 			array(
-				 'user' => array( static::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id' ),
+				'user' => array( static::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id' ),
 			)
 		);
 	}
@@ -85,12 +86,13 @@ class Device extends BasePlatformSystemModel
 			array_merge(
 				$additionalLabels,
 				array(
-					 'user_id'  => 'User ID',
-					 'uuid'     => 'UUID',
-					 'platform' => 'Platform',
-					 'version'  => 'Version',
-					 'model'    => 'Model',
-					 'extra'    => 'Extra',
+					'user_id'  => 'User ID',
+					'owner_id' => 'Owner ID',
+					'uuid'     => 'UUID',
+					'platform' => 'Platform',
+					'version'  => 'Version',
+					'model'    => 'Model',
+					'extra'    => 'Extra',
 				)
 			)
 		);
@@ -99,14 +101,29 @@ class Device extends BasePlatformSystemModel
 	/**
 	 * @param int $userId
 	 *
-	 * @return Device[]
+	 * @return $this[]
 	 */
 	public static function getDevicesByUser( $userId )
 	{
 		return static::model()->findAll(
 			'user_id = :user_id',
 			array(
-				 ':user_id' => $userId,
+				':user_id' => $userId,
+			)
+		);
+	}
+
+	/**
+	 * @param int $ownerId
+	 *
+	 * @return $this[]
+	 */
+	public static function getDevicesByOwner( $ownerId )
+	{
+		return static::model()->findAll(
+			'owner_id = :owner_id',
+			array(
+				':owner_id' => $ownerId,
 			)
 		);
 	}
@@ -115,15 +132,32 @@ class Device extends BasePlatformSystemModel
 	 * @param int    $userId
 	 * @param string $uuid
 	 *
-	 * @return Device
+	 * @return $this
 	 */
 	public static function getDeviceByUser( $userId, $uuid )
 	{
 		return static::model()->find(
 			'user_id = :user_id and uuid = :uuid',
 			array(
-				 ':user_id' => $userId,
-				 ':uuid'    => $uuid,
+				':user_id' => $userId,
+				':uuid'    => $uuid,
+			)
+		);
+	}
+
+	/**
+	 * @param string $ownerId
+	 * @param string $uuid
+	 *
+	 * @return Device
+	 */
+	public static function getDeviceByOwner( $ownerId, $uuid )
+	{
+		return static::model()->find(
+			'owner_id = :owner_id and uuid = :uuid',
+			array(
+				':owner_id' => $ownerId,
+				':uuid'     => $uuid,
 			)
 		);
 	}

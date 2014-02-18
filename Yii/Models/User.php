@@ -107,14 +107,14 @@ class User extends BasePlatformSystemModel
 		return array_merge(
 			parent::behaviors(),
 			array(
-				 //	Secure JSON
-				 'base_platform_model.secure_json' => array(
-					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'               => $this->getDb()->password,
-					 'insecureAttributes' => array(
-						 'user_data',
-					 )
-				 ),
+				//	Secure JSON
+				'base_platform_model.secure_json' => array(
+					'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					'salt'               => $this->getDb()->password,
+					'insecureAttributes' => array(
+						'user_data',
+					)
+				),
 			)
 		);
 	}
@@ -146,19 +146,19 @@ class User extends BasePlatformSystemModel
 	public function relations()
 	{
 		$_relations = array(
-			'apps_created'        => array( self::HAS_MANY, __NAMESPACE__ . '\\App', 'created_by_id' ),
-			'apps_modified'       => array( self::HAS_MANY, __NAMESPACE__ . '\\App', 'last_modified_by_id' ),
-			'app_groups_created'  => array( self::HAS_MANY, __NAMESPACE__ . '\\AppGroup', 'created_by_id' ),
-			'app_groups_modified' => array( self::HAS_MANY, __NAMESPACE__ . '\\AppGroup', 'last_modified_by_id' ),
-			'roles_created'       => array( self::HAS_MANY, __NAMESPACE__ . '\\Role', 'created_by_id' ),
-			'roles_modified'      => array( self::HAS_MANY, __NAMESPACE__ . '\\Role', 'last_modified_by_id' ),
-			'services_created'    => array( self::HAS_MANY, __NAMESPACE__ . '\\Service', 'created_by_id' ),
-			'services_modified'   => array( self::HAS_MANY, __NAMESPACE__ . '\\Service', 'last_modified_by_id' ),
-			'users_created'       => array( self::HAS_MANY, __NAMESPACE__ . '\\User', 'created_by_id' ),
-			'users_modified'      => array( self::HAS_MANY, __NAMESPACE__ . '\\User', 'last_modified_by_id' ),
-			'default_app'         => array( self::BELONGS_TO, __NAMESPACE__ . '\\App', 'default_app_id' ),
-			'role'                => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'role_id' ),
-			'authorizations'      => array( self::HAS_MANY, __NAMESPACE__ . '\\ProviderUser', 'user_id' ),
+			'apps_created'        => array( static::HAS_MANY, __NAMESPACE__ . '\\App', 'created_by_id' ),
+			'apps_modified'       => array( static::HAS_MANY, __NAMESPACE__ . '\\App', 'last_modified_by_id' ),
+			'app_groups_created'  => array( static::HAS_MANY, __NAMESPACE__ . '\\AppGroup', 'created_by_id' ),
+			'app_groups_modified' => array( static::HAS_MANY, __NAMESPACE__ . '\\AppGroup', 'last_modified_by_id' ),
+			'roles_created'       => array( static::HAS_MANY, __NAMESPACE__ . '\\Role', 'created_by_id' ),
+			'roles_modified'      => array( static::HAS_MANY, __NAMESPACE__ . '\\Role', 'last_modified_by_id' ),
+			'services_created'    => array( static::HAS_MANY, __NAMESPACE__ . '\\Service', 'created_by_id' ),
+			'services_modified'   => array( static::HAS_MANY, __NAMESPACE__ . '\\Service', 'last_modified_by_id' ),
+			'users_created'       => array( static::HAS_MANY, __NAMESPACE__ . '\\User', 'created_by_id' ),
+			'users_modified'      => array( static::HAS_MANY, __NAMESPACE__ . '\\User', 'last_modified_by_id' ),
+			'default_app'         => array( static::BELONGS_TO, __NAMESPACE__ . '\\App', 'default_app_id' ),
+			'role'                => array( static::BELONGS_TO, __NAMESPACE__ . '\\Role', 'role_id' ),
+			'authorizations'      => array( static::HAS_MANY, __NAMESPACE__ . '\\ProviderUser', 'user_id' ),
 		);
 
 		return array_merge( parent::relations(), $_relations );
@@ -302,6 +302,9 @@ class User extends BasePlatformSystemModel
 		$this->confirmed = ( 'y' == $this->confirm_code );
 	}
 
+	/**
+	 * @return bool
+	 */
 	public function refresh()
 	{
 		if ( parent::refresh() )
@@ -328,18 +331,18 @@ class User extends BasePlatformSystemModel
 
 		$_myColumns = array_merge(
 			array(
-				 'display_name',
-				 'first_name',
-				 'last_name',
-				 'email',
-				 'phone',
-				 'confirmed',
-				 'is_active',
-				 'is_sys_admin',
-				 'role_id',
-				 'default_app_id',
-				 'user_source',
-				 'user_data',
+				'display_name',
+				'first_name',
+				'last_name',
+				'email',
+				'phone',
+				'confirmed',
+				'is_active',
+				'is_sys_admin',
+				'role_id',
+				'default_app_id',
+				'user_source',
+				'user_data',
 			),
 			$columns
 		);
@@ -351,6 +354,11 @@ class User extends BasePlatformSystemModel
 		);
 	}
 
+	/**
+	 * @param bool $writable
+	 *
+	 * @return array
+	 */
 	public static function getProfileAttributes( $writable = false )
 	{
 		$_fields = array(
@@ -379,9 +387,14 @@ class User extends BasePlatformSystemModel
 	 */
 	public static function authenticate( $userName, $password )
 	{
-		$_user = static::model()
-			->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
-			->findByAttributes( array( 'email' => $userName ) );
+		$_user = static::model()->with(
+			'role.role_service_accesses',
+			'role.role_system_accesses',
+			'role.apps',
+			'role.services'
+		)->findByAttributes(
+				array( 'email' => $userName )
+			);
 
 		if ( empty( $_user ) )
 		{
