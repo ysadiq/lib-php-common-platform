@@ -16,9 +16,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\EventPlatform\Utility;
+namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Platform\Events\BaseEventManagerEvent;
 use DreamFactory\Platform\Events\PlatformEvent;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
@@ -64,8 +63,8 @@ class EventManager
 	public static function trigger( $eventName, PlatformEvent $event = null )
 	{
 		return static::getDispatcher()->dispatch(
-					 static::_normalizeEventName( $eventName ),
-					 $event
+			static::_normalizeEventName( $eventName ),
+			$event
 		);
 	}
 
@@ -82,9 +81,9 @@ class EventManager
 	public static function on( $eventName, $listener, $priority = 0 )
 	{
 		static::getDispatcher()->addListener(
-			  static::_normalizeEventName( $eventName ),
-			  $listener,
-			  $priority
+			static::_normalizeEventName( $eventName ),
+			$listener,
+			$priority
 		);
 	}
 
@@ -99,8 +98,8 @@ class EventManager
 	public static function off( $eventName, $listener )
 	{
 		static::getDispatcher()->removeListener(
-			  static::_normalizeEventName( $eventName ),
-			  $listener
+			static::_normalizeEventName( $eventName ),
+			$listener
 		);
 	}
 
@@ -128,7 +127,7 @@ class EventManager
 		{
 			$_tag = str_ireplace(
 				'{' . $_key . '}',
-				Option::get( $_request, $_key ),
+				$_request->get( $_key ),
 				$_tag
 			);
 		}

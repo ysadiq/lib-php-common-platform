@@ -19,18 +19,22 @@
  */
 namespace DreamFactory\Platform\Yii\Components;
 
+use DreamFactory\Platform\Events\Enums\ApiEvents;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * PlatformWebApplication
  */
-class PlatformWebApplication extends \CWebApplication
+class PlatformWebApplication extends \CWebApplication implements EventSubscriberInterface
 {
 	//*************************************************************************
 	//	Constants
@@ -128,8 +132,9 @@ class PlatformWebApplication extends \CWebApplication
 			$this->setCorsWhitelist( $_allowedHosts );
 		}
 
-		// setup the request handler
-		$this->onBeginRequest = array( $this, 'checkRequestMethod' );
+		//	Setup the request handler and events
+		$this->onBeginRequest = array( $this, '_onBeginRequest' );
+		$this->onEndRequest = array( $this, '_onEndRequest' );
 	}
 
 	/**
@@ -139,17 +144,17 @@ class PlatformWebApplication extends \CWebApplication
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 */
-	public function checkRequestMethod( \CEvent $event )
+	protected function _onBeginRequest( \CEvent $event )
 	{
 		//	Answer an options call...
-		switch ( FilterInput::server( 'REQUEST_METHOD' ) )
+		switch ( Option::server( 'REQUEST_METHOD' ) )
 		{
 			case HttpMethod::Options:
-				header( 'HTTP/1.1 204' );
-				header( 'content-length: 0' );
-				header( 'content-type: text/plain' );
-
-				$this->addCorsHeaders();
+				$_response = new Response();
+				$_response->setStatusCode( HttpResponse::NoContent );
+				$_response->headers->add( array( 'content-type' => 'text/plain' ) );
+				$_response->headers->add( $this->addCorsHeaders( array(), true ) );
+				$_response->send();
 				Pii::end();
 				break;
 
@@ -165,17 +170,31 @@ class PlatformWebApplication extends \CWebApplication
 
 		//	Load any plug-ins
 		$this->_loadPlugins();
+
+		//	Trigger request event
+		EventManager::trigger( ApiEvents::BEFORE_REQUEST );
+	}
+
+	/**
+	 * @param \CEvent $event
+	 */
+	protected function _onEndRequest( \CEvent $event )
+	{
+		EventManager::trigger( ApiEvents::AFTER_REQUEST );
 	}
 
 	/**
 	 * @param array|bool $whitelist Set to "false" to reset the internal method cache.
+	 * @param bool       $returnHeaders
 	 *
-	 * @return bool
+	 * @return bool|array
 	 */
-	public function addCorsHeaders( $whitelist = array() )
+	public function addCorsHeaders( $whitelist = array(), $returnHeaders = false )
 	{
 		static $_cache = array();
 		static $_cacheVerbs = array();
+
+		$_headers = array();
 
 		//	Reset the cache before processing...
 		if ( false === $whitelist )
@@ -240,22 +259,33 @@ class PlatformWebApplication extends \CWebApplication
 
 		if ( !empty( $_originUri ) )
 		{
-			header( 'Access-Control-Allow-Origin: ' . $_originUri );
+			$_headers['Access-Control-Allow-Origin'] = $_originUri;
 		}
 
-		header( 'Access-Control-Allow-Credentials: true' );
-		header( 'Access-Control-Allow-Headers: ' . static::CORS_DEFAULT_ALLOWED_HEADERS );
-		header( 'Access-Control-Allow-Methods: ' . $_allowedMethods );
-		header( 'Access-Control-Max-Age: ' . static::CORS_DEFAULT_MAX_AGE );
+		$_headers['Access-Control-Allow-Credentials'] = 'true';
+		$_headers['Access-Control-Allow-Headers'] = static::CORS_DEFAULT_ALLOWED_HEADERS;
+		$_headers['Access-Control-Allow-Methods'] = $_allowedMethods;
+		$_headers['Access-Control-Max-Age'] = static::CORS_DEFAULT_MAX_AGE;
 
 		if ( $this->_extendedHeaders )
 		{
-			header( 'X-DreamFactory-Source: ' . $_requestSource );
+			$_headers['X-DreamFactory-Source'] = $_requestSource;
 
 			if ( $_origin )
 			{
-				header( 'X-DreamFactory-Origin-Whitelisted: ' . preg_match( '/^([\w_-]+\.)*' . $_requestSource . '$/', $_originUri ) );
+				$_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '/^([\w_-]+\.)*' . $_requestSource . '$/', $_originUri );
 			}
+		}
+
+		if ( $returnHeaders )
+		{
+			return $_headers;
+		}
+
+		//	Dump the headers
+		foreach ( $_headers as $_key => $_value )
+		{
+			header( $_key . ': ' . $_value );
 		}
 
 		return true;
@@ -405,6 +435,7 @@ class PlatformWebApplication extends \CWebApplication
 			{
 				return 'null';
 			}
+
 			$_parts['host'] = $_parts['path'];
 			unset( $_parts['path'] );
 		}
@@ -584,4 +615,32 @@ class PlatformWebApplication extends \CWebApplication
 
 		return $this;
 	}
+
+	/**
+	 * Returns an array of event names this subscriber wants to listen to.
+	 *
+	 * The array keys are event names and the value can be:
+	 *
+	 *  * The method name to call (priority defaults to 0)
+	 *  * An array composed of the method name to call and the priority
+	 *  * An array of arrays composed of the method names to call and respective
+	 *    priorities, or 0 if unset
+	 *
+	 * For instance:
+	 *
+	 *  * array('eventName' => 'methodName')
+	 *  * array('eventName' => array('methodName', $priority))
+	 *  * array('eventName' => array(array('methodName1', $priority), array('methodName2'))
+	 *
+	 * @return array The event names to listen to
+	 *
+	 * @api
+	 */
+	public static function getSubscribedEvents()
+	{
+		return array(
+			'dsp.request_received' => array()
+		);
+	}
+
 }
