@@ -1296,7 +1296,8 @@ SQL
 
 }
 
+//	Set the db connection
+Sql::setConnection( Pii::pdo() );
+
 //	Set the config path...
 SystemManager::setConfigPath( dirname( __DIR__ ) . '/config' );
-//	And the db connection
-Sql::setConnection( Pii::pdo() );

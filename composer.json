@@ -1,6 +1,5 @@
 {
 	"name":              "dreamfactory/lib-php-common-platform",
-	"_github_name":      "dreamfactory/platform-sdk-for-php",
 	"description":       "DreamFactory Services Platform(tm) Platform SDK for PHP",
 	"homepage":          "http://dreamfactorysoftware.github.io",
 	"keywords":          ["php5", "framework", "dsp", "sdk"],
@@ -60,8 +59,9 @@
 	},
 	"target-dir":        "DreamFactory/Platform",
 	"extra":             {
+        "_github_name": "dreamfactory/platform-sdk-for-php",
 		"branch-alias": {
-			"dev-develop": "1.4.x-dev"
+			"dev-develop":  "1.4.x-dev"
 		}
 	}
 }
