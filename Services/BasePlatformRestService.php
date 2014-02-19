@@ -119,14 +119,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected $_response = null;
 	/**
-	 * @var Response The response to the request
-	 */
-	protected $_responseObject = null;
-	/**
-	 * @var Request The response to the request
-	 */
-	protected $_requestObject = null;
-	/**
 	 * @var int The HTTP response code returned for this request
 	 */
 	protected $_responseCode = RestResponse::Ok;
@@ -407,9 +399,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	{
 		// 	Determine application if any
 		$_appName = FilterInput::request(
-							   'app_name',
-							   Option::server( 'HTTP_X_DREAMFACTORY_APPLICATION_NAME', Option::server( 'HTTP_X_APPLICATION_NAME' ) ),
-							   FILTER_SANITIZE_STRING
+			'app_name',
+			Option::server( 'HTTP_X_DREAMFACTORY_APPLICATION_NAME', Option::server( 'HTTP_X_APPLICATION_NAME' ) ),
+			FILTER_SANITIZE_STRING
 		);
 
 		//	Still empty?
@@ -890,4 +882,25 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	{
 		return $this->_responseFormat;
 	}
+
+	/**
+	 * @param string $outputAsFile
+	 *
+	 * @return BasePlatformRestService
+	 */
+	public function setOutputAsFile( $outputAsFile )
+	{
+		$this->_outputAsFile = $outputAsFile;
+
+		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getOutputAsFile()
+	{
+		return $this->_outputAsFile;
+	}
+
 }

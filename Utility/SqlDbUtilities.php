@@ -20,14 +20,14 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\PlatformStorageDrivers;
-use Kisma\Core\Utility\Inflector;
-use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\Sql;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Interfaces\SqlDbDriverTypes;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Sql;
 
 /**
  * SqlDbUtilities
@@ -68,34 +68,29 @@ class SqlDbUtilities implements SqlDbDriverTypes
 	}
 
 	/**
-	 * @param \CDbConnection $db
-	 * @param string         $name
-	 * @param bool           $returnName If true, the table name is returned instead of TRUE
+	 * @param \CDbConnection|array $db         A database connection or the array of tables if you already have it pulled
+	 * @param string               $name       The name of the table to check
+	 * @param bool                 $returnName If true, the table name is returned instead of TRUE
 	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \InvalidArgumentException
 	 * @return bool
 	 */
 	public static function doesTableExist( $db, $name, $returnName = false )
 	{
 		if ( empty( $name ) )
 		{
-			throw new BadRequestException( 'Table name can not be empty.' );
+			throw new \InvalidArgumentException( 'Table name can not be empty.' );
 		}
 
-		$_tables = $db->schema->getTableNames();
+		$_tables = is_array( $db ) ? $db : $db->schema->getTableNames();
 
-		//	make search case insensitive
-		foreach ( $_tables as $_table )
+		//	Make search case insensitive
+		if ( null === ( $_table = Option::get( $_tables, $name ) ) )
 		{
-			if ( 0 == strcasecmp( $_table, $name ) )
-			{
-				return $returnName ? $_table : true;
-			}
+			return false;
 		}
 
-//		Log::debug( 'Unknown table "' . $name . '" requested.' );
-
-		return false;
+		return $returnName ? $_table : true;
 	}
 
 	/**
@@ -947,8 +942,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 						}
 						if ( !empty( $scale ) && !( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) )
 						{
-							if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $scale > 30 ) ) ||
-								 ( $scale > $length )
+							if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $scale > 30 ) ) || ( $scale > $length )
 							)
 							{
 								throw new BadRequestException( "Decimal scale '$scale' is out of valid range." );
@@ -1169,9 +1163,9 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					{
 						throw new BadRequestException( "Field '$name' already exists in table '$table_name'." );
 					}
-					if ( ( ( 0 == strcasecmp( 'id', $type ) ) || ( 0 == strcasecmp( 'pk', $type ) ) ||
-						   Utilities::boolval( Utilities::getArrayValue( 'is_primary_key', $field, false ) ) ) &&
-						 ( $colSchema->isPrimaryKey )
+					if ( ( ( 0 == strcasecmp( 'id', $type ) ) ||
+						   ( 0 == strcasecmp( 'pk', $type ) ) ||
+						   Utilities::boolval( Utilities::getArrayValue( 'is_primary_key', $field, false ) ) ) && ( $colSchema->isPrimaryKey )
 					)
 					{
 						// don't try to alter
@@ -1224,8 +1218,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					}
 					$primaryKey = $name;
 				}
-				elseif ( ( 0 == strcasecmp( 'reference', $type ) ) ||
-						 Utilities::boolval( Utilities::getArrayValue( 'is_foreign_key', $field, false ) )
+				elseif ( ( 0 == strcasecmp( 'reference', $type ) ) || Utilities::boolval( Utilities::getArrayValue( 'is_foreign_key', $field, false ) )
 				)
 				{
 					// special case for references because the table referenced may not be created yet
@@ -1949,8 +1942,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 		{
 			// todo batch this for speed
 			//@TODO Batched it a bit... still probably slow...
-			$_sql
-				= <<<SQL
+			$_sql = <<<SQL
 SELECT
 	id
 FROM
@@ -1973,10 +1965,10 @@ SQL;
 					$_sql,
 					0,
 					array(
-						 ':table_column' => $_tableColumn,
-						 ':table_value'  => Option::get( $_label, 'table' ),
-						 ':field_column' => $_fieldColumn,
-						 ':field_value'  => Option::get( $_label, 'field' ),
+						':table_column' => $_tableColumn,
+						':table_value'  => Option::get( $_label, 'table' ),
+						':field_column' => $_fieldColumn,
+						':field_value'  => Option::get( $_label, 'field' ),
 					)
 				);
 

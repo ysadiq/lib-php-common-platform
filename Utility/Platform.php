@@ -29,10 +29,19 @@ use Kisma\Core\Utility\Option;
 
 /**
  * Platform
- * Generic platform helpers
+ * System constants and generic platform helpers
  */
 class Platform extends SeedUtility
 {
+	//*************************************************************************
+	//	Constants
+	//*************************************************************************
+
+	/**
+	 * @var string The name of the storage container that stores applications
+	 */
+	const APP_STORAGE_CONTAINER = 'applications';
+
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************

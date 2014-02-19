@@ -39,7 +39,7 @@
 			"is_active":   1,
 			"type":        "Local Portal Service",
 			"type_id":     64,
-			"description": "Local Portal Service"
+			"description": "Portal service to authenticated resources"
 		}
 	],
 	"df_sys_email_template": [

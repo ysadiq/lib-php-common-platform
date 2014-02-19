@@ -28,6 +28,7 @@ use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\ParameterBag;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * BasePlatformService
@@ -80,6 +81,14 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 * @var int Designated type ID of this service
 	 */
 	protected $_typeId;
+	/**
+	 * @var Response The response to the request
+	 */
+	protected $_responseObject = null;
+	/**
+	 * @var Request The inbound request
+	 */
+	protected $_requestObject = null;
 
 	//*************************************************************************
 	//* Methods
@@ -267,11 +276,11 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 
 		//	Construct and neutralize...
 		$_tag = Inflector::neutralize(
-			str_ireplace(
-				array_keys( $_replacements ),
-				array_values( $_replacements ),
-				$_tag
-			)
+						 str_ireplace(
+							 array_keys( $_replacements ),
+							 array_values( $_replacements ),
+							 $_tag
+						 )
 		);
 
 		return $_cache[$eventName] = $_tag;
@@ -434,5 +443,45 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	public function getUserId()
 	{
 		return $this->_currentUserId;
+	}
+
+	/**
+	 * @param \Symfony\Component\HttpFoundation\Request $requestObject
+	 *
+	 * @return BasePlatformRestService
+	 */
+	public function setRequestObject( $requestObject )
+	{
+		$this->_requestObject = $requestObject;
+
+		return $this;
+	}
+
+	/**
+	 * @return \Symfony\Component\HttpFoundation\Request
+	 */
+	public function getRequestObject()
+	{
+		return $this->_requestObject;
+	}
+
+	/**
+	 * @param \Symfony\Component\HttpFoundation\Response $responseObject
+	 *
+	 * @return BasePlatformRestService
+	 */
+	public function setResponseObject( $responseObject )
+	{
+		$this->_responseObject = $responseObject;
+
+		return $this;
+	}
+
+	/**
+	 * @return \Symfony\Component\HttpFoundation\Response
+	 */
+	public function getResponseObject()
+	{
+		return $this->_responseObject;
 	}
 }

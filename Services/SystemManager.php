@@ -3,7 +3,7 @@
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,34 +19,29 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use Composer\Json\JsonFile;
 use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\Platform\Enums\InstallationTypes;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Platform\Exceptions\PlatformServiceException;
 use DreamFactory\Platform\Interfaces\PlatformStates;
-use DreamFactory\Platform\Resources\System\CustomSettings;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Drupal;
 use DreamFactory\Platform\Utility\Fabric;
-use DreamFactory\Platform\Utility\FileUtilities;
-use DreamFactory\Platform\Utility\Packager;
-use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
 use DreamFactory\Platform\Yii\Models\App;
-use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
-use DreamFactory\Platform\Yii\Models\EmailTemplate;
+use DreamFactory\Platform\Yii\Models\BasePlatformModel;
 use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Interfaces\HttpResponse;
+use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
+use Kisma\Core\Utility\Storage;
 
 /**
  * SystemManager
@@ -64,6 +59,10 @@ class SystemManager extends BaseSystemRestService
 	 */
 	const SYSTEM_TABLE_PREFIX = 'df_sys_';
 	/**
+	 * @var string The name of the table who's existence indicates that the database has been created
+	 */
+	const DSP_TABLE_MARKER = 'df_sys_config';
+	/**
 	 * @var string The private CORS configuration file
 	 */
 	const CORS_DEFAULT_CONFIG_FILE = '/cors.config.json';
@@ -71,6 +70,22 @@ class SystemManager extends BaseSystemRestService
 	 * @var string The url to pull for DSP tag information
 	 */
 	const VERSION_TAGS_URL = 'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags';
+	/**
+	 * @var string The relative path to the system schema config directory
+	 */
+	const SCHEMA_PATH = '/schema';
+	/**
+	 * @var string The relative (to /config) path to the system schema file
+	 */
+	const SCHEMA_FILE_PATH = '/schema/system_schema.json';
+	/**
+	 * @var string The relative (to /config) path to the system schema data file
+	 */
+	const SCHEMA_DATA_FILE_PATH = '/schema/system_data.json';
+	/**
+	 * @var string The exception message for bogus JSON config files
+	 */
+	const BOGUS_INSTALL_MESSAGE = 'One or more of this DSP\'s configuration files cannot be loaded. Corrupt installation possible! :(';
 
 	//*************************************************************************
 	//* Members
@@ -92,6 +107,7 @@ class SystemManager extends BaseSystemRestService
 	public function __construct( $settings = array() )
 	{
 		static::$_configPath = dirname( __DIR__ ) . '/config';
+		Sql::setConnection( Pii::pdo() );
 
 		parent::__construct(
 			  array_merge(
@@ -107,8 +123,6 @@ class SystemManager extends BaseSystemRestService
 			  )
 		);
 	}
-
-	// Service interface implementation
 
 	/**
 	 * @param string $old
@@ -130,92 +144,60 @@ class SystemManager extends BaseSystemRestService
 
 	/**
 	 * Determines the current state of the system
+	 *
+	 * @return string
 	 */
 	public static function getSystemState()
 	{
-		static $_isReady = false;
+		static $_isReady = null;
 
-		if ( !$_isReady )
+		if ( PlatformStates::READY === $_isReady )
 		{
-			if ( !Pii::getState( 'dsp.init_check_complete', false ) )
+			return $_isReady;
+		}
+
+		if ( !Pii::getState( 'dsp.init_check_complete', false ) )
+		{
+			if ( PlatformStates::DATABASE_READY != ( $_dbState = static::_validateDatabaseStructure() ) )
 			{
-				//	Refresh the schema that we just added
-				$_db = Pii::db();
-				$_schema = $_db->getSchema();
-
-				Sql::setConnection( $_db->pdoInstance );
-
-				$tables = $_schema->getTableNames();
-
-				// if there is no config table, we have to initialize
-				if ( empty( $tables ) || ( false === array_search( 'df_sys_config', $tables ) ) )
-				{
-					return PlatformStates::INIT_REQUIRED;
-				}
-
-				// need to check for db upgrade, based on tables or version
-				$contents = file_get_contents( static::$_configPath . '/schema/system_schema.json' );
-
-				if ( !empty( $contents ) )
-				{
-					$contents = DataFormat::jsonToArray( $contents );
-
-					// check for any missing necessary tables
-					$needed = Option::get( $contents, 'table', array() );
-
-					foreach ( $needed as $table )
-					{
-						$name = Option::get( $table, 'name' );
-						if ( !empty( $name ) && !in_array( $name, $tables ) )
-						{
-							return PlatformStates::SCHEMA_REQUIRED;
-						}
-					}
-
-					$_version = Option::get( $contents, 'version' );
-					$_oldVersion = Sql::scalar( 'SELECT db_version FROM df_sys_config ORDER BY id DESC' );
-
-					if ( static::doesDbVersionRequireUpgrade( $_oldVersion, $_version ) )
-					{
-						return PlatformStates::SCHEMA_REQUIRED;
-					}
-				}
-
-				Pii::setState( 'dsp.init_check_complete', true );
+				//	Really shouldn't ever get here...
+				Log::debug( 'The "Place Where One Should Not Be" has been discovered.' );
+				static::_stateRedirect( $_dbState );
 			}
 
 			// Check for at least one system admin user
 			if ( !static::activated() )
 			{
-				return PlatformStates::ADMIN_REQUIRED;
+				Log::debug( 'System administrator required.' );
+				static::_stateRedirect( PlatformStates::ADMIN_REQUIRED );
+//				return PlatformStates::ADMIN_REQUIRED;
 			}
 
 			//	Need to check for the default services
 			if ( 0 == Service::model()->count() )
 			{
-				return PlatformStates::DATA_REQUIRED;
+				Log::debug( 'Database data (default services) required.' );
+				static::_stateRedirect( PlatformStates::DATA_REQUIRED );
+//				return PlatformStates::DATA_REQUIRED;
 			}
+
+			Pii::setState( 'dsp.init_check_complete', true );
+			Log::debug( 'Platform state validation complete.' );
+		}
+		else
+		{
+			Log::debug( 'Platform state previously validated.' );
 		}
 
 		//	And redirect to welcome screen
 		if ( !Pii::guest() && !Fabric::fabricHosted() && !SystemManager::registrationComplete() )
 		{
-			return PlatformStates::WELCOME_REQUIRED;
+			Log::debug( 'Unregistered, non-hosted DSP detected.' );
+			static::_stateRedirect( PlatformStates::WELCOME_REQUIRED );
+//			return PlatformStates::WELCOME_REQUIRED;
 		}
 
-		$_isReady = true;
-
-		return PlatformStates::READY;
-	}
-
-	/**
-	 * Configures the system.
-	 *
-	 * @return null
-	 */
-	public static function initSystem()
-	{
-		static::initSchema();
+		return $_isReady = PlatformStates::READY;
 	}
 
 	/**
@@ -230,32 +212,18 @@ class SystemManager extends BaseSystemRestService
 
 		try
 		{
-			$contents = file_get_contents( static::$_configPath . '/schema/system_schema.json' );
-
-			if ( empty( $contents ) )
-			{
-				throw new \Exception( "Empty or no system schema file found." );
-			}
-
-			$contents = DataFormat::jsonToArray( $contents );
-			$version = Option::get( $contents, 'version' );
-
+			$_jsonSchema = static::_loadSchema();
+			$version = Option::get( $_jsonSchema, 'version' );
+			$tables = Option::get( $_jsonSchema, 'table' );
 			$command = $_db->createCommand();
-
-			// create system tables
-			$tables = Option::get( $contents, 'table' );
-			if ( empty( $tables ) )
-			{
-				throw new \Exception( "No default system schema found." );
-			}
 
 			Log::debug( 'Checking database schema' );
 
 			SqlDbUtilities::createTables( $_db, $tables, true, false );
 
-			// initialize config table if not already
 			try
 			{
+				// initialize config table if not already
 				$command->reset();
 				// first time is troublesome with session user id
 				$rows = $command->insert( 'df_sys_config', array( 'db_version' => $version ) );
@@ -271,7 +239,7 @@ class SystemManager extends BaseSystemRestService
 			}
 
 			//	Any scripts to run?
-			if ( null !== ( $_scripts = Option::get( $contents, 'scripts' ) ) )
+			if ( null !== ( $_scripts = Option::get( $_jsonSchema, 'scripts' ) ) )
 			{
 				if ( isset( $_scripts['install'] ) )
 				{
@@ -301,18 +269,12 @@ class SystemManager extends BaseSystemRestService
 
 		try
 		{
-			$contents = file_get_contents( static::$_configPath . '/schema/system_schema.json' );
-
-			if ( empty( $contents ) )
-			{
-				throw new \Exception( "Empty or no system schema file found." );
-			}
-
-			$contents = DataFormat::jsonToArray( $contents );
-			$version = Option::get( $contents, 'version' );
-
+			$_jsonSchema = static::_loadSchema();
+			$version = Option::get( $_jsonSchema, 'version' );
+			$tables = Option::get( $_jsonSchema, 'table' );
 			$command = $_db->createCommand();
 			$oldVersion = '';
+
 			if ( SqlDbUtilities::doesTableExist( $_db, static::SYSTEM_TABLE_PREFIX . 'config' ) )
 			{
 				$command->reset();
@@ -320,54 +282,12 @@ class SystemManager extends BaseSystemRestService
 			}
 
 			// create system tables
-			$tables = Option::get( $contents, 'table' );
-			if ( empty( $tables ) )
-			{
-				throw new \Exception( "No default system schema found." );
-			}
-
 			Log::debug( 'Checking database schema' );
 
 			SqlDbUtilities::createTables( $_db, $tables, true, false );
 
 			if ( !empty( $oldVersion ) )
 			{
-				// clean up old unique index, temporary for upgrade
-				try
-				{
-					$command->reset();
-
-					try
-					{
-						$command->dropIndex( 'undx_df_sys_user_username', 'df_sys_user' );
-					}
-					catch ( \Exception $_ex )
-					{
-						//	Ignore missing index error
-						if ( false === stripos( $_ex->getMessage(), '1091 Can\'t drop' ) )
-						{
-							throw $_ex;
-						}
-					}
-
-					try
-					{
-						$command->dropindex( 'ndx_df_sys_user_email', 'df_sys_user' );
-					}
-					catch ( \Exception $_ex )
-					{
-						//	Ignore missing index error
-						if ( false === stripos( $_ex->getMessage(), '1091 Can\'t drop' ) )
-						{
-							throw $_ex;
-						}
-					}
-				}
-				catch ( \Exception $_ex )
-				{
-					Log::error( 'Exception removing prior indexes: ' . $_ex->getMessage() );
-				}
-
 				// Need upgrade path from <1.0.6 for apps
 				if ( version_compare( $oldVersion, '1.0.6', '<' ) )
 				{
@@ -397,22 +317,26 @@ class SystemManager extends BaseSystemRestService
 			try
 			{
 				$command->reset();
-				if ( empty( $oldVersion ) )
-				{
-					// first time is troublesome with session user id
-					$rows = $command->insert( 'df_sys_config', array( 'db_version' => $version ) );
-				}
-				else
-				{
-					$rows = $command->update( 'df_sys_config', array( 'db_version' => $version ) );
-				}
 
-				if ( 0 >= $rows )
+				$_tableName = static::SYSTEM_TABLE_PREFIX . 'config';
+				$_params = array( ':db_version' => $version );
+
+				$_sql = <<<SQL
+INSERT INTO {$_tableName}
+(
+	db_version
+) VALUES(
+	:db_version
+)
+ON DUPLICATE KEY UPDATE
+	db_version = VALUES( db_version )
+SQL;
+
+				if ( 0 >= ( $_count = Sql::execute( $_sql, $_params ) ) && $oldVersion != $version )
 				{
-					if ( $oldVersion != $version )
-					{
-						throw new \Exception( "old_version: $oldVersion new_version: $version" );
-					}
+					Log::error( 'Error updating system config db_version.', array( 'from_version' => $oldVersion, 'to_version' => $version ) );
+
+					throw new \Exception( 'Upsert failed. From v' . $oldVersion . ' to v' . $version );
 				}
 			}
 			catch ( \Exception $_ex )
@@ -421,7 +345,7 @@ class SystemManager extends BaseSystemRestService
 			}
 
 			//	Any scripts to run?
-			if ( null !== ( $_scripts = Option::get( $contents, 'scripts' ) ) )
+			if ( null !== ( $_scripts = Option::get( $_jsonSchema, 'scripts' ) ) )
 			{
 				if ( isset( $_scripts['update'] ) )
 				{
@@ -459,8 +383,6 @@ class SystemManager extends BaseSystemRestService
 
 			return false;
 		}
-
-		Sql::setConnection( Pii::pdo() );
 
 		//	Delete comments
 		$_lines = explode( PHP_EOL, $_commands );
@@ -590,64 +512,23 @@ class SystemManager extends BaseSystemRestService
 	 */
 	public static function initData()
 	{
-		// init with system required data
-		$contents = file_get_contents( static::$_configPath . '/schema/system_data.json' );
-		if ( empty( $contents ) )
-		{
-			throw new \Exception( "Empty or no system data file found." );
-		}
+		$_jsonSchema = static::_loadSchema( static::SCHEMA_DATA_FILE_PATH, false );
 
-		$contents = DataFormat::jsonToArray( $contents );
-		foreach ( $contents as $table => $content )
-		{
-			switch ( $table )
-			{
-				case 'df_sys_service':
-					if ( !empty( $content ) )
-					{
-						foreach ( $content as $service )
-						{
-							$_apiName = Option::get( $service, 'api_name' );
-							if ( !Service::model()->exists( 'api_name = :name', array( ':name' => $_apiName ) ) )
-							{
-								try
-								{
-									$obj = new Service();
-									$obj->setAttributes( $service );
-									$obj->save();
-								}
-								catch ( \Exception $ex )
-								{
-									throw new InternalServerErrorException( "Failed to create services.\n{$ex->getMessage()}" );
-								}
-							}
-						}
-					}
-					break;
-				case 'df_sys_email_template':
-					if ( !empty( $content ) )
-					{
-						foreach ( $content as $template )
-						{
-							$_name = Option::get( $template, 'name' );
-							if ( !EmailTemplate::model()->exists( 'name = :name', array( ':name' => $_name ) ) )
-							{
-								try
-								{
-									$obj = new EmailTemplate();
-									$obj->setAttributes( $template );
-									$obj->save();
-								}
-								catch ( \Exception $ex )
-								{
-									throw new InternalServerErrorException( "Failed to create email template.\n{$ex->getMessage()}" );
-								}
-							}
-						}
-					}
-					break;
-			}
-		}
+		//	Create services
+		static::_createSystemData(
+			  'service',
+			  Option::get( $_jsonSchema, static::SYSTEM_TABLE_PREFIX . 'service' ),
+			  'DreamFactory\\Platform\\Yii\\Models\\Service',
+			  'api_name'
+		);
+
+		//	Create templates
+		static::_createSystemData(
+			  'email_template',
+			  Option::get( $_jsonSchema, static::SYSTEM_TABLE_PREFIX . 'email_template' ),
+			  'DreamFactory\\Platform\\Yii\\Models\\EmailTemplate',
+			  'name'
+		);
 	}
 
 	/**
@@ -796,7 +677,6 @@ class SystemManager extends BaseSystemRestService
 	 */
 	public static function getCurrentVersion()
 	{
-
 		return Pii::getParam( 'dsp.version' );
 	}
 
@@ -827,7 +707,7 @@ class SystemManager extends BaseSystemRestService
 	/**
 	 * @param array $allowed_hosts
 	 *
-	 * @throws \Exception
+	 * @throws PlatformServiceException
 	 */
 	public static function setAllowedHosts( $allowed_hosts = array() )
 	{
@@ -995,6 +875,7 @@ class SystemManager extends BaseSystemRestService
 	 */
 	protected function _listResources()
 	{
+		//@todo Need to supply actual data from service table.
 		return array(
 			'resource' => array(
 				array( 'name' => 'app', 'label' => 'Application' ),
@@ -1029,14 +910,16 @@ class SystemManager extends BaseSystemRestService
 			return false;
 		}
 
-		if ( 'custom' == $this->_resource )
+		if ( 'custom' == ( $_resource = $this->_resource ) )
 		{
-			$_obj = new CustomSettings( $this, $this->_resourceArray );
-
-			return $_obj->processRequest( null, $this->_action );
+//			$_customSettings = new CustomSettings( $this, $this->_resourceArray );
+//
+//			return $_customSettings->processRequest( null, $this->_action );
+			$_resource .= '_settings';
 		}
 
-		$_resource = ResourceStore::resource( $this->_resource, $this->_resourceArray );
+		//	Let the resource handle it...
+		$_resource = ResourceStore::resource( $_resource, $this->_resourceArray );
 
 		return $_resource->processRequest( $this->_resourcePath, $this->_action );
 	}
@@ -1049,6 +932,7 @@ class SystemManager extends BaseSystemRestService
 	 */
 	public static function getResourceModel( $resource )
 	{
+		//@todo should we consider a resource map somewhere in the config for things like this? And dev overriding?
 		if ( 'custom' == $resource )
 		{
 			$resource = 'custom_settings';
@@ -1060,30 +944,25 @@ class SystemManager extends BaseSystemRestService
 	//-------- System Helper Operations -------------------------------------------------
 
 	/**
-	 * @param $id
+	 * @param int $id
 	 *
 	 * @return string
 	 * @throws \Exception
 	 */
 	public static function getAppNameFromId( $id )
 	{
+		//@todo NULLs please!
+		$_name = '';
+
 		if ( !empty( $id ) )
 		{
-			try
+			if ( null !== ( $_app = App::model()->findByPk( $id, array( 'select' => 'name' ) ) ) )
 			{
-				$app = App::model()->findByPk( $id );
-				if ( isset( $app ) )
-				{
-					return $app->getAttribute( 'name' );
-				}
-			}
-			catch ( \Exception $ex )
-			{
-				throw $ex;
+				$_name = $_app->getAttribute( 'name' );
 			}
 		}
 
-		return '';
+		return $_name;
 	}
 
 	/**
@@ -1094,39 +973,18 @@ class SystemManager extends BaseSystemRestService
 	 */
 	public static function getAppIdFromName( $name )
 	{
+		//@todo NULLs please!
+		$_name = '';
+
 		if ( !empty( $name ) )
 		{
-			try
+			if ( null !== ( $_app = App::model()->byApiName( $name, 'name' )->find() ) )
 			{
-				$app = App::model()->find( 'name=:name', array( ':name' => $name ) );
-				if ( isset( $app ) )
-				{
-					return $app->getPrimaryKey();
-				}
-			}
-			catch ( \Exception $ex )
-			{
-				throw $ex;
+				$_name = $_app->getPrimaryKey();
 			}
 		}
 
-		return '';
-	}
-
-	/**
-	 * @return string
-	 */
-	public static function getCurrentAppName()
-	{
-		return ( isset( $GLOBALS['app_name'] ) ) ? $GLOBALS['app_name'] : '';
-	}
-
-	/**
-	 * @return string
-	 */
-	public static function getCurrentAppId()
-	{
-		return static::getAppIdFromName( static::getCurrentAppName() );
+		return $_name;
 	}
 
 	/**
@@ -1136,22 +994,20 @@ class SystemManager extends BaseSystemRestService
 	 */
 	public static function activated()
 	{
+		$_tableName = static::SYSTEM_TABLE_PREFIX . 'user';
+
 		try
 		{
 			$_admins = Sql::scalar(
 						  <<<SQL
-				SELECT
+SELECT
 	COUNT(id)
 FROM
-	df_sys_user
+	{$_tableName}
 WHERE
 	is_sys_admin = 1 AND
 	is_deleted = 0
 SQL
-							  ,
-							  0,
-							  array(),
-							  Pii::pdo()
 			);
 
 			return ( 0 == $_admins ? false : ( $_admins > 1 ? $_admins : true ) );
@@ -1199,6 +1055,214 @@ SQL
 	}
 
 	/**
+	 * @param string $schemaPath
+	 * @param bool   $checkTables
+	 *
+	 * @throws \Exception
+	 * @return string
+	 */
+	protected static function _loadSchema( $schemaPath = null, $checkTables = true )
+	{
+		$_schema = null;
+		$_schemaFilePath = static::$_configPath . ( $schemaPath ? : static::SCHEMA_FILE_PATH );
+
+		if ( false !== ( $_schema = Pii::getState( 'dsp.json_schema', false ) ) )
+		{
+			$_schema = Storage::defrost( $_schema );
+
+			if ( isset( $_schema, $_schema[$_schemaFilePath] ) )
+			{
+				return $_schema[$_schemaFilePath];
+			}
+		}
+
+		if ( empty( $_schema ) )
+		{
+			$_schema = array( $_schemaFilePath => null );
+		}
+
+		if ( false === ( $_jsonSchema = file_get_contents( $_schemaFilePath ) ) )
+		{
+			//	Just put it in the log for now...
+			Log::error( 'File system error reading system schema file: ' . $_schemaFilePath );
+		}
+
+		if ( empty( $_jsonSchema ) )
+		{
+			throw new InternalServerErrorException( static::BOGUS_INSTALL_MESSAGE );
+		}
+
+		$_schema[$_schemaFilePath] = DataFormat::jsonToArray( $_jsonSchema );
+
+		if ( false !== $checkTables )
+		{
+			$_tables = Option::get( $_schema[$_schemaFilePath], 'table' );
+
+			if ( empty( $_tables ) )
+			{
+				throw new InternalServerErrorException( static::BOGUS_INSTALL_MESSAGE );
+			}
+		}
+
+		Pii::setState(
+		   'dsp.json_schema',
+		   Storage::freeze( $_schema )
+		);
+
+		return $_schema[$_schemaFilePath];
+	}
+
+	/**
+	 * Validates that:
+	 *
+	 *    1. The DSP DDL has been executed
+	 *    2. The DSP schema has been created
+	 *    3. The DSP schema is at the current version
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @return int The current system state based on the validation. Returns PlatformStates::DATABASE_READY if all database validations pass.
+	 */
+	protected static function _validateDatabaseStructure()
+	{
+		//	Lad up the schema
+		$_jsonSchema = static::_loadSchema();
+
+		//	Refresh the schema that we just added
+		$_db = Pii::db();
+		Sql::setConnection( $_db->getPdoInstance() );
+
+		$_schema = $_db->getSchema();
+		$_tables = $_schema->getTableNames();
+
+		//	If the marker is not in place, the database schema has not been initialized
+		if ( empty( $_tables ) || false === in_array( static::DSP_TABLE_MARKER, $_tables ) )
+		{
+			Log::debug( 'Database required' );
+			static::_stateRedirect( PlatformStates::INIT_REQUIRED );
+
+//			return PlatformStates::INIT_REQUIRED;
+		}
+
+		// check for any missing necessary tables
+		$_neededTables = Option::get( $_jsonSchema, 'table', array() );
+
+		foreach ( $_neededTables as $_table )
+		{
+			$_name = Option::get( $_table, 'name' );
+
+			if ( !empty( $_name ) && !in_array( $_name, $_tables ) )
+			{
+				Log::debug( 'Database schema required' );
+
+				static::_stateRedirect( PlatformStates::SCHEMA_REQUIRED );
+
+//				return PlatformStates::SCHEMA_REQUIRED;
+			}
+		}
+
+		//	Check for db upgrade, based on tables and/or version
+		$_schemaVersion = Option::get( $_jsonSchema, 'version' );
+		$_currentVersion = Sql::scalar( 'SELECT db_version FROM ' . static::SYSTEM_TABLE_PREFIX . 'config ORDER BY id DESC' );
+
+		if ( static::doesDbVersionRequireUpgrade( $_currentVersion, $_schemaVersion ) )
+		{
+			Log::debug(
+			   'Database schema upgrade required.',
+			   array( 'from_version' => $_currentVersion, 'to_version' => $_schemaVersion )
+			);
+
+			static::_stateRedirect( PlatformStates::SCHEMA_REQUIRED );
+
+//			return PlatformStates::SCHEMA_REQUIRED;
+		}
+
+		return PlatformStates::DATABASE_READY;
+	}
+
+	/**
+	 * @param string $tableName
+	 * @param array  $data
+	 * @param string $modelClassName
+	 * @param string $uniqueColumn
+	 *
+	 * @return int The number of rows added
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 */
+	protected static function _createSystemData( $tableName, array $data, $modelClassName, $uniqueColumn = 'api_name' )
+	{
+		$_added = 0;
+		$_tableName = static::SYSTEM_TABLE_PREFIX . $tableName;
+		$_sql = 'SELECT COUNT(' . $uniqueColumn . ') FROM ' . $_tableName . ' WHERE ' . $uniqueColumn . ' = :' . $uniqueColumn;
+
+		foreach ( $data as $_row )
+		{
+			$_count = Sql::scalar( $_sql, 0, array( ':' . $uniqueColumn => Option::get( $_row, $uniqueColumn ) ) );
+
+			if ( empty( $_count ) )
+			{
+				try
+				{
+					/** @var BasePlatformModel $_model */
+					$_model = new $modelClassName();
+					$_model->setAttributes( $_row );
+					$_model->save();
+
+					$_added++;
+				}
+				catch ( \Exception $_ex )
+				{
+					throw new InternalServerErrorException(
+						'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(),
+						array(
+							'data'          => $data,
+							'bogus_row'     => $_row,
+							'unique_column' => $uniqueColumn
+						)
+					);
+				}
+			}
+		}
+
+		return $_added;
+	}
+
+	/**
+	 * @param string $action
+	 *
+	 * @return void
+	 */
+	protected function _stateRedirect( $action = null )
+	{
+		static $_map = array(
+			PlatformStates::INIT_REQUIRED    => 'initSystem',
+			PlatformStates::SCHEMA_REQUIRED  => 'upgradeSchema',
+			PlatformStates::ADMIN_REQUIRED   => 'initAdmin',
+			PlatformStates::DATA_REQUIRED    => 'initData',
+			PlatformStates::WELCOME_REQUIRED => 'welcome',
+			PlatformStates::UPGRADE_REQUIRED => 'upgrade',
+		);
+
+		if ( is_numeric( $action ) )
+		{
+			$action = Option::get( $_map, $action );
+		}
+
+		if ( !empty( $action ) )
+		{
+			//	Forward to that action page
+			$_returnUrl = '/' . Pii::controller()->id . '/' . $action;
+		}
+		//	Redirect to back from which you came
+		elseif ( null === ( $_returnUrl = Pii::user()->getReturnUrl() ) )
+		{
+			//	Or take me home
+			$_returnUrl = Pii::url( Pii::controller()->id . '/index' );
+		}
+
+		Pii::redirect( $_returnUrl );
+	}
+
+	/**
 	 * @return string
 	 */
 	public static function getConfigPath()
@@ -1213,7 +1277,26 @@ SQL
 	{
 		static::$_configPath = $configPath;
 	}
+
+	/**
+	 * @return string
+	 */
+	public static function getCurrentAppName()
+	{
+		return Option::get( $GLOBALS, 'app_name' );
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function getCurrentAppId()
+	{
+		return static::getAppIdFromName( static::getCurrentAppName() );
+	}
+
 }
 
 //	Set the config path...
 SystemManager::setConfigPath( dirname( __DIR__ ) . '/config' );
+//	And the db connection
+Sql::setConnection( Pii::pdo() );

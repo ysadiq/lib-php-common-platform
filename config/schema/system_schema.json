@@ -1,5 +1,5 @@
 {
-	"version": "1.4.0",
+	"version": "1.4.1",
 	"scripts": {
 		"install": null,
 		"update":  "1.4.0-update.sql"
@@ -137,6 +137,14 @@
 				{
 					"name": "id",
 					"type": "id"
+				},
+				{
+					"_comment":   "Contains a GUID/UUID value which uniquely identifies this user",
+					"name":       "owner_id",
+					"type":       "string",
+					"length":     64,
+					"allow_null": false,
+					"validation": "invisible,api_read_only,not_empty"
 				},
 				{
 					"name":       "email",
@@ -277,6 +285,14 @@
 					"type":       "user_id_on_update",
 					"allow_null": true,
 					"validation": "api_read_only"
+				},
+				{
+					"_comment":   "Contains a GUID/UUID value which uniquely identifies this user",
+					"name":       "owner_id",
+					"type":       "string",
+					"length":     64,
+					"allow_null": false,
+					"validation": "invisible,api_read_only,not_empty"
 				}
 			]
 		},
@@ -335,6 +351,14 @@
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
 					"validation": "api_read_only"
+				},
+				{
+					"_comment":   "Contains a GUID/UUID value which uniquely identifies the owner of this role",
+					"name":       "owner_id",
+					"type":       "owner_id_on_create",
+					"length":     64,
+					"allow_null": false,
+					"validation": "invisible,api_read_only,not_empty"
 				}
 			]
 		},
@@ -453,6 +477,14 @@
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
 					"validation": "api_read_only"
+				},
+				{
+					"_comment":   "If owner_id is null, service is considered public read-only",
+					"name":       "owner_id",
+					"type":       "string",
+					"length":     64,
+					"allow_null": true,
+					"validation": "invisible,api_read_only"
 				}
 			]
 		},
@@ -568,6 +600,14 @@
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
 					"validation": "api_read_only"
+				},
+				{
+					"_comment":   "If owner_id is null, app is considered public read-only",
+					"name":       "owner_id",
+					"type":       "string",
+					"length":     64,
+					"allow_null": true,
+					"validation": "invisible,api_read_only"
 				}
 			]
 		},
@@ -610,6 +650,14 @@
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
 					"validation": "api_read_only"
+				},
+				{
+					"_comment":   "If owner_id is null, group is considered global/system/public read-only",
+					"name":       "owner_id",
+					"type":       "string",
+					"length":     64,
+					"allow_null": true,
+					"validation": "invisible,api_read_only"
 				}
 			]
 		},
@@ -859,6 +907,14 @@
 					"type":       "boolean",
 					"default":    null,
 					"allow_null": true
+				},
+				{
+					"_comment":   "If owner_id is null, row is considered public read-only",
+					"name":       "owner_id",
+					"type":       "string",
+					"length":     64,
+					"allow_null": true,
+					"validation": "invisible,api_read_only"
 				}
 			]
 		},
@@ -962,6 +1018,14 @@
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
 					"validation": "api_read_only"
+				},
+				{
+					"_comment":   "If owner_id is null, template is considered public read-only",
+					"name":       "owner_id",
+					"type":       "string",
+					"length":     64,
+					"allow_null": true,
+					"validation": "invisible,api_read_only"
 				}
 			]
 		},
@@ -1089,6 +1153,14 @@
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
 					"validation": "api_read_only"
+				},
+				{
+					"_comment":   "If owner_id is null, provider is considered public read-only",
+					"name":       "owner_id",
+					"type":       "string",
+					"length":     64,
+					"allow_null": true,
+					"validation": "invisible,api_read_only,not_empty"
 				}
 			]
 		},
@@ -1157,6 +1229,14 @@
 				{
 					"name": "id",
 					"type": "id"
+				},
+				{
+					"_comment":   "Contains a GUID/UUID value which uniquely identifies the owner of this device",
+					"name":       "owner_id",
+					"type":       "string",
+					"length":     64,
+					"allow_null": false,
+					"validation": "invisible,api_read_only,not_empty"
 				},
 				{
 					"name":          "user_id",
