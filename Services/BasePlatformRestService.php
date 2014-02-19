@@ -34,6 +34,7 @@ use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -168,6 +169,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	public function processRequest( $resource = null, $action = self::Get, $output_format = null )
 	{
+		if ( $this->_timer )
+		{
+			$this->_timer->start();
+		}
+
 		$this->_setAction( $action );
 
 		//	Require app name for security check
@@ -192,6 +198,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		}
 
 		$this->_postProcess();
+
+		if ( $this->_timer )
+		{
+			$this->_timer->stop();
+
+			Log::debug( '*profile* ' . $action . ' ' . $this->_requestObject->getRequestUri() . ': ' . $this->_timer->timeSinceStartOfRequest() );
+			//	Profile information does not include responding times...
+		}
 
 		return $this->_respond();
 	}
@@ -330,12 +344,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _preProcess()
 	{
-		$this->_requestObject = $this->_requestObject ? : Request::createFromGlobals();
-
-		$_event = new RestServiceEvent( $this->_apiName, $this->_resource, $this->_requestObject );
-
+		$this->trigger( ResourceServiceEvents::PRE_PROCESS );
 		// throw exception here to stop processing
-		$this->trigger( ResourceServiceEvents::PRE_PROCESS, $_event );
 	}
 
 	/**
@@ -346,12 +356,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _postProcess()
 	{
-		$this->_responseObject = $this->_responseObject ? : new Response( $this->_response );
-
-		$_event = new RestServiceEvent( $this->_apiName, $this->_resource, $this->_requestObject, $this->_responseObject );
-
+		$this->trigger( ResourceServiceEvents::POST_PROCESS );
 		// throw exception here to stop processing
-		$this->trigger( ResourceServiceEvents::POST_PROCESS, $_event );
 	}
 
 	/**
@@ -398,9 +404,13 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	protected function _detectAppName()
 	{
 		// 	Determine application if any
-		$_appName = FilterInput::request(
+		$_appName = $this->_requestObject->query->get(
 			'app_name',
-			Option::server( 'HTTP_X_DREAMFACTORY_APPLICATION_NAME', Option::server( 'HTTP_X_APPLICATION_NAME' ) ),
+			//	No app_name, look for headers...
+			$this->_requestObject->server->get(
+				'HTTP_X_DREAMFACTORY_APPLICATION_NAME',
+				$this->_requestObject->server->get( 'HTTP_X_APPLICATION_NAME' )
+			),
 			FILTER_SANITIZE_STRING
 		);
 
@@ -548,7 +558,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	public function trigger( $eventName, $event = null, $priority = 0 )
 	{
-		return parent::trigger( $eventName, $event ? : new RestServiceEvent( $this->_apiName, $this->_resource ), $priority );
+		return parent::trigger(
+			$eventName,
+			$event ? : new RestServiceEvent( $this->_apiName, $this->_resource, $this->_requestObject, $this->_responseObject ),
+			$priority
+		);
 	}
 
 	/**

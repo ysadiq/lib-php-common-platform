@@ -166,6 +166,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	protected function _preProcess()
 	{
+		parent::_preProcess();
+
 		//	Do validation here
 		$this->checkPermission( PermissionMap::fromMethod( $this->getRequestedAction() ), $this->_resource );
 

@@ -1,10 +1,16 @@
 <?php
 /**
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ *
+ * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -89,6 +95,10 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 * @var Request The inbound request
 	 */
 	protected $_requestObject = null;
+	/**
+	 * @var \PHP_Timer
+	 */
+	protected $_timer;
 
 	//*************************************************************************
 	//* Methods
@@ -147,6 +157,11 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 
 		//	Get the current user ID if one...
 		$this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
+
+		if ( false !== $this->_timer )
+		{
+			$this->_timer = new \PHP_Timer();
+		}
 	}
 
 	/**
@@ -276,11 +291,11 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 
 		//	Construct and neutralize...
 		$_tag = Inflector::neutralize(
-						 str_ireplace(
-							 array_keys( $_replacements ),
-							 array_values( $_replacements ),
-							 $_tag
-						 )
+			str_ireplace(
+				array_keys( $_replacements ),
+				array_values( $_replacements ),
+				$_tag
+			)
 		);
 
 		return $_cache[$eventName] = $_tag;
@@ -484,4 +499,25 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	{
 		return $this->_responseObject;
 	}
+
+	/**
+	 * @param \PHP_Timer $timer
+	 *
+	 * @return BasePlatformService
+	 */
+	public function setTimer( $timer )
+	{
+		$this->_timer = $timer;
+
+		return $this;
+	}
+
+	/**
+	 * @return \PHP_Timer
+	 */
+	public function getTimer()
+	{
+		return $this->_timer;
+	}
+
 }

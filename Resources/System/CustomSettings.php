@@ -99,6 +99,8 @@ class CustomSettings extends BasePlatformRestResource
 	 */
 	protected function _preProcess()
 	{
+		parent::_preProcess();
+
 		//	Do validation here
 		$this->checkPermission( PermissionMap::fromMethod( $this->getRequestedAction() ), 'config' );
 	}

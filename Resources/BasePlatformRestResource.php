@@ -95,9 +95,9 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	 */
 	protected function _postProcess()
 	{
-		parent::_postProcess();
-
 		$this->_formatResponse();
+
+		parent::_postProcess();
 	}
 
 	/**

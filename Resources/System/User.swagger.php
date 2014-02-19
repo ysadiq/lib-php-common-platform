@@ -136,6 +136,7 @@ $_user['apis'] = array(
 										  'By default, all fields and no relations are returned for each record. <br>' .
 										  'Alternatively, to retrieve by record, a large list of ids, or a complicated filter, ' .
 										  'use the POST request with X-HTTP-METHOD = GET header and post records or ids.',
+					'event_name'       => 'user.list',
 				),
 				array(
 					'method'           => 'POST',
@@ -198,6 +199,7 @@ $_user['apis'] = array(
 					'notes'            => 'Post data should be a single record or an array of records (shown). ' .
 										  'By default, only the id property of the record affected is returned on success, ' .
 										  'use \'fields\' and \'related\' to return more info.',
+					'event_name'       => 'user.create',
 				),
 				array(
 					'method'           => 'PATCH',
@@ -251,6 +253,7 @@ $_user['apis'] = array(
 					'notes'            => 'Post data should be a single record or an array of records (shown). ' .
 										  'By default, only the id property of the record is returned on success, ' .
 										  'use \'fields\' and \'related\' to return more info.',
+					'event_name'       => 'user.update',
 				),
 				array(
 					'method'           => 'DELETE',
@@ -312,6 +315,7 @@ $_user['apis'] = array(
 										  'Use \'fields\' and \'related\' to return more properties of the deleted records. <br>' .
 										  'Alternatively, to delete by record or a large list of ids, ' .
 										  'use the POST request with X-HTTP-METHOD = DELETE header and post records or ids.',
+					'event_name'       => 'user.delete',
 				),
 			),
 		'description' => 'Operations for user administration.',
@@ -368,6 +372,7 @@ $_user['apis'] = array(
 							),
 						),
 					'notes'            => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
+					'event_name'       => 'user.read',
 				),
 				array(
 					'method'           => 'PATCH',
@@ -426,6 +431,7 @@ $_user['apis'] = array(
 						),
 					'notes'            => 'Post data should be an array of fields to update for a single record. <br>' .
 										  'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return more properties.',
+					'event_name'       => 'user.update',
 				),
 				array(
 					'method'           => 'DELETE',
@@ -475,6 +481,7 @@ $_user['apis'] = array(
 							),
 						),
 					'notes'            => 'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return deleted properties.',
+					'event_name'       => 'user.delete',
 				),
 			),
 		'description' => 'Operations for individual user administration.',
@@ -562,31 +569,31 @@ $_user['models'] = array(
 				array_merge(
 					$_commonProperties,
 					array(
-						 'last_login_date'     =>
-							 array(
-								 'type'        => 'string',
-								 'description' => 'Timestamp of the last login.',
-							 ),
-						 'created_date'        =>
-							 array(
-								 'type'        => 'string',
-								 'description' => 'Date this user was created.',
-							 ),
-						 'created_by_id'       =>
-							 array(
-								 'type'        => 'integer',
-								 'description' => 'User Id of who created this user.',
-							 ),
-						 'last_modified_date'  =>
-							 array(
-								 'type'        => 'string',
-								 'description' => 'Date this user was last modified.',
-							 ),
-						 'last_modified_by_id' =>
-							 array(
-								 'type'        => 'integer',
-								 'description' => 'User Id of who last modified this user.',
-							 ),
+						'last_login_date'     =>
+							array(
+								'type'        => 'string',
+								'description' => 'Timestamp of the last login.',
+							),
+						'created_date'        =>
+							array(
+								'type'        => 'string',
+								'description' => 'Date this user was created.',
+							),
+						'created_by_id'       =>
+							array(
+								'type'        => 'integer',
+								'description' => 'User Id of who created this user.',
+							),
+						'last_modified_date'  =>
+							array(
+								'type'        => 'string',
+								'description' => 'Date this user was last modified.',
+							),
+						'last_modified_by_id' =>
+							array(
+								'type'        => 'integer',
+								'description' => 'User Id of who last modified this user.',
+							),
 					)
 				),
 		),

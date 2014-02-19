@@ -110,17 +110,17 @@ class SystemManager extends BaseSystemRestService
 		Sql::setConnection( Pii::pdo() );
 
 		parent::__construct(
-			  array_merge(
-				  array(
-					  'name'        => 'System Configuration Management',
-					  'api_name'    => 'system',
-					  'type'        => 'System',
-					  'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-					  'description' => 'Service for system administration.',
-					  'is_active'   => true,
-				  ),
-				  $settings
-			  )
+			array_merge(
+				array(
+					'name'        => 'System Configuration Management',
+					'api_name'    => 'system',
+					'type'        => 'System',
+					'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+					'description' => 'Service for system administration.',
+					'is_active'   => true,
+				),
+				$settings
+			)
 		);
 	}
 
@@ -160,25 +160,24 @@ class SystemManager extends BaseSystemRestService
 		{
 			if ( PlatformStates::DATABASE_READY != ( $_dbState = static::_validateDatabaseStructure() ) )
 			{
-				//	Really shouldn't ever get here...
-				Log::debug( 'The "Place Where One Should Not Be" has been discovered.' );
-				static::_stateRedirect( $_dbState );
+				//	Something is needed for the database
+				return $_dbState;
 			}
 
 			// Check for at least one system admin user
 			if ( !static::activated() )
 			{
 				Log::debug( 'System administrator required.' );
-				static::_stateRedirect( PlatformStates::ADMIN_REQUIRED );
-//				return PlatformStates::ADMIN_REQUIRED;
+
+				return PlatformStates::ADMIN_REQUIRED;
 			}
 
 			//	Need to check for the default services
 			if ( 0 == Service::model()->count() )
 			{
 				Log::debug( 'Database data (default services) required.' );
-				static::_stateRedirect( PlatformStates::DATA_REQUIRED );
-//				return PlatformStates::DATA_REQUIRED;
+
+				return PlatformStates::DATA_REQUIRED;
 			}
 
 			Pii::setState( 'dsp.init_check_complete', true );
@@ -186,15 +185,15 @@ class SystemManager extends BaseSystemRestService
 		}
 		else
 		{
-			Log::debug( 'Platform state previously validated.' );
+//			Log::debug( 'Platform state previously validated.' );
 		}
 
 		//	And redirect to welcome screen
 		if ( !Pii::guest() && !Fabric::fabricHosted() && !SystemManager::registrationComplete() )
 		{
 			Log::debug( 'Unregistered, non-hosted DSP detected.' );
-			static::_stateRedirect( PlatformStates::WELCOME_REQUIRED );
-//			return PlatformStates::WELCOME_REQUIRED;
+
+			return PlatformStates::WELCOME_REQUIRED;
 		}
 
 		return $_isReady = PlatformStates::READY;
@@ -459,8 +458,8 @@ SQL;
 				$_firstName = Pii::getState( 'first_name', Option::get( $attributes, 'firstName' ) );
 				$_lastName = Pii::getState( 'last_name', Option::get( $attributes, 'lastName' ) );
 				$_displayName = Pii::getState(
-								   'display_name',
-								   Option::get( $attributes, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
+					'display_name',
+					Option::get( $attributes, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
 				);
 
 				$_fields = array(
@@ -516,18 +515,18 @@ SQL;
 
 		//	Create services
 		static::_createSystemData(
-			  'service',
-			  Option::get( $_jsonSchema, static::SYSTEM_TABLE_PREFIX . 'service' ),
-			  'DreamFactory\\Platform\\Yii\\Models\\Service',
-			  'api_name'
+			'service',
+			Option::get( $_jsonSchema, static::SYSTEM_TABLE_PREFIX . 'service' ),
+			'DreamFactory\\Platform\\Yii\\Models\\Service',
+			'api_name'
 		);
 
 		//	Create templates
 		static::_createSystemData(
-			  'email_template',
-			  Option::get( $_jsonSchema, static::SYSTEM_TABLE_PREFIX . 'email_template' ),
-			  'DreamFactory\\Platform\\Yii\\Models\\EmailTemplate',
-			  'name'
+			'email_template',
+			Option::get( $_jsonSchema, static::SYSTEM_TABLE_PREFIX . 'email_template' ),
+			'DreamFactory\\Platform\\Yii\\Models\\EmailTemplate',
+			'name'
 		);
 	}
 
@@ -634,11 +633,11 @@ SQL;
 	public static function getDspVersions()
 	{
 		$_results = Curl::get(
-						static::VERSION_TAGS_URL,
-						array(),
-						array(
-							CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' )
-						)
+			static::VERSION_TAGS_URL,
+			array(),
+			array(
+				CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' )
+			)
 		);
 
 		if ( HttpResponse::Ok != ( $_code = Curl::getLastHttpCode() ) )
@@ -855,14 +854,14 @@ SQL;
 
 		//	Call the API
 		return Drupal::registerPlatform(
-					 $user,
-					 $_paths,
-					 array(
-						 'field_first_name'           => $user->first_name,
-						 'field_last_name'            => $user->last_name,
-						 'field_installation_type'    => InstallationTypes::determineType( true ),
-						 'field_registration_skipped' => ( $skipped ? 1 : 0 ),
-					 )
+			$user,
+			$_paths,
+			array(
+				'field_first_name'           => $user->first_name,
+				'field_last_name'            => $user->last_name,
+				'field_installation_type'    => InstallationTypes::determineType( true ),
+				'field_registration_skipped' => ( $skipped ? 1 : 0 ),
+			)
 		);
 	}
 
@@ -875,7 +874,7 @@ SQL;
 	 */
 	protected function _listResources()
 	{
-		//@todo Need to supply actual data from service table.
+		//@todo Need to supply actual data from service table/config file. Maybe swagger?
 		return array(
 			'resource' => array(
 				array( 'name' => 'app', 'label' => 'Application' ),
@@ -884,6 +883,7 @@ SQL;
 				array( 'name' => 'custom', 'label' => 'Custom Settings' ),
 				array( 'name' => 'device', 'label' => 'Device' ),
 				array( 'name' => 'email_template', 'label' => 'Email Template' ),
+				array( 'name' => 'event', 'label' => 'Event' ),
 				array( 'name' => 'provider', 'label' => 'Provider' ),
 				array( 'name' => 'provider_user', 'label' => 'Provider User' ),
 				array( 'name' => 'role', 'label' => 'Role' ),
@@ -912,9 +912,6 @@ SQL;
 
 		if ( 'custom' == ( $_resource = $this->_resource ) )
 		{
-//			$_customSettings = new CustomSettings( $this, $this->_resourceArray );
-//
-//			return $_customSettings->processRequest( null, $this->_action );
 			$_resource .= '_settings';
 		}
 
@@ -935,7 +932,7 @@ SQL;
 		//@todo should we consider a resource map somewhere in the config for things like this? And dev overriding?
 		if ( 'custom' == $resource )
 		{
-			$resource = 'custom_settings';
+			$resource .= '_settings';
 		}
 
 		return ResourceStore::model( $resource );
@@ -999,7 +996,7 @@ SQL;
 		try
 		{
 			$_admins = Sql::scalar(
-						  <<<SQL
+				<<<SQL
 SELECT
 	COUNT(id)
 FROM
@@ -1032,8 +1029,8 @@ SQL
 			/** @var User $_user */
 			$_user = $user
 				? : User::model()->find(
-						'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
-						array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
+					'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
+					array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
 				);
 
 			if ( !empty( $_user ) )
@@ -1105,8 +1102,8 @@ SQL
 		}
 
 		Pii::setState(
-		   'dsp.json_schema',
-		   Storage::freeze( $_schema )
+			'dsp.json_schema',
+			Storage::freeze( $_schema )
 		);
 
 		return $_schema[$_schemaFilePath];
@@ -1138,9 +1135,8 @@ SQL
 		if ( empty( $_tables ) || false === in_array( static::DSP_TABLE_MARKER, $_tables ) )
 		{
 			Log::debug( 'Database required' );
-			static::_stateRedirect( PlatformStates::INIT_REQUIRED );
 
-//			return PlatformStates::INIT_REQUIRED;
+			return PlatformStates::INIT_REQUIRED;
 		}
 
 		// check for any missing necessary tables
@@ -1154,9 +1150,7 @@ SQL
 			{
 				Log::debug( 'Database schema required' );
 
-				static::_stateRedirect( PlatformStates::SCHEMA_REQUIRED );
-
-//				return PlatformStates::SCHEMA_REQUIRED;
+				return PlatformStates::SCHEMA_REQUIRED;
 			}
 		}
 
@@ -1167,13 +1161,11 @@ SQL
 		if ( static::doesDbVersionRequireUpgrade( $_currentVersion, $_schemaVersion ) )
 		{
 			Log::debug(
-			   'Database schema upgrade required.',
-			   array( 'from_version' => $_currentVersion, 'to_version' => $_schemaVersion )
+				'Database schema upgrade required.',
+				array( 'from_version' => $_currentVersion, 'to_version' => $_schemaVersion )
 			);
 
-			static::_stateRedirect( PlatformStates::SCHEMA_REQUIRED );
-
-//			return PlatformStates::SCHEMA_REQUIRED;
+			return PlatformStates::SCHEMA_REQUIRED;
 		}
 
 		return PlatformStates::DATABASE_READY;
@@ -1211,14 +1203,11 @@ SQL
 				}
 				catch ( \Exception $_ex )
 				{
-					throw new InternalServerErrorException(
-						'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(),
-						array(
-							'data'          => $data,
-							'bogus_row'     => $_row,
-							'unique_column' => $uniqueColumn
-						)
-					);
+					throw new InternalServerErrorException( 'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(), array(
+						'data'          => $data,
+						'bogus_row'     => $_row,
+						'unique_column' => $uniqueColumn
+					) );
 				}
 			}
 		}
@@ -1231,7 +1220,7 @@ SQL
 	 *
 	 * @return void
 	 */
-	protected function _stateRedirect( $action = null )
+	protected static function _stateRedirect( $action = null )
 	{
 		static $_map = array(
 			PlatformStates::INIT_REQUIRED    => 'initSystem',
