@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Yii\Components;
 
 use DreamFactory\Platform\Events\Enums\ApiEvents;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Interfaces\EventPublisherLike;
 use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
@@ -29,12 +30,13 @@ use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * PlatformWebApplication
  */
-class PlatformWebApplication extends \CWebApplication implements EventSubscriberInterface
+class PlatformWebApplication extends \CWebApplication implements EventPublisherLike, EventSubscriberInterface
 {
 	//*************************************************************************
 	//	Constants
@@ -98,6 +100,14 @@ class PlatformWebApplication extends \CWebApplication implements EventSubscriber
 	 * @var array The namespaces that contain models. Used by the resource manager
 	 */
 	protected $_modelNamespaces = array();
+	/**
+	 * @var Request
+	 */
+	protected $_requestObject;
+	/**
+	 * @var  Response
+	 */
+	protected $_responseObject;
 
 	//*************************************************************************
 	//	Methods
@@ -146,33 +156,38 @@ class PlatformWebApplication extends \CWebApplication implements EventSubscriber
 	 */
 	protected function _onBeginRequest( \CEvent $event )
 	{
-		//	Answer an options call...
-		switch ( Option::server( 'REQUEST_METHOD' ) )
-		{
-			case HttpMethod::Options:
-				$_response = new Response();
-				$_response->setStatusCode( HttpResponse::NoContent );
-				$_response->headers->add( array( 'content-type' => 'text/plain' ) );
-				$_response->headers->add( $this->addCorsHeaders( array(), true ) );
-				$_response->send();
-				Pii::end();
-				break;
+		$this->_requestObject = Request::createFromGlobals();
+		$this->_responseObject = new Response();
 
+		switch ( $this->_requestObject->getMethod() )
+		{
 			case HttpMethod::Trace:
+				Log::error( 'HTTP TRACE received!', array( 'server' => $_SERVER, 'request' => $_REQUEST ) );
 				throw new BadRequestException();
-		}
 
-		//	Auto-add the CORS headers...
-		if ( $this->_autoAddHeaders )
-		{
-			$this->addCorsHeaders();
+			case HttpMethod::Options:
+				$this->_responseObject->setStatusCode( HttpResponse::NoContent );
+				$this->_responseObject->headers->add( array( 'content-type' => 'text/plain' ) );
+				$this->_responseObject->headers->add( $this->addCorsHeaders( null, true ) );
+				$this->_responseObject->send();
+				Pii::end();
+
+				return;
+
+			default:
+				//	Auto-add the CORS headers...
+				if ( $this->_autoAddHeaders )
+				{
+					$this->_responseObject->headers->add( $this->addCorsHeaders( null, true ) );
+				}
+				break;
 		}
 
 		//	Load any plug-ins
 		$this->_loadPlugins();
 
 		//	Trigger request event
-		EventManager::trigger( ApiEvents::BEFORE_REQUEST );
+		$this->trigger( ApiEvents::BEFORE_REQUEST );
 	}
 
 	/**
@@ -181,6 +196,12 @@ class PlatformWebApplication extends \CWebApplication implements EventSubscriber
 	protected function _onEndRequest( \CEvent $event )
 	{
 		EventManager::trigger( ApiEvents::AFTER_REQUEST );
+
+		//	Send the response
+		if ( !headers_sent() && $this->_responseObject && !$this->_responseObject->isEmpty() )
+		{
+			$this->_responseObject->send();
+		}
 	}
 
 	/**
@@ -214,7 +235,7 @@ class PlatformWebApplication extends \CWebApplication implements EventSubscriber
 		//	Was an origin header passed? If not, don't do CORS.
 		if ( empty( $_origin ) )
 		{
-			return true;
+			return $returnHeaders ? array() : true;
 		}
 
 		if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
@@ -643,4 +664,5 @@ class PlatformWebApplication extends \CWebApplication implements EventSubscriber
 		);
 	}
 
+	public function trigger()
 }

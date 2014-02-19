@@ -27,11 +27,11 @@ use Kisma\Core\Events\Enums\LifeEvents;
 class ApiEvents extends LifeEvents
 {
 	/**
-	 * @var string Called before the request is dispatched
+	 * @var string Triggered immediately before a request is dispatched to a handler
 	 */
 	const BEFORE_REQUEST = '{api_name}.{action}.before_request';
 	/**
-	 * @var string Called after the dispatch request returns
+	 * @var string Triggered immediately after the dispatched request handler returns
 	 */
 	const AFTER_REQUEST = '{api_name}.{action}.after_request';
 }

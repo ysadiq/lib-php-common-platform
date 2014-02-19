@@ -24,4 +24,5 @@ namespace DreamFactory\Platform\Interfaces;
  */
 interface EventPublisherLike
 {
+
 }
