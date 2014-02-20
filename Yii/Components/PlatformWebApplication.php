@@ -3,7 +3,7 @@
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +19,18 @@
  */
 namespace DreamFactory\Platform\Yii\Components;
 
-use DreamFactory\Platform\Events\Enums\ApiEvents;
+use DreamFactory\Platform\Events\DspEvent;
+use DreamFactory\Platform\Events\Enums\DspEvents;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Interfaces\EventPublisherLike;
 use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
+use Kisma\Core\Events\SeedEvent;
+use Kisma\Core\Interfaces\PublisherLike;
+use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
@@ -36,7 +41,7 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * PlatformWebApplication
  */
-class PlatformWebApplication extends \CWebApplication implements EventPublisherLike, EventSubscriberInterface
+class PlatformWebApplication extends \CWebApplication implements PublisherLike, SubscriberLike, EventSubscriberInterface
 {
 	//*************************************************************************
 	//	Constants
@@ -75,6 +80,7 @@ class PlatformWebApplication extends \CWebApplication implements EventPublisherL
 	 */
 	const DEFAULT_PLUGINS_PATH = '/storage/plugins';
 
+
 	//*************************************************************************
 	//	Members
 	//*************************************************************************
@@ -108,10 +114,69 @@ class PlatformWebApplication extends \CWebApplication implements EventPublisherL
 	 * @var  Response
 	 */
 	protected $_responseObject;
+	/**
+	 * @var bool If true, profiling information is output to the log
+	 */
+	protected static $_profilerEnabled = null;
 
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
+
+	/**
+	 * @param array $config
+	 */
+	public function __construct( $config = null )
+	{
+		static::$_profilerEnabled = static::$_profilerEnabled ? : \Kisma::get( CoreSettings::DEBUG );
+
+		//	Start the full-cycle timer
+		$this->startProfiler();
+
+		parent::__construct( $config );
+	}
+
+	/**
+	 * Destruction
+	 */
+	public function __destruct()
+	{
+		Log::debug( 'DSP [web-app] elapsed time: ' . $this->stopProfiler() );
+	}
+
+	/**
+	 * Start a timer
+	 *
+	 * @return $this
+	 */
+	public function startProfiler()
+	{
+		if ( static::$_profilerEnabled )
+		{
+			\PHP_Timer::start();
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Stop last timer
+	 *
+	 * @param bool $returnTimeString
+	 *
+	 * @return float
+	 */
+	public function stopProfiler( $returnTimeString = true )
+	{
+		$_time = 0;
+
+		if ( static::$_profilerEnabled )
+		{
+			$_time = \PHP_Timer::stop();
+		}
+
+		return $returnTimeString ? \PHP_Timer::secondsToTimeString( $_time ) : $_time;
+	}
 
 	/**
 	 * Initialize
@@ -145,6 +210,35 @@ class PlatformWebApplication extends \CWebApplication implements EventPublisherL
 		//	Setup the request handler and events
 		$this->onBeginRequest = array( $this, '_onBeginRequest' );
 		$this->onEndRequest = array( $this, '_onEndRequest' );
+
+		//	Create our HTTP objects
+		$this->_requestObject = Request::createFromGlobals();
+		$this->_responseObject = Response::create();
+	}
+
+	/**
+	 * Returns an array of event names this subscriber wants to listen to.
+	 *
+	 * The array keys are event names and the value can be:
+	 *
+	 *  * The method name to call (priority defaults to 0)
+	 *  * An array composed of the method name to call and the priority
+	 *  * An array of arrays composed of the method names to call and respective
+	 *    priorities, or 0 if unset
+	 *
+	 * For instance:
+	 *
+	 *  * array('eventName' => 'methodName')
+	 *  * array('eventName' => array('methodName', $priority))
+	 *  * array('eventName' => array(array('methodName1', $priority), array('methodName2'))
+	 *
+	 * @return array The event names to listen to
+	 *
+	 * @api
+	 */
+	public static function getSubscribedEvents()
+	{
+		return array();
 	}
 
 	/**
@@ -156,13 +250,19 @@ class PlatformWebApplication extends \CWebApplication implements EventPublisherL
 	 */
 	protected function _onBeginRequest( \CEvent $event )
 	{
-		$this->_requestObject = Request::createFromGlobals();
-		$this->_responseObject = new Response();
+		//	Start the request-only profile
+		$this->startProfiler();
 
 		switch ( $this->_requestObject->getMethod() )
 		{
 			case HttpMethod::Trace:
-				Log::error( 'HTTP TRACE received!', array( 'server' => $_SERVER, 'request' => $_REQUEST ) );
+				Log::error(
+				   'HTTP TRACE received!',
+				   array(
+					   'server'  => $this->_requestObject->server->all(),
+					   'request' => $this->_requestObject->request->all()
+				   )
+				);
 				throw new BadRequestException();
 
 			case HttpMethod::Options:
@@ -170,7 +270,7 @@ class PlatformWebApplication extends \CWebApplication implements EventPublisherL
 				$this->_responseObject->headers->add( array( 'content-type' => 'text/plain' ) );
 				$this->_responseObject->headers->add( $this->addCorsHeaders( null, true ) );
 				$this->_responseObject->send();
-				Pii::end();
+				Pii::end( HttpResponse::NoContent );
 
 				return;
 
@@ -187,7 +287,7 @@ class PlatformWebApplication extends \CWebApplication implements EventPublisherL
 		$this->_loadPlugins();
 
 		//	Trigger request event
-		$this->trigger( ApiEvents::BEFORE_REQUEST );
+		$this->trigger( DspEvents::BEFORE_REQUEST );
 	}
 
 	/**
@@ -195,12 +295,20 @@ class PlatformWebApplication extends \CWebApplication implements EventPublisherL
 	 */
 	protected function _onEndRequest( \CEvent $event )
 	{
-		EventManager::trigger( ApiEvents::AFTER_REQUEST );
+		$this->trigger( DspEvents::AFTER_REQUEST );
 
 		//	Send the response
-		if ( !headers_sent() && $this->_responseObject && !$this->_responseObject->isEmpty() )
+		if ( !headers_sent() && $this->_responseObject )
 		{
-			$this->_responseObject->send();
+			if ( strlen( $this->_responseObject->getContent() ) )
+			{
+				$this->_responseObject->send();
+			}
+		}
+
+		if ( static::$_profilerEnabled )
+		{
+			Log::debug( 'DSP [request] elapsed time: ' . $this->stopProfiler() );
 		}
 	}
 
@@ -226,17 +334,16 @@ class PlatformWebApplication extends \CWebApplication implements EventPublisherL
 			return true;
 		}
 
-		$_requestSource = $_SERVER['SERVER_NAME'];
 		$_origin = trim( Option::server( 'HTTP_ORIGIN' ) );
-//		Log::debug( 'The received origin: [' . $_origin . ']' );
-
-		$_originUri = null;
 
 		//	Was an origin header passed? If not, don't do CORS.
 		if ( empty( $_origin ) )
 		{
 			return $returnHeaders ? array() : true;
 		}
+
+		$_originUri = null;
+		$_requestSource = $_SERVER['SERVER_NAME'];
 
 		if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
 		{
@@ -260,22 +367,19 @@ class PlatformWebApplication extends \CWebApplication implements EventPublisherL
 				 *
 				 * @link http://www.youtube.com/watch?v=VRaoHi_xcWk
 				 */
-				header( 'HTTP/1.1 403 Forbidden' );
-
-				Pii::end();
+				$this->_responseObject->setStatusCode( HttpResponse::Forbidden );
+				$this->_responseObject->send();
+				Pii::end( HttpResponse::Forbidden );
 
 				//	If end fails for some unknown impossible reason...
 				return false;
 			}
-
-//			Log::debug( 'Committing origin to the CORS cache > Source: ' . $_requestSource . ' > Origin: ' . $_originUri );
-			$_cache[$_key] = $_originUri;
-			$_cacheVerbs[$_key] = $_allowedMethods;
 		}
 		else
 		{
 			$_originUri = $_cache[$_key];
-			$_allowedMethods = $_cacheVerbs[$_key];
+			$_allowedMethods = Option::getDeep( $_cacheVerbs, $_key, 'allowed_methods' );
+			$_headers = Option::getDeep( $_cacheVerbs, $_key, 'headers' );
 		}
 
 		if ( !empty( $_originUri ) )
@@ -297,6 +401,13 @@ class PlatformWebApplication extends \CWebApplication implements EventPublisherL
 				$_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '/^([\w_-]+\.)*' . $_requestSource . '$/', $_originUri );
 			}
 		}
+
+		//	Store in cache...
+		$_cache[$_key] = $_originUri;
+		$_cacheVerbs[$_key] = array(
+			'allowed_methods' => $_allowedMethods,
+			'headers'         => $_headers
+		);
 
 		if ( $returnHeaders )
 		{
@@ -354,7 +465,7 @@ class PlatformWebApplication extends \CWebApplication implements EventPublisherL
 			return false;
 		}
 
-		Log::debug( 'Plug-ins loaded.' );
+		$this->trigger( DspEvents::PLUGINS_LOADED );
 
 		return true;
 	}
@@ -638,31 +749,99 @@ class PlatformWebApplication extends \CWebApplication implements EventPublisherL
 	}
 
 	/**
-	 * Returns an array of event names this subscriber wants to listen to.
+	 * @param string    $eventName
+	 * @param SeedEvent $event
 	 *
-	 * The array keys are event names and the value can be:
-	 *
-	 *  * The method name to call (priority defaults to 0)
-	 *  * An array composed of the method name to call and the priority
-	 *  * An array of arrays composed of the method names to call and respective
-	 *    priorities, or 0 if unset
-	 *
-	 * For instance:
-	 *
-	 *  * array('eventName' => 'methodName')
-	 *  * array('eventName' => array('methodName', $priority))
-	 *  * array('eventName' => array(array('methodName1', $priority), array('methodName2'))
-	 *
-	 * @return array The event names to listen to
-	 *
-	 * @api
+	 * @return DspEvent
 	 */
-	public static function getSubscribedEvents()
+	public function trigger( $eventName, $event = null )
 	{
-		return array(
-			'dsp.request_received' => array()
-		);
+		$_event = $event ? : new DspEvent( $this, $this->_requestObject, $this->_responseObject );
+
+		return EventManager::trigger( $eventName, $_event );
 	}
 
-	public function trigger()
+	/**
+	 * Adds an event listener that listens on the specified events.
+	 *
+	 * @param string   $eventName            The event to listen on
+	 * @param callable $listener             The listener
+	 * @param integer  $priority             The higher this value, the earlier an event
+	 *                                       listener will be triggered in the chain (defaults to 0)
+	 *
+	 * @return void
+	 */
+	public function on( $eventName, $listener, $priority = 0 )
+	{
+		EventManager::on( $eventName, $listener, $priority );
+	}
+
+	/**
+	 * Turn off/unbind/remove $listener from an event
+	 *
+	 * @param string   $eventName
+	 * @param callable $listener
+	 *
+	 * @return void
+	 */
+	public function off( $eventName, $listener )
+	{
+		EventManager::off( $eventName, $listener );
+	}
+
+	/**
+	 * @param \Symfony\Component\HttpFoundation\Request $requestObject
+	 *
+	 * @return PlatformWebApplication
+	 */
+	public function setRequestObject( $requestObject )
+	{
+		$this->_requestObject = $requestObject;
+
+		return $this;
+	}
+
+	/**
+	 * @return \Symfony\Component\HttpFoundation\Request
+	 */
+	public function getRequestObject()
+	{
+		return $this->_requestObject;
+	}
+
+	/**
+	 * @param \Symfony\Component\HttpFoundation\Response $responseObject
+	 *
+	 * @return PlatformWebApplication
+	 */
+	public function setResponseObject( $responseObject )
+	{
+		$this->_responseObject = $responseObject;
+
+		return $this;
+	}
+
+	/**
+	 * @return \Symfony\Component\HttpFoundation\Response
+	 */
+	public function getResponseObject()
+	{
+		return $this->_responseObject;
+	}
+
+	/**
+	 * @param boolean $profilerEnabled
+	 */
+	public static function setProfilerEnabled( $profilerEnabled )
+	{
+		static::$_profilerEnabled = $profilerEnabled;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public static function getProfilerEnabled()
+	{
+		return static::$_profilerEnabled;
+	}
 }

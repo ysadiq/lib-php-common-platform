@@ -19,12 +19,14 @@
  */
 namespace DreamFactory\Platform\Events;
 
+use DreamFactory\Platform\Yii\Components\PlatformConsoleApplication;
+use DreamFactory\Platform\Yii\Components\PlatformWebApplication;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Contains additional information about the REST service call being made
  */
-class RestServiceEvent extends PlatformEvent
+class DspEvent extends PlatformEvent
 {
 	//*************************************************************************
 	//	Constants
@@ -33,53 +35,51 @@ class RestServiceEvent extends PlatformEvent
 	/**
 	 * @type string The base of our event tree
 	 */
-	const EVENT_NAMESPACE = '{api_name}';
+	const EVENT_NAMESPACE = 'dsp';
 
 	//**************************************************************************
 	//* Members
 	//**************************************************************************
 
 	/**
-	 * @var string The service called
+	 * @var PlatformWebApplication|PlatformConsoleApplication The application
 	 */
-	protected $_apiName = null;
-	/**
-	 * @var string The requested resource
-	 */
-	protected $_resource = false;
+	protected $_app = null;
 
 	//**************************************************************************
 	//* Methods
 	//**************************************************************************
 
 	/**
-	 * @param string                                    $apiName
-	 * @param string                                    $resource
-	 * @param \Symfony\Component\HttpFoundation\Request $request
-	 * @param string                                    $response
+	 * @param PlatformWebApplication|PlatformConsoleApplication $app
+	 * @param \Symfony\Component\HttpFoundation\Request         $request
+	 * @param string                                            $response
 	 */
-	public function __construct( $apiName, $resource = null, Request $request = null, $response = null )
+	public function __construct( $app, Request $request = null, $response = null )
 	{
 		parent::__construct( $request, $response );
 
-		$this->_apiName = $apiName;
-		$this->_resource = $resource;
+		$this->_app = $app;
 	}
 
 	/**
-	 * @return string
+	 * @param \DreamFactory\Platform\Yii\Components\PlatformConsoleApplication|\DreamFactory\Platform\Yii\Components\PlatformWebApplication $app
+	 *
+	 * @return DspEvent
 	 */
-	public function getApiName()
+	public function setApp( $app )
 	{
-		return $this->_apiName;
+		$this->_app = $app;
+
+		return $this;
 	}
 
 	/**
-	 * @return string
+	 * @return \DreamFactory\Platform\Yii\Components\PlatformConsoleApplication|\DreamFactory\Platform\Yii\Components\PlatformWebApplication
 	 */
-	public function getResource()
+	public function getApp()
 	{
-		return $this->_resource;
+		return $this->_app;
 	}
 
 }

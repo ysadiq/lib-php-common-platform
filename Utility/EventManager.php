@@ -22,6 +22,7 @@ use DreamFactory\Platform\Events\PlatformEvent;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -62,9 +63,9 @@ class EventManager
 	 */
 	public static function trigger( $eventName, PlatformEvent $event = null )
 	{
-		return static::getDispatcher()->dispatch(
-			static::_normalizeEventName( $eventName ),
-			$event
+		return static::_getDispatcher()->dispatch(
+					 static::_normalizeEventName( $eventName ),
+					 $event
 		);
 	}
 
@@ -80,10 +81,10 @@ class EventManager
 	 */
 	public static function on( $eventName, $listener, $priority = 0 )
 	{
-		static::getDispatcher()->addListener(
-			static::_normalizeEventName( $eventName ),
-			$listener,
-			$priority
+		static::_getDispatcher()->addListener(
+			  static::_normalizeEventName( $eventName ),
+			  $listener,
+			  $priority
 		);
 	}
 
@@ -97,9 +98,9 @@ class EventManager
 	 */
 	public static function off( $eventName, $listener )
 	{
-		static::getDispatcher()->removeListener(
-			static::_normalizeEventName( $eventName ),
-			$listener
+		static::_getDispatcher()->removeListener(
+			  static::_normalizeEventName( $eventName ),
+			  $listener
 		);
 	}
 
@@ -121,24 +122,42 @@ class EventManager
 		}
 
 		$_request = $request ? : Request::createFromGlobals();
-		$_replacements = get_class_vars( get_class( $_request ) );
 
-		foreach ( $_replacements as $_key )
+		foreach ( $_request->request as $_key => $_value )
 		{
-			$_tag = str_ireplace(
-				'{' . $_key . '}',
-				$_request->get( $_key ),
-				$_tag
-			);
+			if ( is_scalar( $_value ) )
+			{
+				$_tag = str_ireplace(
+					'{' . $_key . '}',
+					$_value,
+					$_tag
+				);
+			}
 		}
 
 		return $_cache[$eventName] = $_tag;
 	}
 
 	/**
+	 * @param EventSubscriberInterface $subscriber
+	 */
+	public static function addSubscriber( EventSubscriberInterface $subscriber )
+	{
+		static::_getDispatcher()->addSubscriber( $subscriber );
+	}
+
+	/**
+	 * @param EventSubscriberInterface $subscriber
+	 */
+	public static function removeSubscriber( EventSubscriberInterface $subscriber )
+	{
+		static::_getDispatcher()->removeSubscriber( $subscriber );
+	}
+
+	/**
 	 * @return \Symfony\Component\EventDispatcher\EventDispatcher
 	 */
-	public static function getDispatcher()
+	protected static function _getDispatcher()
 	{
 		if ( empty( static::$_dispatcher ) )
 		{

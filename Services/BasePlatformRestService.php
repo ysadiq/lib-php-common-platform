@@ -17,7 +17,6 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\EventPlatform\Utility\EventManager;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
@@ -31,7 +30,9 @@ use DreamFactory\Platform\Interfaces\TransformerLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestResponse;
+use DreamFactory\Platform\Yii\Components\PlatformWebApplication;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
@@ -169,9 +170,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	public function processRequest( $resource = null, $action = self::Get, $output_format = null )
 	{
-		if ( $this->_timer )
+		//	Start a timer...
+		if ( PlatformWebApplication::getProfilerEnabled() )
 		{
-			$this->_timer->start();
+			/** @noinspection PhpUndefinedMethodInspection */
+			Pii::app()->startProfiler();
 		}
 
 		$this->_setAction( $action );
@@ -199,12 +202,13 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 		$this->_postProcess();
 
-		if ( $this->_timer )
+		if ( PlatformWebApplication::getProfilerEnabled() )
 		{
-			$this->_timer->stop();
-
-			Log::debug( '*profile* ' . $action . ' ' . $this->_requestObject->getRequestUri() . ': ' . $this->_timer->timeSinceStartOfRequest() );
-			//	Profile information does not include responding times...
+			/** @noinspection PhpUndefinedMethodInspection */
+			Log::debug(
+			   '*profile* ' . $action . ' ' . $this->_requestObject->getRequestUri() . ': ' .
+			   Pii::app()->stopProfiler()
+			);
 		}
 
 		return $this->_respond();
@@ -405,13 +409,13 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	{
 		// 	Determine application if any
 		$_appName = $this->_requestObject->query->get(
-			'app_name',
-			//	No app_name, look for headers...
-			$this->_requestObject->server->get(
-				'HTTP_X_DREAMFACTORY_APPLICATION_NAME',
-				$this->_requestObject->server->get( 'HTTP_X_APPLICATION_NAME' )
-			),
-			FILTER_SANITIZE_STRING
+												'app_name',
+													//	No app_name, look for headers...
+												$this->_requestObject->server->get(
+																			 'HTTP_X_DREAMFACTORY_APPLICATION_NAME',
+																			 $this->_requestObject->server->get( 'HTTP_X_APPLICATION_NAME' )
+												),
+												FILTER_SANITIZE_STRING
 		);
 
 		//	Still empty?
@@ -559,9 +563,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function trigger( $eventName, $event = null, $priority = 0 )
 	{
 		return parent::trigger(
-			$eventName,
-			$event ? : new RestServiceEvent( $this->_apiName, $this->_resource, $this->_requestObject, $this->_responseObject ),
-			$priority
+					 $eventName,
+					 $event ? : new RestServiceEvent( $this->_apiName, $this->_resource, $this->_requestObject, $this->_responseObject ),
+					 $priority
 		);
 	}
 
