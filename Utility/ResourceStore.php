@@ -840,7 +840,7 @@ class ResourceStore implements UtilityLike
 
 		if ( !$_loader )
 		{
-			$_loader = \Kisma::get( 'app.autoloader' );
+			$_loader = \Kisma::getAutoLoader();
 		};
 
 		if ( true === $resourceName && false === $returnResource )

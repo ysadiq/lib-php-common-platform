@@ -104,17 +104,20 @@ class User extends BasePlatformSystemModel
 	 */
 	public function behaviors()
 	{
+		//	Default salt to database password if the config is low-sodium
+		$_salt = Pii::getParam( 'dsp.salts.secure_json', $this->getDb()->password );
+
 		return array_merge(
 			parent::behaviors(),
 			array(
-				 //	Secure JSON
-				 'base_platform_model.secure_json' => array(
-					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'               => $this->getDb()->password,
-					 'insecureAttributes' => array(
-						 'user_data',
-					 )
-				 ),
+				//	Secure JSON
+				'base_platform_model.secure_json' => array(
+					'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					'salt'               => $_salt,
+					'insecureAttributes' => array(
+						'user_data',
+					)
+				),
 			)
 		);
 	}
@@ -328,26 +331,26 @@ class User extends BasePlatformSystemModel
 
 		$_myColumns = array_merge(
 			array(
-				 'display_name',
-				 'first_name',
-				 'last_name',
-				 'email',
-				 'phone',
-				 'confirmed',
-				 'is_active',
-				 'is_sys_admin',
-				 'role_id',
-				 'default_app_id',
-				 'user_source',
-				 'user_data',
+				'display_name',
+				'first_name',
+				'last_name',
+				'email',
+				'phone',
+				'confirmed',
+				'is_active',
+				'is_sys_admin',
+				'role_id',
+				'default_app_id',
+				'user_source',
+				'user_data',
 			),
 			$columns
 		);
 
 		return parent::getRetrievableAttributes(
-			$requested,
-			$_myColumns,
-			$hidden
+					 $requested,
+					 $_myColumns,
+					 $hidden
 		);
 	}
 
@@ -380,8 +383,8 @@ class User extends BasePlatformSystemModel
 	public static function authenticate( $userName, $password )
 	{
 		$_user = static::model()
-			->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
-			->findByAttributes( array( 'email' => $userName ) );
+					   ->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
+					   ->findByAttributes( array( 'email' => $userName ) );
 
 		if ( empty( $_user ) )
 		{
