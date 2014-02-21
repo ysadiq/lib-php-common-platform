@@ -27,9 +27,9 @@
 	"require":           {
 		"php":                             ">=5.3.10",
 		"kisma/kisma":                     "~0.2.22",
-		"dreamfactory/lib-php-common":     "~1.1.4",
-		"dreamfactory/lib-php-common-yii": "~1.1.6@dev",
-		"dreamfactory/oasys":              "~0.4.5",
+		"dreamfactory/lib-php-common":     "*@dev",
+		"dreamfactory/lib-php-common-yii": "*@dev",
+		"dreamfactory/oasys":              "~0.4.5@dev",
 		"dreamfactory/javascript-sdk":     "1.*",
 		"swiftmailer/swiftmailer":         "4.3.*",
 		"aws/aws-sdk-php":                 "2.4.*",
@@ -39,7 +39,7 @@
 		"dreamfactory/azure-sdk-for-php":  "~0.3.1"
 	},
 	"require-dev":       {
-		"phpunit/phpunit":              "@stable",
+		"phpunit/phpunit":              "~3.7@stable",
 		"phpunit/phpunit-mock-objects": "@stable",
 		"phpunit/phpunit-selenium":     "@stable",
 		"phpunit/phpunit-story":        "@stable",
