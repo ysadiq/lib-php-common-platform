@@ -28,7 +28,7 @@
 		"php":                             ">=5.3.10",
 		"kisma/kisma":                     "~0.2.22",
 		"dreamfactory/lib-php-common":     "~1.1.4",
-		"dreamfactory/lib-php-common-yii": "~1.1.5",
+		"dreamfactory/lib-php-common-yii": "~1.1.6@dev",
 		"dreamfactory/oasys":              "~0.4.5",
 		"dreamfactory/javascript-sdk":     "1.*",
 		"swiftmailer/swiftmailer":         "4.3.*",
