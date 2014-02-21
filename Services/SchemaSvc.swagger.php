@@ -396,237 +396,235 @@ $_base['apis'] = array(
 	),
 );
 $_models = array(
-	array(
-		'Tables'        =>
-			array(
-				'id'         => 'Tables',
-				'properties' =>
-					array(
-						'field' =>
-							array(
-								'type'        => 'Array',
-								'description' => 'An array of table definitions.',
-								'items'       =>
-									array(
-										'$ref' => 'TableSchema',
-									),
-							),
-					),
-			),
-		'TableSchema'   =>
-			array(
-				'id'         => 'TableSchema',
-				'properties' =>
-					array(
-						'name'        =>
-							array(
-								'type'        => 'string',
-								'description' => 'Identifier/Name for the table.',
-							),
-						'label'       =>
-							array(
-								'type'        => 'string',
-								'description' => 'Displayable singular name for the table.',
-							),
-						'plural'      =>
-							array(
-								'type'        => 'string',
-								'description' => 'Displayable plural name for the table.',
-							),
-						'primary_key' =>
-							array(
-								'type'        => 'string',
-								'description' => 'Field(s), if any, that represent the primary key of each record.',
-							),
-						'name_field'  =>
-							array(
-								'type'        => 'string',
-								'description' => 'Field(s), if any, that represent the name of each record.',
-							),
-						'field'       =>
-							array(
-								'type'        => 'Array',
-								'description' => 'An array of available fields in each record.',
-								'items'       =>
-									array(
-										'$ref' => 'FieldSchema',
-									),
-							),
-						'related'     =>
-							array(
-								'type'        => 'Array',
-								'description' => 'An array of available relationships to other tables.',
-								'items'       =>
-									array(
-										'$ref' => 'RelatedSchema',
-									),
-							),
-					),
-			),
-		'Fields'        =>
-			array(
-				'id'         => 'Fields',
-				'properties' =>
-					array(
-						'field' =>
-							array(
-								'type'        => 'Array',
-								'description' => 'An array of field definitions.',
-								'items'       =>
-									array(
-										'$ref' => 'FieldSchema',
-									),
-							),
-					),
-			),
-		'FieldSchema'   =>
-			array(
-				'id'         => 'FieldSchema',
-				'properties' =>
-					array(
-						'name'               =>
-							array(
-								'type'        => 'string',
-								'description' => 'The API name of the field.',
-							),
-						'label'              =>
-							array(
-								'type'        => 'string',
-								'description' => 'The displayable label for the field.',
-							),
-						'type'               =>
-							array(
-								'type'        => 'string',
-								'description' => 'The DSP abstract data type for this field.',
-							),
-						'db_type'            =>
-							array(
-								'type'        => 'string',
-								'description' => 'The native database type used for this field.',
-							),
-						'length'             =>
-							array(
-								'type'        => 'integer',
-								'description' => 'The maximum length allowed (in characters for string, displayed for numbers).',
-							),
-						'precision'          =>
-							array(
-								'type'        => 'integer',
-								'description' => 'Total number of places for numbers.',
-							),
-						'scale'              =>
-							array(
-								'type'        => 'integer',
-								'description' => 'Number of decimal places allowed for numbers.',
-							),
-						'default'            =>
-							array(
-								'type'        => 'string',
-								'description' => 'Default value for this field.',
-							),
-						'required'           =>
-							array(
-								'type'        => 'boolean',
-								'description' => 'Is a value required for record creation.',
-							),
-						'allow_null'         =>
-							array(
-								'type'        => 'boolean',
-								'description' => 'Is null allowed as a value.',
-							),
-						'fixed_length'       =>
-							array(
-								'type'        => 'boolean',
-								'description' => 'Is the length fixed (not variable).',
-							),
-						'supports_multibyte' =>
-							array(
-								'type'        => 'boolean',
-								'description' => 'Does the data type support multibyte characters.',
-							),
-						'auto_increment'     =>
-							array(
-								'type'        => 'boolean',
-								'description' => 'Does the integer field value increment upon new record creation.',
-							),
-						'is_primary_key'     =>
-							array(
-								'type'        => 'boolean',
-								'description' => 'Is this field used as/part of the primary key.',
-							),
-						'is_foreign_key'     =>
-							array(
-								'type'        => 'boolean',
-								'description' => 'Is this field used as a foreign key.',
-							),
-						'ref_table'          =>
-							array(
-								'type'        => 'string',
-								'description' => 'For foreign keys, the referenced table name.',
-							),
-						'ref_fields'         =>
-							array(
-								'type'        => 'string',
-								'description' => 'For foreign keys, the referenced table field name.',
-							),
-						'validation'         =>
-							array(
-								'type'        => 'Array',
-								'description' => 'validations to be performed on this field.',
-								'items'       =>
-									array(
-										'type' => 'string',
-									),
-							),
-						'values'             =>
-							array(
-								'type'        => 'Array',
-								'description' => 'Selectable string values for picklist validation.',
-								'items'       =>
-									array(
-										'type' => 'string',
-									),
-							),
-					),
-			),
-		'RelatedSchema' =>
-			array(
-				'id'         => 'RelatedSchema',
-				'properties' =>
-					array(
-						'name'      =>
-							array(
-								'type'        => 'string',
-								'description' => 'Name of the relationship.',
-							),
-						'type'      =>
-							array(
-								'type'        => 'string',
-								'description' => 'Relationship type - belongs_to, has_many, many_many.',
-							),
-						'ref_table' =>
-							array(
-								'type'        => 'string',
-								'description' => 'The table name that is referenced by the relationship.',
-							),
-						'ref_field' =>
-							array(
-								'type'        => 'string',
-								'description' => 'The field name that is referenced by the relationship.',
-							),
-						'join'      =>
-							array(
-								'type'        => 'string',
-								'description' => 'The intermediate joining table used for many_many relationships.',
-							),
-						'field'     =>
-							array(
-								'type'        => 'string',
-								'description' => 'The current table field that is used in the relationship.',
-							),
-					),
-			),
-	),
+	'Tables'        =>
+		array(
+			'id'         => 'Tables',
+			'properties' =>
+				array(
+					'field' =>
+						array(
+							'type'        => 'Array',
+							'description' => 'An array of table definitions.',
+							'items'       =>
+								array(
+									'$ref' => 'TableSchema',
+								),
+						),
+				),
+		),
+	'TableSchema'   =>
+		array(
+			'id'         => 'TableSchema',
+			'properties' =>
+				array(
+					'name'        =>
+						array(
+							'type'        => 'string',
+							'description' => 'Identifier/Name for the table.',
+						),
+					'label'       =>
+						array(
+							'type'        => 'string',
+							'description' => 'Displayable singular name for the table.',
+						),
+					'plural'      =>
+						array(
+							'type'        => 'string',
+							'description' => 'Displayable plural name for the table.',
+						),
+					'primary_key' =>
+						array(
+							'type'        => 'string',
+							'description' => 'Field(s), if any, that represent the primary key of each record.',
+						),
+					'name_field'  =>
+						array(
+							'type'        => 'string',
+							'description' => 'Field(s), if any, that represent the name of each record.',
+						),
+					'field'       =>
+						array(
+							'type'        => 'Array',
+							'description' => 'An array of available fields in each record.',
+							'items'       =>
+								array(
+									'$ref' => 'FieldSchema',
+								),
+						),
+					'related'     =>
+						array(
+							'type'        => 'Array',
+							'description' => 'An array of available relationships to other tables.',
+							'items'       =>
+								array(
+									'$ref' => 'RelatedSchema',
+								),
+						),
+				),
+		),
+	'Fields'        =>
+		array(
+			'id'         => 'Fields',
+			'properties' =>
+				array(
+					'field' =>
+						array(
+							'type'        => 'Array',
+							'description' => 'An array of field definitions.',
+							'items'       =>
+								array(
+									'$ref' => 'FieldSchema',
+								),
+						),
+				),
+		),
+	'FieldSchema'   =>
+		array(
+			'id'         => 'FieldSchema',
+			'properties' =>
+				array(
+					'name'               =>
+						array(
+							'type'        => 'string',
+							'description' => 'The API name of the field.',
+						),
+					'label'              =>
+						array(
+							'type'        => 'string',
+							'description' => 'The displayable label for the field.',
+						),
+					'type'               =>
+						array(
+							'type'        => 'string',
+							'description' => 'The DSP abstract data type for this field.',
+						),
+					'db_type'            =>
+						array(
+							'type'        => 'string',
+							'description' => 'The native database type used for this field.',
+						),
+					'length'             =>
+						array(
+							'type'        => 'integer',
+							'description' => 'The maximum length allowed (in characters for string, displayed for numbers).',
+						),
+					'precision'          =>
+						array(
+							'type'        => 'integer',
+							'description' => 'Total number of places for numbers.',
+						),
+					'scale'              =>
+						array(
+							'type'        => 'integer',
+							'description' => 'Number of decimal places allowed for numbers.',
+						),
+					'default_value'            =>
+						array(
+							'type'        => 'string',
+							'description' => 'Default value for this field.',
+						),
+					'required'           =>
+						array(
+							'type'        => 'boolean',
+							'description' => 'Is a value required for record creation.',
+						),
+					'allow_null'         =>
+						array(
+							'type'        => 'boolean',
+							'description' => 'Is null allowed as a value.',
+						),
+					'fixed_length'       =>
+						array(
+							'type'        => 'boolean',
+							'description' => 'Is the length fixed (not variable).',
+						),
+					'supports_multibyte' =>
+						array(
+							'type'        => 'boolean',
+							'description' => 'Does the data type support multibyte characters.',
+						),
+					'auto_increment'     =>
+						array(
+							'type'        => 'boolean',
+							'description' => 'Does the integer field value increment upon new record creation.',
+						),
+					'is_primary_key'     =>
+						array(
+							'type'        => 'boolean',
+							'description' => 'Is this field used as/part of the primary key.',
+						),
+					'is_foreign_key'     =>
+						array(
+							'type'        => 'boolean',
+							'description' => 'Is this field used as a foreign key.',
+						),
+					'ref_table'          =>
+						array(
+							'type'        => 'string',
+							'description' => 'For foreign keys, the referenced table name.',
+						),
+					'ref_fields'         =>
+						array(
+							'type'        => 'string',
+							'description' => 'For foreign keys, the referenced table field name.',
+						),
+					'validation'         =>
+						array(
+							'type'        => 'Array',
+							'description' => 'validations to be performed on this field.',
+							'items'       =>
+								array(
+									'type' => 'string',
+								),
+						),
+					'values'             =>
+						array(
+							'type'        => 'Array',
+							'description' => 'Selectable string values for picklist validation.',
+							'items'       =>
+								array(
+									'type' => 'string',
+								),
+						),
+				),
+		),
+	'RelatedSchema' =>
+		array(
+			'id'         => 'RelatedSchema',
+			'properties' =>
+				array(
+					'name'      =>
+						array(
+							'type'        => 'string',
+							'description' => 'Name of the relationship.',
+						),
+					'type'      =>
+						array(
+							'type'        => 'string',
+							'description' => 'Relationship type - belongs_to, has_many, many_many.',
+						),
+					'ref_table' =>
+						array(
+							'type'        => 'string',
+							'description' => 'The table name that is referenced by the relationship.',
+						),
+					'ref_field' =>
+						array(
+							'type'        => 'string',
+							'description' => 'The field name that is referenced by the relationship.',
+						),
+					'join'      =>
+						array(
+							'type'        => 'string',
+							'description' => 'The intermediate joining table used for many_many relationships.',
+						),
+					'field'     =>
+						array(
+							'type'        => 'string',
+							'description' => 'The current table field that is used in the relationship.',
+						),
+				),
+		),
 );
 
 $_base['models'] = array_merge( $_base['models'], $_models );

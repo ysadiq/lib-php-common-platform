@@ -99,7 +99,7 @@ $_models = array(
 		),
 	'EmailRequest'  =>
 		array(
-			'id'         => 'Email',
+			'id'         => 'EmailRequest',
 			'properties' =>
 				array(
 					'template'       =>

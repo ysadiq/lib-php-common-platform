@@ -580,7 +580,7 @@ $_role['models'] = array(
 							'description' => 'Array of system role records.',
 							'items'       =>
 								array(
-									'$ref' => 'Role',
+									'$ref' => 'RoleRequest',
 								),
 						),
 					'ids'    =>
@@ -605,7 +605,7 @@ $_role['models'] = array(
 							'description' => 'Array of system role records.',
 							'items'       =>
 								array(
-									'$ref' => 'Role',
+									'$ref' => 'RoleRequest',
 								),
 						),
 					'meta'   =>
