@@ -1114,32 +1114,7 @@ class SqlDbSvc extends BaseDbSvc
 			$_needLimit = false;
 
 			// build filter string if necessary, add server-side filters if necessary
-			$_ssFilters = Option::get( $extras, 'filters' );
-			if ( !empty( $_ssFilters ) )
-			{
-				$_ssFilterOp = Option::get( $extras, 'filters_op', 'and' );
-				$_ssFilterStr = '';
-				foreach ( $_ssFilters as $_ssFilter )
-				{
-					if ( !empty( $_ssFilterStr ) )
-					{
-						$_ssFilterStr .= " $_ssFilterOp ";
-					}
-
-					$_ssName = Option::get( $_ssFilter, 'name' );
-					$_ssOp = Option::get( $_ssFilter, 'operator' );
-					$_ssValue = Option::get( $_ssFilter, 'value' );
-					$_ssValue = static::interpretFilterValue( $_ssValue );
-					if ( empty( $_ssName ) || empty( $_ssOp ) )
-					{
-						// log and bail
-						continue;
-					}
-					$_ssFilterStr .= "$_ssName $_ssOp $_ssValue";
-				}
-
-				$_filterStr = $_ssFilterStr;
-			}
+			$_filterStr = $this->buildQueryStringFromData( Option::get( $extras, 'filters' ) );
 			if ( !empty( $filter ) )
 			{
 				if ( is_array( $filter ) )
@@ -1747,7 +1722,7 @@ class SqlDbSvc extends BaseDbSvc
 		foreach ( $record as $key => $value )
 		{
 			$fieldVal = ( is_null( $value ) ) ? "NULL" : $this->_sqlConn->quoteValue( $value );
-			$out .= ( !empty( $values ) ) ? ',' : '';
+			$out .= ( !empty( $out ) ) ? ',' : '';
 			$out .= "$key = $fieldVal";
 		}
 
@@ -2247,6 +2222,37 @@ class SqlDbSvc extends BaseDbSvc
 		{
 			throw new InternalServerErrorException( "Error updating many to one map assignment.\n{$ex->getMessage()}", $ex->getCode() );
 		}
+	}
+
+	protected function buildQueryStringFromData( $filter_info )
+	{
+		$_filterStr = '';
+		$_filters = Option::get( $filter_info, 'filters' );
+		if ( !empty( $_filters ) )
+		{
+			$_combinerOp = Option::get( $filter_info, 'filter_op', 'and' );
+			foreach ( $_filters as $_filter )
+			{
+				if ( !empty( $_filterStr ) )
+				{
+					$_filterStr .= " $_combinerOp ";
+				}
+
+				$_name = Option::get( $_filter, 'name' );
+				$_op = Option::get( $_filter, 'operator' );
+				$_value = Option::get( $_filter, 'value' );
+				$_value = static::interpretFilterValue( $_value );
+				if ( empty( $_name ) || empty( $_op ) )
+				{
+					// log and bail
+					continue;
+				}
+				$_value = ( is_null( $_value ) ) ? "NULL" : $this->_sqlConn->quoteValue( $_value );
+				$_filterStr .= "$_name $_op $_value";
+			}
+		}
+
+		return $_filterStr;
 	}
 
 	/**
