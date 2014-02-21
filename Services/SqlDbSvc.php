@@ -1093,85 +1093,130 @@ class SqlDbSvc extends BaseDbSvc
 	public function retrieveRecordsByFilter( $table, $filter = null, $fields = null, $extras = array() )
 	{
 		$table = $this->correctTableName( $table );
+		$_filterStr = '';
 		try
 		{
 			// parse filter
-			$availFields = $this->describeTableFields( $table );
-			$related = Option::get( $extras, 'related' );
-			$relations = ( empty( $related ) ? array() : $this->describeTableRelated( $table ) );
-			$result = $this->parseFieldsForSqlSelect( $fields, $availFields );
-			$bindings = Option::get( $result, 'bindings' );
-			$fields = Option::get( $result, 'fields' );
-			if ( empty( $fields ) )
+			$_availFields = $this->describeTableFields( $table );
+			$_related = Option::get( $extras, 'related' );
+			$_relations = ( empty( $_related ) ? array() : $this->describeTableRelated( $table ) );
+			$_result = $this->parseFieldsForSqlSelect( $fields, $_availFields );
+			$_bindings = Option::get( $_result, 'bindings' );
+			$_fields = Option::get( $_result, 'fields' );
+			if ( empty( $_fields ) )
 			{
-				$fields = '*';
+				$_fields = '*';
 			}
-			$order = Option::get( $extras, 'order' );
-			$limit = intval( Option::get( $extras, 'limit', 0 ) );
-			$offset = intval( Option::get( $extras, 'offset', 0 ) );
-			$maxAllowed = static::getMaxRecordsReturnedLimit();
+			$_order = Option::get( $extras, 'order' );
+			$_limit = intval( Option::get( $extras, 'limit', 0 ) );
+			$_offset = intval( Option::get( $extras, 'offset', 0 ) );
+			$_maxAllowed = static::getMaxRecordsReturnedLimit();
 			$_needLimit = false;
 
-			// use query builder
-			/** @var \CDbCommand $command */
-			$command = $this->_sqlConn->createCommand();
-			$command->select( $fields );
-			$command->from( $table );
+			// build filter string if necessary, add server-side filters if necessary
+			$_ssFilters = Option::get( $extras, 'filters' );
+			if ( !empty( $_ssFilters ) )
+			{
+				$_ssFilterOp = Option::get( $extras, 'filters_op', 'and' );
+				$_ssFilterStr = '';
+				foreach ( $_ssFilters as $_ssFilter )
+				{
+					if ( !empty( $_ssFilterStr ) )
+					{
+						$_ssFilterStr .= " $_ssFilterOp ";
+					}
+
+					$_ssName = Option::get( $_ssFilter, 'name' );
+					$_ssOp = Option::get( $_ssFilter, 'operator' );
+					$_ssValue = Option::get( $_ssFilter, 'value' );
+					$_ssValue = static::interpretFilterValue( $_ssValue );
+					if ( empty( $_ssName ) || empty( $_ssOp ) )
+					{
+						// log and bail
+						continue;
+					}
+					$_ssFilterStr .= "$_ssName $_ssOp $_ssValue";
+				}
+
+				$_filterStr = $_ssFilterStr;
+			}
 			if ( !empty( $filter ) )
 			{
-				$command->where( $filter );
+				if ( is_array( $filter ) )
+				{
+					// convert to string
+				}
+				else
+				{
+					if ( !empty( $_filterStr ) )
+					{
+						$_filterStr = "( $_filterStr ) AND ";
+					}
+
+					$_filterStr .= $filter;
+				}
 			}
-			if ( !empty( $order ) )
+
+			// use query builder
+			/** @var \CDbCommand $_command */
+			$_command = $this->_sqlConn->createCommand();
+			$_command->select( $_fields );
+			$_command->from( $table );
+			if ( !empty( $_filterStr ) )
 			{
-				$command->order( $order );
+				$_command->where( $_filterStr );
 			}
-			if ( $offset > 0 )
+			if ( !empty( $_order ) )
 			{
-				$command->offset( $offset );
+				$_command->order( $_order );
 			}
-			if ( ( $limit < 1 ) || ( $limit > $maxAllowed ) )
+			if ( $_offset > 0 )
+			{
+				$_command->offset( $_offset );
+			}
+			if ( ( $_limit < 1 ) || ( $_limit > $_maxAllowed ) )
 			{
 				// impose a limit to protect server
-				$limit = $maxAllowed;
+				$_limit = $_maxAllowed;
 				$_needLimit = true;
 			}
-			$command->limit( $limit );
+			$_command->limit( $_limit );
 
 			$this->checkConnection();
-			$reader = $command->query();
-			$data = array();
-			$dummy = array();
-			foreach ( $bindings as $binding )
+			$_reader = $_command->query();
+			$_data = array();
+			$_dummy = array();
+			foreach ( $_bindings as $_binding )
 			{
-				$_name = Option::get( $binding, 'name' );
-				$_type = Option::get( $binding, 'pdo_type' );
-				$reader->bindColumn( $_name, $dummy[$_name], $_type );
+				$_name = Option::get( $_binding, 'name' );
+				$_type = Option::get( $_binding, 'pdo_type' );
+				$_reader->bindColumn( $_name, $_dummy[$_name], $_type );
 			}
-			$reader->setFetchMode( \PDO::FETCH_BOUND );
-			$count = 0;
-			while ( false !== $reader->read() )
+			$_reader->setFetchMode( \PDO::FETCH_BOUND );
+			$_row = 0;
+			while ( false !== $_reader->read() )
 			{
-				$temp = array();
-				foreach ( $bindings as $binding )
+				$_temp = array();
+				foreach ( $_bindings as $_binding )
 				{
-					$_name = Option::get( $binding, 'name' );
-					$_type = Option::get( $binding, 'php_type' );
-					$_value = Option::get( $dummy, $_name );
+					$_name = Option::get( $_binding, 'name' );
+					$_type = Option::get( $_binding, 'php_type' );
+					$_value = Option::get( $_dummy, $_name );
 					if ( 'float' == $_type )
 					{
 						$_value = floatval( $_value );
 					}
-					$temp[$_name] = $_value;
+					$_temp[$_name] = $_value;
 				}
 
-				$data[$count++] = $temp;
+				$_data[$_row++] = $_temp;
 			}
 
-			if ( !empty( $relations ) )
+			if ( !empty( $_relations ) )
 			{
-				foreach ( $data as $key => $temp )
+				foreach ( $_data as $_key => $_temp )
 				{
-					$data[$key] = $this->retrieveRelatedRecords( $temp, $relations, $related );
+					$_data[$_key] = $this->retrieveRelatedRecords( $_temp, $_relations, $_related );
 				}
 			}
 
@@ -1182,41 +1227,41 @@ class SqlDbSvc extends BaseDbSvc
 				// count total records
 				if ( $_includeCount || $_needLimit )
 				{
-					$command->reset();
-					$command->select( '(COUNT(*)) as ' . $this->_sqlConn->quoteColumnName( 'count' ) );
-					$command->from( $table );
-					if ( !empty( $filter ) )
+					$_command->reset();
+					$_command->select( '(COUNT(*)) as ' . $this->_sqlConn->quoteColumnName( 'count' ) );
+					$_command->from( $table );
+					if ( !empty( $_filterStr ) )
 					{
-						$command->where( $filter );
+						$_command->where( $_filterStr );
 					}
-					$_count = intval( $command->queryScalar() );
-					$data['meta']['count'] = $_count;
-					if ( ( $_count - $offset ) > $maxAllowed )
+					$_count = intval( $_command->queryScalar() );
+					$_data['meta']['count'] = $_count;
+					if ( ( $_count - $_offset ) > $_maxAllowed )
 					{
-						$data['meta']['next'] = $offset + $limit + 1;
+						$_data['meta']['next'] = $_offset + $_limit + 1;
 					}
 				}
-				// count total records
+
 				if ( $_includeSchema )
 				{
-					$data['meta']['schema'] = SqlDbUtilities::describeTable( $this->_sqlConn, $table );
+					$_data['meta']['schema'] = SqlDbUtilities::describeTable( $this->_sqlConn, $table );
 				}
 			}
 
 //            error_log('retrievefilter: ' . PHP_EOL . print_r($data, true));
 
-			return $data;
+			return $_data;
 		}
-		catch ( \Exception $ex )
+		catch ( \Exception $_ex )
 		{
-			error_log( 'retrievefilter: ' . $ex->getMessage() . PHP_EOL . $filter );
+			error_log( 'retrievefilter: ' . $_ex->getMessage() . PHP_EOL . $_filterStr );
 			/*
             $msg = '[QUERYFAILED]: ' . implode(':', $this->_sqlConn->errorInfo()) . "\n";
             if (isset($GLOBALS['DB_DEBUG'])) {
                 error_log($msg . "\n$query");
             }
             */
-			throw $ex;
+			throw $_ex;
 		}
 	}
 

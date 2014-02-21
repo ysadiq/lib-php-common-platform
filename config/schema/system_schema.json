@@ -108,6 +108,11 @@
 					"allow_null":         true
 				},
 				{
+					"name":       "lookup_keys",
+					"type":       "mediumtext",
+					"allow_null": true
+				},
+				{
 					"name":       "created_date",
 					"type":       "datetime",
 					"validation": "api_read_only"
@@ -257,6 +262,11 @@
 					"type": "datetime"
 				},
 				{
+					"name":       "lookup_keys",
+					"type":       "mediumtext",
+					"allow_null": true
+				},
+				{
 					"name":       "created_date",
 					"type":       "datetime",
 					"validation": "api_read_only"
@@ -315,6 +325,11 @@
 					"ref_on_update": "CASCADE",
 					"ref_on_delete": "SET NULL",
 					"allow_null":    true
+				},
+				{
+					"name":       "lookup_keys",
+					"type":       "mediumtext",
+					"allow_null": true
 				},
 				{
 					"name":       "created_date",
@@ -738,6 +753,20 @@
 					"default":    "No Access",
 					"allow_null": false,
 					"validation": "picklist"
+				},
+				{
+					"name":       "filters",
+					"type":       "mediumtext",
+					"allow_null": true
+				},
+				{
+					"name":       "filter_op",
+					"type":       "string",
+					"length":     64,
+					"value":      ["and", "or"],
+					"default":    "and",
+					"allow_null": false,
+					"validation": "picklist"
 				}
 			]
 		},
@@ -769,6 +798,20 @@
 					"length":     64,
 					"value":      ["No Access", "Read Only", "Write Only", "Read and Write", "Full Access"],
 					"default":    "No Access",
+					"allow_null": false,
+					"validation": "picklist"
+				},
+				{
+					"name":       "filters",
+					"type":       "mediumtext",
+					"allow_null": true
+				},
+				{
+					"name":       "filter_op",
+					"type":       "string",
+					"length":     64,
+					"value":      ["and", "or"],
+					"default":    "and",
 					"allow_null": false,
 					"validation": "picklist"
 				}

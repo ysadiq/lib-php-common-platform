@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
@@ -599,6 +600,14 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		}
 		$_extras['include_count'] = $_count;
 
+		$_filters = array();
+		$_filterOp = 'and';
+		if ( Session::getServiceFilters( $this->_apiName, $this->_resource, $_filters, $_filterOp ) )
+		{
+			$_extras['filters'] = $_filters;
+			$_extras['filters_op'] = $_filterOp;
+		}
+
 		return $_extras;
 	}
 
@@ -814,6 +823,38 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		}
 
 		return $first_array;
+	}
+
+	public static function interpretFilterValue( $value )
+	{
+		if (is_bool($value))
+		{
+			return $value ? 'true' : 'false';
+		}
+
+		if ( is_string( $value ) )
+		{
+			$_parts = explode( '.', $value );
+			if ( count( $_parts ) > 1 )
+			{
+				$_section = array_shift( $_parts );
+				$_lookup = implode( '.', $_parts );
+				switch ( $_section )
+				{
+					case 'service':
+						// get fields here
+						break;
+					default:
+						if ( Session::getLookupValue( $_section, $_lookup, $_result ) )
+						{
+							return $_result;
+						}
+						break;
+				}
+			}
+		}
+
+		return $value;
 	}
 
 	// Handle administrative options, table add, delete, etc
