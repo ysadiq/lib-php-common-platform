@@ -26,8 +26,7 @@
 	],
 	"require":           {
 		"php":                             ">=5.3.18",
-		"kisma/kisma":                     "~0.2.22",
-		"dreamfactory/azure-sdk-for-php":  "~0.3.1",
+		"kisma/kisma":                     "~0.2.22@dev",
 		"dreamfactory/javascript-sdk":     "1.*",
 		"dreamfactory/lib-php-common":     "~1.1.4@dev",
 		"dreamfactory/lib-php-common-yii": "~1.1.5@dev",
@@ -59,9 +58,9 @@
 	},
 	"target-dir":        "DreamFactory/Platform",
 	"extra":             {
-        "_github_name": "dreamfactory/platform-sdk-for-php",
+		"_github_name": "dreamfactory/platform-sdk-for-php",
 		"branch-alias": {
-			"dev-develop":  "1.4.x-dev"
+			"dev-develop": "1.4.x-dev"
 		}
 	}
 }
