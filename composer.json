@@ -26,12 +26,12 @@
 	],
 	"require":           {
 		"php":                             ">=5.3.18",
-		"kisma/kisma":                     "~0.2.18@dev",
+		"kisma/kisma":                     "~0.2.22",
 		"dreamfactory/azure-sdk-for-php":  "~0.3.1",
 		"dreamfactory/javascript-sdk":     "1.*",
-		"dreamfactory/lib-php-common":     "~1.1.4",
-		"dreamfactory/lib-php-common-yii": "~1.1.5",
-		"dreamfactory/oasys":              "~0.4.5",
+		"dreamfactory/lib-php-common":     "~1.1.4@dev",
+		"dreamfactory/lib-php-common-yii": "~1.1.5@dev",
+		"dreamfactory/oasys":              "~0.4.5@dev",
 		"aws/aws-sdk-php":                 "2.4.*",
 		"dready92/php-on-couch":           "dev-master",
 		"rackspace/php-opencloud":         "1.5.*",
@@ -41,7 +41,7 @@
 		"symfony/event-dispatcher":        "@stable"
 	},
 	"require-dev":       {
-		"phpunit/phpunit":              "@stable",
+		"phpunit/phpunit":              "~3.7@stable",
 		"phpunit/dbunit":               "@stable",
 		"phpunit/phpunit-mock-objects": "@stable",
 		"phpunit/phpunit-selenium":     "@stable",
