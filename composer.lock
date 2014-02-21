@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "6af0c2b2862146bfd2b314d02d24e48a",
+    "hash": "d486c52448ed77ff4fb143b2b6dada1c",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -204,7 +204,7 @@
         },
         {
             "name": "dreamfactory/lib-php-common",
-            "version": "1.1.5",
+            "version": "dev-master",
             "target-dir": "DreamFactory/Common",
             "source": {
                 "type": "git",
@@ -253,21 +253,21 @@
                 "library",
                 "php5"
             ],
-            "time": "2013-12-23 02:23:54"
+            "time": "2013-12-23 01:23:54"
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
-            "version": "1.1.5",
+            "version": "dev-master",
             "target-dir": "DreamFactory/Yii",
             "source": {
                 "type": "git",
                 "url": "https://bitbucket.org/dreamfactory/lib-php-common-yii.git",
-                "reference": "a4a55d31b56d9293047dac62ce43bef26cf94ec8"
+                "reference": "6b982ec2a74df989189ddfaf78e2ba1ad7d5efe5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://bitbucket.org/dreamfactory/lib-php-common-yii/get/a4a55d31b56d9293047dac62ce43bef26cf94ec8.zip",
-                "reference": "a4a55d31b56d9293047dac62ce43bef26cf94ec8",
+                "url": "https://bitbucket.org/dreamfactory/lib-php-common-yii/get/6b982ec2a74df989189ddfaf78e2ba1ad7d5efe5.zip",
+                "reference": "6b982ec2a74df989189ddfaf78e2ba1ad7d5efe5",
                 "shasum": ""
             },
             "require": {
@@ -316,7 +316,7 @@
                 "yii",
                 "yiisoft"
             ],
-            "time": "2013-10-31 19:08:19"
+            "time": "2014-02-20 23:40:04"
         },
         {
             "name": "dreamfactory/oasys",
@@ -374,26 +374,18 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/yii.git",
-                "reference": "23e4daf717fb48d88ceb40c97f707118295cbd0a"
+                "reference": "13c82707821a3bc343cd1ba7d8c95fca2c678120"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/23e4daf717fb48d88ceb40c97f707118295cbd0a",
-                "reference": "23e4daf717fb48d88ceb40c97f707118295cbd0a",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/13c82707821a3bc343cd1ba7d8c95fca2c678120",
+                "reference": "13c82707821a3bc343cd1ba7d8c95fca2c678120",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.1.0"
             },
-            "bin": [
-                "framework/yiic"
-            ],
             "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-develop": "1.1.14-dev"
-                }
-            },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "BSD-3-Clause"
@@ -440,23 +432,12 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Exterminator"
+                    "role": "Lead Developer, server-side/client-side"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Exterminator"
-                },
-                {
-                    "name": "Timur Ruziev",
-                    "email": "resurtm@gmail.com",
-                    "homepage": "http://resurtm.com/",
-                    "role": "Core framework development"
-                },
-                {
-                    "name": "Paul Klimov",
-                    "email": "klimov.paul@gmail.com",
-                    "role": "Core framework development"
+                    "role": "Lead Guinea Pig, server-side/client-side"
                 }
             ],
             "description": "Yii Web Programming Framework",
@@ -465,7 +446,7 @@
                 "framework",
                 "yii"
             ],
-            "time": "2014-02-07 16:45:39"
+            "time": "2014-02-13 16:56:31"
         },
         {
             "name": "guzzle/guzzle",
@@ -473,12 +454,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/guzzle.git",
-                "reference": "246cd09118283dce6d2974ace71d666d8a9f26f6"
+                "reference": "8d39ffa70ac1aecd297e93d4185092f51877edb4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/246cd09118283dce6d2974ace71d666d8a9f26f6",
-                "reference": "246cd09118283dce6d2974ace71d666d8a9f26f6",
+                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/8d39ffa70ac1aecd297e93d4185092f51877edb4",
+                "reference": "8d39ffa70ac1aecd297e93d4185092f51877edb4",
                 "shasum": ""
             },
             "require": {
@@ -557,24 +538,27 @@
                 "rest",
                 "web service"
             ],
-            "time": "2014-02-07 19:57:56"
+            "time": "2014-02-20 17:01:46"
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.17",
+            "version": "0.2.22",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "50a1a0fa574b03edc66a65ca0508c04c9f20648d"
+                "reference": "6f9deff5157e2650a65d2c4b276ed00a70570d35"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/50a1a0fa574b03edc66a65ca0508c04c9f20648d",
-                "reference": "50a1a0fa574b03edc66a65ca0508c04c9f20648d",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/6f9deff5157e2650a65d2c4b276ed00a70570d35",
+                "reference": "6f9deff5157e2650a65d2c4b276ed00a70570d35",
                 "shasum": ""
             },
             "require": {
-                "php": ">=5.3.10"
+                "monolog/monolog": "*",
+                "php": ">=5.3.10",
+                "symfony/event-dispatcher": "@stable",
+                "symfony/http-foundation": "@stable"
             },
             "require-dev": {
                 "phpunit/php-code-coverage": "@stable",
@@ -607,7 +591,74 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-02-06 19:58:02"
+            "time": "2014-02-20 23:05:05"
+        },
+        {
+            "name": "monolog/monolog",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Seldaek/monolog.git",
+                "reference": "08f09c20805695212ebe713b6706b8efb24f96e7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/08f09c20805695212ebe713b6706b8efb24f96e7",
+                "reference": "08f09c20805695212ebe713b6706b8efb24f96e7",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.0",
+                "psr/log": "~1.0"
+            },
+            "require-dev": {
+                "aws/aws-sdk-php": "~2.4.8",
+                "doctrine/couchdb": "dev-master",
+                "mlehner/gelf-php": "1.0.*",
+                "phpunit/phpunit": "~3.7.0",
+                "raven/raven": "~0.5",
+                "ruflin/elastica": "0.90.*"
+            },
+            "suggest": {
+                "aws/aws-sdk-php": "Allow sending log messages to AWS services like DynamoDB",
+                "doctrine/couchdb": "Allow sending log messages to a CouchDB server",
+                "ext-amqp": "Allow sending log messages to an AMQP server (1.0+ required)",
+                "ext-mongo": "Allow sending log messages to a MongoDB server",
+                "mlehner/gelf-php": "Allow sending log messages to a GrayLog2 server",
+                "raven/raven": "Allow sending log messages to a Sentry server",
+                "ruflin/elastica": "Allow sending log messages to an Elastic Search server"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.7.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Monolog\\": "src/Monolog"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Jordi Boggiano",
+                    "email": "j.boggiano@seld.be",
+                    "homepage": "http://seld.be",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Sends your logs to files, sockets, inboxes, databases and various web services",
+            "homepage": "http://github.com/Seldaek/monolog",
+            "keywords": [
+                "log",
+                "logging",
+                "psr-3"
+            ],
+            "time": "2014-02-20 10:38:44"
         },
         {
             "name": "pear-pear.php.net/Archive_Tar",
@@ -1099,12 +1150,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/EventDispatcher.git",
-                "reference": "3a6d2d87fc7d25c773ffdeaa19210090ae1b593b"
+                "reference": "8b345992d9e850798f46a6c68804ac9e4965e91a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/3a6d2d87fc7d25c773ffdeaa19210090ae1b593b",
-                "reference": "3a6d2d87fc7d25c773ffdeaa19210090ae1b593b",
+                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/8b345992d9e850798f46a6c68804ac9e4965e91a",
+                "reference": "8b345992d9e850798f46a6c68804ac9e4965e91a",
                 "shasum": ""
             },
             "require": {
@@ -1137,7 +1188,9 @@
             "authors": [
                 {
                     "name": "Fabien Potencier",
-                    "email": "fabien@symfony.com"
+                    "email": "fabien@symfony.com",
+                    "homepage": "http://fabien.potencier.org",
+                    "role": "Lead Developer"
                 },
                 {
                     "name": "Symfony Community",
@@ -1146,7 +1199,59 @@
             ],
             "description": "Symfony EventDispatcher Component",
             "homepage": "http://symfony.com",
-            "time": "2014-02-04 15:16:44"
+            "time": "2014-02-11 13:52:21"
+        },
+        {
+            "name": "symfony/http-foundation",
+            "version": "dev-master",
+            "target-dir": "Symfony/Component/HttpFoundation",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/HttpFoundation.git",
+                "reference": "0fa4996401cf4e97e621357b6f6a9efa8eee678e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/0fa4996401cf4e97e621357b6f6a9efa8eee678e",
+                "reference": "0fa4996401cf4e97e621357b6f6a9efa8eee678e",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.3"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.5-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Symfony\\Component\\HttpFoundation\\": ""
+                },
+                "classmap": [
+                    "Symfony/Component/HttpFoundation/Resources/stubs"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Fabien Potencier",
+                    "email": "fabien@symfony.com",
+                    "homepage": "http://fabien.potencier.org",
+                    "role": "Lead Developer"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "http://symfony.com/contributors"
+                }
+            ],
+            "description": "Symfony HttpFoundation Component",
+            "homepage": "http://symfony.com",
+            "time": "2014-02-18 15:41:30"
         }
     ],
     "packages-dev": [
@@ -1501,16 +1606,16 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "3.7.30",
+            "version": "3.7.31",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "2f33258fa5a0c330515b7deba2bc040fa5c3953b"
+                "reference": "d24e9877331039582497052cc3c4d9f465b88210"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/2f33258fa5a0c330515b7deba2bc040fa5c3953b",
-                "reference": "2f33258fa5a0c330515b7deba2bc040fa5c3953b",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/d24e9877331039582497052cc3c4d9f465b88210",
+                "reference": "d24e9877331039582497052cc3c4d9f465b88210",
                 "shasum": ""
             },
             "require": {
@@ -1571,7 +1676,7 @@
                 "testing",
                 "xunit"
             ],
-            "time": "2014-01-31 08:54:33"
+            "time": "2014-02-03 07:46:27"
         },
         {
             "name": "phpunit/phpunit-mock-objects",
@@ -1777,6 +1882,9 @@
     ],
     "minimum-stability": "dev",
     "stability-flags": {
+        "dreamfactory/lib-php-common": 20,
+        "dreamfactory/lib-php-common-yii": 20,
+        "dreamfactory/oasys": 20,
         "dready92/php-on-couch": 20,
         "phpforce/soap-client": 20,
         "phpunit/phpunit": 0,
