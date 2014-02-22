@@ -23,7 +23,6 @@ use CModelEvent;
 use DreamFactory\Yii\Behaviors\BaseModelBehavior;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\Scalar;
 
 /**
  * SecureJson.php

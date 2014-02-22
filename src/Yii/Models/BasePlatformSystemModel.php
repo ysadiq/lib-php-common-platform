@@ -20,6 +20,8 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Option;
 
 /**
  * BasePlatformSystemModel.php
@@ -163,10 +165,10 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-					 array(
-						 'created_by_id'       => 'Created By',
-						 'last_modified_by_id' => 'Last Modified By',
-					 ) + $additionalLabels
+			array(
+				'created_by_id'       => 'Created By',
+				'last_modified_by_id' => 'Last Modified By',
+			) + $additionalLabels
 		);
 	}
 
@@ -385,19 +387,18 @@ MYSQL;
 	 * Named scope that filters by api_name
 	 *
 	 * @param string $name
-	 * @param string $columnName
 	 *
 	 * @return Service
 	 */
-	public function byApiName( $name, $columnName = 'api_name' )
+	public function byApiName( $name )
 	{
-		if ( $this->hasAttribute( $columnName ) )
+		if ( $this->hasAttribute( 'api_name' ) )
 		{
 			$this->getDbCriteria()->mergeWith(
-				 array(
-					 'condition' => $columnName . ' = :' . $columnName,
-					 'params'    => array( ':' . $columnName => $name ),
-				 )
+				array(
+					'condition' => 'api_name = :api_name',
+					'params'    => array( ':api_name' => $name ),
+				)
 			);
 		}
 

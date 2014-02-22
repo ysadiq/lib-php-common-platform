@@ -572,7 +572,7 @@ $_commonProperties = array(
 );
 
 $_service['models'] = array(
-	'Service'          =>
+	'ServiceRequest'   =>
 		array(
 			'id'         => 'ServiceRequest',
 			'properties' => $_commonProperties,

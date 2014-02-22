@@ -316,7 +316,7 @@ $_group['apis'] = array(
 					'method'           => 'GET',
 					'summary'          => 'getAppGroup() - Retrieve one application group.',
 					'nickname'         => 'getAppGroup',
-					'type'             => 'AppGroup',
+					'type'             => 'AppGroupResponse',
 					'parameters'       =>
 						array(
 							array(

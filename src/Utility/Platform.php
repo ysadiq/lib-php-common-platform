@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\LocalStorageTypes;
-use DreamFactory\Platform\Events\BasePlatformEvent;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Inflector;
