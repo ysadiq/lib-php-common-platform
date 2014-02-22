@@ -22,7 +22,6 @@ namespace DreamFactory\Platform\Yii\Components;
 use DreamFactory\Platform\Events\DspEvent;
 use DreamFactory\Platform\Events\Enums\DspEvents;
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Interfaces\EventPublisherLike;
 use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
@@ -255,7 +254,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
 		switch ( $this->_requestObject->getMethod() )
 		{
-			case HttpMethod::Trace:
+			case HttpMethod::TRACE:
 				Log::error(
 				   'HTTP TRACE received!',
 				   array(
@@ -265,7 +264,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 				);
 				throw new BadRequestException();
 
-			case HttpMethod::Options:
+			case HttpMethod::OPTIONS:
 				$this->_responseObject->setStatusCode( HttpResponse::NoContent );
 				$this->_responseObject->headers->add( array( 'content-type' => 'text/plain' ) );
 				$this->_responseObject->headers->add( $this->addCorsHeaders( null, true ) );
@@ -437,7 +436,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
 			if ( !is_dir( $_path ) )
 			{
-//				Log::debug( 'No plug-ins installed.' );
+				// No plug-ins installed
 
 				return false;
 			}
