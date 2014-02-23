@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "120d2fe9119b3f776b1b8270dc4794fd",
+    "hash": "d581ca8086d245c06dfbf7a2bdf02bb7",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -329,25 +329,29 @@
         },
         {
             "name": "dreamfactory/oasys",
-            "version": "0.4.6",
+            "version": "0.4.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/oasys.git",
-                "reference": "50e6670ea3177db351bc9431a185427fe3dee320"
+                "reference": "c9091ed33bd758387fc52358568d61bf3b8e17e5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/50e6670ea3177db351bc9431a185427fe3dee320",
-                "reference": "50e6670ea3177db351bc9431a185427fe3dee320",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/c9091ed33bd758387fc52358568d61bf3b8e17e5",
+                "reference": "c9091ed33bd758387fc52358568d61bf3b8e17e5",
                 "shasum": ""
             },
             "require": {
                 "ext-curl": "*",
-                "kisma/kisma": ">=0.2.11",
+                "kisma/kisma": ">=0.2.22",
                 "php": ">=5.3.18"
             },
             "require-dev": {
-                "phpunit/phpunit": "*"
+                "phpunit/dbunit": "@stable",
+                "phpunit/php-invoker": "@stable",
+                "phpunit/phpunit": "*",
+                "phpunit/phpunit-selenium": "@stable",
+                "phpunit/phpunit-story": "@stable"
             },
             "type": "library",
             "autoload": {
@@ -363,19 +367,19 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Lead Developer"
                 }
             ],
             "description": "DreamFactory Oasys(tm) Open Authentication System",
             "homepage": "http://dreamfactorysoftware.github.io",
             "keywords": [
                 "OpenId",
-                "dreamfactory",
+                "ldap",
                 "library",
                 "oauth",
                 "oauth2"
             ],
-            "time": "2014-01-30 19:59:56"
+            "time": "2014-02-23 00:53:11"
         },
         {
             "name": "dreamfactory/yii",
@@ -608,34 +612,34 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.22",
+            "version": "0.2.23",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "6f9deff5157e2650a65d2c4b276ed00a70570d35"
+                "reference": "bf8471a057d18161d7a54a77456ccad702ca7498"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/6f9deff5157e2650a65d2c4b276ed00a70570d35",
-                "reference": "6f9deff5157e2650a65d2c4b276ed00a70570d35",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/bf8471a057d18161d7a54a77456ccad702ca7498",
+                "reference": "bf8471a057d18161d7a54a77456ccad702ca7498",
                 "shasum": ""
             },
             "require": {
                 "monolog/monolog": "*",
-                "php": ">=5.3.10",
-                "symfony/event-dispatcher": "@stable",
-                "symfony/http-foundation": "@stable"
+                "php": ">=5.3.18",
+                "symfony/event-dispatcher": "~2.4@stable",
+                "symfony/http-foundation": "~2.4@stable"
             },
             "require-dev": {
-                "phpunit/php-code-coverage": "@stable",
                 "phpunit/phpunit": "@stable"
             },
             "type": "library",
             "autoload": {
-                "psr-0": {
-                    "Kisma": "src/"
+                "psr-4": {
+                    "Kisma\\": "src/Kisma"
                 },
                 "files": [
+                    "src/Kisma.php",
                     "src/autoload.php"
                 ]
             },
@@ -657,7 +661,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-02-20 23:05:05"
+            "time": "2014-02-23 20:57:18"
         },
         {
             "name": "monolog/monolog",
@@ -665,12 +669,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
-                "reference": "08f09c20805695212ebe713b6706b8efb24f96e7"
+                "reference": "6b81ac8153be8ae33a877a79be3f61809f1448d9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/08f09c20805695212ebe713b6706b8efb24f96e7",
-                "reference": "08f09c20805695212ebe713b6706b8efb24f96e7",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/6b81ac8153be8ae33a877a79be3f61809f1448d9",
+                "reference": "6b81ac8153be8ae33a877a79be3f61809f1448d9",
                 "shasum": ""
             },
             "require": {
@@ -680,7 +684,7 @@
             "require-dev": {
                 "aws/aws-sdk-php": "~2.4.8",
                 "doctrine/couchdb": "dev-master",
-                "mlehner/gelf-php": "1.0.*",
+                "graylog2/gelf-php": "~1.0",
                 "phpunit/phpunit": "~3.7.0",
                 "raven/raven": "~0.5",
                 "ruflin/elastica": "0.90.*"
@@ -690,7 +694,7 @@
                 "doctrine/couchdb": "Allow sending log messages to a CouchDB server",
                 "ext-amqp": "Allow sending log messages to an AMQP server (1.0+ required)",
                 "ext-mongo": "Allow sending log messages to a MongoDB server",
-                "mlehner/gelf-php": "Allow sending log messages to a GrayLog2 server",
+                "graylog2/gelf-php": "Allow sending log messages to a GrayLog2 server",
                 "raven/raven": "Allow sending log messages to a Sentry server",
                 "ruflin/elastica": "Allow sending log messages to an Elastic Search server"
             },
@@ -724,7 +728,7 @@
                 "logging",
                 "psr-3"
             ],
-            "time": "2014-02-20 10:38:44"
+            "time": "2014-02-23 15:06:45"
         },
         {
             "name": "pear/mail_mime",
@@ -2130,6 +2134,7 @@
     "minimum-stability": "dev",
     "stability-flags": {
         "dready92/php-on-couch": 20,
+        "kisma/kisma": 0,
         "phpforce/soap-client": 20,
         "phpunit/phpunit-story": 0,
         "phpunit/phpunit-selenium": 0,

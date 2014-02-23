@@ -26,58 +26,58 @@ use Symfony\Component\EventDispatcher\EventDispatcher;
  */
 class ConfigTest extends \PHPUnit_Framework_TestCase
 {
-    //*************************************************************************
-    //	Methods
-    //*************************************************************************
+	//*************************************************************************
+	//	Methods
+	//*************************************************************************
 
-    protected $_preProcess = false;
-    protected $_postProcess = false;
-    protected $_beforeDestruct = false;
+	protected $_preProcess = false;
+	protected $_postProcess = false;
+	protected $_beforeDestruct = false;
 
-    public function testResourceEvents()
-    {
-        $_config = new Config();
-//        $_config->on( ResourceServiceEvents::PRE_PROCESS, array( $this, 'onPreProcess' ) );
-//        $_config->on( ResourceServiceEvents::POST_PROCESS, array( $this, 'onPostProcess' ) );
-        $_config->on( ResourceServiceEvents::BEFORE_DESTRUCT, array( $this, 'onBeforeDestruct' ) );
+	public function testResourceEvents()
+	{
+		$_config = new Config();
+		$_config->on( ResourceServiceEvents::PRE_PROCESS, array( $this, 'onPreProcess' ) );
+		$_config->on( ResourceServiceEvents::POST_PROCESS, array( $this, 'onPostProcess' ) );
+		$_config->on( ResourceServiceEvents::BEFORE_DESTRUCT, array( $this, 'onBeforeDestruct' ) );
 
-//        $_REQUEST['app_name'] = 'config_test';
-//        $_data = $_config->processRequest( 'app', HttpMethod::Get, false );
-//
-        $_config->__destruct();
+		$_REQUEST['app_name'] = 'config_test';
+		$_data = $_config->processRequest( 'app', HttpMethod::Get, false );
 
-//        $this->assertTrue( $this->_preProcess );
-//        $this->assertTrue( $this->_postProcess );
-//        $this->assertTrue( $this->_beforeDestruct );
-    }
+		$_config->__destruct();
 
-    /**
-     * @param BasePlatformEvent $event
-     * @param string            $eventName
-     * @param EventDispatcher   $dispatcher
-     */
-    public function onPreProcess( $event, $eventName, $dispatcher )
-    {
-        $this->_preProcess = true;
-    }
+		$this->assertTrue( $this->_preProcess );
+		$this->assertTrue( $this->_postProcess );
+		$this->assertTrue( $this->_beforeDestruct );
+	}
 
-    /**
-     * @param BasePlatformEvent $event
-     * @param string            $eventName
-     * @param EventDispatcher   $dispatcher
-     */
-    public function onPostProcess( $event, $eventName, $dispatcher )
-    {
-        $this->_postProcess = true;
-    }
+	/**
+	 * @param BasePlatformEvent $event
+	 * @param string            $eventName
+	 * @param EventDispatcher   $dispatcher
+	 */
+	protected function _onPreProcess( $event, $eventName, $dispatcher )
+	{
+		$this->_preProcess = true;
+	}
 
-    /**
-     * @param BasePlatformEvent $event
-     * @param string            $eventName
-     * @param EventDispatcher   $dispatcher
-     */
-    public function onBeforeDestruct( $event, $eventName, $dispatcher )
-    {
-        $this->_beforeDestruct = true;
-    }
+	/**
+	 * @param BasePlatformEvent $event
+	 * @param string            $eventName
+	 * @param EventDispatcher   $dispatcher
+	 */
+	protected function _onPostProcess( $event, $eventName, $dispatcher )
+	{
+		$this->_postProcess = true;
+	}
+
+	/**
+	 * @param BasePlatformEvent $event
+	 * @param string            $eventName
+	 * @param EventDispatcher   $dispatcher
+	 */
+	protected function _onBeforeDestruct( $event, $eventName, $dispatcher )
+	{
+		$this->_beforeDestruct = true;
+	}
 }

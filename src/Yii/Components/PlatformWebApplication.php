@@ -19,12 +19,12 @@
  */
 namespace DreamFactory\Platform\Yii\Components;
 
+use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Events\DspEvent;
 use DreamFactory\Platform\Events\Enums\DspEvents;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Events\SeedEvent;
@@ -127,8 +127,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function __construct( $config = null )
 	{
-		static::$_profilerEnabled = static::$_profilerEnabled ? : \Kisma::get( CoreSettings::DEBUG );
-
 		//	Start the full-cycle timer
 		$this->startProfiler();
 
@@ -146,13 +144,15 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	/**
 	 * Start a timer
 	 *
+	 * @param string $id The id of the timer
+	 *
 	 * @return $this
 	 */
-	public function startProfiler()
+	public function startProfiler( $id = __CLASS__ )
 	{
-		if ( static::$_profilerEnabled )
+		if ( ( static::$_profilerEnabled = static::$_profilerEnabled ? : \Kisma::get( CoreSettings::DEBUG ) ) )
 		{
-			\PHP_Timer::start();
+			Profiler::start( $id );
 		}
 
 		return $this;
@@ -161,20 +161,19 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	/**
 	 * Stop last timer
 	 *
-	 * @param bool $returnTimeString
+	 * @param string $id The id of the timer
+	 * @param bool   $returnTimeString
 	 *
 	 * @return float
 	 */
-	public function stopProfiler( $returnTimeString = true )
+	public function stopProfiler( $id = __CLASS__, $returnTimeString = true )
 	{
-		$_time = 0;
-
 		if ( static::$_profilerEnabled )
 		{
-			$_time = \PHP_Timer::stop();
+			return Profiler::stop( $id, $returnTimeString );
 		}
 
-		return $returnTimeString ? \PHP_Timer::secondsToTimeString( $_time ) : $_time;
+		return false;
 	}
 
 	/**
@@ -250,7 +249,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	protected function _onBeginRequest( \CEvent $event )
 	{
 		//	Start the request-only profile
-		$this->startProfiler();
+		$this->startProfiler( 'request' );
 
 		switch ( $this->_requestObject->getMethod() )
 		{
@@ -304,11 +303,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 				$this->_responseObject->send();
 			}
 		}
-
-		if ( static::$_profilerEnabled )
-		{
-			Log::debug( 'DSP [request] elapsed time: ' . $this->stopProfiler() );
-		}
+		$this->stopProfiler( 'request' );
 	}
 
 	/**

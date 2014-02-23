@@ -4,10 +4,3 @@ vendor
 .composer
 tests/config/keys.php
 tests/storage
-tests/log
-build/api
-build/code-browser
-build/coverage
-build/logs
-build/pdepend
-build/phpdox

@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Events\BasePlatformEvent;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
@@ -31,6 +32,7 @@ use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\EventManager;
 use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\ParameterBag;
 use Symfony\Component\HttpFoundation\Request;
@@ -95,10 +97,6 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 * @var Request The inbound request
 	 */
 	protected $_requestObject = null;
-	/**
-	 * @var \PHP_Timer
-	 */
-	protected $_timer;
 
 	//*************************************************************************
 	//* Methods
@@ -158,10 +156,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 		//	Get the current user ID if one...
 		$this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
 
-		if ( false !== $this->_timer )
-		{
-			$this->_timer = new \PHP_Timer();
-		}
+		Profiler::start( $this->_apiName );
 	}
 
 	/**
@@ -171,6 +166,8 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	{
 		//	Save myself!
 		ServiceHandler::cacheService( $this->_apiName, $this );
+
+		Log::debug( '~~ "' . $this->_apiName . '" profile: ' . Profiler::stop( $this->_apiName ) );
 
 		parent::__destruct();
 	}
@@ -291,11 +288,11 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 
 		//	Construct and neutralize...
 		$_tag = Inflector::neutralize(
-			str_ireplace(
-				array_keys( $_replacements ),
-				array_values( $_replacements ),
-				$_tag
-			)
+						 str_ireplace(
+							 array_keys( $_replacements ),
+							 array_values( $_replacements ),
+							 $_tag
+						 )
 		);
 
 		return $_cache[$eventName] = $_tag;
@@ -498,26 +495,6 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	public function getResponseObject()
 	{
 		return $this->_responseObject;
-	}
-
-	/**
-	 * @param \PHP_Timer $timer
-	 *
-	 * @return BasePlatformService
-	 */
-	public function setTimer( $timer )
-	{
-		$this->_timer = $timer;
-
-		return $this;
-	}
-
-	/**
-	 * @return \PHP_Timer
-	 */
-	public function getTimer()
-	{
-		return $this->_timer;
 	}
 
 }

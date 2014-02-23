@@ -25,7 +25,7 @@
 		"dreamfactory/javascript-sdk":     "1.*",
 		"dreamfactory/lib-php-common-yii": "*",
 		"dreamfactory/oasys":              "~0.4.0",
-		"kisma/kisma":                     "~0.2.22",
+		"kisma/kisma":                     "~0.2@stable",
 		"pear/net_url2":                   "*",
 		"pear/http_request2":              "*",
 		"pear/mail_mime":                  "*",
