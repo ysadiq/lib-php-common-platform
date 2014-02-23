@@ -24,13 +24,15 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Events\BasePlatformEvent;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\EventManager;
+use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
+use Kisma\Core\Interfaces\HttpMethod;
 use Kisma\Core\Interfaces\PublisherLike;
 use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Seed;
-use Kisma\Core\Utility\EventManager;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -497,4 +499,21 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 		return $this->_responseObject;
 	}
 
+	/**
+	 * @param string          $resource     The name of the resource
+	 * @param string          $action       The action to perform
+	 * @param int|string|bool $outputFormat The return format. Defaults to native, or PHP array.
+	 * @param string          $appName      The optional app_name setting for this call. Defaults to called class name hash
+	 *
+	 * @return mixed
+	 */
+	public static function processInlineRequest( $resource, $action = HttpMethod::GET, $outputFormat = false, $appName = null )
+	{
+		//	Get the resource and set the app_name
+		$_resource = ResourceStore::resource( $resource );
+		$_SERVER['HTTP_X_DREAMFACTORY_APPLICATION_NAME'] = $appName ? : sha1( get_called_class() );
+
+		//	Make the call
+		return $_resource->processInlineRequest( $resource, $action, $outputFormat );
+	}
 }

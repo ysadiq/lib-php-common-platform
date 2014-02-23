@@ -17,6 +17,7 @@ namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Events\BasePlatformEvent;
 use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
+use Kisma\Core\Enums\HttpMethod;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
 /**
@@ -36,13 +37,15 @@ class ConfigTest extends \PHPUnit_Framework_TestCase
 
 	public function testResourceEvents()
 	{
+		$_data = Config::processInlineRequest( 'app' );
 		$_config = new Config();
+
 		$_config->on( ResourceServiceEvents::PRE_PROCESS, array( $this, 'onPreProcess' ) );
 		$_config->on( ResourceServiceEvents::POST_PROCESS, array( $this, 'onPostProcess' ) );
 		$_config->on( ResourceServiceEvents::BEFORE_DESTRUCT, array( $this, 'onBeforeDestruct' ) );
 
-		$_REQUEST['app_name'] = 'config_test';
-		$_data = $_config->processRequest( 'app', HttpMethod::Get, false );
+		$_SERVER['HTTP_X_DREAMFACTORY_APP_NAME'] = 'config_test';
+		$_data = $_config->processRequest( 'app', HttpMethod::GET, false );
 
 		$_config->__destruct();
 
@@ -56,7 +59,7 @@ class ConfigTest extends \PHPUnit_Framework_TestCase
 	 * @param string            $eventName
 	 * @param EventDispatcher   $dispatcher
 	 */
-	protected function _onPreProcess( $event, $eventName, $dispatcher )
+	public function onPreProcess( $event, $eventName, $dispatcher )
 	{
 		$this->_preProcess = true;
 	}
@@ -66,7 +69,7 @@ class ConfigTest extends \PHPUnit_Framework_TestCase
 	 * @param string            $eventName
 	 * @param EventDispatcher   $dispatcher
 	 */
-	protected function _onPostProcess( $event, $eventName, $dispatcher )
+	public function onPostProcess( $event, $eventName, $dispatcher )
 	{
 		$this->_postProcess = true;
 	}
@@ -76,7 +79,7 @@ class ConfigTest extends \PHPUnit_Framework_TestCase
 	 * @param string            $eventName
 	 * @param EventDispatcher   $dispatcher
 	 */
-	protected function _onBeforeDestruct( $event, $eventName, $dispatcher )
+	public function onBeforeDestruct( $event, $eventName, $dispatcher )
 	{
 		$this->_beforeDestruct = true;
 	}

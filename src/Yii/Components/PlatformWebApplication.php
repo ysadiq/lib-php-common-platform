@@ -33,14 +33,13 @@ use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * PlatformWebApplication
  */
-class PlatformWebApplication extends \CWebApplication implements PublisherLike, SubscriberLike, EventSubscriberInterface
+class PlatformWebApplication extends \CWebApplication implements PublisherLike, SubscriberLike
 {
 	//*************************************************************************
 	//	Constants
@@ -215,31 +214,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	}
 
 	/**
-	 * Returns an array of event names this subscriber wants to listen to.
-	 *
-	 * The array keys are event names and the value can be:
-	 *
-	 *  * The method name to call (priority defaults to 0)
-	 *  * An array composed of the method name to call and the priority
-	 *  * An array of arrays composed of the method names to call and respective
-	 *    priorities, or 0 if unset
-	 *
-	 * For instance:
-	 *
-	 *  * array('eventName' => 'methodName')
-	 *  * array('eventName' => array('methodName', $priority))
-	 *  * array('eventName' => array(array('methodName1', $priority), array('methodName2'))
-	 *
-	 * @return array The event names to listen to
-	 *
-	 * @api
-	 */
-	public static function getSubscribedEvents()
-	{
-		return array();
-	}
-
-	/**
 	 * Handles an OPTIONS request to the server to allow CORS and optionally sends the CORS headers
 	 *
 	 * @param \CEvent $event
@@ -249,7 +223,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	protected function _onBeginRequest( \CEvent $event )
 	{
 		//	Start the request-only profile
-		$this->startProfiler( 'request' );
+		Profiler::start( 'app.request' );
 
 		switch ( $this->_requestObject->getMethod() )
 		{
@@ -303,7 +277,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 				$this->_responseObject->send();
 			}
 		}
-		$this->stopProfiler( 'request' );
+
+		Log::debug( '~~ "app.request" profile: ' . Profiler::stop( 'app.request' ) );
 	}
 
 	/**
