@@ -30,32 +30,31 @@ if ( false !== Yii::getPathOfAlias( 'DreamFactory.Yii.*' ) )
 	return true;
 }
 
-$_basePath = dirname( dirname( __DIR__ ) );
+$_basePath = dirname( __DIR__ );
 $_vendorPath = $_basePath . '/vendor';
 
 Pii::setPathOfAlias( 'vendor', $_vendorPath );
 
 //	lib-php-common-yii (psr-0 && psr-4 compatible)
-$_libPath =
-	$_vendorPath . '/dreamfactory/lib-php-common-yii' . ( is_dir( $_vendorPath . '/dreamfactory/lib-php-common-yii/src' ) ? '/src' : '/DreamFactory/Yii' );
+$_libPath
+	= $_vendorPath . '/dreamfactory/lib-php-common-yii' . ( is_dir( $_vendorPath . '/dreamfactory/lib-php-common-yii/src' ) ? '/src' : '/DreamFactory/Yii' );
 
 Pii::alias( 'DreamFactory.Yii.*', $_libPath );
-Pii::alias( 'DreamFactory.Yii.Components', $_libPath . '/Components' );
-Pii::alias( 'DreamFactory.Yii.Behaviors', $_libPath . '/Behaviors' );
-Pii::alias( 'DreamFactory.Yii.Utility', $_libPath . '/Utility' );
-Pii::alias( 'DreamFactory.Yii.Logging', $_libPath . '/Logging' );
+Pii::alias( 'DreamFactory.Yii.Components.*', $_libPath . '/Components' );
+Pii::alias( 'DreamFactory.Yii.Behaviors.*', $_libPath . '/Behaviors' );
+Pii::alias( 'DreamFactory.Yii.Utility.*', $_libPath . '/Utility' );
+Pii::alias( 'DreamFactory.Yii.Logging.*', $_libPath . '/Logging' );
 
 //	lib-php-common-platform (psr-0 && psr-4 compatible)
-$_libPath =
-	$_vendorPath .
+$_libPath
+	= $_vendorPath .
 	'/dreamfactory/lib-php-common-platform' .
 	( is_dir( $_vendorPath . '/dreamfactory/lib-php-common-platform/src' ) ? '/src' : '/DreamFactory/Platform' );
 
 Pii::alias( 'DreamFactory.Platform.*', $_libPath );
-Pii::alias( 'DreamFactory.Platform.Services', $_libPath . '/Services' );
-Pii::alias( 'DreamFactory.Platform.Services.Portal', $_libPath . '/Services/Portal' );
-Pii::alias( 'DreamFactory.Platform.Yii.Behaviors', $_libPath . '/Yii/Behaviors' );
-Pii::alias( 'DreamFactory.Platform.Yii.Models', $_libPath . '/Yii/Models' );
+Pii::alias( 'DreamFactory.Platform.Services.*', $_libPath . '/Services' );
+Pii::alias( 'DreamFactory.Platform.Yii.Behaviors.*', $_libPath . '/Yii/Behaviors' );
+Pii::alias( 'DreamFactory.Platform.Yii.Models.*', $_libPath . '/Yii/Models' );
 
 unset( $_libPath );
 

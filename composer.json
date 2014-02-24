@@ -23,8 +23,9 @@
 		"dready92/php-on-couch":           "dev-master",
 		"dreamfactory/azure-sdk-for-php":  "~0.4.0",
 		"dreamfactory/javascript-sdk":     "1.*",
-		"dreamfactory/lib-php-common-yii": "*",
-		"dreamfactory/oasys":              "~0.4.0",
+		"dreamfactory/lib-php-common":	   "dev-develop as dev-master",
+		"dreamfactory/lib-php-common-yii": "dev-develop as dev-master",
+		"dreamfactory/oasys":              "~0.4.7",
 		"kisma/kisma":                     "~0.2@stable",
 		"pear/net_url2":                   "*",
 		"pear/http_request2":              "*",
@@ -35,7 +36,7 @@
 		"swiftmailer/swiftmailer":         "4.3.*"
 	},
 	"require-dev":       {
-		"phpunit/phpunit":          "*",
+		"phpunit/phpunit":          "~3.7@stable",
 		"phpunit/phpunit-story":    "@stable",
 		"phpunit/phpunit-selenium": "@stable",
 		"phpunit/php-invoker":      "@stable",

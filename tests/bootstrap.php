@@ -17,7 +17,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Utility\Log;
 
 /**
@@ -25,7 +24,13 @@ use Kisma\Core\Utility\Log;
  * Bootstrap script for PHPUnit tests
  */
 $_basePath = dirname( __DIR__ );
+$_vendorPath = $_basePath . '/vendor';
 
+if ( !is_dir( $_vendorPath ) )
+{
+	echo 'Please run composer install/update before running tests.';
+	exit( 1 );
+}
 //	Composer
 $_loader = require( $_basePath . '/vendor/autoload.php' );
 

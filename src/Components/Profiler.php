@@ -59,7 +59,7 @@ class Profiler
 	 */
 	public static function stop( $id, $prettyPrint = true )
 	{
-		$_elapsed = microtime( true ) - static::$_runs[$id];
+		$_elapsed = microtime( true ) - ( isset( static::$_runs[$id] ) ? static::$_runs[$id] : 0.0 );
 
 		return $prettyPrint ? static::elapsedAsString( $_elapsed ) : $_elapsed;
 	}

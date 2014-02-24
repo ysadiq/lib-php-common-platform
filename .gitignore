@@ -4,3 +4,4 @@ vendor
 .composer
 tests/config/keys.php
 tests/storage
+build/

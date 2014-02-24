@@ -30,12 +30,9 @@ use DreamFactory\Platform\Interfaces\TransformerLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestResponse;
-use DreamFactory\Platform\Yii\Components\PlatformWebApplication;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
-use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -170,13 +167,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	public function processRequest( $resource = null, $action = self::Get, $output_format = null )
 	{
-		//	Start a timer...
-		if ( PlatformWebApplication::getProfilerEnabled() )
-		{
-			/** @noinspection PhpUndefinedMethodInspection */
-			Pii::app()->startProfiler();
-		}
-
 		$this->_setAction( $action );
 
 		//	Require app name for security check
@@ -189,8 +179,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		//	Inherent failure?
 		if ( false === ( $this->_response = $this->_handleResource() ) )
 		{
-			$_message =
-				$this->_action .
+			$_message
+				= $this->_action .
 				' requests' .
 				( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
 				' are not currently supported by the "' .
@@ -201,15 +191,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		}
 
 		$this->_postProcess();
-
-		if ( PlatformWebApplication::getProfilerEnabled() )
-		{
-			/** @noinspection PhpUndefinedMethodInspection */
-			Log::debug(
-			   '*profile* ' . $action . ' ' . $this->_requestObject->getRequestUri() . ': ' .
-			   Pii::app()->stopProfiler()
-			);
-		}
 
 		return $this->_respond();
 	}
@@ -411,9 +392,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		$_appName = $this->_requestObject->query->get(
 												'app_name',
 													//	No app_name, look for headers...
-												$this->_requestObject->server->get(
-																			 'HTTP_X_DREAMFACTORY_APPLICATION_NAME',
-																			 $this->_requestObject->server->get( 'HTTP_X_APPLICATION_NAME' )
+												Option::server(
+													  'HTTP_X_DREAMFACTORY_APPLICATION_NAME',
+													  Option::server( 'HTTP_X_APPLICATION_NAME' )
 												),
 												FILTER_SANITIZE_STRING
 		);
@@ -920,5 +901,4 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	{
 		return $this->_outputAsFile;
 	}
-
 }
