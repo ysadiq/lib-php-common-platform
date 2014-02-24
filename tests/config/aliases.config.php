@@ -30,7 +30,7 @@ if ( false !== Yii::getPathOfAlias( 'DreamFactory.Yii.*' ) )
 	return true;
 }
 
-$_basePath = dirname( __DIR__ );
+$_basePath = dirname( dirname( __DIR__ ) );
 $_vendorPath = $_basePath . '/vendor';
 
 Pii::setPathOfAlias( 'vendor', $_vendorPath );

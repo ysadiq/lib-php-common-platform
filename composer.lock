@@ -217,20 +217,20 @@
             "source": {
                 "type": "git",
                 "url": "https://bitbucket.org/dreamfactory/lib-php-common.git",
-                "reference": "5379abccefc789a829f1a445bd3177b8573fd1e0"
+                "reference": "5c27c5ec42832378f539693f1a1dfe93ad66d538"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://bitbucket.org/dreamfactory/lib-php-common/get/5379abccefc789a829f1a445bd3177b8573fd1e0.zip",
-                "reference": "5379abccefc789a829f1a445bd3177b8573fd1e0",
+                "url": "https://bitbucket.org/dreamfactory/lib-php-common/get/5c27c5ec42832378f539693f1a1dfe93ad66d538.zip",
+                "reference": "5c27c5ec42832378f539693f1a1dfe93ad66d538",
                 "shasum": ""
             },
             "require": {
-                "kisma/kisma": "~0.2.22",
+                "kisma/kisma": "~0.2.23@stable",
                 "php": ">=5.3.18"
             },
             "require-dev": {
-                "phpunit/phpunit": "*"
+                "phpunit/phpunit": "~3.7@stable"
             },
             "type": "library",
             "extra": {
@@ -256,17 +256,16 @@
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Sr. Software Engineer"
+                    "role": "Lead Guinea Pig, server-side/client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Common Components for PHP",
-            "homepage": "https://www.dreamfactory.com/df_developers",
+            "homepage": "http://dreamfactorysoftware.github.io/",
             "keywords": [
-                "dreamfactory",
                 "dsp",
                 "dsp-core"
             ],
-            "time": "2014-02-22 19:30:49"
+            "time": "2014-02-24 05:01:46"
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
@@ -274,24 +273,24 @@
             "source": {
                 "type": "git",
                 "url": "https://bitbucket.org/dreamfactory/lib-php-common-yii.git",
-                "reference": "4a463e95cf34d27ea52e2040ce96cda940830675"
+                "reference": "7b3f4ec39f17793dcd53a5b94255c7c5469fdb4e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://bitbucket.org/dreamfactory/lib-php-common-yii/get/4a463e95cf34d27ea52e2040ce96cda940830675.zip",
-                "reference": "4a463e95cf34d27ea52e2040ce96cda940830675",
+                "url": "https://bitbucket.org/dreamfactory/lib-php-common-yii/get/7b3f4ec39f17793dcd53a5b94255c7c5469fdb4e.zip",
+                "reference": "7b3f4ec39f17793dcd53a5b94255c7c5469fdb4e",
                 "shasum": ""
             },
             "require": {
                 "dreamfactory/lib-php-common": "dev-develop as dev-master",
-                "dreamfactory/yii": "*",
-                "kisma/kisma": "~0.2.22",
+                "dreamfactory/yii": "=1.1.13@dev",
+                "kisma/kisma": "~0.2@stable",
                 "php": ">=5.3.10"
             },
             "require-dev": {
                 "phpunit/dbunit": "@stable",
                 "phpunit/php-invoker": "@stable",
-                "phpunit/phpunit": "*",
+                "phpunit/phpunit": "~3.7@stable",
                 "phpunit/phpunit-selenium": "@stable",
                 "phpunit/phpunit-story": "@stable"
             },
@@ -314,7 +313,7 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Lead Developer"
                 },
                 {
                     "name": "Jason Sykes",
@@ -338,7 +337,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-02-23 01:02:12"
+            "time": "2014-02-24 05:03:04"
         },
         {
             "name": "dreamfactory/oasys",
@@ -396,16 +395,16 @@
         },
         {
             "name": "dreamfactory/yii",
-            "version": "dev-master",
+            "version": "1.1.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/yii.git",
-                "reference": "13c82707821a3bc343cd1ba7d8c95fca2c678120"
+                "reference": "ecc4882fcb146dbe8cff0c5e9f41f3df402485f4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/13c82707821a3bc343cd1ba7d8c95fca2c678120",
-                "reference": "13c82707821a3bc343cd1ba7d8c95fca2c678120",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/ecc4882fcb146dbe8cff0c5e9f41f3df402485f4",
+                "reference": "ecc4882fcb146dbe8cff0c5e9f41f3df402485f4",
                 "shasum": ""
             },
             "require": {
@@ -472,7 +471,7 @@
                 "framework",
                 "yii"
             ],
-            "time": "2014-02-13 16:56:31"
+            "time": "2014-02-24 00:36:28"
         },
         {
             "name": "fpoirotte/http_request2",

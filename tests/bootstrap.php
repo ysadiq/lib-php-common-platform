@@ -50,11 +50,9 @@ if ( file_exists( __DIR__ . '/config/keys.php' ) )
 	require_once __DIR__ . '/config/keys.php';
 }
 
-Log::setDefaultLog( __DIR__ . '/log/platform-php-sdk.tests.log' );
-
 //	Create the application but don't run (false at the end)
 $_app = DreamFactory\Yii\Utility\Pii::run(
-									__DIR__,
+									$_basePath,
 									$_loader,
 									'DreamFactory\\Platform\\Yii\\Components\\PlatformConsoleApplication',
 									$_config,
