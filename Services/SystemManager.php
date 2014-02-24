@@ -94,17 +94,17 @@ class SystemManager extends BaseSystemRestService
 		static::$_configPath = dirname( __DIR__ ) . '/config';
 
 		parent::__construct(
-			  array_merge(
-				  array(
-					  'name'        => 'System Configuration Management',
-					  'api_name'    => 'system',
-					  'type'        => 'System',
-					  'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-					  'description' => 'Service for system administration.',
-					  'is_active'   => true,
-				  ),
-				  $settings
-			  )
+			array_merge(
+				array(
+					 'name'        => 'System Configuration Management',
+					 'api_name'    => 'system',
+					 'type'        => 'System',
+					 'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+					 'description' => 'Service for system administration.',
+					 'is_active'   => true,
+				),
+				$settings
+			)
 		);
 	}
 
@@ -537,8 +537,8 @@ class SystemManager extends BaseSystemRestService
 				$_firstName = Pii::getState( 'first_name', Option::get( $attributes, 'firstName' ) );
 				$_lastName = Pii::getState( 'last_name', Option::get( $attributes, 'lastName' ) );
 				$_displayName = Pii::getState(
-								   'display_name',
-								   Option::get( $attributes, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
+					'display_name',
+					Option::get( $attributes, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
 				);
 
 				$_fields = array(
@@ -646,6 +646,41 @@ class SystemManager extends BaseSystemRestService
 						}
 					}
 					break;
+				case 'df_sys_app':
+					$result = App::model()->findAll();
+					if ( empty( $result ) )
+					{
+						if ( !empty( $content ) )
+						{
+							foreach ( $content as $package )
+							{
+								if ( null !== ( $fileUrl = Option::get( $package, 'url' ) ) )
+								{
+									if ( 0 === strcasecmp( 'dfpkg', FileUtilities::getFileExtension( $fileUrl ) ) )
+									{
+										Log::debug( 'Importing application: ' . $fileUrl );
+										$filename = null;
+										try
+										{
+											// need to download and extract zip file and move contents to storage
+											$filename = FileUtilities::importUrlFileToTemp( $fileUrl );
+											Packager::importAppFromPackage( $filename, $fileUrl );
+										}
+										catch ( \Exception $ex )
+										{
+											Log::error( "Failed to import application package $fileUrl.\n{$ex->getMessage()}" );
+										}
+
+										if ( !empty( $filename ) && false === @unlink( $filename ) )
+										{
+											Log::error( 'Unable to remove package file "' . $filename . '"' );
+										}
+									}
+								}
+							}
+						}
+					}
+					break;
 			}
 		}
 	}
@@ -658,7 +693,8 @@ class SystemManager extends BaseSystemRestService
 	 * @throws \Exception
 	 * @return void
 	 */
-	public static function upgradeDsp( $version )
+	public
+	static function upgradeDsp( $version )
 	{
 		if ( empty( $version ) )
 		{
@@ -753,11 +789,11 @@ class SystemManager extends BaseSystemRestService
 	public static function getDspVersions()
 	{
 		$_results = Curl::get(
-						static::VERSION_TAGS_URL,
-						array(),
-						array(
-							CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' )
-						)
+			static::VERSION_TAGS_URL,
+			array(),
+			array(
+				 CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' )
+			)
 		);
 
 		if ( HttpResponse::Ok != ( $_code = Curl::getLastHttpCode() ) )
@@ -975,14 +1011,14 @@ class SystemManager extends BaseSystemRestService
 
 		//	Call the API
 		return Drupal::registerPlatform(
-					 $user,
-					 $_paths,
-					 array(
-						 'field_first_name'           => $user->first_name,
-						 'field_last_name'            => $user->last_name,
-						 'field_installation_type'    => InstallationTypes::determineType( true ),
-						 'field_registration_skipped' => ( $skipped ? 1 : 0 ),
-					 )
+			$user,
+			$_paths,
+			array(
+				 'field_first_name'           => $user->first_name,
+				 'field_last_name'            => $user->last_name,
+				 'field_installation_type'    => InstallationTypes::determineType( true ),
+				 'field_registration_skipped' => ( $skipped ? 1 : 0 ),
+			)
 		);
 	}
 
@@ -1139,8 +1175,8 @@ class SystemManager extends BaseSystemRestService
 		try
 		{
 			$_admins = Sql::scalar(
-						  <<<SQL
-				SELECT
+				<<<SQL
+					SELECT
 	COUNT(id)
 FROM
 	df_sys_user
@@ -1148,10 +1184,10 @@ WHERE
 	is_sys_admin = 1 AND
 	is_deleted = 0
 SQL
-							  ,
-							  0,
-							  array(),
-							  Pii::pdo()
+				,
+				0,
+				array(),
+				Pii::pdo()
 			);
 
 			return ( 0 == $_admins ? false : ( $_admins > 1 ? $_admins : true ) );
@@ -1176,8 +1212,8 @@ SQL
 			/** @var User $_user */
 			$_user = $user
 				? : User::model()->find(
-						'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
-						array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
+					'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
+					array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
 				);
 
 			if ( !empty( $_user ) )
