@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "a8f2f82dfd184bc7a5a9073f88b0eb87",
+    "hash": "2a7844b02143117f295b8d52888b4940",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -273,12 +273,12 @@
             "source": {
                 "type": "git",
                 "url": "https://bitbucket.org/dreamfactory/lib-php-common-yii.git",
-                "reference": "7b3f4ec39f17793dcd53a5b94255c7c5469fdb4e"
+                "reference": "46371669272c104688135e3fa51afc82df684e1f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://bitbucket.org/dreamfactory/lib-php-common-yii/get/7b3f4ec39f17793dcd53a5b94255c7c5469fdb4e.zip",
-                "reference": "7b3f4ec39f17793dcd53a5b94255c7c5469fdb4e",
+                "url": "https://bitbucket.org/dreamfactory/lib-php-common-yii/get/46371669272c104688135e3fa51afc82df684e1f.zip",
+                "reference": "46371669272c104688135e3fa51afc82df684e1f",
                 "shasum": ""
             },
             "require": {
@@ -313,7 +313,7 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer"
+                    "role": "Lead Developer, server-side/client-side"
                 },
                 {
                     "name": "Jason Sykes",
@@ -337,7 +337,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-02-24 05:03:04"
+            "time": "2014-02-24 15:32:58"
         },
         {
             "name": "dreamfactory/oasys",
@@ -624,16 +624,16 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.23",
+            "version": "0.2.24",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "bf8471a057d18161d7a54a77456ccad702ca7498"
+                "reference": "278e0c5529e6271f8104e0b177f56ff62b702118"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/bf8471a057d18161d7a54a77456ccad702ca7498",
-                "reference": "bf8471a057d18161d7a54a77456ccad702ca7498",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/278e0c5529e6271f8104e0b177f56ff62b702118",
+                "reference": "278e0c5529e6271f8104e0b177f56ff62b702118",
                 "shasum": ""
             },
             "require": {
@@ -673,7 +673,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-02-23 20:57:18"
+            "time": "2014-02-24 15:25:01"
         },
         {
             "name": "monolog/monolog",
@@ -1128,8 +1128,7 @@
                 },
                 {
                     "name": "Jamie Hannaford",
-                    "email": "jamie.hannaford@rackspace.com",
-                    "homepage": "https://github.com/jamiehannaford"
+                    "email": "jamie@limetree.org"
                 }
             ],
             "description": "Rackspace open cloud php library",
@@ -1145,12 +1144,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/swiftmailer/swiftmailer.git",
-                "reference": "ae540bed1079c07aa12e9e62d9d8d4fc49bbdff2"
+                "reference": "v4.3.1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/swiftmailer/swiftmailer/zipball/ae540bed1079c07aa12e9e62d9d8d4fc49bbdff2",
-                "reference": "ae540bed1079c07aa12e9e62d9d8d4fc49bbdff2",
+                "url": "https://api.github.com/repos/swiftmailer/swiftmailer/zipball/v4.3.1",
+                "reference": "v4.3.1",
                 "shasum": ""
             },
             "require": {
@@ -1174,9 +1173,7 @@
             "authors": [
                 {
                     "name": "Fabien Potencier",
-                    "email": "fabien@symfony.com",
-                    "homepage": "http://fabien.potencier.org",
-                    "role": "Lead Developer"
+                    "email": "fabien@symfony.com"
                 },
                 {
                     "name": "Chris Corbyn"
@@ -1920,9 +1917,7 @@
             "authors": [
                 {
                     "name": "Fabien Potencier",
-                    "email": "fabien@symfony.com",
-                    "homepage": "http://fabien.potencier.org",
-                    "role": "Lead Developer"
+                    "email": "fabien@symfony.com"
                 },
                 {
                     "name": "Symfony Community",
@@ -1939,12 +1934,19 @@
             "alias": "dev-master",
             "alias_normalized": "9999999-dev",
             "version": "dev-develop",
+            "package": "dreamfactory/lib-php-common"
+        },
+        {
+            "alias": "dev-master",
+            "alias_normalized": "9999999-dev",
+            "version": "dev-develop",
             "package": "dreamfactory/lib-php-common-yii"
         }
     ],
     "minimum-stability": "dev",
     "stability-flags": {
         "dready92/php-on-couch": 20,
+        "dreamfactory/lib-php-common": 20,
         "dreamfactory/lib-php-common-yii": 20,
         "dreamfactory/oasys": 0,
         "kisma/kisma": 0,

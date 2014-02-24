@@ -3,7 +3,6 @@
 	"description":       "DreamFactory Services Platform(tm) Components Library/SDK for PHP",
 	"homepage":          "http://dreamfactorysoftware.github.io",
 	"keywords":          ["dsp", "sdk"],
-	"type":              "library",
 	"license":           ["Apache-2.0"],
 	"authors":           [
 		{
@@ -23,7 +22,8 @@
 		"dready92/php-on-couch":           "dev-master",
 		"dreamfactory/azure-sdk-for-php":  "~0.4.0",
 		"dreamfactory/javascript-sdk":     "1.*",
-		"dreamfactory/yii":		   "=1.1.13",
+		"dreamfactory/yii":                "=1.1.13",
+		"dreamfactory/lib-php-common":     "dev-develop as dev-master",
 		"dreamfactory/lib-php-common-yii": "dev-develop as dev-master",
 		"dreamfactory/oasys":              "~0.4@stable",
 		"kisma/kisma":                     "~0.2@stable",
@@ -45,7 +45,7 @@
 	"minimum-stability": "dev",
 	"autoload":          {
 		"psr-4": {
-			"DreamFactory\\Platform\\": "src/"
+			"DreamFactory\\Platform\\": ""
 		}
 	},
 	"extra":             {
