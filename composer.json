@@ -23,9 +23,10 @@
 		"dready92/php-on-couch":           "dev-master",
 		"dreamfactory/azure-sdk-for-php":  "~0.4.0",
 		"dreamfactory/javascript-sdk":     "1.*",
-		"dreamfactory/lib-php-common-yii": "*",
-		"dreamfactory/oasys":              "~0.4.6@stable",
-		"kisma/kisma":                     "~0.2.22",
+		"dreamfactory/yii":		   "=1.1.13",
+		"dreamfactory/lib-php-common-yii": "dev-develop as dev-master",
+		"dreamfactory/oasys":              "~0.4@stable",
+		"kisma/kisma":                     "~0.2@stable",
 		"pear/net_url2":                   "*",
 		"pear/http_request2":              "*",
 		"pear/mail_mime":                  "*",
@@ -35,7 +36,7 @@
 		"swiftmailer/swiftmailer":         "4.3.*"
 	},
 	"require-dev":       {
-		"phpunit/phpunit":          "*",
+		"phpunit/phpunit":          "~3.7@stable",
 		"phpunit/phpunit-story":    "@stable",
 		"phpunit/phpunit-selenium": "@stable",
 		"phpunit/php-invoker":      "@stable",
@@ -43,11 +44,10 @@
 	},
 	"minimum-stability": "dev",
 	"autoload":          {
-		"psr-0": {
-			"DreamFactory\\Platform\\": ""
+		"psr-4": {
+			"DreamFactory\\Platform\\": "src/"
 		}
 	},
-	"target-dir":        "DreamFactory/Platform",
 	"extra":             {
 		"branch-alias": {
 			"dev-develop": "1.4.x-dev"
