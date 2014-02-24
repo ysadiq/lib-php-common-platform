@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "ee66000585850f0bef80ced4a9ca7bfc",
+    "hash": "24698816dbbf2efb2453e95ebba2196f",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -122,22 +122,23 @@
         },
         {
             "name": "dreamfactory/azure-sdk-for-php",
-            "version": "0.4.0.1",
+            "version": "0.4.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/azure-sdk-for-php.git",
-                "reference": "067a5b733b9e1d842e911a1da1910aee94873c2d"
+                "reference": "bbecccae3343e99e47846ba85f53cf26fe4f2506"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/azure-sdk-for-php/zipball/067a5b733b9e1d842e911a1da1910aee94873c2d",
-                "reference": "067a5b733b9e1d842e911a1da1910aee94873c2d",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/azure-sdk-for-php/zipball/bbecccae3343e99e47846ba85f53cf26fe4f2506",
+                "reference": "bbecccae3343e99e47846ba85f53cf26fe4f2506",
                 "shasum": ""
             },
             "require": {
-                "pear-pear/http_request2": "*",
-                "pear-pear/mail_mime": "*",
-                "pear-pear/mail_mimedecode": "*"
+                "pear-pear.php.net/http_request2": "*",
+                "pear-pear.php.net/mail_mime": "*",
+                "pear-pear.php.net/mail_mimedecode": "*",
+                "pear-pear.php.net/net_url2": "*"
             },
             "type": "library",
             "autoload": {
@@ -153,11 +154,6 @@
                 {
                     "name": "Azure PHP SDK",
                     "email": "azurephpsdk@microsoft.com"
-                },
-                {
-                    "name": "Jerry Ablan",
-                    "email": "jerryablan@dreamfactory.com",
-                    "role": "DreamFactory Package Maintainer"
                 }
             ],
             "description": "This project provides a set of PHP client libraries that make it easy to access Windows Azure tables, blobs, queues, service runtime and service management APIs.",
@@ -166,7 +162,7 @@
                 "php",
                 "sdk"
             ],
-            "time": "2014-02-21 20:57:07"
+            "time": "2014-02-24 21:48:37"
         },
         {
             "name": "dreamfactory/javascript-sdk",
@@ -1910,6 +1906,7 @@
         "dreamfactory/oasys": 0,
         "dready92/php-on-couch": 20,
         "phpforce/soap-client": 20,
+        "dreamfactory/azure-sdk-for-php": 0,
         "phpunit/phpunit": 0,
         "phpunit/phpunit-selenium": 0,
         "phpunit/phpunit-story": 0,
