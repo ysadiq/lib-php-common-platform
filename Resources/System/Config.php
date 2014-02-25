@@ -31,7 +31,6 @@ use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Option;
-use Symfony\Component\HttpFoundation\FileBag;
 
 /**
  * Config
@@ -72,16 +71,11 @@ class Config extends BaseSystemRestResource
 		);
 	}
 
-	/**
-	 * @return array|bool
-	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 */
 	public static function getOpenRegistration()
 	{
 		/** @var $_config \DreamFactory\Platform\Yii\Models\Config */
 		$_fields = 'allow_open_registration, open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id';
 		$_config = ResourceStore::model( 'config' )->find( array( 'select' => $_fields ) );
-
 		if ( null === $_config )
 		{
 			throw new InternalServerErrorException( 'Unable to load system configuration.' );
@@ -135,14 +129,24 @@ class Config extends BaseSystemRestResource
 	 */
 	protected function _postProcess()
 	{
-		static $_fabricHosted;
+		static $_fabricHosted = null;
 
-		$_fabricHosted = $_fabricHosted ? : \Kisma::get( 'platform.fabric_hosted', Fabric::fabricHosted() );
+		if ( null === $_fabricHosted )
+		{
+			$_fabricHosted = Fabric::fabricHosted();
+		}
 
 		//	Only return a single row, not in an array
-		if ( is_array( $this->_response ) && !Pii::isEmpty( $_record = Option::get( $this->_response, 'record' ) ) && count( $_record ) >= 1 )
+		if ( null !== ( $_record = Option::getDeep( $this->_response, 'record', 0 ) ) )
 		{
-			$this->_response = current( $_record );
+			if ( 1 == sizeof( $this->_response['record'] ) )
+			{
+				$this->_response = $_record;
+			}
+		}
+		else if ( is_array( $this->_response ) && isset( $this->_response[0] ) && sizeof( $this->_response ) == 1 )
+		{
+			$this->_response = $this->_response[0];
 		}
 
 		/**
@@ -166,7 +170,9 @@ class Config extends BaseSystemRestResource
 		 * Remote login support
 		 */
 		$this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
-		$this->_response['allow_remote_logins'] = ( Pii::getParam( 'dsp.allow_remote_logins', false ) && $this->_response['allow_open_registration'] );
+
+		$this->_response['allow_remote_logins'] = ( Pii::getParam( 'dsp.allow_remote_logins', false ) &&
+													Option::getBool( $this->_response, 'allow_open_registration', false ) );
 
 		if ( false !== $this->_response['allow_remote_logins'] )
 		{
