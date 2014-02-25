@@ -26,8 +26,8 @@
 		"dreamfactory/lib-php-common-yii":   "~1.1@stable",
 		"dreamfactory/oasys":                "~0.4@stable",
 		"dreamfactory/javascript-sdk":       "1.*",
-		"swiftmailer/swiftmailer":           "4.3.*",
-		"aws/aws-sdk-php":                   "2.4.*",
+		"swiftmailer/swiftmailer":           "~4.3@stable",
+		"aws/aws-sdk-php":                   "~2.4@stable",
 		"rackspace/php-opencloud":           "1.5.*",
 		"dready92/php-on-couch":             "dev-master",
 		"phpforce/soap-client":              "dev-master",
@@ -58,7 +58,7 @@
 	"target-dir":        "DreamFactory/Platform",
 	"extra":             {
 		"branch-alias": {
-			"dev-develop": "1.3.6-dev"
+			"dev-develop": "1.4.x-dev"
 		}
 	}
 }
