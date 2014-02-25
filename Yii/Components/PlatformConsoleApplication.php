@@ -20,15 +20,11 @@
 namespace DreamFactory\Platform\Yii\Components;
 
 use DreamFactory\Platform\Components\Profiler;
-use DreamFactory\Platform\Events\DspEvent;
-use DreamFactory\Platform\Events\Enums\DspEvents;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\Events\SeedEvent;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
@@ -76,10 +72,15 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 * @var string The default path (sub-path) of installed plug-ins
 	 */
 	const DEFAULT_PLUGINS_PATH = '/storage/plugins';
+
 	//*************************************************************************
 	//	Members
 	//*************************************************************************
 
+	/**
+	 * @var bool If true, profiling information is output to the log
+	 */
+	protected static $_profilerEnabled = false;
 	/**
 	 * @var array An indexed array of white-listed hosts (ajax.example.com or foo.bar.com or just bar.com)
 	 */
@@ -102,17 +103,13 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 */
 	protected $_modelNamespaces = array();
 	/**
-	 * @var Request
+	 * @var Request The inbound request
 	 */
 	protected $_requestObject;
 	/**
-	 * @var  Response
+	 * @var  Response The outbound response
 	 */
 	protected $_responseObject;
-	/**
-	 * @var bool If true, profiling information is output to the log
-	 */
-	protected static $_profilerEnabled = null;
 
 	//*************************************************************************
 	//	Methods
@@ -123,13 +120,10 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 */
 	public function __construct( $config = null )
 	{
-		//	Start the full-cycle timer
-		if ( ( static::$_profilerEnabled = ( static::$_profilerEnabled ? : \Kisma::get( CoreSettings::DEBUG ) ) ) )
-		{
-			Profiler::start( 'app' );
-		}
-
 		parent::__construct( $config );
+
+		//	Start the full-cycle timer
+		$this->startProfiler( 'app' );
 	}
 
 	/**
@@ -139,49 +133,43 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	{
 		if ( static::$_profilerEnabled )
 		{
-			Log::debug( '~~ "app" profile: ' . Profiler::stop( 'app' ) );
+			Log::debug( '~~ "app" profile: ' . $this->startProfiler( 'app' ) );
 		}
 	}
 
 	/**
-	 * @param string    $eventName
-	 * @param SeedEvent $event
+	 * Start a timer
 	 *
-	 * @return DspEvent
+	 * @param string $id The id of the timer
+	 *
+	 * @return $this
 	 */
-	public function trigger( $eventName, $event = null )
+	public function startProfiler( $id = __CLASS__ )
 	{
-		$_event = $event ? : new DspEvent( $this, $this->_requestObject, $this->_responseObject );
+		if ( static::$_profilerEnabled )
+		{
+			Profiler::start( $id );
+		}
 
-		return EventManager::trigger( $eventName, $_event );
+		return $this;
 	}
 
 	/**
-	 * Adds an event listener that listens on the specified events.
+	 * Stop last timer
 	 *
-	 * @param string   $eventName            The event to listen on
-	 * @param callable $listener             The listener
-	 * @param integer  $priority             The higher this value, the earlier an event
-	 *                                       listener will be triggered in the chain (defaults to 0)
+	 * @param string $id The id of the timer
+	 * @param bool   $returnTimeString
 	 *
-	 * @return void
+	 * @return float
 	 */
-	public function on( $eventName, $listener, $priority = 0 )
+	public function stopProfiler( $id = __CLASS__, $returnTimeString = true )
 	{
-		EventManager::on( $eventName, $listener, $priority );
-	}
+		if ( static::$_profilerEnabled )
+		{
+			return Profiler::stop( $id, $returnTimeString );
+		}
 
-	/**
-	 * Turn off/unbind/remove $listener from an event
-	 *
-	 * @param string   $eventName
-	 * @param callable $listener
-	 *
-	 * @return void
-	 */
-	public function off( $eventName, $listener )
-	{
-		EventManager::off( $eventName, $listener );
+		return false;
 	}
 
 	/**
@@ -392,9 +380,6 @@ class PlatformConsoleApplication extends \CConsoleApplication
 
 		//	Load any plug-ins
 		$this->_loadPlugins();
-
-		//	Trigger request event
-		$this->trigger( DspEvents::BEFORE_REQUEST );
 	}
 
 	/**
@@ -402,8 +387,6 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 */
 	protected function _onEndRequest( \CEvent $event )
 	{
-		$this->trigger( DspEvents::AFTER_REQUEST );
-
 		//	Send the response
 		if ( !headers_sent() && $this->_responseObject )
 		{
@@ -457,8 +440,6 @@ class PlatformConsoleApplication extends \CConsoleApplication
 
 			return false;
 		}
-
-		$this->trigger( DspEvents::PLUGINS_LOADED );
 
 		return true;
 	}
@@ -538,8 +519,8 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	protected function _compareUris( $first, $second )
 	{
 		return ( $first['scheme'] == $second['scheme'] ) &&
-			   ( $first['host'] == $second['host'] ) &&
-			   ( $first['port'] == $second['port'] );
+		( $first['host'] == $second['host'] ) &&
+		( $first['port'] == $second['port'] );
 	}
 
 	/**

@@ -131,7 +131,10 @@ class PlatformWebApplication extends \CWebApplication
 	 */
 	public function __destruct()
 	{
-		Log::debug( '~~ "app" profile: ' . $this->stopProfiler( 'app' ) );
+		if ( static::$_profilerEnabled )
+		{
+			Log::debug( '~~ "app" profile: ' . $this->stopProfiler( 'app' ) );
+		}
 	}
 
 	/**
