@@ -45,7 +45,7 @@
 	"minimum-stability": "dev",
 	"autoload":          {
 		"psr-4": {
-			"DreamFactory\\Platform\\": "src/"
+			"DreamFactory\\Platform\\": ""
 		}
 	},
 	"extra":             {
