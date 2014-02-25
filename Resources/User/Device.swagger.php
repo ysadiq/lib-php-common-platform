@@ -82,6 +82,7 @@ $_commonProperties = array(
 	'id'       =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Identifier of this device.',
 		),
 	'uuid'     =>
@@ -112,24 +113,24 @@ $_commonProperties = array(
 );
 
 $_device['models'] = array(
-	'UserDeviceRequest'   =>
+	'DeviceRequest'   =>
 		array(
-			'id'         => 'UserDeviceRequest',
+			'id'         => 'DeviceRequest',
 			'properties' => $_commonProperties,
 		),
-	'UserDeviceResponse'  =>
+	'DeviceResponse'  =>
 		array(
-			'id'         => 'UserDeviceResponse',
+			'id'         => 'DeviceResponse',
 			'properties' =>
 				array_merge(
 					$_commonProperties,
 					array(
-						 'created_date'        =>
+						 'created_date'       =>
 							 array(
 								 'type'        => 'string',
 								 'description' => 'Date this device was created.',
 							 ),
-						 'last_modified_date'  =>
+						 'last_modified_date' =>
 							 array(
 								 'type'        => 'string',
 								 'description' => 'Date this device was last modified.',
@@ -137,9 +138,9 @@ $_device['models'] = array(
 					)
 				),
 		),
-	'UserDevicesResponse' =>
+	'DevicesRequest'  =>
 		array(
-			'id'         => 'UserDevicesResponse',
+			'id'         => 'DevicesRequest',
 			'properties' =>
 				array(
 					'record' =>
@@ -148,7 +149,33 @@ $_device['models'] = array(
 							'description' => 'Array of system device records.',
 							'items'       =>
 								array(
-									'$ref' => 'UserDeviceResponse',
+									'$ref' => 'DeviceRequest',
+								),
+						),
+					'ids'    =>
+						array(
+							'type'        => 'Array',
+							'description' => 'Array of system record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
+							'items'       =>
+								array(
+									'type'   => 'integer',
+									'format' => 'int32',
+								),
+						),
+				),
+		),
+	'DevicesResponse' =>
+		array(
+			'id'         => 'DevicesResponse',
+			'properties' =>
+				array(
+					'record' =>
+						array(
+							'type'        => 'Array',
+							'description' => 'Array of system device records.',
+							'items'       =>
+								array(
+									'$ref' => 'DeviceResponse',
 								),
 						),
 				),

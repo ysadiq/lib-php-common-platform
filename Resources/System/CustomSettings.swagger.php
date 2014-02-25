@@ -167,7 +167,7 @@ $_custom['models'] = array(
 				'type'        => 'Array',
 				'items'       =>
 				array(
-					'$ref' => 'string',
+					'type' => 'string',
 				),
 			),
 		),

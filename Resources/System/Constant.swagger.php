@@ -116,7 +116,7 @@ $_constant['models'] = array(
 				'type'        => 'Array',
 				'items'       =>
 				array(
-					'$ref' => 'string',
+					'type' => 'string',
 				),
 			),
 		),

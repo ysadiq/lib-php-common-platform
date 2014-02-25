@@ -506,19 +506,22 @@ $_models = array(
 					'length'             =>
 						array(
 							'type'        => 'integer',
+							'format'      => 'int32',
 							'description' => 'The maximum length allowed (in characters for string, displayed for numbers).',
 						),
 					'precision'          =>
 						array(
 							'type'        => 'integer',
+							'format'      => 'int32',
 							'description' => 'Total number of places for numbers.',
 						),
 					'scale'              =>
 						array(
 							'type'        => 'integer',
+							'format'      => 'int32',
 							'description' => 'Number of decimal places allowed for numbers.',
 						),
-					'default_value'            =>
+					'default_value'      =>
 						array(
 							'type'        => 'string',
 							'description' => 'Default value for this field.',

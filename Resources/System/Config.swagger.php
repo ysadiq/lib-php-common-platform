@@ -74,41 +74,49 @@ $_commonProperties = array(
 	'open_reg_role_id'           =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Default Role Id assigned to newly registered users, set to null to turn off open registration.',
 		),
 	'open_reg_email_service_id'  =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Set to an email-type service id to require email confirmation of newly registered users.',
 		),
 	'open_reg_email_template_id' =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Default email template used for open registration email confirmations.',
 		),
 	'invite_email_service_id'    =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Set to an email-type service id to allow user invites and invite confirmations via email service.',
 		),
 	'invite_email_template_id'   =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Default email template used for user invitations and confirmations via email service.',
 		),
 	'password_email_service_id'  =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Set to an email-type service id to require email confirmation to reset passwords, otherwise defaults to security question and answer.',
 		),
 	'password_email_template_id' =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Default email template used for password reset email confirmations.',
 		),
 	'guest_role_id'              =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Role Id assigned for all guest sessions, set to null to require authenticated sessions.',
 		),
 	'editable_profile_fields'    =>

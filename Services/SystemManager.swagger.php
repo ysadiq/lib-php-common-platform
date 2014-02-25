@@ -37,16 +37,16 @@ $_base['apis'] = array_merge(
 		 array(
 			 'path'        => '/{api_name}',
 			 'operations'  =>
-			 array(
-				 0 =>
 				 array(
-					 'method'   => 'GET',
-					 'summary'  => 'getResources() - List resources available for system management.',
-					 'nickname' => 'getResources',
-					 'type'     => 'Resources',
-					 'notes'    => 'See listed operations for each resource available.',
+					 0 =>
+						 array(
+							 'method'   => 'GET',
+							 'summary'  => 'getResources() - List resources available for system management.',
+							 'nickname' => 'getResources',
+							 'type'     => 'Resources',
+							 'notes'    => 'See listed operations for each resource available.',
+						 ),
 				 ),
-			 ),
 			 'description' => 'Operations available for system management.',
 		 ),
 	),
@@ -63,6 +63,31 @@ $_base['apis'] = array_merge(
 );
 
 $_base['models'] = array_merge(
+	array(
+		 'Metadata' =>
+			 array(
+				 'id'         => 'Metadata',
+				 'properties' =>
+					 array(
+						 'schema' =>
+							 array(
+								 'type'        => 'Array',
+								 'description' => 'Array of table schema.',
+								 'items'       =>
+									 array(
+										 'type' => 'string',
+									 ),
+							 ),
+						 'count'  =>
+							 array(
+								 'type'        => 'integer',
+								 'format'      => 'int32',
+								 'description' => 'Record count returned for GET requests.',
+							 ),
+					 ),
+			 ),
+	),
+	Option::get( $_base, 'models' ),
 	Option::get( $_app, 'models' ),
 	Option::get( $_appGroup, 'models' ),
 	Option::get( $_config, 'models' ),

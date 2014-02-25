@@ -55,6 +55,7 @@ $_email['apis'] = array(
 								'description'   => 'Set to limit the filter results.',
 								'allowMultiple' => false,
 								'type'          => 'integer',
+								'format'        => 'int32',
 								'paramType'     => 'query',
 								'required'      => false,
 							),
@@ -71,6 +72,7 @@ $_email['apis'] = array(
 								'description'   => 'Set to offset the filter results to a particular record count.',
 								'allowMultiple' => false,
 								'type'          => 'integer',
+								'format'        => 'int32',
 								'paramType'     => 'query',
 								'required'      => false,
 							),
@@ -477,6 +479,7 @@ $_commonProperties = array(
 	'id'          =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Identifier of this email template.',
 		),
 	'name'        =>
@@ -573,6 +576,7 @@ $_email['models'] = array(
 						 'created_by_id'       =>
 							 array(
 								 'type'        => 'integer',
+								 'format'      => 'int32',
 								 'description' => 'User Id of who created this email template.',
 							 ),
 						 'last_modified_date'  =>
@@ -583,6 +587,7 @@ $_email['models'] = array(
 						 'last_modified_by_id' =>
 							 array(
 								 'type'        => 'integer',
+								 'format'      => 'int32',
 								 'description' => 'User Id of who last modified this email template.',
 							 ),
 					)
@@ -625,7 +630,8 @@ $_email['models'] = array(
 							'description' => 'Array of system record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
 							'items'       =>
 								array(
-									'$ref' => 'integer',
+									'type'   => 'integer',
+									'format' => 'int32',
 								),
 						),
 				),

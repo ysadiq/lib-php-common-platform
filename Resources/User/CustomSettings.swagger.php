@@ -169,7 +169,7 @@ $_custom['models'] = array(
 	array(
 		'id'         => 'CustomSettings',
 		'properties' => array(
-			'type_name'        =>
+			'name'        =>
 			array(
 				'type'        => 'Array',
 				'items'       =>
@@ -188,7 +188,7 @@ $_custom['models'] = array(
 				'type'        => 'Array',
 				'items'       =>
 				array(
-					'$ref' => 'string',
+					'type' => 'string',
 				),
 			),
 		),

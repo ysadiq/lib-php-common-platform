@@ -45,6 +45,7 @@ $_base['apis'] = array(
 								'description'   => 'Optional template id to base email on.',
 								'allowMultiple' => false,
 								'type'          => 'integer',
+								'format'        => 'int32',
 								'paramType'     => 'query',
 								'required'      => false,
 							),
@@ -93,6 +94,7 @@ $_models = array(
 					'count' =>
 						array(
 							'type'        => 'integer',
+							'format'      => 'int32',
 							'description' => 'Number of emails successfully sent.',
 						),
 				),
@@ -110,6 +112,7 @@ $_models = array(
 					'template_id'    =>
 						array(
 							'type'        => 'integer',
+							'format'      => 'int32',
 							'description' => 'Email Template id to base email on.',
 						),
 					'to'             =>

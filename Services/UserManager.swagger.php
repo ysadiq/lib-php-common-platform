@@ -55,6 +55,7 @@ $_base['apis'] = array_merge(
 );
 
 $_base['models'] = array_merge(
+	Option::get( $_base, 'models' ),
 	Option::get( $_custom, 'models' ),
 	Option::get( $_device, 'models' ),
 	Option::get( $_password, 'models' ),

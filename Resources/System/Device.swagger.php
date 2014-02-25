@@ -55,6 +55,7 @@ $_device['apis'] = array(
 								'description'   => 'Set to limit the filter results.',
 								'allowMultiple' => false,
 								'type'          => 'integer',
+								'format'        => 'int32',
 								'paramType'     => 'query',
 								'required'      => false,
 							),
@@ -71,6 +72,7 @@ $_device['apis'] = array(
 								'description'   => 'Set to offset the filter results to a particular record count.',
 								'allowMultiple' => false,
 								'type'          => 'integer',
+								'format'        => 'int32',
 								'paramType'     => 'query',
 								'required'      => false,
 							),
@@ -304,6 +306,7 @@ $_commonProperties = array(
 	'id'       =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Identifier of this device.',
 		),
 	'uuid'     =>
@@ -334,11 +337,12 @@ $_commonProperties = array(
 	'user_id'  =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Id of the User using this device.',
 		),
 	'user'     =>
 		array(
-			'type'        => 'User',
+			'type'        => 'RelatedUser',
 			'description' => 'Related user by user_id.',
 		),
 );
@@ -356,12 +360,12 @@ $_device['models'] = array(
 				array_merge(
 					$_commonProperties,
 					array(
-						 'created_date'        =>
+						 'created_date'       =>
 							 array(
 								 'type'        => 'string',
 								 'description' => 'Date this device was created.',
 							 ),
-						 'last_modified_date'  =>
+						 'last_modified_date' =>
 							 array(
 								 'type'        => 'string',
 								 'description' => 'Date this device was last modified.',
@@ -389,7 +393,8 @@ $_device['models'] = array(
 							'description' => 'Array of system record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
 							'items'       =>
 								array(
-									'$ref' => 'integer',
+									'type'   => 'integer',
+									'format' => 'int32',
 								),
 						),
 				),

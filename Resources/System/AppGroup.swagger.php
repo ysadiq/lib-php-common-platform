@@ -55,6 +55,7 @@ $_group['apis'] = array(
 								'description'   => 'Set to limit the filter results.',
 								'allowMultiple' => false,
 								'type'          => 'integer',
+								'format'        => 'int32',
 								'paramType'     => 'query',
 								'required'      => false,
 							),
@@ -71,6 +72,7 @@ $_group['apis'] = array(
 								'description'   => 'Set to offset the filter results to a particular record count.',
 								'allowMultiple' => false,
 								'type'          => 'integer',
+								'format'        => 'int32',
 								'paramType'     => 'query',
 								'required'      => false,
 							),
@@ -477,6 +479,7 @@ $_commonProperties = array(
 	'id'          =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Identifier of this application group.',
 		),
 	'name'        =>
@@ -489,14 +492,42 @@ $_commonProperties = array(
 			'type'        => 'string',
 			'description' => 'Description of this application group.',
 		),
-	'apps'        =>
+);
+
+$_relatedProperties = array(
+	'apps' =>
 		array(
-			'type'        => 'Array',
+			'type'        => 'RelatedApps',
 			'description' => 'Related apps by app to group assignment.',
-			'items'       =>
-				array(
-					'$ref' => 'App',
-				),
+		),
+);
+
+$_stampProperties = array(
+	'created_date'        =>
+		array(
+			'type'        => 'string',
+			'description' => 'Date this group was created.',
+			'readOnly'    => true,
+		),
+	'created_by_id'       =>
+		array(
+			'type'        => 'integer',
+			'format'      => 'int32',
+			'description' => 'User Id of who created this group.',
+			'readOnly'    => true,
+		),
+	'last_modified_date'  =>
+		array(
+			'type'        => 'string',
+			'description' => 'Date this group was last modified.',
+			'readOnly'    => true,
+		),
+	'last_modified_by_id' =>
+		array(
+			'type'        => 'integer',
+			'format'      => 'int32',
+			'description' => 'User Id of who last modified this group.',
+			'readOnly'    => true,
 		),
 );
 
@@ -504,37 +535,11 @@ $_group['models'] = array(
 	'AppGroupRequest'   =>
 		array(
 			'id'         => 'AppGroupRequest',
-			'properties' => $_commonProperties,
-		),
-	'AppGroupResponse'  =>
-		array(
-			'id'         => 'AppGroupResponse',
 			'properties' =>
 				array_merge(
 					$_commonProperties,
-					array(
-						 'created_date'        =>
-							 array(
-								 'type'        => 'string',
-								 'description' => 'Date this application group was created.',
-							 ),
-						 'created_by_id'       =>
-							 array(
-								 'type'        => 'integer',
-								 'description' => 'User Id of who created this application group.',
-							 ),
-						 'last_modified_date'  =>
-							 array(
-								 'type'        => 'string',
-								 'description' => 'Date this application group was last modified.',
-							 ),
-						 'last_modified_by_id' =>
-							 array(
-								 'type'        => 'integer',
-								 'description' => 'User Id of who last modified this application group.',
-							 ),
-					)
-				),
+					$_relatedProperties
+				)
 		),
 	'AppGroupsRequest'  =>
 		array(
@@ -553,12 +558,23 @@ $_group['models'] = array(
 					'ids'    =>
 						array(
 							'type'        => 'Array',
-							'description' => 'Array of system record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
+							'description' => 'Array of system application group record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
 							'items'       =>
 								array(
-									'$ref' => 'integer',
+									'type'   => 'integer',
+									'format' => 'int32',
 								),
 						),
+				),
+		),
+	'AppGroupResponse'  =>
+		array(
+			'id'         => 'AppGroupResponse',
+			'properties' =>
+				array_merge(
+					$_commonProperties,
+					$_relatedProperties,
+					$_stampProperties
 				),
 		),
 	'AppGroupsResponse' =>
@@ -573,6 +589,36 @@ $_group['models'] = array(
 							'items'       =>
 								array(
 									'$ref' => 'AppGroupResponse',
+								),
+						),
+					'meta'   =>
+						array(
+							'type'        => 'Metadata',
+							'description' => 'Array of metadata returned for GET requests.',
+						),
+				),
+		),
+	'RelatedAppGroup'   =>
+		array(
+			'id'         => 'RelatedAppGroup',
+			'properties' =>
+				array_merge(
+					$_commonProperties,
+					$_stampProperties
+				)
+		),
+	'RelatedAppGroups'  =>
+		array(
+			'id'         => 'RelatedAppGroups',
+			'properties' =>
+				array(
+					'record' =>
+						array(
+							'type'        => 'Array',
+							'description' => 'Array of system application group records.',
+							'items'       =>
+								array(
+									'$ref' => 'RelatedAppGroup',
 								),
 						),
 					'meta'   =>
