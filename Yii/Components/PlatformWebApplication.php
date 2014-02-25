@@ -19,16 +19,12 @@
  */
 namespace DreamFactory\Platform\Yii\Components;
 
-use DreamFactory\Common\Components\DataCache;
 use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\Events\SeedEvent;
-use Kisma\Core\Interfaces\PublisherLike;
-use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
@@ -77,7 +73,6 @@ class PlatformWebApplication extends \CWebApplication
 	 */
 	const DEFAULT_PLUGINS_PATH = '/storage/plugins';
 
-
 	//*************************************************************************
 	//	Members
 	//*************************************************************************
@@ -108,11 +103,11 @@ class PlatformWebApplication extends \CWebApplication
 	 */
 	protected $_modelNamespaces = array();
 	/**
-	 * @var Request
+	 * @var Request The inbound request
 	 */
 	protected $_requestObject;
 	/**
-	 * @var  Response
+	 * @var  Response The outbound response
 	 */
 	protected $_responseObject;
 
@@ -128,7 +123,7 @@ class PlatformWebApplication extends \CWebApplication
 		parent::__construct( $config );
 
 		//	Start the full-cycle timer
-		$this->startProfiler();
+		$this->startProfiler( 'app' );
 	}
 
 	/**
@@ -136,7 +131,7 @@ class PlatformWebApplication extends \CWebApplication
 	 */
 	public function __destruct()
 	{
-		$this->stopProfiler();
+		Log::debug( '~~ "app" profile: ' . $this->stopProfiler( 'app' ) );
 	}
 
 	/**

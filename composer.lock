@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "2a7844b02143117f295b8d52888b4940",
+    "hash": "e8f9578c1fe654caa8f37e82aef8444c",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -213,34 +213,27 @@
         },
         {
             "name": "dreamfactory/lib-php-common",
-            "version": "dev-develop",
+            "version": "1.1.5",
+            "target-dir": "DreamFactory/Common",
             "source": {
                 "type": "git",
                 "url": "https://bitbucket.org/dreamfactory/lib-php-common.git",
-                "reference": "5c27c5ec42832378f539693f1a1dfe93ad66d538"
+                "reference": "6d9de33231d95119ca28033ed5227c830d09b29c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://bitbucket.org/dreamfactory/lib-php-common/get/5c27c5ec42832378f539693f1a1dfe93ad66d538.zip",
-                "reference": "5c27c5ec42832378f539693f1a1dfe93ad66d538",
+                "url": "https://bitbucket.org/dreamfactory/lib-php-common/get/6d9de33231d95119ca28033ed5227c830d09b29c.zip",
+                "reference": "6d9de33231d95119ca28033ed5227c830d09b29c",
                 "shasum": ""
             },
             "require": {
-                "kisma/kisma": "~0.2.23@stable",
-                "php": ">=5.3.18"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "~3.7@stable"
+                "kisma/kisma": ">=0.1.3",
+                "php": ">=5.3.10"
             },
             "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-develop": "1.2.x-dev"
-                }
-            },
             "autoload": {
-                "psr-4": {
-                    "DreamFactory\\Common\\": "src/"
+                "psr-0": {
+                    "DreamFactory\\Common\\": ""
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -251,7 +244,7 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer"
+                    "role": "DreamFactory Package Maintainer"
                 },
                 {
                     "name": "Lee Hicks",
@@ -259,50 +252,43 @@
                     "role": "Lead Guinea Pig, server-side/client-side"
                 }
             ],
-            "description": "DreamFactory Services Platform(tm) Common Components for PHP",
-            "homepage": "http://dreamfactorysoftware.github.io/",
+            "description": "Common PHP Components Library for the DreamFactory Services Platform(tm)",
+            "homepage": "https://www.dreamfactory.com/df_developers",
             "keywords": [
+                "dreamfactory",
                 "dsp",
-                "dsp-core"
+                "dsp-core",
+                "framework",
+                "library",
+                "php5"
             ],
-            "time": "2014-02-24 05:01:46"
+            "time": "2013-12-23 02:23:54"
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
-            "version": "dev-develop",
+            "version": "1.1.5",
+            "target-dir": "DreamFactory/Yii",
             "source": {
                 "type": "git",
                 "url": "https://bitbucket.org/dreamfactory/lib-php-common-yii.git",
-                "reference": "46371669272c104688135e3fa51afc82df684e1f"
+                "reference": "a4a55d31b56d9293047dac62ce43bef26cf94ec8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://bitbucket.org/dreamfactory/lib-php-common-yii/get/46371669272c104688135e3fa51afc82df684e1f.zip",
-                "reference": "46371669272c104688135e3fa51afc82df684e1f",
+                "url": "https://bitbucket.org/dreamfactory/lib-php-common-yii/get/a4a55d31b56d9293047dac62ce43bef26cf94ec8.zip",
+                "reference": "a4a55d31b56d9293047dac62ce43bef26cf94ec8",
                 "shasum": ""
             },
             "require": {
-                "dreamfactory/lib-php-common": "dev-develop as dev-master",
-                "dreamfactory/yii": "=1.1.13@dev",
-                "kisma/kisma": "~0.2@stable",
+                "dreamfactory/lib-php-common": "*",
+                "dreamfactory/yii": "*",
+                "kisma/kisma": ">=0.1.3",
                 "php": ">=5.3.10"
             },
-            "require-dev": {
-                "phpunit/dbunit": "@stable",
-                "phpunit/php-invoker": "@stable",
-                "phpunit/phpunit": "~3.7@stable",
-                "phpunit/phpunit-selenium": "@stable",
-                "phpunit/phpunit-story": "@stable"
-            },
             "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-develop": "1.2.x-dev"
-                }
-            },
             "autoload": {
-                "psr-4": {
-                    "DreamFactory\\Yii\\": "src/"
+                "psr-0": {
+                    "DreamFactory\\Yii\\": ""
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -313,7 +299,7 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "DreamFactory Package Maintainer"
                 },
                 {
                     "name": "Jason Sykes",
@@ -333,11 +319,13 @@
             ],
             "description": "DreamFactory Fabric(tm) PHP Components for Yii",
             "keywords": [
-                "dsp",
-                "sdk",
-                "yii"
+                "dreamfactory",
+                "fabric",
+                "php5",
+                "yii",
+                "yiisoft"
             ],
-            "time": "2014-02-24 15:32:58"
+            "time": "2013-10-31 19:08:19"
         },
         {
             "name": "dreamfactory/oasys",
@@ -457,12 +445,12 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Exterminator"
+                    "role": "Lead Developer, server-side/client-side"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Exterminator"
+                    "role": "Lead Developer, server-side/client-side"
                 }
             ],
             "description": "Yii Web Programming Framework",
@@ -1095,27 +1083,35 @@
         },
         {
             "name": "rackspace/php-opencloud",
-            "version": "V1.5.10",
+            "version": "v1.9.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/rackspace/php-opencloud.git",
-                "reference": "f4c4bbbae8b108c572b346a7cd350c62122451d5"
+                "reference": "6551de7aebcebb369d025662f99ab27c9b4527ac"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/rackspace/php-opencloud/zipball/f4c4bbbae8b108c572b346a7cd350c62122451d5",
-                "reference": "f4c4bbbae8b108c572b346a7cd350c62122451d5",
+                "url": "https://api.github.com/repos/rackspace/php-opencloud/zipball/6551de7aebcebb369d025662f99ab27c9b4527ac",
+                "reference": "6551de7aebcebb369d025662f99ab27c9b4527ac",
                 "shasum": ""
             },
             "require": {
-                "ext-curl": "*",
-                "php": ">=5.3.0"
+                "guzzle/http": "3.8.*@dev",
+                "php": ">=5.3.3"
+            },
+            "require-dev": {
+                "guzzle/guzzle": "dev-master",
+                "psr/log": "1.0.*",
+                "satooshi/php-coveralls": "0.6.*@dev"
             },
             "type": "library",
             "autoload": {
-                "classmap": [
-                    "lib/"
-                ]
+                "psr-0": {
+                    "OpenCloud": [
+                        "lib/",
+                        "tests/"
+                    ]
+                }
             },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
@@ -1128,15 +1124,19 @@
                 },
                 {
                     "name": "Jamie Hannaford",
-                    "email": "jamie@limetree.org"
+                    "email": "jamie.hannaford@rackspace.com",
+                    "homepage": "https://github.com/jamiehannaford"
                 }
             ],
-            "description": "Rackspace open cloud php library",
+            "description": "PHP SDK for Rackspace/OpenStack APIs",
             "keywords": [
-                "cloudfiles",
-                "opencloud"
+                "Openstack",
+                "nova",
+                "opencloud",
+                "rackspace",
+                "swift"
             ],
-            "time": "2013-08-01 16:12:19"
+            "time": "2014-02-06 20:53:21"
         },
         {
             "name": "swiftmailer/swiftmailer",
@@ -1144,12 +1144,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/swiftmailer/swiftmailer.git",
-                "reference": "v4.3.1"
+                "reference": "ae540bed1079c07aa12e9e62d9d8d4fc49bbdff2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/swiftmailer/swiftmailer/zipball/v4.3.1",
-                "reference": "v4.3.1",
+                "url": "https://api.github.com/repos/swiftmailer/swiftmailer/zipball/ae540bed1079c07aa12e9e62d9d8d4fc49bbdff2",
+                "reference": "ae540bed1079c07aa12e9e62d9d8d4fc49bbdff2",
                 "shasum": ""
             },
             "require": {
@@ -1173,7 +1173,9 @@
             "authors": [
                 {
                     "name": "Fabien Potencier",
-                    "email": "fabien@symfony.com"
+                    "email": "fabien@symfony.com",
+                    "homepage": "http://fabien.potencier.org",
+                    "role": "Lead Developer"
                 },
                 {
                     "name": "Chris Corbyn"
@@ -1247,17 +1249,17 @@
         },
         {
             "name": "symfony/http-foundation",
-            "version": "dev-master",
+            "version": "v2.4.2",
             "target-dir": "Symfony/Component/HttpFoundation",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/HttpFoundation.git",
-                "reference": "0fa4996401cf4e97e621357b6f6a9efa8eee678e"
+                "reference": "cdee7c84ba8b2a8aafa1c055f5cb4f640d81c129"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/0fa4996401cf4e97e621357b6f6a9efa8eee678e",
-                "reference": "0fa4996401cf4e97e621357b6f6a9efa8eee678e",
+                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/cdee7c84ba8b2a8aafa1c055f5cb4f640d81c129",
+                "reference": "cdee7c84ba8b2a8aafa1c055f5cb4f640d81c129",
                 "shasum": ""
             },
             "require": {
@@ -1266,7 +1268,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "2.5-dev"
+                    "dev-master": "2.4-dev"
                 }
             },
             "autoload": {
@@ -1295,7 +1297,7 @@
             ],
             "description": "Symfony HttpFoundation Component",
             "homepage": "http://symfony.com",
-            "time": "2014-02-18 15:41:30"
+            "time": "2014-02-11 15:39:28"
         }
     ],
     "packages-dev": [
@@ -1364,12 +1366,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-                "reference": "3a60a660998e8d41d5ea81ff8d96ead546bce150"
+                "reference": "69e55e68481cf708a6db43aff0b504e31402fe27"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/3a60a660998e8d41d5ea81ff8d96ead546bce150",
-                "reference": "3a60a660998e8d41d5ea81ff8d96ead546bce150",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/69e55e68481cf708a6db43aff0b504e31402fe27",
+                "reference": "69e55e68481cf708a6db43aff0b504e31402fe27",
                 "shasum": ""
             },
             "require": {
@@ -1417,7 +1419,7 @@
                 "testing",
                 "xunit"
             ],
-            "time": "2014-02-16 12:11:19"
+            "time": "2014-02-25 03:34:05"
         },
         {
             "name": "phpunit/php-file-iterator",
@@ -1650,16 +1652,16 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "3.7.31",
+            "version": "3.7.32",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "d24e9877331039582497052cc3c4d9f465b88210"
+                "reference": "2752cbb9ea5bd84c2811b34b6953f76965ec7a2f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/d24e9877331039582497052cc3c4d9f465b88210",
-                "reference": "d24e9877331039582497052cc3c4d9f465b88210",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/2752cbb9ea5bd84c2811b34b6953f76965ec7a2f",
+                "reference": "2752cbb9ea5bd84c2811b34b6953f76965ec7a2f",
                 "shasum": ""
             },
             "require": {
@@ -1676,7 +1678,7 @@
                 "symfony/yaml": "~2.0"
             },
             "require-dev": {
-                "pear-pear/pear": "1.9.4"
+                "pear-pear.php.net/pear": "1.9.4"
             },
             "suggest": {
                 "ext-json": "*",
@@ -1720,7 +1722,7 @@
                 "testing",
                 "xunit"
             ],
-            "time": "2014-02-03 07:46:27"
+            "time": "2014-02-25 03:47:29"
         },
         {
             "name": "phpunit/phpunit-mock-objects",
@@ -1932,27 +1934,21 @@
         }
     ],
     "aliases": [
-        {
-            "alias": "dev-master",
-            "alias_normalized": "9999999-dev",
-            "version": "dev-develop",
-            "package": "dreamfactory/lib-php-common"
-        },
-        {
-            "alias": "dev-master",
-            "alias_normalized": "9999999-dev",
-            "version": "dev-develop",
-            "package": "dreamfactory/lib-php-common-yii"
-        }
+
     ],
     "minimum-stability": "dev",
     "stability-flags": {
+        "aws/aws-sdk-php": 0,
         "dready92/php-on-couch": 20,
-        "dreamfactory/lib-php-common": 20,
-        "dreamfactory/lib-php-common-yii": 20,
+        "dreamfactory/azure-sdk-for-php": 0,
+        "dreamfactory/lib-php-common": 0,
+        "dreamfactory/lib-php-common-yii": 0,
         "dreamfactory/oasys": 0,
         "kisma/kisma": 0,
         "phpforce/soap-client": 20,
+        "rackspace/php-opencloud": 0,
+        "swiftmailer/swiftmailer": 0,
+        "symfony/http-foundation": 0,
         "phpunit/phpunit": 0,
         "phpunit/phpunit-story": 0,
         "phpunit/phpunit-selenium": 0,

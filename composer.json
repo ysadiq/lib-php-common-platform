@@ -18,13 +18,13 @@
 	],
 	"require":           {
 		"php":                             ">=5.3.10",
-		"aws/aws-sdk-php":                 "2.4.*",
+		"aws/aws-sdk-php":                 "~2.4.0@stable",
 		"dready92/php-on-couch":           "dev-master",
-		"dreamfactory/azure-sdk-for-php":  "~0.4.0",
+		"dreamfactory/azure-sdk-for-php":  "~0.4@stable",
 		"dreamfactory/javascript-sdk":     "1.*",
 		"dreamfactory/yii":                "=1.1.13",
-		"dreamfactory/lib-php-common":     "dev-develop as dev-master",
-		"dreamfactory/lib-php-common-yii": "dev-develop as dev-master",
+		"dreamfactory/lib-php-common":     "~1.1@stable",
+		"dreamfactory/lib-php-common-yii": "~1.1@stable",
 		"dreamfactory/oasys":              "~0.4@stable",
 		"kisma/kisma":                     "~0.2@stable",
 		"pear/net_url2":                   "*",
@@ -32,8 +32,9 @@
 		"pear/mail_mime":                  "*",
 		"pear/mail_mime-decode":           "*",
 		"phpforce/soap-client":            "dev-master",
-		"rackspace/php-opencloud":         "1.5.*",
-		"swiftmailer/swiftmailer":         "4.3.*"
+		"rackspace/php-opencloud":         "~1.5@stable",
+		"swiftmailer/swiftmailer":         "~4.3@stable",
+		"symfony/http-foundation":         "~2.4@stable"
 	},
 	"require-dev":       {
 		"phpunit/phpunit":          "~3.7@stable",
