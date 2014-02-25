@@ -31,6 +31,7 @@ use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Yii\Models\BasePlatformModel;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Interfaces\UtilityLike;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Inflector;
@@ -840,8 +841,21 @@ class ResourceStore implements UtilityLike
 
 		if ( !$_loader )
 		{
-			$_loader = \Kisma::getAutoLoader();
-		};
+			/** @noinspection PhpIncludeInspection */
+			$_loader = isset( $GLOBALS, $GLOBALS['_autoloader'] )
+				? $GLOBALS['_autoloader']
+				:
+				\Kisma::get(
+					  CoreSettings::AUTO_LOADER,
+						  require( \Kisma::get( 'app.base_path' ) . '/vendor/autoload.php' )
+				);
+
+			//	Still no autoloader? wtf?
+			if ( !$_loader )
+			{
+				throw new InternalServerErrorException( 'No autoloader found. Dishing out resources and models is not possible.' );
+			}
+		}
 
 		if ( true === $resourceName && false === $returnResource )
 		{
