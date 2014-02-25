@@ -137,10 +137,10 @@ class Config extends BaseSystemRestResource
 	{
 		static $_fabricHosted;
 
-		$_fabricHosted ? : \Kisma::get( 'platform.fabric_hosted', Fabric::fabricHosted() );
+		$_fabricHosted = $_fabricHosted ? : \Kisma::get( 'platform.fabric_hosted', Fabric::fabricHosted() );
 
 		//	Only return a single row, not in an array
-		if ( is_array( $this->_response ) && !Pii::isEmpty( $_record = Option::get( $this->_response, 'record' ) ) && count( $_record ) > 1 )
+		if ( is_array( $this->_response ) && !Pii::isEmpty( $_record = Option::get( $this->_response, 'record' ) ) && count( $_record ) >= 1 )
 		{
 			$this->_response = current( $_record );
 		}
