@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "24698816dbbf2efb2453e95ebba2196f",
+    "hash": "f9460260e0428a135daede19cf9ca273",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -379,12 +379,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/yii.git",
-                "reference": "af4b63409222cbf5e23c9c18ca21fdd67afe76b6"
+                "reference": "ecc4882fcb146dbe8cff0c5e9f41f3df402485f4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/af4b63409222cbf5e23c9c18ca21fdd67afe76b6",
-                "reference": "af4b63409222cbf5e23c9c18ca21fdd67afe76b6",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/ecc4882fcb146dbe8cff0c5e9f41f3df402485f4",
+                "reference": "ecc4882fcb146dbe8cff0c5e9f41f3df402485f4",
                 "shasum": ""
             },
             "require": {
@@ -437,12 +437,12 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Exterminator"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Exterminator"
                 }
             ],
             "description": "Yii Web Programming Framework",
@@ -451,7 +451,7 @@
                 "framework",
                 "yii"
             ],
-            "time": "2014-02-24 17:33:55"
+            "time": "2014-02-24 00:36:28"
         },
         {
             "name": "guzzle/guzzle",
@@ -1328,12 +1328,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-                "reference": "e8ffe3fd66479fe502c4a566e9828075f3fffaec"
+                "reference": "69e55e68481cf708a6db43aff0b504e31402fe27"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/e8ffe3fd66479fe502c4a566e9828075f3fffaec",
-                "reference": "e8ffe3fd66479fe502c4a566e9828075f3fffaec",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/69e55e68481cf708a6db43aff0b504e31402fe27",
+                "reference": "69e55e68481cf708a6db43aff0b504e31402fe27",
                 "shasum": ""
             },
             "require": {
@@ -1381,7 +1381,7 @@
                 "testing",
                 "xunit"
             ],
-            "time": "2014-02-24 18:18:21"
+            "time": "2014-02-25 03:34:05"
         },
         {
             "name": "phpunit/php-file-iterator",
@@ -1614,16 +1614,16 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "3.7.31",
+            "version": "3.7.32",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "d24e9877331039582497052cc3c4d9f465b88210"
+                "reference": "2752cbb9ea5bd84c2811b34b6953f76965ec7a2f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/d24e9877331039582497052cc3c4d9f465b88210",
-                "reference": "d24e9877331039582497052cc3c4d9f465b88210",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/2752cbb9ea5bd84c2811b34b6953f76965ec7a2f",
+                "reference": "2752cbb9ea5bd84c2811b34b6953f76965ec7a2f",
                 "shasum": ""
             },
             "require": {
@@ -1640,7 +1640,7 @@
                 "symfony/yaml": "~2.0"
             },
             "require-dev": {
-                "pear-pear/pear": "1.9.4"
+                "pear-pear.php.net/pear": "1.9.4"
             },
             "suggest": {
                 "ext-json": "*",
@@ -1684,7 +1684,7 @@
                 "testing",
                 "xunit"
             ],
-            "time": "2014-02-03 07:46:27"
+            "time": "2014-02-25 03:47:29"
         },
         {
             "name": "phpunit/phpunit-mock-objects",
