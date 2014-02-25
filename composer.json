@@ -2,7 +2,7 @@
 	"name":              "dreamfactory/lib-php-common-platform",
 	"description":       "DreamFactory Services Platform(tm) Components Library/SDK for PHP",
 	"homepage":          "http://dreamfactorysoftware.github.io",
-	"keywords":          ["dsp", "sdk"],
+	"keywords":          ["php5", "framework", "library", "dreamfactory", "dsp"],
 	"type":              "library",
 	"license":           ["Apache-2.0"],
 	"authors":           [
@@ -51,10 +51,11 @@
 		}
 	],
 	"autoload":          {
-		"psr-4": {
-			"DreamFactory\\Platform\\": "src/"
+		"psr-0": {
+			"DreamFactory\\Platform\\": ""
 		}
 	},
+	"target-dir":        "DreamFactory/Platform",
 	"extra":             {
 		"branch-alias": {
 			"dev-develop": "1.4.x-dev"
