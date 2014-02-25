@@ -646,41 +646,73 @@ class SystemManager extends BaseSystemRestService
 						}
 					}
 					break;
-				case 'df_sys_app':
-					$result = App::model()->findAll();
-					if ( empty( $result ) )
-					{
+			}
+		}
+		// init system with sample setup
+		$contents = file_get_contents( \Kisma::get( 'app.config_path' ) . '/schema/sample_data.json' );
+		if ( !empty( $contents ) )
+		{
+			$contents = DataFormat::jsonToArray( $contents );
+			foreach ( $contents as $table => $content )
+			{
+				switch ( $table )
+				{
+					case 'df_sys_service':
 						if ( !empty( $content ) )
 						{
-							foreach ( $content as $package )
+							foreach ( $content as $service )
 							{
-								if ( null !== ( $fileUrl = Option::get( $package, 'url' ) ) )
-								{
-									if ( 0 === strcasecmp( 'dfpkg', FileUtilities::getFileExtension( $fileUrl ) ) )
-									{
-										Log::debug( 'Importing application: ' . $fileUrl );
-										$filename = null;
-										try
-										{
-											// need to download and extract zip file and move contents to storage
-											$filename = FileUtilities::importUrlFileToTemp( $fileUrl );
-											Packager::importAppFromPackage( $filename, $fileUrl );
-										}
-										catch ( \Exception $ex )
-										{
-											Log::error( "Failed to import application package $fileUrl.\n{$ex->getMessage()}" );
-										}
+								Log::debug( 'Importing service: ' . $service['api_name'] );
 
-										if ( !empty( $filename ) && false === @unlink( $filename ) )
+								try
+								{
+									$obj = new Service();
+									$obj->setAttributes( $service );
+									$obj->save();
+								}
+								catch ( \Exception $ex )
+								{
+									Log::error( "Failed to create sample services.\n{$ex->getMessage()}" );
+								}
+							}
+						}
+						break;
+					case 'app_package':
+						$result = App::model()->findAll();
+						if ( empty( $result ) )
+						{
+							if ( !empty( $content ) )
+							{
+								foreach ( $content as $package )
+								{
+									if ( null !== ( $fileUrl = Option::get( $package, 'url' ) ) )
+									{
+										if ( 0 === strcasecmp( 'dfpkg', FileUtilities::getFileExtension( $fileUrl ) ) )
 										{
-											Log::error( 'Unable to remove package file "' . $filename . '"' );
+											Log::debug( 'Importing application: ' . $fileUrl );
+											$filename = null;
+											try
+											{
+												// need to download and extract zip file and move contents to storage
+												$filename = FileUtilities::importUrlFileToTemp( $fileUrl );
+												Packager::importAppFromPackage( $filename, $fileUrl );
+											}
+											catch ( \Exception $ex )
+											{
+												Log::error( "Failed to import application package $fileUrl.\n{$ex->getMessage()}" );
+											}
+
+											if ( !empty( $filename ) && false === @unlink( $filename ) )
+											{
+												Log::error( 'Unable to remove package file "' . $filename . '"' );
+											}
 										}
 									}
 								}
 							}
 						}
-					}
-					break;
+						break;
+				}
 			}
 		}
 	}

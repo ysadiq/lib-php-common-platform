@@ -200,7 +200,7 @@ class PlatformWebApplication extends \CWebApplication
 	protected function _onBeginRequest( \CEvent $event )
 	{
 		//	Start the request-only profile
-		Profiler::start( 'app.request' );
+		$this->startProfiler( 'app.request' );
 
 		switch ( $this->_requestObject->getMethod() )
 		{
@@ -250,7 +250,7 @@ class PlatformWebApplication extends \CWebApplication
 			}
 		}
 
-		Log::debug( '~~ "app.request" profile: ' . Profiler::stop( 'app.request' ) );
+		Log::debug( '~~ "app.request" profile: ' . $this->stopProfiler( 'app.request' ) );
 	}
 
 	/**
@@ -406,6 +406,8 @@ class PlatformWebApplication extends \CWebApplication
 			return false;
 		}
 
+		Log::debug( 'Plug-ins loaded.' );
+
 		return true;
 	}
 
@@ -483,7 +485,9 @@ class PlatformWebApplication extends \CWebApplication
 	 */
 	protected function _compareUris( $first, $second )
 	{
-		return ( $first['scheme'] == $second['scheme'] ) && ( $first['host'] == $second['host'] ) && ( $first['port'] == $second['port'] );
+		return ( $first['scheme'] == $second['scheme'] ) &&
+			   ( $first['host'] == $second['host'] ) &&
+			   ( $first['port'] == $second['port'] );
 	}
 
 	/**
