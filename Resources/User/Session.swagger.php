@@ -137,17 +137,6 @@ $_session['models'] = array(
 							'type'        => 'string',
 							'description' => 'Date timestamp of the last login for the current user.',
 						),
-					'user_data'       =>
-						array(
-							'type'        => 'string',
-							'description' => 'Extra user data, potentially from remote login provider.',
-						),
-					'user_source'     =>
-						array(
-							'type'        => 'integer',
-							'format'      => 'int32',
-							'description' => 'Where the user login originated, 0 = local, otherwise remote login provider_id.',
-						),
 					'app_groups'      =>
 						array(
 							'type'        => 'Array',

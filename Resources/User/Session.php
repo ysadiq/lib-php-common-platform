@@ -334,7 +334,7 @@ class Session extends BasePlatformRestResource
 	 */
 	public static function generateSessionDataFromUser( $userId, $user = null )
 	{
-		static $_fields = array( 'id', 'display_name', 'first_name', 'last_name', 'email', 'is_sys_admin', 'last_login_date', 'user_data', 'user_source' );
+		static $_fields = array( 'id', 'display_name', 'first_name', 'last_name', 'email', 'is_sys_admin', 'last_login_date' );
 		static $_appFields = array( 'id', 'api_name', 'is_active' );
 
 		/** @var User $_user */
