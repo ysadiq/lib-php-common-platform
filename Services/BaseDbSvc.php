@@ -138,6 +138,10 @@ abstract class BaseDbSvc extends BasePlatformRestService
 					return $this->_listResources();
 				}
 
+				if ( empty( $_ids ) )
+				{
+					throw new BadRequestException( "Please reduce the number of tables to retrieve properties on by using the 'names' parameter." );
+				}
 				$_result = $this->getTables( $_ids );
 				$_result = array( 'table' => $_result );
 				break;
