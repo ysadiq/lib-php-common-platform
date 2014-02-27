@@ -205,16 +205,16 @@
         },
         {
             "name": "dreamfactory/lib-php-common",
-            "version": "1.4.0",
+            "version": "1.4.1",
             "source": {
                 "type": "git",
-                "url": "https://bitbucket.org/dreamfactory/lib-php-common.git",
-                "reference": "20fb21b10b1b9bec440959263656cb2e659866f4"
+                "url": "https://github.com/dreamfactorysoftware/lib-php-common.git",
+                "reference": "c13d150de206dc1cc72c2fecf22eeafbf40dcd43"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://bitbucket.org/dreamfactory/lib-php-common/get/20fb21b10b1b9bec440959263656cb2e659866f4.zip",
-                "reference": "20fb21b10b1b9bec440959263656cb2e659866f4",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/c13d150de206dc1cc72c2fecf22eeafbf40dcd43",
+                "reference": "c13d150de206dc1cc72c2fecf22eeafbf40dcd43",
                 "shasum": ""
             },
             "require": {
@@ -243,12 +243,12 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Sr. Software Engineer"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Sr. Software Engineer"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Common Components for PHP",
@@ -257,7 +257,7 @@
                 "dsp",
                 "dsp-core"
             ],
-            "time": "2014-02-27 00:29:43"
+            "time": "2014-02-27 16:19:22"
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
