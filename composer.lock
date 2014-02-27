@@ -261,16 +261,16 @@
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
-            "version": "1.4.1",
+            "version": "1.4.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "d289a7d26f8d0cb73bbeb81ec390cdc8311e6a6e"
+                "reference": "7069b1b5b327ff9577a21ef55e385bf90643b477"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/d289a7d26f8d0cb73bbeb81ec390cdc8311e6a6e",
-                "reference": "d289a7d26f8d0cb73bbeb81ec390cdc8311e6a6e",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/7069b1b5b327ff9577a21ef55e385bf90643b477",
+                "reference": "7069b1b5b327ff9577a21ef55e385bf90643b477",
                 "shasum": ""
             },
             "require": {
@@ -288,7 +288,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-develop": "1.4.x-dev"
+                    "dev-develop": "1.5.x-dev"
                 }
             },
             "autoload": {
@@ -304,7 +304,7 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Lead Developer"
                 },
                 {
                     "name": "Jason Sykes",
@@ -314,7 +314,7 @@
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Guinea Pig, server-side/client-side"
+                    "role": "Lead Developer, server-side/client-side"
                 },
                 {
                     "name": "Todd Appleton",
@@ -328,7 +328,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-02-27 15:46:08"
+            "time": "2014-02-27 20:22:25"
         },
         {
             "name": "dreamfactory/oasys",
@@ -558,16 +558,16 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.24",
+            "version": "0.2.26",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "278e0c5529e6271f8104e0b177f56ff62b702118"
+                "reference": "c8820a135a14e6b15b71955a6b8757da43d6c584"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/278e0c5529e6271f8104e0b177f56ff62b702118",
-                "reference": "278e0c5529e6271f8104e0b177f56ff62b702118",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/c8820a135a14e6b15b71955a6b8757da43d6c584",
+                "reference": "c8820a135a14e6b15b71955a6b8757da43d6c584",
                 "shasum": ""
             },
             "require": {
@@ -577,7 +577,7 @@
                 "symfony/http-foundation": "~2.4@stable"
             },
             "require-dev": {
-                "phpunit/phpunit": "@stable"
+                "phpunit/phpunit": "~3.7@stable"
             },
             "type": "library",
             "autoload": {
@@ -607,7 +607,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-02-24 15:25:01"
+            "time": "2014-02-27 20:56:08"
         },
         {
             "name": "monolog/monolog",

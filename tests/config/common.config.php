@@ -32,6 +32,8 @@ if ( !defined( 'DSP_VERSION' ) && file_exists( __DIR__ . '/constants.config.php'
 	require __DIR__ . '/constants.config.php';
 }
 
+//	What's my name biotch!?
+$_appName = 'DreamFactory Services Platform';
 //	The base path of the project, where it's checked out basically
 $_basePath = dirname( __DIR__ );
 //	The document root
@@ -54,12 +56,16 @@ file_exists( __DIR__ . ALIASES_CONFIG_PATH ) && require __DIR__ . ALIASES_CONFIG
 /**
  * Application Paths
  */
-\Kisma::set( 'app.app_name', $_appName = 'DreamFactory Services Platform' );
-\Kisma::set( 'app.doc_root', $_docRoot );
-\Kisma::set( 'app.log_path', $_logFilePath );
-\Kisma::set( 'app.vendor_path', $_vendorPath );
-\Kisma::set( 'app.log_file_name', $_logFileName );
-\Kisma::set( 'app.project_root', $_basePath );
+\Kisma::set(
+	  array(
+		  'app.app_name'      => $_appName,
+		  'app.doc_root'      => $_docRoot,
+		  'app.log_path'      => $_logFilePath,
+		  'app.vendor_path'   => $_vendorPath,
+		  'app.log_file_name' => $_logFileName,
+		  'app.project_root'  => $_basePath,
+	  )
+);
 
 /**
  * Database Caching
@@ -112,59 +118,59 @@ else
 return array_merge(
 	$_instanceSettings,
 	array(
-		 /**
-		  * App Information
-		  */
-		 'base_path'                     => $_basePath,
-		 /**
-		  * DSP Information
-		  */
-		 'dsp.version'                   => DSP_VERSION,
-		 'dsp.name'                      => $_instanceSettings['dsp_name'],
-		 'dsp.auth_endpoint'             => DEFAULT_INSTANCE_AUTH_ENDPOINT,
-		 'cloud.endpoint'                => DEFAULT_CLOUD_API_ENDPOINT,
-		 'oauth.salt'                    => 'rW64wRUk6Ocs+5c7JwQ{69U{]MBdIHqmx9Wj,=C%S#cA%+?!cJMbaQ+juMjHeEx[dlSe%h%kcI',
-		 /**
-		  * Remote Logins
-		  */
-		 'dsp.allow_remote_logins'       => true,
-		 'dsp.allow_admin_remote_logins' => true,
-		 /**
-		  * User data
-		  */
-		 'adminEmail'                    => DEFAULT_SUPPORT_EMAIL,
-		 /**
-		  * The default service configuration
-		  */
-		 'dsp.service_config'            => require( __DIR__ . SERVICES_CONFIG_PATH ),
-		 /** Array of namespaces to locations for service discovery */
-		 'dsp.service_location_map'      => array(),
-		 /**
-		  * Default services provided by all DSPs
-		  */
-		 'dsp.default_services'          => array(
-			 array('api_name' => 'user', 'name' => 'User Login'),
-			 array('api_name' => 'system', 'name' => 'System Configuration'),
-			 array('api_name' => 'api_docs', 'name' => 'API Documentation'),
-		 ),
-		 /**
-		  * The default application to start
-		  */
-		 'dsp.default_app'               => '/launchpad/index.html',
-		 /**
-		  * The default landing pages for email confirmations
-		  */
-		 'dsp.confirm_invite_url'        => '/confirm_invite.html',
-		 'dsp.confirm_register_url'      => '/confirm_reg.html',
-		 'dsp.confirm_reset_url'         => '/confirm_reset.html',
-		 /**
-		  * The default number of records to return at once for database queries
-		  */
-		 'dsp.db_max_records_returned'   => 1000,
-		 /**
-		  * The default admin resource schema
-		  */
-		 'admin.resource_schema'         => require( __DIR__ . DEFAULT_ADMIN_RESOURCE_SCHEMA ),
-		 'admin.default_theme'           => 'united',
+		/**
+		 * App Information
+		 */
+		'base_path'                     => $_basePath,
+		/**
+		 * DSP Information
+		 */
+		'dsp.version'                   => DSP_VERSION,
+		'dsp.name'                      => $_instanceSettings['dsp_name'],
+		'dsp.auth_endpoint'             => DEFAULT_INSTANCE_AUTH_ENDPOINT,
+		'cloud.endpoint'                => DEFAULT_CLOUD_API_ENDPOINT,
+		'oauth.salt'                    => 'rW64wRUk6Ocs+5c7JwQ{69U{]MBdIHqmx9Wj,=C%S#cA%+?!cJMbaQ+juMjHeEx[dlSe%h%kcI',
+		/**
+		 * Remote Logins
+		 */
+		'dsp.allow_remote_logins'       => true,
+		'dsp.allow_admin_remote_logins' => true,
+		/**
+		 * User data
+		 */
+		'adminEmail'                    => DEFAULT_SUPPORT_EMAIL,
+		/**
+		 * The default service configuration
+		 */
+		'dsp.service_config'            => require( __DIR__ . SERVICES_CONFIG_PATH ),
+		/** Array of namespaces to locations for service discovery */
+		'dsp.service_location_map'      => array(),
+		/**
+		 * Default services provided by all DSPs
+		 */
+		'dsp.default_services'          => array(
+			array( 'api_name' => 'user', 'name' => 'User Login' ),
+			array( 'api_name' => 'system', 'name' => 'System Configuration' ),
+			array( 'api_name' => 'api_docs', 'name' => 'API Documentation' ),
+		),
+		/**
+		 * The default application to start
+		 */
+		'dsp.default_app'               => '/launchpad/index.html',
+		/**
+		 * The default landing pages for email confirmations
+		 */
+		'dsp.confirm_invite_url'        => '/confirm_invite.html',
+		'dsp.confirm_register_url'      => '/confirm_reg.html',
+		'dsp.confirm_reset_url'         => '/confirm_reset.html',
+		/**
+		 * The default number of records to return at once for database queries
+		 */
+		'dsp.db_max_records_returned'   => 1000,
+		/**
+		 * The default admin resource schema
+		 */
+		'admin.resource_schema'         => require( __DIR__ . DEFAULT_ADMIN_RESOURCE_SCHEMA ),
+		'admin.default_theme'           => 'united',
 	)
 );
