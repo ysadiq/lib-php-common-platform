@@ -24,7 +24,6 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
@@ -184,10 +183,6 @@ class PlatformWebApplication extends \CWebApplication
 		//	Setup the request handler and events
 		$this->onBeginRequest = array( $this, '_onBeginRequest' );
 		$this->onEndRequest = array( $this, '_onEndRequest' );
-
-		//	Create our HTTP objects
-		$this->_requestObject = Request::createFromGlobals();
-		$this->_responseObject = Response::create();
 	}
 
 	/**
@@ -202,32 +197,32 @@ class PlatformWebApplication extends \CWebApplication
 		//	Start the request-only profile
 		$this->startProfiler( 'app.request' );
 
-		switch ( $this->_requestObject->getMethod() )
+		switch ( Option::server( 'REQUEST_METHOD' ) )
 		{
 			case HttpMethod::TRACE:
 				Log::error(
 				   'HTTP TRACE received!',
-				   array(
-					   'server'  => $this->_requestObject->server->all(),
-					   'request' => $this->_requestObject->request->all()
-				   )
+					   array(
+						   'server'  => $_SERVER,
+						   'request' => $_REQUEST,
+					   )
 				);
 				throw new BadRequestException();
 
 			case HttpMethod::OPTIONS:
-				$this->_responseObject->setStatusCode( HttpResponse::NoContent );
-				$this->_responseObject->headers->add( array( 'content-type' => 'text/plain' ) );
-				$this->_responseObject->headers->add( $this->addCorsHeaders( null, true ) );
-				$this->_responseObject->send();
-				Pii::end( HttpResponse::NoContent );
+				header( 'HTTP/1.1 204' );
+				header( 'content-length: 0' );
+				header( 'content-type: text/plain' );
 
-				return;
+				$this->addCorsHeaders();
+				Pii::end();
+				break;
 
 			default:
 				//	Auto-add the CORS headers...
 				if ( $this->_autoAddHeaders )
 				{
-					$this->_responseObject->headers->add( $this->addCorsHeaders( null, true ) );
+					$this->addCorsHeaders();
 				}
 				break;
 		}
@@ -241,15 +236,6 @@ class PlatformWebApplication extends \CWebApplication
 	 */
 	protected function _onEndRequest( \CEvent $event )
 	{
-		//	Send the response
-		if ( !headers_sent() && $this->_responseObject )
-		{
-			if ( strlen( $this->_responseObject->getContent() ) )
-			{
-				$this->_responseObject->send();
-			}
-		}
-
 		Log::debug( '~~ "app.request" profile: ' . $this->stopProfiler( 'app.request' ) );
 	}
 
@@ -308,12 +294,9 @@ class PlatformWebApplication extends \CWebApplication
 				 *
 				 * @link http://www.youtube.com/watch?v=VRaoHi_xcWk
 				 */
-				$this->_responseObject->setStatusCode( HttpResponse::Forbidden );
-				$this->_responseObject->send();
-				Pii::end( HttpResponse::Forbidden );
+				header( 'HTTP/1.1 403 Forbidden' );
 
-				//	If end fails for some unknown impossible reason...
-				return false;
+				return Pii::end();
 			}
 		}
 		else
@@ -485,9 +468,7 @@ class PlatformWebApplication extends \CWebApplication
 	 */
 	protected function _compareUris( $first, $second )
 	{
-		return ( $first['scheme'] == $second['scheme'] ) &&
-			   ( $first['host'] == $second['host'] ) &&
-			   ( $first['port'] == $second['port'] );
+		return ( $first['scheme'] == $second['scheme'] ) && ( $first['host'] == $second['host'] ) && ( $first['port'] == $second['port'] );
 	}
 
 	/**
