@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
+ * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,26 +27,40 @@ $_base['apis'] = array(
 			array(
 				array(
 					'method'           => 'GET',
-					'summary'          => 'getTables() - List all tables.',
+					'summary'          => 'getResources() - List all resources.',
+					'nickname'         => 'getResources',
+					'type'             => 'Resources',
+					'responseMessages' =>
+						array(
+							array(
+								'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+								'code'    => 400,
+							),
+							array(
+								'message' => 'Unauthorized Access - No currently valid session available.',
+								'code'    => 401,
+							),
+							array(
+								'message' => 'System Error - Specific reason is included in the error message.',
+								'code'    => 500,
+							),
+						),
+					'notes'            => 'List the names of the available tables in this storage. ',
+				),
+				array(
+					'method'           => 'GET',
+					'summary'          => 'getTables() - List all properties on given tables.',
 					'nickname'         => 'getTables',
 					'type'             => 'Tables',
 					'parameters'       =>
 						array(
-							array(
-								'name'          => 'include_properties',
-								'description'   => 'Return all properties of the tables, if any.',
-								'allowMultiple' => false,
-								'type'          => 'boolean',
-								'paramType'     => 'query',
-								'required'      => false,
-							),
 							array(
 								'name'          => 'names',
 								'description'   => 'Comma-delimited list of the table names to retrieve.',
 								'allowMultiple' => true,
 								'type'          => 'string',
 								'paramType'     => 'query',
-								'required'      => false,
+								'required'      => true,
 							),
 						),
 					'responseMessages' =>
@@ -64,9 +78,7 @@ $_base['apis'] = array(
 								'code'    => 500,
 							),
 						),
-					'notes'            => 'List the names of the available tables in this storage. ' .
-										  'By default, all tables are listed, use \'names\' parameter to get specific tables. ' .
-										  'Use \'include_properties\' to include any properties of the tables.',
+					'notes'            => 'List the properties of the given tables in this storage.',
 				),
 			),
 		'description' => 'Operations available for database tables.',
@@ -425,7 +437,7 @@ $_base['apis'] = array(
 					'method'           => 'GET',
 					'summary'          => 'getRecord() - Retrieve one record by identifier.',
 					'nickname'         => 'getRecord',
-					'type'             => 'Record',
+					'type'             => 'string',
 					'parameters'       =>
 						array(
 							array(
@@ -494,7 +506,7 @@ $_base['apis'] = array(
 					'method'           => 'POST',
 					'summary'          => 'createRecord() - Create one record with given identifier.',
 					'nickname'         => 'createRecord',
-					'type'             => 'Record',
+					'type'             => 'string',
 					'parameters'       =>
 						array(
 							array(
@@ -525,7 +537,7 @@ $_base['apis'] = array(
 								'name'          => 'body',
 								'description'   => 'Data containing name-value pairs of the record to create.',
 								'allowMultiple' => false,
-								'type'          => 'Record',
+								'type'          => 'string',
 								'paramType'     => 'body',
 								'required'      => true,
 							),
@@ -564,7 +576,7 @@ $_base['apis'] = array(
 					'method'           => 'PATCH',
 					'summary'          => 'updateRecord() - Update (patch) one record by identifier.',
 					'nickname'         => 'updateRecord',
-					'type'             => 'Record',
+					'type'             => 'string',
 					'parameters'       =>
 						array(
 							array(
@@ -595,7 +607,7 @@ $_base['apis'] = array(
 								'name'          => 'body',
 								'description'   => 'Data containing name-value pairs of the fields to update.',
 								'allowMultiple' => false,
-								'type'          => 'Record',
+								'type'          => 'string',
 								'paramType'     => 'body',
 								'required'      => true,
 							),
@@ -634,7 +646,7 @@ $_base['apis'] = array(
 					'method'           => 'DELETE',
 					'summary'          => 'deleteRecord() - Delete one record by identifier.',
 					'nickname'         => 'deleteRecord',
-					'type'             => 'Record',
+					'type'             => 'string',
 					'parameters'       =>
 						array(
 							array(
@@ -718,15 +730,10 @@ $_models = array(
 			'id'         => 'Table',
 			'properties' =>
 				array(
-					'name'       =>
+					'name' =>
 						array(
 							'type'        => 'string',
 							'description' => 'Name of the table.',
-						),
-					'_property_' =>
-						array(
-							'type'        => 'string',
-							'description' => 'DB type specific property name-value pairs.',
 						),
 				),
 		),
@@ -741,25 +748,13 @@ $_models = array(
 							'description' => 'Array of records of the given resource.',
 							'items'       =>
 								array(
-									'$ref' => 'Record',
+									'type' => 'string',
 								),
 						),
 					'meta'   =>
 						array(
 							'type'        => 'Metadata',
 							'description' => 'Available metadata for the response.',
-						),
-				),
-		),
-	'Record'   =>
-		array(
-			'id'         => 'Record',
-			'properties' =>
-				array(
-					'_field_' =>
-						array(
-							'type'        => 'string',
-							'description' => 'Array of DB table specific field name-value pairs.',
 						),
 				),
 		),

@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
+ * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ $_base['apis'] = array(
 					'method'           => 'POST',
 					'summary'          => 'createTables() - Create one or more tables.',
 					'nickname'         => 'createTables',
-					'type'             => 'Resources',
+					'type'             => 'Tables',
 					'parameters'       =>
 						array(
 							array(
@@ -69,7 +69,7 @@ $_base['apis'] = array(
 					'method'           => 'PUT',
 					'summary'          => 'updateTables() - Update one or more tables.',
 					'nickname'         => 'updateTables',
-					'type'             => 'Resources',
+					'type'             => 'Tables',
 					'parameters'       =>
 						array(
 							array(
