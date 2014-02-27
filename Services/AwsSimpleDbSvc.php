@@ -167,10 +167,10 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		do
 		{
 			$_result = $this->_dbConn->listDomains(
-				array(
-					 'MxNumberOfDomains' => 100, // arbitrary limit
-					 'NextToken'         => $_token
-				)
+									 array(
+										 'MxNumberOfDomains' => 100, // arbitrary limit
+										 'NextToken'         => $_token
+									 )
 			);
 			$_domains = $_result['DomainNames'];
 			$_token = $_result['NextToken'];
@@ -240,9 +240,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		try
 		{
 			$_result = $this->_dbConn->domainMetadata(
-				array(
-					 'DomainName' => $table
-				)
+									 array(
+										 'DomainName' => $table
+									 )
 			);
 
 			// The result of an operation can be used like an array
@@ -330,9 +330,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		try
 		{
 			$_result = $this->_dbConn->deleteDomain(
-				array(
-					 'DomainName' => $table
-				)
+									 array(
+										 'DomainName' => $table
+									 )
 			);
 			$_out = array( 'name' => $table, 'DomainName' => $table );
 
@@ -395,10 +395,10 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		try
 		{
 			$_result = $this->_dbConn->batchPutAttributes(
-				array(
-					 'DomainName' => $table,
-					 'Items'      => $_items,
-				)
+									 array(
+										 'DomainName' => $table,
+										 'Items'      => $_items,
+									 )
 			);
 
 			return static::cleanRecords( $records, $fields, $_idField );
@@ -443,11 +443,11 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		{
 			// simple insert request
 			$_result = $this->_dbConn->putAttributes(
-				array(
-					 'DomainName' => $table,
-					 'ItemName'   => $_id,
-					 'Attributes' => $this->_formatAttributes( $record )
-				)
+									 array(
+										 'DomainName' => $table,
+										 'ItemName'   => $_id,
+										 'Attributes' => $this->_formatAttributes( $record )
+									 )
 			);
 			$_out = array_merge( static::cleanRecord( $record, $fields ), array( $_idField => $_id ) );
 
@@ -506,10 +506,10 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		try
 		{
 			$_result = $this->_dbConn->batchPutAttributes(
-				array(
-					 'DomainName' => $table,
-					 "Items"      => $_items,
-				)
+									 array(
+										 'DomainName' => $table,
+										 "Items"      => $_items,
+									 )
 			);
 
 			return static::cleanRecords( $records, $fields, $_idField );
@@ -553,11 +553,11 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		{
 			// simple insert request
 			$_result = $this->_dbConn->putAttributes(
-				array(
-					 'DomainName' => $table,
-					 'ItemName'   => $_id,
-					 'Attributes' => $this->_formatAttributes( $record, true ),
-				)
+									 array(
+										 'DomainName' => $table,
+										 'ItemName'   => $_id,
+										 'Attributes' => $this->_formatAttributes( $record, true ),
+									 )
 			);
 			$_out = array_merge( static::cleanRecord( $record, $fields ), array( $_idField => $_id ) );
 
@@ -645,10 +645,10 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		try
 		{
 			$_result = $this->_dbConn->batchPutAttributes(
-				array(
-					 'DomainName' => $table,
-					 'Items'      => $_items,
-				)
+									 array(
+										 'DomainName' => $table,
+										 'Items'      => $_items,
+									 )
 			);
 
 			return $_out;
@@ -692,11 +692,11 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		{
 			// simple insert request
 			$_result = $this->_dbConn->putAttributes(
-				array(
-					 'DomainName' => $table,
-					 'ItemName'   => $id,
-					 'Attributes' => $this->_formatAttributes( $record, true )
-				)
+									 array(
+										 'DomainName' => $table,
+										 'ItemName'   => $id,
+										 'Attributes' => $this->_formatAttributes( $record, true )
+									 )
 			);
 			$_out = array_merge( static::cleanRecord( $record, $fields ), array( $_idField => $id ) );
 
@@ -755,10 +755,10 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		try
 		{
 			$_result = $this->_dbConn->batchPutAttributes(
-				array(
-					 'DomainName' => $table,
-					 "Items"      => $_items,
-				)
+									 array(
+										 'DomainName' => $table,
+										 "Items"      => $_items,
+									 )
 			);
 
 			return static::cleanRecords( $records, $fields, $_idField );
@@ -802,11 +802,11 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		{
 			// simple insert request
 			$_result = $this->_dbConn->putAttributes(
-				array(
-					 'DomainName' => $table,
-					 'ItemName'   => $_id,
-					 'Attributes' => $this->_formatAttributes( $record, true ),
-				)
+									 array(
+										 'DomainName' => $table,
+										 'ItemName'   => $_id,
+										 'Attributes' => $this->_formatAttributes( $record, true ),
+									 )
 			);
 			$_out = array_merge( static::cleanRecord( $record, $fields ), array( $_idField => $_id ) );
 
@@ -894,10 +894,10 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		try
 		{
 			$_result = $this->_dbConn->batchPutAttributes(
-				array(
-					 'DomainName' => $table,
-					 'Items'      => $_items,
-				)
+									 array(
+										 'DomainName' => $table,
+										 'Items'      => $_items,
+									 )
 			);
 
 			return $_out;
@@ -941,11 +941,11 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		{
 			// simple insert request
 			$_result = $this->_dbConn->putAttributes(
-				array(
-					 'DomainName' => $table,
-					 'ItemName'   => $id,
-					 'Attributes' => $this->_formatAttributes( $record, true )
-				)
+									 array(
+										 'DomainName' => $table,
+										 'ItemName'   => $id,
+										 'Attributes' => $this->_formatAttributes( $record, true )
+									 )
 			);
 			$_out = array_merge( static::cleanRecord( $record, $fields ), array( $_idField => $id ) );
 
@@ -1009,10 +1009,10 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		try
 		{
 			$_result = $this->_dbConn->batchDeleteAttributes(
-				array(
-					 'DomainName' => $table,
-					 'Items'      => $_items
-				)
+									 array(
+										 'DomainName' => $table,
+										 'Items'      => $_items
+									 )
 			);
 
 			return ( empty( $_out ) ) ? $_outIds : $_out;
@@ -1141,10 +1141,10 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		try
 		{
 			$_result = $this->_dbConn->batchDeleteAttributes(
-				array(
-					 'DomainName' => $table,
-					 'Items'      => $_items
-				)
+									 array(
+										 'DomainName' => $table,
+										 'Items'      => $_items
+									 )
 			);
 
 			return ( empty( $_out ) ) ? $_outIds : $_out;
@@ -1426,21 +1426,32 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 
 	protected static function _formatValue( $value )
 	{
-		if (is_string($value)) return $value;
-		if (is_array($value)) return '#DFJ#' . json_encode( $value );
-		if (is_bool($value)) return '#DFB#' . strval( $value );
-		if (is_float($value)) return '#DFF#' . strval( $value );
-		if (is_int($value)) return '#DFI#' . strval( $value );
+		if ( is_string( $value ) )
+		{
+			return $value;
+		}
+		if ( is_array( $value ) )
+			return '#DFJ#' . json_encode( $value );
+		if ( is_bool( $value ) )
+			return '#DFB#' . strval( $value );
+		if ( is_float( $value ) )
+			return '#DFF#' . strval( $value );
+		if ( is_int( $value ) )
+			return '#DFI#' . strval( $value );
 
 		return $value;
 	}
 
 	protected static function _unformatValue( $value )
 	{
-		if (0 == substr_compare( $value, '#DFJ#', 0, 5 )) return json_decode( substr( $value, 5 ) );
-		if (0 == substr_compare( $value, '#DFB#', 0, 5 )) return (bool) substr( $value, 5);
-		if (0 == substr_compare( $value, '#DFF#', 0, 5 )) return floatval( substr( $value, 5) );
-		if (0 == substr_compare( $value, '#DFI#', 0, 5 )) return intval( substr( $value, 5) );
+		if ( 0 == substr_compare( $value, '#DFJ#', 0, 5 ) )
+			return json_decode( substr( $value, 5 ) );
+		if ( 0 == substr_compare( $value, '#DFB#', 0, 5 ) )
+			return (bool)substr( $value, 5 );
+		if ( 0 == substr_compare( $value, '#DFF#', 0, 5 ) )
+			return floatval( substr( $value, 5 ) );
+		if ( 0 == substr_compare( $value, '#DFI#', 0, 5 ) )
+			return intval( substr( $value, 5 ) );
 
 		return $value;
 	}

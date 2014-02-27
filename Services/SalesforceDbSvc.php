@@ -26,10 +26,10 @@ use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
+use Guzzle\Http\Client as GuzzleClient;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 use Phpforce\SoapClient as SoapClient;
-use Guzzle\Http\Client as GuzzleClient;
 
 /**
  * SalesforceDbSvc.php

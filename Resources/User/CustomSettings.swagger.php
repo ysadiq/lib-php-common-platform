@@ -23,15 +23,13 @@ $_custom = array();
 $_custom['apis'] = array(
 	array(
 		'path'        => '/{api_name}/custom',
-		'operations'  =>
-		array(
+		'operations'  => array(
 			array(
 				'method'           => 'GET',
 				'summary'          => 'getCustomSettings() - Retrieve all custom user settings.',
 				'nickname'         => 'getCustomSettings',
 				'type'             => 'CustomSettings',
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
 						'code'    => 401,
@@ -52,8 +50,7 @@ $_custom['apis'] = array(
 				'summary'          => 'setCustomSettings() - Set or update one or more custom user settings.',
 				'nickname'         => 'setCustomSettings',
 				'type'             => 'Success',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'body',
 						'description'   => 'Data containing name-value pairs of desired settings.',
@@ -63,8 +60,7 @@ $_custom['apis'] = array(
 						'required'      => true,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -82,23 +78,20 @@ $_custom['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'A valid session is required to edit settings. '.
-									  'Post body should be an array of name-value pairs.',
+				'notes'            => 'A valid session is required to edit settings. ' . 'Post body should be an array of name-value pairs.',
 			),
 		),
 		'description' => 'Operations for managing custom user settings.',
 	),
 	array(
 		'path'        => '/{api_name}/custom/{setting}',
-		'operations'  =>
-		array(
+		'operations'  => array(
 			array(
 				'method'           => 'GET',
 				'summary'          => 'getCustomSetting() - Retrieve one custom user setting.',
 				'nickname'         => 'getCustomSetting',
 				'type'             => 'CustomSetting',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'setting',
 						'description'   => 'Name of the setting to retrieve.',
@@ -108,8 +101,7 @@ $_custom['apis'] = array(
 						'required'      => true,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
 						'code'    => 401,
@@ -123,16 +115,15 @@ $_custom['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Setting will be returned as an object containing name-value pair. '.
-									  'A value of null is returned for settings that are not found.',
+				'notes'            =>
+					'Setting will be returned as an object containing name-value pair. ' . 'A value of null is returned for settings that are not found.',
 			),
 			array(
 				'method'           => 'DELETE',
 				'summary'          => 'deleteCustomSetting() - Delete one custom setting.',
 				'nickname'         => 'deleteCustomSetting',
 				'type'             => 'Success',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'setting',
 						'description'   => 'Name of the setting to delete.',
@@ -142,8 +133,7 @@ $_custom['apis'] = array(
 						'required'      => true,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
 						'code'    => 401,
@@ -165,29 +155,23 @@ $_custom['apis'] = array(
 );
 
 $_custom['models'] = array(
-	'CustomSettings'   =>
-	array(
+	'CustomSettings' => array(
 		'id'         => 'CustomSettings',
 		'properties' => array(
-			'name'        =>
-			array(
-				'type'        => 'Array',
-				'items'       =>
-				array(
+			'name' => array(
+				'type'  => 'Array',
+				'items' => array(
 					'$ref' => 'CustomSetting',
 				),
 			),
 		),
 	),
-	'CustomSetting'  =>
-	array(
+	'CustomSetting'  => array(
 		'id'         => 'CustomSetting',
 		'properties' => array(
-			'name'        =>
-			array(
-				'type'        => 'Array',
-				'items'       =>
-				array(
+			'name' => array(
+				'type'  => 'Array',
+				'items' => array(
 					'type' => 'string',
 				),
 			),

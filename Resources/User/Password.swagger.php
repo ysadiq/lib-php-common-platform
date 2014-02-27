@@ -23,15 +23,13 @@ $_password = array();
 $_password['apis'] = array(
 	array(
 		'path'        => '/{api_name}/password',
-		'operations'  =>
-		array(
+		'operations'  => array(
 			array(
 				'method'           => 'POST',
 				'summary'          => 'changePassword() - Change or reset the current user\'s password.',
 				'nickname'         => 'changePassword',
 				'type'             => 'PasswordResponse',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'reset',
 						'description'   => 'Set to true to perform password reset.',
@@ -49,8 +47,7 @@ $_password['apis'] = array(
 						'required'      => true,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -64,11 +61,12 @@ $_password['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'A valid current session along with old and new password are required to change '.
-									  'the password directly posting \'old_password\' and \'new_password\'. <br/>' .
-									  'To request password reset, post \'email\' and set \'reset\' to true. <br/>' .
-									  'To reset the password from an email confirmation, post \'email\', \'code\', and \'new_password\'. <br/>' .
-									  'To reset the password from a security question, post \'email\', \'security_answer\', and \'new_password\'.',
+				'notes'            =>
+					'A valid current session along with old and new password are required to change ' .
+					'the password directly posting \'old_password\' and \'new_password\'. <br/>' .
+					'To request password reset, post \'email\' and set \'reset\' to true. <br/>' .
+					'To reset the password from an email confirmation, post \'email\', \'code\', and \'new_password\'. <br/>' .
+					'To reset the password from a security question, post \'email\', \'security_answer\', and \'new_password\'.',
 			),
 		),
 		'description' => 'Operations on a user\'s password.',
@@ -76,45 +74,35 @@ $_password['apis'] = array(
 );
 
 $_password['models'] = array(
-	'PasswordRequest'  =>
-	array(
+	'PasswordRequest'  => array(
 		'id'         => 'PasswordRequest',
-		'properties' =>
-		array(
-			'old_password' =>
-			array(
+		'properties' => array(
+			'old_password' => array(
 				'type'        => 'string',
 				'description' => 'Old password to validate change during a session.',
 			),
-			'new_password' =>
-			array(
+			'new_password' => array(
 				'type'        => 'string',
 				'description' => 'New password to be set.',
 			),
-			'email'        =>
-			array(
+			'email'        => array(
 				'type'        => 'string',
 				'description' => 'User\'s email to be used with code to validate email confirmation.',
 			),
-			'code'         =>
-			array(
+			'code'         => array(
 				'type'        => 'string',
 				'description' => 'Code required with new_password when using email confirmation.',
 			),
 		),
 	),
-	'PasswordResponse' =>
-	array(
+	'PasswordResponse' => array(
 		'id'         => 'PasswordResponse',
-		'properties' =>
-		array(
-			'security_question' =>
-			array(
+		'properties' => array(
+			'security_question' => array(
 				'type'        => 'string',
 				'description' => 'User\'s security question, returned on reset request when no email confirmation required.',
 			),
-			'success'           =>
-			array(
+			'success'           => array(
 				'type'        => 'boolean',
 				'description' => 'True if password updated or reset request granted via email confirmation.',
 			),

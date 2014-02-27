@@ -83,10 +83,10 @@ class RoleServiceAccess extends BasePlatformSystemModel
 	{
 		$_labels = array_merge(
 			array(
-				 'role_id'    => 'Role',
-				 'service_id' => 'Service',
-				 'component'  => 'Component',
-				 'access'     => 'Access',
+				'role_id'    => 'Role',
+				'service_id' => 'Service',
+				'component'  => 'Component',
+				'access'     => 'Access',
 			),
 			$additionalLabels
 		);
@@ -104,17 +104,17 @@ class RoleServiceAccess extends BasePlatformSystemModel
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-			$requested,
-			array_merge(
-				array(
-					 'role_id',
-					 'service_id',
-					 'component',
-					 'access',
-				),
-				$columns
-			),
-			$hidden
+					 $requested,
+					 array_merge(
+						 array(
+							 'role_id',
+							 'service_id',
+							 'component',
+							 'access',
+						 ),
+						 $columns
+					 ),
+					 $hidden
 		);
 	}
 }

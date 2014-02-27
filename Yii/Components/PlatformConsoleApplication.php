@@ -518,9 +518,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 */
 	protected function _compareUris( $first, $second )
 	{
-		return ( $first['scheme'] == $second['scheme'] ) &&
-		( $first['host'] == $second['host'] ) &&
-		( $first['port'] == $second['port'] );
+		return ( $first['scheme'] == $second['scheme'] ) && ( $first['host'] == $second['host'] ) && ( $first['port'] == $second['port'] );
 	}
 
 	/**
@@ -552,13 +550,10 @@ class PlatformConsoleApplication extends \CConsoleApplication
 					 $parts,
 					 'url_base',
 						 //	Try and construct
-					 is_array( $parts )
-						 ?
+					 is_array( $parts ) ?
 						 ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' .
 						 $parts['host'] .
-						 ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
-						 :
-						 $parts
+						 ( isset( $parts['port'] ) ? ':' . $parts['port'] : null ) : $parts
 		);
 	}
 

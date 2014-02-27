@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Enums;
 
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Enums\SeedEnum;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -35,17 +34,18 @@ class PermissionMap extends HttpMethod
 	/**
 	 * @var array
 	 */
-	protected static $_map = array(
-		self::Get     => 'read',
-		self::Head    => 'read',
-		self::Options => 'read',
-		self::Post    => 'create',
-		self::Copy    => 'create',
-		self::Put     => 'update',
-		self::Patch   => 'update',
-		self::Merge   => 'update',
-		self::Delete  => 'delete',
-	);
+	protected static $_map
+		= array(
+			self::Get     => 'read',
+			self::Head    => 'read',
+			self::Options => 'read',
+			self::Post    => 'create',
+			self::Copy    => 'create',
+			self::Put     => 'update',
+			self::Patch   => 'update',
+			self::Merge   => 'update',
+			self::Delete  => 'delete',
+		);
 
 	//*************************************************************************
 	//* Members

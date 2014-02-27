@@ -30,21 +30,19 @@ $_session = require( __DIR__ . '/../Resources/User/Session.swagger.php' );
 
 $_base['apis'] = array_merge(
 	array(
-		 array(
-			 'path'        => '/{api_name}',
-			 'operations'  =>
-			 array(
-				 0 =>
-				 array(
-					 'method'   => 'GET',
-					 'summary'  => 'getResources() - List resources available for user session management.',
-					 'nickname' => 'getResources',
-					 'type'     => 'Resources',
-					 'notes'    => 'See listed operations for each resource available.',
-				 ),
-			 ),
-			 'description' => 'Operations available for user session management.',
-		 ),
+		array(
+			'path'        => '/{api_name}',
+			'operations'  => array(
+				0 => array(
+					'method'   => 'GET',
+					'summary'  => 'getResources() - List resources available for user session management.',
+					'nickname' => 'getResources',
+					'type'     => 'Resources',
+					'notes'    => 'See listed operations for each resource available.',
+				),
+			),
+			'description' => 'Operations available for user session management.',
+		),
 	),
 	Option::get( $_custom, 'apis' ),
 	Option::get( $_device, 'apis' ),

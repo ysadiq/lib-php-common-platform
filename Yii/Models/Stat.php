@@ -19,8 +19,8 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
-use Kisma\Core\Utility\Sql;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Sql;
 
 /**
  * Stats.php

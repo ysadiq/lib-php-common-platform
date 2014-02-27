@@ -22,10 +22,7 @@ namespace DreamFactory\Platform\Resources\System;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\BasePlatformService;
-use DreamFactory\Platform\Utility\ResourceStore;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\Sql;
 
 /**
  * Config
@@ -49,22 +46,22 @@ class Config extends BaseSystemRestResource
 	public function __construct( $consumer = null, $resourceArray = array() )
 	{
 		parent::__construct(
-			$consumer,
-			array(
-				 'name'           => 'Configuration',
-				 'type'           => 'System',
-				 'service_name'   => 'system',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'config',
-				 'description'    => 'Service general configuration',
-				 'is_active'      => true,
-				 'resource_array' => $resourceArray,
-				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-					 static::Put   => static::Post,
-					 static::Merge => static::Post,
-				 )
-			)
+			  $consumer,
+			  array(
+				  'name'           => 'Configuration',
+				  'type'           => 'System',
+				  'service_name'   => 'system',
+				  'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				  'api_name'       => 'config',
+				  'description'    => 'Service general configuration',
+				  'is_active'      => true,
+				  'resource_array' => $resourceArray,
+				  'verb_aliases'   => array(
+					  static::Patch => static::Post,
+					  static::Put   => static::Post,
+					  static::Merge => static::Post,
+				  )
+			  )
 		);
 	}
 

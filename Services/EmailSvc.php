@@ -249,16 +249,16 @@ class EmailSvc extends BasePlatformRestService
 		}
 
 		$_message = EmailUtilities::createMessage(
-			$_to,
-			$_cc,
-			$_bcc,
-			$_subject,
-			$_text,
-			$_html,
-			$_fromName,
-			$_fromEmail,
-			$_replyName,
-			$_replyEmail
+								  $_to,
+								  $_cc,
+								  $_bcc,
+								  $_subject,
+								  $_text,
+								  $_html,
+								  $_fromName,
+								  $_fromEmail,
+								  $_replyName,
+								  $_replyEmail
 		);
 
 		return EmailUtilities::sendMessage( $this->_transport, $_message );

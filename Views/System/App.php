@@ -19,13 +19,7 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
-use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Utility\FileUtilities;
-use DreamFactory\Platform\Utility\Packager;
-use Kisma\Core\Utility\FilterInput;
-use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
 
 /**
  * App
@@ -46,16 +40,16 @@ class App extends BaseSystemRestResource
 	public function __construct( $consumer, $resourceArray = array() )
 	{
 		parent::__construct(
-			$consumer,
-			array(
-				 'service_name'   => 'system',
-				 'name'           => 'Application',
-				 'api_name'       => 'app',
-				 'type'           => 'System',
-				 'description'    => 'System application administration.',
-				 'is_active'      => true,
-				 'resource_array' => $resourceArray,
-			)
+			  $consumer,
+			  array(
+				  'service_name'   => 'system',
+				  'name'           => 'Application',
+				  'api_name'       => 'app',
+				  'type'           => 'System',
+				  'description'    => 'System application administration.',
+				  'is_active'      => true,
+				  'resource_array' => $resourceArray,
+			  )
 		);
 	}
 

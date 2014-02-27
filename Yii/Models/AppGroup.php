@@ -54,10 +54,10 @@ class AppGroup extends BasePlatformSystemModel
 		return array_merge(
 			parent::rules(),
 			array(
-				 array( 'name', 'required' ),
-				 array( 'name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
-				 array( 'name', 'length', 'max' => 64 ),
-				 array( 'description', 'safe' ),
+				array( 'name', 'required' ),
+				array( 'name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
+				array( 'name', 'length', 'max' => 64 ),
+				array( 'description', 'safe' ),
 			)
 		);
 	}
@@ -111,15 +111,15 @@ class AppGroup extends BasePlatformSystemModel
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-			$requested,
-			array_merge(
-				array(
-					 'name',
-					 'description',
-				),
-				$columns
-			),
-			$hidden
+					 $requested,
+					 array_merge(
+						 array(
+							 'name',
+							 'description',
+						 ),
+						 $columns
+					 ),
+					 $hidden
 		);
 	}
 }

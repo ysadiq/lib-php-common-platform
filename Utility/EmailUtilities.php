@@ -19,10 +19,9 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use Kisma\Core\Utility\Option;
 
 //	Load up SwiftMailer
 \Yii::registerAutoloader( array( 'Swift', 'autoload' ) );
@@ -97,15 +96,11 @@ class EmailUtilities
 	 *
 	 * @return int
 	 */
-	public static function createMessage( $to_emails, $cc_emails, $bcc_emails, $subject, $body_text,
-										  $body_html = '', $from_name = '', $from_email = '',
-										  $reply_name = '', $reply_email = '' )
+	public static function createMessage( $to_emails, $cc_emails, $bcc_emails, $subject, $body_text, $body_html = '', $from_name = '', $from_email = '', $reply_name = '', $reply_email = '' )
 	{
 		// Create the message
-		$message = \Swift_Message::newInstance()
-				   ->setSubject( $subject )
-				   ->setTo( $to_emails ) // array('receiver@domain.org', 'other@domain.org' => 'A name')
-				   ->setFrom( $from_email, $from_name ); // can be multiple
+		$message = \Swift_Message::newInstance()->setSubject( $subject )->setTo( $to_emails ) // array('receiver@domain.org', 'other@domain.org' => 'A name')
+								 ->setFrom( $from_email, $from_name ); // can be multiple
 		if ( !empty( $reply_email ) )
 		{
 			$message->setReplyTo( $reply_email, $reply_name ); // single address

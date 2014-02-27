@@ -30,7 +30,7 @@ interface RestServiceLike extends HttpMethod
 {
 	/**
 	 * @param mixed  $resource
-	 * @param string $action Http method for request
+	 * @param string $action        Http method for request
 	 * @param string $output_format Output format for request, null = native array
 	 *
 	 * @return mixed

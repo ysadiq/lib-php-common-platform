@@ -41,13 +41,13 @@ class EmailTemplate extends BaseSystemRestResource
 	public function __construct( $consumer, $resources = array() )
 	{
 		$_config = array(
-			'service_name'   => 'system',
-			'name'           => 'Email Template',
-			'api_name'       => 'email_template',
-			'type'           => 'System',
-			'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-			'description'    => 'System email template administration.',
-			'is_active'      => true,
+			'service_name' => 'system',
+			'name'         => 'Email Template',
+			'api_name'     => 'email_template',
+			'type'         => 'System',
+			'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
+			'description'  => 'System email template administration.',
+			'is_active'    => true,
 		);
 
 		parent::__construct( $consumer, $_config, $resources );

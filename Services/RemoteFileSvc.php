@@ -19,11 +19,11 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use Kisma\Core\Utility\Option;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Utility\FileUtilities;
+use Kisma\Core\Utility\Option;
 
 /**
  * RemoteFileSvc.php
@@ -369,7 +369,7 @@ abstract class RemoteFileSvc extends BaseFileSvc
 	 */
 	public function deleteFolder( $container, $path, $force = false )
 	{
-		$path = rtrim($path, '/') . '/';
+		$path = rtrim( $path, '/' ) . '/';
 		$_blobs = $this->listBlobs( $container, $path );
 		if ( !empty( $_blobs ) )
 		{

@@ -56,18 +56,18 @@ class CustomSettings extends BasePlatformRestResource
 		parent::__construct(
 			  $consumer,
 			  array(
-				   'name'         => 'System Custom Settings',
-				   'service_name' => 'system',
-				   'type'         => 'System',
-				   'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
-				   'api_name'     => 'custom',
-				   'description'  => 'Resource for an admin to manage custom system settings.',
-				   'is_active'    => true,
-				   'verb_aliases' => array(
-					   static::Put   => static::Post,
-					   static::Patch => static::Post,
-					   static::Merge => static::Post,
-				   )
+				  'name'         => 'System Custom Settings',
+				  'service_name' => 'system',
+				  'type'         => 'System',
+				  'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
+				  'api_name'     => 'custom',
+				  'description'  => 'Resource for an admin to manage custom system settings.',
+				  'is_active'    => true,
+				  'verb_aliases' => array(
+					  static::Put   => static::Post,
+					  static::Patch => static::Post,
+					  static::Merge => static::Post,
+				  )
 			  )
 		);
 

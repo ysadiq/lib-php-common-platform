@@ -247,7 +247,7 @@ class Fabric extends SeedUtility
 
 			if ( false !== ( $_data = json_decode( file_get_contents( $_cacheFile ), true ) ) )
 			{
-				return array($_data['settings'], $_data['instance']);
+				return array( $_data['settings'], $_data['instance'] );
 			}
 		}
 

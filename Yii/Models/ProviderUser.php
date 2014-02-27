@@ -19,10 +19,6 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
-use Kisma\Core\Utility\Hasher;
-use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Sql;
-
 /**
  * ProviderUser.php
  * The user service registry model for the DSP
@@ -73,8 +69,8 @@ class ProviderUser extends BasePlatformSystemModel
 		return array_merge(
 			parent::relations(),
 			array(
-				 'user'     => array( static::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id' ),
-				 'provider' => array( static::BELONGS_TO, __NAMESPACE__ . '\\Provider', 'provider_id' ),
+				'user'     => array( static::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id' ),
+				'provider' => array( static::BELONGS_TO, __NAMESPACE__ . '\\Provider', 'provider_id' ),
 			)
 		);
 	}
@@ -87,14 +83,14 @@ class ProviderUser extends BasePlatformSystemModel
 		return array_merge(
 			parent::behaviors(),
 			array(
-				 //	Secure JSON
-				 'base_platform_model.secure_json' => array(
-					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'             => $this->getDb()->password,
-					 'secureAttributes' => array(
-						 'auth_text',
-					 )
-				 ),
+				//	Secure JSON
+				'base_platform_model.secure_json' => array(
+					'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					'salt'             => $this->getDb()->password,
+					'secureAttributes' => array(
+						'auth_text',
+					)
+				),
 			)
 		);
 	}
@@ -107,17 +103,17 @@ class ProviderUser extends BasePlatformSystemModel
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-			array_merge(
-				$additionalLabels,
-				array(
-					 'provider_id'      => 'Provider ID',
-					 'user_id'          => 'User ID',
-					 'provider_user_id' => 'Provider User ID',
-					 'account_type'     => 'Account Type',
-					 'auth_text'        => 'Authorization',
-					 'last_use_date'    => 'Last Used',
-				)
-			)
+					 array_merge(
+						 $additionalLabels,
+						 array(
+							 'provider_id'      => 'Provider ID',
+							 'user_id'          => 'User ID',
+							 'provider_user_id' => 'Provider User ID',
+							 'account_type'     => 'Account Type',
+							 'auth_text'        => 'Authorization',
+							 'last_use_date'    => 'Last Used',
+						 )
+					 )
 		);
 	}
 
@@ -130,13 +126,13 @@ class ProviderUser extends BasePlatformSystemModel
 	public function byUserPortal( $userId, $portal )
 	{
 		$this->getDbCriteria()->mergeWith(
-			array(
+			 array(
 				 'condition' => 'user_id = :user_id and provider_id = ( select p.id from df_sys_provider p where p.api_name = :api_name limit 1 order by id )',
 				 'params'    => array(
 					 ':user_id'  => $userId,
 					 ':api_name' => trim( strtolower( $portal ) ),
 				 ),
-			)
+			 )
 		);
 
 		return $this;
@@ -151,13 +147,13 @@ class ProviderUser extends BasePlatformSystemModel
 	public function byUserPortalId( $userId, $portalId )
 	{
 		$this->getDbCriteria()->mergeWith(
-			array(
+			 array(
 				 'condition' => 'user_id = :user_id and provider_id = :portal_id',
 				 'params'    => array(
 					 ':user_id'   => $userId,
 					 ':portal_id' => $portalId,
 				 ),
-			)
+			 )
 		);
 
 		return $this;
@@ -172,13 +168,13 @@ class ProviderUser extends BasePlatformSystemModel
 	public function byUserProviderUserId( $userId, $providerUserId )
 	{
 		$this->getDbCriteria()->mergeWith(
-			array(
+			 array(
 				 'condition' => 'user_id = :user_id and provider_user_id = :provider_user_id',
 				 'params'    => array(
 					 ':user_id'          => $userId,
 					 ':provider_user_id' => $providerUserId,
 				 ),
-			)
+			 )
 		);
 
 		return $this;
@@ -192,10 +188,10 @@ class ProviderUser extends BasePlatformSystemModel
 	public static function getByEmail( $email )
 	{
 		return User::model()->find(
-			'email = :email',
-			array(
-				 ':email' => $email,
-			)
+				   'email = :email',
+				   array(
+					   ':email' => $email,
+				   )
 		);
 	}
 
@@ -207,10 +203,10 @@ class ProviderUser extends BasePlatformSystemModel
 	public static function getLogins( $userId )
 	{
 		return static::model()->findAll(
-			'user_id = :user_id',
-			array(
-				 ':user_id' => $userId,
-			)
+					 'user_id = :user_id',
+					 array(
+						 ':user_id' => $userId,
+					 )
 		);
 	}
 
@@ -223,11 +219,11 @@ class ProviderUser extends BasePlatformSystemModel
 	public static function getLogin( $userId, $providerId )
 	{
 		return static::model()->find(
-			'user_id = :user_id and provider_id = :provider_id',
-			array(
-				 ':user_id'     => $userId,
-				 ':provider_id' => $providerId,
-			)
+					 'user_id = :user_id and provider_id = :provider_id',
+					 array(
+						 ':user_id'     => $userId,
+						 ':provider_id' => $providerId,
+					 )
 		);
 	}
 }

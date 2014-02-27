@@ -525,7 +525,7 @@ class Utilities
 				$_return[$_key] = $_value;
 			}
 
-			if ($check_both_directions)
+			if ( $check_both_directions )
 			{
 				foreach ( $array2 as $_key => $_value )
 				{

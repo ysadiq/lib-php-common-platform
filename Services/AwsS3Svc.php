@@ -20,10 +20,9 @@
 namespace DreamFactory\Platform\Services;
 
 use Aws\S3\S3Client;
-use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
-use DreamFactory\Platform\Exceptions\BlobServiceException;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\BlobServiceException;
+use Kisma\Core\Utility\Option;
 
 /**
  * AwsS3Svc.php
@@ -177,9 +176,9 @@ class AwsS3Svc extends RemoteFileSvc
 		{
 			$this->checkConnection();
 			$this->_blobConn->createBucket(
-				array(
-					 'Bucket' => $_name
-				)
+							array(
+								'Bucket' => $_name
+							)
 			);
 
 			return array( 'name' => $_name, 'path' => $_name );
@@ -227,9 +226,9 @@ class AwsS3Svc extends RemoteFileSvc
 		{
 			$this->checkConnection();
 			$this->_blobConn->deleteBucket(
-				array(
-					 'Bucket' => $container
-				)
+							array(
+								'Bucket' => $container
+							)
 			);
 		}
 		catch ( \Exception $ex )
@@ -426,10 +425,10 @@ class AwsS3Svc extends RemoteFileSvc
 		{
 			$this->checkConnection();
 			$this->_blobConn->deleteObject(
-				array(
-					 'Bucket' => $container,
-					 'Key'    => $name
-				)
+							array(
+								'Bucket' => $container,
+								'Key'    => $name
+							)
 			);
 		}
 		catch ( \Exception $ex )
@@ -540,10 +539,10 @@ class AwsS3Svc extends RemoteFileSvc
 
 			/** @var \Aws\S3\Iterator\ListObjectsIterator $_result */
 			$_result = $this->_blobConn->headObject(
-				array(
-					 'Bucket' => $container,
-					 'Key'    => $name
-				)
+									   array(
+										   'Bucket' => $container,
+										   'Key'    => $name
+									   )
 			);
 
 			$_out = array(
@@ -576,10 +575,10 @@ class AwsS3Svc extends RemoteFileSvc
 
 			/** @var \Aws\S3\Iterator\ListObjectsIterator $_result */
 			$_result = $this->_blobConn->getObject(
-				array(
-					 'Bucket' => $container,
-					 'Key'    => $name
-				)
+									   array(
+										   'Bucket' => $container,
+										   'Key'    => $name
+									   )
 			);
 
 			header( 'Last-Modified: ' . $_result->get( 'LastModified' ) );

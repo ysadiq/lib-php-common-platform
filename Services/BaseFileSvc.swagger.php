@@ -23,15 +23,13 @@ $_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
 $_base['apis'] = array(
 	array(
 		'path'        => '/{api_name}',
-		'operations'  =>
-		array(
+		'operations'  => array(
 			array(
 				'method'           => 'GET',
 				'summary'          => 'getContainers() - List all containers.',
 				'nickname'         => 'getContainers',
 				'type'             => 'ContainersResponse',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'include_properties',
 						'description'   => 'Return any properties of the container in the response.',
@@ -42,8 +40,7 @@ $_base['apis'] = array(
 						'defaultValue'  => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -57,16 +54,15 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'List the names of the available containers in this storage. ' .
-									  'Use \'include_properties\' to include any properties of the containers.',
+				'notes'            =>
+					'List the names of the available containers in this storage. ' . 'Use \'include_properties\' to include any properties of the containers.',
 			),
 			array(
 				'method'           => 'POST',
 				'summary'          => 'createContainers() - Create one or more containers.',
 				'nickname'         => 'createContainers',
 				'type'             => 'ContainersResponse',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'body',
 						'description'   => 'Array of containers to create.',
@@ -94,8 +90,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -109,16 +104,16 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Post data should be a single container definition or an array of container definitions. ' .
-									  'Alternatively, override the HTTP Method to pass containers to other actions.',
+				'notes'            =>
+					'Post data should be a single container definition or an array of container definitions. ' .
+					'Alternatively, override the HTTP Method to pass containers to other actions.',
 			),
 			array(
 				'method'           => 'DELETE',
 				'summary'          => 'deleteContainers() - Delete one or more containers.',
 				'nickname'         => 'deleteContainers',
 				'type'             => 'ContainersResponse',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'names',
 						'description'   => 'List of containers to delete.',
@@ -137,8 +132,7 @@ $_base['apis'] = array(
 						'default'       => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -152,25 +146,24 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Pass a comma-delimited list of container names to delete. ' .
-									  'Set \'force\' to true to delete all containers. ' .
-									  'Alternatively, to delete by container records or a large list of names, ' .
-									  'use the POST request with X-HTTP-METHOD = DELETE header and post containers.',
+				'notes'            =>
+					'Pass a comma-delimited list of container names to delete. ' .
+					'Set \'force\' to true to delete all containers. ' .
+					'Alternatively, to delete by container records or a large list of names, ' .
+					'use the POST request with X-HTTP-METHOD = DELETE header and post containers.',
 			),
 		),
 		'description' => 'Operations available for File Storage Service.',
 	),
 	array(
 		'path'        => '/{api_name}/{container}/',
-		'operations'  =>
-		array(
+		'operations'  => array(
 			array(
 				'method'           => 'GET',
 				'summary'          => 'getContainer() - List the container\'s content, including properties.',
 				'nickname'         => 'getContainer',
 				'type'             => 'ContainerResponse',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'container',
 						'description'   => 'The name of the container from which you want to retrieve contents.',
@@ -225,8 +218,7 @@ $_base['apis'] = array(
 						'defaultValue'  => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -244,16 +236,16 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Use \'include_properties\' to get properties of the container. ' .
-									  'Use the \'include_folders\' and/or \'include_files\' to modify the listing.',
+				'notes'            =>
+					'Use \'include_properties\' to get properties of the container. ' .
+					'Use the \'include_folders\' and/or \'include_files\' to modify the listing.',
 			),
 			array(
 				'method'           => 'POST',
 				'summary'          => 'createContainer() - Create container and/or add content.',
 				'nickname'         => 'createContainer',
 				'type'             => 'ContainerResponse',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'container',
 						'description'   => 'The name of the container you want to put the contents.',
@@ -315,8 +307,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -341,8 +332,7 @@ $_base['apis'] = array(
 				'summary'          => 'updateContainerProperties() - Update properties of the container.',
 				'nickname'         => 'updateContainerProperties',
 				'type'             => 'Container',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'container',
 						'description'   => 'The name of the container you want to put the contents.',
@@ -360,8 +350,7 @@ $_base['apis'] = array(
 						'required'      => true,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -386,8 +375,7 @@ $_base['apis'] = array(
 				'summary'          => 'deleteContainer() - Delete one container and/or its contents.',
 				'nickname'         => 'deleteContainer',
 				'type'             => 'ContainerResponse',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'container',
 						'description'   => 'The name of the container you want to delete from.',
@@ -413,8 +401,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -432,25 +419,24 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Set \'content_only\' to true to delete the folders and files contained, but not the container. ' .
-									  'Set \'force\' to true to delete a non-empty container. ' .
-									  'Alternatively, to delete by a listing of folders and files, ' .
-									  'use the POST request with X-HTTP-METHOD = DELETE header and post listing.',
+				'notes'            =>
+					'Set \'content_only\' to true to delete the folders and files contained, but not the container. ' .
+					'Set \'force\' to true to delete a non-empty container. ' .
+					'Alternatively, to delete by a listing of folders and files, ' .
+					'use the POST request with X-HTTP-METHOD = DELETE header and post listing.',
 			),
 		),
 		'description' => 'Operations on containers.',
 	),
 	array(
 		'path'        => '/{api_name}/{container}/{folder_path}/',
-		'operations'  =>
-		array(
+		'operations'  => array(
 			array(
 				'method'           => 'GET',
 				'summary'          => 'getFolder() - List the folder\'s content, including properties.',
 				'nickname'         => 'getFolder',
 				'type'             => 'FolderResponse',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'container',
 						'description'   => 'The name of the container from which you want to retrieve contents.',
@@ -513,8 +499,7 @@ $_base['apis'] = array(
 						'defaultValue'  => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -532,16 +517,16 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Use \'include_properties\' to get properties of the folder. ' .
-									  'Use the \'include_folders\' and/or \'include_files\' to modify the listing.',
+				'notes'            =>
+					'Use \'include_properties\' to get properties of the folder. ' .
+					'Use the \'include_folders\' and/or \'include_files\' to modify the listing.',
 			),
 			array(
 				'method'           => 'POST',
 				'summary'          => 'createFolder() - Create a folder and/or add content.',
 				'nickname'         => 'createFolder',
 				'type'             => 'FolderResponse',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'container',
 						'description'   => 'The name of the container where you want to put the contents.',
@@ -611,8 +596,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -637,8 +621,7 @@ $_base['apis'] = array(
 				'summary'          => 'updateFolderProperties() - Update folder properties.',
 				'nickname'         => 'updateFolderProperties',
 				'type'             => 'Folder',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'container',
 						'description'   => 'The name of the container where you want to put the contents.',
@@ -664,8 +647,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -690,8 +672,7 @@ $_base['apis'] = array(
 				'summary'          => 'deleteFolder() - Delete one folder and/or its contents.',
 				'nickname'         => 'deleteFolder',
 				'type'             => 'FolderResponse',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'container',
 						'description'   => 'The name of the container where the folder exists.',
@@ -725,8 +706,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -744,25 +724,24 @@ $_base['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'Set \'content_only\' to true to delete the sub-folders and files contained, but not the folder. ' .
-									  'Set \'force\' to true to delete a non-empty folder. ' .
-									  'Alternatively, to delete by a listing of sub-folders and files, ' .
-									  'use the POST request with X-HTTP-METHOD = DELETE header and post listing.',
+				'notes'            =>
+					'Set \'content_only\' to true to delete the sub-folders and files contained, but not the folder. ' .
+					'Set \'force\' to true to delete a non-empty folder. ' .
+					'Alternatively, to delete by a listing of sub-folders and files, ' .
+					'use the POST request with X-HTTP-METHOD = DELETE header and post listing.',
 			),
 		),
 		'description' => 'Operations on folders.',
 	),
 	array(
 		'path'        => '/{api_name}/{container}/{file_path}',
-		'operations'  =>
-		array(
+		'operations'  => array(
 			array(
 				'method'           => 'GET',
 				'summary'          => 'getFile() - Download the file contents and/or its properties.',
 				'nickname'         => 'getFile',
 				'type'             => 'FileResponse',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'container',
 						'description'   => 'Name of the container where the file exists.',
@@ -807,8 +786,7 @@ $_base['apis'] = array(
 						'defaultValue'  => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -827,17 +805,16 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            =>
-				'By default, the file is streamed to the browser. ' .
-				'Use the \'download\' parameter to prompt for download. ' .
-				'Use the \'include_properties\' parameter (optionally add \'content\' to include base64 content) to list properties of the file.',
+					'By default, the file is streamed to the browser. ' .
+					'Use the \'download\' parameter to prompt for download. ' .
+					'Use the \'include_properties\' parameter (optionally add \'content\' to include base64 content) to list properties of the file.',
 			),
 			array(
 				'method'           => 'POST',
 				'summary'          => 'createFile() - Create a new file.',
 				'nickname'         => 'createFile',
 				'type'             => 'FileResponse',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'container',
 						'description'   => 'Name of the container where the file exists.',
@@ -871,8 +848,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -897,8 +873,7 @@ $_base['apis'] = array(
 				'summary'          => 'replaceFile() - Update content of the file.',
 				'nickname'         => 'replaceFile',
 				'type'             => 'FileResponse',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'container',
 						'description'   => 'Name of the container where the file exists.',
@@ -924,8 +899,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -950,8 +924,7 @@ $_base['apis'] = array(
 				'summary'          => 'updateFileProperties() - Update properties of the file.',
 				'nickname'         => 'updateFileProperties',
 				'type'             => 'File',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'container',
 						'description'   => 'Name of the container where the file exists.',
@@ -977,8 +950,7 @@ $_base['apis'] = array(
 						'required'      => false,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -1003,8 +975,7 @@ $_base['apis'] = array(
 				'summary'          => 'deleteFile() - Delete one file.',
 				'nickname'         => 'deleteFile',
 				'type'             => 'FileResponse',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'container',
 						'description'   => 'Name of the container where the file exists.',
@@ -1022,8 +993,7 @@ $_base['apis'] = array(
 						'required'      => true,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -1049,281 +1019,223 @@ $_base['apis'] = array(
 );
 
 $_commonContainer = array(
-	'name'       =>
-	array(
+	'name'       => array(
 		'type'        => 'string',
 		'description' => 'Identifier/Name for the container.',
 	),
-	'path'       =>
-	array(
+	'path'       => array(
 		'type'        => 'string',
 		'description' => 'Same as name for the container, for consistency.',
 	),
-	'_property_' =>
-	array(
+	'_property_' => array(
 		'type'        => 'string',
 		'description' => 'Storage type specific properties.',
 	),
-	'metadata'   =>
-	array(
+	'metadata'   => array(
 		'type'        => 'Array',
 		'description' => 'An array of name-value pairs.',
-		'items'       =>
-		array(
+		'items'       => array(
 			'type' => 'string',
 		),
 	),
 );
 
 $_commonFolder = array(
-	'name'       =>
-	array(
+	'name'       => array(
 		'type'        => 'string',
 		'description' => 'Identifier/Name for the folder, localized to requested resource.',
 	),
-	'path'       =>
-	array(
+	'path'       => array(
 		'type'        => 'string',
 		'description' => 'Full path of the folder, from the service including container.',
 	),
-	'_property_' =>
-	array(
+	'_property_' => array(
 		'type'        => 'string',
 		'description' => 'Storage type specific properties.',
 	),
-	'metadata'   =>
-	array(
+	'metadata'   => array(
 		'type'        => 'Array',
 		'description' => 'An array of name-value pairs.',
-		'items'       =>
-		array(
+		'items'       => array(
 			'type' => 'string',
 		),
 	),
 );
 
 $_commonFile = array(
-	'name'         =>
-	array(
+	'name'         => array(
 		'type'        => 'string',
 		'description' => 'Identifier/Name for the file, localized to requested resource.',
 	),
-	'path'         =>
-	array(
+	'path'         => array(
 		'type'        => 'string',
 		'description' => 'Full path of the file, from the service including container.',
 	),
-	'content_type' =>
-	array(
+	'content_type' => array(
 		'type'        => 'string',
 		'description' => 'The media type of the content of the file.',
 	),
-	'_property_'   =>
-	array(
+	'_property_'   => array(
 		'type'        => 'string',
 		'description' => 'Storage type specific properties.',
 	),
-	'metadata'     =>
-	array(
+	'metadata'     => array(
 		'type'        => 'Array',
 		'description' => 'An array of name-value pairs.',
-		'items'       =>
-		array(
+		'items'       => array(
 			'type' => 'string',
 		),
 	),
 );
 
 $_models = array(
-	'FileRequest'        =>
-	array(
+	'FileRequest'        => array(
 		'id'         => 'FileRequest',
 		'properties' => $_commonFile,
 	),
-	'FileResponse'       =>
-	array(
+	'FileResponse'       => array(
 		'id'         => 'FileResponse',
-		'properties' =>
-		array_merge(
+		'properties' => array_merge(
 			$_commonFile,
 			array(
-				 'content_length' =>
-				 array(
-					 'type'        => 'string',
-					 'description' => 'Size of the file in bytes.',
-				 ),
-				 'last_modified'  =>
-				 array(
-					 'type'        => 'string',
-					 'description' => 'A GMT date timestamp of when the file was last modified.',
-				 ),
+				'content_length' => array(
+					'type'        => 'string',
+					'description' => 'Size of the file in bytes.',
+				),
+				'last_modified'  => array(
+					'type'        => 'string',
+					'description' => 'A GMT date timestamp of when the file was last modified.',
+				),
 			)
 		),
 	),
-	'FolderRequest'      =>
-	array(
+	'FolderRequest'      => array(
 		'id'         => 'FolderRequest',
-		'properties' =>
-		array_merge(
+		'properties' => array_merge(
 			$_commonFolder,
 			array(
-				 'folder' =>
-				 array(
-					 'type'        => 'Array',
-					 'description' => 'An array of sub-folders to create.',
-					 'items'       =>
-					 array(
-						 '$ref' => 'FolderRequest',
-					 ),
-				 ),
-				 'file'   =>
-				 array(
-					 'type'        => 'Array',
-					 'description' => 'An array of files to create.',
-					 'items'       =>
-					 array(
-						 '$ref' => 'FileRequest',
-					 ),
-				 ),
+				'folder' => array(
+					'type'        => 'Array',
+					'description' => 'An array of sub-folders to create.',
+					'items'       => array(
+						'$ref' => 'FolderRequest',
+					),
+				),
+				'file'   => array(
+					'type'        => 'Array',
+					'description' => 'An array of files to create.',
+					'items'       => array(
+						'$ref' => 'FileRequest',
+					),
+				),
 			)
 		),
 	),
-	'FolderResponse'     =>
-	array(
+	'FolderResponse'     => array(
 		'id'         => 'FolderResponse',
-		'properties' =>
-		array_merge(
+		'properties' => array_merge(
 			$_commonFolder,
 			array(
-				 'last_modified' =>
-				 array(
-					 'type'        => 'string',
-					 'description' => 'A GMT date timestamp of when the file was last modified.',
-				 ),
-				 'folder'        =>
-				 array(
-					 'type'        => 'Array',
-					 'description' => 'An array of contained sub-folders.',
-					 'items'       =>
-					 array(
-						 '$ref' => 'FolderResponse',
-					 ),
-				 ),
-				 'file'          =>
-				 array(
-					 'type'        => 'Array',
-					 'description' => 'An array of contained files.',
-					 'items'       =>
-					 array(
-						 '$ref' => 'FileResponse',
-					 ),
-				 ),
+				'last_modified' => array(
+					'type'        => 'string',
+					'description' => 'A GMT date timestamp of when the file was last modified.',
+				),
+				'folder'        => array(
+					'type'        => 'Array',
+					'description' => 'An array of contained sub-folders.',
+					'items'       => array(
+						'$ref' => 'FolderResponse',
+					),
+				),
+				'file'          => array(
+					'type'        => 'Array',
+					'description' => 'An array of contained files.',
+					'items'       => array(
+						'$ref' => 'FileResponse',
+					),
+				),
 			)
 		),
 	),
-	'ContainerRequest'   =>
-	array(
+	'ContainerRequest'   => array(
 		'id'         => 'ContainerRequest',
-		'properties' =>
-		array_merge(
+		'properties' => array_merge(
 			$_commonContainer,
 			array(
-				 'folder' =>
-				 array(
-					 'type'        => 'Array',
-					 'description' => 'An array of folders to create.',
-					 'items'       =>
-					 array(
-						 '$ref' => 'FolderRequest',
-					 ),
-				 ),
-				 'file'   =>
-				 array(
-					 'type'        => 'Array',
-					 'description' => 'An array of files to create.',
-					 'items'       =>
-					 array(
-						 '$ref' => 'FileRequest',
-					 ),
-				 ),
+				'folder' => array(
+					'type'        => 'Array',
+					'description' => 'An array of folders to create.',
+					'items'       => array(
+						'$ref' => 'FolderRequest',
+					),
+				),
+				'file'   => array(
+					'type'        => 'Array',
+					'description' => 'An array of files to create.',
+					'items'       => array(
+						'$ref' => 'FileRequest',
+					),
+				),
 			)
 		),
 	),
-	'ContainerResponse'  =>
-	array(
+	'ContainerResponse'  => array(
 		'id'         => 'ContainerResponse',
-		'properties' =>
-		array_merge(
+		'properties' => array_merge(
 			$_commonContainer,
 			array(
-				 'last_modified' =>
-				 array(
-					 'type'        => 'string',
-					 'description' => 'A GMT date timestamp of when the container was last modified.',
-				 ),
-				 'folder'        =>
-				 array(
-					 'type'        => 'Array',
-					 'description' => 'An array of contained folders.',
-					 'items'       =>
-					 array(
-						 '$ref' => 'FolderResponse',
-					 ),
-				 ),
-				 'file'          =>
-				 array(
-					 'type'        => 'Array',
-					 'description' => 'An array of contained files.',
-					 'items'       =>
-					 array(
-						 '$ref' => 'FileResponse',
-					 ),
-				 ),
+				'last_modified' => array(
+					'type'        => 'string',
+					'description' => 'A GMT date timestamp of when the container was last modified.',
+				),
+				'folder'        => array(
+					'type'        => 'Array',
+					'description' => 'An array of contained folders.',
+					'items'       => array(
+						'$ref' => 'FolderResponse',
+					),
+				),
+				'file'          => array(
+					'type'        => 'Array',
+					'description' => 'An array of contained files.',
+					'items'       => array(
+						'$ref' => 'FileResponse',
+					),
+				),
 			)
 		),
 	),
-	'File'               =>
-	array(
+	'File'               => array(
 		'id'         => 'File',
 		'properties' => $_commonFile,
 	),
-	'Folder'             =>
-	array(
+	'Folder'             => array(
 		'id'         => 'Folder',
 		'properties' => $_commonFolder,
 	),
-	'Container'          =>
-	array(
+	'Container'          => array(
 		'id'         => 'Container',
 		'properties' => $_commonContainer,
 	),
-	'ContainersRequest'  =>
-	array(
+	'ContainersRequest'  => array(
 		'id'         => 'ContainersRequest',
-		'properties' =>
-		array(
-			'container' =>
-			array(
+		'properties' => array(
+			'container' => array(
 				'type'        => 'Array',
 				'description' => 'An array of containers to modify.',
-				'items'       =>
-				array(
+				'items'       => array(
 					'$ref' => 'Container',
 				),
 			),
 		),
 	),
-	'ContainersResponse' =>
-	array(
+	'ContainersResponse' => array(
 		'id'         => 'ContainersResponse',
-		'properties' =>
-		array(
-			'container' =>
-			array(
+		'properties' => array(
+			'container' => array(
 				'type'        => 'Array',
 				'description' => 'An array of containers.',
-				'items'       =>
-				array(
+				'items'       => array(
 					'$ref' => 'Container',
 				),
 			),

@@ -19,8 +19,8 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Common\Enums\OutputFormats;
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Oasys\Exceptions\RedirectRequiredException;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\RestException;
@@ -71,7 +71,7 @@ class RestResponse extends HttpResponse
 			if ( empty( $_format ) )
 			{
 				$_accepted = RestResponse::parseAcceptHeader(
-					FilterInput::server( 'HTTP_ACCEPT', null, FILTER_SANITIZE_STRING )
+										 FilterInput::server( 'HTTP_ACCEPT', null, FILTER_SANITIZE_STRING )
 				);
 				$_accepted = array_values( $_accepted );
 				$_format = Option::get( $_accepted, 0 );

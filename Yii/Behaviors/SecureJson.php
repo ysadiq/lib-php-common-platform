@@ -306,8 +306,7 @@ class SecureJson extends BaseModelBehavior
 		}
 
 		//	Encrypt it...
-		return
-			false === $salt ? $_encoded : Hasher::encryptString( $_encoded, $salt ? : $this->_salt );
+		return false === $salt ? $_encoded : Hasher::encryptString( $_encoded, $salt ? : $this->_salt );
 	}
 
 	/**

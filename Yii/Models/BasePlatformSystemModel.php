@@ -20,7 +20,6 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -165,10 +164,10 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-			array(
-				'created_by_id'       => 'Created By',
-				'last_modified_by_id' => 'Last Modified By',
-			) + $additionalLabels
+					 array(
+						 'created_by_id'       => 'Created By',
+						 'last_modified_by_id' => 'Last Modified By',
+					 ) + $additionalLabels
 		);
 	}
 
@@ -212,7 +211,8 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 
 		try
 		{
-			$_sql = <<<MYSQL
+			$_sql
+				= <<<MYSQL
 SELECT
 	id,
 	$mapColumn
@@ -395,10 +395,10 @@ MYSQL;
 		if ( $this->hasAttribute( 'api_name' ) )
 		{
 			$this->getDbCriteria()->mergeWith(
-				array(
-					'condition' => 'api_name = :api_name',
-					'params'    => array( ':api_name' => $name ),
-				)
+				 array(
+					 'condition' => 'api_name = :api_name',
+					 'params'    => array( ':api_name' => $name ),
+				 )
 			);
 		}
 

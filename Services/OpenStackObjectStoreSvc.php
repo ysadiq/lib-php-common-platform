@@ -19,18 +19,17 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Kisma\Core\Utility\Log;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\BlobServiceException;
+use DreamFactory\Platform\Utility\FileUtilities;
 use Kisma\Core\Utility\Option;
-use OpenCloud\Common\Exceptions\ContainerNotFoundError;
-use OpenCloud\OpenStack;
-use OpenCloud\Rackspace;
 use OpenCloud\Common\Collection;
+use OpenCloud\Common\Exceptions\ContainerNotFoundError;
 use OpenCloud\ObjectStore\Container;
 use OpenCloud\ObjectStore\DataObject;
 use OpenCloud\ObjectStore\Service;
-use DreamFactory\Platform\Exceptions\BlobServiceException;
-use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Utility\FileUtilities;
+use OpenCloud\OpenStack;
+use OpenCloud\Rackspace;
 
 /**
  * RemoteFileSvc.php

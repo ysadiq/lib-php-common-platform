@@ -23,15 +23,13 @@ $_constant = array();
 $_constant['apis'] = array(
 	array(
 		'path'        => '/{api_name}/constant',
-		'operations'  =>
-		array(
+		'operations'  => array(
 			array(
 				'method'           => 'GET',
 				'summary'          => 'getConstants() - Retrieve all platform enumerated constants.',
 				'nickname'         => 'getConstants',
 				'type'             => 'Constants',
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -52,15 +50,13 @@ $_constant['apis'] = array(
 	),
 	array(
 		'path'        => '/{api_name}/constant/{type}',
-		'operations'  =>
-		array(
+		'operations'  => array(
 			array(
 				'method'           => 'GET',
 				'summary'          => 'getConstant() - Retrieve one constant type enumeration.',
 				'nickname'         => 'getConstant',
 				'type'             => 'Constant',
-				'parameters'       =>
-				array(
+				'parameters'       => array(
 					array(
 						'name'          => 'type',
 						'description'   => 'Identifier of the enumeration type to retrieve.',
@@ -70,8 +66,7 @@ $_constant['apis'] = array(
 						'required'      => true,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
 						'code'    => 400,
@@ -93,29 +88,23 @@ $_constant['apis'] = array(
 );
 
 $_constant['models'] = array(
-	'Constants'   =>
-	array(
+	'Constants' => array(
 		'id'         => 'Constants',
 		'properties' => array(
-			'type_name'        =>
-			array(
-				'type'        => 'Array',
-				'items'       =>
-				array(
+			'type_name' => array(
+				'type'  => 'Array',
+				'items' => array(
 					'$ref' => 'Constant',
 				),
 			),
 		),
 	),
-	'Constant'  =>
-	array(
+	'Constant'  => array(
 		'id'         => 'Constant',
 		'properties' => array(
-			'name'        =>
-			array(
-				'type'        => 'Array',
-				'items'       =>
-				array(
+			'name' => array(
+				'type'  => 'Array',
+				'items' => array(
 					'type' => 'string',
 				),
 			),

@@ -21,7 +21,6 @@ namespace DreamFactory\Platform\Yii\Components;
 
 use DreamFactory\Platform\Yii\Models\Stat;
 use DreamFactory\Platform\Yii\Models\User;
-use Kisma\Core\Utility\FilterInput;
 
 /**
  * PlatformUserIdentity

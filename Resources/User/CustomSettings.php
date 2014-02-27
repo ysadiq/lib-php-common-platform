@@ -24,7 +24,6 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
-use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\User;
 use Kisma\Core\Utility\Option;
@@ -55,21 +54,21 @@ class CustomSettings extends BasePlatformRestResource
 	public function __construct( $consumer, $resources = array() )
 	{
 		parent::__construct(
-			$consumer,
-			array(
-				 'name'           => 'User Custom Settings',
-				 'service_name'   => 'user',
-				 'type'           => 'System',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'custom',
-				 'description'    => 'Resource for a user to manage their custom settings.',
-				 'is_active'      => true,
-				 'verb_aliases'   => array(
-					 static::Put   => static::Post,
-					 static::Patch => static::Post,
-					 static::Merge => static::Post,
-				 )
-			)
+			  $consumer,
+			  array(
+				  'name'         => 'User Custom Settings',
+				  'service_name' => 'user',
+				  'type'         => 'System',
+				  'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
+				  'api_name'     => 'custom',
+				  'description'  => 'Resource for a user to manage their custom settings.',
+				  'is_active'    => true,
+				  'verb_aliases' => array(
+					  static::Put   => static::Post,
+					  static::Patch => static::Post,
+					  static::Merge => static::Post,
+				  )
+			  )
 		);
 
 		$this->_setting = Option::get( $resources, 1 );
@@ -204,7 +203,7 @@ class CustomSettings extends BasePlatformRestResource
 	 */
 	public static function deleteCustomSettings( $user_id, $setting = '' )
 	{
-		if ( empty( $setting) )
+		if ( empty( $setting ) )
 		{
 			throw new BadRequestException( 'Deleting all custom settings is not currently supported.' );
 		}
@@ -219,7 +218,7 @@ class CustomSettings extends BasePlatformRestResource
 		try
 		{
 			$_data = $_theUser->getAttribute( 'user_data' );
-			unset( $_data[ $setting ] );
+			unset( $_data[$setting] );
 			$_theUser->setAttribute( 'user_data', $_data );
 			$_theUser->save();
 

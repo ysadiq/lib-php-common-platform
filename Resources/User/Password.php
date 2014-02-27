@@ -25,8 +25,8 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Services\EmailSvc;
-use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\User;
 use Kisma\Core\Utility\FilterInput;
@@ -50,22 +50,22 @@ class Password extends BasePlatformRestResource
 	public function __construct( $consumer, $resources = array() )
 	{
 		parent::__construct(
-			$consumer,
-			array(
-				 'name'           => 'User Password',
-				 'service_name'   => 'user',
-				 'type'           => 'System',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'password',
-				 'description'    => 'Resource for a user to manage their password.',
-				 'is_active'      => true,
-				 'resource_array' => $resources,
-				 'verb_aliases'   => array(
-					 static::Put   => static::Post,
-					 static::Patch => static::Post,
-					 static::Merge => static::Post,
-				 )
-			)
+			  $consumer,
+			  array(
+				  'name'           => 'User Password',
+				  'service_name'   => 'user',
+				  'type'           => 'System',
+				  'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				  'api_name'       => 'password',
+				  'description'    => 'Resource for a user to manage their password.',
+				  'is_active'      => true,
+				  'resource_array' => $resources,
+				  'verb_aliases'   => array(
+					  static::Put   => static::Post,
+					  static::Patch => static::Post,
+					  static::Merge => static::Post,
+				  )
+			  )
 		);
 	}
 
@@ -196,8 +196,8 @@ class Password extends BasePlatformRestResource
 		}
 
 		$_theUser = User::model()->find(
-			'email=:email AND confirm_code=:cc',
-			array( ':email' => $email, ':cc' => $code )
+						'email=:email AND confirm_code=:cc',
+						array( ':email' => $email, ':cc' => $code )
 		);
 		if ( null === $_theUser )
 		{

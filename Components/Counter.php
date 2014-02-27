@@ -36,9 +36,10 @@ class Counter
 	/**
 	 * @var array
 	 */
-	protected $_counters = array(
-		'total' => 0,
-	);
+	protected $_counters
+		= array(
+			'total' => 0,
+		);
 
 	//*************************************************************************
 	//* Methods

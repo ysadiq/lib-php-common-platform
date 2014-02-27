@@ -92,8 +92,8 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		if ( !empty( $this->_resource ) )
 		{
 			$this->validateTableAccess(
-				$this->_resource,
-				PermissionMap::fromMethod( $this->getRequestedAction() )
+				 $this->_resource,
+				 PermissionMap::fromMethod( $this->getRequestedAction() )
 			);
 		}
 		else

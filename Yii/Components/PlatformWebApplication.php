@@ -202,10 +202,10 @@ class PlatformWebApplication extends \CWebApplication
 			case HttpMethod::TRACE:
 				Log::error(
 				   'HTTP TRACE received!',
-					   array(
-						   'server'  => $_SERVER,
-						   'request' => $_REQUEST,
-					   )
+				   array(
+					   'server'  => $_SERVER,
+					   'request' => $_REQUEST,
+				   )
 				);
 				throw new BadRequestException();
 

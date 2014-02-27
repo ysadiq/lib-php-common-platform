@@ -119,7 +119,8 @@ class Profiler
 	 */
 	public static function elapsedAsString( $start, $stop = false )
 	{
-		static $_divisors = array(
+		static $_divisors
+		= array(
 			'hour'   => DateTime::US_PER_HOUR,
 			'minute' => DateTime::US_PER_MINUTE,
 			'second' => DateTime::US_PER_SECOND,

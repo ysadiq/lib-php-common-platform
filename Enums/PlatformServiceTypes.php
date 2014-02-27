@@ -80,7 +80,7 @@ class PlatformServiceTypes extends SeedEnum
 	const REMOTE_WEB_SERVICE = 0x1020;
 
 	/**
-	 * @param int $value enumerated type value
+	 * @param int    $value        enumerated type value
 	 * @param string $service_name given name of the service, also returned as default
 	 *
 	 * @return string - associated file name of native service

@@ -67,7 +67,7 @@ class RoleSystemAccess extends BasePlatformSystemModel
 	public function relations()
 	{
 		return array(
-			'role'    => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'role_id' ),
+			'role' => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'role_id' ),
 		);
 	}
 
@@ -80,9 +80,9 @@ class RoleSystemAccess extends BasePlatformSystemModel
 	{
 		$_labels = array_merge(
 			array(
-				 'role_id'    => 'Role',
-				 'component'  => 'Component',
-				 'access'     => 'Access',
+				'role_id'   => 'Role',
+				'component' => 'Component',
+				'access'    => 'Access',
 			),
 			$additionalLabels
 		);
@@ -100,16 +100,16 @@ class RoleSystemAccess extends BasePlatformSystemModel
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-			$requested,
-			array_merge(
-				array(
-					 'role_id',
-					 'component',
-					 'access',
-				),
-				$columns
-			),
-			$hidden
+					 $requested,
+					 array_merge(
+						 array(
+							 'role_id',
+							 'component',
+							 'access',
+						 ),
+						 $columns
+					 ),
+					 $hidden
 		);
 	}
 }

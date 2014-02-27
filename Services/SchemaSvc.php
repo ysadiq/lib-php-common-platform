@@ -166,18 +166,18 @@ class SchemaSvc extends BasePlatformRestService
 
 		$this->_payload = RestData::getPostedData( false, true );
 		$this->_tables = Option::get(
-			$this->_payload,
-			'table',
-			Option::getDeep( $this->_payload, 'tables', 'table' )
+							   $this->_payload,
+							   'table',
+							   Option::getDeep( $this->_payload, 'tables', 'table' )
 		);
 
 		//	Create fields in existing table
 		if ( !empty( $this->_tableName ) )
 		{
 			$this->_fields = Option::get(
-				$this->_payload,
-				'field',
-				Option::getDeep( $this->_payload, 'fields', 'field' )
+								   $this->_payload,
+								   'field',
+								   Option::getDeep( $this->_payload, 'fields', 'field' )
 			);
 		}
 	}

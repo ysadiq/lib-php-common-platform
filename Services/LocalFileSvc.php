@@ -453,8 +453,8 @@ class LocalFileSvc extends BaseFileSvc
 		// create the folder
 		$this->checkContainerForWrite( $container ); // need to be able to write to storage
 		FileUtilities::copyTree(
-			static::addContainerToName( $src_container, $src_path ),
-			static::addContainerToName( $container, $dest_path )
+					 static::addContainerToName( $src_container, $src_path ),
+					 static::addContainerToName( $container, $dest_path )
 		);
 	}
 

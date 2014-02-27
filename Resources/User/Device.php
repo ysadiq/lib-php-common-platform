@@ -22,9 +22,8 @@ namespace DreamFactory\Platform\Resources\User;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
-use DreamFactory\Platform\Yii\Models\Device as DeviceModel;
-use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Yii\Models\Device as DeviceModel;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -44,17 +43,17 @@ class Device extends BasePlatformRestResource
 	public function __construct( $consumer, $resources = array() )
 	{
 		parent::__construct(
-			$consumer,
-			array(
-				 'name'           => 'User Device',
-				 'service_name'   => 'user',
-				 'type'           => 'System',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'device',
-				 'description'    => 'Resource for a user to manage their devices.',
-				 'is_active'      => true,
-				 'resource_array' => $resources,
-			)
+			  $consumer,
+			  array(
+				  'name'           => 'User Device',
+				  'service_name'   => 'user',
+				  'type'           => 'System',
+				  'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				  'api_name'       => 'device',
+				  'description'    => 'Resource for a user to manage their devices.',
+				  'is_active'      => true,
+				  'resource_array' => $resources,
+			  )
 		);
 	}
 

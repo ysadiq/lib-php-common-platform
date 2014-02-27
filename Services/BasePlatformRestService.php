@@ -177,9 +177,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		//	Inherent failure?
 		if ( false === ( $this->_response = $this->_handleResource() ) )
 		{
-			$_message =
-				$this->_action . ' requests' . ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
-				' are not currently supported by the "' . $this->_apiName . '" service.';
+			$_message
+				=
+				$this->_action .
+				' requests' .
+				( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
+				' are not currently supported by the "' .
+				$this->_apiName .
+				'" service.';
 
 			throw new BadRequestException( $_message );
 		}
@@ -396,7 +401,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 			else
 			{
 				RestResponse::sendErrors(
-					new BadRequestException( 'No application name header or parameter value in request.' )
+							new BadRequestException( 'No application name header or parameter value in request.' )
 				);
 			}
 		}

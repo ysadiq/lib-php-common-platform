@@ -21,8 +21,8 @@ namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Option;
 use Kisma\Core\Exceptions\StorageException;
+use Kisma\Core\Utility\Option;
 
 /**
  * Role.php
@@ -180,10 +180,10 @@ class Role extends BasePlatformSystemModel
 					 $requested,
 					 array_merge(
 						 array(
-							  'name',
-							  'description',
-							  'is_active',
-							  'default_app_id',
+							 'name',
+							 'description',
+							 'is_active',
+							 'default_app_id',
 						 ),
 						 $columns
 					 ),

@@ -34,21 +34,19 @@ $_user = require( __DIR__ . '/../Resources/System/User.swagger.php' );
 
 $_base['apis'] = array_merge(
 	array(
-		 array(
-			 'path'        => '/{api_name}',
-			 'operations'  =>
-				 array(
-					 0 =>
-						 array(
-							 'method'   => 'GET',
-							 'summary'  => 'getResources() - List resources available for system management.',
-							 'nickname' => 'getResources',
-							 'type'     => 'Resources',
-							 'notes'    => 'See listed operations for each resource available.',
-						 ),
-				 ),
-			 'description' => 'Operations available for system management.',
-		 ),
+		array(
+			'path'        => '/{api_name}',
+			'operations'  => array(
+				0 => array(
+					'method'   => 'GET',
+					'summary'  => 'getResources() - List resources available for system management.',
+					'nickname' => 'getResources',
+					'type'     => 'Resources',
+					'notes'    => 'See listed operations for each resource available.',
+				),
+			),
+			'description' => 'Operations available for system management.',
+		),
 	),
 	Option::get( $_app, 'apis' ),
 	Option::get( $_appGroup, 'apis' ),
@@ -64,28 +62,23 @@ $_base['apis'] = array_merge(
 
 $_base['models'] = array_merge(
 	array(
-		 'Metadata' =>
-			 array(
-				 'id'         => 'Metadata',
-				 'properties' =>
-					 array(
-						 'schema' =>
-							 array(
-								 'type'        => 'Array',
-								 'description' => 'Array of table schema.',
-								 'items'       =>
-									 array(
-										 'type' => 'string',
-									 ),
-							 ),
-						 'count'  =>
-							 array(
-								 'type'        => 'integer',
-								 'format'      => 'int32',
-								 'description' => 'Record count returned for GET requests.',
-							 ),
-					 ),
-			 ),
+		'Metadata' => array(
+			'id'         => 'Metadata',
+			'properties' => array(
+				'schema' => array(
+					'type'        => 'Array',
+					'description' => 'Array of table schema.',
+					'items'       => array(
+						'type' => 'string',
+					),
+				),
+				'count'  => array(
+					'type'        => 'integer',
+					'format'      => 'int32',
+					'description' => 'Record count returned for GET requests.',
+				),
+			),
+		),
 	),
 	Option::get( $_base, 'models' ),
 	Option::get( $_app, 'models' ),

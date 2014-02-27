@@ -187,7 +187,8 @@ class FileUtilities
 		/**
 		 * @var array of file extensions to mime types
 		 */
-		static $_mimeTypes = array(
+		static $_mimeTypes
+		= array(
 			'123'         => 'application/vnd.lotus-1-2-3',
 			'3dml'        => 'text/vnd.in3d.3dml',
 			'3ds'         => 'image/x-3ds',
@@ -1196,12 +1197,12 @@ class FileUtilities
 		}
 
 		if ( empty( $mime ) ||
-			 ( 0 === strcasecmp( $mime, $defaultMime ) ) ||
-			 ( 0 === strcasecmp( 'text/plain', $mime ) ) ||
-			 ( 0 === strcasecmp( 'text/x-asm', $mime ) ) ||
-			 ( 0 === strcasecmp( 'text/x-c', $mime ) ) ||
-			 ( 0 === strcasecmp( 'text/x-c++', $mime ) ) ||
-			 ( 0 === strcasecmp( 'text/x-java', $mime ) )
+			( 0 === strcasecmp( $mime, $defaultMime ) ) ||
+			( 0 === strcasecmp( 'text/plain', $mime ) ) ||
+			( 0 === strcasecmp( 'text/x-asm', $mime ) ) ||
+			( 0 === strcasecmp( 'text/x-c', $mime ) ) ||
+			( 0 === strcasecmp( 'text/x-c++', $mime ) ) ||
+			( 0 === strcasecmp( 'text/x-java', $mime ) )
 		)
 		{
 			// need further guidance on these, as they are sometimes incorrect
