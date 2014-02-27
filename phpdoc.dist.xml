@@ -14,6 +14,8 @@
 	</transformer>
 	<files>
 		<directory>src/</directory>
+		<ignore>tests/*</ignore>
+		<ignore>vendor/*</ignore>
 	</files>
 	<transformations>
 		<template name="responsive-twig" />

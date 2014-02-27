@@ -17,6 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Log;
 
 /**
@@ -48,11 +49,11 @@ if ( file_exists( __DIR__ . '/config/keys.php' ) )
 Log::setDefaultLog( __DIR__ . '/log/platform-php-sdk.tests.log' );
 
 //	Create the application but don't run (false at the end)
-$_app = DreamFactory\Yii\Utility\Pii::run(
-									__DIR__,
-										$_autoloader,
-										'DreamFactory\\Platform\\Yii\\Components\\PlatformConsoleApplication',
-										$_config,
-										false
+$_app = Pii::run(
+		   __DIR__,
+		   $_autoloader,
+		   'DreamFactory\\Platform\\Yii\\Components\\PlatformConsoleApplication',
+		   $_config,
+		   false
 );
 
