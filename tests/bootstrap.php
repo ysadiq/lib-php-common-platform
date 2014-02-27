@@ -54,6 +54,11 @@ $_app = Pii::run(
 		   $_autoloader,
 		   'DreamFactory\\Platform\\Yii\\Components\\PlatformConsoleApplication',
 		   $_config,
+			   //	NO AUTO RUN
+		   false,
+			   //	Put Composer first
+		   true,
+			   // NO CACHE
 		   false
 );
 
