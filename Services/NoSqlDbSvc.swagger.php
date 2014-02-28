@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -651,7 +651,7 @@ $_base['apis'] = array(
 					'method'           => 'GET',
 					'summary'          => 'getRecord() - Retrieve one record by identifier.',
 					'nickname'         => 'getRecord',
-					'type'             => 'string',
+					'type'             => 'Record',
 					'parameters'       =>
 						array(
 							array(
@@ -720,7 +720,7 @@ $_base['apis'] = array(
 					'method'           => 'POST',
 					'summary'          => 'createRecord() - Create one record with given identifier.',
 					'nickname'         => 'createRecord',
-					'type'             => 'string',
+					'type'             => 'Record',
 					'parameters'       =>
 						array(
 							array(
@@ -751,7 +751,7 @@ $_base['apis'] = array(
 								'name'          => 'body',
 								'description'   => 'Data containing name-value pairs of the record to create.',
 								'allowMultiple' => false,
-								'type'          => 'string',
+								'type'          => 'Record',
 								'paramType'     => 'body',
 								'required'      => true,
 							),
@@ -790,7 +790,7 @@ $_base['apis'] = array(
 					'method'           => 'PUT',
 					'summary'          => 'replaceRecord() - Update (replace) one record by identifier.',
 					'nickname'         => 'replaceRecord',
-					'type'             => 'string',
+					'type'             => 'Record',
 					'parameters'       =>
 						array(
 							array(
@@ -821,7 +821,7 @@ $_base['apis'] = array(
 								'name'          => 'body',
 								'description'   => 'Data containing name-value pairs of the replacement record.',
 								'allowMultiple' => false,
-								'type'          => 'string',
+								'type'          => 'Record',
 								'paramType'     => 'body',
 								'required'      => true,
 							),
@@ -859,7 +859,7 @@ $_base['apis'] = array(
 					'method'           => 'PATCH',
 					'summary'          => 'updateRecord() - Update (patch) one record by identifier.',
 					'nickname'         => 'updateRecord',
-					'type'             => 'string',
+					'type'             => 'Record',
 					'parameters'       =>
 						array(
 							array(
@@ -890,7 +890,7 @@ $_base['apis'] = array(
 								'name'          => 'body',
 								'description'   => 'Data containing name-value pairs of the fields to update.',
 								'allowMultiple' => false,
-								'type'          => 'string',
+								'type'          => 'Record',
 								'paramType'     => 'body',
 								'required'      => true,
 							),
@@ -929,7 +929,7 @@ $_base['apis'] = array(
 					'method'           => 'DELETE',
 					'summary'          => 'deleteRecord() - Delete one record by identifier.',
 					'nickname'         => 'deleteRecord',
-					'type'             => 'string',
+					'type'             => 'Record',
 					'parameters'       =>
 						array(
 							array(
@@ -990,81 +990,5 @@ $_base['apis'] = array(
 		'description' => 'Operations for single record administration.',
 	),
 );
-
-$_models = array(
-	'Tables'   =>
-		array(
-			'id'         => 'Tables',
-			'properties' =>
-				array(
-					'table' =>
-						array(
-							'type'        => 'Array',
-							'description' => 'Array of tables and their properties.',
-							'items'       =>
-								array(
-									'$ref' => 'Table',
-								),
-						),
-				),
-		),
-	'Table'    =>
-		array(
-			'id'         => 'Table',
-			'properties' =>
-				array(
-					'name'       =>
-						array(
-							'type'        => 'string',
-							'description' => 'Name of the table.',
-						),
-				),
-		),
-	'Records'  =>
-		array(
-			'id'         => 'Records',
-			'properties' =>
-				array(
-					'record' =>
-						array(
-							'type'        => 'Array',
-							'description' => 'Array of records of the given resource.',
-							'items'       =>
-								array(
-									'type' => 'string',
-								),
-						),
-					'meta'   =>
-						array(
-							'type'        => 'Metadata',
-							'description' => 'Available metadata for the response.',
-						),
-				),
-		),
-	'Metadata' =>
-		array(
-			'id'         => 'Metadata',
-			'properties' =>
-				array(
-					'schema' =>
-						array(
-							'type'        => 'Array',
-							'description' => 'Array of table schema.',
-							'items'       =>
-								array(
-									'type' => 'string',
-								),
-						),
-					'count'  =>
-						array(
-							'type'        => 'integer',
-							'format'      => 'int32',
-							'description' => 'Record count returned for GET requests.',
-						),
-				),
-		),
-);
-
-$_base['models'] = array_merge( $_base['models'], $_models );
 
 return $_base;
