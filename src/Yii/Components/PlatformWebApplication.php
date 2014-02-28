@@ -25,10 +25,11 @@ use DreamFactory\Platform\Events\Enums\DspEvents;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Events\SeedEvent;
+use Kisma\Core\Interfaces\PublisherLike;
+use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
@@ -36,9 +37,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * PlatformConsoleApplication
+ * PlatformWebApplication
  */
-class PlatformConsoleApplication extends \CConsoleApplication
+class PlatformWebApplication extends \CWebApplication implements PublisherLike, SubscriberLike
 {
 	//*************************************************************************
 	//	Constants
@@ -67,7 +68,11 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	/**
 	 * @var string The default DSP resource namespace
 	 */
-	const DEFAULT_RESOURCE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Resource';
+	const DEFAULT_SERVICE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Services';
+	/**
+	 * @var string The default DSP resource namespace
+	 */
+	const DEFAULT_RESOURCE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Resources';
 	/**
 	 * @var string The default DSP model namespace
 	 */
@@ -76,6 +81,19 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 * @var string The default path (sub-path) of installed plug-ins
 	 */
 	const DEFAULT_PLUGINS_PATH = '/storage/plugins';
+	/**
+	 * @const int The services namespace map index
+	 */
+	const NS_SERVICES = 0;
+	/**
+	 * @const int The resources namespace map index
+	 */
+	const NS_RESOURCES = 1;
+	/**
+	 * @const int The models namespace map index
+	 */
+	const NS_MODELS = 2;
+
 	//*************************************************************************
 	//	Members
 	//*************************************************************************
@@ -94,14 +112,6 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 */
 	protected $_extendedHeaders = true;
 	/**
-	 * @var array The namespaces that contain resources. Used by the routing engine
-	 */
-	protected $_resourceNamespaces = array();
-	/**
-	 * @var array The namespaces that contain models. Used by the resource manager
-	 */
-	protected $_modelNamespaces = array();
-	/**
 	 * @var Request
 	 */
 	protected $_requestObject;
@@ -113,6 +123,10 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 * @var bool If true, profiling information is output to the log
 	 */
 	protected static $_profilerEnabled = null;
+	/**
+	 * @var array[] The namespaces in use by this system. Used by the routing engine
+	 */
+	protected static $_namespaceMap = array();
 
 	//*************************************************************************
 	//	Methods
@@ -124,10 +138,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	public function __construct( $config = null )
 	{
 		//	Start the full-cycle timer
-		if ( ( static::$_profilerEnabled = ( static::$_profilerEnabled ? : \Kisma::get( CoreSettings::DEBUG ) ) ) )
-		{
-			Profiler::start( 'app' );
-		}
+		$this->startProfiler( 'app.web' );
 
 		parent::__construct( $config );
 	}
@@ -137,172 +148,42 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 */
 	public function __destruct()
 	{
+		Log::debug( '~~ profile "app.web" elapsed time: ' . $this->stopProfiler( 'app.web' ) );
+	}
+
+	/**
+	 * Start a timer
+	 *
+	 * @param string $id The id of the timer
+	 *
+	 * @return $this
+	 */
+	public function startProfiler( $id = __CLASS__ )
+	{
+		if ( ( static::$_profilerEnabled = static::$_profilerEnabled ? : \Kisma::get( CoreSettings::DEBUG ) ) )
+		{
+			Profiler::start( $id );
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Stop last timer
+	 *
+	 * @param string $id The id of the timer
+	 * @param bool   $returnTimeString
+	 *
+	 * @return float
+	 */
+	public function stopProfiler( $id = __CLASS__, $returnTimeString = true )
+	{
 		if ( static::$_profilerEnabled )
 		{
-			Log::debug( '~~ "app" profile: ' . Profiler::stop( 'app' ) );
-		}
-	}
-
-	/**
-	 * @param string    $eventName
-	 * @param SeedEvent $event
-	 *
-	 * @return DspEvent
-	 */
-	public function trigger( $eventName, $event = null )
-	{
-		$_event = $event ? : new DspEvent( $this, $this->_requestObject, $this->_responseObject );
-
-		return EventManager::trigger( $eventName, $_event );
-	}
-
-	/**
-	 * Adds an event listener that listens on the specified events.
-	 *
-	 * @param string   $eventName            The event to listen on
-	 * @param callable $listener             The listener
-	 * @param integer  $priority             The higher this value, the earlier an event
-	 *                                       listener will be triggered in the chain (defaults to 0)
-	 *
-	 * @return void
-	 */
-	public function on( $eventName, $listener, $priority = 0 )
-	{
-		EventManager::on( $eventName, $listener, $priority );
-	}
-
-	/**
-	 * Turn off/unbind/remove $listener from an event
-	 *
-	 * @param string   $eventName
-	 * @param callable $listener
-	 *
-	 * @return void
-	 */
-	public function off( $eventName, $listener )
-	{
-		EventManager::off( $eventName, $listener );
-	}
-
-	/**
-	 * @param array|bool $whitelist Set to "false" to reset the internal method cache.
-	 * @param bool       $returnHeaders
-	 *
-	 * @return bool|array
-	 */
-	public function addCorsHeaders( $whitelist = array(), $returnHeaders = false )
-	{
-		static $_cache = array();
-		static $_cacheVerbs = array();
-
-		$_headers = array();
-
-		//	Reset the cache before processing...
-		if ( false === $whitelist )
-		{
-			$_cache = array();
-			$_cacheVerbs = array();
-
-			return true;
+			return Profiler::stop( $id, $returnTimeString );
 		}
 
-		$_requestSource = $_SERVER['SERVER_NAME'];
-		$_origin = trim( Option::server( 'HTTP_ORIGIN' ) );
-//		Log::debug( 'The received origin: [' . $_origin . ']' );
-
-		$_originUri = null;
-
-		//	Was an origin header passed? If not, don't do CORS.
-		if ( empty( $_origin ) )
-		{
-			return $returnHeaders ? array() : true;
-		}
-
-		$_originUri = null;
-		$_requestSource = gethostname();
-
-		if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
-		{
-			//	Not parse-able, set to itself, check later (testing from local files - no session)?
-			Log::warning( 'Unable to parse received origin: [' . $_origin . ']' );
-			$_originParts = $_origin;
-		}
-
-		$_originUri = $this->_normalizeUri( $_originParts );
-		$_key = sha1( $_requestSource . $_originUri );
-
-		//	Not in cache, check it out...
-		if ( !in_array( $_key, $_cache ) )
-		{
-			if ( false === ( $_allowedMethods = $this->_allowedOrigin( $_originParts, $_requestSource ) ) )
-			{
-				Log::error( 'Unauthorized origin rejected via CORS > Source: ' . $_requestSource . ' > Origin: ' . $_originUri );
-
-				/**
-				 * No sir, I didn't like it.
-				 *
-				 * @link http://www.youtube.com/watch?v=VRaoHi_xcWk
-				 */
-				$this->_responseObject->setStatusCode( HttpResponse::Forbidden );
-				$this->_responseObject->send();
-				Pii::end( HttpResponse::Forbidden );
-
-				Pii::end();
-
-				//	If end fails for some unknown impossible reason...
-				return false;
-			}
-
-//			Log::debug( 'Committing origin to the CORS cache > Source: ' . $_requestSource . ' > Origin: ' . $_originUri );
-			$_cache[$_key] = $_originUri;
-			$_cacheVerbs[$_key] = $_allowedMethods;
-		}
-		else
-		{
-			$_originUri = $_cache[$_key];
-			$_allowedMethods = Option::getDeep( $_cacheVerbs, $_key, 'allowed_methods' );
-			$_headers = Option::getDeep( $_cacheVerbs, $_key, 'headers' );
-		}
-
-		if ( !empty( $_originUri ) )
-		{
-			$_headers['Access-Control-Allow-Origin'] = $_originUri;
-		}
-
-		$_headers['Access-Control-Allow-Credentials'] = 'true';
-		$_headers['Access-Control-Allow-Headers'] = static::CORS_DEFAULT_ALLOWED_HEADERS;
-		$_headers['Access-Control-Allow-Methods'] = $_allowedMethods;
-		$_headers['Access-Control-Max-Age'] = static::CORS_DEFAULT_MAX_AGE;
-
-		if ( $this->_extendedHeaders )
-		{
-			$_headers['X-DreamFactory-Source'] = $_requestSource;
-
-			if ( $_origin )
-			{
-				$_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '/^([\w_-]+\.)*' . $_requestSource . '$/', $_originUri );
-			}
-		}
-
-		//	Store in cache...
-		$_cache[$_key] = $_originUri;
-		$_cacheVerbs[$_key] = array(
-			'allowed_methods' => $_allowedMethods,
-			'headers'         => $_headers
-		);
-
-		if ( $returnHeaders )
-		{
-			return $_headers;
-		}
-
-		//	Dump the headers
-		foreach ( $_headers as $_key => $_value )
-		{
-			header( $_key . ': ' . $_value );
-		}
-
-		return true;
+		return false;
 	}
 
 	/**
@@ -369,13 +250,8 @@ class PlatformConsoleApplication extends \CConsoleApplication
 
 			case HttpMethod::OPTIONS:
 				$this->_responseObject->setStatusCode( HttpResponse::NoContent );
-				$this->_responseObject->headers->add(
-											   array_merge(
-												   array( 'content-type' => 'text/plain' ),
-												   $this->addCorsHeaders( null, true )
-											   )
-				);
-
+				$this->_responseObject->headers->add( array( 'content-type' => 'text/plain' ) );
+				$this->_responseObject->headers->add( $this->addCorsHeaders( null, true ) );
 				$this->_responseObject->send();
 				Pii::end( HttpResponse::NoContent );
 
@@ -414,6 +290,117 @@ class PlatformConsoleApplication extends \CConsoleApplication
 		}
 
 		Log::debug( '~~ "app.request" profile: ' . Profiler::stop( 'app.request' ) );
+	}
+
+	/**
+	 * @param array|bool $whitelist Set to "false" to reset the internal method cache.
+	 * @param bool       $returnHeaders
+	 *
+	 * @return bool|array
+	 */
+	public function addCorsHeaders( $whitelist = array(), $returnHeaders = false )
+	{
+		static $_cache = array();
+		static $_cacheVerbs = array();
+
+		$_headers = array();
+
+		//	Reset the cache before processing...
+		if ( false === $whitelist )
+		{
+			$_cache = array();
+			$_cacheVerbs = array();
+
+			return true;
+		}
+
+		$_origin = trim( Option::server( 'HTTP_ORIGIN' ) );
+
+		//	Was an origin header passed? If not, don't do CORS.
+		if ( empty( $_origin ) )
+		{
+			return $returnHeaders ? array() : true;
+		}
+
+		$_originUri = null;
+		$_requestSource = $_SERVER['SERVER_NAME'];
+
+		if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
+		{
+			//	Not parse-able, set to itself, check later (testing from local files - no session)?
+			Log::warning( 'Unable to parse received origin: [' . $_origin . ']' );
+			$_originParts = $_origin;
+		}
+
+		$_originUri = $this->_normalizeUri( $_originParts );
+		$_key = sha1( $_requestSource . $_originUri );
+
+		//	Not in cache, check it out...
+		if ( !in_array( $_key, $_cache ) )
+		{
+			if ( false === ( $_allowedMethods = $this->_allowedOrigin( $_originParts, $_requestSource ) ) )
+			{
+				Log::error( 'Unauthorized origin rejected via CORS > Source: ' . $_requestSource . ' > Origin: ' . $_originUri );
+
+				/**
+				 * No sir, I didn't like it.
+				 *
+				 * @link http://www.youtube.com/watch?v=VRaoHi_xcWk
+				 */
+				$this->_responseObject->setStatusCode( HttpResponse::Forbidden );
+				$this->_responseObject->send();
+				Pii::end( HttpResponse::Forbidden );
+
+				//	If end fails for some unknown impossible reason...
+				return false;
+			}
+		}
+		else
+		{
+			$_originUri = $_cache[$_key];
+			$_allowedMethods = Option::getDeep( $_cacheVerbs, $_key, 'allowed_methods' );
+			$_headers = Option::getDeep( $_cacheVerbs, $_key, 'headers' );
+		}
+
+		if ( !empty( $_originUri ) )
+		{
+			$_headers['Access-Control-Allow-Origin'] = $_originUri;
+		}
+
+		$_headers['Access-Control-Allow-Credentials'] = 'true';
+		$_headers['Access-Control-Allow-Headers'] = static::CORS_DEFAULT_ALLOWED_HEADERS;
+		$_headers['Access-Control-Allow-Methods'] = $_allowedMethods;
+		$_headers['Access-Control-Max-Age'] = static::CORS_DEFAULT_MAX_AGE;
+
+		if ( $this->_extendedHeaders )
+		{
+			$_headers['X-DreamFactory-Source'] = $_requestSource;
+
+			if ( $_origin )
+			{
+				$_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '/^([\w_-]+\.)*' . $_requestSource . '$/', $_originUri );
+			}
+		}
+
+		//	Store in cache...
+		$_cache[$_key] = $_originUri;
+		$_cacheVerbs[$_key] = array(
+			'allowed_methods' => $_allowedMethods,
+			'headers'         => $_headers
+		);
+
+		if ( $returnHeaders )
+		{
+			return $_headers;
+		}
+
+		//	Dump the headers
+		foreach ( $_headers as $_key => $_value )
+		{
+			header( $_key . ': ' . $_value );
+		}
+
+		return true;
 	}
 
 	/**
@@ -537,9 +524,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 */
 	protected function _compareUris( $first, $second )
 	{
-		return ( $first['scheme'] == $second['scheme'] ) &&
-			   ( $first['host'] == $second['host'] ) &&
-			   ( $first['port'] == $second['port'] );
+		return ( $first['scheme'] == $second['scheme'] ) && ( $first['host'] == $second['host'] ) && ( $first['port'] == $second['port'] );
 	}
 
 	/**
@@ -550,11 +535,29 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 */
 	protected function _parseUri( $uri, $normalize = false )
 	{
+		if ( false === ( $_parts = parse_url( $uri ) ) || !( isset( $_parts['host'] ) || isset( $_parts['path'] ) ) )
+		{
+			return false;
+		}
+
+		if ( isset( $_parts['path'] ) && !isset( $_parts['host'] ) )
+		{
+			//	Special case, handle this generically later
+			if ( 'null' == $_parts['path'] )
+			{
+				return 'null';
+			}
+
+			$_parts['host'] = $_parts['path'];
+			unset( $_parts['path'] );
+		}
+
+		$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
+
 		$_uri = array(
-			'scheme'   => $this->_requestObject->getScheme(),
-			'host'     => $this->_requestObject->getHost(),
-			'port'     => $this->_requestObject->getPort(),
-			'url_base' => $this->_requestObject->getScheme() . '://' . $this->_requestObject->getHost() . ':' . $this->_requestObject->getPort(),
+			'scheme' => Option::get( $_parts, 'scheme', $_protocol ),
+			'host'   => Option::get( $_parts, 'host' ),
+			'port'   => Option::get( $_parts, 'port' ),
 		);
 
 		return $normalize ? $this->_normalizeUri( $_uri ) : $_uri;
@@ -567,18 +570,9 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 */
 	protected function _normalizeUri( $parts )
 	{
-		return Option::get(
-					 $parts,
-					 'url_base',
-						 //	Try and construct
-					 is_array( $parts )
-						 ?
-						 ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' .
-						 $parts['host'] .
-						 ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
-						 :
-						 $parts
-		);
+		return is_array( $parts ) ?
+			( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
+			: $parts;
 	}
 
 	/**
@@ -607,7 +601,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	/**
 	 * @param boolean $autoAddHeaders
 	 *
-	 * @return PlatformConsoleApplication
+	 * @return PlatformWebApplication
 	 */
 	public function setAutoAddHeaders( $autoAddHeaders = true )
 	{
@@ -627,7 +621,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	/**
 	 * @param boolean $extendedHeaders
 	 *
-	 * @return PlatformConsoleApplication
+	 * @return PlatformWebApplication
 	 */
 	public function setExtendedHeaders( $extendedHeaders = true )
 	{
@@ -647,7 +641,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	/**
 	 * @param array $resourceNamespaces
 	 *
-	 * @return PlatformConsoleApplication
+	 * @return PlatformWebApplication
 	 */
 	public function setResourceNamespaces( $resourceNamespaces )
 	{
@@ -732,6 +726,47 @@ class PlatformConsoleApplication extends \CConsoleApplication
 		}
 
 		return $this;
+	}
+
+	/**
+	 * @param string    $eventName
+	 * @param SeedEvent $event
+	 *
+	 * @return DspEvent
+	 */
+	public function trigger( $eventName, $event = null )
+	{
+		$_event = $event ? : new DspEvent( $this, $this->_requestObject, $this->_responseObject );
+
+		return EventManager::trigger( $eventName, $_event );
+	}
+
+	/**
+	 * Adds an event listener that listens on the specified events.
+	 *
+	 * @param string   $eventName            The event to listen on
+	 * @param callable $listener             The listener
+	 * @param integer  $priority             The higher this value, the earlier an event
+	 *                                       listener will be triggered in the chain (defaults to 0)
+	 *
+	 * @return void
+	 */
+	public function on( $eventName, $listener, $priority = 0 )
+	{
+		EventManager::on( $eventName, $listener, $priority );
+	}
+
+	/**
+	 * Turn off/unbind/remove $listener from an event
+	 *
+	 * @param string   $eventName
+	 * @param callable $listener
+	 *
+	 * @return void
+	 */
+	public function off( $eventName, $listener )
+	{
+		EventManager::off( $eventName, $listener );
 	}
 
 	/**

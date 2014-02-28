@@ -59,25 +59,29 @@ class Platform extends SeedUtility
 	{
 		static $_cache = array();
 
+		$_appendage = ( $append ? '/' . ltrim( $append, '/' ) : null );
+
 		if ( !LocalStorageTypes::contains( $_tag = Inflector::neutralize( $type ) ) )
 		{
 			throw new \InvalidArgumentException( 'Type "' . $type . '" is invalid.' );
 		}
 
 		//	Make a cache tag that includes the requested path...
-		$_cacheTag = Inflector::neutralize( $type . ( $append ? '/' . $append : null ) );
+		$_cacheTag = Inflector::neutralize( $type . $_appendage );
 
 		if ( null === ( $_path = Option::get( $_cache, $_cacheTag ) ) )
 		{
-			$_path = trim( Pii::getParam( $_tag ) );
+			$_basePath = trim( Pii::getParam( $_tag ) );
 
-			if ( empty( $_path ) )
+			if ( empty( $_basePath ) )
 			{
-				$_path = \Kisma::get( 'app.project_root' ) . '/storage';
-				Log::notice( 'Empty path for platform path type "' . $type . '". Defaulting to "' . $_path . '"' );
+				$_basePath = \Kisma::get( 'app.project_root' ) . '/storage';
+				Log::notice( 'Empty path for platform path type "' . $type . '". Defaulting to "' . $_basePath . '"' );
 			}
 
-			if ( !is_dir( $_path ) && true === $createIfMissing )
+			$_path .= $_appendage;
+
+			if ( true === $createIfMissing && !is_dir( $_path ) )
 			{
 				if ( false === @\mkdir( $_path, 0777, true ) )
 				{
@@ -89,7 +93,7 @@ class Platform extends SeedUtility
 			Option::set( $_cache, $_cacheTag, $_path );
 		}
 
-		return $_path . ( $append ? '/' . ltrim( $append, '/' ) : null );
+		return $_path;
 	}
 
 	/**
@@ -183,7 +187,8 @@ class Platform extends SeedUtility
 			)
 		);
 
-		$_uuid =
+		$_uuid
+			=
 			'{' .
 			substr( $_hash, 0, 8 ) .
 			'-' .

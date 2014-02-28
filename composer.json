@@ -19,28 +19,30 @@
 	],
 	"require":           {
 		"php":                             ">=5.3.10",
-		"aws/aws-sdk-php":                 "2.4.*",
-		"dready92/php-on-couch":           "dev-master",
-		"dreamfactory/azure-sdk-for-php":  "~0.4.0",
-		"dreamfactory/javascript-sdk":     "1.*",
-		"dreamfactory/lib-php-common":	   "dev-develop as dev-master",
-		"dreamfactory/lib-php-common-yii": "dev-develop as dev-master",
-		"dreamfactory/oasys":              "~0.4.7",
 		"kisma/kisma":                     "~0.2@stable",
+		"dreamfactory/oasys":              "~0.4@stable",
+		"aws/aws-sdk-php":                 "~2.4@stable",
+		"dready92/php-on-couch":           "dev-master",
+		"dreamfactory/azure-sdk-for-php":  "~0.4@stable",
+		"dreamfactory/javascript-sdk":     "1.*",
+		"dreamfactory/lib-php-common":     "~1.4@dev",
+		"dreamfactory/lib-php-common-yii": "~1.4@dev",
 		"pear/net_url2":                   "*",
 		"pear/http_request2":              "*",
 		"pear/mail_mime":                  "*",
 		"pear/mail_mime-decode":           "*",
 		"phpforce/soap-client":            "dev-master",
 		"rackspace/php-opencloud":         "1.5.*",
-		"swiftmailer/swiftmailer":         "4.3.*"
+		"swiftmailer/swiftmailer":         "~4.3@stable"
 	},
 	"require-dev":       {
 		"phpunit/phpunit":          "~3.7@stable",
 		"phpunit/phpunit-story":    "@stable",
 		"phpunit/phpunit-selenium": "@stable",
 		"phpunit/php-invoker":      "@stable",
-		"phpunit/dbunit":           "@stable"
+		"phpunit/dbunit":           "@stable",
+		"facebook/xhprof":          "*",
+		"facebook/xhgui":           "*"
 	},
 	"minimum-stability": "dev",
 	"autoload":          {
