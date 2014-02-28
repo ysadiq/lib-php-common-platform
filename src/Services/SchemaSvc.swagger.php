@@ -28,14 +28,15 @@ $_base['apis'] = array(
 				'method'     => 'GET',
 				'summary'    => 'getResources() - List resources available for database schema.',
 				'nickname'   => 'getResources',
+				'event_name' => '{api_name}.schema.table.list',
 				'type'       => 'Resources',
 				'notes'      => 'See listed operations for each resource available.',
-				'event_name' => '{api_name}.list',
 			),
 			array(
 				'method'           => 'POST',
 				'summary'          => 'createTables() - Create one or more tables.',
 				'nickname'         => 'createTables',
+				'event_name'       => '{api_name}.schema.table.create',
 				'type'             => 'Resources',
 				'parameters'       => array(
 					array(
@@ -62,12 +63,12 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'Post data should be a single table definition or an array of table definitions.',
-				'event_name'       => '{api_name}.create',
 			),
 			array(
 				'method'           => 'PUT',
 				'summary'          => 'updateTables() - Update one or more tables.',
 				'nickname'         => 'updateTables',
+				'event_name'       => '{api_name}.schema.table.update',
 				'type'             => 'Resources',
 				'parameters'       => array(
 					array(
@@ -94,7 +95,6 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'Post data should be a single table definition or an array of table definitions.',
-				'event_name'       => '{api_name}.update',
 			),
 		),
 		'description' => 'Operations available for SQL DB Schemas.',
@@ -106,6 +106,7 @@ $_base['apis'] = array(
 				'method'           => 'GET',
 				'summary'          => 'describeTable() - Retrieve table definition for the given table.',
 				'nickname'         => 'describeTable',
+				'event_name'       => '{api_name}.schema.table.describe',
 				'type'             => 'TableSchema',
 				'parameters'       => array(
 					array(
@@ -132,12 +133,12 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'This describes the table, its fields and relations to other tables.',
-				'event_name'       => '{api_name}.table.create',
 			),
 			array(
 				'method'           => 'POST',
 				'summary'          => 'createFields() - Create one or more fields in the given table.',
 				'nickname'         => 'createFields',
+				'event_name'       => '{api_name}.schema.table.column.create',
 				'type'             => 'Success',
 				'parameters'       => array(
 					array(
@@ -172,12 +173,12 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'Post data should be an array of field properties for a single record or an array of fields.',
-				'event_name'       => '{api_name}.fields.create',
 			),
 			array(
 				'method'           => 'PUT',
 				'summary'          => 'updateFields() - Update one or more fields in the given table.',
 				'nickname'         => 'updateFields',
+				'event_name'       => '{api_name}.schema.table.column.update',
 				'type'             => 'Success',
 				'parameters'       => array(
 					array(
@@ -212,18 +213,19 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'Post data should be an array of field properties for a single record or an array of fields.',
-				'event_name'       => '{api_name}.fields.update',
 			),
 			array(
 				'method'           => 'DELETE',
 				'summary'          => 'deleteTable() - Delete (aka drop) the given table.',
 				'nickname'         => 'deleteTable',
+				'event_name'       => '{api_name}.schema.table.drop',
 				'type'             => 'Success',
 				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
 						'description'   => 'Name of the table to perform operations on.',
 						'allowMultiple' => false,
+						'event_name'    => '{api_name}.schema.delete',
 						'type'          => 'string',
 						'paramType'     => 'path',
 						'required'      => true,
@@ -244,7 +246,6 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'Careful, this drops the database table and all of its contents.',
-				'event_name'       => '{api_name}.table.delete',
 			),
 		),
 		'description' => 'Operations for per table administration.',
@@ -256,6 +257,7 @@ $_base['apis'] = array(
 				'method'           => 'GET',
 				'summary'          => 'describeField() - Retrieve the definition of the given field for the given table.',
 				'nickname'         => 'describeField',
+				'event_name'       => '{api_name}.schema.table.column.describe',
 				'type'             => 'FieldSchema',
 				'parameters'       => array(
 					array(
@@ -290,12 +292,12 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'This describes the field and its properties.',
-				'event_name'       => '{api_name}.field.describe',
 			),
 			array(
 				'method'           => 'PUT',
 				'summary'          => 'updateField() - Update one record by identifier.',
 				'nickname'         => 'updateField',
+				'event_name'       => '{api_name}.schema.table.column.update',
 				'type'             => 'Success',
 				'parameters'       => array(
 					array(
@@ -338,12 +340,12 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'Post data should be an array of field properties for the given field.',
-				'event_name'       => '{api_name}.field.update',
 			),
 			array(
 				'method'           => 'DELETE',
 				'summary'          => 'deleteField() - Remove the given field from the given table.',
 				'nickname'         => 'deleteField',
+				'event_name'       => '{api_name}.schema.table.column.delete',
 				'type'             => 'Success',
 				'parameters'       => array(
 					array(
@@ -378,7 +380,6 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'Careful, this drops the database table field/column and all of its contents.',
-				'event_name'       => '{api_name}.field.delete',
 			),
 		),
 		'description' => 'Operations for single field administration.',

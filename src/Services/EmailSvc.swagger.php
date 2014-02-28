@@ -29,6 +29,7 @@ $_base['apis'] = array(
 				'summary'          => 'sendEmail() - Send an email created from posted data and/or a template.',
 				'nickname'         => 'sendEmail',
 				'type'             => 'EmailResponse',
+				'event_name'       => 'email.sent',
 				'parameters'       => array(
 					array(
 						'name'          => 'template',
@@ -76,7 +77,6 @@ $_base['apis'] = array(
 				'notes'            =>
 					'If a template is not used with all required fields, then they must be included in the request. ' .
 					'If the \'from\' address is not provisioned in the service, then it must be included in the request.',
-				'event_name'       => 'email.sent',
 			),
 		),
 		'description' => 'Operations on a email service.',
@@ -94,7 +94,7 @@ $_models = array(
 		),
 	),
 	'EmailRequest'  => array(
-		'id'         => 'Email',
+		'id'         => 'EmailRequest',
 		'properties' => array(
 			'template'       => array(
 				'type'        => 'string',
