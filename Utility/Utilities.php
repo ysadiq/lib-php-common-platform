@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the 'License');
  * you may not use this file except in compliance with the License.
@@ -480,10 +480,11 @@ class Utilities
 	 *
 	 * @param array $array1
 	 * @param array $array2
+	 * @param bool  $check_both_directions
 	 *
 	 * @return array
 	 */
-	public static function array_diff_recursive( array $array1, $array2 )
+	public static function array_diff_recursive( array $array1, $array2, $check_both_directions = false )
 	{
 		$_return = array();
 
@@ -522,6 +523,44 @@ class Utilities
 				}
 
 				$_return[$_key] = $_value;
+			}
+
+			if ($check_both_directions)
+			{
+				foreach ( $array2 as $_key => $_value )
+				{
+					//	Is the key is there...
+					if ( !array_key_exists( $_key, $array1 ) )
+					{
+						$_return[$_key] = $_value;
+						continue;
+					}
+
+					//	Not an array?
+					if ( !is_array( $_value ) )
+					{
+						if ( $_value !== $array1[$_key] )
+						{
+							$_return[$_key] = $_value;
+							continue;
+						}
+					}
+
+					//	If we've got two arrays, diff 'em
+					if ( is_array( $array1[$_key] ) )
+					{
+						$_diff = static::array_diff_recursive( $_value, $array1[$_key] );
+
+						if ( !empty( $_diff ) )
+						{
+							$_return[$_key] = $_diff;
+						}
+
+						continue;
+					}
+
+					$_return[$_key] = $_value;
+				}
 			}
 		}
 

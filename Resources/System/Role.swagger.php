@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,6 +55,7 @@ $_role['apis'] = array(
 								'description'   => 'Set to limit the filter results.',
 								'allowMultiple' => false,
 								'type'          => 'integer',
+								'format'        => 'int32',
 								'paramType'     => 'query',
 								'required'      => false,
 							),
@@ -71,6 +72,7 @@ $_role['apis'] = array(
 								'description'   => 'Set to offset the filter results to a particular record count.',
 								'allowMultiple' => false,
 								'type'          => 'integer',
+								'format'        => 'int32',
 								'paramType'     => 'query',
 								'required'      => false,
 							),
@@ -477,6 +479,7 @@ $_commonProperties = array(
 	'id'             =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Identifier of this role.',
 		),
 	'name'           =>
@@ -497,39 +500,60 @@ $_commonProperties = array(
 	'default_app_id' =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Default launched app for this role.',
 		),
-	'default_app'    =>
+);
+
+$_relatedProperties = array(
+	'default_app' =>
 		array(
-			'type'        => 'App',
+			'type'        => 'RelatedApp',
 			'description' => 'Related app by default_app_id.',
 		),
-	'users'          =>
+	'users'       =>
 		array(
-			'type'        => 'Array',
+			'type'        => 'RelatedUsers',
 			'description' => 'Related users by User.role_id.',
-			'items'       =>
-				array(
-					'type' => 'string',
-				),
 		),
-	'apps'           =>
+	'apps'        =>
 		array(
-			'type'        => 'Array',
+			'type'        => 'RelatedApps',
 			'description' => 'Related apps by role assignment.',
-			'items'       =>
-				array(
-					'type' => 'string',
-				),
 		),
-	'services'       =>
+	'services'    =>
 		array(
-			'type'        => 'Array',
+			'type'        => 'RelatedServices',
 			'description' => 'Related services by role assignment.',
-			'items'       =>
-				array(
-					'type' => 'string',
-				),
+		),
+);
+
+$_stampProperties = array(
+	'created_date'        =>
+		array(
+			'type'        => 'string',
+			'description' => 'Date this role was created.',
+			'readOnly'    => true,
+		),
+	'created_by_id'       =>
+		array(
+			'type'        => 'integer',
+			'format'      => 'int32',
+			'description' => 'User Id of who created this role.',
+			'readOnly'    => true,
+		),
+	'last_modified_date'  =>
+		array(
+			'type'        => 'string',
+			'description' => 'Date this role was last modified.',
+			'readOnly'    => true,
+		),
+	'last_modified_by_id' =>
+		array(
+			'type'        => 'integer',
+			'format'      => 'int32',
+			'description' => 'User Id of who last modified this role.',
+			'readOnly'    => true,
 		),
 );
 
@@ -537,37 +561,11 @@ $_role['models'] = array(
 	'RoleRequest'   =>
 		array(
 			'id'         => 'RoleRequest',
-			'properties' => $_commonProperties,
-		),
-	'RoleResponse'  =>
-		array(
-			'id'         => 'RoleResponse',
 			'properties' =>
 				array_merge(
 					$_commonProperties,
-					array(
-						 'created_date'        =>
-							 array(
-								 'type'        => 'string',
-								 'description' => 'Date this role was created.',
-							 ),
-						 'created_by_id'       =>
-							 array(
-								 'type'        => 'integer',
-								 'description' => 'User Id of who created this role.',
-							 ),
-						 'last_modified_date'  =>
-							 array(
-								 'type'        => 'string',
-								 'description' => 'Date this role was last modified.',
-							 ),
-						 'last_modified_by_id' =>
-							 array(
-								 'type'        => 'integer',
-								 'description' => 'User Id of who last modified this role.',
-							 ),
-					)
-				),
+					$_relatedProperties
+				)
 		),
 	'RolesRequest'  =>
 		array(
@@ -580,7 +578,7 @@ $_role['models'] = array(
 							'description' => 'Array of system role records.',
 							'items'       =>
 								array(
-									'$ref' => 'Role',
+									'$ref' => 'RoleRequest',
 								),
 						),
 					'ids'    =>
@@ -589,9 +587,20 @@ $_role['models'] = array(
 							'description' => 'Array of system record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
 							'items'       =>
 								array(
-									'$ref' => 'integer',
+									'type'   => 'integer',
+									'format' => 'int32',
 								),
 						),
+				),
+		),
+	'RoleResponse'  =>
+		array(
+			'id'         => 'RoleResponse',
+			'properties' =>
+				array_merge(
+					$_commonProperties,
+					$_relatedProperties,
+					$_stampProperties
 				),
 		),
 	'RolesResponse' =>
@@ -605,7 +614,37 @@ $_role['models'] = array(
 							'description' => 'Array of system role records.',
 							'items'       =>
 								array(
-									'$ref' => 'Role',
+									'$ref' => 'RoleResponse',
+								),
+						),
+					'meta'   =>
+						array(
+							'type'        => 'Metadata',
+							'description' => 'Array of metadata returned for GET requests.',
+						),
+				),
+		),
+	'RelatedRole'   =>
+		array(
+			'id'         => 'RelatedRole',
+			'properties' =>
+				array_merge(
+					$_commonProperties,
+					$_stampProperties
+				)
+		),
+	'RelatedRoles'  =>
+		array(
+			'id'         => 'RelatedRoles',
+			'properties' =>
+				array(
+					'record' =>
+						array(
+							'type'        => 'Array',
+							'description' => 'Array of system role records.',
+							'items'       =>
+								array(
+									'$ref' => 'RelatedRole',
 								),
 						),
 					'meta'   =>

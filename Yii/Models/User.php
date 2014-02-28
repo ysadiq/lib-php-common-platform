@@ -2,10 +2,10 @@
 use DreamFactory\Platform\Yii\Models\ProviderUser;
 
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,13 +105,16 @@ class User extends BasePlatformSystemModel
 	 */
 	public function behaviors()
 	{
+		//	Default salt to database password if the config is low-sodium
+		$_salt = Pii::getParam( 'dsp.salts.secure_json', $this->getDb()->password );
+
 		return array_merge(
 			parent::behaviors(),
 			array(
 				 //	Secure JSON
 				 'base_platform_model.secure_json' => array(
 					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'               => $this->getDb()->password,
+					 'salt'               => $_salt,
 					 'secureAttributes'   => array(
 						 'lookup_keys',
 					 ),
@@ -351,9 +354,9 @@ class User extends BasePlatformSystemModel
 		);
 
 		return parent::getRetrievableAttributes(
-			$requested,
-			$_myColumns,
-			$hidden
+					 $requested,
+					 $_myColumns,
+					 $hidden
 		);
 	}
 
@@ -386,8 +389,8 @@ class User extends BasePlatformSystemModel
 	public static function authenticate( $userName, $password )
 	{
 		$_user = static::model()
-			->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
-			->findByAttributes( array( 'email' => $userName ) );
+					   ->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
+					   ->findByAttributes( array( 'email' => $userName ) );
 
 		if ( empty( $_user ) )
 		{

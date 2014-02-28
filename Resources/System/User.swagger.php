@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,6 +55,7 @@ $_user['apis'] = array(
 								'description'   => 'Set to limit the filter results.',
 								'allowMultiple' => false,
 								'type'          => 'integer',
+								'format'        => 'int32',
 								'paramType'     => 'query',
 								'required'      => false,
 							),
@@ -71,6 +72,7 @@ $_user['apis'] = array(
 								'description'   => 'Set to offset the filter results to a particular record count.',
 								'allowMultiple' => false,
 								'type'          => 'integer',
+								'format'        => 'int32',
 								'paramType'     => 'query',
 								'required'      => false,
 							),
@@ -485,6 +487,7 @@ $_commonProperties = array(
 	'id'             =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Identifier of this user.',
 		),
 	'email'          =>
@@ -537,15 +540,43 @@ $_commonProperties = array(
 			'type'        => 'string',
 			'description' => 'The role to which this user is assigned.',
 		),
-	'default_app'    =>
+);
+
+$_relatedProperties = array(
+	'default_app' =>
 		array(
-			'type'        => 'App',
+			'type'        => 'RelatedApp',
 			'description' => 'Related app by default_app_id.',
 		),
-	'role'           =>
+	'role'        =>
 		array(
-			'type'        => 'Role',
+			'type'        => 'RelatedRole',
 			'description' => 'Related role by role_id.',
+		),
+);
+
+$_stampProperties = array(
+	'created_date'        =>
+		array(
+			'type'        => 'string',
+			'description' => 'Date this user was created.',
+		),
+	'created_by_id'       =>
+		array(
+			'type'        => 'integer',
+			'format'      => 'int32',
+			'description' => 'User Id of who created this user.',
+		),
+	'last_modified_date'  =>
+		array(
+			'type'        => 'string',
+			'description' => 'Date this user was last modified.',
+		),
+	'last_modified_by_id' =>
+		array(
+			'type'        => 'integer',
+			'format'      => 'int32',
+			'description' => 'User Id of who last modified this user.',
 		),
 );
 
@@ -553,42 +584,11 @@ $_user['models'] = array(
 	'UserRequest'   =>
 		array(
 			'id'         => 'UserRequest',
-			'properties' => $_commonProperties,
-		),
-	'UserResponse'  =>
-		array(
-			'id'         => 'UserResponse',
 			'properties' =>
 				array_merge(
 					$_commonProperties,
-					array(
-						 'last_login_date'     =>
-							 array(
-								 'type'        => 'string',
-								 'description' => 'Timestamp of the last login.',
-							 ),
-						 'created_date'        =>
-							 array(
-								 'type'        => 'string',
-								 'description' => 'Date this user was created.',
-							 ),
-						 'created_by_id'       =>
-							 array(
-								 'type'        => 'integer',
-								 'description' => 'User Id of who created this user.',
-							 ),
-						 'last_modified_date'  =>
-							 array(
-								 'type'        => 'string',
-								 'description' => 'Date this user was last modified.',
-							 ),
-						 'last_modified_by_id' =>
-							 array(
-								 'type'        => 'integer',
-								 'description' => 'User Id of who last modified this user.',
-							 ),
-					)
-				),
+					$_relatedProperties
+				)
 		),
 	'UsersRequest'  =>
 		array(
@@ -610,9 +610,27 @@ $_user['models'] = array(
 							'description' => 'Array of system record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
 							'items'       =>
 								array(
-									'$ref' => 'integer',
+									'type'   => 'integer',
+									'format' => 'int32',
 								),
 						),
+				),
+		),
+	'UserResponse'  =>
+		array(
+			'id'         => 'UserResponse',
+			'properties' =>
+				array_merge(
+					$_commonProperties,
+					$_relatedProperties,
+					$_stampProperties,
+					array(
+						 'last_login_date' =>
+							 array(
+								 'type'        => 'string',
+								 'description' => 'Timestamp of the last login.',
+							 ),
+					)
 				),
 		),
 	'UsersResponse' =>
@@ -627,6 +645,36 @@ $_user['models'] = array(
 							'items'       =>
 								array(
 									'$ref' => 'UserResponse',
+								),
+						),
+					'meta'   =>
+						array(
+							'type'        => 'Metadata',
+							'description' => 'Array of metadata returned for GET requests.',
+						),
+				),
+		),
+	'RelatedUser'   =>
+		array(
+			'id'         => 'RelatedUser',
+			'properties' =>
+				array_merge(
+					$_commonProperties,
+					$_stampProperties
+				)
+		),
+	'RelatedUsers'  =>
+		array(
+			'id'         => 'RelatedUsers',
+			'properties' =>
+				array(
+					'record' =>
+						array(
+							'type'        => 'Array',
+							'description' => 'Array of system user records.',
+							'items'       =>
+								array(
+									'$ref' => 'RelatedUser',
 								),
 						),
 					'meta'   =>

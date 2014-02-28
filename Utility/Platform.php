@@ -1,8 +1,8 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,8 +16,8 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\LocalStorageTypes;
-use DreamFactory\Platform\Events\BasePlatformEvent;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -60,15 +60,15 @@ class Platform
 
 			if ( empty( $_path ) )
 			{
-				$_path = \Kisma::get( 'app.project_root' ) . '/storage';
-				Log::notice( 'Empty path for platform path type "' . $type . '". Defaulting to "' . $_path . '"' );
+				$_path = \Kisma::get( 'app.project_root' ) . '/storage/' . $_tag;
+				Log::notice( 'Empty path for platform path type "' . $type . '". Assume "' . $_path . '"' );
 			}
 
 			if ( !is_dir( $_path ) && true === $createIfMissing )
 			{
 				if ( false === @\mkdir( $_path, 0777, true ) )
 				{
-					Log::error( 'File system error creating directory: ' . $_path );
+					throw new FileSystemException( 'File system error creating directory: ' . $_path );
 				}
 			}
 
@@ -149,6 +149,18 @@ class Platform
 	public static function getPluginsPath( $append = null )
 	{
 		return static::_getPlatformPath( LocalStorageTypes::PLUGINS_PATH, $append );
+	}
+
+	/**
+	 * Constructs the virtual swagger path
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getSwaggerPath( $append = null )
+	{
+		return static::_getPlatformPath( LocalStorageTypes::SWAGGER_PATH, $append );
 	}
 
 	/**

@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -840,7 +840,7 @@ class ResourceStore implements UtilityLike
 
 		if ( !$_loader )
 		{
-			$_loader = \Kisma::get( 'app.autoloader' );
+			$_loader = \Kisma::getAutoLoader();
 		};
 
 		if ( true === $resourceName && false === $returnResource )

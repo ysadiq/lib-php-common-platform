@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Option;
 
 /**
  * BasePlatformSystemModel.php

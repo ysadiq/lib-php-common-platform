@@ -3,7 +3,7 @@
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,23 +24,39 @@ use DreamFactory\Yii\Utility\Pii;
  * A single location for all your aliasing needs!
  */
 
-$_libPath = dirname( dirname( __DIR__ ) );
-$_vendorPath = $_libPath . '/vendor';
+//	Already loaded? we done...
+if ( false !== Yii::getPathOfAlias( 'DreamFactory.Yii.*' ) )
+{
+	return true;
+}
+
+$_basePath = dirname( __DIR__ );
+$_vendorPath = $_basePath . '/vendor';
 
 Pii::setPathOfAlias( 'vendor', $_vendorPath );
 
-//	lib-php-common-yii
-Pii::alias( 'DreamFactory.Yii.*', $_vendorPath . '/dreamfactory/lib-php-common-yii/DreamFactory/Yii' );
-Pii::alias( 'DreamFactory.Yii.Components', $_vendorPath . '/dreamfactory/lib-php-common-yii/DreamFactory/Yii/Components' );
-Pii::alias( 'DreamFactory.Yii.Behaviors', $_vendorPath . '/dreamfactory/lib-php-common-yii/DreamFactory/Yii/Behaviors' );
-Pii::alias( 'DreamFactory.Yii.Utility', $_vendorPath . '/dreamfactory/lib-php-common-yii/DreamFactory/Yii/Utility' );
-Pii::alias( 'DreamFactory.Yii.Logging', $_vendorPath . '/dreamfactory/lib-php-common-yii/DreamFactory/Yii/Logging' );
+//	lib-php-common-yii (psr-0 && psr-4 compatible)
+$_libPath =
+	$_vendorPath . '/dreamfactory/lib-php-common-yii' . ( is_dir( $_vendorPath . '/dreamfactory/lib-php-common-yii/src' ) ? '/src' : '/DreamFactory/Yii' );
 
-//	lib-php-common-platform
-Pii::alias( 'DreamFactory.Platform.Services', $_libPath . '/Services' );
-Pii::alias( 'DreamFactory.Platform.Services.Portal', $_libPath . '/Services/Portal' );
-Pii::alias( 'DreamFactory.Platform.Yii.Behaviors', $_libPath . '/Yii/Behaviors' );
-Pii::alias( 'DreamFactory.Platform.Yii.Models', $_libPath . '/Yii/Models' );
+Pii::alias( 'DreamFactory.Yii.*', $_libPath );
+Pii::alias( 'DreamFactory.Yii.Components.*', $_libPath . '/Components' );
+Pii::alias( 'DreamFactory.Yii.Behaviors.*', $_libPath . '/Behaviors' );
+Pii::alias( 'DreamFactory.Yii.Utility.*', $_libPath . '/Utility' );
+Pii::alias( 'DreamFactory.Yii.Logging.*', $_libPath . '/Logging' );
+
+//	lib-php-common-platform (psr-0 && psr-4 compatible)
+$_libPath =
+	$_vendorPath .
+	'/dreamfactory/lib-php-common-platform' .
+	( is_dir( $_vendorPath . '/dreamfactory/lib-php-common-platform/src' ) ? '/src' : '/DreamFactory/Platform' );
+
+Pii::alias( 'DreamFactory.Platform.*', $_libPath );
+Pii::alias( 'DreamFactory.Platform.Services.*', $_libPath . '/Services' );
+Pii::alias( 'DreamFactory.Platform.Yii.Behaviors.*', $_libPath . '/Yii/Behaviors' );
+Pii::alias( 'DreamFactory.Platform.Yii.Models.*', $_libPath . '/Yii/Models' );
+
+unset( $_libPath );
 
 //	Vendors
 Pii::alias( 'Swift', $_vendorPath . '/swiftmailer/swiftmailer/lib/classes' );

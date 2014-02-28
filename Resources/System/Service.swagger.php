@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,6 +55,7 @@ $_service['apis'] = array(
 								'description'   => 'Set to limit the filter results.',
 								'allowMultiple' => false,
 								'type'          => 'integer',
+								'format'        => 'int32',
 								'paramType'     => 'query',
 								'required'      => false,
 							),
@@ -71,6 +72,7 @@ $_service['apis'] = array(
 								'description'   => 'Set to offset the filter results to a particular record count.',
 								'allowMultiple' => false,
 								'type'          => 'integer',
+								'format'        => 'int32',
 								'paramType'     => 'query',
 								'required'      => false,
 							),
@@ -477,6 +479,7 @@ $_commonProperties = array(
 	'id'              =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Identifier of this service.',
 		),
 	'name'            =>
@@ -508,6 +511,7 @@ $_commonProperties = array(
 	'type_id'         =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'One of the supported enumerated service types.',
 		),
 	'storage_name'    =>
@@ -524,6 +528,7 @@ $_commonProperties = array(
 	'storage_type_id' =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'One of the supported enumerated storage service types.',
 		),
 	'credentials'     =>
@@ -551,66 +556,59 @@ $_commonProperties = array(
 			'type'        => 'string',
 			'description' => 'Additional headers required by the service.',
 		),
-	'apps'            =>
+);
+
+$_relatedProperties = array(
+	'apps'  =>
 		array(
-			'type'        => 'Array',
+			'type'        => 'RelatedApps',
 			'description' => 'Related apps by app to service assignment.',
-			'items'       =>
-				array(
-					'$ref' => 'App',
-				),
 		),
-	'roles'           =>
+	'roles' =>
 		array(
-			'type'        => 'Array',
+			'type'        => 'RelatedRoles',
 			'description' => 'Related roles by service to role assignment.',
-			'items'       =>
-				array(
-					'$ref' => 'Role',
-				),
+		),
+);
+
+$_stampProperties = array(
+	'created_date'        =>
+		array(
+			'type'        => 'string',
+			'description' => 'Date this service was created.',
+			'readOnly'    => true,
+		),
+	'created_by_id'       =>
+		array(
+			'type'        => 'integer',
+			'format'      => 'int32',
+			'description' => 'User Id of who created this service.',
+			'readOnly'    => true,
+		),
+	'last_modified_date'  =>
+		array(
+			'type'        => 'string',
+			'description' => 'Date this service was last modified.',
+			'readOnly'    => true,
+		),
+	'last_modified_by_id' =>
+		array(
+			'type'        => 'integer',
+			'format'      => 'int32',
+			'description' => 'User Id of who last modified this service.',
+			'readOnly'    => true,
 		),
 );
 
 $_service['models'] = array(
-	'Service'          =>
+	'ServiceRequest'   =>
 		array(
 			'id'         => 'ServiceRequest',
-			'properties' => $_commonProperties,
-		),
-	'ServiceResponse'  =>
-		array(
-			'id'         => 'ServiceResponse',
 			'properties' =>
 				array_merge(
 					$_commonProperties,
-					array(
-						 'is_system'           =>
-							 array(
-								 'type'        => 'boolean',
-								 'description' => 'True if this service is a default system service.',
-							 ),
-						 'created_date'        =>
-							 array(
-								 'type'        => 'string',
-								 'description' => 'Date this service was created.',
-							 ),
-						 'created_by_id'       =>
-							 array(
-								 'type'        => 'integer',
-								 'description' => 'User Id of who created this service.',
-							 ),
-						 'last_modified_date'  =>
-							 array(
-								 'type'        => 'string',
-								 'description' => 'Date this service was last modified.',
-							 ),
-						 'last_modified_by_id' =>
-							 array(
-								 'type'        => 'integer',
-								 'description' => 'User Id of who last modified this service.',
-							 ),
-					)
-				),
+					$_relatedProperties
+				)
 		),
 	'ServicesRequest'  =>
 		array(
@@ -632,9 +630,27 @@ $_service['models'] = array(
 							'description' => 'Array of system record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
 							'items'       =>
 								array(
-									'$ref' => 'integer',
+									'type'   => 'integer',
+									'format' => 'int32',
 								),
 						),
+				),
+		),
+	'ServiceResponse'  =>
+		array(
+			'id'         => 'ServiceResponse',
+			'properties' =>
+				array_merge(
+					$_commonProperties,
+					$_relatedProperties,
+					$_stampProperties,
+					array(
+						 'is_system' =>
+							 array(
+								 'type'        => 'boolean',
+								 'description' => 'True if this service is a default system service.',
+							 ),
+					)
 				),
 		),
 	'ServicesResponse' =>
@@ -649,6 +665,36 @@ $_service['models'] = array(
 							'items'       =>
 								array(
 									'$ref' => 'ServiceResponse',
+								),
+						),
+					'meta'   =>
+						array(
+							'type'        => 'Metadata',
+							'description' => 'Array of metadata returned for GET requests.',
+						),
+				),
+		),
+	'RelatedService'   =>
+		array(
+			'id'         => 'RelatedService',
+			'properties' =>
+				array_merge(
+					$_commonProperties,
+					$_stampProperties
+				)
+		),
+	'RelatedServices'  =>
+		array(
+			'id'         => 'RelatedServices',
+			'properties' =>
+				array(
+					'record' =>
+						array(
+							'type'        => 'Array',
+							'description' => 'Array of system service records.',
+							'items'       =>
+								array(
+									'$ref' => 'RelatedService',
 								),
 						),
 					'meta'   =>
