@@ -25,8 +25,8 @@
 		"dready92/php-on-couch":           "dev-master",
 		"dreamfactory/azure-sdk-for-php":  "~0.4@stable",
 		"dreamfactory/javascript-sdk":     "1.*",
-		"dreamfactory/lib-php-common":     "~1.4@dev",
-		"dreamfactory/lib-php-common-yii": "~1.4@dev",
+		"dreamfactory/lib-php-common":     "dev-develop as dev-master",
+		"dreamfactory/lib-php-common-yii": "dev-develop as dev-master",
 		"pear/net_url2":                   "*",
 		"pear/http_request2":              "*",
 		"pear/mail_mime":                  "*",
@@ -40,9 +40,7 @@
 		"phpunit/phpunit-story":    "@stable",
 		"phpunit/phpunit-selenium": "@stable",
 		"phpunit/php-invoker":      "@stable",
-		"phpunit/dbunit":           "@stable",
-		"facebook/xhprof":          "*",
-		"facebook/xhgui":           "*"
+		"phpunit/dbunit":           "@stable"
 	},
 	"minimum-stability": "dev",
 	"autoload":          {
@@ -53,7 +51,7 @@
 	"extra":             {
 		"_github_name": "dreamfactory/platform-sdk-for-php",
 		"branch-alias": {
-			"dev-develop": "1.4.x-dev"
+			"dev-develop": "1.5.x-dev"
 		}
 	}
 }
