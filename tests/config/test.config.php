@@ -17,7 +17,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-use DreamFactory\Platform\Utility\Fabric;
 
 /**
  * web.php
@@ -50,7 +49,6 @@ return array(
 	'resourceNamespaces' => array(
 		'DreamFactory\\Platform\\Resources',
 		'DreamFactory\\Platform\\Resources\\System',
-		'DreamFactory\\Platform\\Resources\\Portal',
 		'DreamFactory\\Platform\\Resources\\User',
 	),
 	/**

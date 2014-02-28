@@ -23,6 +23,7 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
@@ -38,13 +39,22 @@ class SwaggerManager extends BasePlatformRestService
 	//*************************************************************************
 
 	/**
-	 * @var string The private caching directory
+	 * @const string The Swagger version
 	 */
-	const SWAGGER_CACHE_DIR = '/swagger/cache/';
+	const SWAGGER_VERSION = '1.2';
 	/**
-	 * @var string The private storage directory for non-generated files
+	 * @const string The private caching directory
 	 */
-	const SWAGGER_CUSTOM_DIR = '/swagger/custom/';
+	const SWAGGER_CACHE_DIR = '/cache';
+	/**
+	 * @const string The private storage directory for non-generated files
+	 */
+	const SWAGGER_CUSTOM_DIR = '/custom';
+
+	//*************************************************************************
+	//	Members
+	//*************************************************************************
+
 	/**
 	 * @var array The event map
 	 */
@@ -56,20 +66,19 @@ class SwaggerManager extends BasePlatformRestService
 
 	/**
 	 * Create a new SwaggerManager
-	 *
 	 */
 	public function __construct()
 	{
 		parent::__construct(
-			array(
-				'name'          => 'Swagger Documentation Management',
-				'apiName'       => 'api_docs',
-				'type'          => 'Swagger',
-				'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
-				'description'   => 'Service for a user to see the API documentation provided via Swagger.',
-				'is_active'     => true,
-				'native_format' => 'json',
-			)
+			  array(
+				  'name'          => 'Swagger Documentation Management',
+				  'apiName'       => 'api_docs',
+				  'type'          => 'Swagger',
+				  'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
+				  'description'   => 'Service for a user to see the API documentation provided via Swagger.',
+				  'is_active'     => true,
+				  'native_format' => 'json',
+			  )
 		);
 	}
 
@@ -86,21 +95,17 @@ class SwaggerManager extends BasePlatformRestService
 	 */
 	protected function _handleResource()
 	{
-		if ( self::Get == $this->_action )
+		if ( HttpMethod::GET != $this->_action )
 		{
-			switch ( $this->_resource )
-			{
-				case '':
-					return static::getSwagger();
-					break;
-
-				default:
-					return static::getSwaggerForService( $this->_resource );
-					break;
-			}
+			return false;
 		}
 
-		return false;
+		if ( empty( $this->_resource ) )
+		{
+			return static::getSwagger();
+		}
+
+		return static::getSwaggerForService( $this->_resource );
 	}
 
 	/**
@@ -114,25 +119,17 @@ class SwaggerManager extends BasePlatformRestService
 	protected static function buildSwagger()
 	{
 		$_basePath = Pii::request()->getHostInfo() . '/rest';
-		// create cache directory if it doesn't exists
-		$_cachePath = Platform::getStoragePath( static::SWAGGER_CACHE_DIR );
-		if ( !file_exists( $_cachePath ) )
-		{
-			@mkdir( $_cachePath, 0777, true );
-		}
-		// create custom directory if it doesn't exists
-		$_customPath = Platform::getStoragePath( static::SWAGGER_CUSTOM_DIR );
-		if ( !file_exists( $_customPath ) )
-		{
-			@mkdir( $_customPath, 0777, true );
-		}
 
-		// generate swagger output from file annotations
+		//	Create cache & custom directories
+		$_cachePath = Platform::getSwaggerPath( static::SWAGGER_CACHE_DIR ) . '/';
+		$_customPath = Platform::getSwaggerPath( static::SWAGGER_CUSTOM_DIR ) . '/';
+
+		//	Generate swagger output from file annotations
 		$_scanPath = rtrim( __DIR__, '/' ) . '/';
 		$_templatePath = dirname( __DIR__ ) . '/templates/swagger/';
 
 		$_baseSwagger = array(
-			'swaggerVersion' => '1.2',
+			'swaggerVersion' => static::SWAGGER_VERSION,
 			'apiVersion'     => API_VERSION,
 			'basePath'       => $_basePath,
 		);
@@ -146,6 +143,7 @@ class SwaggerManager extends BasePlatformRestService
 			array( 'api_name' => 'user', 'type_id' => 0, 'description' => 'User Login' ),
 			array( 'api_name' => 'system', 'type_id' => 0, 'description' => 'System Configuration' )
 		);
+
 		$_result = array_merge( $_other, $_result );
 
 		// gather the services
@@ -166,7 +164,7 @@ class SwaggerManager extends BasePlatformRestService
 				/** @noinspection PhpIncludeInspection */
 				$_fromFile = require( $_filePath );
 
-				if ( is_array( $_fromFile ) )
+				if ( is_array( $_fromFile ) && !empty( $_fromFile ) )
 				{
 					static::$_eventMap[$_apiName] = $_events = static::_parseSwaggerEvents( $_apiName, $_fromFile );
 
@@ -177,6 +175,7 @@ class SwaggerManager extends BasePlatformRestService
 			else
 			{
 				$_filePath = $_customPath . $_fileName . '.json';
+
 				if ( file_exists( $_filePath ) )
 				{
 					$_fromFile = file_get_contents( $_filePath );
@@ -343,7 +342,8 @@ class SwaggerManager extends BasePlatformRestService
 	 */
 	public static function clearCache()
 	{
-		$_swaggerPath = Platform::getStoragePath( static::SWAGGER_CACHE_DIR );
+		$_swaggerPath = Platform::getSwaggerPath( static::SWAGGER_CACHE_DIR );
+
 		if ( file_exists( $_swaggerPath ) )
 		{
 			$files = array_diff( scandir( $_swaggerPath ), array( '.', '..' ) );

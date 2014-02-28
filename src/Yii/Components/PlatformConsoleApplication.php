@@ -67,7 +67,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	/**
 	 * @var string The default DSP resource namespace
 	 */
-	const DEFAULT_RESOURCE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Resource';
+	const DEFAULT_RESOURCE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Resources';
 	/**
 	 * @var string The default DSP model namespace
 	 */

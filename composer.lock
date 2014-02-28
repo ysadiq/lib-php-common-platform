@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "af93abd671fcc091a62dc1718bd13a32",
+    "hash": "f88205f6a22fdd738a502f07808d4efa",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -217,16 +217,16 @@
             "source": {
                 "type": "git",
                 "url": "https://bitbucket.org/dreamfactory/lib-php-common.git",
-                "reference": "5c27c5ec42832378f539693f1a1dfe93ad66d538"
+                "reference": "50094267ab60da94e0f6b8695216d2853d127d80"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://bitbucket.org/dreamfactory/lib-php-common/get/5c27c5ec42832378f539693f1a1dfe93ad66d538.zip",
-                "reference": "5c27c5ec42832378f539693f1a1dfe93ad66d538",
+                "url": "https://bitbucket.org/dreamfactory/lib-php-common/get/50094267ab60da94e0f6b8695216d2853d127d80.zip",
+                "reference": "50094267ab60da94e0f6b8695216d2853d127d80",
                 "shasum": ""
             },
             "require": {
-                "kisma/kisma": "~0.2.23@stable",
+                "kisma/kisma": "~0.2.24@stable",
                 "php": ">=5.3.18"
             },
             "require-dev": {
@@ -251,7 +251,7 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer"
+                    "role": "DreamFactory Package Maintainer"
                 },
                 {
                     "name": "Lee Hicks",
@@ -265,7 +265,7 @@
                 "dsp",
                 "dsp-core"
             ],
-            "time": "2014-02-24 05:01:46"
+            "time": "2014-02-24 22:27:41"
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
@@ -273,17 +273,17 @@
             "source": {
                 "type": "git",
                 "url": "https://bitbucket.org/dreamfactory/lib-php-common-yii.git",
-                "reference": "7b3f4ec39f17793dcd53a5b94255c7c5469fdb4e"
+                "reference": "92cbc5981aaa0d69f5b674150d79089e20294119"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://bitbucket.org/dreamfactory/lib-php-common-yii/get/7b3f4ec39f17793dcd53a5b94255c7c5469fdb4e.zip",
-                "reference": "7b3f4ec39f17793dcd53a5b94255c7c5469fdb4e",
+                "url": "https://bitbucket.org/dreamfactory/lib-php-common-yii/get/92cbc5981aaa0d69f5b674150d79089e20294119.zip",
+                "reference": "92cbc5981aaa0d69f5b674150d79089e20294119",
                 "shasum": ""
             },
             "require": {
-                "dreamfactory/lib-php-common": "dev-develop as dev-master",
-                "dreamfactory/yii": "=1.1.13@dev",
+                "dreamfactory/lib-php-common": "~1.1@stable",
+                "dreamfactory/yii": "=1.1.13",
                 "kisma/kisma": "~0.2@stable",
                 "php": ">=5.3.10"
             },
@@ -313,7 +313,7 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer"
+                    "role": "DreamFactory Package Maintainer"
                 },
                 {
                     "name": "Jason Sykes",
@@ -337,7 +337,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-02-24 05:03:04"
+            "time": "2014-02-24 22:28:13"
         },
         {
             "name": "dreamfactory/oasys",
@@ -399,12 +399,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/yii.git",
-                "reference": "ecc4882fcb146dbe8cff0c5e9f41f3df402485f4"
+                "reference": "af4b63409222cbf5e23c9c18ca21fdd67afe76b6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/ecc4882fcb146dbe8cff0c5e9f41f3df402485f4",
-                "reference": "ecc4882fcb146dbe8cff0c5e9f41f3df402485f4",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/af4b63409222cbf5e23c9c18ca21fdd67afe76b6",
+                "reference": "af4b63409222cbf5e23c9c18ca21fdd67afe76b6",
                 "shasum": ""
             },
             "require": {
@@ -457,12 +457,12 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Exterminator"
+                    "role": "Lead Developer, server-side/client-side"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Exterminator"
+                    "role": "Lead Developer, server-side/client-side"
                 }
             ],
             "description": "Yii Web Programming Framework",
@@ -471,7 +471,7 @@
                 "framework",
                 "yii"
             ],
-            "time": "2014-02-24 00:36:28"
+            "time": "2014-02-24 17:33:55"
         },
         {
             "name": "fpoirotte/http_request2",
@@ -624,16 +624,16 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.23",
+            "version": "0.2.24",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "bf8471a057d18161d7a54a77456ccad702ca7498"
+                "reference": "278e0c5529e6271f8104e0b177f56ff62b702118"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/bf8471a057d18161d7a54a77456ccad702ca7498",
-                "reference": "bf8471a057d18161d7a54a77456ccad702ca7498",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/278e0c5529e6271f8104e0b177f56ff62b702118",
+                "reference": "278e0c5529e6271f8104e0b177f56ff62b702118",
                 "shasum": ""
             },
             "require": {
@@ -673,7 +673,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-02-23 20:57:18"
+            "time": "2014-02-24 15:25:01"
         },
         {
             "name": "monolog/monolog",
@@ -1367,12 +1367,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-                "reference": "3a60a660998e8d41d5ea81ff8d96ead546bce150"
+                "reference": "69e55e68481cf708a6db43aff0b504e31402fe27"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/3a60a660998e8d41d5ea81ff8d96ead546bce150",
-                "reference": "3a60a660998e8d41d5ea81ff8d96ead546bce150",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/69e55e68481cf708a6db43aff0b504e31402fe27",
+                "reference": "69e55e68481cf708a6db43aff0b504e31402fe27",
                 "shasum": ""
             },
             "require": {
@@ -1420,7 +1420,7 @@
                 "testing",
                 "xunit"
             ],
-            "time": "2014-02-16 12:11:19"
+            "time": "2014-02-25 03:34:05"
         },
         {
             "name": "phpunit/php-file-iterator",
@@ -1653,16 +1653,16 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "3.7.31",
+            "version": "3.7.32",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "d24e9877331039582497052cc3c4d9f465b88210"
+                "reference": "2752cbb9ea5bd84c2811b34b6953f76965ec7a2f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/d24e9877331039582497052cc3c4d9f465b88210",
-                "reference": "d24e9877331039582497052cc3c4d9f465b88210",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/2752cbb9ea5bd84c2811b34b6953f76965ec7a2f",
+                "reference": "2752cbb9ea5bd84c2811b34b6953f76965ec7a2f",
                 "shasum": ""
             },
             "require": {
@@ -1679,7 +1679,7 @@
                 "symfony/yaml": "~2.0"
             },
             "require-dev": {
-                "pear-pear/pear": "1.9.4"
+                "pear-pear.php.net/pear": "1.9.4"
             },
             "suggest": {
                 "ext-json": "*",
@@ -1723,7 +1723,7 @@
                 "testing",
                 "xunit"
             ],
-            "time": "2014-02-03 07:46:27"
+            "time": "2014-02-25 03:47:29"
         },
         {
             "name": "phpunit/phpunit-mock-objects",
@@ -1891,12 +1891,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Yaml.git",
-                "reference": "9921872611710df49cf035c259e5a461ea2d0f8c"
+                "reference": "e49a47d60348665261f6e279ba383241deb73cab"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Yaml/zipball/9921872611710df49cf035c259e5a461ea2d0f8c",
-                "reference": "9921872611710df49cf035c259e5a461ea2d0f8c",
+                "url": "https://api.github.com/repos/symfony/Yaml/zipball/e49a47d60348665261f6e279ba383241deb73cab",
+                "reference": "e49a47d60348665261f6e279ba383241deb73cab",
                 "shasum": ""
             },
             "require": {
@@ -1931,7 +1931,7 @@
             ],
             "description": "Symfony Yaml Component",
             "homepage": "http://symfony.com",
-            "time": "2014-01-07 13:29:57"
+            "time": "2014-02-24 16:21:51"
         }
     ],
     "aliases": [

@@ -68,7 +68,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	/**
 	 * @var string The default DSP resource namespace
 	 */
-	const DEFAULT_RESOURCE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Resource';
+	const DEFAULT_SERVICE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Services';
+	/**
+	 * @var string The default DSP resource namespace
+	 */
+	const DEFAULT_RESOURCE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Resources';
 	/**
 	 * @var string The default DSP model namespace
 	 */
@@ -77,7 +81,18 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 * @var string The default path (sub-path) of installed plug-ins
 	 */
 	const DEFAULT_PLUGINS_PATH = '/storage/plugins';
-
+	/**
+	 * @const int The services namespace map index
+	 */
+	const NS_SERVICES = 0;
+	/**
+	 * @const int The resources namespace map index
+	 */
+	const NS_RESOURCES = 1;
+	/**
+	 * @const int The models namespace map index
+	 */
+	const NS_MODELS = 2;
 
 	//*************************************************************************
 	//	Members
@@ -97,14 +112,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	protected $_extendedHeaders = true;
 	/**
-	 * @var array The namespaces that contain resources. Used by the routing engine
-	 */
-	protected $_resourceNamespaces = array();
-	/**
-	 * @var array The namespaces that contain models. Used by the resource manager
-	 */
-	protected $_modelNamespaces = array();
-	/**
 	 * @var Request
 	 */
 	protected $_requestObject;
@@ -116,6 +123,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 * @var bool If true, profiling information is output to the log
 	 */
 	protected static $_profilerEnabled = null;
+	/**
+	 * @var array[] The namespaces in use by this system. Used by the routing engine
+	 */
+	protected static $_namespaceMap = array();
 
 	//*************************************************************************
 	//	Methods
@@ -127,7 +138,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	public function __construct( $config = null )
 	{
 		//	Start the full-cycle timer
-		$this->startProfiler();
+		$this->startProfiler( 'app.web' );
 
 		parent::__construct( $config );
 	}
@@ -137,7 +148,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function __destruct()
 	{
-		Log::debug( 'DSP [web-app] elapsed time: ' . $this->stopProfiler() );
+		Log::debug( '~~ profile "app.web" elapsed time: ' . $this->stopProfiler( 'app.web' ) );
 	}
 
 	/**
