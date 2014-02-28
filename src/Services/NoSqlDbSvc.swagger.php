@@ -28,6 +28,7 @@ $_base['apis'] = array(
 				'method'           => 'GET',
 				'summary'          => 'getTables() - List all tables.',
 				'nickname'         => 'getTables',
+				'event_name'       => '{api_name}.schema.table.list',
 				'type'             => 'Tables',
 				'parameters'       => array(
 					array(
@@ -65,12 +66,12 @@ $_base['apis'] = array(
 					'List the names of the available tables in this storage. ' .
 					'By default, all tables are listed, use \'names\' parameter to get specific tables. ' .
 					'Use \'include_properties\' to include any properties of the tables.',
-				'event_name'       => '{api_name}.list',
 			),
 			array(
 				'method'           => 'POST',
 				'summary'          => 'createTables() - Create one or more tables.',
 				'nickname'         => 'createTables',
+				'event_name'       => '{api_name}.schema.table.create',
 				'type'             => 'Tables',
 				'parameters'       => array(
 					array(
@@ -114,12 +115,12 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'Post body should be a single table definition or an array of table definitions.',
-				'event_name'       => '{api_name}.create',
 			),
 			array(
 				'method'           => 'PATCH',
 				'summary'          => 'updateTableProperties() - Update properties of one or more tables.',
 				'nickname'         => 'updateTableProperties',
+				'event_name'       => '{api_name}.schema.table.update',
 				'type'             => 'Tables',
 				'parameters'       => array(
 					array(
@@ -150,12 +151,12 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'Post body should be a single table definition or an array of table definitions.',
-				'event_name'       => '{api_name}.update',
 			),
 			array(
 				'method'           => 'DELETE',
 				'summary'          => 'deleteTables() - Delete one or more tables.',
 				'nickname'         => 'deleteTables',
+				'event_name'       => '{api_name}.schema.table.delete',
 				'type'             => 'Tables',
 				'parameters'       => array(
 					array(
@@ -198,7 +199,6 @@ $_base['apis'] = array(
 					'Set the names of the tables to delete or set \'force\' to true to clear the database.' .
 					'Alternatively, to delete by table definitions or a large list of names, ' .
 					'use the POST request with X-HTTP-METHOD = DELETE header and post array of definitions or names.',
-				'event_name'       => '{api_name}.delete',
 			),
 		),
 		'description' => 'Operations available for database tables.',
