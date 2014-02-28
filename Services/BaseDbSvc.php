@@ -124,8 +124,6 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		switch ( $this->_action )
 		{
 			case self::Get:
-				$_properties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
-
 				$_ids = FilterInput::request( 'names' );
 				if ( empty( $_ids ) )
 				{
@@ -133,15 +131,11 @@ abstract class BaseDbSvc extends BasePlatformRestService
 					$_ids = Option::get( $_data, 'names' );
 				}
 
-				if ( !$_properties && empty( $_ids ) )
+				if ( empty( $_ids ) )
 				{
 					return $this->_listResources();
 				}
 
-				if ( empty( $_ids ) )
-				{
-					throw new BadRequestException( "Please reduce the number of tables to retrieve properties on by using the 'names' parameter." );
-				}
 				$_result = $this->getTables( $_ids );
 				$_result = array( 'table' => $_result );
 				break;
