@@ -1,15 +1,9 @@
 {
 	"name":              "dreamfactory/lib-php-common-platform",
 	"description":       "DreamFactory Services Platform(tm) Components Library/SDK for PHP",
-	"version":           "1.3.5",
 	"homepage":          "http://dreamfactorysoftware.github.io",
-	"keywords":          [
-		"php5", "framework", "library", "dreamfactory"
-	],
-	"type":              "library",
-	"license":           [
-		"Apache-2.0"
-	],
+	"keywords":          ["dsp", "sdk"],
+	"license":           ["Apache-2.0"],
 	"authors":           [
 		{
 			"name":  "Jerry Ablan",
@@ -23,19 +17,33 @@
 		}
 	],
 	"require":           {
-		"php":                             ">=5.3.10",
-		"kisma/kisma":                     "~0.2.5",
-		"dreamfactory/lib-php-common":     "~1.1.4",
-		"dreamfactory/lib-php-common-yii": "~1.1.5",
-		"dreamfactory/oasys":              "~0.4.0",
-		"dreamfactory/javascript-sdk":     "1.*",
-		"swiftmailer/swiftmailer":         "4.3.*",
-		"aws/aws-sdk-php":                 "2.4.*",
-		"rackspace/php-opencloud":         "1.5.*",
-		"dready92/php-on-couch":           "dev-master",
-		"phpforce/soap-client":            "dev-master",
-		"dreamfactory/azure-sdk-for-php":  "~0.3.1"
+		"php":                               ">=5.3.10",
+		"kisma/kisma":                       "~0.2@stable",
+		"aws/aws-sdk-php":                   "~2.4.0@stable",
+		"dready92/php-on-couch":             "dev-master",
+		"dreamfactory/azure-sdk-for-php":    "~0.4@stable",
+		"dreamfactory/javascript-sdk":       "1.*",
+		"dreamfactory/yii":                  "=1.1.13",
+		"dreamfactory/lib-php-common":       "~1.4@stable",
+		"dreamfactory/lib-php-common-yii":   "~1.4@stable",
+		"dreamfactory/oasys":                "~0.4@stable",
+		"pear-pear.php.net/Net_URL2":        "*",
+		"pear-pear.php.net/HTTP_Request2":   "*",
+		"pear-pear.php.net/Mail_mimeDecode": "*",
+		"pear-pear.php.net/Mail_Mime":       "*",
+		"phpforce/soap-client":              "dev-master",
+		"rackspace/php-opencloud":           "~1.5@stable",
+		"swiftmailer/swiftmailer":           "~4.3@stable",
+		"symfony/http-foundation":           "~2.4@stable"
 	},
+	"require-dev":       {
+		"phpunit/phpunit":          "~3.7@stable",
+		"phpunit/phpunit-story":    "@stable",
+		"phpunit/phpunit-selenium": "@stable",
+		"phpunit/php-invoker":      "@stable",
+		"phpunit/dbunit":           "@stable"
+	},
+	"minimum-stability": "dev",
 	"repositories":      [
 		{
 			"type": "pear",
@@ -48,5 +56,9 @@
 		}
 	},
 	"target-dir":        "DreamFactory/Platform",
-	"minimum-stability": "dev"
+	"extra":             {
+		"branch-alias": {
+			"dev-develop": "1.4.x-dev"
+		}
+	}
 }

@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,10 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 
 /**
  * SwaggerManager
@@ -57,15 +58,15 @@ class SwaggerManager extends BasePlatformRestService
 	public function __construct()
 	{
 		parent::__construct(
-			array(
-				 'name'          => 'Swagger Documentation Management',
-				 'apiName'       => 'api_docs',
-				 'type'          => 'Swagger',
-				 'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'description'   => 'Service for a user to see the API documentation provided via Swagger.',
-				 'is_active'     => true,
-				 'native_format' => 'json',
-			)
+			  array(
+				  'name'          => 'Swagger Documentation Management',
+				  'apiName'       => 'api_docs',
+				  'type'          => 'Swagger',
+				  'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
+				  'description'   => 'Service for a user to see the API documentation provided via Swagger.',
+				  'is_active'     => true,
+				  'native_format' => 'json',
+			  )
 		);
 	}
 
@@ -111,13 +112,13 @@ class SwaggerManager extends BasePlatformRestService
 	{
 		$_basePath = Pii::request()->getHostInfo() . '/rest';
 		// create cache directory if it doesn't exists
-		$_cachePath = Pii::getParam( 'storage_base_path' ) . static::SWAGGER_CACHE_DIR;
+		$_cachePath = Platform::getStoragePath( static::SWAGGER_CACHE_DIR );
 		if ( !file_exists( $_cachePath ) )
 		{
 			@mkdir( $_cachePath, 0777, true );
 		}
 		// create custom directory if it doesn't exists
-		$_customPath = Pii::getParam( 'storage_base_path' ) . static::SWAGGER_CUSTOM_DIR;
+		$_customPath = Platform::getStoragePath( static::SWAGGER_CUSTOM_DIR );
 		if ( !file_exists( $_customPath ) )
 		{
 			@mkdir( $_customPath, 0777, true );
@@ -125,7 +126,7 @@ class SwaggerManager extends BasePlatformRestService
 
 		// generate swagger output from file annotations
 		$_scanPath = rtrim( __DIR__, '/' ) . '/';
-		$_templatePath = dirname( __DIR__ ) . '/Templates/Swagger/';
+		$_templatePath = dirname( __DIR__ ) . '/templates/swagger/';
 
 		$_baseSwagger = array(
 			'swaggerVersion' => '1.2',
@@ -135,10 +136,7 @@ class SwaggerManager extends BasePlatformRestService
 
 		// build services from database
 		$_command = Pii::db()->createCommand();
-		$_result = $_command->select( 'api_name,type_id,storage_type_id,description' )
-			->from( 'df_sys_service' )
-			->order( 'api_name' )
-			->queryAll();
+		$_result = $_command->select( 'api_name,type_id,storage_type_id,description' )->from( 'df_sys_service' )->order( 'api_name' )->queryAll();
 
 		// add static services
 		$_other = array(
@@ -160,6 +158,7 @@ class SwaggerManager extends BasePlatformRestService
 			$_filePath = $_scanPath . $_fileName . '.swagger.php';
 			if ( file_exists( $_filePath ) )
 			{
+				/** @noinspection PhpIncludeInspection */
 				$_fromFile = require( $_filePath );
 				if ( is_array( $_fromFile ) )
 				{
@@ -186,6 +185,8 @@ class SwaggerManager extends BasePlatformRestService
 
 				// nothing exists for this service, build from the default base service
 				$_filePath = $_scanPath . 'BasePlatformRestSvc.swagger.php';
+
+				/** @noinspection PhpIncludeInspection */
 				$_fromFile = require( $_filePath );
 				if ( !is_array( $_fromFile ) )
 				{
@@ -216,6 +217,7 @@ class SwaggerManager extends BasePlatformRestService
 
 		// cache main api listing file
 		$_main = $_scanPath . 'SwaggerManager.swagger.php';
+		/** @noinspection PhpIncludeInspection */
 		$_resourceListing = require( $_main );
 		$_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
 		$_filePath = $_cachePath . '_.json';
@@ -225,8 +227,7 @@ class SwaggerManager extends BasePlatformRestService
 		}
 
 		$_exampleFile = 'example_service_swagger.json';
-		if ( !file_exists( $_customPath . $_exampleFile ) &&
-			 file_exists( $_templatePath . $_exampleFile )
+		if ( !file_exists( $_customPath . $_exampleFile ) && file_exists( $_templatePath . $_exampleFile )
 		)
 		{
 			file_put_contents(
@@ -247,7 +248,7 @@ class SwaggerManager extends BasePlatformRestService
 	 */
 	public static function getSwagger()
 	{
-		$_swaggerPath = Pii::getParam( 'storage_base_path' ) . static::SWAGGER_CACHE_DIR;
+		$_swaggerPath = Platform::getStoragePath( static::SWAGGER_CACHE_DIR );
 		$_filePath = $_swaggerPath . '_.json';
 		if ( !file_exists( $_filePath ) )
 		{
@@ -276,7 +277,7 @@ class SwaggerManager extends BasePlatformRestService
 	 */
 	public static function getSwaggerForService( $service )
 	{
-		$_swaggerPath = Pii::getParam( 'storage_base_path' ) . static::SWAGGER_CACHE_DIR;
+		$_swaggerPath = Platform::getStoragePath( static::SWAGGER_CACHE_DIR );
 		$_filePath = $_swaggerPath . $service . '.json';
 		if ( !file_exists( $_filePath ) )
 		{
@@ -300,7 +301,7 @@ class SwaggerManager extends BasePlatformRestService
 	 */
 	public static function clearCache()
 	{
-		$_swaggerPath = Pii::getParam( 'storage_base_path' ) . static::SWAGGER_CACHE_DIR;
+		$_swaggerPath = Platform::getStoragePath( static::SWAGGER_CACHE_DIR );
 		if ( file_exists( $_swaggerPath ) )
 		{
 			$files = array_diff( scandir( $_swaggerPath ), array( '.', '..' ) );
@@ -310,4 +311,48 @@ class SwaggerManager extends BasePlatformRestService
 			}
 		}
 	}
+
+	public static function compileEvents( $startId = 2 )
+	{
+		$_id = $startId ? : 2;
+		$_swaggerPath = Platform::getSwaggerPath();
+		$_masterPath = $_swaggerPath . '/_.json';
+		$_compiled = $_swaggerPath . '/.event-map.json';
+
+		if ( !file_exists( $_masterPath ) )
+		{
+			return false;
+		}
+
+		if ( false === ( $_master = json_decode( file_get_contents( $_masterPath ) ) ) )
+		{
+			return false;
+		}
+
+		$_apis = array();
+
+		foreach ( $_master->apis as $_api )
+		{
+			$_label = trim( $_api->path, '/' );
+
+			$_apis[] = array(
+				'id'     => $_id++,
+				'label'  => $_label,
+				'inode'  => true,
+				'open'   => false,
+				'branch' => static::_loadSwaggerFile( $_label, $_swaggerPath . '/' . $_label . '.json', $_id ),
+			);
+		}
+
+		$_result = array(
+			'id'     => 2,
+			'label'  => 'platform',
+			'inode'  => true,
+			'open'   => true,
+			'branch' => $_apis,
+		);
+
+		return file_put_contents( $_compiled, json_encode( array( $_result ), JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT ) );
+	}
+
 }

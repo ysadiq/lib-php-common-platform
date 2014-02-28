@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,9 +30,9 @@ use DreamFactory\Platform\Resources\System\CustomSettings;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Drupal;
 use DreamFactory\Platform\Utility\Fabric;
-use Kisma\Core\Utility\Curl;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\Packager;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
@@ -43,6 +43,7 @@ use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Interfaces\HttpResponse;
+use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -66,6 +67,10 @@ class SystemManager extends BaseSystemRestService
 	 * @var string The private CORS configuration file
 	 */
 	const CORS_DEFAULT_CONFIG_FILE = '/cors.config.json';
+	/**
+	 * @var string The url to pull for DSP tag information
+	 */
+	const VERSION_TAGS_URL = 'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags';
 
 	//*************************************************************************
 	//* Members
@@ -86,20 +91,20 @@ class SystemManager extends BaseSystemRestService
 	 */
 	public function __construct( $settings = array() )
 	{
-		static::$_configPath = \Kisma::get( 'app.config_path' );
+		static::$_configPath = dirname( __DIR__ ) . '/config';
 
 		parent::__construct(
-			  array_merge(
-				  array(
-					  'name'        => 'System Configuration Management',
-					  'api_name'    => 'system',
-					  'type'        => 'System',
-					  'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-					  'description' => 'Service for system administration.',
-					  'is_active'   => true,
-				  ),
-				  $settings
-			  )
+			array_merge(
+				array(
+					 'name'        => 'System Configuration Management',
+					 'api_name'    => 'system',
+					 'type'        => 'System',
+					 'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+					 'description' => 'Service for system administration.',
+					 'is_active'   => true,
+				),
+				$settings
+			)
 		);
 	}
 
@@ -195,7 +200,7 @@ class SystemManager extends BaseSystemRestService
 		//	And redirect to welcome screen
 		if ( !Pii::guest() && !Fabric::fabricHosted() && !SystemManager::registrationComplete() )
 		{
-			Pii::controller()->redirect( '/web/welcome' );
+			return PlatformStates::WELCOME_REQUIRED;
 		}
 
 		$_isReady = true;
@@ -211,8 +216,6 @@ class SystemManager extends BaseSystemRestService
 	public static function initSystem()
 	{
 		static::initSchema();
-		static::initAdmin();
-		static::initData();
 	}
 
 	/**
@@ -506,20 +509,21 @@ class SystemManager extends BaseSystemRestService
 	/**
 	 * Configures the system.
 	 *
-	 * @throws \Exception
+	 * @param array|null $attributes
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return null
 	 */
-	public static function initAdmin()
+	public static function initAdmin( $attributes = null )
 	{
-		//	Create and login first admin user
-		$_model = Option::get( $_POST, 'InitAdminForm' );
-
-		$_email = Pii::getState( 'email', Option::get( $_model, 'email' ) );
-		$_password = Pii::getState( 'password', Option::get( $_model, 'password' ) );
+		// Create and login first admin user
+		// Use the model attributes, or check system state variables
+		$_email = Pii::getState( 'email', Option::get( $attributes, 'email' ) );
+		$_password = Pii::getState( 'password', Option::get( $attributes, 'password' ) );
 
 		if ( empty( $_email ) || empty( $_password ) )
 		{
-			Pii::redirect( '/web/activate' );
+			throw new BadRequestException( 'Valid email address and password required to create a user.' );
 		}
 
 		try
@@ -530,11 +534,11 @@ class SystemManager extends BaseSystemRestService
 			if ( empty( $_user ) )
 			{
 				$_user = new User();
-				$_firstName = Pii::getState( 'first_name', Option::get( $_model, 'firstName' ) );
-				$_lastName = Pii::getState( 'last_name', Option::get( $_model, 'lastName' ) );
+				$_firstName = Pii::getState( 'first_name', Option::get( $attributes, 'firstName' ) );
+				$_lastName = Pii::getState( 'last_name', Option::get( $attributes, 'lastName' ) );
 				$_displayName = Pii::getState(
-								   'display_name',
-								   Option::get( $_model, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
+					'display_name',
+					Option::get( $attributes, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
 				);
 
 				$_fields = array(
@@ -642,73 +646,41 @@ class SystemManager extends BaseSystemRestService
 						}
 					}
 					break;
-			}
-		}
-		// init system with sample setup
-		$contents = file_get_contents( \Kisma::get( 'app.config_path' ) . '/schema/sample_data.json' );
-		if ( !empty( $contents ) )
-		{
-			$contents = DataFormat::jsonToArray( $contents );
-			foreach ( $contents as $table => $content )
-			{
-				switch ( $table )
-				{
-					case 'df_sys_service':
+				case 'df_sys_app':
+					$result = App::model()->findAll();
+					if ( empty( $result ) )
+					{
 						if ( !empty( $content ) )
 						{
-							foreach ( $content as $service )
+							foreach ( $content as $package )
 							{
-								Log::debug( 'Importing service: ' . $service['api_name'] );
-
-								try
+								if ( null !== ( $fileUrl = Option::get( $package, 'url' ) ) )
 								{
-									$obj = new Service();
-									$obj->setAttributes( $service );
-									$obj->save();
-								}
-								catch ( \Exception $ex )
-								{
-									Log::error( "Failed to create sample services.\n{$ex->getMessage()}" );
-								}
-							}
-						}
-						break;
-					case 'app_package':
-						$result = App::model()->findAll();
-						if ( empty( $result ) )
-						{
-							if ( !empty( $content ) )
-							{
-								foreach ( $content as $package )
-								{
-									if ( null !== ( $fileUrl = Option::get( $package, 'url' ) ) )
+									if ( 0 === strcasecmp( 'dfpkg', FileUtilities::getFileExtension( $fileUrl ) ) )
 									{
-										if ( 0 === strcasecmp( 'dfpkg', FileUtilities::getFileExtension( $fileUrl ) ) )
+										Log::debug( 'Importing application: ' . $fileUrl );
+										$filename = null;
+										try
 										{
-											Log::debug( 'Importing application: ' . $fileUrl );
-											$filename = null;
-											try
-											{
-												// need to download and extract zip file and move contents to storage
-												$filename = FileUtilities::importUrlFileToTemp( $fileUrl );
-												Packager::importAppFromPackage( $filename, $fileUrl );
-											}
-											catch ( \Exception $ex )
-											{
-												Log::error( "Failed to import application package $fileUrl.\n{$ex->getMessage()}" );
-											}
+											// need to download and extract zip file and move contents to storage
+											$filename = FileUtilities::importUrlFileToTemp( $fileUrl );
+											Packager::importAppFromPackage( $filename, $fileUrl );
+										}
+										catch ( \Exception $ex )
+										{
+											Log::error( "Failed to import application package $fileUrl.\n{$ex->getMessage()}" );
+										}
 
-											if ( !empty( $filename ) && false === @unlink( $filename ) )
-											{
-												Log::error( 'Unable to remove package file "' . $filename . '"' );
-											}
+										if ( !empty( $filename ) && false === @unlink( $filename ) )
+										{
+											Log::error( 'Unable to remove package file "' . $filename . '"' );
 										}
 									}
 								}
 							}
 						}
-						break;
-				}
+					}
+					break;
 			}
 		}
 	}
@@ -721,7 +693,8 @@ class SystemManager extends BaseSystemRestService
 	 * @throws \Exception
 	 * @return void
 	 */
-	public static function upgradeDsp( $version )
+	public
+	static function upgradeDsp( $version )
 	{
 		if ( empty( $version ) )
 		{
@@ -731,7 +704,7 @@ class SystemManager extends BaseSystemRestService
 
 		// copy current directory to backup
 		$_upgradeDir = Pii::getParam( 'base_path' ) . '/';
-		$_backupDir = Pii::getParam( 'storage_base_path' ) . '/backups/';
+		$_backupDir = Platform::getStoragePath( '/backups/' );
 		if ( !file_exists( $_backupDir ) )
 		{
 			@\mkdir( $_backupDir, 0777, true );
@@ -799,7 +772,7 @@ class SystemManager extends BaseSystemRestService
 		// now run installer script
 		$_oldWorkingDir = getcwd();
 		chdir( $_upgradeDir );
-		$_installCommand = 'export COMPOSER_HOME=' . $_upgradeDir . '; /bin/bash ./scripts/installer.sh -cD 2>&1';
+		$_installCommand = 'export COMPOSER_HOME=' . $_upgradeDir . '; /bin/bash ./scripts/installer.sh -cDf 2>&1';
 		exec( $_installCommand, $_installOut );
 		Log::info( implode( PHP_EOL, $_installOut ) );
 
@@ -816,11 +789,11 @@ class SystemManager extends BaseSystemRestService
 	public static function getDspVersions()
 	{
 		$_results = Curl::get(
-						'https://api.github.com/repos/dreamfactorysoftware/dsp-core/tags',
-						array(),
-						array(
-							CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' )
-						)
+			static::VERSION_TAGS_URL,
+			array(),
+			array(
+				 CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' )
+			)
 		);
 
 		if ( HttpResponse::Ok != ( $_code = Curl::getLastHttpCode() ) )
@@ -1038,14 +1011,14 @@ class SystemManager extends BaseSystemRestService
 
 		//	Call the API
 		return Drupal::registerPlatform(
-					 $user,
-					 $_paths,
-					 array(
-						 'field_first_name'           => $user->first_name,
-						 'field_last_name'            => $user->last_name,
-						 'field_installation_type'    => InstallationTypes::determineType( true ),
-						 'field_registration_skipped' => ( $skipped ? 1 : 0 ),
-					 )
+			$user,
+			$_paths,
+			array(
+				 'field_first_name'           => $user->first_name,
+				 'field_last_name'            => $user->last_name,
+				 'field_installation_type'    => InstallationTypes::determineType( true ),
+				 'field_registration_skipped' => ( $skipped ? 1 : 0 ),
+			)
 		);
 	}
 
@@ -1064,6 +1037,7 @@ class SystemManager extends BaseSystemRestService
 				array( 'name' => 'app_group', 'label' => 'Application Group' ),
 				array( 'name' => 'config', 'label' => 'Configuration' ),
 				array( 'name' => 'custom', 'label' => 'Custom Settings' ),
+				array( 'name' => 'device', 'label' => 'Device' ),
 				array( 'name' => 'email_template', 'label' => 'Email Template' ),
 				array( 'name' => 'provider', 'label' => 'Provider' ),
 				array( 'name' => 'provider_user', 'label' => 'Provider User' ),
@@ -1201,8 +1175,8 @@ class SystemManager extends BaseSystemRestService
 		try
 		{
 			$_admins = Sql::scalar(
-						  <<<SQL
-		SELECT
+				<<<SQL
+SELECT
 	COUNT(id)
 FROM
 	df_sys_user
@@ -1210,10 +1184,10 @@ WHERE
 	is_sys_admin = 1 AND
 	is_deleted = 0
 SQL
-							  ,
-							  0,
-							  array(),
-							  Pii::pdo()
+				,
+				0,
+				array(),
+				Pii::pdo()
 			);
 
 			return ( 0 == $_admins ? false : ( $_admins > 1 ? $_admins : true ) );
@@ -1238,8 +1212,8 @@ SQL
 			/** @var User $_user */
 			$_user = $user
 				? : User::model()->find(
-						'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
-						array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
+					'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
+					array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
 				);
 
 			if ( !empty( $_user ) )
@@ -1260,86 +1234,12 @@ SQL
 		}
 	}
 
-//	/**
-//	 * @param string $apiName
-//	 *
-//	 * @return BasePlatformService|void
-//	 * @throws \Exception
-//	 */
-//	public function setApiName( $apiName )
-//	{
-//		throw new \Exception( 'SystemManager API name can not be changed.' );
-//	}
-//
-//	/**
-//	 * @param string $type
-//	 *
-//	 * @return BasePlatformService|void
-//	 * @throws \Exception
-//	 */
-//	public function setType( $type )
-//	{
-//		throw new \Exception( 'SystemManager type can not be changed.' );
-//	}
-//
-//	/**
-//	 * @param string $description
-//	 *
-//	 * @return BasePlatformService
-//	 * @throws \Exception
-//	 */
-//	public function setDescription( $description )
-//	{
-//		throw new \Exception( 'SystemManager description can not be changed.' );
-//	}
-//
-//	/**
-//	 * @param boolean $isActive
-//	 *
-//	 * @return BasePlatformService|void
-//	 * @throws \Exception
-//	 */
-//	public function setIsActive( $isActive = false )
-//	{
-//		throw new \Exception( 'SystemManager active flag can not be changed.' );
-//	}
-//
-//	/**
-//	 * @return boolean
-//	 */
-//	public function getIsActive()
-//	{
-//		return $this->_isActive;
-//	}
-//
-//	/**
-//	 * @param string $name
-//	 *
-//	 * @return BasePlatformService|void
-//	 * @throws \Exception
-//	 */
-//	public function setName( $name )
-//	{
-//		throw new \Exception( 'SystemManager name can not be changed.' );
-//	}
-//
-//	/**
-//	 * @param string $nativeFormat
-//	 *
-//	 * @return BasePlatformService|void
-//	 * @throws \Exception
-//	 */
-//	public function setNativeFormat( $nativeFormat )
-//	{
-//		throw new \Exception( 'SystemManager native format can not be changed.' );
-//	}
-
 	/**
 	 * @return string
 	 */
 	public static function getConfigPath()
 	{
-		return self::$_configPath;
+		return static::$_configPath;
 	}
 
 	/**
@@ -1347,9 +1247,9 @@ SQL
 	 */
 	public static function setConfigPath( $configPath )
 	{
-		self::$_configPath = $configPath;
+		static::$_configPath = $configPath;
 	}
 }
 
 //	Set the config path...
-SystemManager::setConfigPath( \Kisma::get( 'app.config_path' ) );
+SystemManager::setConfigPath( dirname( __DIR__ ) . '/config' );

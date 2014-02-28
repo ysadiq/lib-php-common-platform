@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +19,16 @@
  */
 namespace DreamFactory\Platform\Yii\Components;
 
+use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * PlatformWebApplication
@@ -74,6 +77,10 @@ class PlatformWebApplication extends \CWebApplication
 	//*************************************************************************
 
 	/**
+	 * @var bool If true, profiling information is output to the log
+	 */
+	protected static $_profilerEnabled = false;
+	/**
 	 * @var array An indexed array of white-listed hosts (ajax.example.com or foo.bar.com or just bar.com)
 	 */
 	protected $_corsWhitelist = array();
@@ -94,10 +101,75 @@ class PlatformWebApplication extends \CWebApplication
 	 * @var array The namespaces that contain models. Used by the resource manager
 	 */
 	protected $_modelNamespaces = array();
+	/**
+	 * @var Request The inbound request
+	 */
+	protected $_requestObject;
+	/**
+	 * @var  Response The outbound response
+	 */
+	protected $_responseObject;
 
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
+
+	/**
+	 * @param array $config
+	 */
+	public function __construct( $config = null )
+	{
+		parent::__construct( $config );
+
+		//	Start the full-cycle timer
+		$this->startProfiler( 'app' );
+	}
+
+	/**
+	 * Destruction
+	 */
+	public function __destruct()
+	{
+		if ( static::$_profilerEnabled )
+		{
+			Log::debug( '~~ "app" profile: ' . $this->stopProfiler( 'app' ) );
+		}
+	}
+
+	/**
+	 * Start a timer
+	 *
+	 * @param string $id The id of the timer
+	 *
+	 * @return $this
+	 */
+	public function startProfiler( $id = __CLASS__ )
+	{
+		if ( static::$_profilerEnabled )
+		{
+			Profiler::start( $id );
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Stop last timer
+	 *
+	 * @param string $id The id of the timer
+	 * @param bool   $returnTimeString
+	 *
+	 * @return float
+	 */
+	public function stopProfiler( $id = __CLASS__, $returnTimeString = true )
+	{
+		if ( static::$_profilerEnabled )
+		{
+			return Profiler::stop( $id, $returnTimeString );
+		}
+
+		return false;
+	}
 
 	/**
 	 * Initialize
@@ -106,30 +178,11 @@ class PlatformWebApplication extends \CWebApplication
 	{
 		parent::init();
 
-		//	Get CORS data from config file
-		$_config = Pii::getParam( 'storage_base_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
+		$this->_loadCorsConfig();
 
-		if ( !file_exists( $_config ) )
-		{
-			// old location
-			$_config = Pii::getParam( 'private_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
-		}
-
-		if ( file_exists( $_config ) )
-		{
-			$_allowedHosts = array();
-			$_content = @file_get_contents( $_config );
-
-			if ( !empty( $_content ) )
-			{
-				$_allowedHosts = json_decode( $_content, true );
-			}
-
-			$this->setCorsWhitelist( $_allowedHosts );
-		}
-
-		// setup the request handler
-		$this->onBeginRequest = array( $this, 'checkRequestMethod' );
+		//	Setup the request handler and events
+		$this->onBeginRequest = array( $this, '_onBeginRequest' );
+		$this->onEndRequest = array( $this, '_onEndRequest' );
 	}
 
 	/**
@@ -139,12 +192,24 @@ class PlatformWebApplication extends \CWebApplication
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 */
-	public function checkRequestMethod( \CEvent $event )
+	protected function _onBeginRequest( \CEvent $event )
 	{
-		//	Answer an options call...
-		switch ( FilterInput::server( 'REQUEST_METHOD' ) )
+		//	Start the request-only profile
+		$this->startProfiler( 'app.request' );
+
+		switch ( Option::server( 'REQUEST_METHOD' ) )
 		{
-			case HttpMethod::Options:
+			case HttpMethod::TRACE:
+				Log::error(
+				   'HTTP TRACE received!',
+					   array(
+						   'server'  => $_SERVER,
+						   'request' => $_REQUEST,
+					   )
+				);
+				throw new BadRequestException();
+
+			case HttpMethod::OPTIONS:
 				header( 'HTTP/1.1 204' );
 				header( 'content-length: 0' );
 				header( 'content-type: text/plain' );
@@ -153,14 +218,13 @@ class PlatformWebApplication extends \CWebApplication
 				Pii::end();
 				break;
 
-			case HttpMethod::Trace:
-				throw new BadRequestException();
-		}
-
-		//	Auto-add the CORS headers...
-		if ( $this->_autoAddHeaders )
-		{
-			$this->addCorsHeaders();
+			default:
+				//	Auto-add the CORS headers...
+				if ( $this->_autoAddHeaders )
+				{
+					$this->addCorsHeaders();
+				}
+				break;
 		}
 
 		//	Load any plug-ins
@@ -168,14 +232,25 @@ class PlatformWebApplication extends \CWebApplication
 	}
 
 	/**
-	 * @param array|bool $whitelist Set to "false" to reset the internal method cache.
-	 *
-	 * @return bool
+	 * @param \CEvent $event
 	 */
-	public function addCorsHeaders( $whitelist = array() )
+	protected function _onEndRequest( \CEvent $event )
+	{
+		Log::debug( '~~ "app.request" profile: ' . $this->stopProfiler( 'app.request' ) );
+	}
+
+	/**
+	 * @param array|bool $whitelist Set to "false" to reset the internal method cache.
+	 * @param bool       $returnHeaders
+	 *
+	 * @return bool|array
+	 */
+	public function addCorsHeaders( $whitelist = array(), $returnHeaders = false )
 	{
 		static $_cache = array();
 		static $_cacheVerbs = array();
+
+		$_headers = array();
 
 		//	Reset the cache before processing...
 		if ( false === $whitelist )
@@ -186,17 +261,16 @@ class PlatformWebApplication extends \CWebApplication
 			return true;
 		}
 
-		$_requestSource = $_SERVER['SERVER_NAME'];
 		$_origin = trim( Option::server( 'HTTP_ORIGIN' ) );
-//		Log::debug( 'The received origin: [' . $_origin . ']' );
-
-		$_originUri = null;
 
 		//	Was an origin header passed? If not, don't do CORS.
 		if ( empty( $_origin ) )
 		{
-			return true;
+			return $returnHeaders ? array() : true;
 		}
+
+		$_originUri = null;
+		$_requestSource = $_SERVER['SERVER_NAME'];
 
 		if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
 		{
@@ -222,40 +296,52 @@ class PlatformWebApplication extends \CWebApplication
 				 */
 				header( 'HTTP/1.1 403 Forbidden' );
 
-				Pii::end();
-
-				//	If end fails for some unknown impossible reason...
-				return false;
+				return Pii::end();
 			}
-
-//			Log::debug( 'Committing origin to the CORS cache > Source: ' . $_requestSource . ' > Origin: ' . $_originUri );
-			$_cache[$_key] = $_originUri;
-			$_cacheVerbs[$_key] = $_allowedMethods;
 		}
 		else
 		{
 			$_originUri = $_cache[$_key];
-			$_allowedMethods = $_cacheVerbs[$_key];
+			$_allowedMethods = Option::getDeep( $_cacheVerbs, $_key, 'allowed_methods' );
+			$_headers = Option::getDeep( $_cacheVerbs, $_key, 'headers' );
 		}
 
 		if ( !empty( $_originUri ) )
 		{
-			header( 'Access-Control-Allow-Origin: ' . $_originUri );
+			$_headers['Access-Control-Allow-Origin'] = $_originUri;
 		}
 
-		header( 'Access-Control-Allow-Credentials: true' );
-		header( 'Access-Control-Allow-Headers: ' . static::CORS_DEFAULT_ALLOWED_HEADERS );
-		header( 'Access-Control-Allow-Methods: ' . $_allowedMethods );
-		header( 'Access-Control-Max-Age: ' . static::CORS_DEFAULT_MAX_AGE );
+		$_headers['Access-Control-Allow-Credentials'] = 'true';
+		$_headers['Access-Control-Allow-Headers'] = static::CORS_DEFAULT_ALLOWED_HEADERS;
+		$_headers['Access-Control-Allow-Methods'] = $_allowedMethods;
+		$_headers['Access-Control-Max-Age'] = static::CORS_DEFAULT_MAX_AGE;
 
 		if ( $this->_extendedHeaders )
 		{
-			header( 'X-DreamFactory-Source: ' . $_requestSource );
+			$_headers['X-DreamFactory-Source'] = $_requestSource;
 
 			if ( $_origin )
 			{
-				header( 'X-DreamFactory-Origin-Whitelisted: ' . preg_match( '/^([\w_-]+\.)*' . $_requestSource . '$/', $_originUri ) );
+				$_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '/^([\w_-]+\.)*' . $_requestSource . '$/', $_originUri );
 			}
+		}
+
+		//	Store in cache...
+		$_cache[$_key] = $_originUri;
+		$_cacheVerbs[$_key] = array(
+			'allowed_methods' => $_allowedMethods,
+			'headers'         => $_headers
+		);
+
+		if ( $returnHeaders )
+		{
+			return $_headers;
+		}
+
+		//	Dump the headers
+		foreach ( $_headers as $_key => $_value )
+		{
+			header( $_key . ': ' . $_value );
 		}
 
 		return true;
@@ -275,7 +361,7 @@ class PlatformWebApplication extends \CWebApplication
 
 			if ( !is_dir( $_path ) )
 			{
-				Log::debug( 'No plug-ins installed.' );
+				// No plug-ins installed
 
 				return false;
 			}
@@ -405,6 +491,7 @@ class PlatformWebApplication extends \CWebApplication
 			{
 				return 'null';
 			}
+
 			$_parts['host'] = $_parts['path'];
 			unset( $_parts['path'] );
 		}
@@ -430,6 +517,60 @@ class PlatformWebApplication extends \CWebApplication
 		return is_array( $parts ) ?
 			( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
 			: $parts;
+	}
+
+	/**
+	 * Load the CORS configuration
+	 */
+	protected function _loadCorsConfig()
+	{
+		$_config = null;
+
+		if ( null === ( $_config = Pii::getState( 'cors.options' ) ) )
+		{
+			//	Get CORS data from config file
+			$_configFile = Pii::getParam( 'storage_base_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
+
+			if ( file_exists( $_configFile ) )
+			{
+				if ( false === ( $_config = @file_get_contents( $_configFile ) ) )
+				{
+					Log::error( 'File system error reading CORS configuration file.' );
+
+					return;
+				}
+			}
+			else
+			{
+				//	May be a file in the old location
+				if ( !file_exists( $_oldConfigFile = Pii::getParam( 'private_path' ) . static::CORS_DEFAULT_CONFIG_FILE ) )
+				{
+					return;
+				}
+
+				//	Take this opportunity to move it to the proper location
+				if ( false !== @file_put_contents( $_configFile, $_config = @file_get_contents( $_oldConfigFile ) ) )
+				{
+					if ( false === @unlink( $_oldConfigFile ) )
+					{
+						Log::error( 'File system error removing CORS configuration file from deprecated location.' );
+						//	Not fatal...
+					}
+				}
+				else
+				{
+					Log::error( 'File system error updating location of CORS configuration file.' );
+					//	Not fatal...
+				}
+			}
+
+			Pii::setState( 'cors.options', $_config );
+		}
+
+		if ( !empty( $_config ) )
+		{
+			$this->setCorsWhitelist( json_decode( $_config, true ) );
+		}
 	}
 
 	/**
@@ -583,5 +724,61 @@ class PlatformWebApplication extends \CWebApplication
 		}
 
 		return $this;
+	}
+
+	/**
+	 * @param \Symfony\Component\HttpFoundation\Request $requestObject
+	 *
+	 * @return PlatformWebApplication
+	 */
+	public function setRequestObject( $requestObject )
+	{
+		$this->_requestObject = $requestObject;
+
+		return $this;
+	}
+
+	/**
+	 * @return \Symfony\Component\HttpFoundation\Request
+	 */
+	public function getRequestObject()
+	{
+		return $this->_requestObject;
+	}
+
+	/**
+	 * @param \Symfony\Component\HttpFoundation\Response $responseObject
+	 *
+	 * @return PlatformWebApplication
+	 */
+	public function setResponseObject( $responseObject )
+	{
+		$this->_responseObject = $responseObject;
+
+		return $this;
+	}
+
+	/**
+	 * @return \Symfony\Component\HttpFoundation\Response
+	 */
+	public function getResponseObject()
+	{
+		return $this->_responseObject;
+	}
+
+	/**
+	 * @param boolean $profilerEnabled
+	 */
+	public static function setProfilerEnabled( $profilerEnabled )
+	{
+		static::$_profilerEnabled = $profilerEnabled;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public static function getProfilerEnabled()
+	{
+		return static::$_profilerEnabled;
 	}
 }

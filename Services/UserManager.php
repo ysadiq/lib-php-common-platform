@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ use DreamFactory\Oasys\Enums\Flows;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Resources\User\CustomSettings;
+use DreamFactory\Platform\Resources\User\Device;
 use DreamFactory\Platform\Resources\User\Password;
 use DreamFactory\Platform\Resources\User\Profile;
 use DreamFactory\Platform\Resources\User\Register;
@@ -68,6 +69,7 @@ class UserManager extends BaseSystemRestService
 	{
 		$resources = array(
 			array( 'name' => 'custom' ),
+			array( 'name' => 'device' ),
 			array( 'name' => 'password' ),
 			array( 'name' => 'profile' ),
 			array( 'name' => 'register' ),
@@ -116,6 +118,11 @@ class UserManager extends BaseSystemRestService
 
 			case 'custom':
 				$obj = new CustomSettings( $this, $this->_resourceArray );
+				$result = $obj->processRequest( null, $this->_action );
+				break;
+
+			case 'device':
+				$obj = new Device( $this, $this->_resourceArray );
 				$result = $obj->processRequest( null, $this->_action );
 				break;
 

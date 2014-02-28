@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,10 +36,9 @@ class Counter
 	/**
 	 * @var array
 	 */
-	protected $_counters
-		= array(
-			'total' => 0,
-		);
+	protected $_counters = array(
+		'total' => 0,
+	);
 
 	//*************************************************************************
 	//* Methods
@@ -94,9 +93,9 @@ class Counter
 	}
 
 	/**
-	 * @param string|array $name         The counter or counters to increment. Pass '*' to increment ALL counters.
-	 * @param int          $howMuch      How much to increment. Defaults to 1
-	 * @param int          $startValue   If a counter doesn't exist, create it with this starting value
+	 * @param string|array $name       The counter or counters to increment. Pass '*' to increment ALL counters.
+	 * @param int          $howMuch    How much to increment. Defaults to 1
+	 * @param int          $startValue If a counter doesn't exist, create it with this starting value
 	 *
 	 * @return $this
 	 */

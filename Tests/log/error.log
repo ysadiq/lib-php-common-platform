@@ -1,6 +1,0 @@
-Jan 12 22:13:31 ERRO REST Exception #500 > Invalid model type 'provider' requested. {"context":{"host":"azrael","request_uri":null,"source_ip":null,"sapi_name":"cli"}}
-Jan 12 22:13:31 ERRO REST Exception #500 > Invalid model type 'user' requested. {"context":{"host":"azrael","request_uri":null,"source_ip":null,"sapi_name":"cli"}}
-Jan 12 22:14:28 ERRO REST Exception #500 > Invalid model type 'provider' requested. {"context":{"host":"azrael","request_uri":null,"source_ip":null,"sapi_name":"cli"}}
-Jan 12 22:14:28 ERRO REST Exception #500 > Invalid model type 'user' requested. {"context":{"host":"azrael","request_uri":null,"source_ip":null,"sapi_name":"cli"}}
-Jan 12 22:19:48 ERRO REST Exception #500 > Invalid model type 'provider' requested. {"context":{"host":"azrael","request_uri":null,"source_ip":null,"sapi_name":"cli"}}
-Jan 12 22:19:48 ERRO REST Exception #500 > Invalid model type 'user' requested. {"context":{"host":"azrael","request_uri":null,"source_ip":null,"sapi_name":"cli"}}

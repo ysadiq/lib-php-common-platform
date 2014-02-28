@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -165,7 +165,7 @@ class User extends BaseSystemRestResource
 			}
 			else
 			{
-				$_defaultPath = __DIR__ . '/../../Templates/Email/confirm_user_invitation.json';
+				$_defaultPath = __DIR__ . '/../../templates/email/confirm_user_invitation.json';
 				if ( !file_exists( $_defaultPath ) )
 				{
 					throw new InternalServerErrorException( "No default email template for user invite." );

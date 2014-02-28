@@ -1,16 +1,12 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
- *
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
- *
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  * http://www.apache.org/licenses/LICENSE-2.0
- *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,7 +17,7 @@ namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\SeedUtility;
+use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -30,7 +26,7 @@ use Kisma\Core\Utility\Option;
  * Platform
  * Generic platform helpers
  */
-class Platform extends SeedUtility
+class Platform
 {
 	//*************************************************************************
 	//	Methods
@@ -60,13 +56,19 @@ class Platform extends SeedUtility
 
 		if ( null === ( $_path = Option::get( $_cache, $_cacheTag ) ) )
 		{
-			$_path = Pii::getParam( $_tag );
+			$_path = trim( Pii::getParam( $_tag ) );
 
-			if ( !file_exists( $_path ) && true === $createIfMissing )
+			if ( empty( $_path ) )
+			{
+				$_path = \Kisma::get( 'app.project_root' ) . '/storage/' . $_tag;
+				Log::notice( 'Empty path for platform path type "' . $type . '". Assume "' . $_path . '"' );
+			}
+
+			if ( !is_dir( $_path ) && true === $createIfMissing )
 			{
 				if ( false === @\mkdir( $_path, 0777, true ) )
 				{
-					Log::error( 'File system error creating directory: ' . $_path );
+					throw new FileSystemException( 'File system error creating directory: ' . $_path );
 				}
 			}
 
@@ -150,6 +152,18 @@ class Platform extends SeedUtility
 	}
 
 	/**
+	 * Constructs the virtual swagger path
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getSwaggerPath( $append = null )
+	{
+		return static::_getPlatformPath( LocalStorageTypes::SWAGGER_PATH, $append );
+	}
+
+	/**
 	 * @param string $namespace
 	 *
 	 * @return string
@@ -162,14 +176,40 @@ class Platform extends SeedUtility
 			hash(
 				'ripemd128',
 				uniqid( '', true ) . ( $_uuid ? : microtime( true ) ) . md5(
-					$namespace . $_SERVER['REQUEST_TIME'] . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['LOCAL_ADDR'] . $_SERVER['LOCAL_PORT'] . $_SERVER['REMOTE_ADDR'] .
-					$_SERVER['REMOTE_PORT']
+					$namespace . $_SERVER['REQUEST_TIME'] . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['LOCAL_ADDR'] . $_SERVER['LOCAL_PORT'] .
+					$_SERVER['REMOTE_ADDR'] . $_SERVER['REMOTE_PORT']
 				)
 			)
 		);
 
-		$_uuid = '{' . substr( $_hash, 0, 8 ) . '-' . substr( $_hash, 8, 4 ) . '-' . substr( $_hash, 12, 4 ) . '-' . substr( $_hash, 16, 4 ) . '-' . substr( $_hash, 20, 12 ) . '}';
+		$_uuid = '{' . substr( $_hash, 0, 8 ) . '-' . substr( $_hash, 8, 4 ) . '-' . substr( $_hash, 12, 4 ) . '-' . substr( $_hash, 16, 4 ) . '-' . substr(
+				$_hash,
+				20,
+				12
+			) . '}';
 
 		return $_uuid;
+	}
+
+	/**
+	 * Attempts to require one or more autoload files.
+	 * fUseful for DSP apps written in PHP.
+	 *
+	 * @param array $autoloaders
+	 *
+	 * @return mixed|bool
+	 */
+	public static function registerAutoloaders( $autoloaders = array() )
+	{
+		foreach ( Option::clean( $autoloaders ) as $_file )
+		{
+			if ( file_exists( $_file ) )
+			{
+				/** @noinspection PhpIncludeInspection */
+				return require_once $_file;
+			}
+		}
+
+		return false;
 	}
 }

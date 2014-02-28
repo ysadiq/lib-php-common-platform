@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,7 +141,7 @@ class Portal extends BaseSystemRestService
 				);
 			}
 
-			return array('resource' => $_providers);
+			return array( 'resource' => $_providers );
 		}
 
 		//	1. Validate portal
@@ -404,9 +404,9 @@ class Portal extends BaseSystemRestService
 		{
 			$_method = str_replace( static::ACTION_TOKEN, Inflector::deneutralize( $this->_controlCommand ), static::DEFAULT_HANDLER_PATTERN );
 
-			if ( is_callable( array($this, $_method) ) )
+			if ( is_callable( array( $this, $_method ) ) )
 			{
-				return call_user_func( array($this, $_method), $provider );
+				return call_user_func( array( $this, $_method ), $provider );
 			}
 		}
 
@@ -774,5 +774,17 @@ class Portal extends BaseSystemRestService
 	public function getControlCommand()
 	{
 		return $this->_controlCommand;
+	}
+
+	/**
+	 * @param string $nativeFormat
+	 *
+	 * @return $this
+	 */
+	public function setNativeFormat( $nativeFormat )
+	{
+		$this->_nativeFormat = $nativeFormat;
+
+		return $this;
 	}
 }

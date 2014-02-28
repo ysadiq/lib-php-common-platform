@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,10 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Services\EmailSvc;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\ServiceHandler;
-use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\User;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Hasher;
@@ -77,7 +77,8 @@ class Register extends BasePlatformRestResource
 	protected function _handlePost()
 	{
 		$_data = RestData::getPostedData( false, true );
-		$_result = $this->userRegister( $_data );
+		$_login = FilterInput::request( 'login', true, FILTER_VALIDATE_BOOLEAN );
+		$_result = $this->userRegister( $_data, $_login );
 
 		return $_result;
 	}
@@ -86,24 +87,18 @@ class Register extends BasePlatformRestResource
 
 	/**
 	 * @param array $data
-	 *
 	 * @param bool  $login
+	 * @param bool  $return_identity
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \Exception
 	 * @return array
 	 */
-	public static function userRegister( $data, $login = true )
+	public static function userRegister( $data, $login = true, $return_identity = false )
 	{
 		/** @var $_config Config */
-		$_fields = 'allow_open_registration, open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id';
-		if ( null === ( $_config = Config::model()->find( array( 'select' => $_fields ) ) ) )
-		{
-			throw new InternalServerErrorException( 'Unable to load system configuration.' );
-		}
-
-		if ( !$_config->allow_open_registration )
+		if ( false === ( $_config = Config::getOpenRegistration() ) )
 		{
 			throw new BadRequestException( "Open registration for users is not currently enabled for this system." );
 		}
@@ -114,10 +109,10 @@ class Register extends BasePlatformRestResource
 			throw new BadRequestException( "The email field for registering a user can not be empty." );
 		}
 
-		$_newPassword = Option::get( $data, 'new_password' );
+		$_newPassword = Option::get( $data, 'new_password', Option::get( $data, 'password' ) );
 		$_confirmCode = 'y'; // default
-		$_roleId = $_config->open_reg_role_id;
-		$_serviceId = $_config->open_reg_email_service_id;
+		$_roleId = Option::get( $_config, 'open_reg_role_id' );
+		$_serviceId = Option::get( $_config, 'open_reg_email_service_id' );
 		if ( !empty( $_serviceId ) )
 		{
 			// email confirmation required
@@ -125,7 +120,7 @@ class Register extends BasePlatformRestResource
 			$_code = Option::get( $data, 'code', FilterInput::request( 'code' ) );
 			if ( !empty( $_code ) )
 			{
-				return static::userConfirm( $_email, $_code, $_newPassword );
+				return static::userConfirm( $_email, $_code, $_newPassword, $login, $return_identity );
 			}
 
 			$_confirmCode = Hasher::generateUnique( $_email, 32 );
@@ -146,9 +141,9 @@ class Register extends BasePlatformRestResource
 			throw new BadRequestException( "A registered user already exists with the email '$_email'." );
 		}
 
-		$_firstName = Option::get( $data, 'first_name' );
-		$_lastName = Option::get( $data, 'last_name' );
-		$_displayName = Option::get( $data, 'display_name' );
+		$_firstName = Option::get( $data, 'first_name', Option::get( $data, 'firstName' ) );
+		$_lastName = Option::get( $data, 'last_name', Option::get( $data, 'lastName' ) );
+		$_displayName = Option::get( $data, 'display_name', Option::get( $data, 'displayName' ) );
 		// fill out the user fields for creation
 		$_temp = substr( $_email, 0, strrpos( $_email, '@' ) );
 		$_fields = array(
@@ -189,14 +184,14 @@ class Register extends BasePlatformRestResource
 				}
 
 				$_data = array();
-				$_template = $_config->open_reg_email_template_id;
+				$_template = Option::get( $_config, 'open_reg_email_template_id' );
 				if ( !empty( $_template ) )
 				{
 					$_data['template_id'] = $_template;
 				}
 				else
 				{
-					$_defaultPath = dirname( dirname( __DIR__ ) ) . '/Templates/Email/confirm_user_registration.json';
+					$_defaultPath = dirname( dirname( __DIR__ ) ) . '/templates/email/confirm_user_registration.json';
 					if ( !file_exists( $_defaultPath ) )
 					{
 						throw new \Exception( "No default email template for user registration." );
@@ -226,7 +221,7 @@ class Register extends BasePlatformRestResource
 			{
 				try
 				{
-					return Session::userLogin( $_theUser->email, $_newPassword );
+					return Session::userLogin( $_theUser->email, $_newPassword, $return_identity );
 				}
 				catch ( \Exception $ex )
 				{
@@ -243,6 +238,7 @@ class Register extends BasePlatformRestResource
 	 * @param string $code
 	 * @param string $new_password
 	 * @param bool   $login
+	 * @param bool   $return_identity
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
@@ -250,7 +246,7 @@ class Register extends BasePlatformRestResource
 	 *
 	 * @return array
 	 */
-	public static function userConfirm( $email, $code, $new_password, $login = true )
+	public static function userConfirm( $email, $code, $new_password, $login = true, $return_identity = false )
 	{
 		if ( empty( $email ) )
 		{
@@ -292,7 +288,7 @@ class Register extends BasePlatformRestResource
 		{
 			try
 			{
-				return Session::userLogin( $_theUser->email, $new_password );
+				return Session::userLogin( $_theUser->email, $new_password, $return_identity );
 			}
 			catch ( \Exception $ex )
 			{

@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ namespace DreamFactory\Platform\Interfaces;
 
 /**
  * PlatformStates
- * Defines the various states in which a platforms may exist
+ * Defines the various states in which a platform may exist
  */
 interface PlatformStates
 {
@@ -53,4 +53,8 @@ interface PlatformStates
 	 * @var string
 	 */
 	const UPGRADE_REQUIRED = 5;
+	/**
+	 * @var string
+	 */
+	const WELCOME_REQUIRED = 6;
 }

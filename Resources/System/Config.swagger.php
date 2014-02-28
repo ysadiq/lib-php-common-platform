@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,41 +74,49 @@ $_commonProperties = array(
 	'open_reg_role_id'           =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Default Role Id assigned to newly registered users, set to null to turn off open registration.',
 		),
 	'open_reg_email_service_id'  =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Set to an email-type service id to require email confirmation of newly registered users.',
 		),
 	'open_reg_email_template_id' =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Default email template used for open registration email confirmations.',
 		),
 	'invite_email_service_id'    =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Set to an email-type service id to allow user invites and invite confirmations via email service.',
 		),
 	'invite_email_template_id'   =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Default email template used for user invitations and confirmations via email service.',
 		),
 	'password_email_service_id'  =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Set to an email-type service id to require email confirmation to reset passwords, otherwise defaults to security question and answer.',
 		),
 	'password_email_template_id' =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Default email template used for password reset email confirmations.',
 		),
 	'guest_role_id'              =>
 		array(
 			'type'        => 'integer',
+			'format'      => 'int32',
 			'description' => 'Role Id assigned for all guest sessions, set to null to require authenticated sessions.',
 		),
 	'editable_profile_fields'    =>

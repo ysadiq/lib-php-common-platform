@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Option;
 
 /**
  * BasePlatformSystemModel.php
@@ -66,8 +66,8 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	public function relations()
 	{
 		return array(
-			'created_by'       => array( self::BELONGS_TO, 'User', 'created_by_id' ),
-			'last_modified_by' => array( self::BELONGS_TO, 'User', 'last_modified_by_id' ),
+			'created_by'       => array( static::BELONGS_TO, 'User', 'created_by_id' ),
+			'last_modified_by' => array( static::BELONGS_TO, 'User', 'last_modified_by_id' ),
 		);
 	}
 
@@ -126,11 +126,11 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 		{
 			return array_merge(
 				array(
-					 'id',
-					 'created_date',
-					 'created_by_id',
-					 'last_modified_date',
-					 'last_modified_by_id'
+					'id',
+					'created_date',
+					'created_by_id',
+					'last_modified_date',
+					'last_modified_by_id'
 				),
 				!empty( $columns ) ? $columns : $this->getSafeAttributeNames()
 			);
@@ -212,8 +212,7 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 
 		try
 		{
-			$_sql
-				= <<<MYSQL
+			$_sql = <<<MYSQL
 SELECT
 	id,
 	$mapColumn
@@ -397,8 +396,8 @@ MYSQL;
 		{
 			$this->getDbCriteria()->mergeWith(
 				array(
-					 'condition' => 'api_name = :api_name',
-					 'params'    => array( ':api_name' => $name ),
+					'condition' => 'api_name = :api_name',
+					'params'    => array( ':api_name' => $name ),
 				)
 			);
 		}
