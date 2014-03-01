@@ -17,7 +17,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-use Kisma\Core\Utility\Log;
 
 /**
  * bootstrap.php
@@ -42,7 +41,6 @@ defined( 'YII_DEBUG' ) or define( 'YII_DEBUG', true );
 defined( 'YII_TRACE_LEVEL' ) or define( 'YII_TRACE_LEVEL', 3 );
 
 $_config = require( __DIR__ . '/config/test.config.php' );
-//\Kisma::set( 'app.config', $_config );
 
 //	Testing keys
 if ( file_exists( __DIR__ . '/config/keys.php' ) )
@@ -51,14 +49,14 @@ if ( file_exists( __DIR__ . '/config/keys.php' ) )
 	require_once __DIR__ . '/config/keys.php';
 }
 
-Log::setDefaultLog( __DIR__ . '/log/platform-php-sdk.tests.log' );
-
 //	Create the application but don't run (false at the end)
 $_app = DreamFactory\Yii\Utility\Pii::run(
 	$_basePath,
-	$_loader,
+	$_autoloader,
 	'DreamFactory\\Platform\\Yii\\Components\\PlatformConsoleApplication',
 	$_config,
+	false,
+	true,
 	false
 );
 

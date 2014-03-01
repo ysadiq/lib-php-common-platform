@@ -19,12 +19,14 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * BasePlatformService
