@@ -1,9 +1,6 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
- *
- * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,42 +16,22 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
-use DreamFactory\Platform\Events\BasePlatformEvent;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
-use DreamFactory\Platform\Utility\EventManager;
-use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
-use Kisma\Core\Interfaces\HttpMethod;
-use Kisma\Core\Interfaces\PublisherLike;
-use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Inflector;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Symfony\Component\HttpFoundation\ParameterBag;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 
 /**
  * BasePlatformService
  * The base class for all DSP services
  */
-abstract class BasePlatformService extends Seed implements PlatformServiceLike, ConsumerLike, PublisherLike, SubscriberLike
+abstract class BasePlatformService extends Seed implements PlatformServiceLike, ConsumerLike
 {
-	//*************************************************************************
-	//	Constants
-	//*************************************************************************
-
-	/**
-	 * @type string The base of our event tree
-	 */
-	const EVENT_NAMESPACE = 'platform.';
-
 	//*************************************************************************
 	//* Members
 	//*************************************************************************
@@ -64,13 +41,17 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	protected $_apiName;
 	/**
-	 * @var int current user ID
-	 */
-	protected $_currentUserId;
-	/**
 	 * @var string Description of this service
 	 */
 	protected $_description;
+	/**
+	 * @var string Designated type of this service
+	 */
+	protected $_type;
+	/**
+	 * @var int Designated type ID of this service
+	 */
+	protected $_typeId;
 	/**
 	 * @var boolean Is this service activated for use?
 	 */
@@ -84,21 +65,9 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	protected $_proxyClient;
 	/**
-	 * @var string Designated type of this service
+	 * @var int current user ID
 	 */
-	protected $_type;
-	/**
-	 * @var int Designated type ID of this service
-	 */
-	protected $_typeId;
-	/**
-	 * @var Response The response to the request
-	 */
-	protected $_responseObject = null;
-	/**
-	 * @var Request The inbound request
-	 */
-	protected $_requestObject = null;
+	protected $_currentUserId;
 
 	//*************************************************************************
 	//* Methods
@@ -155,47 +124,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 			$this->_description = $this->_name;
 		}
 
-		//	Get the current user ID if one...
 		$this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
-
-		Profiler::start( $this->_apiName );
-	}
-
-	/**
-	 * Destructor
-	 */
-	public function __destruct()
-	{
-		//	Save myself!
-		ServiceHandler::cacheService( $this->_apiName, $this );
-
-		Log::debug( '~~ "' . $this->_apiName . '" profile: ' . Profiler::stop( $this->_apiName ) );
-
-		parent::__destruct();
-	}
-
-	/**
-	 * {@InheritDoc}
-	 */
-	public function on( $eventName, $listener, $priority = 0 )
-	{
-		EventManager::on( $this->_normalizeEventName( $eventName ), $listener, $priority );
-	}
-
-	/**
-	 * {@InheritDoc}
-	 */
-	public function off( $eventName, $callback )
-	{
-		EventManager::off( $this->_normalizeEventName( $eventName ), $callback );
-	}
-
-	/**
-	 * {@InheritDoc}
-	 */
-	public function trigger( $eventName, $event = null )
-	{
-		return EventManager::trigger( $this->_normalizeEventName( $eventName ), $event );
 	}
 
 	/**
@@ -235,69 +164,14 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	}
 
 	/**
-	 * @param string        $eventName
-	 * @param Request|array $values The values to use for replacements in the event name templates.
-	 *                              If none specified, the $_REQUEST variables will be used.
-	 *                              The current class's variables are also available for replacement.
-	 *
-	 * @return string
+	 * Destructor
 	 */
-	protected function _normalizeEventName( $eventName, $values = null )
+	public function __destruct()
 	{
-		static $_cache = array(), $_replacements = null;
+		//	Save myself!
+		ServiceHandler::cacheService( $this->_apiName, $this );
 
-		if ( null !== ( $_name = Option::get( $_cache, $_tag = Inflector::neutralize( $eventName ) ) ) )
-		{
-			return $_name;
-		}
-
-		if ( null === $values )
-		{
-			$values = get_object_vars( Request::createFromGlobals() );
-		}
-
-		if ( null === $_replacements )
-		{
-			$_replacements = array();
-
-			foreach ( array_merge( get_object_vars( $this ), Option::clean( $values ) ) as $_key => $_value )
-			{
-				$_key = Inflector::neutralize( ltrim( $_key, '_' ) );
-
-				if ( !is_scalar( $_value ) )
-				{
-					if ( $_value instanceof ParameterBag )
-					{
-						foreach ( $_value as $_bagKey => $_bagValue )
-						{
-							$_bagKey = Inflector::neutralize( ltrim( $_bagKey, '_' ) );
-
-							if ( !is_scalar( $_bagValue ) )
-							{
-								continue;
-							}
-
-							$_replacements['{' . $_key . '.' . $_bagKey . '}'] = $_bagValue;
-						}
-					}
-
-					continue;
-				}
-
-				$_replacements['{' . $_key . '}'] = $_value;
-			}
-		}
-
-		//	Construct and neutralize...
-		$_tag = Inflector::neutralize(
-						 str_ireplace(
-							 array_keys( $_replacements ),
-							 array_values( $_replacements ),
-							 $_tag
-						 )
-		);
-
-		return $_cache[$eventName] = $_tag;
+		parent::__destruct();
 	}
 
 	/**
@@ -457,63 +331,5 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	public function getUserId()
 	{
 		return $this->_currentUserId;
-	}
-
-	/**
-	 * @param \Symfony\Component\HttpFoundation\Request $requestObject
-	 *
-	 * @return BasePlatformRestService
-	 */
-	public function setRequestObject( $requestObject )
-	{
-		$this->_requestObject = $requestObject;
-
-		return $this;
-	}
-
-	/**
-	 * @return \Symfony\Component\HttpFoundation\Request
-	 */
-	public function getRequestObject()
-	{
-		return $this->_requestObject;
-	}
-
-	/**
-	 * @param \Symfony\Component\HttpFoundation\Response $responseObject
-	 *
-	 * @return BasePlatformRestService
-	 */
-	public function setResponseObject( $responseObject )
-	{
-		$this->_responseObject = $responseObject;
-
-		return $this;
-	}
-
-	/**
-	 * @return \Symfony\Component\HttpFoundation\Response
-	 */
-	public function getResponseObject()
-	{
-		return $this->_responseObject;
-	}
-
-	/**
-	 * @param string          $resource     The name of the resource
-	 * @param string          $action       The action to perform
-	 * @param int|string|bool $outputFormat The return format. Defaults to native, or PHP array.
-	 * @param string          $appName      The optional app_name setting for this call. Defaults to called class name hash
-	 *
-	 * @return mixed
-	 */
-	public static function processInlineRequest( $resource, $action = HttpMethod::GET, $outputFormat = false, $appName = null )
-	{
-		//	Get the resource and set the app_name
-		$_resource = ResourceStore::resource( $resource );
-		$_SERVER['HTTP_X_DREAMFACTORY_APPLICATION_NAME'] = $appName ? : sha1( get_called_class() );
-
-		//	Make the call
-		return $_resource->processInlineRequest( $resource, $action, $outputFormat );
 	}
 }

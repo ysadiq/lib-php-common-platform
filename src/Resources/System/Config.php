@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,28 +54,34 @@ class Config extends BaseSystemRestResource
 	public function __construct( $consumer = null, $resourceArray = array() )
 	{
 		parent::__construct(
-			  $consumer,
-			  array(
-				  'name'           => 'Configuration',
-				  'type'           => 'System',
-				  'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				  'api_name'       => 'config',
-				  'description'    => 'Service general configuration',
-				  'is_active'      => true,
-				  'resource_array' => $resourceArray,
-				  'verb_aliases'   => array(
-					  static::Patch => static::Post,
-					  static::Merge => static::Post,
-				  )
-			  )
+			$consumer,
+			array(
+				'name'           => 'Configuration',
+				'type'           => 'System',
+				'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				'api_name'       => 'config',
+				'description'    => 'Service general configuration',
+				'is_active'      => true,
+				'resource_array' => $resourceArray,
+				'verb_aliases'   => array(
+					static::Patch => static::Post,
+					static::Merge => static::Post,
+				)
+			)
 		);
 	}
 
+	/**
+	 * @return array|bool
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 */
 	public static function getOpenRegistration()
 	{
 		/** @var $_config \DreamFactory\Platform\Yii\Models\Config */
 		$_fields = 'allow_open_registration, open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id';
+
 		$_config = ResourceStore::model( 'config' )->find( array( 'select' => $_fields ) );
+
 		if ( null === $_config )
 		{
 			throw new InternalServerErrorException( 'Unable to load system configuration.' );
@@ -129,24 +135,14 @@ class Config extends BaseSystemRestResource
 	 */
 	protected function _postProcess()
 	{
-		static $_fabricHosted = null;
+		static $_fabricHosted;
 
-		if ( null === $_fabricHosted )
-		{
-			$_fabricHosted = Fabric::fabricHosted();
-		}
+		$_fabricHosted = $_fabricHosted ? : \Kisma::get( 'platform.fabric_hosted', Fabric::fabricHosted() );
 
 		//	Only return a single row, not in an array
-		if ( null !== ( $_record = Option::getDeep( $this->_response, 'record', 0 ) ) )
+		if ( is_array( $this->_response ) && !Pii::isEmpty( $_record = Option::get( $this->_response, 'record' ) ) && count( $_record ) >= 1 )
 		{
-			if ( 1 == sizeof( $this->_response['record'] ) )
-			{
-				$this->_response = $_record;
-			}
-		}
-		else if ( is_array( $this->_response ) && isset( $this->_response[0] ) && sizeof( $this->_response ) == 1 )
-		{
-			$this->_response = $this->_response[0];
+			$this->_response = current( $_record );
 		}
 
 		/**
@@ -170,8 +166,8 @@ class Config extends BaseSystemRestResource
 		 * Remote login support
 		 */
 		$this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
-		$this->_response['allow_remote_logins'] =
-			( Pii::getParam( 'dsp.allow_remote_logins', false ) && Option::get( $this->_response, 'allow_open_registration', false ) );
+		$this->_response['allow_remote_logins'] = ( Pii::getParam( 'dsp.allow_remote_logins', false ) &&
+			Option::getBool( $this->_response, 'allow_open_registration' ) );
 
 		if ( false !== $this->_response['allow_remote_logins'] )
 		{

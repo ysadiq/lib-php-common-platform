@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,18 +56,18 @@ class CustomSettings extends BasePlatformRestResource
 		parent::__construct(
 			  $consumer,
 			  array(
-				   'name'         => 'System Custom Settings',
-				   'service_name' => 'system',
-				   'type'         => 'System',
-				   'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
-				   'api_name'     => 'custom',
-				   'description'  => 'Resource for an admin to manage custom system settings.',
-				   'is_active'    => true,
-				   'verb_aliases' => array(
-					   static::Put   => static::Post,
-					   static::Patch => static::Post,
-					   static::Merge => static::Post,
-				   )
+				  'name'         => 'System Custom Settings',
+				  'service_name' => 'system',
+				  'type'         => 'System',
+				  'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
+				  'api_name'     => 'custom',
+				  'description'  => 'Resource for an admin to manage custom system settings.',
+				  'is_active'    => true,
+				  'verb_aliases' => array(
+					  static::Put   => static::Post,
+					  static::Patch => static::Post,
+					  static::Merge => static::Post,
+				  )
 			  )
 		);
 

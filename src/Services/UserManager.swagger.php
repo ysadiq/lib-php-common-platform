@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,12 +34,11 @@ $_base['apis'] = array_merge(
 			'path'        => '/{api_name}',
 			'operations'  => array(
 				0 => array(
-					'method'     => 'GET',
-					'summary'    => 'getResources() - List resources available for user session management.',
-					'nickname'   => 'getResources',
-					'type'       => 'Resources',
-					'notes'      => 'See listed operations for each resource available.',
-					'event_name' => '{api_name}.list',
+					'method'   => 'GET',
+					'summary'  => 'getResources() - List resources available for user session management.',
+					'nickname' => 'getResources',
+					'type'     => 'Resources',
+					'notes'    => 'See listed operations for each resource available.',
 				),
 			),
 			'description' => 'Operations available for user session management.',
@@ -54,6 +53,7 @@ $_base['apis'] = array_merge(
 );
 
 $_base['models'] = array_merge(
+	Option::get( $_base, 'models' ),
 	Option::get( $_custom, 'models' ),
 	Option::get( $_device, 'models' ),
 	Option::get( $_password, 'models' ),

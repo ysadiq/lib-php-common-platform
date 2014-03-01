@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Option;
 use Kisma\Core\Exceptions\StorageException;
+use Kisma\Core\Utility\Option;
 
 /**
  * Role.php
@@ -180,10 +180,10 @@ class Role extends BasePlatformSystemModel
 					 $requested,
 					 array_merge(
 						 array(
-							  'name',
-							  'description',
-							  'is_active',
-							  'default_app_id',
+							 'name',
+							 'description',
+							 'is_active',
+							 'default_app_id',
 						 ),
 						 $columns
 					 ),

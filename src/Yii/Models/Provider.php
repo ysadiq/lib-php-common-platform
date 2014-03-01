@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,6 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
-use CEvent;
-use CModelEvent;
 use DreamFactory\Oasys\Oasys;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Yii\Utility\Pii;
@@ -82,14 +80,14 @@ class Provider extends BasePlatformSystemModel
 		return array_merge(
 			parent::behaviors(),
 			array(
-				 //	Secure JSON
-				 'base_platform_model.secure_json' => array(
-					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'             => $this->getDb()->password,
-					 'secureAttributes' => array(
-						 'config_text',
-					 )
-				 ),
+				//	Secure JSON
+				'base_platform_model.secure_json' => array(
+					'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					'salt'             => $this->getDb()->password,
+					'secureAttributes' => array(
+						'config_text',
+					)
+				),
 			)
 		);
 	}
@@ -102,18 +100,18 @@ class Provider extends BasePlatformSystemModel
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-			array_merge(
-				$additionalLabels,
-				array(
-					 'provider_name'     => 'Name',
-					 'api_name'          => 'API Name',
-					 'config_text'       => 'Configuration',
-					 'is_active'         => 'Active',
-					 'is_system'         => 'Is a System Provider',
-					 'is_login_provider' => 'Provider Login Services',
-					 'base_provider_id'  => 'Base Provider',
-				)
-			)
+					 array_merge(
+						 $additionalLabels,
+						 array(
+							 'provider_name'     => 'Name',
+							 'api_name'          => 'API Name',
+							 'config_text'       => 'Configuration',
+							 'is_active'         => 'Active',
+							 'is_system'         => 'Is a System Provider',
+							 'is_login_provider' => 'Provider Login Services',
+							 'base_provider_id'  => 'Base Provider',
+						 )
+					 )
 		);
 	}
 
@@ -125,10 +123,10 @@ class Provider extends BasePlatformSystemModel
 	public function byPortal( $portal )
 	{
 		$this->getDbCriteria()->mergeWith(
-			array(
+			 array(
 				 'condition' => 'lower(provider_name) = lower(:provider_name) or lower(api_name) = lower(:api_name)',
 				 'params'    => array( ':provider_name' => $portal, ':api_name' => Inflector::neutralize( $portal ) ),
-			)
+			 )
 		);
 
 		return $this;
@@ -169,10 +167,10 @@ class Provider extends BasePlatformSystemModel
 		if ( !Pii::guest() )
 		{
 			$_auth = ProviderUser::model()->byUserProviderUserId(
-				Session::getCurrentUserId(),
-				Option::get( $provider, 'id' )
+								 Session::getCurrentUserId(),
+								 Option::get( $provider, 'id' )
 			)->find(
-					array( 'select' => 'auth_text' )
+								 array( 'select' => 'auth_text' )
 				);
 
 			if ( null !== $_auth )

@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,7 @@ namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
-use DreamFactory\Platform\Utility\ResourceStore;
-use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Sql;
-use DreamFactory\Platform\Services\SystemManager;
-use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\Platform\Utility\SqlDbUtilities;
 
 /**
  * ProviderUser
@@ -48,20 +41,20 @@ class ProviderUser extends BaseSystemRestResource
 	public function __construct( $consumer = null, $resourceArray = array() )
 	{
 		parent::__construct(
-			$consumer,
-			array(
-				 'name'           => 'portal account',
-				 'type'           => 'Service',
-				 'service_name'   => 'system',
-				 'type_id'        => PlatformServiceTypes::LOCAL_PORTAL_SERVICE,
-				 'api_name'       => 'portal_account',
-				 'description'    => 'Service provider account configuration.',
-				 'is_active'      => true,
-				 'resource_array' => $resourceArray,
-				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-				 ),
-			)
+			  $consumer,
+			  array(
+				  'name'           => 'portal account',
+				  'type'           => 'Service',
+				  'service_name'   => 'system',
+				  'type_id'        => PlatformServiceTypes::LOCAL_PORTAL_SERVICE,
+				  'api_name'       => 'portal_account',
+				  'description'    => 'Service provider account configuration.',
+				  'is_active'      => true,
+				  'resource_array' => $resourceArray,
+				  'verb_aliases'   => array(
+					  static::Patch => static::Post,
+				  ),
+			  )
 		);
 	}
 }

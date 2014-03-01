@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,6 @@ $_constant['apis'] = array(
 					),
 				),
 				'notes'            => 'Returns an object containing every enumerated type and its constant values',
-				'event_name'       => 'constant.list',
 			),
 		),
 		'description' => 'Operations for retrieving platform constants.',
@@ -82,7 +81,6 @@ $_constant['apis'] = array(
 					),
 				),
 				'notes'            => 'Returns , all fields and no relations are returned.',
-				'event_name'       => 'constant.get',
 			),
 		),
 		'description' => 'Operations for retrieval individual platform constant enumerations.',
@@ -107,7 +105,7 @@ $_constant['models'] = array(
 			'name' => array(
 				'type'  => 'Array',
 				'items' => array(
-					'$ref' => 'string',
+					'type' => 'string',
 				),
 			),
 		),

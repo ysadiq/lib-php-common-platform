@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ namespace DreamFactory\Platform\Yii\Models;
  * Columns:
  *
  * @property int                 $user_id
- * @property string              $owner_id
  * @property string              $uuid
  * @property string              $platform
  * @property string              $version
@@ -83,48 +82,32 @@ class Device extends BasePlatformSystemModel
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-			array_merge(
-				$additionalLabels,
-				array(
-					'user_id'  => 'User ID',
-					'owner_id' => 'Owner ID',
-					'uuid'     => 'UUID',
-					'platform' => 'Platform',
-					'version'  => 'Version',
-					'model'    => 'Model',
-					'extra'    => 'Extra',
-				)
-			)
+					 array_merge(
+						 $additionalLabels,
+						 array(
+							 'user_id'  => 'User ID',
+							 'uuid'     => 'UUID',
+							 'platform' => 'Platform',
+							 'version'  => 'Version',
+							 'model'    => 'Model',
+							 'extra'    => 'Extra',
+						 )
+					 )
 		);
 	}
 
 	/**
 	 * @param int $userId
 	 *
-	 * @return $this[]
+	 * @return Device[]
 	 */
 	public static function getDevicesByUser( $userId )
 	{
 		return static::model()->findAll(
-			'user_id = :user_id',
-			array(
-				':user_id' => $userId,
-			)
-		);
-	}
-
-	/**
-	 * @param int $ownerId
-	 *
-	 * @return $this[]
-	 */
-	public static function getDevicesByOwner( $ownerId )
-	{
-		return static::model()->findAll(
-			'owner_id = :owner_id',
-			array(
-				':owner_id' => $ownerId,
-			)
+					 'user_id = :user_id',
+					 array(
+						 ':user_id' => $userId,
+					 )
 		);
 	}
 
@@ -132,33 +115,16 @@ class Device extends BasePlatformSystemModel
 	 * @param int    $userId
 	 * @param string $uuid
 	 *
-	 * @return $this
+	 * @return Device
 	 */
 	public static function getDeviceByUser( $userId, $uuid )
 	{
 		return static::model()->find(
-			'user_id = :user_id and uuid = :uuid',
-			array(
-				':user_id' => $userId,
-				':uuid'    => $uuid,
-			)
-		);
-	}
-
-	/**
-	 * @param string $ownerId
-	 * @param string $uuid
-	 *
-	 * @return Device
-	 */
-	public static function getDeviceByOwner( $ownerId, $uuid )
-	{
-		return static::model()->find(
-			'owner_id = :owner_id and uuid = :uuid',
-			array(
-				':owner_id' => $ownerId,
-				':uuid'     => $uuid,
-			)
+					 'user_id = :user_id and uuid = :uuid',
+					 array(
+						 ':user_id' => $userId,
+						 ':uuid'    => $uuid,
+					 )
 		);
 	}
 }

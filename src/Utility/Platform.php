@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
@@ -75,8 +76,8 @@ class Platform extends SeedUtility
 
 			if ( empty( $_basePath ) )
 			{
-				$_basePath = \Kisma::get( 'app.project_root' ) . '/storage';
-				Log::notice( 'Empty path for platform path type "' . $type . '". Defaulting to "' . $_basePath . '"' );
+				$_path = \Kisma::get( 'app.project_root' ) . '/storage';
+				Log::notice( 'Empty path for platform path type "' . $type . '". Defaulting to "' . $_path . '"' );
 			}
 
 			$_path .= $_appendage;
@@ -85,7 +86,7 @@ class Platform extends SeedUtility
 			{
 				if ( false === @\mkdir( $_path, 0777, true ) )
 				{
-					Log::error( 'File system error creating directory: ' . $_path );
+					throw new FileSystemException( 'File system error creating directory: ' . $_path );
 				}
 			}
 

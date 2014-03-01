@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Enums;
 
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Enums\SeedEnum;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -35,17 +34,18 @@ class PermissionMap extends HttpMethod
 	/**
 	 * @var array
 	 */
-	protected static $_map = array(
-		self::Get     => 'read',
-		self::Head    => 'read',
-		self::Options => 'read',
-		self::Post    => 'create',
-		self::Copy    => 'create',
-		self::Put     => 'update',
-		self::Patch   => 'update',
-		self::Merge   => 'update',
-		self::Delete  => 'delete',
-	);
+	protected static $_map
+		= array(
+			self::Get     => 'read',
+			self::Head    => 'read',
+			self::Options => 'read',
+			self::Post    => 'create',
+			self::Copy    => 'create',
+			self::Put     => 'update',
+			self::Patch   => 'update',
+			self::Merge   => 'update',
+			self::Delete  => 'delete',
+		);
 
 	//*************************************************************************
 	//* Members

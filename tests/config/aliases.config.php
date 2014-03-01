@@ -30,7 +30,7 @@ if ( false !== Yii::getPathOfAlias( 'DreamFactory.Yii.*' ) )
 	return true;
 }
 
-$_basePath = dirname( dirname( __DIR__ ) );
+$_basePath = dirname( __DIR__ );
 $_vendorPath = $_basePath . '/vendor';
 
 Pii::setPathOfAlias( 'vendor', $_vendorPath );
@@ -47,7 +47,8 @@ Pii::alias( 'DreamFactory.Yii.Logging.*', $_libPath . '/Logging' );
 
 //	lib-php-common-platform (psr-0 && psr-4 compatible)
 $_libPath
-	= $_vendorPath .
+	=
+	$_vendorPath .
 	'/dreamfactory/lib-php-common-platform' .
 	( is_dir( $_vendorPath . '/dreamfactory/lib-php-common-platform/src' ) ? '/src' : '/DreamFactory/Platform' );
 

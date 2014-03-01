@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -187,7 +187,8 @@ class FileUtilities
 		/**
 		 * @var array of file extensions to mime types
 		 */
-		static $_mimeTypes = array(
+		static $_mimeTypes
+		= array(
 			'123'         => 'application/vnd.lotus-1-2-3',
 			'3dml'        => 'text/vnd.in3d.3dml',
 			'3ds'         => 'image/x-3ds',
@@ -1196,11 +1197,12 @@ class FileUtilities
 		}
 
 		if ( empty( $mime ) ||
-			 ( 0 === strcasecmp( $mime, $defaultMime ) ) ||
-			 ( 0 === strcasecmp( 'text/plain', $mime ) ) ||
-			 ( 0 === strcasecmp( 'text/x-c', $mime ) ) ||
-			 ( 0 === strcasecmp( 'text/x-c++', $mime ) ) ||
-			 ( 0 === strcasecmp( 'text/x-java', $mime ) )
+			( 0 === strcasecmp( $mime, $defaultMime ) ) ||
+			( 0 === strcasecmp( 'text/plain', $mime ) ) ||
+			( 0 === strcasecmp( 'text/x-asm', $mime ) ) ||
+			( 0 === strcasecmp( 'text/x-c', $mime ) ) ||
+			( 0 === strcasecmp( 'text/x-c++', $mime ) ) ||
+			( 0 === strcasecmp( 'text/x-java', $mime ) )
 		)
 		{
 			// need further guidance on these, as they are sometimes incorrect

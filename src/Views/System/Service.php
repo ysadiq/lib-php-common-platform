@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
-use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\SwaggerManager;
 
@@ -42,16 +41,16 @@ class Service extends BaseSystemRestResource
 	public function __construct( $consumer, $resources = array() )
 	{
 		return parent::__construct(
-			$consumer,
-			array(
-				 'service_name'   => 'system',
-				 'name'           => 'Service',
-				 'api_name'       => 'service',
-				 'type'           => 'System',
-				 'description'    => 'System service administration.',
-				 'is_active'      => true,
-				 'resource_array' => $resources,
-			)
+					 $consumer,
+					 array(
+						 'service_name'   => 'system',
+						 'name'           => 'Service',
+						 'api_name'       => 'service',
+						 'type'           => 'System',
+						 'description'    => 'System service administration.',
+						 'is_active'      => true,
+						 'resource_array' => $resources,
+					 )
 		);
 	}
 

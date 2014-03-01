@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,14 +51,14 @@ class UserManager extends BaseSystemRestService
 	public function __construct()
 	{
 		parent::__construct(
-			array(
-				 'name'        => 'User Session Management',
-				 'apiName'     => 'user',
-				 'type'        => 'User',
-				 'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'description' => 'Service for a user to manage their session, profile and password.',
-				 'is_active'   => true,
-			)
+			  array(
+				  'name'        => 'User Session Management',
+				  'apiName'     => 'user',
+				  'type'        => 'User',
+				  'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+				  'description' => 'Service for a user to manage their session, profile and password.',
+				  'is_active'   => true,
+			  )
 		);
 	}
 

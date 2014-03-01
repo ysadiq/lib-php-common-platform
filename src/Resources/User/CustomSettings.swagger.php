@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,6 @@ $_custom['apis'] = array(
 					),
 				),
 				'notes'            => 'Returns an object containing name-value pairs for custom user settings',
-				'event_name'       => 'user.settings.get',
 			),
 			array(
 				'method'           => 'POST',
@@ -79,8 +78,7 @@ $_custom['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'A valid session is required to edit settings. Post body should be an array of name-value pairs.',
-				'event_name'       => 'user.settings.update',
+				'notes'            => 'A valid session is required to edit settings. ' . 'Post body should be an array of name-value pairs.',
 			),
 		),
 		'description' => 'Operations for managing custom user settings.',
@@ -160,7 +158,7 @@ $_custom['models'] = array(
 	'CustomSettings' => array(
 		'id'         => 'CustomSettings',
 		'properties' => array(
-			'type_name' => array(
+			'name' => array(
 				'type'  => 'Array',
 				'items' => array(
 					'$ref' => 'CustomSetting',
@@ -174,7 +172,7 @@ $_custom['models'] = array(
 			'name' => array(
 				'type'  => 'Array',
 				'items' => array(
-					'$ref' => 'string',
+					'type' => 'string',
 				),
 			),
 		),

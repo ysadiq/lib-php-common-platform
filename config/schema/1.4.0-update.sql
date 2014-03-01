@@ -54,7 +54,3 @@ REFERENCES `df_sys_provider` (`id`)
 
 --	A unique index on the provider user (credentials storage)
 CREATE UNIQUE INDEX `undx_provider_user_all_user_ids` ON `df_sys_provider_user` (`user_id`, `provider_id`, `provider_user_id`);
-
---	Drop old old old index if laying around
-DROP INDEX undx_df_sys_user_username ON df_sys_user;
-DROP INDEX ndx_df_sys_user_email ON df_sys_user;

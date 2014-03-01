@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -186,8 +186,8 @@ class Packager
 				if ( empty( $_storageServiceId ) )
 				{
 					$_service = Service::model()->find(
-						'type_id = :type',
-						array( ':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE )
+									   'type_id = :type',
+									   array( ':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE )
 					);
 					$_storageServiceId = ( $_service ) ? $_service->getPrimaryKey() : null;
 					$_container = 'applications';
@@ -286,8 +286,8 @@ class Packager
 		{
 			// must be set or defaulted to local
 			$_model = Service::model()->find(
-				'type_id = :type',
-				array( ':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE )
+							 'type_id = :type',
+							 array( ':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE )
 			);
 			$_storageServiceId = ( $_model ) ? $_model->getPrimaryKey() : null;
 			$_record['storage_service_id'] = $_storageServiceId;

@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,19 +78,19 @@ class EmailTemplate extends BasePlatformSystemModel
 	{
 		$_labels = array_merge(
 			array(
-				 'name'           => 'Name',
-				 'description'    => 'Description',
-				 'to'             => 'To Email List',
-				 'cc'             => 'CC Email List',
-				 'bcc'            => 'BCC Email List',
-				 'subject'        => 'Subject',
-				 'body_text'      => 'Body Text Format',
-				 'body_html'      => 'Body HTML Format',
-				 'from_name'      => 'From Name',
-				 'from_email'     => 'From Email',
-				 'reply_to_name'  => 'Reply To Name',
-				 'reply_to_email' => 'Reply To Email',
-				 'defaults'       => 'Default Values',
+				'name'           => 'Name',
+				'description'    => 'Description',
+				'to'             => 'To Email List',
+				'cc'             => 'CC Email List',
+				'bcc'            => 'BCC Email List',
+				'subject'        => 'Subject',
+				'body_text'      => 'Body Text Format',
+				'body_html'      => 'Body HTML Format',
+				'from_name'      => 'From Name',
+				'from_email'     => 'From Email',
+				'reply_to_name'  => 'Reply To Name',
+				'reply_to_email' => 'Reply To Email',
+				'defaults'       => 'Default Values',
 			),
 			$additionalLabels
 		);
@@ -153,26 +153,26 @@ class EmailTemplate extends BasePlatformSystemModel
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-			$requested,
-			array_merge(
-				array(
-					 'name',
-					 'description',
-					 'to',
-					 'cc',
-					 'bcc',
-					 'subject',
-					 'body_text',
-					 'body_html',
-					 'from_name',
-					 'from_email',
-					 'reply_to_name',
-					 'reply_to_email',
-					 'defaults',
-				),
-				$columns
-			),
-			$hidden
+					 $requested,
+					 array_merge(
+						 array(
+							 'name',
+							 'description',
+							 'to',
+							 'cc',
+							 'bcc',
+							 'subject',
+							 'body_text',
+							 'body_html',
+							 'from_name',
+							 'from_email',
+							 'reply_to_name',
+							 'reply_to_email',
+							 'defaults',
+						 ),
+						 $columns
+					 ),
+					 $hidden
 		);
 	}
 }

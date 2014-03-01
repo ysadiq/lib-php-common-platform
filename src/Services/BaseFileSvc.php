@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Interfaces\FileServiceLike;
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\RestData;
 use Kisma\Core\Utility\FilterInput;
@@ -255,13 +255,13 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 						$content = RestData::getPostedData();
 						$contentType = FilterInput::server( 'CONTENT_TYPE', '' );
 						$result = $this->_handleFileContent(
-							$this->_folderPath,
-							$fileNameHeader,
-							$content,
-							$contentType,
-							$extract,
-							$clean,
-							$checkExist
+									   $this->_folderPath,
+									   $fileNameHeader,
+									   $content,
+									   $contentType,
+									   $extract,
+									   $clean,
+									   $checkExist
 						);
 					}
 					elseif ( !empty( $folderNameHeader ) )
@@ -280,13 +280,13 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 						{
 							$tmpName = FileUtilities::importUrlFileToTemp( $fileUrl );
 							$result = $this->_handleFile(
-								$this->_folderPath,
-								'',
-								$tmpName,
-								'',
-								$extract,
-								$clean,
-								$checkExist
+										   $this->_folderPath,
+										   '',
+										   $tmpName,
+										   '',
+										   $extract,
+										   $clean,
+										   $checkExist
 							);
 							unlink( $tmpName );
 						}
@@ -338,13 +338,13 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 						// or possibly xml or json post of file properties create, copy or move
 						$content = RestData::getPostedData();
 						$result = $this->_handleFileContent(
-							$path,
-							$name,
-							$content,
-							$contentType,
-							$extract,
-							$clean,
-							$checkExist
+									   $path,
+									   $name,
+									   $content,
+									   $contentType,
+									   $extract,
+									   $clean,
+									   $checkExist
 						);
 					}
 					else
@@ -366,13 +366,13 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 							$tmpName = $file["tmp_name"];
 							$contentType = $file['type'];
 							$result = $this->_handleFile(
-								$path,
-								$name,
-								$tmpName,
-								$contentType,
-								$extract,
-								$clean,
-								$checkExist
+										   $path,
+										   $name,
+										   $tmpName,
+										   $contentType,
+										   $extract,
+										   $clean,
+										   $checkExist
 							);
 						}
 						else
@@ -504,8 +504,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 * @throws \Exception
 	 * @return array
 	 */
-	protected function _handleFile( $dest_path, $dest_name, $source_file, $contentType = '',
-		$extract = false, $clean = false, $check_exist = false )
+	protected function _handleFile( $dest_path, $dest_name, $source_file, $contentType = '', $extract = false, $clean = false, $check_exist = false )
 	{
 		$ext = FileUtilities::getFileExtension( $source_file );
 		if ( empty( $contentType ) )
@@ -547,8 +546,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 * @throws \Exception
 	 * @return array
 	 */
-	protected function _handleFileContent( $dest_path, $dest_name, $content, $contentType = '',
-		$extract = false, $clean = false, $check_exist = false )
+	protected function _handleFileContent( $dest_path, $dest_name, $content, $contentType = '', $extract = false, $clean = false, $check_exist = false )
 	{
 		$ext = FileUtilities::getFileExtension( $dest_name );
 		if ( empty( $contentType ) )
@@ -606,13 +604,13 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				$tmpName = $file['tmp_name'];
 				$contentType = $file['type'];
 				$tmp = $this->_handleFile(
-					$this->_folderPath,
-					$name,
-					$tmpName,
-					$contentType,
-					$extract,
-					$clean,
-					$checkExist
+							$this->_folderPath,
+							$name,
+							$tmpName,
+							$contentType,
+							$extract,
+							$clean,
+							$checkExist
 				);
 				$out[$key] = ( isset( $tmp['file'] ) ? $tmp['file'] : array() );
 			}

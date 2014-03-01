@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,10 +83,10 @@ class RoleServiceAccess extends BasePlatformSystemModel
 	{
 		$_labels = array_merge(
 			array(
-				 'role_id'    => 'Role',
-				 'service_id' => 'Service',
-				 'component'  => 'Component',
-				 'access'     => 'Access',
+				'role_id'    => 'Role',
+				'service_id' => 'Service',
+				'component'  => 'Component',
+				'access'     => 'Access',
 			),
 			$additionalLabels
 		);
@@ -104,17 +104,17 @@ class RoleServiceAccess extends BasePlatformSystemModel
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-			$requested,
-			array_merge(
-				array(
-					 'role_id',
-					 'service_id',
-					 'component',
-					 'access',
-				),
-				$columns
-			),
-			$hidden
+					 $requested,
+					 array_merge(
+						 array(
+							 'role_id',
+							 'service_id',
+							 'component',
+							 'access',
+						 ),
+						 $columns
+					 ),
+					 $hidden
 		);
 	}
 }

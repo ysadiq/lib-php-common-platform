@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -249,16 +249,16 @@ class EmailSvc extends BasePlatformRestService
 		}
 
 		$_message = EmailUtilities::createMessage(
-			$_to,
-			$_cc,
-			$_bcc,
-			$_subject,
-			$_text,
-			$_html,
-			$_fromName,
-			$_fromEmail,
-			$_replyName,
-			$_replyEmail
+								  $_to,
+								  $_cc,
+								  $_bcc,
+								  $_subject,
+								  $_text,
+								  $_html,
+								  $_fromName,
+								  $_fromEmail,
+								  $_replyName,
+								  $_replyEmail
 		);
 
 		return EmailUtilities::sendMessage( $this->_transport, $_message );

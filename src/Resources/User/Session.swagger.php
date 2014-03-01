@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,6 @@ $_session['apis'] = array(
 					),
 				),
 				'notes'            => 'Calling this refreshes the current session, or returns an error for timed-out or invalid sessions.',
-				'event_name'       => 'session.check',
 			),
 			array(
 				'method'           => 'POST',
@@ -68,7 +67,6 @@ $_session['apis'] = array(
 					),
 				),
 				'notes'            => 'Calling this creates a new session and logs in the user.',
-				'event_name'       => 'session.login',
 			),
 			array(
 				'method'           => 'DELETE',
@@ -82,7 +80,6 @@ $_session['apis'] = array(
 					),
 				),
 				'notes'            => 'Calling this deletes the current session and logs out the user.',
-				'event_name'       => 'session.logout',
 			),
 		),
 		'description' => 'Operations on a user\'s session.',
@@ -90,7 +87,7 @@ $_session['apis'] = array(
 );
 
 $_session['models'] = array(
-	'Session' => array(
+	'Session'    => array(
 		'id'         => 'Session',
 		'properties' => array(
 			'id'              => array(
@@ -125,26 +122,18 @@ $_session['models'] = array(
 				'type'        => 'string',
 				'description' => 'Date timestamp of the last login for the current user.',
 			),
-			'user_data'       => array(
-				'type'        => 'string',
-				'description' => 'Extra user data, potentially from remote login provider.',
-			),
-			'user_source'     => array(
-				'type'        => 'integer',
-				'description' => 'Where the user login originated, 0 = local, otherwise remote login provider_id.',
-			),
 			'app_groups'      => array(
 				'type'        => 'Array',
 				'description' => 'App groups and the containing apps.',
 				'items'       => array(
-					'type' => 'App',
+					'$ref' => 'SessionApp',
 				),
 			),
 			'no_group_apps'   => array(
 				'type'        => 'Array',
 				'description' => 'Apps that are not in any app groups.',
 				'items'       => array(
-					'type' => 'App',
+					'$ref' => 'SessionApp',
 				),
 			),
 			'session_id'      => array(
@@ -161,7 +150,7 @@ $_session['models'] = array(
 			),
 		),
 	),
-	'Login'   => array(
+	'Login'      => array(
 		'id'         => 'Login',
 		'properties' => array(
 			'email'    => array(
@@ -174,11 +163,12 @@ $_session['models'] = array(
 			),
 		),
 	),
-	'App'     => array(
-		'id'         => 'App',
+	'SessionApp' => array(
+		'id'         => 'SessionApp',
 		'properties' => array(
 			'id'                      => array(
 				'type'        => 'integer',
+				'format'      => 'int32',
 				'description' => 'Id of the application.',
 			),
 			'name'                    => array(

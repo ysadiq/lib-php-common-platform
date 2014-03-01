@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,11 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use Kisma\Core\Utility\Option;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Utility\FileUtilities;
+use Kisma\Core\Utility\Option;
 
 /**
  * RemoteFileSvc.php
@@ -369,7 +369,7 @@ abstract class RemoteFileSvc extends BaseFileSvc
 	 */
 	public function deleteFolder( $container, $path, $force = false )
 	{
-		$path = rtrim($path, '/') . '/';
+		$path = rtrim( $path, '/' ) . '/';
 		$_blobs = $this->listBlobs( $container, $path );
 		if ( !empty( $_blobs ) )
 		{

@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,6 @@ $_profile['apis'] = array(
 				'notes'            =>
 					'A valid current session is required to use this API. ' .
 					'This profile, along with password, is the only things that the user can directly change.',
-				'event_name'       => 'user.profile.get',
 			),
 			array(
 				'method'           => 'POST',
@@ -70,7 +69,6 @@ $_profile['apis'] = array(
 					),
 				),
 				'notes'            => 'Update the display name, phone, etc., as well as, security question and answer.',
-				'event_name'       => 'user.profile.update',
 			),
 		),
 		'description' => 'Operations on a user\'s profile.',
@@ -104,6 +102,7 @@ $_commonProfile = array(
 	),
 	'default_app_id'    => array(
 		'type'        => 'integer',
+		'format'      => 'int32',
 		'description' => 'Id of the application to be launched at login.',
 	),
 );

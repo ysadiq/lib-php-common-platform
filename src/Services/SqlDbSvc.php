@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -130,17 +130,17 @@ class SqlDbSvc extends BaseDbSvc
 
 			/** @var \CDbConnection $_db */
 			$_db = Pii::createComponent(
-				array(
-					 'class'                 => 'CDbConnection',
-					 'connectionString'      => $dsn,
-					 'username'              => $user,
-					 'password'              => $password,
-					 'charset'               => 'utf8',
-					 'enableProfiling'       => defined( YII_DEBUG ),
-					 'enableParamLogging'    => defined( YII_DEBUG ),
-					 'schemaCachingDuration' => 3600,
-					 'schemaCacheID'         => ( !$this->_isNative && static::ENABLE_REMOTE_CACHE ) ? static::REMOTE_CACHE_ID : 'cache',
-				)
+					  array(
+						  'class'                 => 'CDbConnection',
+						  'connectionString'      => $dsn,
+						  'username'              => $user,
+						  'password'              => $password,
+						  'charset'               => 'utf8',
+						  'enableProfiling'       => defined( YII_DEBUG ),
+						  'enableParamLogging'    => defined( YII_DEBUG ),
+						  'schemaCachingDuration' => 3600,
+						  'schemaCacheID'         => ( !$this->_isNative && static::ENABLE_REMOTE_CACHE ) ? static::REMOTE_CACHE_ID : 'cache',
+					  )
 			);
 
 			Pii::app()->setComponent( 'db.' . $this->_apiName, $_db );
@@ -149,13 +149,13 @@ class SqlDbSvc extends BaseDbSvc
 			if ( !$this->_isNative && static::ENABLE_REMOTE_CACHE )
 			{
 				$_cache = Pii::createComponent(
-					array(
-						 'class'                => 'CDbCache',
-						 'connectionID'         => 'db' /* . $this->_apiName*/,
-						 'cacheTableName'       => 'df_sys_cache_remote',
-						 'autoCreateCacheTable' => true,
-						 'keyPrefix'            => $this->_apiName,
-					)
+							 array(
+								 'class'                => 'CDbCache',
+								 'connectionID'         => 'db' /* . $this->_apiName*/,
+								 'cacheTableName'       => 'df_sys_cache_remote',
+								 'autoCreateCacheTable' => true,
+								 'keyPrefix'            => $this->_apiName,
+							 )
 				);
 
 				try
@@ -1631,12 +1631,12 @@ class SqlDbSvc extends BaseDbSvc
 						$relatedTable = Option::get( $relationInfo, 'ref_table' );
 						$relatedField = Option::get( $relationInfo, 'ref_field' );
 						$this->assignManyToOne(
-							$table,
-							$id,
-							$relatedTable,
-							$relatedField,
-							$relations,
-							$allow_delete
+							 $table,
+							 $id,
+							 $relatedTable,
+							 $relatedField,
+							 $relations,
+							 $allow_delete
 						);
 						break;
 					case 'many_many':
@@ -1654,13 +1654,13 @@ class SqlDbSvc extends BaseDbSvc
 						$joinLeftField = trim( Option::get( $other, 0, '' ) );
 						$joinRightField = trim( Option::get( $other, 1, '' ) );
 						$this->assignManyToOneByMap(
-							$table,
-							$id,
-							$relatedTable,
-							$joinTable,
-							$joinLeftField,
-							$joinRightField,
-							$relations
+							 $table,
+							 $id,
+							 $relatedTable,
+							 $joinTable,
+							 $joinLeftField,
+							 $joinRightField,
+							 $relations
 						);
 						break;
 					default:

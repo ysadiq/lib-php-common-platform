@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,9 +24,6 @@ use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Models\BaseFactoryModel;
 use Kisma\Core\Exceptions\NotImplementedException;
-use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Hasher;
-use Kisma\Core\Utility\Sql;
 
 /**
  * BasePlatformModel.php
@@ -62,17 +59,17 @@ class BasePlatformModel extends BaseFactoryModel
 		return array_merge(
 			parent::behaviors(),
 			array( //	Timestamper
-				 'base_platform_model.timestamp_behavior' => array(
-					 'class'                => '\\DreamFactory\\Yii\\Behaviors\\TimestampBehavior',
-					 'createdColumn'        => array( 'create_date', 'created_date' ),
-					 'createdByColumn'      => array( 'create_user_id', 'created_by_id' ),
-					 'lastModifiedColumn'   => array( 'lmod_date', 'last_modified_date' ),
-					 'lastModifiedByColumn' => array( 'lmod_user_id', 'last_modified_by_id' ),
-					 'currentUserId'        => function ()
-					 {
-						 return Session::getCurrentUserId();
-					 }
-				 ),
+				   'base_platform_model.timestamp_behavior' => array(
+					   'class'                => '\\DreamFactory\\Yii\\Behaviors\\TimestampBehavior',
+					   'createdColumn'        => array( 'create_date', 'created_date' ),
+					   'createdByColumn'      => array( 'create_user_id', 'created_by_id' ),
+					   'lastModifiedColumn'   => array( 'lmod_date', 'last_modified_date' ),
+					   'lastModifiedByColumn' => array( 'lmod_user_id', 'last_modified_by_id' ),
+					   'currentUserId'        => function ()
+						   {
+							   return Session::getCurrentUserId();
+						   }
+				   ),
 			)
 		);
 	}
@@ -97,11 +94,11 @@ class BasePlatformModel extends BaseFactoryModel
 		return $_cache = array_merge(
 		//	Mine
 			array(
-				 'id'                 => 'ID',
-				 'create_date'        => 'Created Date',
-				 'created_date'       => 'Created Date',
-				 'last_modified_date' => 'Last Modified Date',
-				 'lmod_date'          => 'Last Modified Date',
+				'id'                 => 'ID',
+				'create_date'        => 'Created Date',
+				'created_date'       => 'Created Date',
+				'last_modified_date' => 'Last Modified Date',
+				'lmod_date'          => 'Last Modified Date',
 			),
 			//	Subclass
 			$additionalLabels

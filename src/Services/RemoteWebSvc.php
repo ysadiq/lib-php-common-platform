@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\RestData;
-use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Curl;
 
 /**
  * RemoteWebSvc
@@ -163,9 +163,8 @@ class RemoteWebSvc extends BasePlatformRestService
 				$key = Option::get( $header, 'name' );
 				$value = Option::get( $header, 'value' );
 
-				$options[CURLOPT_HTTPHEADER] = array(
-					!isset( $options[CURLOPT_HTTPHEADER] ) ? array( $key . ': ' . $value ) : $options[CURLOPT_HTTPHEADER][] = $key . ': ' . $value
-				);
+				$options[CURLOPT_HTTPHEADER]
+					= !isset( $options[CURLOPT_HTTPHEADER] ) ? array( $key . ': ' . $value ) : $options[CURLOPT_HTTPHEADER][] = $key . ': ' . $value;
 			}
 		}
 
@@ -177,8 +176,8 @@ class RemoteWebSvc extends BasePlatformRestService
 		parent::_preProcess();
 
 		$this->_query = $this->buildParameterString( $this->_action );
-		$this->_url =
-			rtrim( $this->_baseUrl, '/' ) . ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null ) . '?' . $this->_query;
+		$this->_url
+			= rtrim( $this->_baseUrl, '/' ) . ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null ) . '?' . $this->_query;
 
 		//	set additional headers
 		$this->_curlOptions = $this->addHeaders( $this->_action, $this->_curlOptions );

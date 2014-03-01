@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,14 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\PlatformStorageDrivers;
-use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Platform\Interfaces\SqlDbDriverTypes;
-use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Interfaces\SqlDbDriverTypes;
+use DreamFactory\Yii\Utility\Pii;
 
 /**
  * SqlDbUtilities
@@ -175,9 +175,9 @@ class SqlDbUtilities implements SqlDbDriverTypes
 			$_names = $temp;
 			natcasesort( $_names );
 			$labels = static::getLabels(
-				array( 'and', "field=''", array( 'in', 'table', $_names ) ),
-				array(),
-				'table,label,plural'
+							array( 'and', "field=''", array( 'in', 'table', $_names ) ),
+							array(),
+							'table,label,plural'
 			);
 			$tables = array();
 			foreach ( $_names as $name )
@@ -530,8 +530,8 @@ class SqlDbUtilities implements SqlDbDriverTypes
 						$tmpTable = Option::get( $value2, 0 );
 						$tmpField = Option::get( $value2, 1 );
 						if ( ( 0 != strcasecmp( $key, $key2 ) ) && // not same key
-							 ( 0 != strcasecmp( $tmpTable, $name ) ) && // not self-referencing table
-							 ( 0 != strcasecmp( $parent_table, $name ) )
+							( 0 != strcasecmp( $tmpTable, $name ) ) && // not self-referencing table
+							( 0 != strcasecmp( $parent_table, $name ) )
 						)
 						{ // not same as parent, i.e. via reference back to self
 							// not the same key
@@ -861,14 +861,14 @@ class SqlDbUtilities implements SqlDbDriverTypes
 				case 'int':
 				case 'bigint':
 				case 'integer':
-					$definition =
-						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( 'mediumint' == $type ) )
-							? 'int' : $type;
+					$definition
+						= ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( 'mediumint' == $type ) )
+						? 'int' : $type;
 					if ( isset( $length ) )
 					{
 						if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) &&
-							 ( $length <= 255 ) &&
-							 ( $length > 0 )
+							( $length <= 255 ) &&
+							( $length > 0 )
 						)
 						{
 							$definition .= '(' . intval( $length ) . ')'; // sets the viewable length
@@ -890,7 +890,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					{
 						$length = intval( $length );
 						if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 65 ) ) ||
-							 ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 38 ) )
+							( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 38 ) )
 						)
 						{
 							throw new BadRequestException( "Decimal precision '$length' is out of valid range." );
@@ -903,8 +903,8 @@ class SqlDbUtilities implements SqlDbDriverTypes
 						if ( !empty( $scale ) )
 						{
 							if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $scale > 30 ) ) ||
-								 ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $scale > 18 ) ) ||
-								 ( $scale > $length )
+								( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $scale > 18 ) ) ||
+								( $scale > $length )
 							)
 							{
 								throw new BadRequestException( "Decimal scale '$scale' is out of valid range." );
@@ -930,7 +930,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					{
 						$length = intval( $length );
 						if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 53 ) ) ||
-							 ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 38 ) )
+							( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 38 ) )
 						)
 						{
 							throw new BadRequestException( "Decimal precision '$length' is out of valid range." );
@@ -942,7 +942,8 @@ class SqlDbUtilities implements SqlDbDriverTypes
 						}
 						if ( !empty( $scale ) && !( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) )
 						{
-							if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $scale > 30 ) ) || ( $scale > $length )
+							if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $scale > 30 ) ) ||
+								 ( $scale > $length )
 							)
 							{
 								throw new BadRequestException( "Decimal scale '$scale' is out of valid range." );
@@ -959,9 +960,9 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					break;
 				case 'money':
 				case 'smallmoney':
-					$definition =
-						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? $type
-							: 'money'; // let yii handle it
+					$definition
+						= ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? $type
+						: 'money'; // let yii handle it
 					// convert to float
 					$default = ( isset( $default ) ) ? floatval( $default ) : $default;
 					break;
@@ -1069,21 +1070,21 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					$quoteDefault = true;
 					break;
 				case 'text':
-					$definition =
-						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varchar(max)'
-							: 'text'; // microsoft recommended
+					$definition
+						= ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varchar(max)'
+						: 'text'; // microsoft recommended
 					$quoteDefault = true;
 					break;
 				case 'blob':
-					$definition =
-						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varbinary(max)'
-							: 'blob'; // microsoft recommended
+					$definition
+						= ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varbinary(max)'
+						: 'blob'; // microsoft recommended
 					$quoteDefault = true;
 					break;
 				case 'datetime':
-					$definition =
-						( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ? 'datetime2'
-							: 'datetime'; // microsoft recommends
+					$definition
+						= ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ? 'datetime2'
+						: 'datetime'; // microsoft recommends
 					break;
 				default:
 					// blind copy of column type
@@ -1163,9 +1164,9 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					{
 						throw new BadRequestException( "Field '$name' already exists in table '$table_name'." );
 					}
-					if ( ( ( 0 == strcasecmp( 'id', $type ) ) ||
-						   ( 0 == strcasecmp( 'pk', $type ) ) ||
-						   Utilities::boolval( Utilities::getArrayValue( 'is_primary_key', $field, false ) ) ) && ( $colSchema->isPrimaryKey )
+					if ( ( ( 0 == strcasecmp( 'id', $type ) ) || ( 0 == strcasecmp( 'pk', $type ) ) ||
+						   Utilities::boolval( Utilities::getArrayValue( 'is_primary_key', $field, false ) ) ) &&
+						 ( $colSchema->isPrimaryKey )
 					)
 					{
 						// don't try to alter
@@ -1218,7 +1219,8 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					}
 					$primaryKey = $name;
 				}
-				elseif ( ( 0 == strcasecmp( 'reference', $type ) ) || Utilities::boolval( Utilities::getArrayValue( 'is_foreign_key', $field, false ) )
+				elseif ( ( 0 == strcasecmp( 'reference', $type ) ) ||
+						 Utilities::boolval( Utilities::getArrayValue( 'is_foreign_key', $field, false ) )
 				)
 				{
 					// special case for references because the table referenced may not be created yet
@@ -1429,13 +1431,13 @@ class SqlDbUtilities implements SqlDbDriverTypes
 						continue;
 					}
 					$rows = $command->addForeignKey(
-						$name,
-						$table,
-						$reference['column'],
-						$refTable,
-						$reference['ref_fields'],
-						$reference['delete'],
-						$reference['update']
+									$name,
+									$table,
+									$reference['column'],
+									$refTable,
+									$reference['ref_fields'],
+									$reference['delete'],
+									$reference['update']
 					);
 				}
 			}
@@ -1965,10 +1967,10 @@ SQL;
 					$_sql,
 					0,
 					array(
-						':table_column' => $_tableColumn,
-						':table_value'  => Option::get( $_label, 'table' ),
-						':field_column' => $_fieldColumn,
-						':field_value'  => Option::get( $_label, 'field' ),
+						 ':table_column' => $_tableColumn,
+						 ':table_value'  => Option::get( $_label, 'table' ),
+						 ':field_column' => $_fieldColumn,
+						 ':field_value'  => Option::get( $_label, 'field' ),
 					)
 				);
 

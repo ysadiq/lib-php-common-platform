@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,6 @@ $_custom['apis'] = array(
 					),
 				),
 				'notes'            => 'Returns an object containing name-value pairs for custom system settings',
-				'event_name'       => 'settings.get',
 			),
 			array(
 				'method'           => 'POST',
@@ -69,7 +68,6 @@ $_custom['apis'] = array(
 				),
 				'notes'            =>
 					'A valid session and system configuration permissions is required to edit settings. ' . 'Post body should be an array of name-value pairs.',
-				'event_name'       => 'settings.update',
 			),
 		),
 		'description' => 'Operations for managing custom system settings.',
@@ -99,7 +97,6 @@ $_custom['apis'] = array(
 					),
 				),
 				'notes'            => 'Setting will be returned as an object containing name-value pair.',
-				'event_name'       => 'setting.get',
 			),
 			array(
 				'method'           => 'DELETE',
@@ -131,7 +128,6 @@ $_custom['apis'] = array(
 					),
 				),
 				'notes'            => 'A valid session with system configuration permissions is required to delete settings.',
-				'event_name'       => 'setting.delete',
 			),
 		),
 		'description' => 'Operations for individual custom system settings.',
@@ -156,7 +152,7 @@ $_custom['models'] = array(
 			'name' => array(
 				'type'  => 'Array',
 				'items' => array(
-					'$ref' => 'string',
+					'type' => 'string',
 				),
 			),
 		),

@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,15 +82,15 @@ class AppServiceRelation extends BasePlatformSystemModel
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-			array_merge(
-				array(
-					 'id'         => 'Id',
-					 'app_id'     => 'App',
-					 'service_id' => 'Service',
-					 'component'  => 'Component',
-				),
-				$additionalLabels
-			)
+					 array_merge(
+						 array(
+							 'id'         => 'Id',
+							 'app_id'     => 'App',
+							 'service_id' => 'Service',
+							 'component'  => 'Component',
+						 ),
+						 $additionalLabels
+					 )
 		);
 	}
 
@@ -105,16 +105,16 @@ class AppServiceRelation extends BasePlatformSystemModel
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-			$requested,
-			array_merge(
-				array(
-					 'app_id',
-					 'service_id',
-					 'component',
-				),
-				$columns
-			),
-			$hidden
+					 $requested,
+					 array_merge(
+						 array(
+							 'app_id',
+							 'service_id',
+							 'component',
+						 ),
+						 $columns
+					 ),
+					 $hidden
 		);
 	}
 
@@ -125,7 +125,7 @@ class AppServiceRelation extends BasePlatformSystemModel
 	 */
 	public function getAttributes( $names = true )
 	{
-		$_record =  parent::getAttributes( $names );
+		$_record = parent::getAttributes( $names );
 
 		$_component = Option::get( $_record, 'component' );
 		if ( !empty( $_component ) )

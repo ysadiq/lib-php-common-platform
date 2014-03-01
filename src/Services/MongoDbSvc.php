@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,6 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Common\Utility\DataFormat;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -570,10 +568,10 @@ class MongoDbSvc extends NoSqlDbSvc
 					$_record = array( '$set' => $_record );
 				}
 				$result = $_coll->findAndModify(
-					array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) ),
-					$_record,
-					$_fieldArray,
-					array( 'new' => true )
+								array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) ),
+								$_record,
+								$_fieldArray,
+								array( 'new' => true )
 				);
 
 				$_out[] = static::mongoIdToId( $result );
@@ -613,10 +611,10 @@ class MongoDbSvc extends NoSqlDbSvc
 		try
 		{
 			$result = $_coll->findAndModify(
-				$_criteria,
-				$record,
-				$_fieldArray,
-				array( 'new' => true )
+							$_criteria,
+							$record,
+							$_fieldArray,
+							array( 'new' => true )
 			);
 
 			return static::mongoIdToId( $result );
@@ -732,10 +730,10 @@ class MongoDbSvc extends NoSqlDbSvc
 		try
 		{
 			$result = $_coll->findAndModify(
-				$_criteria,
-				$record,
-				$_fieldArray,
-				array( 'new' => true )
+							$_criteria,
+							$record,
+							$_fieldArray,
+							array( 'new' => true )
 			);
 
 			return static::mongoIdToId( $result );
@@ -953,7 +951,7 @@ class MongoDbSvc extends NoSqlDbSvc
 			$_result = $_result->limit( $_limit );
 
 			$_out = iterator_to_array( $_result );
-			$_out =  static::cleanRecords( $_out );
+			$_out = static::cleanRecords( $_out );
 			if ( $_addCount || $_needMore )
 			{
 				$_out['meta']['count'] = $_count;

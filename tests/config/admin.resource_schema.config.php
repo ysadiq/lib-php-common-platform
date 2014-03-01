@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-use DreamFactory\Yii\Utility\Pii;
 
 /**
  * admin.resource_schema.config.php
@@ -27,58 +26,57 @@ use DreamFactory\Yii\Utility\Pii;
 $_basePath = dirname( __DIR__ );
 $_vendorPath = $_basePath . '/vendor';
 
-return
-	array(
-		//*************************************************************************
-		//	Apps
-		//*************************************************************************
+return array(
+	//*************************************************************************
+	//	Apps
+	//*************************************************************************
 
-		'apps'           => array(
-			'header'       => 'Installed Applications',
-			'resource'     => 'app',
-			'resourceName' => 'Application',
-			'fields'       => array(
-				'id'        => array( 'title' => 'ID', 'key' => true, 'list' => false, 'create' => false, 'edit' => false ),
-				'name'      => array( 'title' => 'Name' ),
-				'api_name'  => array( 'title' => 'Endpoint', 'edit' => false ),
-				'url'       => array( 'title' => 'Default Page', 'inputClass' => 'input-xxlarge' ),
-				'is_active' => array(
-					'title'   => 'Active',
-					'options' => array( 'true' => 'Yes', 'false' => 'No' ),
-					'display' => '##function (data){return data ? "Yes" : "No";}##',
-				),
+	'apps'           => array(
+		'header'       => 'Installed Applications',
+		'resource'     => 'app',
+		'resourceName' => 'Application',
+		'fields'       => array(
+			'id'        => array( 'title' => 'ID', 'key' => true, 'list' => false, 'create' => false, 'edit' => false ),
+			'name'      => array( 'title' => 'Name' ),
+			'api_name'  => array( 'title' => 'Endpoint', 'edit' => false ),
+			'url'       => array( 'title' => 'Default Page', 'inputClass' => 'input-xxlarge' ),
+			'is_active' => array(
+				'title'   => 'Active',
+				'options' => array( 'true' => 'Yes', 'false' => 'No' ),
+				'display' => '##function (data){return data ? "Yes" : "No";}##',
 			),
-			'listFields'   => 'id,name,api_name,url,is_active',
-			'labels'       => array( 'ID', 'Name', 'Starting Path', 'Active' ),
 		),
-		//*************************************************************************
-		//	Providers
-		//*************************************************************************
+		'listFields'   => 'id,name,api_name,url,is_active',
+		'labels'       => array( 'ID', 'Name', 'Starting Path', 'Active' ),
+	),
+	//*************************************************************************
+	//	Providers
+	//*************************************************************************
 
-		'providers'      => array(
-			'header'       => 'Authentication Providers',
-			'resource'     => 'provider',
-			'resourceName' => 'Provider',
-			'fields'       => array(
-				'id'            => array( 'title' => 'ID', 'key' => true, 'list' => true, 'create' => false, 'edit' => false ),
-				'provider_name' => array( 'title' => 'Name' ),
-				'api_name'      => array( 'title' => 'API Name' ),
-				'config_text'   => array( 'title' => 'Settings', 'list' => false ),
-			),
-			'listFields'   => 'id,provider_name,api_name,config_text',
-			'labels'       => array( 'ID', 'Name', 'API Name', 'Settings' ),
+	'providers'      => array(
+		'header'       => 'Authentication Providers',
+		'resource'     => 'provider',
+		'resourceName' => 'Provider',
+		'fields'       => array(
+			'id'            => array( 'title' => 'ID', 'key' => true, 'list' => true, 'create' => false, 'edit' => false ),
+			'provider_name' => array( 'title' => 'Name' ),
+			'api_name'      => array( 'title' => 'API Name' ),
+			'config_text'   => array( 'title' => 'Settings', 'list' => false ),
 		),
-		//*************************************************************************
-		//	Provider Users
-		//*************************************************************************
+		'listFields'   => 'id,provider_name,api_name,config_text',
+		'labels'       => array( 'ID', 'Name', 'API Name', 'Settings' ),
+	),
+	//*************************************************************************
+	//	Provider Users
+	//*************************************************************************
 
-		'provider_users' => array(
-			'header'       => 'Provider Users',
-			'resource'     => 'provider_user',
-			'resourceName' => 'ProviderUser',
-			'fields'       => array( 'id', 'user_id', 'provider_id', 'provider.provider_name', 'provider_user_id', 'last_use_date' ),
-			'labels'       => array( 'ID', 'User', 'Provider', 'Provider User ID', 'Last Used' ),
-			'listFields'   => 'id,user_id,provider_id,provider.provider_name,provider_user_id,last_use_date',
-		),
-	);
+	'provider_users' => array(
+		'header'       => 'Provider Users',
+		'resource'     => 'provider_user',
+		'resourceName' => 'ProviderUser',
+		'fields'       => array( 'id', 'user_id', 'provider_id', 'provider.provider_name', 'provider_user_id', 'last_use_date' ),
+		'labels'       => array( 'ID', 'User', 'Provider', 'Provider User ID', 'Last Used' ),
+		'listFields'   => 'id,user_id,provider_id,provider.provider_name,provider_user_id,last_use_date',
+	),
+);
 

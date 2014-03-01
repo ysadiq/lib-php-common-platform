@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -165,10 +164,10 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-			array(
-				'created_by_id'       => 'Created By',
-				'last_modified_by_id' => 'Last Modified By',
-			) + $additionalLabels
+					 array(
+						 'created_by_id'       => 'Created By',
+						 'last_modified_by_id' => 'Last Modified By',
+					 ) + $additionalLabels
 		);
 	}
 
@@ -212,7 +211,8 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 
 		try
 		{
-			$_sql = <<<MYSQL
+			$_sql
+				= <<<MYSQL
 SELECT
 	id,
 	$mapColumn
@@ -395,10 +395,10 @@ MYSQL;
 		if ( $this->hasAttribute( 'api_name' ) )
 		{
 			$this->getDbCriteria()->mergeWith(
-				array(
-					'condition' => 'api_name = :api_name',
-					'params'    => array( ':api_name' => $name ),
-				)
+				 array(
+					 'condition' => 'api_name = :api_name',
+					 'params'    => array( ':api_name' => $name ),
+				 )
 			);
 		}
 

@@ -31,7 +31,24 @@
 			"type":        "Email Service",
 			"type_id":     1,
 			"description": "Email utility access",
-			"parameters": [{"name":"from_name","value":""},{"name":"from_email","value":""},{"name":"reply_to_name","value":""},{"name":"reply_to_email","value":""}]
+			"parameters":  [
+				{
+					"name":  "from_name",
+					"value": ""
+				},
+				{
+					"name":  "from_email",
+					"value": ""
+				},
+				{
+					"name":  "reply_to_name",
+					"value": ""
+				},
+				{
+					"name":  "reply_to_email",
+					"value": ""
+				}
+			]
 		},
 		{
 			"api_name":    "portal",
@@ -66,6 +83,20 @@
 			"body_html":   "Hi {first_name},<br\/>\n<br\/>\nYou have requested to reset your password. Go to the following url, enter the code below, and set your new password.<br\/>\n<br\/>\n{dsp.confirm_reset_url}<br\/>\n<br\/>\nConfirmation Code: {confirm_code}<br\/>\n<br\/>\nThanks,<br\/>\n{from_name}",
 			"from_name":   "DreamFactory",
 			"from_email":  "no-reply@dreamfactory.com"
+		}
+	],
+	"df_sys_app":            [
+		{
+			"url": "https://github.com/dreamfactorysoftware/app-todo-jquery/raw/master/todojquery.dfpkg"
+		},
+		{
+			"url": "https://github.com/dreamfactorysoftware/app-todo-angular/raw/master/todoangular.dfpkg"
+		},
+		{
+			"url": "https://github.com/dreamfactorysoftware/app-todo-sencha/raw/master/todosencha.dfpkg"
+		},
+		{
+			"url": "https://github.com/dreamfactorysoftware/app-calendar/raw/master/calendar.dfpkg"
 		}
 	]
 }
