@@ -43,22 +43,22 @@ class Profile extends BasePlatformRestResource
 	public function __construct( $consumer, $resources = array() )
 	{
 		parent::__construct(
-			  $consumer,
-			  array(
-				  'name'           => 'User Profile',
-				  'service_name'   => 'user',
-				  'type'           => 'System',
-				  'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				  'api_name'       => 'profile',
-				  'description'    => 'Resource for a user to manage their profile.',
-				  'is_active'      => true,
-				  'resource_array' => $resources,
-				  'verb_aliases'   => array(
-					  static::Put   => static::Post,
-					  static::Patch => static::Post,
-					  static::Merge => static::Post,
-				  )
-			  )
+			$consumer,
+			array(
+				'name'           => 'User Profile',
+				'service_name'   => 'user',
+				'type'           => 'System',
+				'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				'api_name'       => 'profile',
+				'description'    => 'Resource for a user to manage their profile.',
+				'is_active'      => true,
+				'resource_array' => $resources,
+				'verb_aliases'   => array(
+					static::Put   => static::Post,
+					static::Patch => static::Post,
+					static::Merge => static::Post,
+				)
+			)
 		);
 	}
 

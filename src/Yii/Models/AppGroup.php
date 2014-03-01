@@ -111,15 +111,15 @@ class AppGroup extends BasePlatformSystemModel
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-					 $requested,
-					 array_merge(
-						 array(
-							 'name',
-							 'description',
-						 ),
-						 $columns
-					 ),
-					 $hidden
+			$requested,
+			array_merge(
+				array(
+					'name',
+					'description',
+				),
+				$columns
+			),
+			$hidden
 		);
 	}
 }

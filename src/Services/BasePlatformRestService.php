@@ -188,7 +188,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		if ( false === ( $this->_response = $this->_handleResource() ) )
 		{
 			$_message
-				= $this->_action .
+				=
+				$this->_action .
 				' requests' .
 				( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
 				' are not currently supported by the "' .
@@ -398,13 +399,13 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	{
 		// 	Determine application if any
 		$_appName = $this->_requestObject->query->get(
-												'app_name',
-													//	No app_name, look for headers...
-												Option::server(
-													  'HTTP_X_DREAMFACTORY_APPLICATION_NAME',
-													  Option::server( 'HTTP_X_APPLICATION_NAME' )
-												),
-												FILTER_SANITIZE_STRING
+			'app_name',
+			//	No app_name, look for headers...
+			Option::server(
+				'HTTP_X_DREAMFACTORY_APPLICATION_NAME',
+				Option::server( 'HTTP_X_APPLICATION_NAME' )
+			),
+			FILTER_SANITIZE_STRING
 		);
 
 		//	Still empty?
@@ -422,7 +423,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 			else
 			{
 				RestResponse::sendErrors(
-							new BadRequestException( 'No application name header or parameter value in request.' )
+					new BadRequestException( 'No application name header or parameter value in request.' )
 				);
 			}
 		}
@@ -554,9 +555,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function trigger( $eventName, $event = null, $priority = 0 )
 	{
 		return parent::trigger(
-					 $eventName,
-					 $event ? : new RestServiceEvent( $this->_apiName, $this->_resource, $this->_requestObject, $this->_responseObject ),
-					 $priority
+			$eventName,
+			$event ? : new RestServiceEvent( $this->_apiName, $this->_resource, $this->_requestObject, $this->_responseObject ),
+			$priority
 		);
 	}
 

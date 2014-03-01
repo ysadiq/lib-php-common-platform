@@ -57,14 +57,14 @@ file_exists( __DIR__ . ALIASES_CONFIG_PATH ) && require __DIR__ . ALIASES_CONFIG
  * Application Paths
  */
 \Kisma::set(
-	  array(
-		  'app.app_name'      => $_appName,
-		  'app.doc_root'      => $_docRoot,
-		  'app.log_path'      => $_logFilePath,
-		  'app.vendor_path'   => $_vendorPath,
-		  'app.log_file_name' => $_logFileName,
-		  'app.project_root'  => $_basePath,
-	  )
+	array(
+		'app.app_name'      => $_appName,
+		'app.doc_root'      => $_docRoot,
+		'app.log_path'      => $_logFilePath,
+		'app.vendor_path'   => $_vendorPath,
+		'app.log_file_name' => $_logFileName,
+		'app.project_root'  => $_basePath,
+	)
 );
 
 /**

@@ -22,8 +22,8 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\RestData;
-use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Curl;
+use Kisma\Core\Utility\Option;
 
 /**
  * RemoteWebSvc
@@ -194,10 +194,10 @@ class RemoteWebSvc extends BasePlatformRestService
 //		Log::debug( 'Outbound HTTP request: ' . $this->_action . ': ' . $this->_url );
 
 		$_result = Curl::request(
-					   $this->_action,
-					   $this->_url,
-					   RestData::getPostedData() ? : array(),
-					   $this->_curlOptions
+			$this->_action,
+			$this->_url,
+			RestData::getPostedData() ? : array(),
+			$this->_curlOptions
 		);
 
 		if ( false === $_result )

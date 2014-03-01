@@ -240,11 +240,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 		{
 			case HttpMethod::TRACE:
 				Log::error(
-				   'HTTP TRACE received!',
-				   array(
-					   'server'  => $this->_requestObject->server->all(),
-					   'request' => $this->_requestObject->request->all()
-				   )
+					'HTTP TRACE received!',
+					array(
+						'server'  => $this->_requestObject->server->all(),
+						'request' => $this->_requestObject->request->all()
+					)
 				);
 				throw new BadRequestException();
 

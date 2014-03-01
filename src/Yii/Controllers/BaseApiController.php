@@ -312,7 +312,7 @@ class BaseApiController extends \CController implements EventPublisherLike
 
 			$_output = $this->_formatOutput( $_response );
 			Log::error(
-			   'Complete (!)< ' . $_targetMethod . ' < ERROR result : ' . PHP_EOL . ( is_scalar( $_output ) ? $_output : print_r( $_output, true ) )
+				'Complete (!)< ' . $_targetMethod . ' < ERROR result : ' . PHP_EOL . ( is_scalar( $_output ) ? $_output : print_r( $_output, true ) )
 			);
 			$this->_sendResponse( $_ex, $_output );
 		}
@@ -340,8 +340,8 @@ class BaseApiController extends \CController implements EventPublisherLike
 
 		if ( !empty( $_path ) )
 		{
-			$_path =
-				str_ireplace( '/' . $this->id . '/' . $this->action->id, null, rtrim( $_path, '/' ) );
+			$_path
+				= str_ireplace( '/' . $this->id . '/' . $this->action->id, null, rtrim( $_path, '/' ) );
 
 //			Log::debug( 'Parsed path: ' . $_path . ' from [' . '/' . $this->id . '/' . $this->action->id . ']' );
 			$this->_parsedUrl['path'] = $_path;
@@ -722,11 +722,11 @@ class BaseApiController extends \CController implements EventPublisherLike
 		header( 'Cache-Control: no-store, no-cache, max-age=0, must-revalidate' );
 
 		return $this->_createResponse(
-					array(),
-					true,
-					$errorMessage,
-					$errorCode,
-					$_fullDetails
+			array(),
+			true,
+			$errorMessage,
+			$errorCode,
+			$_fullDetails
 		);
 	}
 

@@ -117,11 +117,11 @@ JS;
 
 		//	Register the jquery plugin
 		Pii::scriptFile(
-		   array(
-			   $_cdnRoot . 'jquery.validate.min.js',
-			   $_cdnRoot . 'additional-methods.min.js',
-		   ),
-		   static::End
+			array(
+				$_cdnRoot . 'jquery.validate.min.js',
+				$_cdnRoot . 'additional-methods.min.js',
+			),
+			static::End
 		);
 
 		//	Add to the page load

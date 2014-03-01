@@ -41,7 +41,8 @@
 		"phpunit/phpunit-selenium": "@stable",
 		"phpunit/phpunit-story":    "@stable",
 		"phpunit/php-invoker":      "@stable",
-		"phpunit/dbunit":           "@stable"
+		"phpunit/dbunit":           "@stable",
+		"facebook/xhprof":          "*"
 	},
 	"autoload":          {
 		"psr-4": {

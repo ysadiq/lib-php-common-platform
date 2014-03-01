@@ -25,6 +25,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\EmailSvc;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Yii\Models\Config;
@@ -174,7 +175,8 @@ class User extends BaseSystemRestResource
 			}
 			else
 			{
-				$_defaultPath = __DIR__ . '/../../templates/email/confirm_user_invitation.json';
+				$_defaultPath = Platform::getLibraryTemplatePath( '/email/confirm_user_invitation.json' );
+
 				if ( !file_exists( $_defaultPath ) )
 				{
 					throw new InternalServerErrorException( "No default email template for user invite." );

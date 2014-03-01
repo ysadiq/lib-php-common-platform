@@ -40,16 +40,16 @@ class App extends BaseSystemRestResource
 	public function __construct( $consumer, $resourceArray = array() )
 	{
 		parent::__construct(
-			  $consumer,
-			  array(
-				  'service_name'   => 'system',
-				  'name'           => 'Application',
-				  'api_name'       => 'app',
-				  'type'           => 'System',
-				  'description'    => 'System application administration.',
-				  'is_active'      => true,
-				  'resource_array' => $resourceArray,
-			  )
+			$consumer,
+			array(
+				'service_name'   => 'system',
+				'name'           => 'Application',
+				'api_name'       => 'app',
+				'type'           => 'System',
+				'description'    => 'System application administration.',
+				'is_active'      => true,
+				'resource_array' => $resourceArray,
+			)
 		);
 	}
 

@@ -95,6 +95,7 @@ class PlatformServiceTypes extends SeedEnum
 	/**
 	 * @param int    $value        enumerated type value
 	 * @param string $service_name given name of the service, also returned as default
+	 *
 	 * @var array A map of classes for services
 	 */
 	protected static $_classMap

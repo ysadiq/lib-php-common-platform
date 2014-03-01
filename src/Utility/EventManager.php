@@ -64,8 +64,8 @@ class EventManager
 	public static function trigger( $eventName, PlatformEvent $event = null )
 	{
 		return static::_getDispatcher()->dispatch(
-					 static::_normalizeEventName( $eventName ),
-					 $event
+			static::_normalizeEventName( $eventName ),
+			$event
 		);
 	}
 
@@ -82,9 +82,9 @@ class EventManager
 	public static function on( $eventName, $listener, $priority = 0 )
 	{
 		static::_getDispatcher()->addListener(
-			  static::_normalizeEventName( $eventName ),
-			  $listener,
-			  $priority
+			static::_normalizeEventName( $eventName ),
+			$listener,
+			$priority
 		);
 	}
 
@@ -99,8 +99,8 @@ class EventManager
 	public static function off( $eventName, $listener )
 	{
 		static::_getDispatcher()->removeListener(
-			  static::_normalizeEventName( $eventName ),
-			  $listener
+			static::_normalizeEventName( $eventName ),
+			$listener
 		);
 	}
 

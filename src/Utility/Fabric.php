@@ -114,7 +114,8 @@ class Fabric extends SeedUtility
 		/**
 		 * Add host names to this list to white-list...
 		 */
-		static $_allowedHosts = array(
+		static $_allowedHosts
+		= array(
 			'launchpad-dev.dreamfactory.com',
 			'launchpad-demo.dreamfactory.com',
 			'next.cloud.dreamfactory.com',

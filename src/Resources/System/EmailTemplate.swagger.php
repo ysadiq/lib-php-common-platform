@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,6 +53,7 @@ $_email['apis'] = array(
 						'description'   => 'Set to limit the filter results.',
 						'allowMultiple' => false,
 						'type'          => 'integer',
+						'format'        => 'int32',
 						'paramType'     => 'query',
 						'required'      => false,
 					),
@@ -69,6 +70,7 @@ $_email['apis'] = array(
 						'description'   => 'Set to offset the filter results to a particular record count.',
 						'allowMultiple' => false,
 						'type'          => 'integer',
+						'format'        => 'int32',
 						'paramType'     => 'query',
 						'required'      => false,
 					),
@@ -126,7 +128,6 @@ $_email['apis'] = array(
 					'By default, all fields and no relations are returned for each record. <br>' .
 					'Alternatively, to retrieve by record, a large list of ids, or a complicated filter, ' .
 					'use the POST request with X-HTTP-METHOD = GET header and post records or ids.',
-				'event_name'       => 'email.templates.list',
 			),
 			array(
 				'method'           => 'POST',
@@ -188,7 +189,6 @@ $_email['apis'] = array(
 					'Post data should be a single record or an array of records (shown). ' .
 					'By default, only the id property of the record affected is returned on success, ' .
 					'use \'fields\' and \'related\' to return more info.',
-				'event_name'       => 'email.templates.create',
 			),
 			array(
 				'method'           => 'PATCH',
@@ -241,7 +241,6 @@ $_email['apis'] = array(
 					'Post data should be a single record or an array of records (shown). ' .
 					'By default, only the id property of the record is returned on success, ' .
 					'use \'fields\' and \'related\' to return more info.',
-				'event_name'       => 'email.templates.update',
 			),
 			array(
 				'method'           => 'DELETE',
@@ -302,7 +301,6 @@ $_email['apis'] = array(
 					'Use \'fields\' and \'related\' to return more properties of the deleted records. <br>' .
 					'Alternatively, to delete by record or a large list of ids, ' .
 					'use the POST request with X-HTTP-METHOD = DELETE header and post records or ids.',
-				'event_name'       => 'email.templates.delete',
 			),
 		),
 		'description' => 'Operations for email template administration.',
@@ -356,7 +354,6 @@ $_email['apis'] = array(
 					),
 				),
 				'notes'            => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
-				'event_name'       => 'email.template.get',
 			),
 			array(
 				'method'           => 'PATCH',
@@ -414,7 +411,6 @@ $_email['apis'] = array(
 				'notes'            =>
 					'Post data should be an array of fields to update for a single record. <br>' .
 					'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return more properties.',
-				'event_name'       => 'email.template.update',
 			),
 			array(
 				'method'           => 'DELETE',
@@ -462,7 +458,6 @@ $_email['apis'] = array(
 					),
 				),
 				'notes'            => 'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return deleted properties.',
-				'event_name'       => 'email.template.delete',
 			),
 		),
 		'description' => 'Operations for individual email template administration.',
@@ -472,6 +467,7 @@ $_email['apis'] = array(
 $_commonProperties = array(
 	'id'          => array(
 		'type'        => 'integer',
+		'format'      => 'int32',
 		'description' => 'Identifier of this email template.',
 	),
 	'name'        => array(
@@ -548,6 +544,7 @@ $_email['models'] = array(
 				),
 				'created_by_id'       => array(
 					'type'        => 'integer',
+					'format'      => 'int32',
 					'description' => 'User Id of who created this email template.',
 				),
 				'last_modified_date'  => array(
@@ -556,6 +553,7 @@ $_email['models'] = array(
 				),
 				'last_modified_by_id' => array(
 					'type'        => 'integer',
+					'format'      => 'int32',
 					'description' => 'User Id of who last modified this email template.',
 				),
 			)
@@ -588,7 +586,8 @@ $_email['models'] = array(
 				'type'        => 'Array',
 				'description' => 'Array of system record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
 				'items'       => array(
-					'$ref' => 'integer',
+					'type'   => 'integer',
+					'format' => 'int32',
 				),
 			),
 		),

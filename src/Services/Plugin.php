@@ -313,10 +313,10 @@ class Portal extends BaseSystemRestService
 		$_config = array_merge(
 			$_config,
 			Option::getDeep(
-				  $this->_serviceMap,
-				  $this->_resource,
-				  'config_text',
-				  array()
+				$this->_serviceMap,
+				$this->_resource,
+				'config_text',
+				array()
 			)
 		);
 

@@ -134,21 +134,21 @@ class Config extends BasePlatformSystemModel
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-					 array(
-						 'db_version'                 => 'Db Version',
-						 'allow_open_registration'    => 'Allow Open Registration',
-						 'open_reg_role_id'           => 'Open Registration Default Role Id',
-						 'open_reg_email_service_id'  => 'Open Registration Email Service',
-						 'open_reg_email_template_id' => 'Open Registration Email Template',
-						 'invite_email_service_id'    => 'Invitation Email Service',
-						 'invite_email_template_id'   => 'Invitation Email Template',
-						 'password_email_service_id'  => 'Password Reset Email Service',
-						 'password_email_template_id' => 'Password Reset Email Template',
-						 'allow_guest_user'           => 'Allow Guest User',
-						 'guest_role_id'              => 'Guest Role Id',
-						 'editable_profile_fields'    => 'Editable Profile Fields',
-						 'custom_settings'            => 'Custom System-Level Settings',
-					 ) + $additionalLabels
+			array(
+				'db_version'                 => 'Db Version',
+				'allow_open_registration'    => 'Allow Open Registration',
+				'open_reg_role_id'           => 'Open Registration Default Role Id',
+				'open_reg_email_service_id'  => 'Open Registration Email Service',
+				'open_reg_email_template_id' => 'Open Registration Email Template',
+				'invite_email_service_id'    => 'Invitation Email Service',
+				'invite_email_template_id'   => 'Invitation Email Template',
+				'password_email_service_id'  => 'Password Reset Email Service',
+				'password_email_template_id' => 'Password Reset Email Template',
+				'allow_guest_user'           => 'Allow Guest User',
+				'guest_role_id'              => 'Guest Role Id',
+				'editable_profile_fields'    => 'Editable Profile Fields',
+				'custom_settings'            => 'Custom System-Level Settings',
+			) + $additionalLabels
 		);
 	}
 
@@ -162,27 +162,27 @@ class Config extends BasePlatformSystemModel
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-					 $requested,
-					 array_merge(
-						 array(
-							 'db_version',
-							 'allow_open_registration',
-							 'open_reg_role_id',
-							 'open_reg_email_service_id',
-							 'open_reg_email_template_id',
-							 'invite_email_service_id',
-							 'invite_email_template_id',
-							 'password_email_service_id',
-							 'password_email_template_id',
-							 'allow_guest_user',
-							 'guest_role_id',
-							 'editable_profile_fields',
-							 'custom_settings',
-						 ),
-						 $columns
-					 ),
-						 // hide these from the general public
-					 $hidden
+			$requested,
+			array_merge(
+				array(
+					'db_version',
+					'allow_open_registration',
+					'open_reg_role_id',
+					'open_reg_email_service_id',
+					'open_reg_email_template_id',
+					'invite_email_service_id',
+					'invite_email_template_id',
+					'password_email_service_id',
+					'password_email_template_id',
+					'allow_guest_user',
+					'guest_role_id',
+					'editable_profile_fields',
+					'custom_settings',
+				),
+				$columns
+			),
+			// hide these from the general public
+			$hidden
 		);
 	}
 

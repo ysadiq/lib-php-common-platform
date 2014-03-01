@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,6 +53,7 @@ $_app['apis'] = array(
 						'description'   => 'Set to limit the filter results.',
 						'allowMultiple' => false,
 						'type'          => 'integer',
+						'format'        => 'int32',
 						'paramType'     => 'query',
 						'required'      => false,
 					),
@@ -69,6 +70,7 @@ $_app['apis'] = array(
 						'description'   => 'Set to offset the filter results to a particular record count.',
 						'allowMultiple' => false,
 						'type'          => 'integer',
+						'format'        => 'int32',
 						'paramType'     => 'query',
 						'required'      => false,
 					),
@@ -126,7 +128,6 @@ $_app['apis'] = array(
 					'By default, all fields and no relations are returned for each record. <br>' .
 					'Alternatively, to retrieve by record, a large list of ids, or a complicated filter, ' .
 					'use the POST request with X-HTTP-METHOD = GET header and post records or ids.',
-				'event_name'       => 'app.list',
 			),
 			array(
 				'method'           => 'POST',
@@ -188,7 +189,6 @@ $_app['apis'] = array(
 					'Post data should be a single record or an array of records (shown). ' .
 					'By default, only the id property of the record affected is returned on success, ' .
 					'use \'fields\' and \'related\' to return more info.',
-				'event_name'       => 'app.create',
 			),
 			array(
 				'method'           => 'PATCH',
@@ -241,7 +241,6 @@ $_app['apis'] = array(
 					'Post data should be a single record or an array of records (shown). ' .
 					'By default, only the id property of the record is returned on success, ' .
 					'use \'fields\' and \'related\' to return more info.',
-				'event_name'       => 'app.update',
 			),
 			array(
 				'method'           => 'DELETE',
@@ -311,7 +310,6 @@ $_app['apis'] = array(
 					'Use \'fields\' and \'related\' to return more properties of the deleted records. <br>' .
 					'Alternatively, to delete by record or a large list of ids, ' .
 					'use the POST request with X-HTTP-METHOD = DELETE header and post records or ids.',
-				'event_name'       => 'app.delete',
 			),
 		),
 		'description' => 'Operations for application administration.',
@@ -405,7 +403,6 @@ $_app['apis'] = array(
 					),
 				),
 				'notes'            => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
-				'event_name'       => 'app.get',
 			),
 			array(
 				'method'           => 'PATCH',
@@ -463,7 +460,6 @@ $_app['apis'] = array(
 				'notes'            =>
 					'Post data should be an array of fields to update for a single record. <br>' .
 					'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return more properties.',
-				'event_name'       => 'app.update',
 			),
 			array(
 				'method'           => 'DELETE',
@@ -519,8 +515,7 @@ $_app['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return deleted properties.',
-				'event_name'       => 'app.delete',
+				'notes'            => ' By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return deleted properties.',
 			),
 		),
 		'description' => 'Operations for individual application administration.',
@@ -530,6 +525,7 @@ $_app['apis'] = array(
 $_commonProperties = array(
 	'id'                      => array(
 		'type'        => 'integer',
+		'format'      => 'int32',
 		'description' => 'Identifier of this application.',
 	),
 	'name'                    => array(
@@ -584,75 +580,63 @@ $_commonProperties = array(
 		'type'        => 'boolean',
 		'description' => 'True when the app relies on a browser plugin.',
 	),
-	'roles_default_app'       => array(
-		'type'        => 'Array',
+);
+
+$_relatedProperties = array(
+	'roles_default_app' => array(
+		'type'        => 'RelatedRoles',
 		'description' => 'Related roles by Role.default_app_id.',
-		'items'       => array(
-			'type' => 'string',
-		),
 	),
-	'users_default_app'       => array(
-		'type'        => 'Array',
+	'users_default_app' => array(
+		'type'        => 'RelatedUsers',
 		'description' => 'Related users by User.default_app_id.',
-		'items'       => array(
-			'type' => 'string',
-		),
 	),
-	'app_groups'              => array(
-		'type'        => 'Array',
+	'app_groups'        => array(
+		'type'        => 'RelatedAppGroups',
 		'description' => 'Related groups by app to group assignment.',
-		'items'       => array(
-			'type' => 'string',
-		),
 	),
-	'roles'                   => array(
-		'type'        => 'Array',
+	'roles'             => array(
+		'type'        => 'RelatedRoles',
 		'description' => 'Related roles by app to role assignment.',
-		'items'       => array(
-			'type' => 'string',
-		),
 	),
-	'services'                => array(
-		'type'        => 'Array',
+	'services'          => array(
+		'type'        => 'RelatedServices',
 		'description' => 'Related services by app to service assignment.',
-		'items'       => array(
-			'type' => 'string',
-		),
+	),
+);
+
+$_stampProperties = array(
+	'created_date'        => array(
+		'type'        => 'string',
+		'description' => 'Date this application was created.',
+		'readOnly'    => true,
+	),
+	'created_by_id'       => array(
+		'type'        => 'integer',
+		'format'      => 'int32',
+		'description' => 'User Id of who created this application.',
+		'readOnly'    => true,
+	),
+	'last_modified_date'  => array(
+		'type'        => 'string',
+		'description' => 'Date this application was last modified.',
+		'readOnly'    => true,
+	),
+	'last_modified_by_id' => array(
+		'type'        => 'integer',
+		'format'      => 'int32',
+		'description' => 'User Id of who last modified this application.',
+		'readOnly'    => true,
 	),
 );
 
 $_app['models'] = array(
 	'AppRequest'   => array(
 		'id'         => 'AppRequest',
-		'properties' => $_commonProperties,
-	),
-	'AppResponse'  => array(
-		'id'         => 'AppResponse',
 		'properties' => array_merge(
 			$_commonProperties,
-			array(
-				'created_date'        => array(
-					'type'        => 'string',
-					'description' => 'Date this application was created.',
-					'readOnly'    => true,
-				),
-				'created_by_id'       => array(
-					'type'        => 'integer',
-					'description' => 'User Id of who created this application.',
-					'readOnly'    => true,
-				),
-				'last_modified_date'  => array(
-					'type'        => 'string',
-					'description' => 'Date this application was last modified.',
-					'readOnly'    => true,
-				),
-				'last_modified_by_id' => array(
-					'type'        => 'integer',
-					'description' => 'User Id of who last modified this application.',
-					'readOnly'    => true,
-				),
-			)
-		),
+			$_relatedProperties
+		)
 	),
 	'AppsRequest'  => array(
 		'id'         => 'AppsRequest',
@@ -668,9 +652,18 @@ $_app['models'] = array(
 				'type'        => 'Array',
 				'description' => 'Array of system application record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
 				'items'       => array(
-					'$ref' => 'integer',
+					'type'   => 'integer',
+					'format' => 'int32',
 				),
 			),
+		),
+	),
+	'AppResponse'  => array(
+		'id'         => 'AppResponse',
+		'properties' => array_merge(
+			$_commonProperties,
+			$_relatedProperties,
+			$_stampProperties
 		),
 	),
 	'AppsResponse' => array(
@@ -689,19 +682,26 @@ $_app['models'] = array(
 			),
 		),
 	),
-	'Metadata'     => array(
-		'id'         => 'Metadata',
+	'RelatedApp'   => array(
+		'id'         => 'RelatedApp',
+		'properties' => array_merge(
+			$_commonProperties,
+			$_stampProperties
+		)
+	),
+	'RelatedApps'  => array(
+		'id'         => 'RelatedApps',
 		'properties' => array(
-			'schema' => array(
+			'record' => array(
 				'type'        => 'Array',
-				'description' => 'Array of table schema.',
+				'description' => 'Array of system application records.',
 				'items'       => array(
-					'$ref' => 'string',
+					'$ref' => 'RelatedApp',
 				),
 			),
-			'count'  => array(
-				'type'        => 'integer',
-				'description' => 'Record count returned for GET requests.',
+			'meta'   => array(
+				'type'        => 'Metadata',
+				'description' => 'Array of metadata returned for GET requests.',
 			),
 		),
 	),

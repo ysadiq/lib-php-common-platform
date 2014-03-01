@@ -568,10 +568,10 @@ class MongoDbSvc extends NoSqlDbSvc
 					$_record = array( '$set' => $_record );
 				}
 				$result = $_coll->findAndModify(
-								array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) ),
-								$_record,
-								$_fieldArray,
-								array( 'new' => true )
+					array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) ),
+					$_record,
+					$_fieldArray,
+					array( 'new' => true )
 				);
 
 				$_out[] = static::mongoIdToId( $result );
@@ -611,10 +611,10 @@ class MongoDbSvc extends NoSqlDbSvc
 		try
 		{
 			$result = $_coll->findAndModify(
-							$_criteria,
-							$record,
-							$_fieldArray,
-							array( 'new' => true )
+				$_criteria,
+				$record,
+				$_fieldArray,
+				array( 'new' => true )
 			);
 
 			return static::mongoIdToId( $result );
@@ -730,10 +730,10 @@ class MongoDbSvc extends NoSqlDbSvc
 		try
 		{
 			$result = $_coll->findAndModify(
-							$_criteria,
-							$record,
-							$_fieldArray,
-							array( 'new' => true )
+				$_criteria,
+				$record,
+				$_fieldArray,
+				array( 'new' => true )
 			);
 
 			return static::mongoIdToId( $result );

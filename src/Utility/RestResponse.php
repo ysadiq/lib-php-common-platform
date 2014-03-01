@@ -71,7 +71,7 @@ class RestResponse extends HttpResponse
 			if ( empty( $_format ) )
 			{
 				$_accepted = RestResponse::parseAcceptHeader(
-										 FilterInput::server( 'HTTP_ACCEPT', null, FILTER_SANITIZE_STRING )
+					FilterInput::server( 'HTTP_ACCEPT', null, FILTER_SANITIZE_STRING )
 				);
 				$_accepted = array_values( $_accepted );
 				$_format = Option::get( $_accepted, 0 );

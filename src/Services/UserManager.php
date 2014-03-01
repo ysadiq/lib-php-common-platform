@@ -51,14 +51,14 @@ class UserManager extends BaseSystemRestService
 	public function __construct()
 	{
 		parent::__construct(
-			  array(
-				  'name'        => 'User Session Management',
-				  'apiName'     => 'user',
-				  'type'        => 'User',
-				  'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-				  'description' => 'Service for a user to manage their session, profile and password.',
-				  'is_active'   => true,
-			  )
+			array(
+				'name'        => 'User Session Management',
+				'apiName'     => 'user',
+				'type'        => 'User',
+				'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+				'description' => 'Service for a user to manage their session, profile and password.',
+				'is_active'   => true,
+			)
 		);
 	}
 

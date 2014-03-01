@@ -62,4 +62,8 @@ class LocalStorageTypes extends SeedEnum
 	 * @type string
 	 */
 	const SWAGGER_PATH = 'swagger_path';
+	/**
+	 * @type string
+	 */
+	const TEMPLATE_PATH = 'template_path';
 }

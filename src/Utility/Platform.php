@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\LocalStorageTypes;
+use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\SeedUtility;
@@ -54,6 +55,7 @@ class Platform extends SeedUtility
 	 * @param bool   $createIfMissing If true and final directory does not exist, it is created.
 	 *
 	 * @throws \InvalidArgumentException
+	 * @throws \Kisma\Core\Exceptions\FileSystemException
 	 * @return string
 	 */
 	protected static function _getPlatformPath( $type, $append = null, $createIfMissing = true )
@@ -119,6 +121,42 @@ class Platform extends SeedUtility
 	public static function getPrivatePath( $append = null )
 	{
 		return static::_getPlatformPath( LocalStorageTypes::PRIVATE_PATH, $append );
+	}
+
+	/**
+	 * Returns the library configuration path, not the platform's config path in the root
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getLibraryConfigPath( $append = null )
+	{
+		return SystemManager::getConfigPath() . ( $append ? '/' . ltrim( $append, '/' ) : null );
+	}
+
+	/**
+	 * Returns the library template configuration path, not the platform's config path in the root
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getLibraryTemplatePath( $append = null )
+	{
+		return static::getLibraryConfigPath( '/templates' ) . ( $append ? '/' . ltrim( $append, '/' ) : null );
+	}
+
+	/**
+	 * Returns the platform configuration path, in the root
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getPlatformConfigPath( $append = null )
+	{
+		return Pii::getPathOfAlias( 'application.config' ) . ( $append ? '/' . ltrim( $append, '/' ) : null );
 	}
 
 	/**

@@ -177,17 +177,17 @@ class Role extends BasePlatformSystemModel
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-					 $requested,
-					 array_merge(
-						 array(
-							 'name',
-							 'description',
-							 'is_active',
-							 'default_app_id',
-						 ),
-						 $columns
-					 ),
-					 $hidden
+			$requested,
+			array_merge(
+				array(
+					'name',
+					'description',
+					'is_active',
+					'default_app_id',
+				),
+				$columns
+			),
+			$hidden
 		);
 	}
 

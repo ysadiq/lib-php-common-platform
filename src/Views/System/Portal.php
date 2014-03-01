@@ -44,16 +44,16 @@ class Portal extends BaseSystemRestResource
 	public function __construct( $consumer, $resources = array() )
 	{
 		return parent::__construct(
-					 $consumer,
-					 array(
-						 'service_name'   => 'system',
-						 'name'           => 'Service',
-						 'api_name'       => 'service',
-						 'type'           => 'System',
-						 'description'    => 'System service administration.',
-						 'is_active'      => true,
-						 'resource_array' => $resources,
-					 )
+			$consumer,
+			array(
+				'service_name'   => 'system',
+				'name'           => 'Service',
+				'api_name'       => 'service',
+				'type'           => 'System',
+				'description'    => 'System service administration.',
+				'is_active'      => true,
+				'resource_array' => $resources,
+			)
 		);
 	}
 

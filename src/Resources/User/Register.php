@@ -50,22 +50,22 @@ class Register extends BasePlatformRestResource
 	public function __construct( $consumer, $resources = array() )
 	{
 		parent::__construct(
-			  $consumer,
-			  array(
-				  'name'           => 'User Registration',
-				  'service_name'   => 'user',
-				  'type'           => 'System',
-				  'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				  'api_name'       => 'register',
-				  'description'    => 'Resource for a user registration.',
-				  'is_active'      => true,
-				  'resource_array' => $resources,
-				  'verb_aliases'   => array(
-					  static::Put   => static::Post,
-					  static::Patch => static::Post,
-					  static::Merge => static::Post,
-				  )
-			  )
+			$consumer,
+			array(
+				'name'           => 'User Registration',
+				'service_name'   => 'user',
+				'type'           => 'System',
+				'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				'api_name'       => 'register',
+				'description'    => 'Resource for a user registration.',
+				'is_active'      => true,
+				'resource_array' => $resources,
+				'verb_aliases'   => array(
+					static::Put   => static::Post,
+					static::Patch => static::Post,
+					static::Merge => static::Post,
+				)
+			)
 		);
 	}
 
@@ -151,8 +151,7 @@ class Register extends BasePlatformRestResource
 			'first_name'   => ( !empty( $_firstName ) ) ? $_firstName : $_temp,
 			'last_name'    => ( !empty( $_lastName ) ) ? $_lastName : $_temp,
 			'display_name' => ( !empty( $_displayName ) )
-					? $_displayName
-					: ( !empty( $_firstName ) && !empty( $_lastName ) ) ? $_firstName . ' ' . $_lastName
+					? $_displayName : ( !empty( $_firstName ) && !empty( $_lastName ) ) ? $_firstName . ' ' . $_lastName
 						: $_temp,
 			'role_id'      => $_roleId,
 			'confirm_code' => $_confirmCode
@@ -193,7 +192,8 @@ class Register extends BasePlatformRestResource
 				}
 				else
 				{
-					$_defaultPath = dirname( dirname( __DIR__ ) ) . '/templates/email/confirm_user_registration.json';
+					$_defaultPath = Platform::getLibraryTemplatePath( '/email/confirm_user_registration.json' );
+
 					if ( !file_exists( $_defaultPath ) )
 					{
 						throw new \Exception( "No default email template for user registration." );
@@ -266,8 +266,8 @@ class Register extends BasePlatformRestResource
 		}
 
 		$_theUser = User::model()->find(
-						'email=:email AND confirm_code=:cc',
-						array( ':email' => $email, ':cc' => $code )
+			'email=:email AND confirm_code=:cc',
+			array( ':email' => $email, ':cc' => $code )
 		);
 		if ( null === $_theUser )
 		{

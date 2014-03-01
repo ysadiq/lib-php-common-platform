@@ -106,31 +106,31 @@ class AsgardService extends SeedBag
 			$_stats->set( 'apps', static::_appStats( $_dspName, $_pdo ) );
 
 			$_stats->set(
-				   'app_groups',
-				   array(
-					   'counts' => static::_rowCount( 'df_sys_app_group', $_dspName, $_pdo )
-				   )
+				'app_groups',
+				array(
+					'counts' => static::_rowCount( 'df_sys_app_group', $_dspName, $_pdo )
+				)
 			);
 
 			$_stats->set(
-				   'roles',
-				   array(
-					   'counts' => static::_rowCount( 'df_sys_role', $_dspName, $_pdo )
-				   )
+				'roles',
+				array(
+					'counts' => static::_rowCount( 'df_sys_role', $_dspName, $_pdo )
+				)
 			);
 
 			$_stats->set(
-				   'services',
-				   array(
-					   'counts' => static::_rowCount( 'df_sys_service', $_dspName, $_pdo )
-				   )
+				'services',
+				array(
+					'counts' => static::_rowCount( 'df_sys_service', $_dspName, $_pdo )
+				)
 			);
 
 			$_stats->set(
-				   'users',
-				   array(
-					   'counts' => static::_rowCount( 'df_sys_user', $_dspName, $_pdo )
-				   )
+				'users',
+				array(
+					'counts' => static::_rowCount( 'df_sys_user', $_dspName, $_pdo )
+				)
 			);
 		}
 

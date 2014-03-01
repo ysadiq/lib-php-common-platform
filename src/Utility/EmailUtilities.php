@@ -100,7 +100,7 @@ class EmailUtilities
 	{
 		// Create the message
 		$message = \Swift_Message::newInstance()->setSubject( $subject )->setTo( $to_emails ) // array('receiver@domain.org', 'other@domain.org' => 'A name')
-								 ->setFrom( $from_email, $from_name ); // can be multiple
+			->setFrom( $from_email, $from_name ); // can be multiple
 		if ( !empty( $reply_email ) )
 		{
 			$message->setReplyTo( $reply_email, $reply_name ); // single address

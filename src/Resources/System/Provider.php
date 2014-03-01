@@ -40,14 +40,14 @@ class Provider extends BaseSystemRestResource
 	public function __construct( $consumer = null, $resourceArray = array() )
 	{
 		parent::__construct(
-			  $consumer,
-			  array(
-				  'name'           => 'Provider',
-				  'is_active'      => true,
-				  'type'           => 'System',
-				  'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				  'resource_array' => $resourceArray,
-			  )
+			$consumer,
+			array(
+				'name'           => 'Provider',
+				'is_active'      => true,
+				'type'           => 'System',
+				'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				'resource_array' => $resourceArray,
+			)
 		);
 	}
 }

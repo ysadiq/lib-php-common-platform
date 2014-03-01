@@ -41,20 +41,20 @@ class ProviderUser extends BaseSystemRestResource
 	public function __construct( $consumer = null, $resourceArray = array() )
 	{
 		parent::__construct(
-			  $consumer,
-			  array(
-				  'name'           => 'portal account',
-				  'type'           => 'Service',
-				  'service_name'   => 'system',
-				  'type_id'        => PlatformServiceTypes::LOCAL_PORTAL_SERVICE,
-				  'api_name'       => 'portal_account',
-				  'description'    => 'Service provider account configuration.',
-				  'is_active'      => true,
-				  'resource_array' => $resourceArray,
-				  'verb_aliases'   => array(
-					  static::Patch => static::Post,
-				  ),
-			  )
+			$consumer,
+			array(
+				'name'           => 'portal account',
+				'type'           => 'Service',
+				'service_name'   => 'system',
+				'type_id'        => PlatformServiceTypes::LOCAL_PORTAL_SERVICE,
+				'api_name'       => 'portal_account',
+				'description'    => 'Service provider account configuration.',
+				'is_active'      => true,
+				'resource_array' => $resourceArray,
+				'verb_aliases'   => array(
+					static::Patch => static::Post,
+				),
+			)
 		);
 	}
 }

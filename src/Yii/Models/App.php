@@ -124,21 +124,21 @@ class App extends BasePlatformSystemModel
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-					 array(
-						 'name'                    => 'Name',
-						 'api_name'                => 'API Name',
-						 'description'             => 'Description',
-						 'is_active'               => 'Is Active',
-						 'url'                     => 'Url',
-						 'is_url_external'         => 'Is Url External',
-						 'import_url'              => 'Import Url',
-						 'storage_service_id'      => 'Storage Service',
-						 'storage_container'       => 'Storage Container',
-						 'requires_fullscreen'     => 'Requires Fullscreen',
-						 'allow_fullscreen_toggle' => 'Allow Fullscreen Toggle',
-						 'toggle_location'         => 'Toggle Location',
-						 'requires_plugin'         => 'Requires Plugin',
-					 ) + $additionalLabels
+			array(
+				'name'                    => 'Name',
+				'api_name'                => 'API Name',
+				'description'             => 'Description',
+				'is_active'               => 'Is Active',
+				'url'                     => 'Url',
+				'is_url_external'         => 'Is Url External',
+				'import_url'              => 'Import Url',
+				'storage_service_id'      => 'Storage Service',
+				'storage_container'       => 'Storage Container',
+				'requires_fullscreen'     => 'Requires Fullscreen',
+				'allow_fullscreen_toggle' => 'Allow Fullscreen Toggle',
+				'toggle_location'         => 'Toggle Location',
+				'requires_plugin'         => 'Requires Plugin',
+			) + $additionalLabels
 		);
 	}
 
@@ -278,27 +278,27 @@ class App extends BasePlatformSystemModel
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-					 $requested,
-					 array_merge(
-						 array(
-							 'name',
-							 'api_name',
-							 'description',
-							 'is_active',
-							 'url',
-							 'is_url_external',
-							 'import_url',
-							 'storage_service_id',
-							 'storage_container',
-							 'launch_url',
-							 'requires_fullscreen',
-							 'allow_fullscreen_toggle',
-							 'toggle_location',
-							 'requires_plugin',
-						 ),
-						 $columns
-					 ),
-					 $hidden
+			$requested,
+			array_merge(
+				array(
+					'name',
+					'api_name',
+					'description',
+					'is_active',
+					'url',
+					'is_url_external',
+					'import_url',
+					'storage_service_id',
+					'storage_container',
+					'launch_url',
+					'requires_fullscreen',
+					'allow_fullscreen_toggle',
+					'toggle_location',
+					'requires_plugin',
+				),
+				$columns
+			),
+			$hidden
 		);
 	}
 
@@ -482,7 +482,7 @@ class App extends BasePlatformSystemModel
 
 			/** @var \CDbCommand $_command */
 			$_mapRows = Sql::findAll(
-						   <<<MYSQL
+				<<<MYSQL
 		SELECT
 	id,
 	{$relationKey},
@@ -492,11 +492,11 @@ FROM
 WHERE
 	app_id = :app_id
 MYSQL
-							   ,
-							   array(
-								   ':app_id' => $id,
-							   ),
-							   Pii::pdo()
+				,
+				array(
+					':app_id' => $id,
+				),
+				Pii::pdo()
 			);
 
 			$_deletes = array();
@@ -571,11 +571,11 @@ MYSQL
 					$_newComponent = json_encode( Option::get( $_item, 'component' ) );
 
 					$rows = static::model()->insert(
-								  array(
-									  'app_id'     => $id,
-									  'service_id' => Option::get( $_item, 'service_id' ),
-									  'component'  => $_newComponent
-								  )
+						array(
+							'app_id'     => $id,
+							'service_id' => Option::get( $_item, 'service_id' ),
+							'component'  => $_newComponent
+						)
 					);
 
 					if ( 0 >= $rows )

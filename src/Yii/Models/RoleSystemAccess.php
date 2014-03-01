@@ -100,16 +100,16 @@ class RoleSystemAccess extends BasePlatformSystemModel
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-					 $requested,
-					 array_merge(
-						 array(
-							 'role_id',
-							 'component',
-							 'access',
-						 ),
-						 $columns
-					 ),
-					 $hidden
+			$requested,
+			array_merge(
+				array(
+					'role_id',
+					'component',
+					'access',
+				),
+				$columns
+			),
+			$hidden
 		);
 	}
 }

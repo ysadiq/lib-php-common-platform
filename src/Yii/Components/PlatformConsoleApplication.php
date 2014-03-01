@@ -359,21 +359,21 @@ class PlatformConsoleApplication extends \CConsoleApplication
 		{
 			case HttpMethod::TRACE:
 				Log::error(
-				   'HTTP TRACE received!',
-				   array(
-					   'server'  => $this->_requestObject->server->all(),
-					   'request' => $this->_requestObject->request->all()
-				   )
+					'HTTP TRACE received!',
+					array(
+						'server'  => $this->_requestObject->server->all(),
+						'request' => $this->_requestObject->request->all()
+					)
 				);
 				throw new BadRequestException();
 
 			case HttpMethod::OPTIONS:
 				$this->_responseObject->setStatusCode( HttpResponse::NoContent );
 				$this->_responseObject->headers->add(
-											   array_merge(
-												   array( 'content-type' => 'text/plain' ),
-												   $this->addCorsHeaders( null, true )
-											   )
+					array_merge(
+						array( 'content-type' => 'text/plain' ),
+						$this->addCorsHeaders( null, true )
+					)
 				);
 
 				$this->_responseObject->send();
@@ -537,9 +537,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 */
 	protected function _compareUris( $first, $second )
 	{
-		return ( $first['scheme'] == $second['scheme'] ) &&
-			   ( $first['host'] == $second['host'] ) &&
-			   ( $first['port'] == $second['port'] );
+		return ( $first['scheme'] == $second['scheme'] ) && ( $first['host'] == $second['host'] ) && ( $first['port'] == $second['port'] );
 	}
 
 	/**
@@ -568,16 +566,12 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	protected function _normalizeUri( $parts )
 	{
 		return Option::get(
-					 $parts,
-					 'url_base',
-						 //	Try and construct
-					 is_array( $parts )
-						 ?
-						 ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' .
-						 $parts['host'] .
-						 ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
-						 :
-						 $parts
+			$parts,
+			'url_base',
+			//	Try and construct
+			is_array( $parts ) ?
+				( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
+				: $parts
 		);
 	}
 

@@ -100,18 +100,18 @@ class Provider extends BasePlatformSystemModel
 	public function attributeLabels( $additionalLabels = array() )
 	{
 		return parent::attributeLabels(
-					 array_merge(
-						 $additionalLabels,
-						 array(
-							 'provider_name'     => 'Name',
-							 'api_name'          => 'API Name',
-							 'config_text'       => 'Configuration',
-							 'is_active'         => 'Active',
-							 'is_system'         => 'Is a System Provider',
-							 'is_login_provider' => 'Provider Login Services',
-							 'base_provider_id'  => 'Base Provider',
-						 )
-					 )
+			array_merge(
+				$additionalLabels,
+				array(
+					'provider_name'     => 'Name',
+					'api_name'          => 'API Name',
+					'config_text'       => 'Configuration',
+					'is_active'         => 'Active',
+					'is_system'         => 'Is a System Provider',
+					'is_login_provider' => 'Provider Login Services',
+					'base_provider_id'  => 'Base Provider',
+				)
+			)
 		);
 	}
 
@@ -123,10 +123,10 @@ class Provider extends BasePlatformSystemModel
 	public function byPortal( $portal )
 	{
 		$this->getDbCriteria()->mergeWith(
-			 array(
-				 'condition' => 'lower(provider_name) = lower(:provider_name) or lower(api_name) = lower(:api_name)',
-				 'params'    => array( ':provider_name' => $portal, ':api_name' => Inflector::neutralize( $portal ) ),
-			 )
+			array(
+				'condition' => 'lower(provider_name) = lower(:provider_name) or lower(api_name) = lower(:api_name)',
+				'params'    => array( ':provider_name' => $portal, ':api_name' => Inflector::neutralize( $portal ) ),
+			)
 		);
 
 		return $this;
@@ -167,10 +167,10 @@ class Provider extends BasePlatformSystemModel
 		if ( !Pii::guest() )
 		{
 			$_auth = ProviderUser::model()->byUserProviderUserId(
-								 Session::getCurrentUserId(),
-								 Option::get( $provider, 'id' )
+				Session::getCurrentUserId(),
+				Option::get( $provider, 'id' )
 			)->find(
-								 array( 'select' => 'auth_text' )
+					array( 'select' => 'auth_text' )
 				);
 
 			if ( null !== $_auth )

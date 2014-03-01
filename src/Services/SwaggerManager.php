@@ -70,15 +70,15 @@ class SwaggerManager extends BasePlatformRestService
 	public function __construct()
 	{
 		parent::__construct(
-			  array(
-				  'name'          => 'Swagger Documentation Management',
-				  'apiName'       => 'api_docs',
-				  'type'          => 'Swagger',
-				  'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
-				  'description'   => 'Service for a user to see the API documentation provided via Swagger.',
-				  'is_active'     => true,
-				  'native_format' => 'json',
-			  )
+			array(
+				'name'          => 'Swagger Documentation Management',
+				'apiName'       => 'api_docs',
+				'type'          => 'Swagger',
+				'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
+				'description'   => 'Service for a user to see the API documentation provided via Swagger.',
+				'is_active'     => true,
+				'native_format' => 'json',
+			)
 		);
 	}
 
@@ -126,7 +126,7 @@ class SwaggerManager extends BasePlatformRestService
 
 		//	Generate swagger output from file annotations
 		$_scanPath = rtrim( __DIR__, '/' ) . '/';
-		$_templatePath = dirname( __DIR__ ) . '/templates/swagger/';
+		$_templatePath = Platform::getLibraryTemplatePath( '/swagger/' );
 
 		$_baseSwagger = array(
 			'swaggerVersion' => static::SWAGGER_VERSION,

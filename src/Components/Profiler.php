@@ -1,6 +1,6 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
  * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
@@ -119,7 +119,8 @@ class Profiler
 	 */
 	public static function elapsedAsString( $start, $stop = false )
 	{
-		static $_divisors = array(
+		static $_divisors
+		= array(
 			'hour'   => DateTime::US_PER_HOUR,
 			'minute' => DateTime::US_PER_MINUTE,
 			'second' => DateTime::US_PER_SECOND,

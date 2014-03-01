@@ -255,13 +255,13 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 						$content = RestData::getPostedData();
 						$contentType = FilterInput::server( 'CONTENT_TYPE', '' );
 						$result = $this->_handleFileContent(
-									   $this->_folderPath,
-									   $fileNameHeader,
-									   $content,
-									   $contentType,
-									   $extract,
-									   $clean,
-									   $checkExist
+							$this->_folderPath,
+							$fileNameHeader,
+							$content,
+							$contentType,
+							$extract,
+							$clean,
+							$checkExist
 						);
 					}
 					elseif ( !empty( $folderNameHeader ) )
@@ -280,13 +280,13 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 						{
 							$tmpName = FileUtilities::importUrlFileToTemp( $fileUrl );
 							$result = $this->_handleFile(
-										   $this->_folderPath,
-										   '',
-										   $tmpName,
-										   '',
-										   $extract,
-										   $clean,
-										   $checkExist
+								$this->_folderPath,
+								'',
+								$tmpName,
+								'',
+								$extract,
+								$clean,
+								$checkExist
 							);
 							unlink( $tmpName );
 						}
@@ -338,13 +338,13 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 						// or possibly xml or json post of file properties create, copy or move
 						$content = RestData::getPostedData();
 						$result = $this->_handleFileContent(
-									   $path,
-									   $name,
-									   $content,
-									   $contentType,
-									   $extract,
-									   $clean,
-									   $checkExist
+							$path,
+							$name,
+							$content,
+							$contentType,
+							$extract,
+							$clean,
+							$checkExist
 						);
 					}
 					else
@@ -366,13 +366,13 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 							$tmpName = $file["tmp_name"];
 							$contentType = $file['type'];
 							$result = $this->_handleFile(
-										   $path,
-										   $name,
-										   $tmpName,
-										   $contentType,
-										   $extract,
-										   $clean,
-										   $checkExist
+								$path,
+								$name,
+								$tmpName,
+								$contentType,
+								$extract,
+								$clean,
+								$checkExist
 							);
 						}
 						else
@@ -604,13 +604,13 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 				$tmpName = $file['tmp_name'];
 				$contentType = $file['type'];
 				$tmp = $this->_handleFile(
-							$this->_folderPath,
-							$name,
-							$tmpName,
-							$contentType,
-							$extract,
-							$clean,
-							$checkExist
+					$this->_folderPath,
+					$name,
+					$tmpName,
+					$contentType,
+					$extract,
+					$clean,
+					$checkExist
 				);
 				$out[$key] = ( isset( $tmp['file'] ) ? $tmp['file'] : array() );
 			}

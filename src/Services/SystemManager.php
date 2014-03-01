@@ -106,17 +106,17 @@ class SystemManager extends BaseSystemRestService
 	public function __construct( $settings = array() )
 	{
 		parent::__construct(
-			  array_merge(
-				  array(
-					  'name'        => 'System Configuration Management',
-					  'api_name'    => 'system',
-					  'type'        => 'System',
-					  'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-					  'description' => 'Service for system administration.',
-					  'is_active'   => true,
-				  ),
-				  $settings
-			  )
+			array_merge(
+				array(
+					'name'        => 'System Configuration Management',
+					'api_name'    => 'system',
+					'type'        => 'System',
+					'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+					'description' => 'Service for system administration.',
+					'is_active'   => true,
+				),
+				$settings
+			)
 		);
 	}
 
@@ -456,8 +456,8 @@ SQL;
 				$_firstName = Pii::getState( 'first_name', Option::get( $attributes, 'firstName' ) );
 				$_lastName = Pii::getState( 'last_name', Option::get( $attributes, 'lastName' ) );
 				$_displayName = Pii::getState(
-								   'display_name',
-								   Option::get( $attributes, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
+					'display_name',
+					Option::get( $attributes, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
 				);
 
 				$_fields = array(
@@ -513,18 +513,18 @@ SQL;
 
 		//	Create services
 		static::_createSystemData(
-			  'service',
-			  Option::get( $_jsonSchema, static::SYSTEM_TABLE_PREFIX . 'service' ),
-			  'DreamFactory\\Platform\\Yii\\Models\\Service',
-			  'api_name'
+			'service',
+			Option::get( $_jsonSchema, static::SYSTEM_TABLE_PREFIX . 'service' ),
+			'DreamFactory\\Platform\\Yii\\Models\\Service',
+			'api_name'
 		);
 
 		//	Create templates
 		static::_createSystemData(
-			  'email_template',
-			  Option::get( $_jsonSchema, static::SYSTEM_TABLE_PREFIX . 'email_template' ),
-			  'DreamFactory\\Platform\\Yii\\Models\\EmailTemplate',
-			  'name'
+			'email_template',
+			Option::get( $_jsonSchema, static::SYSTEM_TABLE_PREFIX . 'email_template' ),
+			'DreamFactory\\Platform\\Yii\\Models\\EmailTemplate',
+			'name'
 		);
 	}
 
@@ -631,11 +631,11 @@ SQL;
 	public static function getDspVersions()
 	{
 		$_results = Curl::get(
-						static::VERSION_TAGS_URL,
-						array(),
-						array(
-							CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' )
-						)
+			static::VERSION_TAGS_URL,
+			array(),
+			array(
+				CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' )
+			)
 		);
 
 		if ( HttpResponse::Ok != ( $_code = Curl::getLastHttpCode() ) )
@@ -852,14 +852,14 @@ SQL;
 
 		//	Call the API
 		return Drupal::registerPlatform(
-					 $user,
-					 $_paths,
-					 array(
-						 'field_first_name'           => $user->first_name,
-						 'field_last_name'            => $user->last_name,
-						 'field_installation_type'    => InstallationTypes::determineType( true ),
-						 'field_registration_skipped' => ( $skipped ? 1 : 0 ),
-					 )
+			$user,
+			$_paths,
+			array(
+				'field_first_name'           => $user->first_name,
+				'field_last_name'            => $user->last_name,
+				'field_installation_type'    => InstallationTypes::determineType( true ),
+				'field_registration_skipped' => ( $skipped ? 1 : 0 ),
+			)
 		);
 	}
 
@@ -994,7 +994,7 @@ SQL;
 		try
 		{
 			$_admins = Sql::scalar(
-						  <<<SQL
+				<<<SQL
 		SELECT
 	COUNT(id)
 FROM
@@ -1027,8 +1027,8 @@ SQL
 			/** @var User $_user */
 			$_user = $user
 				? : User::model()->find(
-						'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
-						array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
+					'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
+					array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
 				);
 
 			if ( !empty( $_user ) )
@@ -1100,8 +1100,8 @@ SQL
 		}
 
 		Pii::setState(
-		   'dsp.json_schema',
-		   Storage::freeze( $_schema )
+			'dsp.json_schema',
+			Storage::freeze( $_schema )
 		);
 
 		return $_schema[$_schemaFilePath];
@@ -1159,8 +1159,8 @@ SQL
 		if ( static::doesDbVersionRequireUpgrade( $_currentVersion, $_schemaVersion ) )
 		{
 			Log::debug(
-			   'Database schema upgrade required.',
-			   array( 'from_version' => $_currentVersion, 'to_version' => $_schemaVersion )
+				'Database schema upgrade required.',
+				array( 'from_version' => $_currentVersion, 'to_version' => $_schemaVersion )
 			);
 
 			return PlatformStates::SCHEMA_REQUIRED;

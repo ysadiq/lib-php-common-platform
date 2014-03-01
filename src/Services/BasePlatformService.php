@@ -37,6 +37,10 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	//*************************************************************************
 
 	/**
+	 * @var bool If true, profiling information will be output to the log
+	 */
+	protected static $_enableProfiler = false;
+	/**
 	 * @var string Name to be used in an API
 	 */
 	protected $_apiName;
@@ -124,7 +128,55 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 			$this->_description = $this->_name;
 		}
 
+		//	Get the current user ID if one...
 		$this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
+
+		if ( static::$_enableProfiler )
+		{
+			/** @noinspection PhpUndefinedFunctionInspection */
+			xhprof_enable();
+		}
+	}
+
+	/**
+	 * Destructor
+	 */
+	public function __destruct()
+	{
+		//	Save myself!
+		ServiceHandler::cacheService( $this->_apiName, $this );
+
+		if ( static::$_enableProfiler )
+		{
+			/** @noinspection PhpUndefinedFunctionInspection */
+			Log::debug( '~~ "' . $this->_apiName . '"', xhprof_disable() );
+		}
+
+		parent::__destruct();
+	}
+
+	/**
+	 * {@InheritDoc}
+	 */
+	public function on( $eventName, $listener, $priority = 0 )
+	{
+		EventManager::on( $this->_normalizeEventName( $eventName ), $listener, $priority );
+	}
+
+	/**
+	 * {@InheritDoc}
+	 */
+	public function off( $eventName, $callback )
+	{
+		EventManager::off( $this->_normalizeEventName( $eventName ), $callback );
+	}
+
+	/**
+	 * {@InheritDoc}
+	 */
+	public function trigger( $eventName, $event = null )
+	{
+		return EventManager::trigger( $this->_normalizeEventName( $eventName ), $event );
 	}
 
 	/**
@@ -164,14 +216,69 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	}
 
 	/**
-	 * Destructor
+	 * @param string        $eventName
+	 * @param Request|array $values The values to use for replacements in the event name templates.
+	 *                              If none specified, the $_REQUEST variables will be used.
+	 *                              The current class's variables are also available for replacement.
+	 *
+	 * @return string
 	 */
-	public function __destruct()
+	protected function _normalizeEventName( $eventName, $values = null )
 	{
-		//	Save myself!
-		ServiceHandler::cacheService( $this->_apiName, $this );
+		static $_cache = array(), $_replacements = null;
 
-		parent::__destruct();
+		if ( null !== ( $_name = Option::get( $_cache, $_tag = Inflector::neutralize( $eventName ) ) ) )
+		{
+			return $_name;
+		}
+
+		if ( null === $values )
+		{
+			$values = get_object_vars( Request::createFromGlobals() );
+		}
+
+		if ( null === $_replacements )
+		{
+			$_replacements = array();
+
+			foreach ( array_merge( get_object_vars( $this ), Option::clean( $values ) ) as $_key => $_value )
+			{
+				$_key = Inflector::neutralize( ltrim( $_key, '_' ) );
+
+				if ( !is_scalar( $_value ) )
+				{
+					if ( $_value instanceof ParameterBag )
+					{
+						foreach ( $_value as $_bagKey => $_bagValue )
+						{
+							$_bagKey = Inflector::neutralize( ltrim( $_bagKey, '_' ) );
+
+							if ( !is_scalar( $_bagValue ) )
+							{
+								continue;
+							}
+
+							$_replacements['{' . $_key . '.' . $_bagKey . '}'] = $_bagValue;
+						}
+					}
+
+					continue;
+				}
+
+				$_replacements['{' . $_key . '}'] = $_value;
+			}
+		}
+
+		//	Construct and neutralize...
+		$_tag = Inflector::neutralize(
+			str_ireplace(
+				array_keys( $_replacements ),
+				array_values( $_replacements ),
+				$_tag
+			)
+		);
+
+		return $_cache[$eventName] = $_tag;
 	}
 
 	/**
@@ -332,4 +439,55 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	{
 		return $this->_currentUserId;
 	}
+
+	/**
+	 * @return \Symfony\Component\HttpFoundation\Request
+	 */
+	public function getRequestObject()
+	{
+		//return Pii::app()->getRequestObject();
+	}
+
+	/**
+	 * @return \Symfony\Component\HttpFoundation\Response
+	 */
+	public function getResponseObject()
+	{
+		//return Pii::app()->getResponseObject();
+	}
+
+	/**
+	 * @param string          $resource     The name of the resource
+	 * @param string          $action       The action to perform
+	 * @param int|string|bool $outputFormat The return format. Defaults to native, or PHP array.
+	 * @param string          $appName      The optional app_name setting for this call. Defaults to called class name hash
+	 *
+	 * @return mixed
+	 */
+	public static function processInlineRequest( $resource, $action = HttpMethod::GET, $outputFormat = false, $appName = null )
+	{
+//		//	Get the resource and set the app_name
+//		$_resource = ResourceStore::resource( $resource );
+//		$_SERVER['HTTP_X_DREAMFACTORY_APPLICATION_NAME'] = $appName ? : sha1( get_called_class() );
+//
+//		//	Make the call
+//		return $_resource->processInlineRequest( $resource, $action, $outputFormat );
+	}
+
+	/**
+	 * @param boolean $enableProfiler
+	 */
+	public static function setEnableProfiler( $enableProfiler )
+	{
+		static::$_enableProfiler = $enableProfiler;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public static function getEnableProfiler()
+	{
+		return static::$_enableProfiler;
+	}
+
 }

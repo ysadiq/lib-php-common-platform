@@ -1197,12 +1197,12 @@ class FileUtilities
 		}
 
 		if ( empty( $mime ) ||
-			( 0 === strcasecmp( $mime, $defaultMime ) ) ||
-			( 0 === strcasecmp( 'text/plain', $mime ) ) ||
-			( 0 === strcasecmp( 'text/x-asm', $mime ) ) ||
-			( 0 === strcasecmp( 'text/x-c', $mime ) ) ||
-			( 0 === strcasecmp( 'text/x-c++', $mime ) ) ||
-			( 0 === strcasecmp( 'text/x-java', $mime ) )
+			 ( 0 === strcasecmp( $mime, $defaultMime ) ) ||
+			 ( 0 === strcasecmp( 'text/plain', $mime ) ) ||
+			 ( 0 === strcasecmp( 'text/x-asm', $mime ) ) ||
+			 ( 0 === strcasecmp( 'text/x-c', $mime ) ) ||
+			 ( 0 === strcasecmp( 'text/x-c++', $mime ) ) ||
+			 ( 0 === strcasecmp( 'text/x-java', $mime ) )
 		)
 		{
 			// need further guidance on these, as they are sometimes incorrect
