@@ -99,6 +99,14 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	//*************************************************************************
 
 	/**
+	 * @var bool If true, profiling information is output to the log
+	 */
+	protected static $_enableProfiler = false;
+	/**
+	 * @var array[] The namespaces in use by this system. Used by the routing engine
+	 */
+	protected static $_namespaceMap = array( self::NS_MODELS => array(), self::NS_SERVICES => array(), self::NS_RESOURCES => array() );
+	/**
 	 * @var array An indexed array of white-listed hosts (ajax.example.com or foo.bar.com or just bar.com)
 	 */
 	protected $_corsWhitelist = array();
@@ -119,37 +127,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 * @var  Response
 	 */
 	protected $_responseObject;
-	/**
-	 * @var bool If true, profiling information is output to the log
-	 */
-	protected static $_profilerEnabled = null;
-	/**
-	 * @var array[] The namespaces in use by this system. Used by the routing engine
-	 */
-	protected static $_namespaceMap = array();
 
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
-
-	/**
-	 * @param array $config
-	 */
-	public function __construct( $config = null )
-	{
-		//	Start the full-cycle timer
-		$this->startProfiler( 'app.web' );
-
-		parent::__construct( $config );
-	}
-
-	/**
-	 * Destruction
-	 */
-	public function __destruct()
-	{
-		Log::debug( '~~ profile "app.web" elapsed time: ' . $this->stopProfiler( 'app.web' ) );
-	}
 
 	/**
 	 * Start a timer
@@ -160,9 +141,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function startProfiler( $id = __CLASS__ )
 	{
-		if ( ( static::$_profilerEnabled = static::$_profilerEnabled ? : \Kisma::get( CoreSettings::DEBUG ) ) )
+		if ( ( static::$_enableProfiler = static::$_enableProfiler ? : \Kisma::get( CoreSettings::DEBUG ) ) && function_exists( 'xhprof_enable' ) )
 		{
-			Profiler::start( $id );
+			/** @noinspection PhpUndefinedFunctionInspection */
+			xhprof_enable();
 		}
 
 		return $this;
@@ -178,9 +160,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function stopProfiler( $id = __CLASS__, $returnTimeString = true )
 	{
-		if ( static::$_profilerEnabled )
+		if ( static::$_enableProfiler )
 		{
-			return Profiler::stop( $id, $returnTimeString );
+			/** @noinspection PhpUndefinedFunctionInspection */
+			return xhprof_disable();
 		}
 
 		return false;
@@ -564,6 +547,26 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	}
 
 	/**
+	 * @param int    $which
+	 * @param string $namespace
+	 * @param string $path
+	 * @param bool   $prepend If true, the namespace(s) will be placed at the beginning of the list
+	 *
+	 * @return PlatformWebApplication
+	 */
+	protected static function _mapNamespace( $which, $namespace, $path, $prepend = false )
+	{
+		if ( $prepend )
+		{
+			array_unshift( static::$_namespaceMap[$which], array( $namespace, $path ) );
+		}
+		else
+		{
+			static::$_namespaceMap[$which][$namespace] = $path;
+		}
+	}
+
+	/**
 	 * @param array $parts Return from \parse_url
 	 *
 	 * @return string
@@ -573,6 +576,47 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 		return is_array( $parts ) ?
 			( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
 			: $parts;
+	}
+
+	/**
+	 * @param string    $eventName
+	 * @param SeedEvent $event
+	 *
+	 * @return DspEvent
+	 */
+	public function trigger( $eventName, $event = null )
+	{
+		$_event = $event ? : new DspEvent( $this, $this->_requestObject, $this->_responseObject );
+
+		return EventManager::trigger( $eventName, $_event );
+	}
+
+	/**
+	 * Adds an event listener that listens on the specified events.
+	 *
+	 * @param string   $eventName            The event to listen on
+	 * @param callable $listener             The listener
+	 * @param integer  $priority             The higher this value, the earlier an event
+	 *                                       listener will be triggered in the chain (defaults to 0)
+	 *
+	 * @return void
+	 */
+	public function on( $eventName, $listener, $priority = 0 )
+	{
+		EventManager::on( $eventName, $listener, $priority );
+	}
+
+	/**
+	 * Turn off/unbind/remove $listener from an event
+	 *
+	 * @param string   $eventName
+	 * @param callable $listener
+	 *
+	 * @return void
+	 */
+	public function off( $eventName, $listener )
+	{
+		EventManager::off( $eventName, $listener );
 	}
 
 	/**
@@ -645,7 +689,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function setResourceNamespaces( $resourceNamespaces )
 	{
-		$this->_resourceNamespaces = $resourceNamespaces;
+		static::$_namespaceMap[static::NS_RESOURCES] = $resourceNamespaces;
 
 		return $this;
 	}
@@ -655,30 +699,19 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function getResourceNamespaces()
 	{
-		return $this->_resourceNamespaces;
+		return static::$_namespaceMap[static::NS_RESOURCES];
 	}
 
 	/**
-	 * @param string|array $namespace
-	 * @param bool         $prepend If true, the namespace(s) will be placed at the beginning of the list
+	 * @param string $namespace
+	 * @param string $path
+	 * @param bool   $prepend If true, the namespace(s) will be placed at the beginning of the list
 	 *
 	 * @return PlatformWebApplication
 	 */
-	public function addResourceNamespace( $namespace, $prepend = false )
+	public function addResourceNamespace( $namespace, $path, $prepend = false )
 	{
-		foreach ( Option::clean( $namespace ) as $_entry )
-		{
-			if ( !in_array( $_entry, $this->_resourceNamespaces ) )
-			{
-				if ( false === $prepend )
-				{
-					$this->_resourceNamespaces[] = $_entry;
-					continue;
-				}
-
-				array_unshift( $this->_resourceNamespaces, $_entry );
-			}
-		}
+		static::_mapNamespace( static::NS_RESOURCES, $namespace, $path, $prepend );
 
 		return $this;
 	}
@@ -690,7 +723,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function setModelNamespaces( $modelNamespaces )
 	{
-		$this->_modelNamespaces = $modelNamespaces;
+		static::$_namespaceMap[static::NS_MODELS] = $modelNamespaces;
 
 		return $this;
 	}
@@ -700,83 +733,19 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function getModelNamespaces()
 	{
-		return $this->_modelNamespaces;
+		return static::$_namespaceMap[static::NS_MODELS];
 	}
 
 	/**
-	 * @param string|array $namespace
-	 * @param bool         $prepend If true, the namespace(s) will be placed at the beginning of the list
+	 * @param string $namespace
+	 * @param string $path
+	 * @param bool   $prepend If true, the namespace(s) will be placed at the beginning of the list
 	 *
 	 * @return PlatformWebApplication
 	 */
-	public function addModelNamespace( $namespace, $prepend = false )
+	public function addModelNamespace( $namespace, $path, $prepend = false )
 	{
-		foreach ( Option::clean( $namespace ) as $_entry )
-		{
-			if ( !in_array( $_entry, $this->_modelNamespaces ) )
-			{
-				if ( false === $prepend )
-				{
-					$this->_modelNamespaces[] = $_entry;
-					continue;
-				}
-
-				array_unshift( $this->_modelNamespaces, $_entry );
-			}
-		}
-
-		return $this;
-	}
-
-	/**
-	 * @param string    $eventName
-	 * @param SeedEvent $event
-	 *
-	 * @return DspEvent
-	 */
-	public function trigger( $eventName, $event = null )
-	{
-		$_event = $event ? : new DspEvent( $this, $this->_requestObject, $this->_responseObject );
-
-		return EventManager::trigger( $eventName, $_event );
-	}
-
-	/**
-	 * Adds an event listener that listens on the specified events.
-	 *
-	 * @param string   $eventName            The event to listen on
-	 * @param callable $listener             The listener
-	 * @param integer  $priority             The higher this value, the earlier an event
-	 *                                       listener will be triggered in the chain (defaults to 0)
-	 *
-	 * @return void
-	 */
-	public function on( $eventName, $listener, $priority = 0 )
-	{
-		EventManager::on( $eventName, $listener, $priority );
-	}
-
-	/**
-	 * Turn off/unbind/remove $listener from an event
-	 *
-	 * @param string   $eventName
-	 * @param callable $listener
-	 *
-	 * @return void
-	 */
-	public function off( $eventName, $listener )
-	{
-		EventManager::off( $eventName, $listener );
-	}
-
-	/**
-	 * @param \Symfony\Component\HttpFoundation\Request $requestObject
-	 *
-	 * @return PlatformWebApplication
-	 */
-	public function setRequestObject( $requestObject )
-	{
-		$this->_requestObject = $requestObject;
+		static::_mapNamespace( static::NS_MODELS, $namespace, $path, $prepend );
 
 		return $this;
 	}
@@ -790,18 +759,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	}
 
 	/**
-	 * @param \Symfony\Component\HttpFoundation\Response $responseObject
-	 *
-	 * @return PlatformWebApplication
-	 */
-	public function setResponseObject( $responseObject )
-	{
-		$this->_responseObject = $responseObject;
-
-		return $this;
-	}
-
-	/**
 	 * @return \Symfony\Component\HttpFoundation\Response
 	 */
 	public function getResponseObject()
@@ -810,18 +767,19 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	}
 
 	/**
-	 * @param boolean $profilerEnabled
+	 * @param boolean $enableProfiler
 	 */
-	public static function setProfilerEnabled( $profilerEnabled )
+	public static function setEnableProfiler( $enableProfiler )
 	{
-		static::$_profilerEnabled = $profilerEnabled;
+		static::$_enableProfiler = $enableProfiler;
 	}
 
 	/**
 	 * @return boolean
 	 */
-	public static function getProfilerEnabled()
+	public static function getEnableProfiler()
 	{
-		return static::$_profilerEnabled;
+		return static::$_enableProfiler;
 	}
+
 }
