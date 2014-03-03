@@ -1,5 +1,10 @@
 # DreamFactory Services Platform&trade; Change Log
 
+## v1.4.1 (Released 2014-03-03)
+
+### Bug Fixes
+* Fix api login session bug 
+
 ## v1.4.0 (Released 2014-02-28)
 
 ### Major Foundational Changes
