@@ -5,4 +5,4 @@ vendor
 tests/config/keys.php
 tests/storage
 tests/log
-build/
+build
