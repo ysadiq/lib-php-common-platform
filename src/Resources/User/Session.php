@@ -291,6 +291,11 @@ class Session extends BasePlatformRestResource
 			return $_identity;
 		}
 
+		if ( !Pii::user()->login( $_identity ) )
+		{
+			throw new InternalServerErrorException( 'Failed to login user.' );
+		}
+
 		// 	Additional stuff for session - launchpad mainly
 		return static::addSessionExtras( $_result, $_user->is_sys_admin, true );
 	}
