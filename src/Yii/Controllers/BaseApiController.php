@@ -340,8 +340,7 @@ class BaseApiController extends \CController implements EventPublisherLike
 
 		if ( !empty( $_path ) )
 		{
-			$_path
-				= str_ireplace( '/' . $this->id . '/' . $this->action->id, null, rtrim( $_path, '/' ) );
+			$_path = str_ireplace( '/' . $this->id . '/' . $this->action->id, null, rtrim( $_path, '/' ) );
 
 //			Log::debug( 'Parsed path: ' . $_path . ' from [' . '/' . $this->id . '/' . $this->action->id . ']' );
 			$this->_parsedUrl['path'] = $_path;

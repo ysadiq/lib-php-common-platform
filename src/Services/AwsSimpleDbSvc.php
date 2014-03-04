@@ -1435,11 +1435,17 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 			return '#DFJ#' . json_encode( $value );
 		}
 		if ( is_bool( $value ) )
+		{
 			return '#DFB#' . strval( $value );
+		}
 		if ( is_float( $value ) )
+		{
 			return '#DFF#' . strval( $value );
+		}
 		if ( is_int( $value ) )
+		{
 			return '#DFI#' . strval( $value );
+		}
 
 		return $value;
 	}
@@ -1447,13 +1453,21 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	protected static function _unformatValue( $value )
 	{
 		if ( 0 == substr_compare( $value, '#DFJ#', 0, 5 ) )
+		{
 			return json_decode( substr( $value, 5 ) );
+		}
 		if ( 0 == substr_compare( $value, '#DFB#', 0, 5 ) )
+		{
 			return (bool)substr( $value, 5 );
+		}
 		if ( 0 == substr_compare( $value, '#DFF#', 0, 5 ) )
+		{
 			return floatval( substr( $value, 5 ) );
+		}
 		if ( 0 == substr_compare( $value, '#DFI#', 0, 5 ) )
+		{
 			return intval( substr( $value, 5 ) );
+		}
 
 		return $value;
 	}

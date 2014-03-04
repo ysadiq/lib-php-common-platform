@@ -18,8 +18,7 @@
  * limitations under the License.
  */
 
-$_description
-	= '<p>
+$_description = '<p>
 	This is <a href="http://swagger.wordnik.com">Swagger</a>-built documentation detailing the DreamFactory DSP REST API.<br>
 	More info can be found <a href="http://www.dreamfactory.com/developers/documentation">here</a>.<br>
 	<br>

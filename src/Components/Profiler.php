@@ -50,7 +50,8 @@ class Profiler
 
 		if ( function_exists( 'xhprof_enable' ) )
 		{
-			xhprof_enable();
+			/** @noinspection PhpUndefinedConstantInspection */
+			xhprof_enable( XHPROF_FLAGS_CPU + XHPROF_FLAGS_MEMORY );
 		}
 
 		return static::$_runs[$id];
@@ -152,8 +153,7 @@ class Profiler
 	 */
 	public static function elapsedAsString( $start, $stop = false )
 	{
-		static $_divisors
-		= array(
+		static $_divisors = array(
 			'hour'   => DateTime::US_PER_HOUR,
 			'minute' => DateTime::US_PER_MINUTE,
 			'second' => DateTime::US_PER_SECOND,

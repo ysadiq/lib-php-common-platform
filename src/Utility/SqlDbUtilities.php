@@ -861,9 +861,9 @@ class SqlDbUtilities implements SqlDbDriverTypes
 				case 'int':
 				case 'bigint':
 				case 'integer':
-					$definition
-						= ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( 'mediumint' == $type ) )
-						? 'int' : $type;
+					$definition =
+						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( 'mediumint' == $type ) )
+							? 'int' : $type;
 					if ( isset( $length ) )
 					{
 						if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) &&
@@ -959,9 +959,9 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					break;
 				case 'money':
 				case 'smallmoney':
-					$definition
-						= ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? $type
-						: 'money'; // let yii handle it
+					$definition =
+						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? $type
+							: 'money'; // let yii handle it
 					// convert to float
 					$default = ( isset( $default ) ) ? floatval( $default ) : $default;
 					break;
@@ -1069,21 +1069,21 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					$quoteDefault = true;
 					break;
 				case 'text':
-					$definition
-						= ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varchar(max)'
-						: 'text'; // microsoft recommended
+					$definition =
+						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varchar(max)'
+							: 'text'; // microsoft recommended
 					$quoteDefault = true;
 					break;
 				case 'blob':
-					$definition
-						= ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varbinary(max)'
-						: 'blob'; // microsoft recommended
+					$definition =
+						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varbinary(max)'
+							: 'blob'; // microsoft recommended
 					$quoteDefault = true;
 					break;
 				case 'datetime':
-					$definition
-						= ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ? 'datetime2'
-						: 'datetime'; // microsoft recommends
+					$definition =
+						( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ? 'datetime2'
+							: 'datetime'; // microsoft recommends
 					break;
 				default:
 					// blind copy of column type
@@ -1942,8 +1942,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 		{
 			// todo batch this for speed
 			//@TODO Batched it a bit... still probably slow...
-			$_sql
-				= <<<SQL
+			$_sql = <<<SQL
 SELECT
 	id
 FROM

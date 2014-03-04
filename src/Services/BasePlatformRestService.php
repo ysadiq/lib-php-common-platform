@@ -187,8 +187,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 		//	Inherent failure?
 		if ( false === ( $this->_response = $this->_handleResource() ) )
 		{
-			$_message
-				=
+			$_message =
 				$this->_action .
 				' requests' .
 				( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .

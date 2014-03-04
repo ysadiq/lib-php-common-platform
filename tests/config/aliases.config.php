@@ -36,8 +36,8 @@ $_vendorPath = $_basePath . '/vendor';
 Pii::setPathOfAlias( 'vendor', $_vendorPath );
 
 //	lib-php-common-yii (psr-0 && psr-4 compatible)
-$_libPath
-	= $_vendorPath . '/dreamfactory/lib-php-common-yii' . ( is_dir( $_vendorPath . '/dreamfactory/lib-php-common-yii/src' ) ? '/src' : '/DreamFactory/Yii' );
+$_libPath =
+	$_vendorPath . '/dreamfactory/lib-php-common-yii' . ( is_dir( $_vendorPath . '/dreamfactory/lib-php-common-yii/src' ) ? '/src' : '/DreamFactory/Yii' );
 
 Pii::alias( 'DreamFactory.Yii.*', $_libPath );
 Pii::alias( 'DreamFactory.Yii.Components.*', $_libPath . '/Components' );
@@ -46,8 +46,7 @@ Pii::alias( 'DreamFactory.Yii.Utility.*', $_libPath . '/Utility' );
 Pii::alias( 'DreamFactory.Yii.Logging.*', $_libPath . '/Logging' );
 
 //	lib-php-common-platform (psr-0 && psr-4 compatible)
-$_libPath
-	=
+$_libPath =
 	$_vendorPath .
 	'/dreamfactory/lib-php-common-platform' .
 	( is_dir( $_vendorPath . '/dreamfactory/lib-php-common-platform/src' ) ? '/src' : '/DreamFactory/Platform' );

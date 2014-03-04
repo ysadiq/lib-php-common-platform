@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Yii\Components;
 
+use Composer\Autoload\ClassLoader;
 use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Events\DspEvent;
 use DreamFactory\Platform\Events\Enums\DspEvents;
@@ -28,7 +29,8 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\Events\SeedEvent;
+use Kisma\Core\Interfaces\PublisherLike;
+use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
@@ -38,7 +40,7 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * PlatformConsoleApplication
  */
-class PlatformConsoleApplication extends \CConsoleApplication
+class PlatformConsoleApplication extends \CConsoleApplication implements PublisherLike, SubscriberLike
 {
 	//*************************************************************************
 	//	Constants
@@ -65,6 +67,14 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 */
 	const CORS_DEFAULT_CONFIG_FILE = '/cors.config.json';
 	/**
+	 * @var string The session key for CORS configs
+	 */
+	const CORS_WHITELIST_KEY = 'cors.config';
+	/**
+	 * @var string The default DSP resource namespace
+	 */
+	const DEFAULT_SERVICE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Services';
+	/**
 	 * @var string The default DSP resource namespace
 	 */
 	const DEFAULT_RESOURCE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Resources';
@@ -76,10 +86,31 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 * @var string The default path (sub-path) of installed plug-ins
 	 */
 	const DEFAULT_PLUGINS_PATH = '/storage/plugins';
+	/**
+	 * @const int The services namespace map index
+	 */
+	const NS_SERVICES = 0;
+	/**
+	 * @const int The resources namespace map index
+	 */
+	const NS_RESOURCES = 1;
+	/**
+	 * @const int The models namespace map index
+	 */
+	const NS_MODELS = 2;
+
 	//*************************************************************************
 	//	Members
 	//*************************************************************************
 
+	/**
+	 * @var bool If true, profiling information is output to the log
+	 */
+	protected static $_enableProfiler = false;
+	/**
+	 * @var array[] The namespaces in use by this system. Used by the routing engine
+	 */
+	protected static $_namespaceMap = array( self::NS_MODELS => array(), self::NS_SERVICES => array(), self::NS_RESOURCES => array() );
 	/**
 	 * @var array An indexed array of white-listed hosts (ajax.example.com or foo.bar.com or just bar.com)
 	 */
@@ -109,43 +140,65 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 * @var  Response
 	 */
 	protected $_responseObject;
-	/**
-	 * @var bool If true, profiling information is output to the log
-	 */
-	protected static $_profilerEnabled = null;
 
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
 
 	/**
-	 * @param array $config
+	 * Start a profiler
+	 *
+	 * @param string $id The id of the profiler
+	 *
+	 * @return $this
 	 */
-	public function __construct( $config = null )
+	public function startProfiler( $id = __CLASS__ )
 	{
-		//	Start the full-cycle timer
-		if ( ( static::$_profilerEnabled = ( static::$_profilerEnabled ? : \Kisma::get( CoreSettings::DEBUG ) ) ) )
+		if ( static::$_enableProfiler )
 		{
-			Profiler::start( 'app' );
+			Profiler::start( $id );
 		}
 
-		parent::__construct( $config );
+		return $this;
 	}
 
 	/**
-	 * Destruction
+	 * Stop a profiler
+	 *
+	 * @param string $id The id of the profiler
+	 * @param bool   $prettyPrint
+	 *
+	 * @internal param bool $returnTimeString
+	 *
+	 * @return float
 	 */
-	public function __destruct()
+	public function stopProfiler( $id = __CLASS__, $prettyPrint = true )
 	{
-		if ( static::$_profilerEnabled )
+		if ( static::$_enableProfiler )
 		{
-			Log::debug( '~~ "app" profile: ' . Profiler::stop( 'app' ) );
+			return Profiler::stop( $id, $prettyPrint );
 		}
+
+		return false;
 	}
 
 	/**
-	 * @param string    $eventName
-	 * @param SeedEvent $event
+	 * Initialize
+	 */
+	protected function init()
+	{
+		parent::init();
+
+		$this->_loadCorsConfig();
+
+		//	Setup the request handler and events
+		$this->onBeginRequest = array( $this, '_onBeginRequest' );
+		$this->onEndRequest = array( $this, '_onEndRequest' );
+	}
+
+	/**
+	 * @param string        $eventName
+	 * @param PlatformEvent $event
 	 *
 	 * @return DspEvent
 	 */
@@ -206,9 +259,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
 			return true;
 		}
 
-		$_requestSource = $_SERVER['SERVER_NAME'];
-		$_origin = trim( Option::server( 'HTTP_ORIGIN' ) );
-//		Log::debug( 'The received origin: [' . $_origin . ']' );
+		$_origin = trim( $this->_requestObject->headers->get( 'origin' ) );
 
 		$_originUri = null;
 
@@ -219,7 +270,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
 		}
 
 		$_originUri = null;
-		$_requestSource = gethostname();
+		$_requestSource = $_SERVER['SERVER_NAME'];
 
 		if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
 		{
@@ -243,8 +294,8 @@ class PlatformConsoleApplication extends \CConsoleApplication
 				 *
 				 * @link http://www.youtube.com/watch?v=VRaoHi_xcWk
 				 */
-				$this->_responseObject->setStatusCode( HttpResponse::Forbidden );
-				$this->_responseObject->send();
+				$this->_responseObject->setStatusCode( HttpResponse::Forbidden )->send();
+
 				Pii::end( HttpResponse::Forbidden );
 
 				Pii::end();
@@ -266,21 +317,24 @@ class PlatformConsoleApplication extends \CConsoleApplication
 
 		if ( !empty( $_originUri ) )
 		{
-			$_headers['Access-Control-Allow-Origin'] = $_originUri;
+			$this->_responseObject->headers->set( 'Access-Control-Allow-Origin', $_originUri );
 		}
 
-		$_headers['Access-Control-Allow-Credentials'] = 'true';
-		$_headers['Access-Control-Allow-Headers'] = static::CORS_DEFAULT_ALLOWED_HEADERS;
-		$_headers['Access-Control-Allow-Methods'] = $_allowedMethods;
-		$_headers['Access-Control-Max-Age'] = static::CORS_DEFAULT_MAX_AGE;
+		$this->_responseObject->headers->set( 'Access-Control-Allow-Credentials', 'true' );
+		$this->_responseObject->headers->set( 'Access-Control-Allow-Headers', static::CORS_DEFAULT_ALLOWED_HEADERS );
+		$this->_responseObject->headers->set( 'Access-Control-Allow-Methods', $_allowedMethods );
+		$this->_responseObject->headers->set( 'Access-Control-Max-Age', static::CORS_DEFAULT_MAX_AGE );
 
 		if ( $this->_extendedHeaders )
 		{
-			$_headers['X-DreamFactory-Source'] = $_requestSource;
+			$this->_responseObject->headers->set( 'X-DreamFactory-Source', $_requestSource );
 
 			if ( $_origin )
 			{
-				$_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '/^([\w_-]+\.)*' . $_requestSource . '$/', $_originUri );
+				$this->_responseObject->headers->set(
+					'X-DreamFactory-Origin-Whitelisted',
+					preg_match( '/^([\w_-]+\.)*' . $_requestSource . '$/', $_originUri )
+				);
 			}
 		}
 
@@ -293,54 +347,10 @@ class PlatformConsoleApplication extends \CConsoleApplication
 
 		if ( $returnHeaders )
 		{
-			return $_headers;
-		}
-
-		//	Dump the headers
-		foreach ( $_headers as $_key => $_value )
-		{
-			header( $_key . ': ' . $_value );
+			return $this->_responseObject->headers->all();
 		}
 
 		return true;
-	}
-
-	/**
-	 * Initialize
-	 */
-	protected function init()
-	{
-		parent::init();
-
-		//	Get CORS data from config file
-		$_config = Pii::getParam( 'storage_base_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
-
-		if ( !file_exists( $_config ) )
-		{
-			// old location
-			$_config = Pii::getParam( 'private_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
-		}
-
-		if ( file_exists( $_config ) )
-		{
-			$_allowedHosts = array();
-			$_content = @file_get_contents( $_config );
-
-			if ( !empty( $_content ) )
-			{
-				$_allowedHosts = json_decode( $_content, true );
-			}
-
-			$this->setCorsWhitelist( $_allowedHosts );
-		}
-
-		//	Setup the request handler and events
-		$this->onBeginRequest = array( $this, '_onBeginRequest' );
-		$this->onEndRequest = array( $this, '_onEndRequest' );
-
-		//	Create our HTTP objects
-		$this->_requestObject = Request::createFromGlobals();
-		$this->_responseObject = Response::create();
 	}
 
 	/**
@@ -355,8 +365,22 @@ class PlatformConsoleApplication extends \CConsoleApplication
 		//	Start the request-only profile
 		Profiler::start( 'app.request' );
 
+		$this->_requestObject = Request::createFromGlobals();
+		$this->_responseObject = Response::create();
+
+		//	Load any plug-ins
+		$this->_loadPlugins();
+
 		switch ( $this->_requestObject->getMethod() )
 		{
+			//	OPTIONS goooooooooood!!!!!
+			case HttpMethod::OPTIONS:
+				$this->addCorsHeaders();
+				$this->_responseObject->setStatusCode( HttpResponse::NoContent )->send();
+				Pii::end( HttpResponse::NoContent );
+				break;
+
+			//	TRACE baaaaaadddddddddd!!!!!
 			case HttpMethod::TRACE:
 				Log::error(
 					'HTTP TRACE received!',
@@ -365,33 +389,15 @@ class PlatformConsoleApplication extends \CConsoleApplication
 						'request' => $this->_requestObject->request->all()
 					)
 				);
+
 				throw new BadRequestException();
-
-			case HttpMethod::OPTIONS:
-				$this->_responseObject->setStatusCode( HttpResponse::NoContent );
-				$this->_responseObject->headers->add(
-					array_merge(
-						array( 'content-type' => 'text/plain' ),
-						$this->addCorsHeaders( null, true )
-					)
-				);
-
-				$this->_responseObject->send();
-				Pii::end( HttpResponse::NoContent );
-
-				return;
-
-			default:
-				//	Auto-add the CORS headers...
-				if ( $this->_autoAddHeaders )
-				{
-					$this->_responseObject->headers->add( $this->addCorsHeaders( null, true ) );
-				}
-				break;
 		}
 
-		//	Load any plug-ins
-		$this->_loadPlugins();
+		//	Auto-add the CORS headers...
+		if ( $this->_autoAddHeaders )
+		{
+			$this->addCorsHeaders();
+		}
 
 		//	Trigger request event
 		$this->trigger( DspEvents::BEFORE_REQUEST );
@@ -403,15 +409,6 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	protected function _onEndRequest( \CEvent $event )
 	{
 		$this->trigger( DspEvents::AFTER_REQUEST );
-
-		//	Send the response
-		if ( !headers_sent() && $this->_responseObject )
-		{
-			if ( strlen( $this->_responseObject->getContent() ) )
-			{
-				$this->_responseObject->send();
-			}
-		}
 
 		Log::debug( '~~ "app.request" profile: ' . Profiler::stop( 'app.request' ) );
 	}
@@ -549,11 +546,29 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	protected function _parseUri( $uri, $normalize = false )
 	{
 		$_uri = array(
-			'scheme'   => $this->_requestObject->getScheme(),
-			'host'     => $this->_requestObject->getHost(),
-			'port'     => $this->_requestObject->getPort(),
-			'url_base' => $this->_requestObject->getScheme() . '://' . $this->_requestObject->getHost() . ':' . $this->_requestObject->getPort(),
+			'scheme' => $this->_requestObject->getScheme(),
+			'host'   => $this->_requestObject->getHttpHost(),
+			'port'   => $this->_requestObject->getPort(),
+			'path'   => $this->_requestObject->getPathInfo(),
 		);
+
+		if ( !( isset( $_uri['host'] ) || isset( $_uri['path'] ) ) )
+		{
+			return false;
+		}
+
+		if ( isset( $_uri['path'] ) && !isset( $_uri['host'] ) )
+		{
+			//	Special case, handle this generically later
+			if ( 'null' == $_uri['path'] )
+			{
+				return 'null';
+			}
+
+			$_uri['host'] = $_uri['path'];
+
+			unset( $_uri['path'] );
+		}
 
 		return $normalize ? $this->_normalizeUri( $_uri ) : $_uri;
 	}
@@ -565,14 +580,109 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	 */
 	protected function _normalizeUri( $parts )
 	{
-		return Option::get(
-			$parts,
-			'url_base',
-			//	Try and construct
-			is_array( $parts ) ?
-				( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
-				: $parts
-		);
+		return is_array( $parts ) ?
+			( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
+			: $parts;
+	}
+
+	/**
+	 * Loads the CORS whitelist from the session. If not there, it's loaded and stuffed in there.
+	 *
+	 * @return $this
+	 */
+	protected function _loadCorsConfig()
+	{
+		$_list = $this->_corsWhitelist;
+
+		if ( false !== $_list && !is_array( $_list ) || null === ( $_list = Pii::getState( static::CORS_WHITELIST_KEY ) ) )
+		{
+			//	Get CORS data from config file
+			$_config = Platform::getStorageBasePath( static::CORS_DEFAULT_CONFIG_FILE );
+
+			if ( file_exists( $_config ) )
+			{
+				$_list = @json_decode( file_get_contents( $_config ), true );
+
+				if ( empty( $_list ) )
+				{
+					Pii::setState( static::CORS_WHITELIST_KEY, false );
+					Log::error( 'Found CORS configuration, but contents invalid: ' . print_r( $_list, true ) );
+
+					return $this;
+				}
+			}
+			else
+			{
+				//	Check the old location
+				$_oldConfig = Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE );
+
+				//	Nada? Bail...
+				if ( !file_exists( $_oldConfig ) )
+				{
+					Pii::setState( static::CORS_WHITELIST_KEY, false );
+
+					return $this;
+				}
+
+				if ( false === ( $_json = @json_decode( @file_get_contents( $_oldConfig ), true ) ) )
+				{
+					Pii::setState( static::CORS_WHITELIST_KEY, false );
+					Log::error( 'Found CORS configuration in old location, but contents invalid: ' . print_r( $_json, true ) );
+
+					return $this;
+				}
+
+				if ( false === @file_put_contents( $_config, json_encode( $_json ) ) )
+				{
+					Pii::setState( static::CORS_WHITELIST_KEY, false );
+					Log::error( 'Error moving CORS configuration file to new location.' );
+
+					return $this;
+				}
+
+				//	Final step, remove old configuration file...
+				if ( false === @unlink( $_oldConfig ) )
+				{
+					Pii::setState( static::CORS_WHITELIST_KEY, false );
+					Log::error( 'File system error removing CORS configuration file from old location. Ignoring' );
+
+					return $this;
+				}
+
+				//	Migration complete...
+				Log::info( 'CORS configuration file migrated from old location.' );
+				$_list = $_json;
+			}
+		}
+
+		if ( $_list )
+		{
+			$this->setCorsWhitelist( $_list );
+		}
+
+		Pii::setState( static::CORS_WHITELIST_KEY, $_list );
+
+		return $this;
+	}
+
+	/**
+	 * @param int    $which
+	 * @param string $namespace
+	 * @param string $path
+	 * @param bool   $prepend If true, the namespace(s) will be placed at the beginning of the list
+	 *
+	 * @return PlatformWebApplication
+	 */
+	protected static function _mapNamespace( $which, $namespace, $path, $prepend = false )
+	{
+		if ( $prepend )
+		{
+			array_unshift( static::$_namespaceMap[$which], array( $namespace, $path ) );
+		}
+		else
+		{
+			static::$_namespaceMap[$which][$namespace] = $path;
+		}
 	}
 
 	/**
@@ -639,125 +749,11 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	}
 
 	/**
-	 * @param array $resourceNamespaces
-	 *
-	 * @return PlatformConsoleApplication
-	 */
-	public function setResourceNamespaces( $resourceNamespaces )
-	{
-		$this->_resourceNamespaces = $resourceNamespaces;
-
-		return $this;
-	}
-
-	/**
-	 * @return array
-	 */
-	public function getResourceNamespaces()
-	{
-		return $this->_resourceNamespaces;
-	}
-
-	/**
-	 * @param string|array $namespace
-	 * @param bool         $prepend If true, the namespace(s) will be placed at the beginning of the list
-	 *
-	 * @return PlatformWebApplication
-	 */
-	public function addResourceNamespace( $namespace, $prepend = false )
-	{
-		foreach ( Option::clean( $namespace ) as $_entry )
-		{
-			if ( !in_array( $_entry, $this->_resourceNamespaces ) )
-			{
-				if ( false === $prepend )
-				{
-					$this->_resourceNamespaces[] = $_entry;
-					continue;
-				}
-
-				array_unshift( $this->_resourceNamespaces, $_entry );
-			}
-		}
-
-		return $this;
-	}
-
-	/**
-	 * @param array $modelNamespaces
-	 *
-	 * @return PlatformWebApplication
-	 */
-	public function setModelNamespaces( $modelNamespaces )
-	{
-		$this->_modelNamespaces = $modelNamespaces;
-
-		return $this;
-	}
-
-	/**
-	 * @return array
-	 */
-	public function getModelNamespaces()
-	{
-		return $this->_modelNamespaces;
-	}
-
-	/**
-	 * @param string|array $namespace
-	 * @param bool         $prepend If true, the namespace(s) will be placed at the beginning of the list
-	 *
-	 * @return PlatformWebApplication
-	 */
-	public function addModelNamespace( $namespace, $prepend = false )
-	{
-		foreach ( Option::clean( $namespace ) as $_entry )
-		{
-			if ( !in_array( $_entry, $this->_modelNamespaces ) )
-			{
-				if ( false === $prepend )
-				{
-					$this->_modelNamespaces[] = $_entry;
-					continue;
-				}
-
-				array_unshift( $this->_modelNamespaces, $_entry );
-			}
-		}
-
-		return $this;
-	}
-
-	/**
-	 * @param \Symfony\Component\HttpFoundation\Request $requestObject
-	 *
-	 * @return PlatformWebApplication
-	 */
-	public function setRequestObject( $requestObject )
-	{
-		$this->_requestObject = $requestObject;
-
-		return $this;
-	}
-
-	/**
 	 * @return \Symfony\Component\HttpFoundation\Request
 	 */
 	public function getRequestObject()
 	{
 		return $this->_requestObject;
-	}
-
-	/**
-	 * @param \Symfony\Component\HttpFoundation\Response $responseObject
-	 *
-	 * @return PlatformWebApplication
-	 */
-	public function setResponseObject( $responseObject )
-	{
-		$this->_responseObject = $responseObject;
-
-		return $this;
 	}
 
 	/**
@@ -769,18 +765,121 @@ class PlatformConsoleApplication extends \CConsoleApplication
 	}
 
 	/**
-	 * @param boolean $profilerEnabled
+	 * @param boolean $enableProfiler
 	 */
-	public static function setProfilerEnabled( $profilerEnabled )
+	public static function setEnableProfiler( $enableProfiler )
 	{
-		static::$_profilerEnabled = $profilerEnabled;
+		static::$_enableProfiler = $enableProfiler;
 	}
 
 	/**
 	 * @return boolean
 	 */
-	public static function getProfilerEnabled()
+	public static function getEnableProfiler()
 	{
-		return static::$_profilerEnabled;
+		return static::$_enableProfiler;
+	}
+
+	/**
+	 * @param array $resourceNamespaces
+	 *
+	 * @return PlatformWebApplication
+	 */
+	public function setResourceNamespaces( $resourceNamespaces )
+	{
+		static::$_namespaceMap[static::NS_RESOURCES] = $resourceNamespaces;
+
+		return $this;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getResourceNamespaces()
+	{
+		return static::$_namespaceMap[static::NS_RESOURCES];
+	}
+
+	/**
+	 * @param string $namespace
+	 * @param string $path
+	 * @param bool   $prepend If true, the namespace(s) will be placed at the beginning of the list
+	 *
+	 * @return PlatformWebApplication
+	 */
+	public function addResourceNamespace( $namespace, $path, $prepend = false )
+	{
+		static::_mapNamespace( static::NS_RESOURCES, $namespace, $path, $prepend );
+		array_unshift( $this->_modelNamespaces, $_entry );
+
+		return $this;
+	}
+
+	/**
+	 * @param array $modelNamespaces
+	 *
+	 * @return PlatformWebApplication
+	 */
+	public function setModelNamespaces( $modelNamespaces )
+	{
+		static::$_namespaceMap[static::NS_MODELS] = $modelNamespaces;
+
+		return $this;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getModelNamespaces()
+	{
+		return static::$_namespaceMap[static::NS_MODELS];
+	}
+
+	/**
+	 * @param string $namespace
+	 * @param string $path
+	 * @param bool   $prepend If true, the namespace(s) will be placed at the beginning of the list
+	 *
+	 * @return PlatformWebApplication
+	 */
+	public function addModelNamespace( $namespace, $path, $prepend = false )
+	{
+		static::_mapNamespace( static::NS_MODELS, $namespace, $path, $prepend );
+
+		return $this;
+	}
+
+	/**
+	 * @param int $which Which map to return or null for all
+	 *
+	 * @return \array[]
+	 */
+	public static function getNamespaceMap( $which = null )
+	{
+		return $which ? static::$_namespaceMap[$which] : static::$_namespaceMap;
+	}
+
+	/**
+	 * Registers a set of PSR-4 directories for a given namespace, either
+	 * appending or prepending to the ones previously set for this namespace.
+	 *
+	 * @param string       $prefix  The prefix/namespace, with trailing '\\'
+	 * @param array|string $paths   The PSR-0 base directories
+	 * @param bool         $prepend Whether to prepend the directories
+	 *
+	 * @throws InternalServerErrorException
+	 * @return \Composer\Autoload\ClassLoader
+	 */
+	public static function addNamespace( $prefix, $paths, $prepend = false )
+	{
+		/** @var ClassLoader $_loader */
+		if ( null === ( $_loader = \Kisma::get( CoreSettings::AUTO_LOADER ) ) )
+		{
+			throw new InternalServerErrorException( 'Unable to find auto-loader. :(' );
+		}
+
+		$_loader->addPsr4( $prefix, $paths, $prepend );
+
+		return $_loader;
 	}
 }

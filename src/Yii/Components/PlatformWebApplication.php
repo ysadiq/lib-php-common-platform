@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
-use Composer\Composer;
 use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Events\DspEvent;
 use DreamFactory\Platform\Events\Enums\DspEvents;
@@ -129,6 +128,14 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 * @var bool If true, adds some extended information about the request in the form of X-DreamFactory-* headers
 	 */
 	protected $_extendedHeaders = true;
+	/**
+	 * @var array The namespaces that contain resources. Used by the routing engine
+	 */
+	protected $_resourceNamespaces = array();
+	/**
+	 * @var array The namespaces that contain models. Used by the resource manager
+	 */
+	protected $_modelNamespaces = array();
 	/**
 	 * @var Request
 	 */
@@ -264,7 +271,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 			return $returnHeaders ? array() : true;
 		}
 
-		$_originUri = null;
 		$_requestSource = $_SERVER['SERVER_NAME'];
 
 		if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
@@ -291,7 +297,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 				 */
 				$this->_responseObject->setStatusCode( HttpResponse::Forbidden )->send();
 
-				Pii::end( HttpResponse::Forbidden );
+				return Pii::end( HttpResponse::Forbidden );
 			}
 		}
 		else

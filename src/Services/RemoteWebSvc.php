@@ -163,8 +163,8 @@ class RemoteWebSvc extends BasePlatformRestService
 				$key = Option::get( $header, 'name' );
 				$value = Option::get( $header, 'value' );
 
-				$options[CURLOPT_HTTPHEADER]
-					= !isset( $options[CURLOPT_HTTPHEADER] ) ? array( $key . ': ' . $value ) : $options[CURLOPT_HTTPHEADER][] = $key . ': ' . $value;
+				$options[CURLOPT_HTTPHEADER] =
+					!isset( $options[CURLOPT_HTTPHEADER] ) ? array( $key . ': ' . $value ) : $options[CURLOPT_HTTPHEADER][] = $key . ': ' . $value;
 			}
 		}
 
@@ -176,8 +176,8 @@ class RemoteWebSvc extends BasePlatformRestService
 		parent::_preProcess();
 
 		$this->_query = $this->buildParameterString( $this->_action );
-		$this->_url
-			= rtrim( $this->_baseUrl, '/' ) . ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null ) . '?' . $this->_query;
+		$this->_url =
+			rtrim( $this->_baseUrl, '/' ) . ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null ) . '?' . $this->_query;
 
 		//	set additional headers
 		$this->_curlOptions = $this->addHeaders( $this->_action, $this->_curlOptions );

@@ -476,8 +476,8 @@ class Portal extends BaseSystemRestService
 		{
 			if ( null !== ( $_error = Option::getDeep( $response, 'result', 'error' ) ) )
 			{
-				$_message
-					= '[' . $_message . '] ' . Option::get( $_error, 'message', 'Not specified.' ) . ' (' . Option::get( $_error, 'code', 'Unknown' ) . ')';
+				$_message =
+					'[' . $_message . '] ' . Option::get( $_error, 'message', 'Not specified.' ) . ' (' . Option::get( $_error, 'code', 'Unknown' ) . ')';
 			}
 
 			throw new RestException( $_code, $_message );
@@ -538,8 +538,7 @@ class Portal extends BaseSystemRestService
 	protected function _cleanRequestPayload()
 	{
 		//	This is a list of possible query string options to be removed from the request payload
-		static $_internalOptions
-		= array(
+		static $_internalOptions = array(
 			'_',
 			'app_name',
 			'control',

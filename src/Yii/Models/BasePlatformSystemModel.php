@@ -211,8 +211,7 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 
 		try
 		{
-			$_sql
-				= <<<MYSQL
+			$_sql = <<<MYSQL
 SELECT
 	id,
 	$mapColumn

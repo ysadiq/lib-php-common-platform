@@ -55,25 +55,24 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * @var array
 	 */
-	protected $_defaultCreateTable
-		= array(
-			'AttributeDefinitions'  => array(
-				array(
-					'AttributeName' => 'id',
-					'AttributeType' => Type::S
-				)
-			),
-			'KeySchema'             => array(
-				array(
-					'AttributeName' => 'id',
-					'KeyType'       => KeyType::HASH
-				)
-			),
-			'ProvisionedThroughput' => array(
-				'ReadCapacityUnits'  => 10,
-				'WriteCapacityUnits' => 20
+	protected $_defaultCreateTable = array(
+		'AttributeDefinitions'  => array(
+			array(
+				'AttributeName' => 'id',
+				'AttributeType' => Type::S
 			)
-		);
+		),
+		'KeySchema'             => array(
+			array(
+				'AttributeName' => 'id',
+				'KeyType'       => KeyType::HASH
+			)
+		),
+		'ProvisionedThroughput' => array(
+			'ReadCapacityUnits'  => 10,
+			'WriteCapacityUnits' => 20
+		)
+	);
 
 	//*************************************************************************
 	//	Methods

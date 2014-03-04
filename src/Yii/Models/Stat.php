@@ -74,8 +74,7 @@ class Stat extends BasePlatformSystemModel
 	 */
 	public static function create( $type, $userId, $statData, $date = null )
 	{
-		$_sql
-			= <<<SQL
+		$_sql = <<<SQL
 INSERT INTO df_sys_stat
 (
 	type,

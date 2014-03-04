@@ -317,8 +317,7 @@ class SystemManager extends BaseSystemRestService
 				$_tableName = static::SYSTEM_TABLE_PREFIX . 'config';
 				$_params = array( ':db_version' => $version );
 
-				$_sql
-					= <<<SQL
+				$_sql = <<<SQL
 INSERT INTO {$_tableName}
 (
 	db_version
@@ -1220,8 +1219,7 @@ SQL
 	 */
 	protected static function _stateRedirect( $action = null )
 	{
-		static $_map
-		= array(
+		static $_map = array(
 			PlatformStates::INIT_REQUIRED    => 'initSystem',
 			PlatformStates::SCHEMA_REQUIRED  => 'upgradeSchema',
 			PlatformStates::ADMIN_REQUIRED   => 'initAdmin',

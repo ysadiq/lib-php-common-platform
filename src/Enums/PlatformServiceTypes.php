@@ -98,21 +98,20 @@ class PlatformServiceTypes extends SeedEnum
 	 *
 	 * @var array A map of classes for services
 	 */
-	protected static $_classMap
-		= array(
-			self::SYSTEM_MANAGER_SERVICE => 'SystemManager',
-			self::USER_MANAGER_SERVICE   => 'UserManager',
-			self::LOCAL_PORTAL_SERVICE   => 'Portal',
-			self::LOCAL_FILE_STORAGE     => 'LocalFileSvc',
-			self::REMOTE_FILE_STORAGE    => 'RemoteFileSvc',
-			self::LOCAL_SQL_DB           => 'SqlDbSvc',
-			self::REMOTE_SQL_DB          => 'SqlDbSvc',
-			self::LOCAL_SQL_DB_SCHEMA    => 'SchemaSvc',
-			self::REMOTE_SQL_DB_SCHEMA   => 'SchemaSvc',
-			self::EMAIL_SERVICE          => 'EmailSvc',
-			self::NOSQL_DB               => 'NoSqlDbSvc',
-			self::SALESFORCE             => 'SalesforceDbSvc',
-		);
+	protected static $_classMap = array(
+		self::SYSTEM_MANAGER_SERVICE => 'SystemManager',
+		self::USER_MANAGER_SERVICE   => 'UserManager',
+		self::LOCAL_PORTAL_SERVICE   => 'Portal',
+		self::LOCAL_FILE_STORAGE     => 'LocalFileSvc',
+		self::REMOTE_FILE_STORAGE    => 'RemoteFileSvc',
+		self::LOCAL_SQL_DB           => 'SqlDbSvc',
+		self::REMOTE_SQL_DB          => 'SqlDbSvc',
+		self::LOCAL_SQL_DB_SCHEMA    => 'SchemaSvc',
+		self::REMOTE_SQL_DB_SCHEMA   => 'SchemaSvc',
+		self::EMAIL_SERVICE          => 'EmailSvc',
+		self::NOSQL_DB               => 'NoSqlDbSvc',
+		self::SALESFORCE             => 'SalesforceDbSvc',
+	);
 
 	//*************************************************************************
 	//	Methods

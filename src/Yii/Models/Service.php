@@ -70,11 +70,10 @@ class Service extends BasePlatformSystemModel
 	/**
 	 * @var array
 	 */
-	protected static $_systemServices
-		= array(
-			'system' => 'DreamFactory\\Platform\\Services\\SystemManager',
-			'user'   => 'DreamFactory\\Platform\\Services\\UserManager',
-		);
+	protected static $_systemServices = array(
+		'system' => 'DreamFactory\\Platform\\Services\\SystemManager',
+		'user'   => 'DreamFactory\\Platform\\Services\\UserManager',
+	);
 
 	//*************************************************************************
 	//* Methods
@@ -128,8 +127,7 @@ class Service extends BasePlatformSystemModel
 			$_tableName = static::model()->tableName();
 
 			//	List all available services from db
-			$_sql
-				= <<<MYSQL
+			$_sql = <<<MYSQL
 SELECT
 	*
 FROM

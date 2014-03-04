@@ -68,8 +68,7 @@ class Validate implements PageLocation
 
 		if ( null === Option::get( $options, 'highlight' ) )
 		{
-			$options['highlight']
-				= <<<SCRIPT
+			$options['highlight'] = <<<SCRIPT
 function( element, errorClass ) {
 	$(element).closest('div.control-group').addClass('error');
 	$(element).addClass(errorClass);
@@ -79,8 +78,7 @@ SCRIPT;
 
 		if ( null === Option::get( $options, 'unhighlight' ) )
 		{
-			$options['unhighlight']
-				= <<<SCRIPT
+			$options['unhighlight'] = <<<SCRIPT
 function( element, errorClass ) {
 	$(element).closest('div.control-group').removeClass('error');
 	$(element).removeClass(errorClass);
@@ -91,8 +89,7 @@ SCRIPT;
 		//	Get the options...
 		$_scriptOptions = is_string( $options ) ? $options : PiiScript::encodeOptions( $options );
 
-		$_validate
-			= <<<JS
+		$_validate = <<<JS
 jQuery.validator.addMethod(
 	"phoneUS",
 	function(phone_number, element) {

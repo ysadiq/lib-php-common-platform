@@ -52,11 +52,10 @@ class AsgardService extends SeedBag
 	/**
 	 * @var array Used to determine if an app is a system app or not
 	 */
-	protected static $_repoUrls
-		= array(
-			'github.com/dreamfactorysoftware/',
-			'bitbucket.org/dreamfactory/',
-		);
+	protected static $_repoUrls = array(
+		'github.com/dreamfactorysoftware/',
+		'bitbucket.org/dreamfactory/',
+	);
 
 	//*************************************************************************
 	//	Methods
@@ -199,8 +198,7 @@ class AsgardService extends SeedBag
 		/**
 		 * DB Stats
 		 */
-		$_sql
-			= <<<MYSQL
+		$_sql = <<<MYSQL
 SELECT
 	SUM( data_length + index_length ) / 1024 / 1024 AS mb_used_nbr,
 	SUM( data_free ) / 1024 / 1024 AS mb_free_nbr
@@ -236,8 +234,7 @@ MYSQL;
 	{
 		Sql::setConnection( $pdo );
 
-		$_sql
-			= <<<MYSQL
+		$_sql = <<<MYSQL
 SELECT
 	a.api_name,
 	a.is_active,
@@ -308,8 +305,7 @@ MYSQL;
 	{
 		Sql::setConnection( $pdo );
 
-		$_sql
-			= <<<MYSQL
+		$_sql = <<<MYSQL
 SELECT
 	COUNT(*)
 FROM
