@@ -26,8 +26,9 @@ use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * RestResponse
@@ -66,18 +67,16 @@ class RestResponse extends HttpResponse
 
 		if ( empty( $_format ) )
 		{
-			$_format = FilterInput::request( 'format', null, FILTER_SANITIZE_STRING );
+			$_format = Pii::app()->getRequestObject()->query->get( 'format' );
 
 			if ( empty( $_format ) )
 			{
-				$_accepted = RestResponse::parseAcceptHeader(
-					FilterInput::server( 'HTTP_ACCEPT', null, FILTER_SANITIZE_STRING )
-				);
-				$_accepted = array_values( $_accepted );
-				$_format = Option::get( $_accepted, 0 );
+				$_format = @current( Pii::app()->getRequestObject()->getAcceptableContentTypes() );
 			}
 		}
+
 		$_format = trim( strtolower( $_format ) );
+
 		switch ( $_format )
 		{
 			case 'json':
@@ -109,56 +108,6 @@ class RestResponse extends HttpResponse
 		}
 
 		return $_format;
-	}
-
-	public static function parseAcceptHeader( $header )
-	{
-		$accept = array();
-		foreach ( preg_split( '/\s*,\s*/', $header ) as $i => $term )
-		{
-			$o = new \stdclass;
-			$o->pos = $i;
-			if ( preg_match( ",^(\S+)\s*;\s*(?:q|level)=([0-9\.]+),i", $term, $M ) )
-			{
-				$o->type = $M[1];
-				$o->q = (double)$M[2];
-			}
-			else
-			{
-				$o->type = $term;
-				$o->q = 1;
-			}
-			$accept[] = $o;
-		}
-		usort(
-			$accept,
-			function ( $a, $b )
-			{ /* first tier: highest q factor wins */
-				$diff = $b->q - $a->q;
-				if ( $diff > 0 )
-				{
-					$diff = 1;
-				}
-				else if ( $diff < 0 )
-				{
-					$diff = -1;
-				}
-				else
-				{ /* tie-breaker: first listed item wins */
-					$diff = $a->pos - $b->pos;
-				}
-
-				return $diff;
-			}
-		);
-
-		$_result = array();
-		foreach ( $accept as $a )
-		{
-			$_result[$a->type] = $a->type;
-		}
-
-		return $_result;
 	}
 
 	/**
@@ -248,39 +197,28 @@ class RestResponse extends HttpResponse
 		{
 			case OutputFormats::JSON:
 			case 'json':
-				$_contentType = 'application/json; charset=utf-8';
-
-				// JSON if no callback
-				if ( isset( $_GET['callback'] ) )
-				{
-					// JSONP if valid callback
-					if ( !static::is_valid_callback( $_GET['callback'] ) )
-					{
-						// Otherwise, bad request
-						header( 'status: 400 Bad Request', true, static::BadRequest );
-						Pii::end();
-
-						return;
-					}
-
-					$result = "{$_GET['callback']}($result);";
-				}
+				$_response = new JsonResponse( $result, $code );
+				$_response->setCallback( Option::get( $_GET, 'callback' ) );
 				break;
 
 			case OutputFormats::XML:
 			case 'xml':
-				$_contentType = 'application/xml';
-				$result = '<?xml version="1.0" ?>' . "<dfapi>$result</dfapi>";
+				$_response = new Response( '<?xml version="1.0" ?><dfapi>' . $result . '</dfapi>', $code );
+				$_response->headers->set( 'Content-Type', 'application/xml' );
 				break;
 
-			case 'csv':
-				$_contentType = 'text/csv';
+			case OutputFormats::CSV:
+				$_response = new Response( null, $code );
+				$_response->headers->set( 'Content-Type', 'text/csv' );
 				break;
 
 			default:
-				$_contentType = 'application/octet-stream';
+				$_response = new Response( null, $code );
+				$_response->headers->set( 'Content-Type', 'application/octet-stream' );
 				break;
 		}
+
+		$_response->headers->set( 'P3P', 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"' );
 
 		/* gzip handling output if necessary */
 		ob_start();
@@ -288,17 +226,9 @@ class RestResponse extends HttpResponse
 
 		if ( !headers_sent() )
 		{
-			// headers
-			$code = static::getHttpStatusCode( $code );
-			$_title = static::getHttpStatusCodeTitle( $code );
-			header( "HTTP/1.1 $code $_title" );
-			header( "Content-Type: $_contentType" );
-			//	IE 9 requires hoop for session cookies in iframes
-			header( 'P3P:CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"' );
-
 			if ( !empty( $as_file ) )
 			{
-				header( "Content-Disposition: attachment; filename=\"$as_file\";" );
+				$_response->headers->set( 'Content-Disposition', 'attachment; filename="' . $as_file . '";' );
 			}
 
 			//	Add additional headers for CORS support

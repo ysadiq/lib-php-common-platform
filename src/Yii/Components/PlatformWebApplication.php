@@ -19,20 +19,26 @@
  */
 namespace DreamFactory\Platform\Yii\Components;
 
+use Composer\Autoload\ClassLoader;
+use Composer\Composer;
 use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Events\DspEvent;
 use DreamFactory\Platform\Events\Enums\DspEvents;
+use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Utility\EventManager;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\Events\SeedEvent;
 use Kisma\Core\Interfaces\PublisherLike;
 use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -65,6 +71,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 * @var string The private CORS configuration file
 	 */
 	const CORS_DEFAULT_CONFIG_FILE = '/cors.config.json';
+	/**
+	 * @var string The session key for CORS configs
+	 */
+	const CORS_WHITELIST_KEY = 'cors.config';
 	/**
 	 * @var string The default DSP resource namespace
 	 */
@@ -133,37 +143,37 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	//*************************************************************************
 
 	/**
-	 * Start a timer
+	 * Start a profiler
 	 *
-	 * @param string $id The id of the timer
+	 * @param string $id The id of the profiler
 	 *
 	 * @return $this
 	 */
 	public function startProfiler( $id = __CLASS__ )
 	{
-		if ( ( static::$_enableProfiler = static::$_enableProfiler ? : \Kisma::get( CoreSettings::DEBUG ) ) && function_exists( 'xhprof_enable' ) )
+		if ( static::$_enableProfiler )
 		{
-			/** @noinspection PhpUndefinedFunctionInspection */
-			xhprof_enable();
+			Profiler::start( $id );
 		}
 
 		return $this;
 	}
 
 	/**
-	 * Stop last timer
+	 * Stop a profiler
 	 *
-	 * @param string $id The id of the timer
-	 * @param bool   $returnTimeString
+	 * @param string $id The id of the profiler
+	 * @param bool   $prettyPrint
+	 *
+	 * @internal param bool $returnTimeString
 	 *
 	 * @return float
 	 */
-	public function stopProfiler( $id = __CLASS__, $returnTimeString = true )
+	public function stopProfiler( $id = __CLASS__, $prettyPrint = true )
 	{
 		if ( static::$_enableProfiler )
 		{
-			/** @noinspection PhpUndefinedFunctionInspection */
-			return xhprof_disable();
+			return Profiler::stop( $id, $prettyPrint );
 		}
 
 		return false;
@@ -176,103 +186,52 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	{
 		parent::init();
 
-		//	Get CORS data from config file
-		$_config = Pii::getParam( 'storage_base_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
-
-		if ( !file_exists( $_config ) )
-		{
-			// old location
-			$_config = Pii::getParam( 'private_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
-		}
-
-		if ( file_exists( $_config ) )
-		{
-			$_allowedHosts = array();
-			$_content = @file_get_contents( $_config );
-
-			if ( !empty( $_content ) )
-			{
-				$_allowedHosts = json_decode( $_content, true );
-			}
-
-			$this->setCorsWhitelist( $_allowedHosts );
-		}
+		$this->_loadCorsConfig();
 
 		//	Setup the request handler and events
 		$this->onBeginRequest = array( $this, '_onBeginRequest' );
 		$this->onEndRequest = array( $this, '_onEndRequest' );
-
-		//	Create our HTTP objects
-		$this->_requestObject = Request::createFromGlobals();
-		$this->_responseObject = Response::create();
 	}
 
 	/**
-	 * Handles an OPTIONS request to the server to allow CORS and optionally sends the CORS headers
+	 * @param string        $eventName
+	 * @param PlatformEvent $event
 	 *
-	 * @param \CEvent $event
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @return DspEvent
 	 */
-	protected function _onBeginRequest( \CEvent $event )
+	public function trigger( $eventName, $event = null )
 	{
-		//	Start the request-only profile
-		Profiler::start( 'app.request' );
+		$_event = $event ? : new DspEvent( $this, $this->_requestObject, $this->_responseObject );
 
-		switch ( $this->_requestObject->getMethod() )
-		{
-			case HttpMethod::TRACE:
-				Log::error(
-					'HTTP TRACE received!',
-					array(
-						'server'  => $this->_requestObject->server->all(),
-						'request' => $this->_requestObject->request->all()
-					)
-				);
-				throw new BadRequestException();
-
-			case HttpMethod::OPTIONS:
-				$this->_responseObject->setStatusCode( HttpResponse::NoContent );
-				$this->_responseObject->headers->add( array( 'content-type' => 'text/plain' ) );
-				$this->_responseObject->headers->add( $this->addCorsHeaders( null, true ) );
-				$this->_responseObject->send();
-				Pii::end( HttpResponse::NoContent );
-
-				return;
-
-			default:
-				//	Auto-add the CORS headers...
-				if ( $this->_autoAddHeaders )
-				{
-					$this->_responseObject->headers->add( $this->addCorsHeaders( null, true ) );
-				}
-				break;
-		}
-
-		//	Load any plug-ins
-		$this->_loadPlugins();
-
-		//	Trigger request event
-		$this->trigger( DspEvents::BEFORE_REQUEST );
+		return EventManager::trigger( $eventName, $_event );
 	}
 
 	/**
-	 * @param \CEvent $event
+	 * Adds an event listener that listens on the specified events.
+	 *
+	 * @param string   $eventName            The event to listen on
+	 * @param callable $listener             The listener
+	 * @param integer  $priority             The higher this value, the earlier an event
+	 *                                       listener will be triggered in the chain (defaults to 0)
+	 *
+	 * @return void
 	 */
-	protected function _onEndRequest( \CEvent $event )
+	public function on( $eventName, $listener, $priority = 0 )
 	{
-		$this->trigger( DspEvents::AFTER_REQUEST );
+		EventManager::on( $eventName, $listener, $priority );
+	}
 
-		//	Send the response
-		if ( !headers_sent() && $this->_responseObject )
-		{
-			if ( strlen( $this->_responseObject->getContent() ) )
-			{
-				$this->_responseObject->send();
-			}
-		}
-
-		Log::debug( '~~ "app.request" profile: ' . Profiler::stop( 'app.request' ) );
+	/**
+	 * Turn off/unbind/remove $listener from an event
+	 *
+	 * @param string   $eventName
+	 * @param callable $listener
+	 *
+	 * @return void
+	 */
+	public function off( $eventName, $listener )
+	{
+		EventManager::off( $eventName, $listener );
 	}
 
 	/**
@@ -297,7 +256,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 			return true;
 		}
 
-		$_origin = trim( Option::server( 'HTTP_ORIGIN' ) );
+		$_origin = trim( $this->_requestObject->headers->get( 'origin' ) );
 
 		//	Was an origin header passed? If not, don't do CORS.
 		if ( empty( $_origin ) )
@@ -330,12 +289,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 				 *
 				 * @link http://www.youtube.com/watch?v=VRaoHi_xcWk
 				 */
-				$this->_responseObject->setStatusCode( HttpResponse::Forbidden );
-				$this->_responseObject->send();
-				Pii::end( HttpResponse::Forbidden );
+				$this->_responseObject->setStatusCode( HttpResponse::Forbidden )->send();
 
-				//	If end fails for some unknown impossible reason...
-				return false;
+				Pii::end( HttpResponse::Forbidden );
 			}
 		}
 		else
@@ -347,21 +303,24 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
 		if ( !empty( $_originUri ) )
 		{
-			$_headers['Access-Control-Allow-Origin'] = $_originUri;
+			$this->_responseObject->headers->set( 'Access-Control-Allow-Origin', $_originUri );
 		}
 
-		$_headers['Access-Control-Allow-Credentials'] = 'true';
-		$_headers['Access-Control-Allow-Headers'] = static::CORS_DEFAULT_ALLOWED_HEADERS;
-		$_headers['Access-Control-Allow-Methods'] = $_allowedMethods;
-		$_headers['Access-Control-Max-Age'] = static::CORS_DEFAULT_MAX_AGE;
+		$this->_responseObject->headers->set( 'Access-Control-Allow-Credentials', 'true' );
+		$this->_responseObject->headers->set( 'Access-Control-Allow-Headers', static::CORS_DEFAULT_ALLOWED_HEADERS );
+		$this->_responseObject->headers->set( 'Access-Control-Allow-Methods', $_allowedMethods );
+		$this->_responseObject->headers->set( 'Access-Control-Max-Age', static::CORS_DEFAULT_MAX_AGE );
 
 		if ( $this->_extendedHeaders )
 		{
-			$_headers['X-DreamFactory-Source'] = $_requestSource;
+			$this->_responseObject->headers->set( 'X-DreamFactory-Source', $_requestSource );
 
 			if ( $_origin )
 			{
-				$_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '/^([\w_-]+\.)*' . $_requestSource . '$/', $_originUri );
+				$this->_responseObject->headers->set(
+					'X-DreamFactory-Origin-Whitelisted',
+					preg_match( '/^([\w_-]+\.)*' . $_requestSource . '$/', $_originUri )
+				);
 			}
 		}
 
@@ -374,16 +333,79 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
 		if ( $returnHeaders )
 		{
-			return $_headers;
-		}
-
-		//	Dump the headers
-		foreach ( $_headers as $_key => $_value )
-		{
-			header( $_key . ': ' . $_value );
+			return $this->_responseObject->headers->all();
 		}
 
 		return true;
+	}
+
+	/**
+	 * Handles an OPTIONS request to the server to allow CORS and optionally sends the CORS headers
+	 *
+	 * @param \CEvent $event
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 */
+	protected function _onBeginRequest( \CEvent $event )
+	{
+		//	Start the request-only profile
+		Profiler::start( 'app.request' );
+
+		$this->_requestObject = Request::createFromGlobals();
+		$this->_responseObject = Response::create();
+
+		//	Load any plug-ins
+		$this->_loadPlugins();
+
+		switch ( $this->_requestObject->getMethod() )
+		{
+			//	OPTIONS goooooooooood!!!!!
+			case HttpMethod::OPTIONS:
+				$this->addCorsHeaders();
+				$this->_responseObject->setStatusCode( HttpResponse::NoContent )->send();
+				Pii::end( HttpResponse::NoContent );
+				break;
+
+			//	TRACE baaaaaadddddddddd!!!!!
+			case HttpMethod::TRACE:
+				Log::error(
+					'HTTP TRACE received!',
+					array(
+						'server'  => $this->_requestObject->server->all(),
+						'request' => $this->_requestObject->request->all()
+					)
+				);
+
+				throw new BadRequestException();
+		}
+
+		//	Auto-add the CORS headers...
+		if ( $this->_autoAddHeaders )
+		{
+			$this->addCorsHeaders();
+		}
+
+		//	Trigger request event
+		$this->trigger( DspEvents::BEFORE_REQUEST );
+	}
+
+	/**
+	 * @param \CEvent $event
+	 */
+	protected function _onEndRequest( \CEvent $event )
+	{
+		$this->trigger( DspEvents::AFTER_REQUEST );
+
+		//	Send the response
+//		if ( !headers_sent() && $this->_responseObject )
+//		{
+//			if ( strlen( $this->_responseObject->getContent() ) )
+//			{
+//				$this->_responseObject->send();
+//			}
+//		}
+
+		Log::debug( '~~ "app.request" profile: ' . Profiler::stop( 'app.request' ) );
 	}
 
 	/**
@@ -518,32 +540,124 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	protected function _parseUri( $uri, $normalize = false )
 	{
-		if ( false === ( $_parts = parse_url( $uri ) ) || !( isset( $_parts['host'] ) || isset( $_parts['path'] ) ) )
+		$_uri = array(
+			'scheme' => $this->_requestObject->getScheme(),
+			'host'   => $this->_requestObject->getHttpHost(),
+			'port'   => $this->_requestObject->getPort(),
+			'path'   => $this->_requestObject->getPathInfo(),
+		);
+
+		if ( !( isset( $_uri['host'] ) || isset( $_uri['path'] ) ) )
 		{
 			return false;
 		}
 
-		if ( isset( $_parts['path'] ) && !isset( $_parts['host'] ) )
+		if ( isset( $_uri['path'] ) && !isset( $_uri['host'] ) )
 		{
 			//	Special case, handle this generically later
-			if ( 'null' == $_parts['path'] )
+			if ( 'null' == $_uri['path'] )
 			{
 				return 'null';
 			}
 
-			$_parts['host'] = $_parts['path'];
-			unset( $_parts['path'] );
+			$_uri['host'] = $_uri['path'];
+
+			unset( $_uri['path'] );
 		}
 
-		$_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
-
-		$_uri = array(
-			'scheme' => Option::get( $_parts, 'scheme', $_protocol ),
-			'host'   => Option::get( $_parts, 'host' ),
-			'port'   => Option::get( $_parts, 'port' ),
-		);
-
 		return $normalize ? $this->_normalizeUri( $_uri ) : $_uri;
+	}
+
+	/**
+	 * @param array $parts Return from \parse_url
+	 *
+	 * @return string
+	 */
+	protected function _normalizeUri( $parts )
+	{
+		return is_array( $parts ) ?
+			( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
+			: $parts;
+	}
+
+	/**
+	 * Loads the CORS whitelist from the session. If not there, it's loaded and stuffed in there.
+	 *
+	 * @return $this
+	 */
+	protected function _loadCorsConfig()
+	{
+		$_list = $this->_corsWhitelist;
+
+		if ( false !== $_list && !is_array( $_list ) || null === ( $_list = Pii::getState( static::CORS_WHITELIST_KEY ) ) )
+		{
+			//	Get CORS data from config file
+			$_config = Platform::getStorageBasePath( static::CORS_DEFAULT_CONFIG_FILE );
+
+			if ( file_exists( $_config ) )
+			{
+				$_list = @json_decode( file_get_contents( $_config ), true );
+
+				if ( empty( $_list ) )
+				{
+					Pii::setState( static::CORS_WHITELIST_KEY, false );
+					Log::error( 'Found CORS configuration, but contents invalid: ' . print_r( $_list, true ) );
+
+					return $this;
+				}
+			}
+			else
+			{
+				//	Check the old location
+				$_oldConfig = Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE );
+
+				//	Nada? Bail...
+				if ( !file_exists( $_oldConfig ) )
+				{
+					Pii::setState( static::CORS_WHITELIST_KEY, false );
+
+					return $this;
+				}
+
+				if ( false === ( $_json = @json_decode( @file_get_contents( $_oldConfig ), true ) ) )
+				{
+					Pii::setState( static::CORS_WHITELIST_KEY, false );
+					Log::error( 'Found CORS configuration in old location, but contents invalid: ' . print_r( $_json, true ) );
+
+					return $this;
+				}
+
+				if ( false === @file_put_contents( $_config, json_encode( $_json ) ) )
+				{
+					Pii::setState( static::CORS_WHITELIST_KEY, false );
+					Log::error( 'Error moving CORS configuration file to new location.' );
+
+					return $this;
+				}
+
+				//	Final step, remove old configuration file...
+				if ( false === @unlink( $_oldConfig ) )
+				{
+					Pii::setState( static::CORS_WHITELIST_KEY, false );
+					Log::error( 'File system error removing CORS configuration file from old location. Ignoring' );
+
+					return $this;
+				}
+
+				//	Migration complete...
+				Log::info( 'CORS configuration file migrated from old location.' );
+				$_list = $_json;
+			}
+		}
+
+		if ( $_list )
+		{
+			$this->setCorsWhitelist( $_list );
+		}
+
+		Pii::setState( static::CORS_WHITELIST_KEY, $_list );
+
+		return $this;
 	}
 
 	/**
@@ -564,59 +678,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 		{
 			static::$_namespaceMap[$which][$namespace] = $path;
 		}
-	}
-
-	/**
-	 * @param array $parts Return from \parse_url
-	 *
-	 * @return string
-	 */
-	protected function _normalizeUri( $parts )
-	{
-		return is_array( $parts ) ?
-			( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
-			: $parts;
-	}
-
-	/**
-	 * @param string    $eventName
-	 * @param SeedEvent $event
-	 *
-	 * @return DspEvent
-	 */
-	public function trigger( $eventName, $event = null )
-	{
-		$_event = $event ? : new DspEvent( $this, $this->_requestObject, $this->_responseObject );
-
-		return EventManager::trigger( $eventName, $_event );
-	}
-
-	/**
-	 * Adds an event listener that listens on the specified events.
-	 *
-	 * @param string   $eventName            The event to listen on
-	 * @param callable $listener             The listener
-	 * @param integer  $priority             The higher this value, the earlier an event
-	 *                                       listener will be triggered in the chain (defaults to 0)
-	 *
-	 * @return void
-	 */
-	public function on( $eventName, $listener, $priority = 0 )
-	{
-		EventManager::on( $eventName, $listener, $priority );
-	}
-
-	/**
-	 * Turn off/unbind/remove $listener from an event
-	 *
-	 * @param string   $eventName
-	 * @param callable $listener
-	 *
-	 * @return void
-	 */
-	public function off( $eventName, $listener )
-	{
-		EventManager::off( $eventName, $listener );
 	}
 
 	/**
@@ -680,6 +741,38 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	public function getExtendedHeaders()
 	{
 		return $this->_extendedHeaders;
+	}
+
+	/**
+	 * @return \Symfony\Component\HttpFoundation\Request
+	 */
+	public function getRequestObject()
+	{
+		return $this->_requestObject;
+	}
+
+	/**
+	 * @return \Symfony\Component\HttpFoundation\Response
+	 */
+	public function getResponseObject()
+	{
+		return $this->_responseObject;
+	}
+
+	/**
+	 * @param boolean $enableProfiler
+	 */
+	public static function setEnableProfiler( $enableProfiler )
+	{
+		static::$_enableProfiler = $enableProfiler;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public static function getEnableProfiler()
+	{
+		return static::$_enableProfiler;
 	}
 
 	/**
@@ -751,35 +844,36 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	}
 
 	/**
-	 * @return \Symfony\Component\HttpFoundation\Request
+	 * @param int $which Which map to return or null for all
+	 *
+	 * @return \array[]
 	 */
-	public function getRequestObject()
+	public static function getNamespaceMap( $which = null )
 	{
-		return $this->_requestObject;
+		return $which ? static::$_namespaceMap[$which] : static::$_namespaceMap;
 	}
 
 	/**
-	 * @return \Symfony\Component\HttpFoundation\Response
+	 * Registers a set of PSR-4 directories for a given namespace, either
+	 * appending or prepending to the ones previously set for this namespace.
+	 *
+	 * @param string       $prefix  The prefix/namespace, with trailing '\\'
+	 * @param array|string $paths   The PSR-0 base directories
+	 * @param bool         $prepend Whether to prepend the directories
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @return \Composer\Autoload\ClassLoader
 	 */
-	public function getResponseObject()
+	public static function addNamespace( $prefix, $paths, $prepend = false )
 	{
-		return $this->_responseObject;
-	}
+		/** @var ClassLoader $_loader */
+		if ( null === ( $_loader = \Kisma::get( CoreSettings::AUTO_LOADER ) ) )
+		{
+			throw new InternalServerErrorException( 'Unable to find auto-loader. :(' );
+		}
 
-	/**
-	 * @param boolean $enableProfiler
-	 */
-	public static function setEnableProfiler( $enableProfiler )
-	{
-		static::$_enableProfiler = $enableProfiler;
-	}
+		$_loader->addPsr4( $prefix, $paths, $prepend );
 
-	/**
-	 * @return boolean
-	 */
-	public static function getEnableProfiler()
-	{
-		return static::$_enableProfiler;
+		return $_loader;
 	}
-
 }

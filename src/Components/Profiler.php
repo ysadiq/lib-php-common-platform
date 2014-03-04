@@ -46,7 +46,14 @@ class Profiler
 	 */
 	public static function start( $id )
 	{
-		return static::$_runs[$id] = microtime( true );
+		static::$_runs[$id] = array( 'start' => microtime( true ) );
+
+		if ( function_exists( 'xhprof_enable' ) )
+		{
+			xhprof_enable();
+		}
+
+		return static::$_runs[$id];
 	}
 
 	/**
@@ -59,9 +66,14 @@ class Profiler
 	 */
 	public static function stop( $id, $prettyPrint = true )
 	{
-		$_elapsed = microtime( true ) - ( isset( static::$_runs[$id] ) ? static::$_runs[$id] : 0.0 );
+		if ( function_exists( 'xhprof_disable' ) )
+		{
+			static::$_runs[$id]['xhprof'] = xhprof_disable();
+		}
 
-		return $prettyPrint ? static::elapsedAsString( $_elapsed ) : $_elapsed;
+		static::$_runs[$id]['elapsed'] = ( static::$_runs[$id]['stop'] = microtime( true ) ) - ( isset( static::$_runs[$id] ) ? static::$_runs[$id] : 0.0 );
+
+		return $prettyPrint ? static::elapsedAsString( static::$_runs[$id]['elapsed'] ) : static::$_runs[$id]['elapsed'];
 	}
 
 	/**
@@ -81,9 +93,30 @@ class Profiler
 
 		while ( $count >= $_runCount-- )
 		{
-			$_time = microtime( true );
+			$_run = array(
+				'start'   => $_time = microtime( true ),
+				'end'     => 0,
+				'elapsed' => 0,
+				'xhprof'  => null,
+			);
+
+			if ( function_exists( 'xhprof_enable' ) )
+			{
+				xhprof_enable();
+			}
+
 			call_user_func_array( $callable, $arguments );
-			$_runs[] = ( microtime( true ) - $_time );
+
+			if ( function_exists( 'xhprof_disable' ) )
+			{
+				$_run['xhprof'] = xhprof_disable();
+			}
+
+			$_run['elapsed'] = ( $_run['end'] = microtime( true ) ) - $_run['start'];
+
+			$_runs[] = $_run;
+
+			unset( $_run );
 		}
 
 		//	Summarize the runs

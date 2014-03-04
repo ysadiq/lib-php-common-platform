@@ -25,7 +25,6 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Inflector;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -70,23 +69,16 @@ class Platform extends SeedUtility
 		}
 
 		//	Make a cache tag that includes the requested path...
-		$_cacheTag = Inflector::neutralize( $type . $_appendage );
+		$_cacheTag = Inflector::neutralize( $type . '/' . $_appendage );
 
 		if ( null === ( $_path = Option::get( $_cache, $_cacheTag ) ) )
 		{
-			$_basePath = trim( Pii::getParam( $_tag ) );
+			$_storagePath = Platform::getStoragePath();
+			$_path = $_storagePath . $_appendage;
 
-			if ( empty( $_basePath ) )
+			if ( true === $createIfMissing && !is_dir( dirname( $_path ) ) )
 			{
-				$_path = \Kisma::get( 'app.project_root' ) . '/storage';
-				Log::notice( 'Empty path for platform path type "' . $type . '". Defaulting to "' . $_path . '"' );
-			}
-
-			$_path .= $_appendage;
-
-			if ( true === $createIfMissing && !is_dir( $_path ) )
-			{
-				if ( false === @\mkdir( $_path, 0777, true ) )
+				if ( false === @\mkdir( dirname( $_path ), 0777, true ) )
 				{
 					throw new FileSystemException( 'File system error creating directory: ' . $_path );
 				}
@@ -97,6 +89,18 @@ class Platform extends SeedUtility
 		}
 
 		return $_path;
+	}
+
+	/**
+	 * Constructs the virtual storage path
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getStorageBasePath( $append = null )
+	{
+		return static::_getPlatformPath( LocalStorageTypes::STORAGE_BASE_PATH, $append );
 	}
 
 	/**
@@ -226,8 +230,7 @@ class Platform extends SeedUtility
 			)
 		);
 
-		$_uuid
-			=
+		$_uuid =
 			'{' .
 			substr( $_hash, 0, 8 ) .
 			'-' .
