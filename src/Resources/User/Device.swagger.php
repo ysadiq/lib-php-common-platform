@@ -29,6 +29,7 @@ $_device['apis'] = array(
 				'summary'          => 'getDevices() - Retrieve the current user\'s device information.',
 				'nickname'         => 'getDevices',
 				'type'             => 'DevicesResponse',
+				'event_name'       => 'devices.list',
 				'responseMessages' => array(
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
@@ -46,6 +47,7 @@ $_device['apis'] = array(
 				'summary'          => 'setDevice() - Create a record of the current user\'s device information.',
 				'nickname'         => 'setDevice',
 				'type'             => 'Success',
+				'event_name'       => 'device.create',
 				'parameters'       => array(
 					array(
 						'name'          => 'body',

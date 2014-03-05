@@ -29,6 +29,7 @@ $_constant['apis'] = array(
 				'summary'          => 'getConstants() - Retrieve all platform enumerated constants.',
 				'nickname'         => 'getConstants',
 				'type'             => 'Constants',
+				'event_name'       => 'constants.list',
 				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
@@ -56,6 +57,7 @@ $_constant['apis'] = array(
 				'summary'          => 'getConstant() - Retrieve one constant type enumeration.',
 				'nickname'         => 'getConstant',
 				'type'             => 'Constant',
+				'event_name'       => 'constant.read',
 				'parameters'       => array(
 					array(
 						'name'          => 'type',

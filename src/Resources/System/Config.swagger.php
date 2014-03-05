@@ -25,17 +25,19 @@ $_config['apis'] = array(
 		'path'        => '/{api_name}/config',
 		'operations'  => array(
 			array(
-				'method'   => 'GET',
-				'summary'  => 'getConfig() - Retrieve system configuration properties.',
-				'nickname' => 'getConfig',
-				'type'     => 'ConfigResponse',
-				'notes'    => 'The retrieved properties control how the system behaves.',
+				'method'     => 'GET',
+				'summary'    => 'getConfig() - Retrieve system configuration properties.',
+				'nickname'   => 'getConfig',
+				'type'       => 'ConfigResponse',
+				'event_name' => 'config.read',
+				'notes'      => 'The retrieved properties control how the system behaves.',
 			),
 			array(
 				'method'           => 'POST',
 				'summary'          => 'setConfig() - Update one or more system configuration properties.',
 				'nickname'         => 'setConfig',
 				'type'             => 'ConfigResponse',
+				'event_name'       => 'config.update',
 				'parameters'       => array(
 					array(
 						'name'          => 'body',

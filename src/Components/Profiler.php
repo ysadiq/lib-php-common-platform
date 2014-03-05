@@ -59,6 +59,7 @@ class Profiler
 		{
 			/** @noinspection PhpUndefinedConstantInspection */
 			xhprof_enable( XHPROF_FLAGS_CPU + XHPROF_FLAGS_MEMORY );
+			static::$_runs[$id]['xhprof'] = true;
 		}
 
 		return static::$_runs[$id];
@@ -84,7 +85,7 @@ class Profiler
 			static::$_runs[$id]['xhprof'] = array(
 				'data'     => $_data = xhprof_disable(),
 				'run_name' => $_runName = $id . microtime( true ),
-				'runs'     => $_runs = XHProfRuns_Default(),
+				'runs'     => $_runs = new \XHProfRuns_Default(),
 				'run_id'   => $_runId = $_runs->save_run( $_data, $_runName ),
 				'url'      => '/xhprof/index.php?run=' . $_runId . '&source=' . $_runName,
 			);

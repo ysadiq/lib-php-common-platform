@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Utility;
 use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Oasys\Exceptions\RedirectRequiredException;
+use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Yii\Utility\Pii;
@@ -42,10 +43,6 @@ class RestResponse extends HttpResponse
 	//*************************************************************************
 
 	/**
-	 * @var int
-	 */
-	const GZIP_THRESHOLD = 2048;
-	/**
 	 * @var string The default character set
 	 */
 	const DEFAULT_CHARSET = 'utf-8';
@@ -65,7 +62,7 @@ class RestResponse extends HttpResponse
 
 	/**
 	 * @param string $requested Optional requested set format, FALSE for raw formatting
-	 * @param string $internal  Reference returned internal formatting (jtables, etc.)
+	 * @param string $internal  Reference returned internal formatting (datatables, jtables, etc.)
 	 *
 	 * @return string output format, outer envelope
 	 */
@@ -99,27 +96,32 @@ class RestResponse extends HttpResponse
 		{
 			case 'json':
 			case 'application/json':
+			case DataFormats::JSON:
 				$_format = DataFormats::JSON;
 				break;
 
 			case 'xml':
 			case 'application/xml':
 			case 'text/xml':
+			case DataFormats::XML:
 				$_format = DataFormats::XML;
 				break;
 
 			case 'csv':
 			case 'text/csv':
+			case DataFormats::CSV:
 				$_format = DataFormats::CSV;
 				break;
 
 			case 'psv':
 			case 'text/psv':
+			case DataFormats::PSV:
 				$_format = DataFormats::PSV;
 				break;
 
 			case 'tsv':
 			case 'text/tsv':
+			case DataFormats::TSV:
 				$_format = DataFormats::TSV;
 				break;
 
@@ -160,48 +162,38 @@ class RestResponse extends HttpResponse
 	}
 
 	/**
-	 * @param \Exception $ex
-	 * @param string     $desired_format
+	 * @param  \Exception $exception
+	 * @param string      $desired_format
 	 */
-	public static function sendErrors( $ex, $desired_format = 'json' )
+	public static function sendErrors( $exception, $desired_format = 'json' )
 	{
-		$_status = $ex->getCode();
+		$_status = $exception->getCode();
+
 		$_errorInfo = array(
-			'message' => htmlentities( $ex->getMessage() ),
-			'code'    => $ex->getCode()
+			'message' => htmlentities( $exception->getMessage() ),
+			'code'    => $exception->getCode()
 		);
 
-		if ( $ex instanceof RestException )
+		if ( $exception instanceof RestException )
 		{
-			$_status = $ex->getStatusCode();
-			$_errorInfo['context'] = $ex->getContext();
+			$_status = $exception->getStatusCode();
+			$_errorInfo['context'] = $exception->getContext();
 		}
-		elseif ( $ex instanceOf \CHttpException )
+		elseif ( $exception instanceOf \CHttpException )
 		{
-			$_status = $ex->statusCode;
+			$_status = $exception->statusCode;
 		}
-		elseif ( $ex instanceof RedirectRequiredException )
+		elseif ( $exception instanceof RedirectRequiredException )
 		{
-			$_errorInfo['location'] = $ex->getRedirectUri();
+			$_errorInfo['location'] = $exception->getRedirectUri();
 		}
 
 		$_result = array(
 			'error' => array( $_errorInfo )
 		);
 
-//		if ( static::Ok != $_status )
-//		{
-//			if ( $_status == static::InternalServerError || $_status == static::BadRequest )
-//			{
-////				Log::error( 'Error ' . $_status . ': ' . $ex->getMessage() );
-//			}
-//			else
-//			{
-////				Log::info( 'Non-Error ' . $_status . ': ' . $ex->getMessage() );
-//			}
-//		}
-
 		$_result = DataFormat::reformatData( $_result, null, $desired_format );
+
 		static::sendResults( $_result, $_status, $desired_format );
 	}
 
@@ -285,66 +277,6 @@ class RestResponse extends HttpResponse
 		}
 
 		return true;
-	}
-
-	/**
-	 * @param $subject
-	 *
-	 * @return bool
-	 */
-	public static function is_valid_callback( $subject )
-	{
-		$identifier_syntax = '/^[$_\p{L}][$_\p{L}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]*+$/u';
-
-		$reserved_words = array(
-			'break',
-			'do',
-			'instanceof',
-			'typeof',
-			'case',
-			'else',
-			'new',
-			'var',
-			'catch',
-			'finally',
-			'return',
-			'void',
-			'continue',
-			'for',
-			'switch',
-			'while',
-			'debugger',
-			'function',
-			'this',
-			'with',
-			'default',
-			'if',
-			'throw',
-			'delete',
-			'in',
-			'try',
-			'class',
-			'enum',
-			'extends',
-			'super',
-			'const',
-			'export',
-			'import',
-			'implements',
-			'let',
-			'private',
-			'public',
-			'yield',
-			'interface',
-			'package',
-			'protected',
-			'static',
-			'null',
-			'true',
-			'false'
-		);
-
-		return preg_match( $identifier_syntax, $subject ) && !in_array( mb_strtolower( $subject, 'UTF-8' ), $reserved_words );
 	}
 
 	/**

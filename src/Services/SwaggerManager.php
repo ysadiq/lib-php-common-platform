@@ -26,6 +26,7 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Sql;
 
 /**
  * SwaggerManager
@@ -63,6 +64,13 @@ class SwaggerManager extends BasePlatformRestService
 	 * @var array The event map
 	 */
 	protected static $_eventMap;
+	/**
+	 * @var array The core DSP services that are built-in
+	 */
+	protected static $_builtInServices = array(
+		array( 'api_name' => 'user', 'type_id' => 0, 'description' => 'User Login' ),
+		array( 'api_name' => 'system', 'type_id' => 0, 'description' => 'System Configuration' )
+	);
 
 	//*************************************************************************
 	//	Methods
@@ -139,21 +147,28 @@ class SwaggerManager extends BasePlatformRestService
 		);
 
 		// build services from database
-		$_command = Pii::db()->createCommand();
-		$_result = $_command->select( 'api_name,type_id,storage_type_id,description' )->from( 'df_sys_service' )->order( 'api_name' )->queryAll();
+		$_sql = <<<SQL
+SELECT
+	api_name,
+	type_id,
+	storage_type_id,
+	description
+FROM
+	df_sys_service
+ORDER BY
+	api_name ASC
+SQL;
 
-		// add static services
-		$_other = array(
-			array( 'api_name' => 'user', 'type_id' => 0, 'description' => 'User Login' ),
-			array( 'api_name' => 'system', 'type_id' => 0, 'description' => 'System Configuration' )
+		//	Pull the services and add in the built-in services
+		$_result = array_merge(
+			static::$_builtInServices,
+			$_rows = Sql::findAll( $_sql, null, Pii::pdo() )
 		);
-
-		$_result = array_merge( $_other, $_result );
 
 		// gather the services
 		$_services = array();
 
-		foreach ( $_result as $_service )
+		foreach ( $_rows as $_service )
 		{
 			$_apiName = Option::get( $_service, 'api_name' );
 			$_typeId = Option::get( $_service, 'type_id' );
@@ -170,7 +185,8 @@ class SwaggerManager extends BasePlatformRestService
 
 				if ( is_array( $_fromFile ) && !empty( $_fromFile ) )
 				{
-					static::$_eventMap[$_apiName] = $_events = static::_parseSwaggerEvents( $_apiName, $_fromFile );
+					//	Parse the events while we get the chance...
+					static::$_eventMap[$_apiName] = $_events = static::_parseSwaggerEvents( $_service, $_apiName, $_fromFile );
 
 					$_content = array_merge( $_baseSwagger, $_fromFile );
 					$_content = json_encode( $_content );
@@ -183,6 +199,7 @@ class SwaggerManager extends BasePlatformRestService
 				if ( file_exists( $_filePath ) )
 				{
 					$_fromFile = file_get_contents( $_filePath );
+
 					if ( !empty( $_fromFile ) )
 					{
 						$_content = $_fromFile;
@@ -199,11 +216,15 @@ class SwaggerManager extends BasePlatformRestService
 
 				/** @noinspection PhpIncludeInspection */
 				$_fromFile = require( $_filePath );
+
 				if ( !is_array( $_fromFile ) )
 				{
 					Log::error( "Failed to get default swagger file contents for service $_apiName." );
 					continue;
 				}
+
+				//	Parse the events while we get the chance...
+				static::$_eventMap[$_apiName] = $_events = static::_parseSwaggerEvents( $_service, $_apiName, $_fromFile );
 
 				$_content = array_merge( $_baseSwagger, $_fromFile );
 				$_content = json_encode( $_content );
@@ -259,12 +280,13 @@ class SwaggerManager extends BasePlatformRestService
 	}
 
 	/**
+	 * @param array           $service
 	 * @param string          $apiName
 	 * @param array|\stdClass $data
 	 *
 	 * @return array
 	 */
-	protected static function _parseSwaggerEvents( $apiName, $data )
+	protected static function _parseSwaggerEvents( $service, $apiName, $data )
 	{
 		$_eventMap = $_events = array();
 

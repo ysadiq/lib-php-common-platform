@@ -28,6 +28,7 @@ $_session['apis'] = array(
 				'method'           => 'GET',
 				'summary'          => 'getSession() - Retrieve the current user session information.',
 				'nickname'         => 'getSession',
+				'event_name'       => 'session.read',
 				'type'             => 'Session',
 				'responseMessages' => array(
 					array(
@@ -46,6 +47,7 @@ $_session['apis'] = array(
 				'summary'          => 'login() - Login and create a new user session.',
 				'nickname'         => 'login',
 				'type'             => 'Session',
+				'event_name'       => 'session.create',
 				'parameters'       => array(
 					array(
 						'name'          => 'body',
@@ -73,6 +75,7 @@ $_session['apis'] = array(
 				'summary'          => 'logout() - Logout and destroy the current user session.',
 				'nickname'         => 'logout',
 				'type'             => 'Success',
+				'event_name'       => 'session.delete',
 				'responseMessages' => array(
 					array(
 						'message' => 'System Error - Specific reason is included in the error message.',

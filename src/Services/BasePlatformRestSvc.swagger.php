@@ -33,6 +33,7 @@ return array(
 		array(
 			'path'        => '/{api_name}',
 			'operations'  => array(),
+			'event_name'  => '{api_name}.list',
 			'description' => 'No operations currently defined for this service.',
 		),
 	),

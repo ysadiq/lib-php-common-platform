@@ -44,12 +44,14 @@ $_base['apis'] = array(
 					),
 				),
 				'notes'            => 'List the names of the available tables in this storage. ',
+				'event_name'       => '{api_name}.list',
 			),
 			array(
 				'method'           => 'GET',
 				'summary'          => 'getTables() - List all properties on given tables.',
 				'nickname'         => 'getTables',
 				'type'             => 'Tables',
+				'event_name'       => 'tables.list',
 				'parameters'       => array(
 					array(
 						'name'          => 'names',
@@ -87,6 +89,7 @@ $_base['apis'] = array(
 				'summary'          => 'getRecords() - Retrieve one or more records.',
 				'nickname'         => 'getRecords',
 				'type'             => 'Records',
+				'event_name'       => '{table_name}.records.get',
 				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
@@ -211,6 +214,7 @@ $_base['apis'] = array(
 				'summary'          => 'createRecords() - Create one or more records.',
 				'nickname'         => 'createRecords',
 				'type'             => 'Records',
+				'event_name'       => '{table_name}.records.create',
 				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
@@ -290,6 +294,7 @@ $_base['apis'] = array(
 				'summary'          => 'updateRecords() - Update (patch) one or more records.',
 				'nickname'         => 'updateRecords',
 				'type'             => 'Records',
+				'event_name'       => '{table_name}.records.update',
 				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
@@ -376,6 +381,7 @@ $_base['apis'] = array(
 				'summary'          => 'deleteRecords() - Delete one or more records.',
 				'nickname'         => 'deleteRecords',
 				'type'             => 'Records',
+				'event_name'       => '{table_name}.records.delete',
 				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
@@ -470,6 +476,7 @@ $_base['apis'] = array(
 				'summary'          => 'getRecord() - Retrieve one record by identifier.',
 				'nickname'         => 'getRecord',
 				'type'             => 'Record',
+				'event_name'       => '{table_name}.record.get',
 				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
@@ -541,6 +548,7 @@ $_base['apis'] = array(
 				'summary'          => 'createRecord() - Create one record with given identifier.',
 				'nickname'         => 'createRecord',
 				'type'             => 'Record',
+				'event_name'       => '{table_name}.record.create',
 				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
@@ -618,6 +626,7 @@ $_base['apis'] = array(
 				'summary'          => 'updateRecord() - Update (patch) one record by identifier.',
 				'nickname'         => 'updateRecord',
 				'type'             => 'Record',
+				'event_name'       => '{table_name}.record.update',
 				'parameters'       => array(
 					array(
 						'name'          => 'table_name',
@@ -695,6 +704,7 @@ $_base['apis'] = array(
 				'summary'          => 'deleteRecord() - Delete one record by identifier.',
 				'nickname'         => 'deleteRecord',
 				'type'             => 'Record',
+				'event_name'       => '{table_name}.record.delete',
 				'parameters'       => array(
 					array(
 						'name'          => 'table_name',

@@ -19,42 +19,59 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
-use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Services\BasePlatformService;
+use DreamFactory\Platform\Services\SwaggerManager;
+use DreamFactory\Platform\Utility\SwaggerUtilities;
+use Swagger\Annotations as SWG;
 
 /**
- * ProviderUser
- * DSP service/provider interface
+ * Provider
+ * DSP portal service provider
  *
  */
-class ProviderUser extends BaseSystemRestResource
+class Provider extends BaseSystemRestResource
 {
+	//*************************************************************************
+	//	Methods
+	//*************************************************************************
+
 	/**
-	 * Constructor
+	 * Creates a new Provider
 	 *
-	 * @param BasePlatformService $consumer
-	 * @param array               $resourceArray
-	 *
-	 * @return \DreamFactory\Platform\Resources\System\ProviderUser
+	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+	 * @param array                                               $resources
 	 */
-	public function __construct( $consumer = null, $resourceArray = array() )
+	public function __construct( $consumer, $resources = array() )
 	{
-		parent::__construct(
+		return parent::__construct(
 			$consumer,
 			array(
-				'name'           => 'portal account',
-				'type'           => 'Service',
 				'service_name'   => 'system',
+				'name'           => 'provider',
+				'api_name'       => 'provider',
 				'type_id'        => PlatformServiceTypes::LOCAL_PORTAL_SERVICE,
-				'api_name'       => 'portal_account',
-				'description'    => 'Service provider account configuration.',
+				'type'           => 'Service',
+				'description'    => 'Service provider configuration.',
 				'is_active'      => true,
-				'resource_array' => $resourceArray,
+				'resource_array' => $resources,
 				'verb_aliases'   => array(
-					static::Patch => static::Post,
+					static::PATCH => static::POST,
 				),
 			)
 		);
+	}
+
+	/**
+	 * @param mixed $results
+	 */
+	protected function _postProcess( $results = null )
+	{
+		if ( static::GET != $this->_action )
+		{
+			//	Clear swagger cache upon any Provider changes.
+			SwaggerManager::clearCache();
+		}
+
+		parent::_postProcess( $results );
 	}
 }

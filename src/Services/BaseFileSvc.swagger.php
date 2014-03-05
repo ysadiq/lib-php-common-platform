@@ -29,6 +29,7 @@ $_base['apis'] = array(
 				'summary'          => 'getResources() - List all resources.',
 				'nickname'         => 'getResources',
 				'type'             => 'Resources',
+				'event_name'       => '{api_name}.list',
 				'responseMessages' => array(
 					array(
 						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
@@ -50,6 +51,7 @@ $_base['apis'] = array(
 				'summary'          => 'getContainers() - List all containers with properties.',
 				'nickname'         => 'getContainers',
 				'type'             => 'ContainersResponse',
+				'event_name'       => 'containers.list',
 				'parameters'       => array(
 					array(
 						'name'          => 'include_properties',
@@ -82,6 +84,7 @@ $_base['apis'] = array(
 				'summary'          => 'createContainers() - Create one or more containers.',
 				'nickname'         => 'createContainers',
 				'type'             => 'ContainersResponse',
+				'event_name'       => 'containers.create',
 				'parameters'       => array(
 					array(
 						'name'          => 'body',
@@ -133,6 +136,7 @@ $_base['apis'] = array(
 				'summary'          => 'deleteContainers() - Delete one or more containers.',
 				'nickname'         => 'deleteContainers',
 				'type'             => 'ContainersResponse',
+				'event_name'       => 'containers.delete',
 				'parameters'       => array(
 					array(
 						'name'          => 'names',
@@ -183,6 +187,7 @@ $_base['apis'] = array(
 				'summary'          => 'getContainer() - List the container\'s content, including properties.',
 				'nickname'         => 'getContainer',
 				'type'             => 'ContainerResponse',
+				'event_name'       => 'container.read',
 				'parameters'       => array(
 					array(
 						'name'          => 'container',
@@ -265,6 +270,7 @@ $_base['apis'] = array(
 				'summary'          => 'createContainer() - Create container and/or add content.',
 				'nickname'         => 'createContainer',
 				'type'             => 'ContainerResponse',
+				'event_name'       => 'container.create',
 				'parameters'       => array(
 					array(
 						'name'          => 'container',
@@ -352,6 +358,7 @@ $_base['apis'] = array(
 				'summary'          => 'updateContainerProperties() - Update properties of the container.',
 				'nickname'         => 'updateContainerProperties',
 				'type'             => 'Container',
+				'event_name'       => 'container.update',
 				'parameters'       => array(
 					array(
 						'name'          => 'container',
@@ -395,6 +402,7 @@ $_base['apis'] = array(
 				'summary'          => 'deleteContainer() - Delete one container and/or its contents.',
 				'nickname'         => 'deleteContainer',
 				'type'             => 'ContainerResponse',
+				'event_name'       => 'container.delete',
 				'parameters'       => array(
 					array(
 						'name'          => 'container',
@@ -456,6 +464,7 @@ $_base['apis'] = array(
 				'summary'          => 'getFolder() - List the folder\'s content, including properties.',
 				'nickname'         => 'getFolder',
 				'type'             => 'FolderResponse',
+				'event_name'       => '{container}.folder.list',
 				'parameters'       => array(
 					array(
 						'name'          => 'container',
@@ -546,6 +555,7 @@ $_base['apis'] = array(
 				'summary'          => 'createFolder() - Create a folder and/or add content.',
 				'nickname'         => 'createFolder',
 				'type'             => 'FolderResponse',
+				'event_name'       => '{container}.folder.create',
 				'parameters'       => array(
 					array(
 						'name'          => 'container',
@@ -641,6 +651,7 @@ $_base['apis'] = array(
 				'summary'          => 'updateFolderProperties() - Update folder properties.',
 				'nickname'         => 'updateFolderProperties',
 				'type'             => 'Folder',
+				'event_name'       => '{container}.folder.update',
 				'parameters'       => array(
 					array(
 						'name'          => 'container',
@@ -692,6 +703,7 @@ $_base['apis'] = array(
 				'summary'          => 'deleteFolder() - Delete one folder and/or its contents.',
 				'nickname'         => 'deleteFolder',
 				'type'             => 'FolderResponse',
+				'event_name'       => '{container}.folder.delete',
 				'parameters'       => array(
 					array(
 						'name'          => 'container',
@@ -761,6 +773,7 @@ $_base['apis'] = array(
 				'summary'          => 'getFile() - Download the file contents and/or its properties.',
 				'nickname'         => 'getFile',
 				'type'             => 'FileResponse',
+				'event_name'       => '{container}.file.read',
 				'parameters'       => array(
 					array(
 						'name'          => 'container',
@@ -834,6 +847,7 @@ $_base['apis'] = array(
 				'summary'          => 'createFile() - Create a new file.',
 				'nickname'         => 'createFile',
 				'type'             => 'FileResponse',
+				'event_name'       => '{container}.file.create',
 				'parameters'       => array(
 					array(
 						'name'          => 'container',
@@ -893,6 +907,7 @@ $_base['apis'] = array(
 				'summary'          => 'replaceFile() - Update content of the file.',
 				'nickname'         => 'replaceFile',
 				'type'             => 'FileResponse',
+				'event_name'       => '{container}.file.update',
 				'parameters'       => array(
 					array(
 						'name'          => 'container',
@@ -944,6 +959,7 @@ $_base['apis'] = array(
 				'summary'          => 'updateFileProperties() - Update properties of the file.',
 				'nickname'         => 'updateFileProperties',
 				'type'             => 'File',
+				'event_name'       => '{container}.file.update_properties',
 				'parameters'       => array(
 					array(
 						'name'          => 'container',
@@ -995,6 +1011,7 @@ $_base['apis'] = array(
 				'summary'          => 'deleteFile() - Delete one file.',
 				'nickname'         => 'deleteFile',
 				'type'             => 'FileResponse',
+				'event_name'       => '{container}.file.delete',
 				'parameters'       => array(
 					array(
 						'name'          => 'container',

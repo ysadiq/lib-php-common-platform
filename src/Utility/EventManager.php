@@ -19,6 +19,7 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Events\PlatformEvent;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -121,14 +122,14 @@ class EventManager
 			return $_name;
 		}
 
-		$_request = $request ? : Request::createFromGlobals();
+		$_request = $request ? : Pii::app()->getRequestObject();
 
 		foreach ( $_request->request as $_key => $_value )
 		{
 			if ( is_scalar( $_value ) )
 			{
 				$_tag = str_ireplace(
-					'{' . $_key . '}',
+					array( '{' . $_key . '}', '{request.' . $_key . '}' ),
 					$_value,
 					$_tag
 				);
