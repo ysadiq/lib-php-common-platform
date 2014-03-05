@@ -22,6 +22,12 @@ namespace DreamFactory\Platform\Components;
 use Kisma\Core\Enums\DateTime;
 
 /**
+ * Profiler includes
+ */
+require_once 'xhprof_lib/utils/xhprof_lib.php';
+require_once 'xhprof_lib/utils/xhprof_runs.php';
+
+/**
  * A simple profiling class
  */
 class Profiler
@@ -46,7 +52,7 @@ class Profiler
 	 */
 	public static function start( $id )
 	{
-		static::$_runs[$id] = array( 'start' => microtime( true ) );
+		static::$_runs[$id] = array( 'start' => microtime( true ), 'xhprof' => false );
 
 		if ( function_exists( 'xhprof_enable' ) )
 		{
@@ -67,12 +73,20 @@ class Profiler
 	 */
 	public static function stop( $id, $prettyPrint = true )
 	{
-		if ( function_exists( 'xhprof_disable' ) )
-		{
-			static::$_runs[$id]['xhprof'] = xhprof_disable();
-		}
-
 		static::$_runs[$id]['elapsed'] = ( static::$_runs[$id]['stop'] = microtime( true ) ) - ( isset( static::$_runs[$id] ) ? static::$_runs[$id] : 0.0 );
+
+		if ( static::$_runs[$id]['xhprof'] )
+		{
+			/** @noinspection PhpUndefinedFunctionInspection */
+			/** @noinspection PhpUndefinedMethodInspection */
+			static::$_runs[$id]['xhprof'] = array(
+				'data'     => $_data = xhprof_disable(),
+				'run_name' => $_runName = $id . microtime( true ),
+				'runs'     => $_runs = XHProfRuns_Default(),
+				'run_id'   => $_runId = $_runs->save_run( $_data, $_runName ),
+				'url'      => '/xhprof/index.php?run=' . $_runId . '&source=' . $_runName,
+			);
+		}
 
 		return $prettyPrint ? static::elapsedAsString( static::$_runs[$id]['elapsed'] ) : static::$_runs[$id]['elapsed'];
 	}

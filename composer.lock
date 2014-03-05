@@ -527,12 +527,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/guzzle.git",
-                "reference": "5d90ff3b75ce6617395c47e5c20e0aae2fae9be7"
+                "reference": "dd3e6c0e3f0d5de9347fd9c9efb71597577c9a92"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/5d90ff3b75ce6617395c47e5c20e0aae2fae9be7",
-                "reference": "5d90ff3b75ce6617395c47e5c20e0aae2fae9be7",
+                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/dd3e6c0e3f0d5de9347fd9c9efb71597577c9a92",
+                "reference": "dd3e6c0e3f0d5de9347fd9c9efb71597577c9a92",
                 "shasum": ""
             },
             "require": {
@@ -611,24 +611,24 @@
                 "rest",
                 "web service"
             ],
-            "time": "2014-02-28 21:59:47"
+            "time": "2014-03-02 21:31:45"
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.26",
+            "version": "0.2.28",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "c8820a135a14e6b15b71955a6b8757da43d6c584"
+                "reference": "cbb7e4f858468f56f76679a2e5a7e07261151bfe"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/c8820a135a14e6b15b71955a6b8757da43d6c584",
-                "reference": "c8820a135a14e6b15b71955a6b8757da43d6c584",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/cbb7e4f858468f56f76679a2e5a7e07261151bfe",
+                "reference": "cbb7e4f858468f56f76679a2e5a7e07261151bfe",
                 "shasum": ""
             },
             "require": {
-                "monolog/monolog": "*",
+                "monolog/monolog": "@stable",
                 "php": ">=5.3.18",
                 "symfony/event-dispatcher": "~2.4@stable",
                 "symfony/http-foundation": "~2.4@stable"
@@ -637,13 +637,17 @@
                 "phpunit/phpunit": "~3.7@stable"
             },
             "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-develop": "0.2.x-dev"
+                }
+            },
             "autoload": {
                 "psr-4": {
                     "Kisma\\": "src/Kisma"
                 },
                 "files": [
-                    "src/Kisma.php",
-                    "src/autoload.php"
+                    "src/Kisma.php"
                 ]
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -664,7 +668,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-02-27 20:56:08"
+            "time": "2014-03-04 04:19:07"
         },
         {
             "name": "monolog/monolog",
@@ -1505,12 +1509,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/HttpFoundation.git",
-                "reference": "0fa4996401cf4e97e621357b6f6a9efa8eee678e"
+                "reference": "617979faab09c050e48db1fdb04c64a9c50f1848"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/0fa4996401cf4e97e621357b6f6a9efa8eee678e",
-                "reference": "0fa4996401cf4e97e621357b6f6a9efa8eee678e",
+                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/617979faab09c050e48db1fdb04c64a9c50f1848",
+                "reference": "617979faab09c050e48db1fdb04c64a9c50f1848",
                 "shasum": ""
             },
             "require": {
@@ -1548,7 +1552,7 @@
             ],
             "description": "Symfony HttpFoundation Component",
             "homepage": "http://symfony.com",
-            "time": "2014-02-18 15:41:30"
+            "time": "2014-03-03 22:00:45"
         }
     ],
     "packages-dev": [
@@ -1893,12 +1897,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-token-stream.git",
-                "reference": "292f4d5772dad5a12775be69f4a8dd663b20f103"
+                "reference": "ad4e1e23ae01b483c16f600ff1bebec184588e32"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-token-stream/zipball/292f4d5772dad5a12775be69f4a8dd663b20f103",
-                "reference": "292f4d5772dad5a12775be69f4a8dd663b20f103",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-token-stream/zipball/ad4e1e23ae01b483c16f600ff1bebec184588e32",
+                "reference": "ad4e1e23ae01b483c16f600ff1bebec184588e32",
                 "shasum": ""
             },
             "require": {
@@ -1935,7 +1939,7 @@
             "keywords": [
                 "tokenizer"
             ],
-            "time": "2013-10-21 14:03:39"
+            "time": "2014-03-03 05:10:30"
         },
         {
             "name": "phpunit/phpunit",
@@ -2177,12 +2181,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Yaml.git",
-                "reference": "e49a47d60348665261f6e279ba383241deb73cab"
+                "reference": "6194137af5f12fbcfc0cb21e269f47542b8beb47"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Yaml/zipball/e49a47d60348665261f6e279ba383241deb73cab",
-                "reference": "e49a47d60348665261f6e279ba383241deb73cab",
+                "url": "https://api.github.com/repos/symfony/Yaml/zipball/6194137af5f12fbcfc0cb21e269f47542b8beb47",
+                "reference": "6194137af5f12fbcfc0cb21e269f47542b8beb47",
                 "shasum": ""
             },
             "require": {
@@ -2217,7 +2221,7 @@
             ],
             "description": "Symfony Yaml Component",
             "homepage": "http://symfony.com",
-            "time": "2014-02-24 16:21:51"
+            "time": "2014-03-03 12:53:01"
         }
     ],
     "aliases": [
