@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
+use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
 use DreamFactory\Platform\Events\ResourceEvent;
@@ -368,7 +369,17 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 			$_result = Option::get( $_result, 'record', $_result );
 		}
 
-		$_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
+		//	Neutralize the output format
+		if ( !is_numeric( $this->_outputFormat ) )
+		{
+			$this->_outputFormat = DataFormats::toNumeric( $this->_outputFormat );
+		}
+
+		//	json response formatted by specialized response class (JsonResponse)
+		if ( DataFormats::JSON !== $this->_outputFormat )
+		{
+			$_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
+		}
 
 		$this->trigger( ResourceServiceEvents::AFTER_DATA_FORMAT );
 

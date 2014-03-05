@@ -28,6 +28,7 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -44,6 +45,19 @@ class RestResponse extends HttpResponse
 	 * @var int
 	 */
 	const GZIP_THRESHOLD = 2048;
+	/**
+	 * @var string The default character set
+	 */
+	const DEFAULT_CHARSET = 'utf-8';
+
+	//*************************************************************************
+	//	Members
+	//*************************************************************************
+
+	/**
+	 * @var string The outbound character set
+	 */
+	protected static $_charset = self::DEFAULT_CHARSET;
 
 	//*************************************************************************
 	//	Methods
@@ -65,13 +79,17 @@ class RestResponse extends HttpResponse
 		$internal = ResponseFormats::RAW;
 		$_format = $requested;
 
+		/** @var Request $_request */
+		/** @noinspection PhpUndefinedMethodInspection */
+		$_request = Pii::app()->getRequestObject();
+
 		if ( empty( $_format ) )
 		{
-			$_format = Pii::app()->getRequestObject()->query->get( 'format' );
+			$_format = $_request->query->get( 'format' );
 
 			if ( empty( $_format ) )
 			{
-				$_format = @current( Pii::app()->getRequestObject()->getAcceptableContentTypes() );
+				$_format = @current( $_request->getAcceptableContentTypes() );
 			}
 		}
 
@@ -81,18 +99,28 @@ class RestResponse extends HttpResponse
 		{
 			case 'json':
 			case 'application/json':
-				$_format = 'json';
+				$_format = DataFormats::JSON;
 				break;
 
 			case 'xml':
 			case 'application/xml':
 			case 'text/xml':
-				$_format = 'xml';
+				$_format = DataFormats::XML;
 				break;
 
 			case 'csv':
 			case 'text/csv':
-				$_format = 'csv';
+				$_format = DataFormats::CSV;
+				break;
+
+			case 'psv':
+			case 'text/psv':
+				$_format = DataFormats::PSV;
+				break;
+
+			case 'tsv':
+			case 'text/tsv':
+				$_format = DataFormats::TSV;
 				break;
 
 			default:
@@ -103,7 +131,7 @@ class RestResponse extends HttpResponse
 				}
 
 				//	Set envelope to JSON
-				$_format = 'json';
+				$_format = DataFormats::JSON;
 				break;
 		}
 
@@ -161,17 +189,17 @@ class RestResponse extends HttpResponse
 			'error' => array( $_errorInfo )
 		);
 
-		if ( static::Ok != $_status )
-		{
-			if ( $_status == static::InternalServerError || $_status == static::BadRequest )
-			{
-//				Log::error( 'Error ' . $_status . ': ' . $ex->getMessage() );
-			}
-			else
-			{
-//				Log::info( 'Non-Error ' . $_status . ': ' . $ex->getMessage() );
-			}
-		}
+//		if ( static::Ok != $_status )
+//		{
+//			if ( $_status == static::InternalServerError || $_status == static::BadRequest )
+//			{
+////				Log::error( 'Error ' . $_status . ': ' . $ex->getMessage() );
+//			}
+//			else
+//			{
+////				Log::info( 'Non-Error ' . $_status . ': ' . $ex->getMessage() );
+//			}
+//		}
 
 		$_result = DataFormat::reformatData( $_result, null, $desired_format );
 		static::sendResults( $_result, $_status, $desired_format );
@@ -182,82 +210,81 @@ class RestResponse extends HttpResponse
 	 * @param int    $code
 	 * @param string $format
 	 * @param string $as_file
+	 * @param bool   $exitAfterSend
+	 *
+	 * @return bool
 	 */
-	public static function sendResults( $result, $code = RestResponse::Ok, $format = 'json', $as_file = null )
+	public static function sendResults( $result, $code = RestResponse::Ok, $format = 'json', $as_file = null, $exitAfterSend = true )
 	{
 		//	Some REST services may handle the response, they just return null
 		if ( is_null( $result ) )
 		{
-			Pii::end();
-
-			return;
+			return Pii::end();
 		}
+
+		/** @var Response $_response */
+		/** @noinspection PhpUndefinedMethodInspection */
+		$_response = Pii::app()->getResponseObject();
 
 		switch ( $format )
 		{
 			case OutputFormats::JSON:
 			case 'json':
-				$_response = new JsonResponse( $result, $code );
-				$_response->setCallback( Option::get( $_GET, 'callback' ) );
+				if ( is_string( $result ) )
+				{
+					$_response->setContent( $result )->headers->set( 'Content-Type', 'application/json' );
+				}
+				else
+				{
+					/** @var JsonResponse $_response */
+					$_response = new JsonResponse( $result, $code );
+					$_response->setCallback( Option::get( $_GET, 'callback' ) );
+				}
 				break;
 
 			case OutputFormats::XML:
 			case 'xml':
-				$_response = new Response( '<?xml version="1.0" ?><dfapi>' . $result . '</dfapi>', $code );
+				$_response->setContent( '<?xml version="1.0" ?><dfapi>' . $result . '</dfapi>', $code );
 				$_response->headers->set( 'Content-Type', 'application/xml' );
 				break;
 
 			case OutputFormats::CSV:
-				$_response = new Response( null, $code );
-				$_response->headers->set( 'Content-Type', 'text/csv' );
+				$_response->setContent( $result );
+				$_response->headers->set( 'Content-Type', 'text/csv; application/csv;' );
+				break;
+
+			case OutputFormats::TSV:
+				$_response->setContent( $result );
+				$_response->headers->set( 'Content-Type', 'text/tsv; application/tsv;' );
+				break;
+
+			case OutputFormats::PSV:
+				$_response->setContent( $result );
+				$_response->headers->set( 'Content-Type', 'text/psv; application/psv;' );
 				break;
 
 			default:
-				$_response = new Response( null, $code );
+				$_response->setContent( $result );
 				$_response->headers->set( 'Content-Type', 'application/octet-stream' );
 				break;
 		}
 
 		$_response->headers->set( 'P3P', 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"' );
 
-		/* gzip handling output if necessary */
-		ob_start();
-		ob_implicit_flush( 0 );
-
-		if ( !headers_sent() )
+		if ( !empty( $as_file ) )
 		{
-			if ( !empty( $as_file ) )
-			{
-				$_response->headers->set( 'Content-Disposition', 'attachment; filename="' . $as_file . '";' );
-			}
-
-			//	Add additional headers for CORS support
-			Pii::app()->addCorsHeaders();
+			$_response->headers->set( 'Content-Disposition', 'attachment; filename="' . $as_file . '";' );
 		}
 
-		// send it out
-		echo $result;
+		//	Send it out!
+		$_response->setCharset( static::$_charset )->send();
 
-		if ( false !== strpos( Option::server( 'HTTP_ACCEPT_ENCODING' ), 'gzip' ) )
+		if ( $exitAfterSend )
 		{
-			$_output = ob_get_clean();
-
-			if ( strlen( $_output ) >= static::GZIP_THRESHOLD )
-			{
-				header( 'Content-Encoding: gzip' );
-				$_output = gzencode( $_output, 9 );
-			}
-
-			// compressed or not, dump it out as the buffer is destroyed already
-			echo $_output;
-		}
-		else
-		{
-			// flush output and destroy buffer
-			ob_end_flush();
+			return Pii::end();
 		}
 
-		Pii::end();
+		return true;
 	}
 
 	/**
@@ -319,4 +346,21 @@ class RestResponse extends HttpResponse
 
 		return preg_match( $identifier_syntax, $subject ) && !in_array( mb_strtolower( $subject, 'UTF-8' ), $reserved_words );
 	}
+
+	/**
+	 * @param string $charset
+	 */
+	public static function setCharset( $charset )
+	{
+		static::$_charset = $charset;
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function getCharset()
+	{
+		return static::$_charset;
+	}
+
 }
