@@ -182,82 +182,71 @@ class RestResponse extends HttpResponse
 	 * @param int    $code
 	 * @param string $format
 	 * @param string $as_file
+	 * @param bool   $exitAfterSend
+	 *
+	 * @return bool
 	 */
-	public static function sendResults( $result, $code = RestResponse::Ok, $format = 'json', $as_file = null )
+	public static function sendResults( $result, $code = RestResponse::Ok, $format = 'json', $as_file = null, $exitAfterSend = true )
 	{
 		//	Some REST services may handle the response, they just return null
 		if ( is_null( $result ) )
 		{
-			Pii::end();
-
-			return;
+			return Pii::end();
 		}
+
+		/** @var Response $_response */
+		$_response = Pii::app()->getResponseObject();
 
 		switch ( $format )
 		{
 			case OutputFormats::JSON:
 			case 'json':
-				$_response = new JsonResponse( $result, $code );
-				$_response->setCallback( Option::get( $_GET, 'callback' ) );
+				if ( is_string( $result ) )
+				{
+					$_response->setContent( $result )->headers->set( 'Content-Type', 'application/json' );
+				}
+				else
+				{
+					/** @var JsonResponse $_response */
+					$_response = new JsonResponse( $result, $code );
+					$_response->setCallback( Option::get( $_GET, 'callback' ) );
+				}
+
 				break;
 
 			case OutputFormats::XML:
 			case 'xml':
-				$_response = new Response( '<?xml version="1.0" ?><dfapi>' . $result . '</dfapi>', $code );
+				$_response->setContent( '<?xml version="1.0" ?><dfapi>' . $result . '</dfapi>', $code );
 				$_response->headers->set( 'Content-Type', 'application/xml' );
 				break;
 
 			case OutputFormats::CSV:
-				$_response = new Response( null, $code );
-				$_response->headers->set( 'Content-Type', 'text/csv' );
+				$_response->setContent( $result );
+				$_response->headers->set( 'Content-Type', 'text/csv; application/csv;' );
 				break;
 
 			default:
-				$_response = new Response( null, $code );
+				$_response->setContent( $result );
 				$_response->headers->set( 'Content-Type', 'application/octet-stream' );
 				break;
 		}
 
 		$_response->headers->set( 'P3P', 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"' );
 
-		/* gzip handling output if necessary */
-		ob_start();
-		ob_implicit_flush( 0 );
-
-		if ( !headers_sent() )
+		if ( !empty( $as_file ) )
 		{
-			if ( !empty( $as_file ) )
-			{
-				$_response->headers->set( 'Content-Disposition', 'attachment; filename="' . $as_file . '";' );
-			}
-
-			//	Add additional headers for CORS support
-			Pii::app()->addCorsHeaders();
+			$_response->headers->set( 'Content-Disposition', 'attachment; filename="' . $as_file . '";' );
 		}
 
-		// send it out
-		echo $result;
+		//	Send it out!
+		$_response->setCharset( 'utf-8' )->send();
 
-		if ( false !== strpos( Option::server( 'HTTP_ACCEPT_ENCODING' ), 'gzip' ) )
+		if ( $exitAfterSend )
 		{
-			$_output = ob_get_clean();
-
-			if ( strlen( $_output ) >= static::GZIP_THRESHOLD )
-			{
-				header( 'Content-Encoding: gzip' );
-				$_output = gzencode( $_output, 9 );
-			}
-
-			// compressed or not, dump it out as the buffer is destroyed already
-			echo $_output;
-		}
-		else
-		{
-			// flush output and destroy buffer
-			ob_end_flush();
+			return Pii::end();
 		}
 
-		Pii::end();
+		return true;
 	}
 
 	/**

@@ -47,6 +47,10 @@ class SwaggerManager extends BasePlatformRestService
 	 */
 	const SWAGGER_CACHE_DIR = '/cache';
 	/**
+	 * @const string The private cache file
+	 */
+	const SWAGGER_CACHE_FILE = '/_.json';
+	/**
 	 * @const string The private storage directory for non-generated files
 	 */
 	const SWAGGER_CUSTOM_DIR = '/custom';
@@ -227,7 +231,9 @@ class SwaggerManager extends BasePlatformRestService
 		/** @noinspection PhpIncludeInspection */
 		$_resourceListing = require( $_main );
 		$_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
-		$_filePath = $_cachePath . '_.json';
+
+		$_filePath = $_cachePath . static::SWAGGER_CACHE_FILE;
+
 		if ( false === file_put_contents( $_filePath, json_encode( $_out ) ) )
 		{
 			Log::error( "Failed to write cache file $_filePath." );
@@ -289,11 +295,22 @@ class SwaggerManager extends BasePlatformRestService
 	 */
 	public static function getSwagger()
 	{
-		$_swaggerPath = Platform::getStoragePath( static::SWAGGER_CACHE_DIR );
-		$_filePath = $_swaggerPath . '_.json';
+		$_swaggerPath = Platform::getSwaggerPath( static::SWAGGER_CACHE_DIR );
+
+		if ( !is_dir( $_swaggerPath ) )
+		{
+			if ( false === @mkdir( $_swaggerPath, 0777, true ) )
+			{
+				Log::error( 'File system error while creating swagger cache path: ' . $_swaggerPath );
+			}
+		}
+
+		$_filePath = $_swaggerPath . static::SWAGGER_CACHE_FILE;
+
 		if ( !file_exists( $_filePath ) )
 		{
 			static::buildSwagger();
+
 			if ( !file_exists( $_filePath ) )
 			{
 				throw new InternalServerErrorException( "Failed to create swagger cache." );

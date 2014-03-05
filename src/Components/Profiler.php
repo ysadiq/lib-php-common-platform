@@ -20,6 +20,13 @@
 namespace DreamFactory\Platform\Components;
 
 use Kisma\Core\Enums\DateTime;
+use Kisma\Core\Utility\Log;
+
+/**
+ * Profiler includes
+ */
+require_once 'xhprof_lib/utils/xhprof_lib.php';
+require_once 'xhprof_lib/utils/xhprof_runs.php';
 
 /**
  * A simple profiling class
@@ -46,7 +53,7 @@ class Profiler
 	 */
 	public static function start( $id )
 	{
-		static::$_runs[$id] = array( 'start' => microtime( true ) );
+		static::$_runs[$id] = array( 'start' => microtime( true ), 'xhprof' => false );
 
 		if ( function_exists( 'xhprof_enable' ) )
 		{
@@ -67,12 +74,29 @@ class Profiler
 	 */
 	public static function stop( $id, $prettyPrint = true )
 	{
-		if ( function_exists( 'xhprof_disable' ) )
+		static::$_runs[$id]['stop'] = microtime( true );
+
+		if ( !isset( static::$_runs[$id]['start'] ) )
 		{
-			static::$_runs[$id]['xhprof'] = xhprof_disable();
+			static::$_runs[$id]['start'] = static::$_runs[$id]['stop'];
 		}
 
-		static::$_runs[$id]['elapsed'] = ( static::$_runs[$id]['stop'] = microtime( true ) ) - ( isset( static::$_runs[$id] ) ? static::$_runs[$id] : 0.0 );
+		static::$_runs[$id]['elapsed'] = ( static::$_runs[$id]['stop'] - static::$_runs[$id]['start'] );
+
+		if ( static::$_runs[$id]['xhprof'] )
+		{
+			/** @noinspection PhpUndefinedFunctionInspection */
+			/** @noinspection PhpUndefinedMethodInspection */
+			static::$_runs[$id]['xhprof'] = array(
+				'data'     => $_data = xhprof_disable(),
+				'run_name' => $_runName = $id . microtime( true ),
+				'runs'     => $_runs = XHProfRuns_Default(),
+				'run_id'   => $_runId = $_runs->save_run( $_data, $_runName ),
+				'url'      => '/xhprof/index.php?run=' . $_runId . '&source=' . $_runName,
+			);
+
+			Log::debug( '~!~ profiler link: ' . static::$_runs[$id]['xhprof']['url'] );
+		}
 
 		return $prettyPrint ? static::elapsedAsString( static::$_runs[$id]['elapsed'] ) : static::$_runs[$id]['elapsed'];
 	}
@@ -154,9 +178,9 @@ class Profiler
 	public static function elapsedAsString( $start, $stop = false )
 	{
 		static $_divisors = array(
-			'hour'   => DateTime::US_PER_HOUR,
-			'minute' => DateTime::US_PER_MINUTE,
-			'second' => DateTime::US_PER_SECOND,
+			'h' => DateTime::US_PER_HOUR,
+			'm' => DateTime::US_PER_MINUTE,
+			's' => DateTime::US_PER_SECOND,
 		);
 
 		$_ms = round( ( false === $stop ? $start : ( $stop - $start ) ) * 1000 );
@@ -167,7 +191,7 @@ class Profiler
 			{
 				$_time = floor( $_ms / $_divisor * 100.0 ) / 100.0;
 
-				return $_time . ' ' . ( $_time == 1 ? $_label : $_label . 's' );
+				return $_time . $_label;
 			}
 		}
 
