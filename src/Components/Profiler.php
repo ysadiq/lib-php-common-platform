@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Components;
 
 use Kisma\Core\Enums\DateTime;
+use Kisma\Core\Utility\Log;
 
 /**
  * Profiler includes
@@ -86,6 +87,8 @@ class Profiler
 				'run_id'   => $_runId = $_runs->save_run( $_data, $_runName ),
 				'url'      => '/xhprof/index.php?run=' . $_runId . '&source=' . $_runName,
 			);
+
+			Log::debug( '~!~ profiler link: ' . static::$_runs[$id]['xhprof']['url'] );
 		}
 
 		return $prettyPrint ? static::elapsedAsString( static::$_runs[$id]['elapsed'] ) : static::$_runs[$id]['elapsed'];
@@ -168,9 +171,9 @@ class Profiler
 	public static function elapsedAsString( $start, $stop = false )
 	{
 		static $_divisors = array(
-			'hour'   => DateTime::US_PER_HOUR,
-			'minute' => DateTime::US_PER_MINUTE,
-			'second' => DateTime::US_PER_SECOND,
+			'h' => DateTime::US_PER_HOUR,
+			'm' => DateTime::US_PER_MINUTE,
+			's' => DateTime::US_PER_SECOND,
 		);
 
 		$_ms = round( ( false === $stop ? $start : ( $stop - $start ) ) * 1000 );
@@ -181,7 +184,7 @@ class Profiler
 			{
 				$_time = floor( $_ms / $_divisor * 100.0 ) / 100.0;
 
-				return $_time . ' ' . ( $_time == 1 ? $_label : $_label . 's' );
+				return $_time . $_label;
 			}
 		}
 
