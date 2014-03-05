@@ -69,20 +69,27 @@ class Platform extends SeedUtility
 		}
 
 		//	Make a cache tag that includes the requested path...
-		$_cacheTag = Inflector::neutralize( $type . '/' . $_appendage );
+		$_cacheTag = $_tag . '/' . Inflector::neutralize( $_appendage );
 
 		if ( null === ( $_path = Option::get( $_cache, $_cacheTag ) ) )
 		{
-			$_storagePath = Platform::getStoragePath();
-			$_path = $_storagePath . $_appendage;
+			$_path = trim( Pii::getParam( $_tag ) );
 
-			if ( true === $createIfMissing && !is_dir( dirname( $_path ) ) )
+			if ( empty( $_path ) )
 			{
-				if ( false === @\mkdir( dirname( $_path ), 0777, true ) )
+				$_path = \Kisma::get( 'app.project_root' ) . '/storage';
+				Log::notice( 'Empty path for platform path type "' . $type . '". Defaulting to "' . $_path . '"' );
+			}
+
+			if ( true === $createIfMissing && !is_dir( $_path ) )
+			{
+				if ( false === @\mkdir( $_path, 0777, true ) )
 				{
 					throw new FileSystemException( 'File system error creating directory: ' . $_path );
 				}
 			}
+
+			$_path .= $_appendage;
 
 			//	Store path for next time...
 			Option::set( $_cache, $_cacheTag, $_path );

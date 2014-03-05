@@ -370,13 +370,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 		$_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
 
-		if ( null === $this->_responseObject )
-		{
-			$this->_responseObject = new Response();
-		}
-
-		$this->_responseObject->setContent( $_result );
-
 		$this->trigger( ResourceServiceEvents::AFTER_DATA_FORMAT );
 
 		if ( !empty( $this->_outputFormat ) )

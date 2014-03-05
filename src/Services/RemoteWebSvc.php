@@ -163,8 +163,12 @@ class RemoteWebSvc extends BasePlatformRestService
 				$key = Option::get( $header, 'name' );
 				$value = Option::get( $header, 'value' );
 
-				$options[CURLOPT_HTTPHEADER] =
-					!isset( $options[CURLOPT_HTTPHEADER] ) ? array( $key . ': ' . $value ) : $options[CURLOPT_HTTPHEADER][] = $key . ': ' . $value;
+				if ( null === Options::get( $options, CURLOPT_HTTPHEADER ) )
+				{
+					$options[CURLOPT_HTTPHEADER] = array();
+				}
+
+				$options[CURLOPT_HTTPHEADER][] = $key . ': ' . $value;
 			}
 		}
 

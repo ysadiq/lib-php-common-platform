@@ -74,7 +74,8 @@ class Profiler
 	 */
 	public static function stop( $id, $prettyPrint = true )
 	{
-		static::$_runs[$id]['elapsed'] = ( static::$_runs[$id]['stop'] = microtime( true ) ) - ( isset( static::$_runs[$id] ) ? static::$_runs[$id] : 0.0 );
+		static::$_runs[$id]['stop'] = microtime( true );
+		static::$_runs[$id]['elapsed'] = ( static::$_runs[$id]['stop'] - static::$_runs[$id]['start'] );
 
 		if ( static::$_runs[$id]['xhprof'] )
 		{
