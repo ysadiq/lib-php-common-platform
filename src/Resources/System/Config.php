@@ -148,7 +148,7 @@ class Config extends BaseSystemRestResource
 		/**
 		 * Versioning and upgrade support
 		 */
-		if ( null === ( $_versionInfo = Pii::getState( 'platform.version_info' ) ) )
+		if ( null === ( $_versionInfo = \Kisma::get( 'platform.version_info' ) ) )
 		{
 			$_versionInfo = array(
 				'dsp_version'       => $_currentVersion = SystemManager::getCurrentVersion(),
@@ -156,7 +156,7 @@ class Config extends BaseSystemRestResource
 				'upgrade_available' => version_compare( $_currentVersion, $_latestVersion, '<' ),
 			);
 
-			Pii::setState( 'platform.version_info', $_versionInfo );
+			\Kisma::set( 'platform.version_info', $_versionInfo );
 		}
 
 		$this->_response = array_merge( $this->_response, $_versionInfo );

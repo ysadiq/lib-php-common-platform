@@ -25,8 +25,11 @@ use Kisma\Core\Utility\Log;
 /**
  * Profiler includes
  */
-require_once 'xhprof_lib/utils/xhprof_lib.php';
-require_once 'xhprof_lib/utils/xhprof_runs.php';
+if ( !function_exists( 'xhprof_error' ) )
+{
+	require_once 'xhprof_lib/utils/xhprof_lib.php';
+	require_once 'xhprof_lib/utils/xhprof_runs.php';
+}
 
 /**
  * A simple profiling class
@@ -75,6 +78,11 @@ class Profiler
 	 */
 	public static function stop( $id, $prettyPrint = true )
 	{
+		if ( !isset( static::$_runs[$id]['start'] ) )
+		{
+			return 'not profiled';
+		}
+
 		static::$_runs[$id]['stop'] = microtime( true );
 		static::$_runs[$id]['elapsed'] = ( static::$_runs[$id]['stop'] - static::$_runs[$id]['start'] );
 

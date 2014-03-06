@@ -362,6 +362,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	{
 		$_result = $this->_response;
 
+		if ( empty( $this->_outputFormat ) )
+		{
+			$this->_outputFormat = DataFormats::JSON;
+		}
+
 		if ( null === $this->_nativeFormat && DataFormat::CSV == $this->_outputFormat )
 		{
 			// need to strip 'record' wrapper before reformatting to csv

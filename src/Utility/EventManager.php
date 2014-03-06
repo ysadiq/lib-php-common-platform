@@ -124,15 +124,18 @@ class EventManager
 
 		$_request = $request ? : Pii::app()->getRequestObject();
 
-		foreach ( $_request->request as $_key => $_value )
+		if ( !empty( $_request ) )
 		{
-			if ( is_scalar( $_value ) )
+			foreach ( $_request->request as $_key => $_value )
 			{
-				$_tag = str_ireplace(
-					array( '{' . $_key . '}', '{request.' . $_key . '}' ),
-					$_value,
-					$_tag
-				);
+				if ( is_scalar( $_value ) )
+				{
+					$_tag = str_ireplace(
+						array( '{' . $_key . '}', '{request.' . $_key . '}' ),
+						$_value,
+						$_tag
+					);
+				}
 			}
 		}
 

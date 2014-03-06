@@ -27,7 +27,6 @@ use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Utility\EventManager;
-use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Enums\HttpMethod;
@@ -595,7 +594,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 		if ( false !== $_list && ( !is_array( $_list ) || null === ( $_list = \Kisma::get( static::CORS_WHITELIST_KEY ) ) ) )
 		{
 			//	Get CORS data from config file
-			$_config = Platform::getStorageBasePath( static::CORS_DEFAULT_CONFIG_FILE );
+			$_config = Pii::getParam( 'storage_base_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
 
 			if ( file_exists( $_config ) )
 			{
@@ -612,7 +611,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 			else
 			{
 				//	Check the old location
-				$_oldConfig = Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE );
+				$_oldConfig = Pii::getParam( 'private_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
 
 				//	Nada? Bail...
 				if ( !file_exists( $_oldConfig ) )

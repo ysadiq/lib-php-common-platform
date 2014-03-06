@@ -231,7 +231,11 @@ class RestResponse extends HttpResponse
 					/** @var JsonResponse $_response */
 					$_response = new JsonResponse( $result, $code );
 					$_response->setCallback( Option::get( $_GET, 'callback' ) );
-					Pii::app()->setResponseObject( $_response );
+
+					if ( 'cli' !== PHP_SAPI )
+					{
+						Pii::app()->setResponseObject( $_response );
+					}
 				}
 				break;
 

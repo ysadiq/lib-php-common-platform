@@ -21,6 +21,7 @@ use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Platform\Utility\ServiceHandler;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Seed;
@@ -244,16 +245,19 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 			/** @var Request $_request */
 			$_request = Pii::app()->getRequestObject();
 
-			$_requestValues = $_requestValues
-				? : array_merge(
-					$_request->headers->all(),
-					$_request->attributes->all(),
-					$_request->cookies->all(),
-					$_request->files->all(),
-					$_request->query->all(),
-					$_request->request->all(),
-					$_request->server->all()
-				);
+			if ( !empty( $_request ) )
+			{
+				$_requestValues = $_requestValues
+					? : array_merge(
+						$_request->headers->all(),
+						$_request->attributes->all(),
+						$_request->cookies->all(),
+						$_request->files->all(),
+						$_request->query->all(),
+						$_request->request->all(),
+						$_request->server->all()
+					);
+			}
 		}
 
 		if ( null === $_replacements )
