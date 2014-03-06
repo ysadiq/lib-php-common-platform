@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "5dde3bd861dc10458b4339684ba8d9ff",
+    "hash": "226df04f20fefac8f718d4427fe1317f",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -558,16 +558,16 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.28",
+            "version": "dev-develop",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "cbb7e4f858468f56f76679a2e5a7e07261151bfe"
+                "reference": "206cdebd92b74ac77f48f0cce7370a721b284117"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/cbb7e4f858468f56f76679a2e5a7e07261151bfe",
-                "reference": "cbb7e4f858468f56f76679a2e5a7e07261151bfe",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/206cdebd92b74ac77f48f0cce7370a721b284117",
+                "reference": "206cdebd92b74ac77f48f0cce7370a721b284117",
                 "shasum": ""
             },
             "require": {
@@ -590,7 +590,7 @@
                     "Kisma\\": "src/Kisma"
                 },
                 "files": [
-                    "src/Kisma.php"
+                    "src/autoload.php"
                 ]
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -611,7 +611,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-03-04 04:19:07"
+            "time": "2014-03-05 23:57:29"
         },
         {
             "name": "monolog/monolog",
@@ -2224,7 +2224,7 @@
     ],
     "minimum-stability": "dev",
     "stability-flags": {
-        "kisma/kisma": 0,
+        "kisma/kisma": 20,
         "dreamfactory/lib-php-common": 20,
         "dreamfactory/lib-php-common-yii": 20,
         "dreamfactory/oasys": 20,
