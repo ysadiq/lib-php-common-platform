@@ -358,7 +358,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 		Profiler::start( 'app.request' );
 
 		$this->_requestObject = Request::createFromGlobals();
-		$this->_responseObject = Response::create();
+		$_response = Response::create();
 
 		//	Load any plug-ins
 		$this->_loadPlugins();
@@ -368,9 +368,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 			//	OPTIONS goooooooooood!!!!!
 			case HttpMethod::OPTIONS:
 				$this->addCorsHeaders();
-				$this->_responseObject->setStatusCode( HttpResponse::NoContent )->send();
-				Pii::end( HttpResponse::NoContent );
-				break;
+				$_response->setStatusCode( HttpResponse::NoContent )->send();
+
+				return Pii::end( HttpResponse::NoContent );
 
 			//	TRACE baaaaaadddddddddd!!!!!
 			case HttpMethod::TRACE:
@@ -385,11 +385,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 				throw new BadRequestException();
 		}
 
-		//	Auto-add the CORS headers...
-		if ( $this->_autoAddHeaders )
-		{
-			$this->addCorsHeaders();
-		}
+		//	Save to object and add headers
+		$this->setResponseObject( $_response );
 
 		//	Trigger request event
 		$this->trigger( DspEvents::BEFORE_REQUEST );
@@ -595,7 +592,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	{
 		$_list = $this->_corsWhitelist;
 
-		if ( false !== $_list && !is_array( $_list ) || null === ( $_list = Pii::getState( static::CORS_WHITELIST_KEY ) ) )
+		if ( false !== $_list && ( !is_array( $_list ) || null === ( $_list = Pii::getState( static::CORS_WHITELIST_KEY ) ) ) )
 		{
 			//	Get CORS data from config file
 			$_config = Platform::getStorageBasePath( static::CORS_DEFAULT_CONFIG_FILE );
@@ -763,6 +760,24 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	public function getResponseObject()
 	{
 		return $this->_responseObject;
+	}
+
+	/**
+	 * @param \Symfony\Component\HttpFoundation\Response $responseObject
+	 *
+	 * @return PlatformWebApplication
+	 */
+	public function setResponseObject( Response $responseObject )
+	{
+		$this->_responseObject = $responseObject;
+
+		//	Auto-add the CORS headers...
+		if ( $this->_autoAddHeaders )
+		{
+			$this->addCorsHeaders();
+		}
+
+		return $this;
 	}
 
 	/**

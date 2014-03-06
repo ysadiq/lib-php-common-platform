@@ -25,6 +25,7 @@ use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -178,7 +179,11 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	public function trigger( $eventName, $event = null )
 	{
-		return EventManager::trigger( $this->_normalizeEventName( $eventName ), $event );
+		$_event = EventManager::trigger( $this->_normalizeEventName( $eventName ), $event );
+
+		Log::debug( 'Event "' . $eventName . '" triggered.' );
+
+		return $_event;
 	}
 
 	/**
@@ -227,23 +232,35 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	protected function _normalizeEventName( $eventName, $values = null )
 	{
-		static $_cache = array(), $_replacements = null;
+		static $_cache = array(), $_replacements = null, $_requestValues = null, $_request = null;
 
 		if ( null !== ( $_name = Option::get( $_cache, $_tag = Inflector::neutralize( $eventName ) ) ) )
 		{
 			return $_name;
 		}
 
-		if ( null === $values )
+		if ( null === $_request )
 		{
-			$values = get_object_vars( Request::createFromGlobals() );
+			/** @var Request $_request */
+			$_request = Pii::app()->getRequestObject();
+
+			$_requestValues = $_requestValues
+				? : array_merge(
+					array_replace_recursive()$_request->headers->all(),
+					$_request->attributes->all(),
+					$_request->cookies->all(),
+					$_request->files->all(),
+					$_request->query->all(),
+					$_request->request->all(),
+					$_request->server->all()
+				);
 		}
 
 		if ( null === $_replacements )
 		{
 			$_replacements = array();
 
-			foreach ( array_merge( get_object_vars( $this ), Option::clean( $values ) ) as $_key => $_value )
+			foreach ( array_merge( get_object_vars( $this ), Option::clean( $_requestValues ) ) as $_key => $_value )
 			{
 				$_key = Inflector::neutralize( ltrim( $_key, '_' ) );
 

@@ -463,6 +463,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _handleGet()
 	{
+		$_eventName = $this->_apiName . '.' . ( empty( $this->_resourceId ) ? 'list' : 'read' );
+		$this->trigger( $_eventName );
+
 		return false;
 	}
 
@@ -471,6 +474,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _handleMerge()
 	{
+		$_eventName = $this->_apiName . '.update';
+		$this->trigger( $_eventName );
+
 		return false;
 	}
 
@@ -503,6 +509,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _handlePost()
 	{
+		$_eventName = $this->_apiName . '.create';
+		$this->trigger( $_eventName );
+
 		return false;
 	}
 
@@ -511,6 +520,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _handlePut()
 	{
+		$_eventName = $this->_apiName . '.update';
+		$this->trigger( $_eventName );
+
 		return false;
 	}
 
@@ -519,6 +531,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _handlePatch()
 	{
+		$_eventName = $this->_apiName . '.update';
+		$this->trigger( $_eventName );
+
 		return false;
 	}
 
@@ -527,6 +542,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _handleDelete()
 	{
+		$_eventName = $this->_apiName . '.delete';
+		$this->trigger( $_eventName );
+
 		return false;
 	}
 
@@ -538,6 +556,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _listResources()
 	{
+		$_eventName = $this->_apiName . '.list';
+		$this->trigger( $_eventName );
+
 		return false;
 	}
 

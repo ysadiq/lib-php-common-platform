@@ -185,9 +185,6 @@ SQL;
 
 				if ( is_array( $_fromFile ) && !empty( $_fromFile ) )
 				{
-					//	Parse the events while we get the chance...
-					static::$_eventMap[$_apiName] = $_events = static::_parseSwaggerEvents( $_service, $_apiName, $_fromFile );
-
 					$_content = array_merge( $_baseSwagger, $_fromFile );
 					$_content = json_encode( $_content );
 				}
@@ -223,9 +220,6 @@ SQL;
 					continue;
 				}
 
-				//	Parse the events while we get the chance...
-				static::$_eventMap[$_apiName] = $_events = static::_parseSwaggerEvents( $_service, $_apiName, $_fromFile );
-
 				$_content = array_merge( $_baseSwagger, $_fromFile );
 				$_content = json_encode( $_content );
 			}
@@ -235,6 +229,7 @@ SQL;
 
 			// cache it to a file for later access
 			$_filePath = $_cachePath . $_apiName . '.json';
+
 			if ( false === file_put_contents( $_filePath, $_content ) )
 			{
 				Log::error( "Failed to write cache file $_filePath." );
@@ -259,6 +254,9 @@ SQL;
 		{
 			Log::error( "Failed to write cache file $_filePath." );
 		}
+
+		//	Parse the events while we get the chance...
+		static::$_eventMap = static::_parseSwaggerEvents( $_out );
 
 		//	Write event cache file
 		if ( false === file_put_contents( $_cachePath . '_events.json', json_encode( static::$_eventMap ) ) )
@@ -286,7 +284,7 @@ SQL;
 	 *
 	 * @return array
 	 */
-	protected static function _parseSwaggerEvents( $service, $apiName, $data )
+	protected static function _parseSwaggerEvents( $data )
 	{
 		$_eventMap = $_events = array();
 

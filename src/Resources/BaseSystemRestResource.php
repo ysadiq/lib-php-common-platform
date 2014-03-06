@@ -250,6 +250,9 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	protected function _handleGet()
 	{
+		//	Phone home...
+		parent::_handleGet();
+
 		//	Single resource by ID
 		if ( !empty( $this->_resourceId ) )
 		{

@@ -82,7 +82,7 @@ class RestResponse extends HttpResponse
 
 		if ( empty( $_format ) )
 		{
-			$_format = $_request->query->get( 'format' );
+			$_format = $_request->get( 'format' );
 
 			if ( empty( $_format ) )
 			{
@@ -231,33 +231,34 @@ class RestResponse extends HttpResponse
 					/** @var JsonResponse $_response */
 					$_response = new JsonResponse( $result, $code );
 					$_response->setCallback( Option::get( $_GET, 'callback' ) );
+					Pii::app()->setResponseObject( $_response );
 				}
 				break;
 
 			case OutputFormats::XML:
 			case 'xml':
-				$_response->setContent( '<?xml version="1.0" ?><dfapi>' . $result . '</dfapi>', $code );
-				$_response->headers->set( 'Content-Type', 'application/xml' );
+				$_response->setContent( '<?xml version="1.0" ?><dfapi>' . $result . '</dfapi>', $code )
+					->headers->set( 'Content-Type', 'application/xml' );
 				break;
 
 			case OutputFormats::CSV:
-				$_response->setContent( $result );
-				$_response->headers->set( 'Content-Type', 'text/csv; application/csv;' );
+				$_response->setContent( $result )
+					->headers->set( 'Content-Type', 'text/csv; application/csv;' );
 				break;
 
 			case OutputFormats::TSV:
-				$_response->setContent( $result );
-				$_response->headers->set( 'Content-Type', 'text/tsv; application/tsv;' );
+				$_response->setContent( $result )
+					->headers->set( 'Content-Type', 'text/tsv; application/tsv;' );
 				break;
 
 			case OutputFormats::PSV:
-				$_response->setContent( $result );
-				$_response->headers->set( 'Content-Type', 'text/psv; application/psv;' );
+				$_response->setContent( $result )
+					->headers->set( 'Content-Type', 'text/psv; application/psv;' );
 				break;
 
 			default:
-				$_response->setContent( $result );
-				$_response->headers->set( 'Content-Type', 'application/octet-stream' );
+				$_response->setContent( $result )
+					->headers->set( 'Content-Type', 'application/octet-stream' );
 				break;
 		}
 
@@ -265,7 +266,7 @@ class RestResponse extends HttpResponse
 
 		if ( !empty( $as_file ) )
 		{
-			$_response->headers->set( 'Content-Disposition', 'attachment; filename="' . $as_file . '";' );
+			$_response->headers->makeDisposition( 'attachment', $as_file );
 		}
 
 		//	Send it out!

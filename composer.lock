@@ -465,63 +465,6 @@
             "time": "2014-02-24 17:33:55"
         },
         {
-            "name": "fpoirotte/http_request2",
-            "version": "dev-trunk",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/fpoirotte/HTTP_Request2.git",
-                "reference": "2c9b238d2296d60111b063a27183630d8688b196"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/fpoirotte/HTTP_Request2/zipball/2c9b238d2296d60111b063a27183630d8688b196",
-                "reference": "2c9b238d2296d60111b063a27183630d8688b196",
-                "shasum": ""
-            },
-            "require": {
-                "pear/net_url2": "~2.0.0",
-                "pear/pear_exception": "dev-master",
-                "php": ">=5.2.0"
-            },
-            "provide": {
-                "pear/http_request2": "2.1.1-patch1"
-            },
-            "suggest": {
-                "ext-curl": "Adds support for the curl wrappers",
-                "ext-fileinfo": "Retrieves information on files",
-                "ext-openssl": "Adds support for HTTPS requests",
-                "ext-zlib": "Adds support for compressed HTTP responses"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-trunk": "2.1.x-dev"
-                }
-            },
-            "autoload": {
-                "psr-0": {
-                    "HTTP_Request2": ""
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "include-path": [
-                ""
-            ],
-            "license": [
-                "BSD"
-            ],
-            "authors": [
-                {
-                    "name": "Alexey Borzov",
-                    "email": "avb@php.net",
-                    "role": "Developer HTML_Common2"
-                }
-            ],
-            "description": "Provides an easy way to perform HTTP requests.",
-            "homepage": "https://github.com/fpoirotte/HTTP_Request2",
-            "time": "2013-10-27 10:13:43"
-        },
-        {
             "name": "guzzle/guzzle",
             "version": "dev-master",
             "source": {
@@ -984,6 +927,58 @@
                 "/"
             ],
             "description": "Selection of methods that are often needed when working with XML documents.  Functionality includes creating of attribute lists from arrays, creation of tags, validation of XML names and more."
+        },
+        {
+            "name": "pear/http_request2",
+            "version": "dev-trunk",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/pear/HTTP_Request2.git",
+                "reference": "ed779344f6f9fad4ee69ad24827ec216b98d7ef9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/pear/HTTP_Request2/zipball/ed779344f6f9fad4ee69ad24827ec216b98d7ef9",
+                "reference": "ed779344f6f9fad4ee69ad24827ec216b98d7ef9",
+                "shasum": ""
+            },
+            "require": {
+                "pear/net_url2": ">=2.0.0",
+                "pear/pear_exception": "*",
+                "php": ">=5.2.0"
+            },
+            "suggest": {
+                "ext-fileinfo": "Adds support for looking up mime-types using finfo.",
+                "ext-zlib": "Allows handling gzip compressed responses.",
+                "lib-curl": "Allows using cURL as a request backend.",
+                "lib-openssl": "Allows handling SSL requests when not using cURL."
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "HTTP_Request2": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "authors": [
+                {
+                    "name": "Alexey Borzov",
+                    "email": "avb@php.net",
+                    "role": "Developer HTML_Common2"
+                }
+            ],
+            "description": "Provides an easy way to perform HTTP requests.",
+            "homepage": "http://pear.php.net/package/HTTP_Request2",
+            "keywords": [
+                "PEAR",
+                "curl",
+                "http",
+                "request"
+            ],
+            "time": "2014-01-16 18:42:31"
         },
         {
             "name": "pear/mail_mime",
@@ -1509,12 +1504,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/HttpFoundation.git",
-                "reference": "617979faab09c050e48db1fdb04c64a9c50f1848"
+                "reference": "eae69c6e62a0ce9e4a8518ff2aed6803b5b6aad5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/617979faab09c050e48db1fdb04c64a9c50f1848",
-                "reference": "617979faab09c050e48db1fdb04c64a9c50f1848",
+                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/eae69c6e62a0ce9e4a8518ff2aed6803b5b6aad5",
+                "reference": "eae69c6e62a0ce9e4a8518ff2aed6803b5b6aad5",
                 "shasum": ""
             },
             "require": {
@@ -1552,7 +1547,7 @@
             ],
             "description": "Symfony HttpFoundation Component",
             "homepage": "http://symfony.com",
-            "time": "2014-03-03 22:00:45"
+            "time": "2014-03-04 07:36:44"
         }
     ],
     "packages-dev": [
