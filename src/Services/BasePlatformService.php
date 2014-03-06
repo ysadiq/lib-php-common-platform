@@ -182,7 +182,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	{
 		$_event = EventManager::trigger( $this->_normalizeEventName( $eventName ), $event );
 
-		Log::debug( 'Event "' . $eventName . '" triggered.' );
+		Log::debug( 'Event "' . $eventName . '" triggered @ ' . __FILE__ . ' (' . __LINE__ . ')' );
 
 		return $_event;
 	}
@@ -231,7 +231,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 *
 	 * @return string
 	 */
-	protected function _normalizeEventName( $eventName, $values = null )
+	protected function _normalizeEventName( &$eventName, $values = null )
 	{
 		static $_cache = array(), $_replacements = null, $_requestValues = null, $_request = null;
 
@@ -242,20 +242,19 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 
 		if ( null === $_request )
 		{
-			/** @var Request $_request */
 			$_request = Pii::app()->getRequestObject();
 
 			if ( !empty( $_request ) )
 			{
 				$_requestValues = $_requestValues
-					? : array_merge(
-						$_request->headers->all(),
-						$_request->attributes->all(),
-						$_request->cookies->all(),
-						$_request->files->all(),
-						$_request->query->all(),
-						$_request->request->all(),
-						$_request->server->all()
+					? : array(
+						'headers'    => $_request->headers,
+						'attributes' => $_request->attributes,
+						'cookie'     => $_request->cookies,
+						'files'      => $_request->files,
+						'query'      => $_request->query,
+						'request'    => $_request->request,
+						'server'     => $_request->server,
 					);
 			}
 		}
@@ -265,7 +264,8 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 			$_replacements = array();
 			$_combinedValues = Option::merge(
 				Option::clean( $_requestValues ),
-				array_merge( get_object_vars( $this ) )
+				Inflector::neutralizeObject( get_object_vars( $this ) ),
+				Option::clean( $values )
 			);
 
 			foreach ( $_combinedValues as $_key => $_value )
@@ -305,7 +305,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 			)
 		);
 
-		return $_cache[$eventName] = $_tag;
+		return $eventName = $_cache[$eventName] = $_tag;
 	}
 
 	/**
