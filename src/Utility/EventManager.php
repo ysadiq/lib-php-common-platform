@@ -33,6 +33,15 @@ use Symfony\Component\HttpFoundation\Request;
 class EventManager
 {
 	//*************************************************************************
+	//	Constants
+	//*************************************************************************
+
+	/**
+	 * @var string The event name cache key
+	 */
+	const EVENT_NAME_CACHE_KEY = 'event_manager.event_name_cache';
+
+	//*************************************************************************
 	//	Members
 	//*************************************************************************
 
@@ -57,17 +66,15 @@ class EventManager
 	 *     }
 	 *     echo 'continue with default behavior';
 	 *
-	 * @param string                                      $eventName
+	 * @param string                                      $eventName Updated with actual event name used
 	 * @param \DreamFactory\Platform\Events\PlatformEvent $event
+	 * @param array                                       $values    Optional replacement values for dynamic event names
 	 *
 	 * @return \Symfony\Component\EventDispatcher\Event
 	 */
-	public static function trigger( $eventName, PlatformEvent $event = null )
+	public static function trigger( &$eventName, PlatformEvent $event = null, $values = array() )
 	{
-		return static::_getDispatcher()->dispatch(
-			static::_normalizeEventName( $eventName ),
-			$event
-		);
+		return static::_getDispatcher()->dispatch( static::_normalizeEventName( $eventName, $values ), $event );
 	}
 
 	/**
@@ -77,16 +84,13 @@ class EventManager
 	 * @param callable $listener  The listener
 	 * @param integer  $priority  The higher this value, the earlier an event
 	 *                            listener will be triggered in the chain (defaults to 0)
+	 * @param array    $values    Optional replacement values for dynamic event names
 	 *
 	 * @throws InvalidArgumentException
 	 */
-	public static function on( $eventName, $listener, $priority = 0 )
+	public static function on( $eventName, $listener, $priority = 0, $values = array() )
 	{
-		static::_getDispatcher()->addListener(
-			static::_normalizeEventName( $eventName ),
-			$listener,
-			$priority
-		);
+		static::_getDispatcher()->addListener( static::_normalizeEventName( $eventName, $values ), $listener, $priority );
 	}
 
 	/**
@@ -94,52 +98,98 @@ class EventManager
 	 *
 	 * @param string|array $eventName The event(s) to remove a listener from
 	 * @param callable     $listener  The listener to remove
-	 *
-	 * @throws InvalidArgumentException
+	 * @param array        $values    Optional replacement values for dynamic event names
 	 */
-	public static function off( $eventName, $listener )
+	public static function off( $eventName, $listener, $values = array() )
 	{
-		static::_getDispatcher()->removeListener(
-			static::_normalizeEventName( $eventName ),
-			$listener
-		);
+		static::_getDispatcher()->removeListener( static::_normalizeEventName( $eventName, $values ), $listener );
 	}
 
 	/**
-	 * @param string                                    $eventName
-	 * @param \Symfony\Component\HttpFoundation\Request $request
+	 * @param string        $eventName
+	 * @param Request|array $values The values to use for replacements in the event name templates.
+	 *                              If none specified, the $_REQUEST variables will be used.
+	 *                              The current class's variables are also available for replacement.
 	 *
 	 * @return string
 	 */
-	protected static function _normalizeEventName( $eventName, Request $request = null )
+	protected static function _normalizeEventName( &$eventName, $values = null )
 	{
-		static $_cache = array();
+		static $_requestValues = null, $_replacements;
+
+		if ( false === strpos( $eventName, '{' ) )
+		{
+			return $eventName;
+		}
 
 		$_tag = Inflector::neutralize( $eventName );
 
-		if ( null !== ( $_name = Option::get( $_cache, $_tag ) ) )
+		if ( null === $_requestValues )
 		{
-			return $_name;
+			$_requestValues = array();
+			$_request = Pii::app()->getRequestObject();
+
+			if ( !empty( $_request ) )
+			{
+				$_requestValues = array(
+					'headers'    => $_request->headers,
+					'attributes' => $_request->attributes,
+					'cookie'     => $_request->cookies,
+					'files'      => $_request->files,
+					'query'      => $_request->query,
+					'request'    => $_request->request,
+					'server'     => $_request->server,
+				);
+			}
 		}
 
-		$_request = $request ? : Pii::app()->getRequestObject();
+		$_combinedValues = Option::merge(
+			Option::clean( $_requestValues ),
+			Inflector::neutralizeObject( $values )
+		);
 
-		if ( !empty( $_request ) )
+		if ( empty( $_replacements ) && !empty( $_combinedValues ) )
 		{
-			foreach ( $_request->request as $_key => $_value )
+			$_replacements = array();
+
+			foreach ( $_combinedValues as $_key => $_value )
 			{
 				if ( is_scalar( $_value ) )
 				{
-					$_tag = str_ireplace(
-						array( '{' . $_key . '}', '{request.' . $_key . '}' ),
-						$_value,
-						$_tag
-					);
+					$_replacements['{' . $_key . '}'] = $_value;
+				}
+				else if ( $_value instanceof \IteratorAggregate && $_value instanceof \Countable )
+				{
+					foreach ( $_value as $_bagKey => $_bagValue )
+					{
+						$_bagKey = Inflector::neutralize( ltrim( $_bagKey, '_' ) );
+
+						if ( is_array( $_bagValue ) )
+						{
+							if ( !empty( $_bagValue ) )
+							{
+								$_bagValue = current( $_bagValue );
+							}
+							else
+							{
+								$_bagValue = null;
+							}
+						}
+						elseif ( !is_scalar( $_bagValue ) )
+						{
+							continue;
+						}
+
+						$_replacements['{' . $_key . '.' . $_bagKey . '}'] = $_bagValue;
+					}
 				}
 			}
 		}
 
-		return $_cache[$eventName] = $_tag;
+		//	Construct and neutralize...
+		$_tag = Inflector::neutralize( str_ireplace( array_keys( $_replacements ), array_values( $_replacements ), $_tag ) );
+
+		return $eventName = $_tag;
 	}
 
 	/**

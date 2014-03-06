@@ -338,7 +338,13 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _preProcess()
 	{
-		$this->trigger( ResourceServiceEvents::PRE_PROCESS );
+		static $_triggered = false;
+
+		if ( !$_triggered )
+		{
+			$_triggered = $this->trigger( ResourceServiceEvents::PRE_PROCESS );
+		}
+
 		// throw exception here to stop processing
 	}
 
@@ -350,7 +356,13 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _postProcess()
 	{
-		$this->trigger( ResourceServiceEvents::POST_PROCESS );
+		static $_triggered = false;
+
+		if ( !$_triggered )
+		{
+			$this->trigger( ResourceServiceEvents::POST_PROCESS );
+		}
+
 		// throw exception here to stop processing
 	}
 
@@ -406,7 +418,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	protected function _detectAppName()
 	{
 		// 	Determine application if any
-		$_appName = $this->_requestObject->query->get(
+		$_appName = $this->_requestObject->get(
 			'app_name',
 			//	No app_name, look for headers...
 			Option::server(
@@ -468,8 +480,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _handleGet()
 	{
-		$_eventName = $this->_apiName . '.' . ( empty( $this->_resourceId ) ? 'list' : 'read' );
-		$this->trigger( $_eventName );
+		if ( null !== ( $_eventName = Option::getDeep( static::$_eventMap, $this->_apiName, $this->_resource ) ) )
+		{
+			$this->trigger( $_eventName );
+		}
 
 		return false;
 	}

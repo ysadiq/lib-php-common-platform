@@ -81,11 +81,11 @@ class Platform extends SeedUtility
 				Log::notice( 'Empty path for platform path type "' . $type . '". Defaulting to "' . $_path . '"' );
 			}
 
-			if ( true === $createIfMissing && !is_dir( $_path ) )
+			if ( true === $createIfMissing && !is_dir( $_path . $_appendage ) )
 			{
-				if ( false === @\mkdir( $_path, 0777, true ) )
+				if ( false === @\mkdir( $_path . $_appendage, 0777, true ) )
 				{
-					throw new FileSystemException( 'File system error creating directory: ' . $_path );
+					throw new FileSystemException( 'File system error creating directory: ' . $_path . $_appendage );
 				}
 			}
 

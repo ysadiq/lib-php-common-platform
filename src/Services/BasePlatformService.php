@@ -41,6 +41,10 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	//*************************************************************************
 
 	/**
+	 * @var array The event map
+	 */
+	protected static $_eventMap;
+	/**
 	 * @var bool If true, profiling information will be output to the log
 	 */
 	protected static $_enableProfiler = false;
@@ -164,7 +168,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	public function on( $eventName, $listener, $priority = 0 )
 	{
-		EventManager::on( $this->_normalizeEventName( $eventName ), $listener, $priority );
+		EventManager::on( $eventName, $listener, $priority, get_object_vars( $this ) );
 	}
 
 	/**
@@ -172,7 +176,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	public function off( $eventName, $callback )
 	{
-		EventManager::off( $this->_normalizeEventName( $eventName ), $callback );
+		EventManager::off( $eventName, $callback, get_object_vars( $this ) );
 	}
 
 	/**
@@ -180,7 +184,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	public function trigger( $eventName, $event = null )
 	{
-		$_event = EventManager::trigger( $this->_normalizeEventName( $eventName ), $event );
+		$_event = EventManager::trigger( $eventName, $event, get_object_vars( $this ) );
 
 		Log::debug( 'Event "' . $eventName . '" triggered @ ' . __FILE__ . ' (' . __LINE__ . ')' );
 

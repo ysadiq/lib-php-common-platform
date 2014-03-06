@@ -52,9 +52,25 @@ class SwaggerManager extends BasePlatformRestService
 	 */
 	const SWAGGER_CACHE_FILE = '/_.json';
 	/**
+	 * @const string A cached events list derived from Swagger
+	 */
+	const SWAGGER_EVENT_CACHE_FILE = '/_events.json';
+	/**
 	 * @const string The private storage directory for non-generated files
 	 */
 	const SWAGGER_CUSTOM_DIR = '/custom';
+	/**
+	 * @const string The name of the custom example file
+	 */
+	const SWAGGER_CUSTOM_EXAMPLE_FILE = '/example_service_swagger.json';
+	/**
+	 * @const string Our base API swagger file
+	 */
+	const SWAGGER_BASE_API_FILE = '/SwaggerManager.swagger.php';
+	/**
+	 * @const string When a swagger file is not found for a route, this will be used.
+	 */
+	const SWAGGER_DEFAULT_BASE_FILE = '/BasePlatformRestSvc.swagger.php';
 
 	//*************************************************************************
 	//	Members
@@ -63,7 +79,7 @@ class SwaggerManager extends BasePlatformRestService
 	/**
 	 * @var array The event map
 	 */
-	protected static $_eventMap;
+	protected static $_eventMap = array();
 	/**
 	 * @var array The core DSP services that are built-in
 	 */
@@ -130,20 +146,20 @@ class SwaggerManager extends BasePlatformRestService
 	 */
 	protected static function buildSwagger()
 	{
-		$_basePath = Pii::request()->getHostInfo() . '/rest';
+		Log::info( 'Building Swagger cache' );
 
 		//	Create cache & custom directories
-		$_cachePath = Platform::getSwaggerPath( static::SWAGGER_CACHE_DIR ) . '/';
-		$_customPath = Platform::getSwaggerPath( static::SWAGGER_CUSTOM_DIR ) . '/';
+		$_cachePath = Platform::getSwaggerPath( static::SWAGGER_CACHE_DIR );
+		$_customPath = Platform::getSwaggerPath( static::SWAGGER_CUSTOM_DIR );
+		$_templatePath = Platform::getLibraryTemplatePath( '/swagger' );
 
 		//	Generate swagger output from file annotations
-		$_scanPath = rtrim( __DIR__, '/' ) . '/';
-		$_templatePath = Platform::getLibraryTemplatePath( '/swagger/' );
+		$_scanPath = __DIR__;
 
 		$_baseSwagger = array(
 			'swaggerVersion' => static::SWAGGER_VERSION,
 			'apiVersion'     => API_VERSION,
-			'basePath'       => $_basePath,
+			'basePath'       => Pii::request()->getHostInfo() . '/rest',
 		);
 
 		// build services from database
@@ -168,16 +184,16 @@ SQL;
 		// gather the services
 		$_services = array();
 
-		foreach ( $_rows as $_service )
+		foreach ( $_result as $_service )
 		{
+			$_content = null;
 			$_apiName = Option::get( $_service, 'api_name' );
-			$_typeId = Option::get( $_service, 'type_id' );
+			$_typeId = (int)Option::get( $_service, 'type_id', PlatformServiceTypes::SYSTEM_SERVICE );
 			$_fileName = PlatformServiceTypes::getFileName( $_typeId, $_apiName );
 
-			$_content = null;
+			$_filePath = $_scanPath . '/' . $_fileName . '.swagger.php';
 
-			$_filePath = $_scanPath . $_fileName . '.swagger.php';
-
+			//	Check cache path, then custom...
 			if ( file_exists( $_filePath ) )
 			{
 				/** @noinspection PhpIncludeInspection */
@@ -185,13 +201,12 @@ SQL;
 
 				if ( is_array( $_fromFile ) && !empty( $_fromFile ) )
 				{
-					$_content = array_merge( $_baseSwagger, $_fromFile );
-					$_content = json_encode( $_content );
+					$_content = json_encode( array_merge( $_baseSwagger, $_fromFile ) );
 				}
 			}
-			else
+			else //	Check custom path
 			{
-				$_filePath = $_customPath . $_fileName . '.json';
+				$_filePath = $_customPath . '/' . $_fileName . '.json';
 
 				if ( file_exists( $_filePath ) )
 				{
@@ -206,44 +221,58 @@ SQL;
 
 			if ( empty( $_content ) )
 			{
-				Log::error( "No available swagger file contents for service $_apiName." );
+				Log::error( '  * No Swagger content found for service "' . $_apiName . '" in "' . $_filePath . '"' );
 
 				// nothing exists for this service, build from the default base service
-				$_filePath = $_scanPath . 'BasePlatformRestSvc.swagger.php';
+				$_filePath = $_scanPath . static::SWAGGER_DEFAULT_BASE_FILE;
 
 				/** @noinspection PhpIncludeInspection */
 				$_fromFile = require( $_filePath );
 
 				if ( !is_array( $_fromFile ) )
 				{
-					Log::error( "Failed to get default swagger file contents for service $_apiName." );
+					Log::error( '  * Failed to get default swagger file contents for service "' . $_apiName . '"' );
 					continue;
 				}
 
-				$_content = array_merge( $_baseSwagger, $_fromFile );
-				$_content = json_encode( $_content );
+				$_content = json_encode( array_merge( $_baseSwagger, $_fromFile ) );
 			}
 
 			// replace service type placeholder with api name for this service instance
 			$_content = str_replace( '/{api_name}', '/' . $_apiName, $_content );
 
 			// cache it to a file for later access
-			$_filePath = $_cachePath . $_apiName . '.json';
+			$_filePath = $_cachePath . '/' . $_apiName . '.json';
 
 			if ( false === file_put_contents( $_filePath, $_content ) )
 			{
-				Log::error( "Failed to write cache file $_filePath." );
+				Log::error( '  * File system error creating swagger cache file: ' . $_filePath );
 			}
 
 			// build main services list
 			$_services[] = array(
 				'path'        => '/' . $_apiName,
-				'description' => Option::get( $_service, 'description' )
+				'description' => Option::get( $_service, 'description', 'Service' )
 			);
+
+			if ( !isset( static::$_eventMap[$_apiName] ) || !is_array( static::$_eventMap[$_apiName] ) || empty( static::$_eventMap[$_apiName] ) )
+			{
+				static::$_eventMap[$_apiName] = array();
+			}
+
+			$_serviceEvents = static::_parseSwaggerEvents( $_apiName, json_decode( $_content, true ) );
+
+			//	Parse the events while we get the chance...
+			static::$_eventMap[$_apiName] = array_merge(
+				Option::clean( static::$_eventMap[$_apiName] ),
+				$_serviceEvents
+			);
+
+			unset( $_content, $_filePath, $_service, $_serviceEvents );
 		}
 
 		// cache main api listing file
-		$_main = $_scanPath . 'SwaggerManager.swagger.php';
+		$_main = $_scanPath . static::SWAGGER_BASE_API_FILE;
 		/** @noinspection PhpIncludeInspection */
 		$_resourceListing = require( $_main );
 		$_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
@@ -252,39 +281,33 @@ SQL;
 
 		if ( false === file_put_contents( $_filePath, json_encode( $_out ) ) )
 		{
-			Log::error( "Failed to write cache file $_filePath." );
+			Log::error( '  * File system error creating swagger cache file: ' . $_filePath );
 		}
-
-		//	Parse the events while we get the chance...
-		static::$_eventMap = static::_parseSwaggerEvents( $_out );
 
 		//	Write event cache file
-		if ( false === file_put_contents( $_cachePath . '_events.json', json_encode( static::$_eventMap ) ) )
+		if ( false === file_put_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE, json_encode( static::$_eventMap ) ) )
 		{
-			Log::error( 'File system error writing events cache file: ' . $_cachePath . '_events.json' );
+			Log::error( '  * File system error writing events cache file: ' . $_cachePath . static::SWAGGER_EVENT_CACHE_FILE );
 		}
 
-		$_exampleFile = 'example_service_swagger.json';
-		if ( !file_exists( $_customPath . $_exampleFile ) && file_exists( $_templatePath . $_exampleFile )
-		)
+		//	Create example file
+		if ( !file_exists( $_customPath . static::SWAGGER_CUSTOM_EXAMPLE_FILE ) && file_exists( $_templatePath . static::SWAGGER_CUSTOM_EXAMPLE_FILE ) )
 		{
-			file_put_contents(
-				$_customPath . $_exampleFile,
-				file_get_contents( $_templatePath . $_exampleFile )
-			);
+			file_put_contents( $_customPath . static::SWAGGER_CUSTOM_EXAMPLE_FILE, file_get_contents( $_templatePath . static::SWAGGER_CUSTOM_EXAMPLE_FILE ) );
 		}
+
+		Log::info( 'Swagger cache build process complete' );
 
 		return $_out;
 	}
 
 	/**
-	 * @param array           $service
-	 * @param string          $apiName
-	 * @param array|\stdClass $data
+	 * @param string $apiName
+	 * @param array  $data
 	 *
 	 * @return array
 	 */
-	protected static function _parseSwaggerEvents( $data )
+	protected static function _parseSwaggerEvents( $apiName, $data )
 	{
 		$_eventMap = $_events = array();
 
@@ -296,11 +319,17 @@ SQL;
 			{
 				if ( null !== ( $_eventName = Option::get( $_operation, 'event_name' ) ) )
 				{
-					$_events[Option::get( $_operation, 'method', 'GET' )] = str_ireplace( '{api_name}', $apiName, $_eventName );
+					$_method = strtolower( Option::get( $_operation, 'method', HttpMethod::GET ) );
+
+					$_events[$_method] = str_ireplace(
+						array( '{api_name}', '{action}', '{request.method}' ),
+						array( $apiName, $_method, $_method ),
+						$_eventName
+					);
 				}
 			}
 
-			$_eventMap[$_api['path']] = $_events;
+			$_eventMap[str_ireplace( '{api_name}', $apiName, $_api['path'] )] = $_events;
 		}
 
 		return $_eventMap;
@@ -355,20 +384,22 @@ SQL;
 	 */
 	public static function getSwaggerForService( $service )
 	{
-		$_swaggerPath = Platform::getStoragePath( static::SWAGGER_CACHE_DIR );
-		$_filePath = $_swaggerPath . $service . '.json';
+		$_swaggerPath = Platform::getSwaggerPath( static::SWAGGER_CACHE_DIR );
+		$_filePath = $_swaggerPath . '/' . $service . '.json';
+
 		if ( !file_exists( $_filePath ) )
 		{
 			static::buildSwagger();
+
 			if ( !file_exists( $_filePath ) )
 			{
-				throw new InternalServerErrorException( "Failed to create swagger cache for service '$service'." );
+				throw new InternalServerErrorException( 'File system error creating Swagger cache file for "' . $service . '"' );
 			}
 		}
 
 		if ( false === ( $_content = file_get_contents( $_filePath ) ) )
 		{
-			throw new InternalServerErrorException( "Failed to retrieve swagger cache." );
+			throw new InternalServerErrorException( 'File system error reading Swagger cache: ' . $_filePath );
 		}
 
 		return $_content;

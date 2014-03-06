@@ -111,6 +111,7 @@ class PlatformServiceTypes extends SeedEnum
 		self::EMAIL_SERVICE          => 'EmailSvc',
 		self::NOSQL_DB               => 'NoSqlDbSvc',
 		self::SALESFORCE             => 'SalesforceDbSvc',
+		self::REMOTE_WEB_SERVICE     => 'RemoteWebSvc',
 	);
 
 	//*************************************************************************
@@ -127,17 +128,19 @@ class PlatformServiceTypes extends SeedEnum
 	{
 		$_serviceName = $serviceName ? : null;
 
-		if ( null === ( $_fileName = Option::get( static::$_classMap, $value ) ) )
+		if ( null !== ( $_fileName = Option::get( static::$_classMap, $value ) ) )
 		{
-			if ( static::SYSTEM_SERVICE == $value && !empty( $_serviceName ) )
-			{
-				if ( null !== ( $_fileName = Option::get( static::$_classMap, strtolower( $_serviceName ) ) ) )
-				{
-					return $_fileName;
-				}
+			return $_fileName;
+		}
 
-				return static::$_classMap[static::SYSTEM_MANAGER_SERVICE];
+		if ( static::SYSTEM_SERVICE == $value && !empty( $_serviceName ) )
+		{
+			if ( null !== ( $_fileName = Option::get( static::$_classMap, strtolower( $_serviceName ) ) ) )
+			{
+				return $_fileName;
 			}
+
+			return static::$_classMap[static::SYSTEM_MANAGER_SERVICE];
 		}
 
 		return $_serviceName;
