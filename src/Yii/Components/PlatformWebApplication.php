@@ -418,7 +418,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	protected function _loadPlugins()
 	{
-		if ( null === ( $_autoloadPath = Pii::getState( 'dsp.plugin_autoload_path' ) ) )
+		if ( null === ( $_autoloadPath = \Kisma::get( 'dsp.plugin_autoload_path' ) ) )
 		{
 			//	Locate plug-in directory...
 			$_path = Pii::getParam( 'dsp.plugins_path', Pii::getParam( 'dsp.base_path' ) . static::DEFAULT_PLUGINS_PATH );
@@ -442,7 +442,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 				return false;
 			}
 
-			Pii::setState( 'dsp.plugin_autoload_path', $_autoloadPath );
+			\Kisma::set( 'dsp.plugin_autoload_path', $_autoloadPath );
 		}
 
 		/** @noinspection PhpIncludeInspection */
@@ -592,7 +592,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	{
 		$_list = $this->_corsWhitelist;
 
-		if ( false !== $_list && ( !is_array( $_list ) || null === ( $_list = Pii::getState( static::CORS_WHITELIST_KEY ) ) ) )
+		if ( false !== $_list && ( !is_array( $_list ) || null === ( $_list = \Kisma::get( static::CORS_WHITELIST_KEY ) ) ) )
 		{
 			//	Get CORS data from config file
 			$_config = Platform::getStorageBasePath( static::CORS_DEFAULT_CONFIG_FILE );
@@ -603,7 +603,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
 				if ( empty( $_list ) )
 				{
-					Pii::setState( static::CORS_WHITELIST_KEY, false );
+					\Kisma::set( static::CORS_WHITELIST_KEY, false );
 					Log::error( 'Found CORS configuration, but contents invalid: ' . print_r( $_list, true ) );
 
 					return $this;
@@ -617,14 +617,14 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 				//	Nada? Bail...
 				if ( !file_exists( $_oldConfig ) )
 				{
-					Pii::setState( static::CORS_WHITELIST_KEY, false );
+					\Kisma::set( static::CORS_WHITELIST_KEY, false );
 
 					return $this;
 				}
 
 				if ( false === ( $_json = @json_decode( @file_get_contents( $_oldConfig ), true ) ) )
 				{
-					Pii::setState( static::CORS_WHITELIST_KEY, false );
+					\Kisma::set( static::CORS_WHITELIST_KEY, false );
 					Log::error( 'Found CORS configuration in old location, but contents invalid: ' . print_r( $_json, true ) );
 
 					return $this;
@@ -632,7 +632,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
 				if ( false === @file_put_contents( $_config, json_encode( $_json ) ) )
 				{
-					Pii::setState( static::CORS_WHITELIST_KEY, false );
+					\Kisma::set( static::CORS_WHITELIST_KEY, false );
 					Log::error( 'Error moving CORS configuration file to new location.' );
 
 					return $this;
@@ -641,7 +641,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 				//	Final step, remove old configuration file...
 				if ( false === @unlink( $_oldConfig ) )
 				{
-					Pii::setState( static::CORS_WHITELIST_KEY, false );
+					\Kisma::set( static::CORS_WHITELIST_KEY, false );
 					Log::error( 'File system error removing CORS configuration file from old location. Ignoring' );
 
 					return $this;
@@ -658,7 +658,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 			$this->setCorsWhitelist( $_list );
 		}
 
-		Pii::setState( static::CORS_WHITELIST_KEY, $_list );
+		\Kisma::set( static::CORS_WHITELIST_KEY, $_list );
 
 		return $this;
 	}

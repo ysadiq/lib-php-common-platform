@@ -246,7 +246,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 
 			$_requestValues = $_requestValues
 				? : array_merge(
-					array_replace_recursive()$_request->headers->all(),
+					$_request->headers->all(),
 					$_request->attributes->all(),
 					$_request->cookies->all(),
 					$_request->files->all(),
@@ -259,8 +259,12 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 		if ( null === $_replacements )
 		{
 			$_replacements = array();
+			$_combinedValues = Option::merge(
+				Option::clean( $_requestValues ),
+				array_merge( get_object_vars( $this ) )
+			);
 
-			foreach ( array_merge( get_object_vars( $this ), Option::clean( $_requestValues ) ) as $_key => $_value )
+			foreach ( $_combinedValues as $_key => $_value )
 			{
 				$_key = Inflector::neutralize( ltrim( $_key, '_' ) );
 
