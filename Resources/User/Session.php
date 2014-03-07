@@ -79,17 +79,17 @@ class Session extends BasePlatformRestResource
 		parent::__construct(
 			$consumer,
 			array(
-				 'name'           => 'User Session',
-				 'service_name'   => 'user',
-				 'type'           => 'System',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'session',
-				 'description'    => 'Resource for a user to manage their session.',
-				 'is_active'      => true,
-				 'resource_array' => $resources,
-				 'verb_aliases'   => array(
-					 static::Put => static::Post,
-				 )
+				'name'           => 'User Session',
+				'service_name'   => 'user',
+				'type'           => 'System',
+				'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				'api_name'       => 'session',
+				'description'    => 'Resource for a user to manage their session.',
+				'is_active'      => true,
+				'resource_array' => $resources,
+				'verb_aliases'   => array(
+					static::Put => static::Post,
+				)
 			)
 		);
 	}
@@ -710,6 +710,90 @@ class Session extends BasePlatformRestResource
 	}
 
 	/**
+	 * @param string $service
+	 * @param string $component
+	 *
+	 * @returns boolean | array
+	 */
+	public static function getServiceAccess( $service, $component = null )
+	{
+		static::_checkCache();
+
+		$_public = Option::get( static::$_cache, 'public' );
+
+		if ( Option::getBool( $_public, 'is_sys_admin' ) )
+		{
+			return true; // no need to check role
+		}
+
+		if ( null === ( $_roleInfo = Option::get( $_public, 'role' ) ) )
+		{
+			// no role assigned
+			return false;
+		}
+
+		$_services = Option::clean( Option::get( $_roleInfo, 'services' ) );
+
+		if ( !is_array( $_services ) || empty( $_services ) )
+		{
+			// no service assigned
+			return false;
+		}
+
+		$_allFound = false;
+		$_serviceFound = false;
+
+		foreach ( $_services as $_svcInfo )
+		{
+			$_theService = Option::get( $_svcInfo, 'service', '' );
+
+			if ( 0 == strcasecmp( $service, $_theService ) )
+			{
+				$_theComponent = Option::get( $_svcInfo, 'component' );
+				if ( !empty( $component ) )
+				{
+					if ( 0 == strcasecmp( $component, $_theComponent ) )
+					{
+						// component specific found
+
+						return $_svcInfo;
+					}
+
+					if ( empty( $_theComponent ) || ( '*' == $_theComponent ) )
+					{
+						$_serviceFound = $_svcInfo;
+					}
+				}
+				else
+				{
+					if ( empty( $_theComponent ) || ( '*' == $_theComponent ) )
+					{
+						// service specific found
+
+						return $_svcInfo;
+					}
+				}
+			}
+			elseif ( empty( $_theService ) || ( '*' == $_theService ) )
+			{
+				$_allFound = $_svcInfo;
+			}
+		}
+
+		if ( false !== $_serviceFound )
+		{
+			return $_serviceFound;
+		}
+
+		if ( false !== $_allFound )
+		{
+			return $_allFound;
+		}
+
+		return false;
+	}
+
+	/**
 	 * @param $request
 	 * @param $access
 	 *
@@ -762,152 +846,25 @@ class Session extends BasePlatformRestResource
 	/**
 	 * @param string $service
 	 * @param string $component
-	 * @param array  $filters
-	 * @param string $operator
 	 *
 	 * @returns bool
 	 */
-	public static function getServiceFilters( $service, $component = null, &$filters, &$operator )
+	public static function getServiceFilters( $service, $component = null )
 	{
-		static::_checkCache();
-
-		$_public = Option::get( static::$_cache, 'public' );
-
-		if ( Option::getBool( $_public, 'is_sys_admin' ) )
+		$_access = static::getServiceAccess( $service, $component );
+		if ( !is_array( $_access ) )
 		{
-			return false; // no need to check role
+			return null;
 		}
 
-		if ( null === ( $_roleInfo = Option::get( $_public, 'role' ) ) )
+		$_filters = Option::get( $_access, 'filters' );
+		$_operator = Option::get( $_access, 'filter_op', 'AND' );
+		if ( empty( $_filters ) )
 		{
-			// no role assigned
-			return false;
+			return null;
 		}
 
-		$_services = Option::clean( Option::get( $_roleInfo, 'services' ) );
-
-		if ( !is_array( $_services ) || empty( $_services ) )
-		{
-			// no service assigned
-			return false;
-		}
-
-		$_allFilters = false;
-		$_allFound = false;
-		$_serviceFilters = array();
-		$_serviceFound = false;
-
-		foreach ( $_services as $_svcInfo )
-		{
-			$_theService = Option::get( $_svcInfo, 'service', '' );
-			$_theFilters = Option::get( $_svcInfo, 'filters' );
-
-			if ( 0 == strcasecmp( $service, $_theService ) )
-			{
-				$_theComponent = Option::get( $_svcInfo, 'component' );
-				if ( !empty( $component ) )
-				{
-					if ( 0 == strcasecmp( $component, $_theComponent ) )
-					{
-						$filters = $_theFilters; // component specific found
-						return true;
-					}
-					elseif ( empty( $_theComponent ) || ( '*' == $_theComponent ) )
-					{
-						$_serviceFilters = $_theFilters;
-						$_serviceFound = true;
-					}
-				}
-				else
-				{
-					if ( empty( $_theComponent ) || ( '*' == $_theComponent ) )
-					{
-						$filters = $_theFilters; // service specific found
-						return true;
-					}
-				}
-			}
-			elseif ( empty( $_theService ) || ( '*' == $_theService ) )
-			{
-				$_allFilters = $_theFilters;
-				$_allFound = true;
-			}
-		}
-
-		if ( $_serviceFound )
-		{
-			if ( $_serviceFilters )
-			{
-				$filters = $_serviceFilters; // service found
-				return true;
-			}
-		}
-		elseif ( $_allFound )
-		{
-			if ( $_allFilters )
-			{
-				$filters = $_allFilters; // all services found
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	 * @param string $section
-	 * @param string $lookup
-	 * @param string $value
-	 *
-	 * @returns bool
-	 */
-	public static function getLookupValue( $section, $lookup, &$value )
-	{
-		static::_checkCache();
-
-		$_public = Option::get( static::$_cache, 'public' );
-
-		if ( !empty( $section ) )
-		{
-			switch ( $section )
-			{
-				case 'user':
-					// get fields here
-					if ( !empty( $lookup ) )
-					{
-						if ( isset( $_public, $_public[$lookup] ) )
-						{
-							$value = $_public[$lookup];
-
-							return true;
-						}
-					}
-					break;
-				default:
-					if ( !empty( $lookup ) )
-					{
-						if ( isset( $_public, $_public[$section], $_public[$section][$lookup] ) )
-						{
-							$value = $_public[$section][$lookup];
-
-							return true;
-						}
-					}
-					break;
-			}
-		}
-
-		if ( !empty( $lookup ) )
-		{
-			if ( isset( $_public, $_public[$lookup] ) )
-			{
-				$value = $_public[$lookup];
-
-				return true;
-			}
-		}
-
-		return false;
+		return array( 'filters' => $_filters, 'filter_op' => $_operator );
 	}
 
 	/**
@@ -916,45 +873,45 @@ class Session extends BasePlatformRestResource
 	 *
 	 * @returns bool
 	 */
-	public static function getRoleLookupValue( $lookup, &$value )
+	public static function getLookupValue( $lookup, &$value )
 	{
+		if (empty($lookup))
+		{
+			return false;
+		}
+
 		static::_checkCache();
 
 		$_public = Option::get( static::$_cache, 'public' );
 
-		if ( null === ( $_role = Option::get( $_public, 'role' ) ) )
+		$_parts = explode( '.', $lookup );
+		if ( count( $_parts ) > 1 )
 		{
-			// no role assigned
-			return false;
-		}
-
-		if ( is_array( $lookup ) )
-		{
-			if ( count( $lookup ) > 1 )
+			$_section = array_shift( $_parts );
+			$_lookup = implode( '.', $_parts );
+			if ( !empty( $_section ) )
 			{
-				// look for keys, etc.
-				$_field = $lookup[0];
-				if ( null !== ( $_keys = Option::get( $_role, $_field ) ) )
+				switch ( $_section )
 				{
-					$_key = $lookup[1];
-					if ( isset( $_keys[$_key] ) )
-					{
-						$value = $_keys[$_key];
+					case 'user':
+						// get fields here
+						if ( !empty( $_lookup ) )
+						{
+							if ( isset( $_public, $_public[$_lookup] ) )
+							{
+								$value = $_public[$_lookup];
 
-						return true;
-					}
+								return true;
+							}
+						}
+						break;
 				}
-
-				return false;
 			}
-
-			// otherwise single string, pull it and carry on
-			$lookup = array_shift( $lookup );
 		}
 
-		if ( isset( $_role, $_role[$lookup] ) )
+		if ( isset( $_public, $_public['lookup'], $_public['lookup'][$lookup] ) )
 		{
-			$value = $_role[$lookup];
+			$value = $_public['lookup'][$lookup];
 
 			return true;
 		}

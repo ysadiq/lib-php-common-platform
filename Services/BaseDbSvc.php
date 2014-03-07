@@ -56,7 +56,10 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 * @var int|string
 	 */
 	protected $_resourceId = null;
-
+	/**
+	 * @var array
+	 */
+	protected $_requestData = null;
 	/**
 	 * @var boolean
 	 */
@@ -75,11 +78,111 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		{
 			//	Default verb aliases
 			$settings['verb_aliases'] = array(
-				static::Patch => static::Merge,
+				static::PATCH => static::MERGE,
 			);
 		}
 
 		parent::__construct( $settings );
+	}
+
+	/**
+	 *
+	 */
+	protected function _detectResourceMembers( $resourcePath = null )
+	{
+		parent::_detectResourceMembers( $resourcePath );
+
+		$this->_resourceId = ( isset( $this->_resourceArray, $this->_resourceArray[1] ) ) ? $this->_resourceArray[1] : '';
+
+		$this->_requestData = RestData::getPostedData( true, true );
+
+	}
+
+	/**
+	 * @param null|array $post_data
+	 *
+	 * @return array
+	 */
+	protected function _gatherExtrasFromRequest( $post_data = null )
+	{
+		// most DBs support the following filter extras from url or posted data
+		$_extras = array();
+
+		// Most requests contain 'returned fields' parameter
+		$_fields = FilterInput::request( 'fields', Option::get( $this->_requestData, 'fields' ) );
+		$_fieldsDefault = ( static::GET == $this->_action ) ? '*' : null;
+		$_extras['fields'] = ( empty( $_fields ) ) ? $_fieldsDefault : $_fields;
+
+		// means to override the default identifier field for a table
+		// or supply one when there is no default designated
+		$_idField = FilterInput::request( 'id_field', Option::get( $this->_requestData, 'id_field' ) );
+		$_extras['id_field'] = ( empty( $_idField ) ) ? static::DEFAULT_ID_FIELD : $_idField;
+
+		if ( null != $_ssFilters = Session::getServiceFilters( $this->_apiName, $this->_resource ) )
+		{
+			$_extras['ss_filters'] = $_ssFilters;
+		}
+
+		// look for limit, accept top as well as limit
+		$_limit = FilterInput::request(
+			'limit',
+			FilterInput::request(
+				'top',
+				Option::get( $post_data, 'limit', Option::get( $post_data, 'top' ) ),
+				FILTER_VALIDATE_INT
+			),
+			FILTER_VALIDATE_INT
+		);
+		$_extras['limit'] = $_limit;
+
+		// accept skip as well as offset
+		$_offset = FilterInput::request(
+			'offset',
+			FilterInput::request(
+				'skip',
+				Option::get( $post_data, 'offset', Option::get( $post_data, 'skip' ) ),
+				FILTER_VALIDATE_INT
+			),
+			FILTER_VALIDATE_INT
+		);
+		$_extras['offset'] = $_offset;
+
+		// accept sort as well as order
+		$_order = FilterInput::request(
+			'order',
+			FilterInput::request(
+				'sort',
+				Option::get( $post_data, 'order', Option::get( $post_data, 'sort' ) )
+			)
+		);
+		$_extras['order'] = $_order;
+
+		// include count in metadata tag
+		$_includeCount = FilterInput::request(
+			'include_count',
+			Option::getBool( $post_data, 'include_count', false ),
+			FILTER_VALIDATE_BOOLEAN
+		);
+		$_extras['include_count'] = $_includeCount;
+
+		return $_extras;
+	}
+
+	/**
+	 * @param string $table
+	 * @param string $access
+	 *
+	 * @throws BadRequestException
+	 */
+	protected function validateTableAccess( $table, $access = 'read' )
+	{
+		if ( empty( $table ) )
+		{
+			throw new BadRequestException( 'Table name can not be empty.' );
+		}
+
+		// finally check that the current user has privileges to access this table
+		$this->checkPermission( $access, $table );
 	}
 
 	/**
@@ -124,14 +227,8 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	{
 		switch ( $this->_action )
 		{
-			case self::Get:
-				$_ids = FilterInput::request( 'names' );
-				if ( empty( $_ids ) )
-				{
-					$_data = RestData::getPostedData( false, true );
-					$_ids = Option::get( $_data, 'names' );
-				}
-
+			case self::GET:
+				$_ids = FilterInput::request( 'names', Option::get( $this->_requestData, 'names' ) );
 				if ( empty( $_ids ) )
 				{
 					return $this->_listResources();
@@ -141,17 +238,16 @@ abstract class BaseDbSvc extends BasePlatformRestService
 				$_result = array( 'table' => $_result );
 				break;
 
-			case self::Post:
-				$_data = RestData::getPostedData( false, true );
-				$_tables = Option::get( $_data, 'table', null );
+			case self::POST:
+				$_tables = Option::get( $this->_requestData, 'table', null );
 				if ( empty( $_tables ) )
 				{
 					// xml to array conversion leaves them in plural wrapper
-					$_tables = Option::getDeep( $_data, 'tables', 'table' );
+					$_tables = Option::getDeep( $this->_requestData, 'tables', 'table' );
 				}
 				if ( empty( $_tables ) )
 				{
-					$_result = $this->createTable( $_data );
+					$_result = $this->createTable( $this->_requestData );
 				}
 				else
 				{
@@ -159,19 +255,18 @@ abstract class BaseDbSvc extends BasePlatformRestService
 					$_result = array( 'table' => $_result );
 				}
 				break;
-			case self::Put:
-			case self::Patch:
-			case self::Merge:
-				$_data = RestData::getPostedData( false, true );
-				$_tables = Option::get( $_data, 'table', null );
+			case self::PUT:
+			case self::PATCH:
+			case self::MERGE:
+				$_tables = Option::get( $this->_requestData, 'table', null );
 				if ( empty( $_tables ) )
 				{
 					// xml to array conversion leaves them in plural wrapper
-					$_tables = Option::getDeep( $_data, 'tables', 'table' );
+					$_tables = Option::getDeep( $this->_requestData, 'tables', 'table' );
 				}
 				if ( empty( $_tables ) )
 				{
-					$_result = $this->updateTable( $_data );
+					$_result = $this->updateTable( $this->_requestData );
 				}
 				else
 				{
@@ -179,13 +274,8 @@ abstract class BaseDbSvc extends BasePlatformRestService
 					$_result = array( 'table' => $_result );
 				}
 				break;
-			case self::Delete:
-				$_data = RestData::getPostedData( false, true );
-				$_ids = FilterInput::request( 'names' );
-				if ( empty( $_ids ) )
-				{
-					$_ids = Option::get( $_data, 'names', '' );
-				}
+			case self::DELETE:
+				$_ids = FilterInput::request( 'names', Option::get( $this->_requestData, 'names', '' ) );
 				if ( !empty( $_ids ) )
 				{
 					$_result = $this->deleteTables( $_ids );
@@ -193,19 +283,20 @@ abstract class BaseDbSvc extends BasePlatformRestService
 				}
 				else
 				{
-					$_tables = Option::get( $_data, 'table' );
+					$_tables = Option::get( $this->_requestData, 'table' );
 					if ( empty( $_tables ) )
 					{
 						// xml to array conversion leaves them in plural wrapper
-						$_tables = Option::getDeep( $_data, 'tables', 'table' );
+						$_tables = Option::getDeep( $this->_requestData, 'tables', 'table' );
 					}
 					if ( empty( $_tables ) )
 					{
-						$_name = Option::get( $_data, 'name' );
+						$_name = Option::get( $this->_requestData, 'name' );
 						if ( empty( $_name ) )
 						{
 							throw new BadRequestException( 'No table name in DELETE request.' );
 						}
+
 						$_result = $this->deleteTable( $_name );
 					}
 					else
@@ -227,51 +318,41 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 */
 	protected function _handleGet()
 	{
-		$_data = RestData::getPostedData( false, true );
-		// Most requests contain 'returned fields' parameter, all by default
-		$_fields = FilterInput::request( 'fields', '*' );
-		$_extras = $this->_gatherExtrasFromRequest( $_data );
+		$_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
+
 		if ( empty( $this->_resourceId ) )
 		{
-			$_ids = FilterInput::request( 'ids' );
-			if ( empty( $_ids ) )
-			{
-				$_ids = Option::get( $_data, 'ids' );
-			}
+			$_ids = FilterInput::request( 'ids', Option::get( $this->_requestData, 'ids' ) );
 			if ( !empty( $_ids ) )
 			{
-				$_result = $this->retrieveRecordsByIds( $this->_resource, $_ids, $_fields, $_extras );
+				$_result = $this->retrieveRecordsByIds( $this->_resource, $_ids, $_extras );
 				$_result = array( 'record' => $_result );
 			}
 			else
 			{
-				$_records = Option::get( $_data, 'record' );
+				$_records = Option::get( $this->_requestData, 'record' );
 				if ( empty( $_records ) )
 				{
 					// xml to array conversion leaves them in plural wrapper
-					$_records = Option::getDeep( $_data, 'records', 'record' );
+					$_records = Option::getDeep( $this->_requestData, 'records', 'record' );
 				}
 				if ( !empty( $_records ) )
 				{
 					// passing records to have them updated with new or more values, id field required
-					$_result = $this->retrieveRecords( $this->_resource, $_records, $_fields, $_extras );
+					$_result = $this->retrieveRecords( $this->_resource, $_records, $_extras );
 					$_result = array( 'record' => $_result );
 				}
 				else
 				{
-					$_filter = FilterInput::request( 'filter' );
-					if ( empty( $_filter ) )
-					{
-						$_filter = Option::get( $_data, 'filter' );
-					}
-					if ( empty( $_filter ) && !empty( $_data ) )
+					$_filter = FilterInput::request( 'filter', Option::get( $this->_requestData, 'filter' ) );
+					if ( empty( $_filter ) && !empty( $this->_requestData ) )
 					{
 						// query by record map
-						$_result = $this->retrieveRecord( $this->_resource, $_data, $_fields, $_extras );
+						$_result = $this->retrieveRecord( $this->_resource, $this->_requestData, $_extras );
 					}
 					else
 					{
-						$_result = $this->retrieveRecordsByFilter( $this->_resource, $_filter, $_fields, $_extras );
+						$_result = $this->retrieveRecordsByFilter( $this->_resource, $_filter, $_extras );
 						if ( isset( $_result['meta'] ) )
 						{
 							$_meta = $_result['meta'];
@@ -289,7 +370,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		else
 		{
 			// single entity by id
-			$_result = $this->retrieveRecordById( $this->_resource, $this->_resourceId, $_fields, $_extras );
+			$_result = $this->retrieveRecordById( $this->_resource, $this->_resourceId, $_extras );
 		}
 
 		return $_result;
@@ -301,28 +382,25 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 */
 	protected function _handlePost()
 	{
-		$_data = RestData::getPostedData( false, true );
-		if ( empty( $_data ) )
+		if ( empty( $this->_requestData ) )
 		{
 			throw new BadRequestException( 'No record(s) in create request.' );
 		}
 
-		// Most requests contain 'returned fields' parameter
-		$_fields = FilterInput::request( 'fields', '' );
-		$_extras = $this->_gatherExtrasFromRequest( $_data );
-		$_records = Option::get( $_data, 'record' );
+		$_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
+		$_records = Option::get( $this->_requestData, 'record' );
 		if ( empty( $_records ) )
 		{
 			// xml to array conversion leaves them in plural wrapper
-			$_records = Option::getDeep( $_data, 'records', 'record' );
+			$_records = Option::getDeep( $this->_requestData, 'records', 'record' );
 		}
 		if ( empty( $_records ) )
 		{
-			$_result = $this->createRecord( $this->_resource, $_data, $_fields, $_extras );
+			$_result = $this->createRecord( $this->_resource, $this->_requestData, $_extras );
 		}
 		else
 		{
-			$_result = $this->createRecords( $this->_resource, $_records, $_fields, $_extras );
+			$_result = $this->createRecords( $this->_resource, $_records, $_extras );
 			$_result = array( 'record' => $_result );
 		}
 
@@ -335,54 +413,43 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 */
 	protected function _handlePut()
 	{
-		$_data = RestData::getPostedData( false, true );
-		if ( empty( $_data ) )
+		if ( empty( $this->_requestData ) )
 		{
 			throw new BadRequestException( 'No record(s) in update request.' );
 		}
 
-		// Most requests contain 'returned fields' parameter
-		$_fields = FilterInput::request( 'fields', '' );
-		$_extras = $this->_gatherExtrasFromRequest( $_data );
+		$_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
 		if ( empty( $this->_resourceId ) )
 		{
-			$_ids = FilterInput::request( 'ids' );
-			if ( empty( $_ids ) )
-			{
-				$_ids = Option::get( $_data, 'ids' );
-			}
+			$_ids = FilterInput::request( 'ids', Option::get( $this->_requestData, 'ids' ) );
 			if ( !empty( $_ids ) )
 			{
-				$_result = $this->updateRecordsByIds( $this->_resource, $_data, $_ids, $_fields, $_extras );
+				$_result = $this->updateRecordsByIds( $this->_resource, $this->_requestData, $_ids, $_extras );
 				$_result = array( 'record' => $_result );
 			}
 			else
 			{
-				$_filter = FilterInput::request( 'filter' );
-				if ( empty( $_filter ) )
-				{
-					$_filter = Option::get( $_data, 'filter' );
-				}
+				$_filter = FilterInput::request( 'filter', Option::get( $this->_requestData, 'filter' ) );
 				if ( !empty( $_filter ) )
 				{
-					$_result = $this->updateRecordsByFilter( $this->_resource, $_data, $_filter, $_fields, $_extras );
+					$_result = $this->updateRecordsByFilter( $this->_resource, $this->_requestData, $_filter, $_extras );
 					$_result = array( 'record' => $_result );
 				}
 				else
 				{
-					$_records = Option::get( $_data, 'record' );
+					$_records = Option::get( $this->_requestData, 'record' );
 					if ( empty( $_records ) )
 					{
 						// xml to array conversion leaves them in plural wrapper
-						$_records = Option::getDeep( $_data, 'records', 'record' );
+						$_records = Option::getDeep( $this->_requestData, 'records', 'record' );
 					}
 					if ( empty( $_records ) )
 					{
-						$_result = $this->updateRecord( $this->_resource, $_data, $_fields, $_extras );
+						$_result = $this->updateRecord( $this->_resource, $this->_requestData, $_extras );
 					}
 					else
 					{
-						$_result = $this->updateRecords( $this->_resource, $_records, $_fields, $_extras );
+						$_result = $this->updateRecords( $this->_resource, $_records, $_extras );
 						$_result = array( 'record' => $_result );
 					}
 				}
@@ -390,7 +457,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		}
 		else
 		{
-			$_result = $this->updateRecordById( $this->_resource, $_data, $this->_resourceId, $_fields, $_extras );
+			$_result = $this->updateRecordById( $this->_resource, $this->_requestData, $this->_resourceId, $_extras );
 		}
 
 		return $_result;
@@ -402,54 +469,43 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 */
 	protected function _handleMerge()
 	{
-		$_data = RestData::getPostedData( false, true );
-		if ( empty( $_data ) )
+		if ( empty( $this->_requestData ) )
 		{
 			throw new BadRequestException( 'No record(s) in merge request.' );
 		}
 
-		// Most requests contain 'returned fields' parameter
-		$_fields = FilterInput::request( 'fields', '' );
-		$_extras = $this->_gatherExtrasFromRequest( $_data );
+		$_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
 		if ( empty( $this->_resourceId ) )
 		{
-			$_ids = FilterInput::request( 'ids' );
-			if ( empty( $_ids ) )
-			{
-				$_ids = Option::get( $_data, 'ids' );
-			}
+			$_ids = FilterInput::request( 'ids', Option::get( $this->_requestData, 'ids' ) );
 			if ( !empty( $_ids ) )
 			{
-				$_result = $this->mergeRecordsByIds( $this->_resource, $_data, $_ids, $_fields, $_extras );
+				$_result = $this->mergeRecordsByIds( $this->_resource, $this->_requestData, $_ids, $_extras );
 				$_result = array( 'record' => $_result );
 			}
 			else
 			{
-				$_filter = FilterInput::request( 'filter' );
-				if ( empty( $_filter ) )
-				{
-					$_filter = Option::get( $_data, 'filter' );
-				}
+				$_filter = FilterInput::request( 'filter', Option::get( $this->_requestData, 'filter' ) );
 				if ( !empty( $_filter ) )
 				{
-					$_result = $this->mergeRecordsByFilter( $this->_resource, $_data, $_filter, $_fields, $_extras );
+					$_result = $this->mergeRecordsByFilter( $this->_resource, $this->_requestData, $_filter, $_extras );
 					$_result = array( 'record' => $_result );
 				}
 				else
 				{
-					$_records = Option::get( $_data, 'record' );
+					$_records = Option::get( $this->_requestData, 'record' );
 					if ( empty( $_records ) )
 					{
 						// xml to array conversion leaves them in plural wrapper
-						$_records = Option::getDeep( $_data, 'records', 'record' );
+						$_records = Option::getDeep( $this->_requestData, 'records', 'record' );
 					}
 					if ( empty( $_records ) )
 					{
-						$_result = $this->mergeRecord( $this->_resource, $_data, $_fields, $_extras );
+						$_result = $this->mergeRecord( $this->_resource, $this->_requestData, $_extras );
 					}
 					else
 					{
-						$_result = $this->mergeRecords( $this->_resource, $_records, $_fields, $_extras );
+						$_result = $this->mergeRecords( $this->_resource, $_records, $_extras );
 						$_result = array( 'record' => $_result );
 					}
 				}
@@ -457,7 +513,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		}
 		else
 		{
-			$_result = $this->mergeRecordById( $this->_resource, $_data, $this->_resourceId, $_fields, $_extras );
+			$_result = $this->mergeRecordById( $this->_resource, $this->_requestData, $this->_resourceId, $_extras );
 		}
 
 		return $_result;
@@ -469,61 +525,49 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 */
 	protected function _handleDelete()
 	{
-		$_data = RestData::getPostedData( false, true );
-		// Most requests contain 'returned fields' parameter
-		$_fields = FilterInput::request( 'fields', '' );
-		$_extras = $this->_gatherExtrasFromRequest( $_data );
+		$_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
 		if ( empty( $this->_resourceId ) )
 		{
-			$_ids = FilterInput::request( 'ids' );
-			if ( empty( $_ids ) )
-			{
-				$_ids = Option::get( $_data, 'ids', '' );
-			}
+			$_ids = FilterInput::request( 'ids', Option::get( $_data, 'ids' ) );
 			if ( !empty( $_ids ) )
 			{
-				$_result = $this->deleteRecordsByIds( $this->_resource, $_ids, $_fields, $_extras );
+				$_result = $this->deleteRecordsByIds( $this->_resource, $_ids, $_extras );
 				$_result = array( 'record' => $_result );
 			}
 			else
 			{
-				$_filter = FilterInput::request( 'filter' );
-				if ( empty( $_filter ) )
+				$_filter = FilterInput::request( 'filter', Option::get( $_data, 'filter' ) );
+				if ( isset( $_filter ) )
 				{
-					$_filter = Option::get( $_data, 'filter' );
-				}
-				if ( !empty( $_filter ) )
-				{
-					$_result = $this->deleteRecordsByFilter( $this->_resource, $_filter, $_fields, $_extras );
+					$_result = $this->deleteRecordsByFilter( $this->_resource, $_filter, $_extras );
 					$_result = array( 'record' => $_result );
 				}
 				else
 				{
-					$_records = Option::get( $_data, 'record' );
+					$_records = Option::get( $this->_requestData, 'record' );
 					if ( empty( $_records ) )
 					{
 						// xml to array conversion leaves them in plural wrapper
-						$_records = Option::getDeep( $_data, 'records', 'record' );
+						$_records = Option::getDeep( $this->_requestData, 'records', 'record' );
 					}
 					if ( empty( $_records ) )
 					{
-						if ( empty( $_data ) )
+						if ( empty( $this->_requestData ) )
 						{
-							if ( !FilterInput::request( 'force', false, FILTER_VALIDATE_BOOLEAN ) )
+							if ( !FilterInput::request( 'truncate', false, FILTER_VALIDATE_BOOLEAN ) )
 							{
 								throw new BadRequestException( 'No filter or records given for delete request.' );
 							}
-							$_extras['force'] = true;
-							$_result = $this->deleteRecords( $this->_resource, null, $_fields, $_extras );
+							$_result = $this->truncateTable( $this->_resource );
 						}
 						else
 						{
-							$_result = $this->deleteRecord( $this->_resource, $_data, $_fields, $_extras );
+							$_result = $this->deleteRecord( $this->_resource, $this->_requestData, $_extras );
 						}
 					}
 					else
 					{
-						$_result = $this->deleteRecords( $this->_resource, $_records, $_fields, $_extras );
+						$_result = $this->deleteRecords( $this->_resource, $_records, $_extras );
 						$_result = array( 'record' => $_result );
 					}
 				}
@@ -531,99 +575,10 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		}
 		else
 		{
-			$_result = $this->deleteRecordById( $this->_resource, $this->_resourceId, $_fields, $_extras );
+			$_result = $this->deleteRecordById( $this->_resource, $this->_resourceId, $_extras );
 		}
 
 		return $_result;
-	}
-
-	/**
-	 *
-	 */
-	protected function _detectResourceMembers( $resourcePath = null )
-	{
-		parent::_detectResourceMembers( $resourcePath );
-
-		$this->_resourceId = ( isset( $this->_resourceArray, $this->_resourceArray[1] ) ) ? $this->_resourceArray[1] : '';
-	}
-
-	/**
-	 * @param null|array $post_data
-	 *
-	 * @return array
-	 */
-	protected function _gatherExtrasFromRequest( $post_data = null )
-	{
-		$_extras = array();
-
-		// means to override the default identifier field for a table
-		// or supply one when there is no default designated
-		$_idField = FilterInput::request( 'id_field' );
-		if ( empty( $_idField ) && !empty( $post_data ) )
-		{
-			$_idField = Option::get( $post_data, 'id_field' );
-		}
-		$_extras['id_field'] = $_idField;
-
-		// most DBs support the following filter extras
-		// accept top as well as limit
-		$_limit = FilterInput::request( 'limit', FilterInput::request( 'top', 0, FILTER_VALIDATE_INT ), FILTER_VALIDATE_INT );
-		if ( empty( $_limit ) && !empty( $post_data ) )
-		{
-			$_limit = Option::get( $post_data, 'limit' );
-		}
-		$_extras['limit'] = $_limit;
-
-		// accept skip as well as offset
-		$_offset = FilterInput::request( 'offset', FilterInput::request( 'skip', 0, FILTER_VALIDATE_INT ), FILTER_VALIDATE_INT );
-		if ( empty( $_offset ) && !empty( $post_data ) )
-		{
-			$_offset = Option::get( $post_data, 'offset' );
-		}
-		$_extras['offset'] = $_offset;
-
-		// accept sort as well as order
-		$_order = FilterInput::request( 'order', FilterInput::request( 'sort' ) );
-		if ( empty( $_order ) && !empty( $post_data ) )
-		{
-			$_order = Option::get( $post_data, 'order' );
-		}
-		$_extras['order'] = $_order;
-
-		// include count in metadata tag
-		$_count = FilterInput::request( 'include_count', FilterInput::request( 'count', false, FILTER_VALIDATE_BOOLEAN ), FILTER_VALIDATE_BOOLEAN );
-		if ( empty( $_count ) && !empty( $post_data ) )
-		{
-			$_count = Option::getBool( $post_data, 'count' );
-		}
-		$_extras['include_count'] = $_count;
-
-		$_filters = array();
-		$_filterOp = 'and';
-		if ( Session::getServiceFilters( $this->_apiName, $this->_resource, $_filters, $_filterOp ) )
-		{
-			$_extras['filters'] = $_filters;
-			$_extras['filters_op'] = $_filterOp;
-		}
-
-		return $_extras;
-	}
-
-	/**
-	 * @param string $table
-	 * @param string $access
-	 *
-	 * @throws BadRequestException
-	 */
-	protected function validateTableAccess( $table, $access = 'read' )
-	{
-		if ( empty( $table ) )
-		{
-			throw new BadRequestException( 'Table name can not be empty.' );
-		}
-
-		// finally check that the current user has privileges to access this table
-		$this->checkPermission( $access, $table );
 	}
 
 	// Helper function for record usage
@@ -825,33 +780,27 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
 	public static function interpretFilterValue( $value )
 	{
-		if (is_bool($value))
+		// all other data types besides strings, just return
+		if ( !is_string( $value ) || empty( $value ) )
 		{
-			return $value ? 'true' : 'false';
+			return $value;
 		}
 
-		if ( is_string( $value ) )
+		// filter string values should be wrapped in matching quotes
+		if ( ( ( 0 === strpos( $value, '"' ) ) && ( ( strlen( $value ) - 1 ) === strrpos( $value, '"' ) ) ) ||
+			 ( ( 0 === strpos( $value, "'" ) ) && ( ( strlen( $value ) - 1 ) === strrpos( $value, "'" ) ) )
+		)
 		{
-			$_parts = explode( '.', $value );
-			if ( count( $_parts ) > 1 )
-			{
-				$_section = array_shift( $_parts );
-				$_lookup = implode( '.', $_parts );
-				switch ( $_section )
-				{
-					case 'service':
-						// get fields here
-						break;
-					default:
-						if ( Session::getLookupValue( $_section, $_lookup, $_result ) )
-						{
-							return $_result;
-						}
-						break;
-				}
-			}
+			return substr( $value, 1, ( strlen( $value ) - 1 ) );
 		}
 
+		// the rest should be lookup keys
+		if ( Session::getLookupValue( $value, $_result ) )
+		{
+			return $_result;
+		}
+
+		// todo Should we error here?
 		return $value;
 	}
 
@@ -1012,323 +961,311 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 */
 	abstract public function deleteTable( $table, $check_empty = false );
 
+	/**
+	 * Delete all table entries but keep the table
+	 *
+	 * @param string $table
+	 *
+	 * @throws \Exception
+	 * @return array
+	 */
+	abstract public function truncateTable( $table );
+
 	// Handle table record operations
 
 	/**
 	 * @param string $table
 	 * @param array  $records
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function createRecords( $table, $records, $fields = null, $extras = array() );
+	abstract public function createRecords( $table, $records, $extras = array() );
 
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function createRecord( $table, $record, $fields = null, $extras = array() )
+	public function createRecord( $table, $record, $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
 			throw new BadRequestException( 'There are no fields in the record.' );
 		}
 
-		$results = $this->createRecords( $table, array( $record ), $fields, $extras );
+		$_results = $this->createRecords( $table, array( $record ), $extras );
 
-		return $results[0];
+		return $_results[0];
 	}
 
 	/**
 	 * @param string $table
 	 * @param array  $records
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function updateRecords( $table, $records, $fields = null, $extras = array() );
+	abstract public function updateRecords( $table, $records, $extras = array() );
 
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecord( $table, $record, $fields = null, $extras = array() )
+	public function updateRecord( $table, $record, $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
 			throw new BadRequestException( 'There are no fields in the record.' );
 		}
 
-		$results = $this->updateRecords( $table, array( $record ), $fields, $extras );
+		$_results = $this->updateRecords( $table, array( $record ), $extras );
 
-		return $results[0];
+		return $_results[0];
 	}
 
 	/**
 	 * @param string $table
 	 * @param array  $record
 	 * @param mixed  $filter
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function updateRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() );
+	abstract public function updateRecordsByFilter( $table, $record, $filter = null, $extras = array() );
 
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $ids    - array or comma-delimited list of record identifiers
-	 * @param mixed  $fields - array or comma-delimited list of record fields
+	 * @param mixed  $ids - array or comma-delimited list of record identifiers
 	 * @param array  $extras
 	 *
 	 * @return array
 	 */
-	abstract public function updateRecordsByIds( $table, $record, $ids, $fields = null, $extras = array() );
+	abstract public function updateRecordsByIds( $table, $record, $ids, $extras = array() );
 
 	/**
 	 * @param string $table
 	 * @param array  $record
 	 * @param string $id
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function updateRecordById( $table, $record, $id, $fields = null, $extras = array() )
+	public function updateRecordById( $table, $record, $id, $extras = array() )
 	{
-		$results = $this->updateRecordsByIds( $table, $record, $id, $fields, $extras );
+		$_results = $this->updateRecordsByIds( $table, $record, $id, $extras );
 
-		return $results[0];
+		return $_results[0];
 	}
 
 	/**
 	 * @param string $table
 	 * @param array  $records
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function mergeRecords( $table, $records, $fields = null, $extras = array() );
+	abstract public function mergeRecords( $table, $records, $extras = array() );
 
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecord( $table, $record, $fields = null, $extras = array() )
+	public function mergeRecord( $table, $record, $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
 			throw new BadRequestException( 'There are no fields in the record.' );
 		}
 
-		$results = $this->mergeRecords( $table, array( $record ), $fields, $extras );
+		$_results = $this->mergeRecords( $table, array( $record ), $extras );
 
-		return $results[0];
+		return $_results[0];
 	}
 
 	/**
 	 * @param string $table
 	 * @param  array $record
 	 * @param mixed  $filter
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function mergeRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() );
+	abstract public function mergeRecordsByFilter( $table, $record, $filter = null, $extras = array() );
 
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $ids    - array or comma-delimited list of record identifiers
-	 * @param mixed  $fields - array or comma-delimited list of record fields
+	 * @param mixed  $ids - array or comma-delimited list of record identifiers
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function mergeRecordsByIds( $table, $record, $ids, $fields = null, $extras = array() );
+	abstract public function mergeRecordsByIds( $table, $record, $ids, $extras = array() );
 
 	/**
 	 * @param string $table
 	 * @param array  $record
 	 * @param string $id
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function mergeRecordById( $table, $record, $id, $fields = null, $extras = array() )
+	public function mergeRecordById( $table, $record, $id, $extras = array() )
 	{
-		$results = $this->mergeRecordsByIds( $table, $record, $id, $fields, $extras );
+		$_results = $this->mergeRecordsByIds( $table, $record, $id, $extras );
 
-		return $results[0];
+		return $_results[0];
 	}
 
 	/**
 	 * @param string $table
 	 * @param array  $records
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function deleteRecords( $table, $records, $fields = null, $extras = array() );
+	abstract public function deleteRecords( $table, $records, $extras = array() );
 
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecord( $table, $record, $fields = null, $extras = array() )
+	public function deleteRecord( $table, $record, $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
 			throw new BadRequestException( 'There are no fields in the record.' );
 		}
 
-		$results = $this->deleteRecords( $table, array( $record ), $fields, $extras );
+		$_results = $this->deleteRecords( $table, array( $record ), $extras );
 
-		return $results[0];
+		return $_results[0];
 	}
 
 	/**
 	 * @param string $table
 	 * @param mixed  $filter
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function deleteRecordsByFilter( $table, $filter, $fields = null, $extras = array() );
+	abstract public function deleteRecordsByFilter( $table, $filter, $extras = array() );
 
 	/**
 	 * @param string $table
-	 * @param mixed  $ids    - array or comma-delimited list of record identifiers
-	 * @param mixed  $fields - array or comma-delimited list of record fields
+	 * @param mixed  $ids - array or comma-delimited list of record identifiers
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function deleteRecordsByIds( $table, $ids, $fields = null, $extras = array() );
+	abstract public function deleteRecordsByIds( $table, $ids, $extras = array() );
 
 	/**
 	 * @param string $table
 	 * @param string $id
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function deleteRecordById( $table, $id, $fields = null, $extras = array() )
+	public function deleteRecordById( $table, $id, $extras = array() )
 	{
-		$results = $this->deleteRecordsByIds( $table, $id, $fields, $extras );
+		$_results = $this->deleteRecordsByIds( $table, $id, $extras );
 
-		return $results[0];
+		return $_results[0];
 	}
 
 	/**
 	 * @param string $table
 	 * @param mixed  $filter
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function retrieveRecordsByFilter( $table, $filter = null, $fields = null, $extras = array() );
+	abstract public function retrieveRecordsByFilter( $table, $filter = null, $extras = array() );
 
 	/**
 	 * @param string $table
 	 * @param array  $records
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function retrieveRecords( $table, $records, $fields = null, $extras = array() );
+	abstract public function retrieveRecords( $table, $records, $extras = array() );
 
 	/**
 	 * @param string $table
 	 * @param array  $record
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecord( $table, $record, $fields = null, $extras = array() )
+	public function retrieveRecord( $table, $record, $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
 			throw new BadRequestException( 'There are no fields in the record.' );
 		}
 
-		$results = $this->retrieveRecords( $table, array( $record ), $fields, $extras );
+		$_results = $this->retrieveRecords( $table, array( $record ), $extras );
 
-		return $results[0];
+		return $_results[0];
 	}
 
 	/**
 	 * @param string $table
-	 * @param mixed  $ids    - array or comma-delimited list of record identifiers
-	 * @param mixed  $fields - array or comma-delimited list of record fields
+	 * @param mixed  $ids - array or comma-delimited list of record identifiers
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	abstract public function retrieveRecordsByIds( $table, $ids, $fields = null, $extras = array() );
+	abstract public function retrieveRecordsByIds( $table, $ids, $extras = array() );
 
 	/**
 	 * @param string $table
 	 * @param mixed  $id
-	 * @param mixed  $fields - array or comma-delimited list of record fields
 	 * @param array  $extras
 	 *
 	 * @throws \Exception
 	 * @return array
 	 */
-	public function retrieveRecordById( $table, $id, $fields = null, $extras = array() )
+	public function retrieveRecordById( $table, $id, $extras = array() )
 	{
-		$results = $this->retrieveRecordsByIds( $table, $id, $fields, $extras );
+		$_results = $this->retrieveRecordsByIds( $table, $id, $extras );
 
-		return $results[0];
+		return $_results[0];
 	}
 
 }

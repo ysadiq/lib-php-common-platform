@@ -71,7 +71,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	/**
 	 * @var string REST verb to take action on
 	 */
-	protected $_action = self::Get;
+	protected $_action = self::GET;
 	/**
 	 * @var bool If true, _handleResource() dispatches a call to _handle[Action]() methods if defined.
 	 * For example, a GET request would be dispatched to _handleGet().
@@ -163,7 +163,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return mixed
 	 */
-	public function processRequest( $resource = null, $action = self::Get, $output_format = null )
+	public function processRequest( $resource = null, $action = self::GET, $output_format = null )
 	{
 		$this->_setAction( $action );
 
@@ -598,7 +598,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 *
 	 * @return BasePlatformRestService
 	 */
-	protected function _setAction( $action = self::Get )
+	protected function _setAction( $action = self::GET )
 	{
 		$this->_action = trim( strtoupper( $action ) );
 
