@@ -205,7 +205,7 @@ SQL;
 
 				if ( is_array( $_fromFile ) && !empty( $_fromFile ) )
 				{
-					$_content = json_encode( array_merge( $_baseSwagger, $_fromFile ) );
+					$_content = json_encode( array_merge( $_baseSwagger, $_fromFile ), JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT );
 				}
 			}
 			else //	Check custom path
@@ -239,7 +239,7 @@ SQL;
 					continue;
 				}
 
-				$_content = json_encode( array_merge( $_baseSwagger, $_fromFile ) );
+				$_content = json_encode( array_merge( $_baseSwagger, $_fromFile ), JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT );
 			}
 
 			// replace service type placeholder with api name for this service instance
@@ -283,13 +283,15 @@ SQL;
 
 		$_filePath = $_cachePath . static::SWAGGER_CACHE_FILE;
 
-		if ( false === file_put_contents( $_filePath, json_encode( $_out ) ) )
+		if ( false === file_put_contents( $_filePath, json_encode( $_out, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT ) ) )
 		{
 			Log::error( '  * File system error creating swagger cache file: ' . $_filePath );
 		}
 
 		//	Write event cache file
-		if ( false === file_put_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE, json_encode( static::$_eventMap ) ) )
+		if ( false ===
+			 file_put_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE, json_encode( static::$_eventMap, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT ) )
+		)
 		{
 			Log::error( '  * File system error writing events cache file: ' . $_cachePath . static::SWAGGER_EVENT_CACHE_FILE );
 		}
