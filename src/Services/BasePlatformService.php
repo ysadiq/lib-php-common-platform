@@ -17,18 +17,16 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Platform\Utility\ServiceHandler;
-use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Symfony\Component\HttpFoundation\Request;
 
 /**
  * BasePlatformService
@@ -43,11 +41,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	/**
 	 * @var array The event map
 	 */
-	protected static $_eventMap;
-	/**
-	 * @var bool If true, profiling information will be output to the log
-	 */
-	protected static $_enableProfiler = false;
+	protected static $_eventMap = false;
 	/**
 	 * @var string Name to be used in an API
 	 */
@@ -108,7 +102,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 
 		if ( empty( $this->_apiName ) )
 		{
-			throw new \InvalidArgumentException( '"api_name" can not be empty.' );
+			throw new \InvalidArgumentException( '"api_name" cannot be empty.' );
 		}
 
 		if ( null === $this->_typeId )
@@ -139,11 +133,8 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 		//	Get the current user ID if one...
 		$this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
 
-		if ( static::$_enableProfiler )
-		{
-			/** @noinspection PhpUndefinedFunctionInspection */
-			xhprof_enable();
-		}
+		//	Get our event mapping
+		static::$_eventMap = SwaggerManager::getEventMap();
 	}
 
 	/**
@@ -153,12 +144,6 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	{
 		//	Save myself!
 		ServiceHandler::cacheService( $this->_apiName, $this );
-
-		if ( static::$_enableProfiler )
-		{
-			/** @noinspection PhpUndefinedFunctionInspection */
-			Log::debug( '~~ "' . $this->_apiName . '"', xhprof_disable() );
-		}
 
 		parent::__destruct();
 	}
@@ -184,11 +169,27 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	 */
 	public function trigger( $eventName, $event = null )
 	{
-		$_event = EventManager::trigger( $eventName, $event, get_object_vars( $this ) );
+		return EventManager::trigger( $eventName, $event, get_object_vars( $this ) );
+	}
 
-		Log::debug( 'Event "' . $eventName . '" triggered @ ' . __FILE__ . ' (' . __LINE__ . ')' );
-
-		return $_event;
+	/**
+	 * @param string          $resource     The name of the resource
+	 * @param string          $action       The action to perform
+	 * @param int|string|bool $outputFormat The return format. Defaults to native, or PHP array.
+	 * @param string          $appName      The optional app_name setting for this call. Defaults to called class name hash
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\NotImplementedException
+	 * @return mixed
+	 */
+	public static function processInlineRequest( $resource, $action = HttpMethod::GET, $outputFormat = false, $appName = null )
+	{
+		throw new NotImplementedException();
+//		//	Get the resource and set the app_name
+//		$_resource = ResourceStore::resource( $resource );
+//		$_SERVER['HTTP_X_DREAMFACTORY_APPLICATION_NAME'] = $appName ? : sha1( get_called_class() );
+//
+//		//	Make the call
+//		return $_resource->processInlineRequest( $resource, $action, $outputFormat );
 	}
 
 	/**
@@ -216,107 +217,22 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 		{
 			if ( empty( $_type ) )
 			{
-				Log::notice( '  * Empty "type", assuming this is a system resource ( type_id == 0 )' );
+				Log::notice( ' * Empty "type", assuming this is a system resource( type_id == 0 )' );
 
 				return PlatformServiceTypes::SYSTEM_SERVICE;
 			}
 
-			Log::error( '  * Unknown service type ID request for "' . $type . '".' );
+			Log::error( ' * Unknown service type ID request for "' . $type . '" . ' );
 
 			return false;
 		}
 	}
 
 	/**
-	 * @param string        $eventName
-	 * @param Request|array $values The values to use for replacements in the event name templates.
-	 *                              If none specified, the $_REQUEST variables will be used.
-	 *                              The current class's variables are also available for replacement.
-	 *
-	 * @return string
-	 */
-	protected function _normalizeEventName( &$eventName, $values = null )
-	{
-		static $_cache = array(), $_replacements = null, $_requestValues = null, $_request = null;
-
-		if ( null !== ( $_name = Option::get( $_cache, $_tag = Inflector::neutralize( $eventName ) ) ) )
-		{
-			return $_name;
-		}
-
-		if ( null === $_request )
-		{
-			$_request = Pii::app()->getRequestObject();
-
-			if ( !empty( $_request ) )
-			{
-				$_requestValues = $_requestValues
-					? : array(
-						'headers'    => $_request->headers,
-						'attributes' => $_request->attributes,
-						'cookie'     => $_request->cookies,
-						'files'      => $_request->files,
-						'query'      => $_request->query,
-						'request'    => $_request->request,
-						'server'     => $_request->server,
-					);
-			}
-		}
-
-		if ( null === $_replacements )
-		{
-			$_replacements = array();
-			$_combinedValues = Option::merge(
-				Option::clean( $_requestValues ),
-				Inflector::neutralizeObject( get_object_vars( $this ) ),
-				Option::clean( $values )
-			);
-
-			foreach ( $_combinedValues as $_key => $_value )
-			{
-				$_key = Inflector::neutralize( ltrim( $_key, '_' ) );
-
-				if ( !is_scalar( $_value ) )
-				{
-					if ( $_value instanceof ParameterBag )
-					{
-						foreach ( $_value as $_bagKey => $_bagValue )
-						{
-							$_bagKey = Inflector::neutralize( ltrim( $_bagKey, '_' ) );
-
-							if ( !is_scalar( $_bagValue ) )
-							{
-								continue;
-							}
-
-							$_replacements['{' . $_key . '.' . $_bagKey . '}'] = $_bagValue;
-						}
-					}
-
-					continue;
-				}
-
-				$_replacements['{' . $_key . '}'] = $_value;
-			}
-		}
-
-		//	Construct and neutralize...
-		$_tag = Inflector::neutralize(
-			str_ireplace(
-				array_keys( $_replacements ),
-				array_values( $_replacements ),
-				$_tag
-			)
-		);
-
-		return $eventName = $_cache[$eventName] = $_tag;
-	}
-
-	/**
 	 * @param string $request
 	 * @param string $component
 	 *
-	 * @throws \Kisma\Core\Exceptions\NotImplementedException
+	 * @throws NotImplementedException
 	 */
 	protected function _checkPermission( $request, $component )
 	{
@@ -470,55 +386,4 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	{
 		return $this->_currentUserId;
 	}
-
-	/**
-	 * @return \Symfony\Component\HttpFoundation\Request
-	 */
-	public function getRequestObject()
-	{
-		//return Pii::app()->getRequestObject();
-	}
-
-	/**
-	 * @return \Symfony\Component\HttpFoundation\Response
-	 */
-	public function getResponseObject()
-	{
-		//return Pii::app()->getResponseObject();
-	}
-
-	/**
-	 * @param string          $resource     The name of the resource
-	 * @param string          $action       The action to perform
-	 * @param int|string|bool $outputFormat The return format. Defaults to native, or PHP array.
-	 * @param string          $appName      The optional app_name setting for this call. Defaults to called class name hash
-	 *
-	 * @return mixed
-	 */
-	public static function processInlineRequest( $resource, $action = HttpMethod::GET, $outputFormat = false, $appName = null )
-	{
-//		//	Get the resource and set the app_name
-//		$_resource = ResourceStore::resource( $resource );
-//		$_SERVER['HTTP_X_DREAMFACTORY_APPLICATION_NAME'] = $appName ? : sha1( get_called_class() );
-//
-//		//	Make the call
-//		return $_resource->processInlineRequest( $resource, $action, $outputFormat );
-	}
-
-	/**
-	 * @param boolean $enableProfiler
-	 */
-	public static function setEnableProfiler( $enableProfiler )
-	{
-		static::$_enableProfiler = $enableProfiler;
-	}
-
-	/**
-	 * @return boolean
-	 */
-	public static function getEnableProfiler()
-	{
-		return static::$_enableProfiler;
-	}
-
 }

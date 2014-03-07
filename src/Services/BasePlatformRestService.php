@@ -23,6 +23,7 @@ use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\DataFormats;
+use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
 use DreamFactory\Platform\Events\ResourceEvent;
@@ -36,11 +37,11 @@ use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 
 /**
  * BasePlatformRestService
@@ -160,8 +161,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function __construct( $settings = array() )
 	{
 		$this->_serviceId = Option::get( $settings, 'id', null, true );
-		$this->_requestObject = Request::createFromGlobals();
-		$this->_responseObject = new Response();
+		$this->_requestObject = Pii::app()->getRequestObject();
+		$this->_responseObject = Pii::app()->getResponseObject();
 
 		parent::__construct( Option::clean( $settings ) );
 	}
@@ -284,26 +285,37 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 			throw new BadRequestException( 'The action "' . $this->_action . '" is not supported.' );
 		}
 
+		$_methodToCall = false;
+
 		//	Check verb aliases
 		if ( true === $this->_autoDispatch && null !== ( $_alias = Option::get( $this->_verbAliases, $this->_action ) ) )
 		{
 			//	A closure?
 			if ( is_callable( $_alias ) )
 			{
-				return call_user_func( $_alias );
+				$_methodToCall = $_alias;
 			}
 
 			//	Swap 'em and dispatch
 			$this->_originalAction = $this->_action;
 			$this->_action = $_alias;
 		}
-
-		//	If we have a dedicated handler method, call it
-		$_method = str_ireplace( static::ACTION_TOKEN, $this->_action, $this->_autoDispatchPattern );
-
-		if ( $this->_autoDispatch && method_exists( $this, $_method ) )
+		else
 		{
-			return call_user_func( array( $this, $_method ) );
+			//	If we have a dedicated handler method, call it
+			$_method = str_ireplace( static::ACTION_TOKEN, $this->_action, $this->_autoDispatchPattern );
+
+			if ( $this->_autoDispatch && method_exists( $this, $_method ) )
+			{
+				$_methodToCall = array( $this, $_method );
+			}
+		}
+
+		if ( $_methodToCall )
+		{
+			$this->_triggerActionEvent( $this->_action );
+
+			return call_user_func( $_methodToCall );
 		}
 
 		//	Otherwise just return false
@@ -334,16 +346,17 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	}
 
 	/**
-	 * @return void
+	 * @return mixed
 	 */
 	protected function _preProcess()
 	{
-		static $_triggered = false;
-
-		if ( !$_triggered )
+		//	The system service shouldn't trigger events, only the resources...
+		if ( PlatformServiceTypes::SYSTEM_MANAGER_SERVICE == $this->_apiName && !empty( $this->_resource ) )
 		{
-			$_triggered = $this->trigger( ResourceServiceEvents::PRE_PROCESS );
+			return;
 		}
+
+		return $this->trigger( ResourceServiceEvents::PRE_PROCESS );
 
 		// throw exception here to stop processing
 	}
@@ -352,16 +365,17 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * Handles all processing after a request.
 	 * Calls the default output formatter, which, like the goggles, does nothing.
 	 *
-	 * @return void
+	 * @return mixed
 	 */
 	protected function _postProcess()
 	{
-		static $_triggered = false;
-
-		if ( !$_triggered )
+		//	The system service shouldn't trigger events, only the resources...
+		if ( PlatformServiceTypes::SYSTEM_MANAGER_SERVICE == $this->_apiName && !empty( $this->_resource ) )
 		{
-			$this->trigger( ResourceServiceEvents::POST_PROCESS );
+			return;
 		}
+
+		return $this->trigger( ResourceServiceEvents::POST_PROCESS );
 
 		// throw exception here to stop processing
 	}
@@ -480,11 +494,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _handleGet()
 	{
-		if ( null !== ( $_eventName = Option::getDeep( static::$_eventMap, $this->_apiName, $this->_resource ) ) )
-		{
-			$this->trigger( $_eventName );
-		}
-
 		return false;
 	}
 
@@ -597,11 +606,32 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	public function trigger( $eventName, $event = null, $priority = 0 )
 	{
+		Log::debug(
+			'Event "' . $eventName . '" triggered for:  ' . $this->_action . ' /' . $this->_apiName . ( $this->_resource ? '/' . $this->_resource : null )
+		);
+
 		return parent::trigger(
 			$eventName,
 			$event ? : new RestServiceEvent( $this->_apiName, $this->_resource, $this->_requestObject, $this->_responseObject ),
 			$priority
 		);
+	}
+
+	/**
+	 * Triggers the appropriate event for the action /api_name/resource/resourceId
+	 *
+	 * @param RestServiceEvent $event
+	 *
+	 * @return bool
+	 */
+	protected function _triggerActionEvent( $event = null )
+	{
+		if ( null === ( $_eventName = SwaggerManager::findEvent( $this, $this->_action ) ) )
+		{
+			return false;
+		}
+
+		return $this->trigger( $_eventName, $event );
 	}
 
 	/**

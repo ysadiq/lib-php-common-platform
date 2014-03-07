@@ -79,7 +79,7 @@ class SwaggerManager extends BasePlatformRestService
 	/**
 	 * @var array The event map
 	 */
-	protected static $_eventMap = array();
+	protected static $_eventMap = false;
 	/**
 	 * @var array The core DSP services that are built-in
 	 */
@@ -144,7 +144,7 @@ class SwaggerManager extends BasePlatformRestService
 	 * @return array
 	 * @throws \Exception
 	 */
-	protected static function buildSwagger()
+	protected static function _buildSwagger()
 	{
 		Log::info( 'Building Swagger cache' );
 
@@ -184,6 +184,10 @@ SQL;
 		// gather the services
 		$_services = array();
 
+		//	Initialize the event map
+		static::$_eventMap = static::$_eventMap ? : array();
+
+		//	Spin through services and pull the configs
 		foreach ( $_result as $_service )
 		{
 			$_content = null;
@@ -336,6 +340,73 @@ SQL;
 	}
 
 	/**
+	 * @param BasePlatformRestService $service
+	 *
+	 * @return null
+	 */
+	public static function findEvent( BasePlatformRestService $service, $action )
+	{
+		$_map = static::getEventMap();
+
+		if ( null === ( $_resources = Option::get( $_map, $_apiName = $service->getApiName() ) ) )
+		{
+			return null;
+		}
+
+		$_resource = $service->getResource();
+		$_pattern = '/' . $_apiName . ( $_resource ? '\/' . $_resource : null ) . '(?:\/(\w))$/i';
+
+		$_matches = preg_grep( $_pattern, $_resources );
+
+		if ( empty( $_matches ) )
+		{
+			return null;
+		}
+
+		foreach ( $_matches as $_match )
+		{
+			if ( null !== ( $_eventName = Option::getDeep( $_resources, $_match, $action ) ) )
+			{
+				return $_eventName;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Retrieves the cached event map or triggers a rebuild
+	 *
+	 * @return array
+	 */
+	public static function getEventMap()
+	{
+		if ( !empty( static::$_eventMap ) )
+		{
+			return static::$_eventMap;
+		}
+
+		$_cachePath = Platform::getSwaggerPath( static::SWAGGER_CACHE_DIR );
+		$_encoded = @file_get_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE );
+
+		if ( !empty( $_encoded ) )
+		{
+			if ( false === ( static::$_eventMap = json_decode( $_encoded, true ) ) )
+			{
+				Log::error( '  * Event cache file appears corrupt, or cannot be read.' );
+			}
+		}
+
+		//	If we still have no event map, build it.
+		if ( empty( static::$_eventMap ) )
+		{
+			static::_buildSwagger();
+		}
+
+		return static::$_eventMap;
+	}
+
+	/**
 	 * Main retrieve point for a list of swagger-able services
 	 * This builds the full swagger cache if it does not exist
 	 *
@@ -358,7 +429,7 @@ SQL;
 
 		if ( !file_exists( $_filePath ) )
 		{
-			static::buildSwagger();
+			static::_buildSwagger();
 
 			if ( !file_exists( $_filePath ) )
 			{
@@ -389,7 +460,7 @@ SQL;
 
 		if ( !file_exists( $_filePath ) )
 		{
-			static::buildSwagger();
+			static::_buildSwagger();
 
 			if ( !file_exists( $_filePath ) )
 			{

@@ -16,19 +16,10 @@
  */
 namespace DreamFactory\Platform\Interfaces;
 
-use Kisma\Core\Interfaces\HttpMethod;
-
 /**
- * RestResourceLike
+ * ResourceLike
+ * Something that acts like a resource
  */
-interface RestResourceLike extends HttpMethod, ResourceLike
+interface ResourceLike
 {
-	/**
-	 * Process the request
-	 *
-	 * @param string $action
-	 *
-	 * @return mixed
-	 */
-	public function processRequest( $action = self::Get );
 }

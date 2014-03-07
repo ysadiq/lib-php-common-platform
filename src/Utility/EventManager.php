@@ -88,7 +88,7 @@ class EventManager
 	 *
 	 * @throws InvalidArgumentException
 	 */
-	public static function on( $eventName, $listener, $priority = 0, $values = array() )
+	public static function on( &$eventName, $listener, $priority = 0, $values = array() )
 	{
 		static::_getDispatcher()->addListener( static::_normalizeEventName( $eventName, $values ), $listener, $priority );
 	}
@@ -100,7 +100,7 @@ class EventManager
 	 * @param callable     $listener  The listener to remove
 	 * @param array        $values    Optional replacement values for dynamic event names
 	 */
-	public static function off( $eventName, $listener, $values = array() )
+	public static function off( &$eventName, $listener, $values = array() )
 	{
 		static::_getDispatcher()->removeListener( static::_normalizeEventName( $eventName, $values ), $listener );
 	}
