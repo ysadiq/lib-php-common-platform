@@ -265,12 +265,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "ffc8ea1fbc9a2bfeff139296cddc340bc811082f"
+                "reference": "ae02f8d7a5c148ee0c8c007b7fff7657f5e81873"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/ffc8ea1fbc9a2bfeff139296cddc340bc811082f",
-                "reference": "ffc8ea1fbc9a2bfeff139296cddc340bc811082f",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/ae02f8d7a5c148ee0c8c007b7fff7657f5e81873",
+                "reference": "ae02f8d7a5c148ee0c8c007b7fff7657f5e81873",
                 "shasum": ""
             },
             "require": {
@@ -309,7 +309,7 @@
                 {
                     "name": "Jason Sykes",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "UX/QA, client-side"
+                    "role": "Lead Engineer, client-side"
                 },
                 {
                     "name": "Lee Hicks",
@@ -319,7 +319,7 @@
                 {
                     "name": "Todd Appleton",
                     "email": "toddappleton@dreamfactory.com",
-                    "role": "UX/QA, client-side"
+                    "role": "Lead Engineer, client-side; UX/QA"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Yii Components Library",
@@ -328,7 +328,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-02-27 20:22:34"
+            "time": "2014-03-07 00:25:48"
         },
         {
             "name": "dreamfactory/oasys",
@@ -562,12 +562,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "206cdebd92b74ac77f48f0cce7370a721b284117"
+                "reference": "e725c316b591cb60dfa260a06ac19775cd503ea9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/206cdebd92b74ac77f48f0cce7370a721b284117",
-                "reference": "206cdebd92b74ac77f48f0cce7370a721b284117",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/e725c316b591cb60dfa260a06ac19775cd503ea9",
+                "reference": "e725c316b591cb60dfa260a06ac19775cd503ea9",
                 "shasum": ""
             },
             "require": {
@@ -611,7 +611,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-03-05 23:57:29"
+            "time": "2014-03-07 00:04:19"
         },
         {
             "name": "monolog/monolog",
