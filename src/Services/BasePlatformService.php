@@ -39,10 +39,6 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 	//*************************************************************************
 
 	/**
-	 * @var array The event map
-	 */
-	protected static $_eventMap = false;
-	/**
 	 * @var string Name to be used in an API
 	 */
 	protected $_apiName;
@@ -132,9 +128,6 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 
 		//	Get the current user ID if one...
 		$this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
-
-		//	Get our event mapping
-		static::$_eventMap = SwaggerManager::getEventMap();
 	}
 
 	/**

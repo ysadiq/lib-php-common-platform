@@ -621,7 +621,7 @@ MYSQL;
 
 		if ( 'LOCAL_EMAIL_SERVICE' == $_type )
 		{
-			$_type = 'EMAIL_SERVICE';
+			$_type = PlatformServiceTypes::EMAIL_SERVICE;
 		}
 
 		try

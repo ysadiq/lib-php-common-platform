@@ -189,12 +189,22 @@ class Fabric extends SeedUtility
 			$_instance = $_cache = $_response->details;
 			$_dbName = $_instance->db_name;
 			$_dspName = $_instance->instance->instance_name_text;
-			\Kisma::set( 'dsp.credentials', $_cache );
-			\Kisma::set( 'platform.private_path', $_privatePath = $_cache->private_path );
+
+			$_privatePath = $_cache->private_path;
 			$_privateKey = basename( dirname( $_privatePath ) );
-			\Kisma::set( 'platform.storage_key', $_instance->storage_key );
-			\Kisma::set( 'platform.private_storage_key', $_privateKey );
-			\Kisma::set( 'platform.db_config_file', $_privatePath . '/' . $_dbConfigFileName );
+
+			//	Stick this in persistent storage
+			\Kisma::set(
+				array(
+					'dsp.credentials'              => $_cache,
+					'platform.dsp_name'            => $_dspName,
+					'platform.private_path'        => $_privatePath,
+					'platform.storage_key'         => $_instance->storage_key,
+					'platform.private_storage_key' => $_privateKey,
+					'platform.db_config_file'      => $_privatePath . '/' . $_dbConfigFileName,
+					'platform.db_config_file_name' => $_dbConfigFileName,
+				)
+			);
 
 			/** @noinspection PhpIncludeInspection */
 			//	File should be there from provisioning... If not, tenemos una problema!
@@ -206,9 +216,6 @@ class Fabric extends SeedUtility
 				$_settings = static::_cacheSettings( $_host, $_settings, $_instance );
 			}
 		}
-
-		\Kisma::set( 'platform.dsp_name', $_dspName );
-		\Kisma::set( 'platform.db_config_file_name', $_dbConfigFileName );
 
 		//	Save it for later (don't run away and let me down <== extra points if you get the reference)
 		setcookie( static::PrivateFigNewton, $_privateKey, time() + DateTime::TheEnd, '/' );

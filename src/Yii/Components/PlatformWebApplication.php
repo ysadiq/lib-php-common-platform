@@ -170,19 +170,13 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 *
 	 * @param string $id The id of the profiler
 	 * @param bool   $prettyPrint
-	 *
-	 * @internal param bool $returnTimeString
-	 *
-	 * @return float
 	 */
 	public function stopProfiler( $id = __CLASS__, $prettyPrint = true )
 	{
 		if ( static::$_enableProfiler )
 		{
-			return Profiler::stop( $id, $prettyPrint );
+			Log::debug( '~~ "' . $id . '" profile: ' . Profiler::stop( 'app.request', $prettyPrint ) );
 		}
-
-		return false;
 	}
 
 	/**
@@ -193,6 +187,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 		parent::init();
 
 		$this->_loadCorsConfig();
+
+		//	Debug options
+		static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
+		EventManager::setLogEvents( Pii::getParam( 'dsp.log_events', false ) );
 
 		//	Setup the request handler and events
 		$this->onBeginRequest = array( $this, '_onBeginRequest' );
@@ -354,7 +352,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	protected function _onBeginRequest( \CEvent $event )
 	{
 		//	Start the request-only profile
-		Profiler::start( 'app.request' );
+		if ( static::$_enableProfiler )
+		{
+			Profiler::start( 'app.request' );
+		}
 
 		$this->_requestObject = Request::createFromGlobals();
 		$_response = Response::create();
@@ -398,16 +399,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	{
 		$this->trigger( DspEvents::AFTER_REQUEST );
 
-		//	Send the response
-//		if ( !headers_sent() && $this->_responseObject )
-//		{
-//			if ( strlen( $this->_responseObject->getContent() ) )
-//			{
-//				$this->_responseObject->send();
-//			}
-//		}
-
-		Log::debug( '~~ "app.request" profile: ' . Profiler::stop( 'app.request' ) );
+		if ( static::$_enableProfiler )
+		{
+			Log::debug( '~~ "app.request" profile: ' . Profiler::stop( 'app.request' ) );
+		}
 	}
 
 	/**

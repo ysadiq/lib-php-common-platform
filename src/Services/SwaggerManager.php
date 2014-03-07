@@ -343,22 +343,35 @@ SQL;
 
 	/**
 	 * @param BasePlatformRestService $service
+	 * @param string                  $action
 	 *
-	 * @return null
+	 * @return string
 	 */
 	public static function findEvent( BasePlatformRestService $service, $action )
 	{
 		$_map = static::getEventMap();
 
-		if ( null === ( $_resources = Option::get( $_map, $_apiName = $service->getApiName() ) ) )
+		if ( null === ( $_resources = Option::get( $_map, $service->getResource() ) ) )
+		{
+			if ( !method_exists( $service, 'getServiceName' ) || null === ( $_resources = Option::get( $_map, $service->getServiceName() ) ) )
+			{
+				if ( null === ( $_resources = Option::get( $_map, 'system' ) ) )
+				{
+					return null;
+				}
+			}
+		}
+
+		if ( null === $_path = Option::get( $_GET, 'path', trim( Pii::app()->getRequestObject()->getPathInfo(), '/' ) ) )
 		{
 			return null;
 		}
 
-		$_resource = $service->getResource();
-		$_pattern = '/' . $_apiName . ( $_resource ? '\/' . $_resource : null ) . '(?:\/(\w))$/i';
+		$_path = preg_quote( '/' . str_replace( '/rest', null, $_path ) );
 
-		$_matches = preg_grep( $_pattern, $_resources );
+		$_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', $_path ) . '$@D';
+
+		$_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
 		if ( empty( $_matches ) )
 		{

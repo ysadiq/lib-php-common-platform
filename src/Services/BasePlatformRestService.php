@@ -313,7 +313,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 		if ( $_methodToCall )
 		{
-			$this->_triggerActionEvent( $this->_action );
+			$this->_triggerActionEvent();
 
 			return call_user_func( $_methodToCall );
 		}
@@ -606,10 +606,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	public function trigger( $eventName, $event = null, $priority = 0 )
 	{
-		Log::debug(
-			'Event "' . $eventName . '" triggered for:  ' . $this->_action . ' /' . $this->_apiName . ( $this->_resource ? '/' . $this->_resource : null )
-		);
-
 		return parent::trigger(
 			$eventName,
 			$event ? : new RestServiceEvent( $this->_apiName, $this->_resource, $this->_requestObject, $this->_responseObject ),

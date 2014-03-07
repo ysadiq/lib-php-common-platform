@@ -217,6 +217,7 @@ class RestResponse extends HttpResponse
 		/** @var Response $_response */
 		/** @noinspection PhpUndefinedMethodInspection */
 		$_response = Pii::app()->getResponseObject();
+		$_response->setStatusCode( $code );
 
 		switch ( $format )
 		{

@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Utility;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -49,6 +50,10 @@ class EventManager
 	 * @var EventDispatcher
 	 */
 	protected static $_dispatcher = null;
+	/**
+	 * @var bool If true, events are logged to the debug stream
+	 */
+	protected static $_logEvents = false;
 
 	//*************************************************************************
 	//	Methods
@@ -74,7 +79,16 @@ class EventManager
 	 */
 	public static function trigger( &$eventName, PlatformEvent $event = null, $values = array() )
 	{
-		return static::_getDispatcher()->dispatch( static::_normalizeEventName( $eventName, $values ), $event );
+		$eventName = static::_normalizeEventName( $eventName, $values );
+
+		if ( static::$_logEvents )
+		{
+			Log::debug(
+				'Event "' . $eventName . '" triggered for:  ' . Pii::app()->getRequestObject()->getPathInfo()
+			);
+		}
+
+		return static::_getDispatcher()->dispatch( $eventName, $event );
 	}
 
 	/**
@@ -206,6 +220,22 @@ class EventManager
 	public static function removeSubscriber( EventSubscriberInterface $subscriber )
 	{
 		static::_getDispatcher()->removeSubscriber( $subscriber );
+	}
+
+	/**
+	 * @param boolean $logEvents
+	 */
+	public static function setLogEvents( $logEvents )
+	{
+		static::$_logEvents = $logEvents;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public static function getLogEvents()
+	{
+		return static::$_logEvents;
 	}
 
 	/**

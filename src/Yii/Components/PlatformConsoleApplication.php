@@ -146,6 +146,35 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	//*************************************************************************
 
 	/**
+	 * @param array $config
+	 */
+	public function __construct( $config = null )
+	{
+		$this->_requestObject = Request::createFromGlobals();
+		$this->_responseObject = Response::create();
+
+		parent::__construct( $config );
+	}
+
+	/**
+	 * Initialize
+	 */
+	protected function init()
+	{
+		parent::init();
+
+		$this->_loadCorsConfig();
+
+		//	Debug options
+		static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
+		EventManager::setLogEvents( Pii::getParam( 'dsp.log_events', false ) );
+
+		//	Setup the request handler and events
+		$this->onBeginRequest = array( $this, '_onBeginRequest' );
+		$this->onEndRequest = array( $this, '_onEndRequest' );
+	}
+
+	/**
 	 * Start a profiler
 	 *
 	 * @param string $id The id of the profiler
@@ -167,36 +196,18 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	 *
 	 * @param string $id The id of the profiler
 	 * @param bool   $prettyPrint
-	 *
-	 * @internal param bool $returnTimeString
-	 *
-	 * @return float
 	 */
 	public function stopProfiler( $id = __CLASS__, $prettyPrint = true )
 	{
 		if ( static::$_enableProfiler )
 		{
-			return Profiler::stop( $id, $prettyPrint );
+			Log::debug( '~~ "' . $id . '" profile: ' . Profiler::stop( 'app.request', $prettyPrint ) );
 		}
-
-		return false;
 	}
 
 	/**
-	 * Initialize
-	 */
-	protected function init()
-	{
-		parent::init();
-
-		$this->_loadCorsConfig();
-
-		//	Setup the request handler and events
-		$this->onBeginRequest = array( $this, '_onBeginRequest' );
-		$this->onEndRequest = array( $this, '_onEndRequest' );
-	}
-
-	/**
+	 * Triggers a DSP-level event
+	 *
 	 * @param string        $eventName
 	 * @param PlatformEvent $event
 	 *
@@ -365,9 +376,6 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 		//	Start the request-only profile
 		Profiler::start( 'app.request' );
 
-		$this->_requestObject = Request::createFromGlobals();
-		$this->_responseObject = Response::create();
-
 		//	Load any plug-ins
 		$this->_loadPlugins();
 
@@ -409,8 +417,7 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	protected function _onEndRequest( \CEvent $event )
 	{
 		$this->trigger( DspEvents::AFTER_REQUEST );
-
-		Log::debug( '~~ "app.request" profile: ' . Profiler::stop( 'app.request' ) );
+		$this->stopProfiler( 'app.request' );
 	}
 
 	/**
