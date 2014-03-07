@@ -1733,9 +1733,9 @@ class SqlDbSvc extends BaseDbSvc
 			$_operator = Option::get( $_filter, 'operator' );
 			$_filterValue = Option::get( $_filter, 'value' );
 			$_filterValue = static::interpretFilterValue( $_filterValue );
-			$_foundInRecord = array_key_exists( $_filterField, $record );
+			$_foundInRecord = (is_array($record)) ? array_key_exists( $_filterField, $record ) : false;
 			$_recordValue = Option::get( $record, $_filterField );
-			$_foundInOld = array_key_exists( $_filterField, $old_record );
+			$_foundInOld = (is_array($old_record)) ? array_key_exists( $_filterField, $old_record ) : false;
 			$_oldValue = Option::get( $old_record, $_filterField );
 			$_compareFound = ( $_foundInRecord || ( $for_update && $_foundInOld ) );
 			$_compareValue = $_foundInRecord ? $_recordValue : ( $for_update ? $_oldValue : null );
