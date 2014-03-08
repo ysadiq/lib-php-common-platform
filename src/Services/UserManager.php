@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Oasys\Enums\Flows;
+use DreamFactory\Platform\Components\ActionEventManager;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Resources\User\CustomSettings;
@@ -77,6 +78,8 @@ class UserManager extends BaseSystemRestService
 			array( 'name' => 'ticket' )
 		);
 
+		$this->_triggerActionEvent( null, 'user.list' );
+
 		return array( 'resource' => $resources );
 	}
 
@@ -92,7 +95,7 @@ class UserManager extends BaseSystemRestService
 			case '':
 				switch ( $this->_action )
 				{
-					case self::Get:
+					case static::GET:
 						return $this->_listResources();
 						break;
 					default:
@@ -102,7 +105,7 @@ class UserManager extends BaseSystemRestService
 
 			case 'session':
 				//	Handle remote login
-				if ( HttpMethod::Post == $this->_action && Pii::getParam( 'dsp.allow_remote_logins' ) )
+				if ( HttpMethod::POST == $this->_action && Pii::getParam( 'dsp.allow_remote_logins' ) )
 				{
 					$_provider = FilterInput::post( 'provider', null, FILTER_SANITIZE_STRING );
 
@@ -146,7 +149,7 @@ class UserManager extends BaseSystemRestService
 			case 'ticket':
 				switch ( $this->_action )
 				{
-					case self::Get:
+					case static::GET:
 						$result = $this->userTicket();
 						break;
 					default:
@@ -174,6 +177,7 @@ class UserManager extends BaseSystemRestService
 	{
 		try
 		{
+			ActionEventManager::trigger( 'session.validate' );
 			$userId = Session::validateSession();
 		}
 		catch ( \Exception $ex )

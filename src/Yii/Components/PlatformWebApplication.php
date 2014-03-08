@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
+use DreamFactory\Platform\Components\EventProxy;
 use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Events\DspEvent;
 use DreamFactory\Platform\Events\Enums\DspEvents;
@@ -36,7 +37,6 @@ use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -745,7 +745,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function getRequestObject()
 	{
-		return $this->_requestObject;
+		return $this->_requestObject ? : $this->_requestObject = Request::createFromGlobals();
 	}
 
 	/**
@@ -753,7 +753,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function getResponseObject()
 	{
-		return $this->_responseObject;
+		return $this->_responseObject ? : $this->_responseObject = Response::create();
 	}
 
 	/**

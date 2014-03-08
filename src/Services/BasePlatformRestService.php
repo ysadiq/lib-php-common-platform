@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Components\ActionEventManager;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
@@ -40,8 +41,8 @@ use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * BasePlatformRestService
@@ -161,8 +162,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	public function __construct( $settings = array() )
 	{
 		$this->_serviceId = Option::get( $settings, 'id', null, true );
-		$this->_requestObject = Pii::app()->getRequestObject();
-		$this->_responseObject = Pii::app()->getResponseObject();
 
 		parent::__construct( Option::clean( $settings ) );
 	}
@@ -386,9 +385,15 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _respond()
 	{
+		//	Native and PHP response types return, not emit...
+		if ( in_array( $this->_outputFormat, array( false, DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE ) ) )
+		{
+			return $this->_response;
+		}
+
 		$_result = $this->_response;
 
-		if ( empty( $this->_outputFormat ) )
+		if ( false !== $this->_outputFormat && empty( $this->_outputFormat ) )
 		{
 			$this->_outputFormat = DataFormats::JSON;
 		}
@@ -431,8 +436,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _detectAppName()
 	{
+		$_request = Pii::app()->getRequestObject() ? : Request::createFromGlobals();
+
 		// 	Determine application if any
-		$_appName = $this->_requestObject->get(
+		$_appName = $_request->get(
 			'app_name',
 			//	No app_name, look for headers...
 			Option::server(
@@ -608,7 +615,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	{
 		return parent::trigger(
 			$eventName,
-			$event ? : new RestServiceEvent( $this->_apiName, $this->_resource, $this->_requestObject, $this->_responseObject ),
+			$event ? : new RestServiceEvent( $this->_apiName, $this->_resource ),
 			$priority
 		);
 	}
@@ -617,17 +624,18 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * Triggers the appropriate event for the action /api_name/resource/resourceId
 	 *
 	 * @param RestServiceEvent $event
+	 * @param string           $eventName The event to trigger. If not supplied, one will looked up based on the context
 	 *
 	 * @return bool
 	 */
-	protected function _triggerActionEvent( $event = null )
+	protected function _triggerActionEvent( $event = null, $eventName = null )
 	{
-		if ( null === ( $_eventName = SwaggerManager::findEvent( $this, $this->_action ) ) )
+		if ( null === ( $_eventName = $eventName ) && null === ( $_eventName = SwaggerManager::findEvent( $this, $this->_action ) ) )
 		{
 			return false;
 		}
 
-		return $this->trigger( $_eventName, $event );
+		return ActionEventManager::trigger( $_eventName, $event );
 	}
 
 	/**

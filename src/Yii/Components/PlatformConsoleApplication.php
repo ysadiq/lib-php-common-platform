@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
+use DreamFactory\Platform\Components\EventProxy;
 use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Events\DspEvent;
 use DreamFactory\Platform\Events\Enums\DspEvents;
@@ -112,6 +113,10 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	 */
 	protected static $_namespaceMap = array( self::NS_MODELS => array(), self::NS_SERVICES => array(), self::NS_RESOURCES => array() );
 	/**
+	 * @var EventProxy Our application-wide event proxy
+	 */
+	protected static $_eventProxy = null;
+	/**
 	 * @var array An indexed array of white-listed hosts (ajax.example.com or foo.bar.com or just bar.com)
 	 */
 	protected $_corsWhitelist = array();
@@ -161,6 +166,9 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	 */
 	protected function init()
 	{
+		//	Kickstart the proxy
+		static::$_eventProxy = static::$_eventProxy ? : new EventProxy();
+
 		parent::init();
 
 		$this->_loadCorsConfig();
@@ -760,7 +768,7 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	 */
 	public function getRequestObject()
 	{
-		return $this->_requestObject;
+		return $this->_requestObject ? : $this->_requestObject = Request::createFromGlobals();
 	}
 
 	/**
@@ -768,7 +776,7 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	 */
 	public function getResponseObject()
 	{
-		return $this->_responseObject;
+		return $this->_responseObject ? : $this->_responseObject = Response::create();
 	}
 
 	/**
@@ -888,5 +896,21 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 		$_loader->addPsr4( $prefix, $paths, $prepend );
 
 		return $_loader;
+	}
+
+	/**
+	 * @param \DreamFactory\Platform\Components\EventProxy $eventProxy
+	 */
+	public static function setEventProxy( $eventProxy )
+	{
+		static::$_eventProxy = $eventProxy;
+	}
+
+	/**
+	 * @return \DreamFactory\Platform\Components\EventProxy
+	 */
+	public static function getEventProxy()
+	{
+		return static::$_eventProxy;
 	}
 }

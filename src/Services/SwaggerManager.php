@@ -362,20 +362,27 @@ SQL;
 			}
 		}
 
-		if ( null === $_path = Option::get( $_GET, 'path', trim( Pii::app()->getRequestObject()->getPathInfo(), '/' ) ) )
+		$_path = str_replace( 'rest', null, trim( !Pii::cli() ? Pii::app()->getRequestObject()->getPathInfo() : $service->getResourcePath(), '/' ) );
+
+		if ( empty( $_path ) )
 		{
 			return null;
 		}
 
-		$_path = preg_quote( '/' . str_replace( '/rest', null, $_path ) );
-
-		$_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', $_path ) . '$@D';
+		$_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '$@D';
 
 		$_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
 		if ( empty( $_matches ) )
 		{
-			return null;
+			//	See if there is an event with /system at the front...
+			$_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( str_replace( 'system/', null, $_path ) ) ) . '$@D';
+			$_matches = preg_grep( $_pattern, array_keys( $_resources ) );
+
+			if ( empty( $_matches ) )
+			{
+				return null;
+			}
 		}
 
 		foreach ( $_matches as $_match )

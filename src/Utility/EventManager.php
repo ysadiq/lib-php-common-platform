@@ -79,12 +79,13 @@ class EventManager
 	 */
 	public static function trigger( &$eventName, PlatformEvent $event = null, $values = array() )
 	{
-		$eventName = static::_normalizeEventName( $eventName, $values );
+		$_request = Pii::app()->getRequestObject() ? : Request::createFromGlobals();
+		$eventName = static::normalizeEventName( $eventName, $values );
 
 		if ( static::$_logEvents )
 		{
 			Log::debug(
-				'Event "' . $eventName . '" triggered for:  ' . Pii::app()->getRequestObject()->getPathInfo()
+				'Event "' . $eventName . '" triggered for:  ' . $_request->getPathInfo()
 			);
 		}
 
@@ -104,7 +105,7 @@ class EventManager
 	 */
 	public static function on( &$eventName, $listener, $priority = 0, $values = array() )
 	{
-		static::_getDispatcher()->addListener( static::_normalizeEventName( $eventName, $values ), $listener, $priority );
+		static::_getDispatcher()->addListener( static::normalizeEventName( $eventName, $values ), $listener, $priority );
 	}
 
 	/**
@@ -116,7 +117,7 @@ class EventManager
 	 */
 	public static function off( &$eventName, $listener, $values = array() )
 	{
-		static::_getDispatcher()->removeListener( static::_normalizeEventName( $eventName, $values ), $listener );
+		static::_getDispatcher()->removeListener( static::normalizeEventName( $eventName, $values ), $listener );
 	}
 
 	/**
@@ -127,7 +128,7 @@ class EventManager
 	 *
 	 * @return string
 	 */
-	protected static function _normalizeEventName( &$eventName, $values = null )
+	public static function normalizeEventName( &$eventName, $values = null )
 	{
 		static $_requestValues = null, $_replacements;
 
@@ -246,6 +247,7 @@ class EventManager
 		if ( empty( static::$_dispatcher ) )
 		{
 			static::$_dispatcher = new EventDispatcher();
+			static::$_logEvents = Pii::getParam( 'dsp.log_events', false );
 		}
 
 		return static::$_dispatcher;

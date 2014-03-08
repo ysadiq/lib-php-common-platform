@@ -20,8 +20,6 @@
 namespace DreamFactory\Platform\Events;
 
 use Kisma\Core\Events\SeedEvent;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 
 /**
  * A basic DSP event for the server-side DSP events
@@ -42,27 +40,11 @@ class PlatformEvent extends SeedEvent
 	//**************************************************************************
 
 	/**
-	 * @var int The time of the event. Unix timestamp returned from time()
-	 */
-	protected $_timestamp = null;
-	/**
 	 * @var bool Set to true to stop the default action from being performed
 	 */
 	protected $_defaultPrevented = false;
 	/**
-	 * @var mixed The last value returned by an event handler that was triggered by this event, unless the value was null.
-	 */
-	protected $_lastHandlerResult = null;
-	/**
-	 * @var Request The inbound request associated with this event
-	 */
-	protected $_request = null;
-	/**
-	 * @var Response The response to the original resource request, as it stands right now
-	 */
-	protected $_response = null;
-	/**
-	 * @var bool Indicates that a listener in the chain has changed the response
+	 * @var bool Indicates that a listener in the chain has changed the data
 	 */
 	protected $_dirty = false;
 
@@ -71,18 +53,11 @@ class PlatformEvent extends SeedEvent
 	//**************************************************************************
 
 	/**
-	 * @param Request         $request
-	 * @param Response|string $response
+	 * @param array $data
 	 */
-	public function __construct( $request = null, $response = null )
+	public function __construct( $data = array() )
 	{
-		$this->_timestamp = time();
-
-		//	Build a request if we don't get one
-		$this->_request = $request ? : Request::createFromGlobals();
-
-		//	Build a response if one isn't given
-		$this->_response = ( $response instanceof Response ) ? $response : new Response( is_string( $response ) ? $response : null );
+		parent::__construct( $data );
 	}
 
 	/**
@@ -99,72 +74,6 @@ class PlatformEvent extends SeedEvent
 	public function isDefaultPrevented()
 	{
 		return $this->_defaultPrevented;
-	}
-
-	/**
-	 * @return int
-	 */
-	public function getTimestamp()
-	{
-		return $this->_timestamp;
-	}
-
-	/**
-	 * @param mixed $lastHandlerResult
-	 *
-	 * @return PlatformEvent
-	 */
-	public function setLastHandlerResult( $lastHandlerResult )
-	{
-		if ( null !== $lastHandlerResult )
-		{
-			$this->_lastHandlerResult = $lastHandlerResult;
-		}
-
-		return $this;
-	}
-
-	/**
-	 * @return mixed
-	 */
-	public function getLastHandlerResult()
-	{
-		return $this->_lastHandlerResult;
-	}
-
-	/**
-	 * @return \Symfony\Component\HttpFoundation\Request
-	 */
-	public function getRequest()
-	{
-		return $this->_request;
-	}
-
-	/**
-	 * @return \Symfony\Component\HttpFoundation\Response
-	 */
-	public function getResponse()
-	{
-		return $this->_response;
-	}
-
-	/**
-	 * @param \Symfony\Component\HttpFoundation\Response $response
-	 *
-	 * @return $this
-	 */
-	public function setResponse( Response $response )
-	{
-		//	If it hasn't changed, don't set it
-		if ( $response === $this->_response )
-		{
-			return $this;
-		}
-
-		$this->_response = $response;
-		$this->_dirty = true;
-
-		return $this;
 	}
 
 	/**

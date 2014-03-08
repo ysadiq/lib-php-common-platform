@@ -19,22 +19,11 @@
  */
 namespace DreamFactory\Platform\Events;
 
-use Symfony\Component\HttpFoundation\Request;
-
 /**
  * Contains additional information about the REST service call being made
  */
 class RestServiceEvent extends PlatformEvent
 {
-	//*************************************************************************
-	//	Constants
-	//*************************************************************************
-
-	/**
-	 * @type string The base of our event tree
-	 */
-	const EVENT_NAMESPACE = '{api_name}';
-
 	//**************************************************************************
 	//* Members
 	//**************************************************************************
@@ -58,12 +47,12 @@ class RestServiceEvent extends PlatformEvent
 	 * @param \Symfony\Component\HttpFoundation\Request $request
 	 * @param string                                    $response
 	 */
-	public function __construct( $apiName, $resource = null, Request $request = null, $response = null )
+	public function __construct( $apiName, $resource, $data = null )
 	{
-		parent::__construct( $request, $response );
-
 		$this->_apiName = $apiName;
 		$this->_resource = $resource;
+
+		parent::__construct( $data );
 	}
 
 	/**
