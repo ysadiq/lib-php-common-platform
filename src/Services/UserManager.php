@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Oasys\Enums\Flows;
-use DreamFactory\Platform\Components\ActionEventManager;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Resources\User\CustomSettings;
@@ -77,8 +76,6 @@ class UserManager extends BaseSystemRestService
 			array( 'name' => 'session' ),
 			array( 'name' => 'ticket' )
 		);
-
-		$this->_triggerActionEvent( null, 'user.list' );
 
 		return array( 'resource' => $resources );
 	}
@@ -177,7 +174,7 @@ class UserManager extends BaseSystemRestService
 	{
 		try
 		{
-			ActionEventManager::trigger( 'session.validate' );
+			Pii::app()->trigger( 'session.validate' );
 			$userId = Session::validateSession();
 		}
 		catch ( \Exception $ex )

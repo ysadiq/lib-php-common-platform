@@ -1,5 +1,5 @@
 {
-	"version": "1.4.1.1",
+	"version": "1.4.2",
 	"scripts": {
 		"install": null,
 		"update":  "1.4.0-update.sql"
@@ -1287,6 +1287,57 @@
 					"validation": "api_read_only"
 				}
 			]
+		},
+		{
+			"name":  "df_sys_event",
+			"field": [
+				{
+					"name": "id",
+					"type": "id"
+				},
+				{
+					"name":       "event_name",
+					"type":       "string",
+					"length":     1024,
+					"allow_null": false,
+					"is_unique":  true
+				},
+				{
+					"name":               "handlers",
+					"type":               "mediumtext",
+					"supports_multibyte": true,
+					"allow_null":         true
+				},
+				{
+					"_comment":   "Contains a GUID/UUID value which uniquely identifies this user",
+					"name":       "owner_id",
+					"type":       "string",
+					"length":     64,
+					"allow_null": false,
+					"validation": "invisible,api_read_only,not_empty"
+				},
+				{
+					"name":       "created_date",
+					"type":       "datetime",
+					"validation": "api_read_only"
+				},
+				{
+					"name":       "created_by_id",
+					"type":       "user_id_on_create",
+					"validation": "api_read_only"
+				},
+				{
+					"name":       "last_modified_date",
+					"type":       "timestamp_on_update",
+					"validation": "api_read_only"
+				},
+				{
+					"name":       "last_modified_by_id",
+					"type":       "user_id_on_update",
+					"validation": "api_read_only"
+				}
+			]
 		}
+
 	]
 }

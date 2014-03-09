@@ -105,6 +105,10 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	//*************************************************************************
 
 	/**
+	 * @var EventDispatcher
+	 */
+	protected static $_dispatcher;
+	/**
 	 * @var bool If true, profiling information is output to the log
 	 */
 	protected static $_enableProfiler = false;

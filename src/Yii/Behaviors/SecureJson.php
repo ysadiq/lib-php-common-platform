@@ -120,13 +120,9 @@ class SecureJson extends BaseModelBehavior
 	//*************************************************************************
 
 	/**
-	 * Apply any formats
-	 *
-	 * @param \CModelEvent event parameter
-	 *
-	 * @return bool|void
+	 * @param \CEvent $event
 	 */
-	public function beforeValidate( $event )
+	protected function _convertTo( $event )
 	{
 		if ( !empty( $this->_secureAttributes ) )
 		{
@@ -163,14 +159,12 @@ class SecureJson extends BaseModelBehavior
 				}
 			}
 		}
-
-		parent::beforeValidate( $event );
 	}
 
 	/**
-	 * @param \CModelEvent $event
+	 * @param \CEvent $event
 	 */
-	protected function afterSave( $event )
+	protected function _convertFrom( $event )
 	{
 		if ( !empty( $this->_secureAttributes ) )
 		{
@@ -207,7 +201,36 @@ class SecureJson extends BaseModelBehavior
 				}
 			}
 		}
+	}
 
+	/**
+	 * @param \CEvent $event
+	 */
+	protected function beforeFind( $event )
+	{
+		$this->_convertTo( $event );
+		parent::beforeFind( $event );
+	}
+
+	/**
+	 * Apply any formats
+	 *
+	 * @param \CModelEvent event parameter
+	 *
+	 * @return bool|void
+	 */
+	public function beforeValidate( $event )
+	{
+		$this->_convertTo( $event );
+		parent::beforeValidate( $event );
+	}
+
+	/**
+	 * @param \CModelEvent $event
+	 */
+	protected function afterSave( $event )
+	{
+		$this->_convertFrom( $event );
 		parent::afterSave( $event );
 	}
 
@@ -218,43 +241,9 @@ class SecureJson extends BaseModelBehavior
 	 */
 	public function afterFind( $event )
 	{
-		if ( !empty( $this->_secureAttributes ) )
-		{
-			foreach ( Option::clean( $this->_secureAttributes ) as $_attribute )
-			{
-				if ( $event->sender->hasAttribute( $_attribute ) )
-				{
-					if ( false !== ( $_secrets = $this->_fromSecureJson( $event->sender->getAttribute( $_attribute ) ) ) )
-					{
-						$event->sender->setAttribute( $_attribute, $_secrets );
-						continue;
-					}
+		$this->_convertFrom( $event );
 
-					$event->isValid = false;
-					$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" encryption malformed or otherwise invalid.' );
-				}
-			}
-		}
-
-		if ( !empty( $this->_insecureAttributes ) )
-		{
-			foreach ( Option::clean( $this->_insecureAttributes ) as $_attribute )
-			{
-				if ( $event->sender->hasAttribute( $_attribute ) )
-				{
-					if ( false !== ( $_secrets = $this->_fromSecureJson( $event->sender->getAttribute( $_attribute ), false ) ) )
-					{
-						$event->sender->setAttribute( $_attribute, $_secrets );
-						continue;
-					}
-
-					$event->isValid = false;
-					$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" is malformed or otherwise invalid.' );
-				}
-			}
-		}
-
-		return parent::afterFind( $event );
+		parent::afterFind( $event );
 	}
 
 	/**

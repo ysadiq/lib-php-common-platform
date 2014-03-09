@@ -20,6 +20,8 @@
 namespace DreamFactory\Platform\Components;
 
 use DreamFactory\Platform\Events\PlatformEvent;
+use DreamFactory\Platform\Events\RestServiceEvent;
+use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
 use Guzzle\Http\Client;
 use Guzzle\Http\Exception\MultiTransferException;
@@ -28,7 +30,6 @@ use Kisma\Core\Utility\Convert;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\EventDispatcher;
-use Symfony\Component\HttpFoundation\Request;
 
 /**
  * ActionEventManager
@@ -86,6 +87,19 @@ class ActionEventManager extends EventDispatcher
 		//	Load cached subscribers
 		static::$_subscribedEvents = $subscribedEvents ? : \Kisma::get( static::SUBSCRIBED_EVENTS_KEY, array() );
 
+		$_events = ResourceStore::model( 'event' )->findAll();
+
+		if ( !empty( $_events ) )
+		{
+			foreach ( $_events as $_event )
+			{
+				static::$_subscribedEvents[$_event->event_name] = $_event->handlers;
+				unset( $_event );
+			}
+
+			unset( $_events );
+		}
+
 		foreach ( static::$_subscribedEvents as $_eventName => $_listeners )
 		{
 			foreach ( $_listeners as $_listener )
@@ -100,7 +114,18 @@ class ActionEventManager extends EventDispatcher
 	 */
 	public function __destruct()
 	{
-		\Kisma::set( static::SUBSCRIBED_EVENTS_KEY, static::_getDispatcher()->getListeners() );
+		\Kisma::set( static::SUBSCRIBED_EVENTS_KEY, static::$_subscribedEvents );
+
+		if ( !empty( static::$_subscribedEvents ) )
+		{
+			foreach ( static::$_subscribedEvents as $_eventName => $_handlers )
+			{
+				ResourceStore::model( 'event' )->upsert(
+					array( 'event_name' => $_eventName, 'handlers' => $_handlers )
+				);
+			}
+		}
+
 	}
 
 	/**
@@ -118,27 +143,39 @@ class ActionEventManager extends EventDispatcher
 			throw new \InvalidArgumentException( 'The supplied $listener is not a valid URL or closure.' );
 		}
 
+		if ( static::$_logEvents )
+		{
+			Log::debug( 'Registration request for "' . $eventName . '": ' . ( is_callable( $listener ) ? '(callable)' : $listener ) );
+		}
+
 		parent::addListener( $eventName, $listener, $priority );
 	}
 
 	/**
-	 * @param \callable[]   $listeners
-	 * @param string        $eventName
-	 * @param PlatformEvent $event
+	 * @param \callable[]                                    $listeners
+	 * @param string                                         $eventName
+	 * @param \DreamFactory\Platform\Events\RestServiceEvent $event
 	 *
 	 * @throws \Kisma\Core\Exceptions\EventException
 	 * @throws \InvalidArgumentException
 	 * @return bool|void
 	 */
-	protected function doDispatch( $listeners, $eventName, PlatformEvent $event )
+	protected function doDispatch( $listeners, $eventName, RestServiceEvent $event )
 	{
+		if ( static::$_logEvents )
+		{
+			Log::debug(
+				'/' . $event->getApiName() . '/' . $event->getResource() . ' triggered event: ' . $eventName
+			);
+		}
+
 		if ( empty( $listeners ) )
 		{
 			return false;
 		}
 
-		$_client = new Client();
-		$_client->setUserAgent( static::DEFAULT_USER_AGENT );
+		static::$_client = static::$_client ? : new Client();
+		static::$_client->setUserAgent( static::DEFAULT_USER_AGENT );
 
 		$_event = json_encode( Convert::toArray( $event ), JSON_UNESCAPED_SLASHES );
 
@@ -157,15 +194,10 @@ class ActionEventManager extends EventDispatcher
 			if ( is_callable( $_listener ) )
 			{
 				call_user_func( $_listener, $event, $eventName, $this );
-
-				if ( $event->isPropagationStopped() )
-				{
-					break;
-				}
 			}
 			else if ( is_string( $_listener ) )
 			{
-				$_post = $_client->post( $_listener );
+				$_post = static::$_client->post( $_listener );
 				$_post->setResponseBody( $_payload, 'application/json' );
 
 				$_posts[] = $_post;
@@ -174,19 +206,24 @@ class ActionEventManager extends EventDispatcher
 			{
 				throw new \InvalidArgumentException( 'Invalid listener for action event "' . $eventName . '"' );
 			}
+
+			if ( $event->isPropagationStopped() )
+			{
+				break;
+			}
 		}
 
 		try
 		{
 			//	Send the posts all at once
-			$_client->send( $_posts );
+			static::$_client->send( $_posts );
 		}
 		catch ( MultiTransferException $_exceptions )
 		{
 			/** @var \Exception $_exception */
 			foreach ( $_exceptions as $_exception )
 			{
-				Log::error( 'Proxy exception: ' . $_exception->getMessage() );
+				Log::error( '  * Action event exception: ' . $_exception->getMessage() );
 			}
 
 			foreach ( $_exceptions->getFailedRequests() as $_request )
@@ -278,8 +315,16 @@ class ActionEventManager extends EventDispatcher
 	{
 		if ( empty( static::$_dispatcher ) )
 		{
-			static::$_dispatcher = new static();
-			static::$_logEvents = Pii::getParam( 'dsp.log_events', false );
+			static::setLogEvents( Pii::getParam( 'dsp.log_events' ) );
+			static::$_dispatcher = new EventDispatcher();
+
+			foreach ( static::$_subscribedEvents as $_eventName => $_handlers )
+			{
+				foreach ( $_handlers as $_listener )
+				{
+					static::$_dispatcher->addListener( $_eventName, $_listener );
+				}
+			}
 		}
 
 		return static::$_dispatcher;
@@ -305,15 +350,6 @@ class ActionEventManager extends EventDispatcher
 	 */
 	public static function trigger( $eventName, PlatformEvent $event = null, $values = array() )
 	{
-		$_request = Pii::app()->getRequestObject() ? : Request::createFromGlobals();
-
-		if ( static::$_logEvents )
-		{
-			Log::debug(
-				'Event "' . $eventName . '" triggered for:  ' . $_request->getPathInfo()
-			);
-		}
-
 		if ( empty( $event ) )
 		{
 			$event = new PlatformEvent( $values );

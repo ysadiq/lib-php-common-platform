@@ -19,10 +19,6 @@
  */
 namespace DreamFactory\Platform\Events;
 
-use DreamFactory\Platform\Yii\Components\PlatformConsoleApplication;
-use DreamFactory\Platform\Yii\Components\PlatformWebApplication;
-use Symfony\Component\HttpFoundation\Request;
-
 /**
  * Contains additional information about the REST service call being made
  */
@@ -36,50 +32,4 @@ class DspEvent extends PlatformEvent
 	 * @type string The base of our event tree
 	 */
 	const EVENT_NAMESPACE = 'dsp';
-
-	//**************************************************************************
-	//* Members
-	//**************************************************************************
-
-	/**
-	 * @var PlatformWebApplication|PlatformConsoleApplication The application
-	 */
-	protected $_app = null;
-
-	//**************************************************************************
-	//* Methods
-	//**************************************************************************
-
-	/**
-	 * @param PlatformWebApplication|PlatformConsoleApplication $app
-	 * @param \Symfony\Component\HttpFoundation\Request         $request
-	 * @param string                                            $response
-	 */
-	public function __construct( $app, Request $request = null, $response = null )
-	{
-		parent::__construct( $request, $response );
-
-		$this->_app = $app;
-	}
-
-	/**
-	 * @param \DreamFactory\Platform\Yii\Components\PlatformConsoleApplication|\DreamFactory\Platform\Yii\Components\PlatformWebApplication $app
-	 *
-	 * @return DspEvent
-	 */
-	public function setApp( $app )
-	{
-		$this->_app = $app;
-
-		return $this;
-	}
-
-	/**
-	 * @return \DreamFactory\Platform\Yii\Components\PlatformConsoleApplication|\DreamFactory\Platform\Yii\Components\PlatformWebApplication
-	 */
-	public function getApp()
-	{
-		return $this->_app;
-	}
-
 }

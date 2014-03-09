@@ -349,9 +349,24 @@ SQL;
 	 */
 	public static function findEvent( BasePlatformRestService $service, $action )
 	{
-		$_map = static::getEventMap();
+		static $_cache = array();
 
-		if ( null === ( $_resources = Option::get( $_map, $service->getResource() ) ) )
+		$_map = static::getEventMap();
+		$_hash = sha1( get_class( $service ) . $action );
+
+		if ( isset( $_cache[$_hash] ) )
+		{
+			return $_cache[$_hash];
+		}
+
+		$_resource = $service->getResource();
+
+		if ( empty( $_resource ) )
+		{
+			$_resource = $service->getApiName();
+		}
+
+		if ( null === ( $_resources = Option::get( $_map, $_resource ) ) )
 		{
 			if ( !method_exists( $service, 'getServiceName' ) || null === ( $_resources = Option::get( $_map, $service->getServiceName() ) ) )
 			{
@@ -389,7 +404,7 @@ SQL;
 		{
 			if ( null !== ( $_eventName = Option::getDeep( $_resources, $_match, $action ) ) )
 			{
-				return $_eventName;
+				return $_cache[$_hash] = $_eventName;
 			}
 		}
 

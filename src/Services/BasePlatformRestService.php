@@ -21,7 +21,6 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\Platform\Components\ActionEventManager;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
@@ -35,6 +34,7 @@ use DreamFactory\Platform\Exceptions\NoExtraActionsException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Interfaces\TransformerLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
@@ -82,7 +82,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	/**
 	 * @var string REST verb to take action on
 	 */
-	protected $_action = self::Get;
+	protected $_action = self::GET;
 	/**
 	 * @var bool If true, _handleResource() dispatches a call to _handle[Action]() methods if defined.
 	 * For example, a GET request would be dispatched to _handleGet().
@@ -312,9 +312,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
 		if ( $_methodToCall )
 		{
-			$this->_triggerActionEvent();
+			$_result = call_user_func( $_methodToCall );
+			$this->_triggerActionEvent( $_result );
 
-			return call_user_func( $_methodToCall );
+			return $_result;
 		}
 
 		//	Otherwise just return false
@@ -577,9 +578,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _handleDelete()
 	{
-		$_eventName = $this->_apiName . '.delete';
-		$this->trigger( $_eventName );
-
 		return false;
 	}
 
@@ -591,9 +589,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 */
 	protected function _listResources()
 	{
-		$_eventName = $this->_apiName . '.list';
-		$this->trigger( $_eventName );
-
 		return false;
 	}
 
@@ -623,19 +618,25 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	/**
 	 * Triggers the appropriate event for the action /api_name/resource/resourceId
 	 *
-	 * @param RestServiceEvent $event
+	 * @param mixed            $result    The result of the call
 	 * @param string           $eventName The event to trigger. If not supplied, one will looked up based on the context
+	 * @param RestServiceEvent $event
 	 *
 	 * @return bool
 	 */
-	protected function _triggerActionEvent( $event = null, $eventName = null )
+	protected function _triggerActionEvent( $result, $eventName = null, $event = null )
 	{
-		if ( null === ( $_eventName = $eventName ) && null === ( $_eventName = SwaggerManager::findEvent( $this, $this->_action ) ) )
+		$_eventName = $eventName ? : SwaggerManager::findEvent( $this, $this->_action );
+
+		if ( empty( $_eventName ) )
 		{
 			return false;
 		}
 
-		return ActionEventManager::trigger( $_eventName, $event );
+		return Pii::app()->trigger(
+			$_eventName,
+			$event ? : new RestServiceEvent( $this instanceOf BaseSystemRestResource ? 'system' : $this->_apiName, $this->_resource, $result )
+		);
 	}
 
 	/**

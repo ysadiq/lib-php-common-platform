@@ -24,10 +24,10 @@ use DreamFactory\Platform\Components\EventProxy;
 use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Events\DspEvent;
 use DreamFactory\Platform\Events\Enums\DspEvents;
+use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Enums\HttpMethod;
@@ -107,6 +107,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	//*************************************************************************
 
 	/**
+	 * @var EventDispatcher
+	 */
+	protected static $_dispatcher;
+	/**
 	 * @var bool If true, profiling information is output to the log
 	 */
 	protected static $_enableProfiler = false;
@@ -149,6 +153,44 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	//*************************************************************************
 
 	/**
+	 * @param array $config
+	 */
+	public function __construct( $config = null )
+	{
+		parent::__construct( $config );
+
+		$this->_initEvents();
+	}
+
+	/**
+	 * Initialize and load any events
+	 */
+	protected function _initEvents()
+	{
+		if ( null === static::$_dispatcher )
+		{
+			static::$_dispatcher = new EventDispatcher();
+
+			$_events = ResourceStore::model( 'event' )->findAll();
+
+			if ( !empty( $_events ) )
+			{
+				foreach ( $_events as $_event )
+				{
+					foreach ( $_event->handlers as $_listener )
+					{
+						static::$_dispatcher->addListener( $_event->event_name, $_listener );
+					}
+
+					unset( $_event );
+				}
+
+				unset( $_events );
+			}
+		}
+	}
+
+	/**
 	 * Start a profiler
 	 *
 	 * @param string $id The id of the profiler
@@ -184,13 +226,15 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	protected function init()
 	{
+		static::$_dispatcher = new EventDispatcher();
+
 		parent::init();
 
 		$this->_loadCorsConfig();
 
 		//	Debug options
 		static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
-		EventManager::setLogEvents( Pii::getParam( 'dsp.log_events', false ) );
+		EventDispatcher::setLogEvents( Pii::getParam( 'dsp.log_events', false ) );
 
 		//	Setup the request handler and events
 		$this->onBeginRequest = array( $this, '_onBeginRequest' );
@@ -205,9 +249,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function trigger( $eventName, $event = null )
 	{
-		$_event = $event ? : new DspEvent( $this, $this->_requestObject, $this->_responseObject );
-
-		return EventManager::trigger( $eventName, $_event );
+		return static::$_dispatcher->dispatch( $eventName, $event );
 	}
 
 	/**
@@ -222,7 +264,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function on( $eventName, $listener, $priority = 0 )
 	{
-		EventManager::on( $eventName, $listener, $priority );
+		static::$_dispatcher->addListener( $eventName, $listener, $priority );
 	}
 
 	/**
@@ -235,7 +277,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function off( $eventName, $listener )
 	{
-		EventManager::off( $eventName, $listener );
+		static::$_dispatcher->removeListener( $eventName, $listener );
 	}
 
 	/**
@@ -347,6 +389,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 *
 	 * @param \CEvent $event
 	 *
+	 * @return bool
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 */
 	protected function _onBeginRequest( \CEvent $event )
@@ -891,4 +934,21 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
 		return $_loader;
 	}
+
+	/**
+	 * @param \DreamFactory\Platform\Components\EventDispatcher $dispatcher
+	 */
+	public static function setDispatcher( $dispatcher )
+	{
+		static::$_dispatcher = $dispatcher;
+	}
+
+	/**
+	 * @return \DreamFactory\Platform\Components\EventDispatcher
+	 */
+	public static function getDispatcher()
+	{
+		return static::$_dispatcher;
+	}
+
 }
