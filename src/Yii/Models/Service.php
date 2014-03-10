@@ -285,7 +285,6 @@ MYSQL;
 		return parent::attributeLabels(
 			array_merge(
 				array(
-<<<<<<< HEAD:src/Yii/Models/Service.php
 					'name'          => 'Name',
 					'api_name'      => 'API Name',
 					'description'   => 'Description',
@@ -300,22 +299,6 @@ MYSQL;
 					'base_url'      => 'Base Url',
 					'parameters'    => 'Parameters',
 					'headers'       => 'Headers',
-=======
-					 'name'          => 'Name',
-					 'api_name'      => 'API Name',
-					 'description'   => 'Description',
-					 'is_active'     => 'Is Active',
-					 'is_system'     => 'Is System',
-					 'type'          => 'Type',
-					 'type_id'       => 'Type ID',
-					 'storage_name'  => 'Storage Name',
-					 'storage_type'  => 'Storage Type',
-					 'credentials'   => 'Credentials',
-					 'native_format' => 'Native Format',
-					 'base_url'      => 'Base Url',
-					 'parameters'    => 'Parameters',
-					 'headers'       => 'Headers',
->>>>>>> develop:Yii/Models/Service.php
 				),
 				$additionalLabels
 			)
@@ -465,28 +448,9 @@ MYSQL;
 	 */
 	public function afterFind()
 	{
-		$_didWork = false;
-
 		//	Ensure type ID is set
 		if ( empty( $this->type_id ) )
 		{
-			Log::debug(
-				'>> Service::afterFind(\'' . $this->api_name . '\')',
-				array(
-<<<<<<< HEAD:src/Yii/Models/Service.php
-					'type_id'         => $this->type_id,
-					'storage_type_id' => $this->storage_type_id,
-					'type'            => $this->type,
-					'storage_type'    => $this->storage_type
-=======
-					 'type_id'         => $this->type_id,
-					 'storage_type_id' => $this->storage_type_id,
-					 'type'            => $this->type,
-					 'storage_type'    => $this->storage_type
->>>>>>> develop:Yii/Models/Service.php
-				)
-			);
-
 			if ( false === ( $_typeId = $this->getServiceTypeId() ) )
 			{
 				Log::error( '  * Invalid service type "' . $this->type . '" found in row: ' . print_r( $this->getAttributes(), true ) );
@@ -495,12 +459,7 @@ MYSQL;
 
 			$this->type_id = $_typeId;
 
-			if ( $this->update( array( 'type_id' => $_typeId ) ) )
-			{
-				$_didWork = true;
-				Log::debug( '  * Set "type_id" of service "' . $this->api_name . '" to "' . $_typeId . '"' );
-			}
-			else
+			if ( !$this->update( array( 'type_id' => $_typeId ) ) )
 			{
 				Log::notice( '  * Unable to update df_sys_service.type_id to "' . $_typeId . '" in row ID#' . $this->id );
 			}
@@ -512,13 +471,10 @@ MYSQL;
 			{
 				$this->storage_type_id = null;
 				$this->update( array( 'storage_type_id' => null ) );
-				Log::debug( '  * Set "storage_type_id" of service "' . $this->api_name . '" to NULL' );
 			}
 		}
 		else if ( null === $this->storage_type_id )
 		{
-			$_didWork = true;
-
 			if ( false === ( $_typeId = $this->getStorageTypeId() ) )
 			{
 				Log::error( '  * Invalid storage type "' . $this->storage_type . '" found in row: ' . print_r( $this->getAttributes(), true ) );
@@ -556,26 +512,6 @@ MYSQL;
 		}
 
 		parent::afterFind();
-
-		if ( $_didWork )
-		{
-			Log::debug(
-				'<< Service::afterFind(\'' . $this->api_name . '\')',
-				array(
-<<<<<<< HEAD:src/Yii/Models/Service.php
-					'type_id'         => $this->type_id,
-					'storage_type_id' => $this->storage_type_id,
-					'type'            => $this->type,
-					'storage_type'    => $this->storage_type
-=======
-					 'type_id'         => $this->type_id,
-					 'storage_type_id' => $this->storage_type_id,
-					 'type'            => $this->type,
-					 'storage_type'    => $this->storage_type
->>>>>>> develop:Yii/Models/Service.php
-				)
-			);
-		}
 	}
 
 	/**
@@ -591,7 +527,6 @@ MYSQL;
 			$requested,
 			array_merge(
 				array(
-<<<<<<< HEAD:src/Yii/Models/Service.php
 					'name',
 					'api_name',
 					'description',
@@ -608,24 +543,6 @@ MYSQL;
 					'base_url',
 					'parameters',
 					'headers',
-=======
-					 'name',
-					 'api_name',
-					 'description',
-					 'is_active',
-					 'type',
-					 'type_id',
-					 'is_system',
-					 'storage_name',
-					 'storage_type',
-					 'storage_type_id',
-					 'credentials',
-					 'native_format',
-					 'native_format_id',
-					 'base_url',
-					 'parameters',
-					 'headers',
->>>>>>> develop:Yii/Models/Service.php
 				),
 				$columns
 			),
