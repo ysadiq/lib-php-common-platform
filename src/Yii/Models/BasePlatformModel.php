@@ -68,6 +68,10 @@ class BasePlatformModel extends BaseFactoryModel
 					   'currentUserId'        => function ()
 						   {
 							   return Session::getCurrentUserId();
+						   },
+					   'currentOwnerId'       => function ()
+						   {
+							   return Session::getCurrentOwnerId();
 						   }
 				   ),
 			)

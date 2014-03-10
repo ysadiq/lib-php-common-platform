@@ -57,6 +57,10 @@ class Session extends BasePlatformRestResource
 	 */
 	protected static $_userId = null;
 	/**
+	 * @var string
+	 */
+	protected static $_ownerId = null;
+	/**
 	 * @var array
 	 */
 	protected static $_cache = null;
@@ -285,6 +289,7 @@ class Session extends BasePlatformRestResource
 		$_user->update( array( 'last_login_date' => date( 'c' ) ) );
 
 		static::$_userId = $_user->id;
+		static::$_ownerId = sha1( $_user->email );
 
 		if ( $return_identity )
 		{
@@ -755,6 +760,14 @@ class Session extends BasePlatformRestResource
 		}
 
 		return static::$_userId = $setToIfNull ? : null;
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function getCurrentOwnerId()
+	{
+		return static::$_ownerId;
 	}
 
 	/**
