@@ -39,38 +39,39 @@ use Kisma\Core\Utility\Log;
  *
  * Columns
  *
- * @property string     $email
- * @property string     $password
- * @property string     $first_name
- * @property string     $last_name
- * @property string     $display_name
- * @property string     $phone
- * @property boolean    $is_active
- * @property boolean    $is_sys_admin
- * @property string     $confirm_code
- * @property boolean    $confirmed
- * @property integer    $default_app_id
- * @property integer    $role_id
- * @property string     $security_question
- * @property string     $security_answer
- * @property int        $user_source
- * @property array      $user_data
- * @property string     $last_login_date
+ * @property string      $email
+ * @property string      $password
+ * @property string      $first_name
+ * @property string      $last_name
+ * @property string      $display_name
+ * @property string      $phone
+ * @property boolean     $is_active
+ * @property boolean     $is_sys_admin
+ * @property string      $confirm_code
+ * @property boolean     $confirmed
+ * @property integer     $default_app_id
+ * @property integer     $role_id
+ * @property string      $security_question
+ * @property string      $security_answer
+ * @property int         $user_source
+ * @property string      $user_data
+ * @property string      $last_login_date
+ * @property array       $lookup_keys
  *
  * Relations
  *
- * @property App[]      $apps_created
- * @property App[]      $apps_modified
- * @property AppGroup[] $app_groups_created
- * @property AppGroup[] $app_groups_modified
- * @property Role[]     $roles_created
- * @property Role[]     $roles_modified
- * @property Service[]  $services_created
- * @property Service[]  $services_modified
- * @property User[]     $users_created
- * @property User[]     $users_modified
- * @property App        $default_app
- * @property Role       $role
+ * @property App[]       $apps_created
+ * @property App[]       $apps_modified
+ * @property AppGroup[]  $app_groups_created
+ * @property AppGroup[]  $app_groups_modified
+ * @property Role[]      $roles_created
+ * @property Role[]      $roles_modified
+ * @property Service[]   $services_created
+ * @property Service[]   $services_modified
+ * @property User[]      $users_created
+ * @property User[]      $users_modified
+ * @property App         $default_app
+ * @property Role        $role
  */
 class User extends BasePlatformSystemModel
 {
@@ -104,20 +105,20 @@ class User extends BasePlatformSystemModel
 	 */
 	public function behaviors()
 	{
-		//	Default salt to database password if the config is low-sodium
-		$_salt = Pii::getParam( 'dsp.salts.secure_json', $this->getDb()->password );
-
 		return array_merge(
 			parent::behaviors(),
 			array(
-				//	Secure JSON
-				'base_platform_model.secure_json' => array(
-					'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					'salt'               => $_salt,
-					'insecureAttributes' => array(
-						'user_data',
-					)
-				),
+				 //	Secure JSON
+				 'base_platform_model.secure_json' => array(
+					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					 'salt'               => $this->getDb()->password,
+					 'secureAttributes'   => array(
+						 'lookup_keys',
+					 ),
+					 'insecureAttributes' => array(
+						 'user_data',
+					 )
+				 ),
 			)
 		);
 	}
@@ -137,7 +138,7 @@ class User extends BasePlatformSystemModel
 			array( 'phone', 'length', 'max' => 32 ),
 			array( 'confirm_code, display_name, security_question', 'length', 'max' => 128 ),
 			array( 'is_active, is_sys_admin', 'boolean' ),
-			array( 'user_data', 'safe' ),
+			array( 'user_data, lookup_keys', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -191,6 +192,7 @@ class User extends BasePlatformSystemModel
 			'security_answer'   => 'Security Answer',
 			'user_source'       => 'User Source',
 			'user_data'         => 'User Data',
+			'lookup_keys'       => 'Lookup Keys',
 		);
 
 		return parent::attributeLabels( array_merge( $_myLabels, $additionalLabels ) );
@@ -331,18 +333,19 @@ class User extends BasePlatformSystemModel
 
 		$_myColumns = array_merge(
 			array(
-				'display_name',
-				'first_name',
-				'last_name',
-				'email',
-				'phone',
-				'confirmed',
-				'is_active',
-				'is_sys_admin',
-				'role_id',
-				'default_app_id',
-				'user_source',
-				'user_data',
+				 'display_name',
+				 'first_name',
+				 'last_name',
+				 'email',
+				 'phone',
+				 'confirmed',
+				 'is_active',
+				 'is_sys_admin',
+				 'role_id',
+				 'default_app_id',
+				 'user_source',
+				 'user_data',
+				 'lookup_keys',
 			),
 			$columns
 		);
@@ -433,7 +436,7 @@ class User extends BasePlatformSystemModel
 				foreach ( $this->role->role_service_accesses as $_perm )
 				{
 					$_permServiceId = $_perm->service_id;
-					$_temp = $_perm->getAttributes( $columns ? : array( 'service_id', 'component', 'access' ) );
+					$_temp = $_perm->getAttributes( $columns ? : array( 'service_id', 'component', 'access', 'filters' ) );
 
 					if ( $this->role->services )
 					{
@@ -458,7 +461,7 @@ class User extends BasePlatformSystemModel
 				/** @var Role $_perm */
 				foreach ( $this->role->role_system_accesses as $_perm )
 				{
-					$_temp = $_perm->getAttributes( $columns ? : array( 'component', 'access' ) );
+					$_temp = $_perm->getAttributes( $columns ? : array( 'component', 'access', 'filters' ) );
 					$_temp['service'] = 'system';
 					$_perms[] = $_temp;
 				}

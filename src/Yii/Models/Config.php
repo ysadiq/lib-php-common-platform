@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 
 /**
@@ -40,6 +41,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
  * @property integer             $guest_role_id
  * @property string              $editable_profile_fields
  * @property string              $custom_settings
+ * @property array               $lookup_keys
  *
  * Relations
  *
@@ -74,14 +76,17 @@ class Config extends BasePlatformSystemModel
 		return array_merge(
 			parent::behaviors(),
 			array(
-				//	Secure JSON
-				'base_platform_model.secure_json' => array(
-					'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					'salt'               => $this->getDb()->password,
-					'insecureAttributes' => array(
-						'custom_settings',
-					)
-				),
+				 //	Secure JSON
+				 'base_platform_model.secure_json' => array(
+					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					 'salt'               => $this->getDb()->password,
+					 'secureAttributes'   => array(
+						 'lookup_keys',
+					 ),
+					 'insecureAttributes' => array(
+						 'custom_settings',
+					 )
+				 ),
 			)
 		);
 	}
@@ -165,19 +170,20 @@ class Config extends BasePlatformSystemModel
 			$requested,
 			array_merge(
 				array(
-					'db_version',
-					'allow_open_registration',
-					'open_reg_role_id',
-					'open_reg_email_service_id',
-					'open_reg_email_template_id',
-					'invite_email_service_id',
-					'invite_email_template_id',
-					'password_email_service_id',
-					'password_email_template_id',
-					'allow_guest_user',
-					'guest_role_id',
-					'editable_profile_fields',
-					'custom_settings',
+					 'db_version',
+					 'allow_open_registration',
+					 'open_reg_role_id',
+					 'open_reg_email_service_id',
+					 'open_reg_email_template_id',
+					 'invite_email_service_id',
+					 'invite_email_template_id',
+					 'password_email_service_id',
+					 'password_email_template_id',
+					 'allow_guest_user',
+					 'guest_role_id',
+					 'editable_profile_fields',
+					 'custom_settings',
+					 'lookup_keys',
 				),
 				$columns
 			),

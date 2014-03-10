@@ -174,7 +174,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @return mixed
 	 */
-	public function processRequest( $resource = null, $action = self::Get, $output_format = null )
+	public function processRequest( $resource = null, $action = self::GET, $output_format = null )
 	{
 		$this->_setAction( $action );
 
@@ -693,7 +693,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 	 *
 	 * @return BasePlatformRestService
 	 */
-	protected function _setAction( $action = self::Get )
+	protected function _setAction( $action = self::GET )
 	{
 		$this->_action = trim( strtoupper( $action ) );
 

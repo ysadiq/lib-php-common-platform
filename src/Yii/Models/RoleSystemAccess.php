@@ -25,14 +25,16 @@ namespace DreamFactory\Platform\Yii\Models;
  *
  * Columns:
  *
- * @property integer $id
- * @property integer $role_id
- * @property string  $component
- * @property string  $access
+ * @property integer    $id
+ * @property integer    $role_id
+ * @property string     $component
+ * @property string     $access
+ * @property array      $filters
+ * @property string     $filter_op
  *
  * Relations:
  *
- * @property Role    $role
+ * @property Role       $role
  */
 class RoleSystemAccess extends BasePlatformSystemModel
 {
@@ -49,6 +51,26 @@ class RoleSystemAccess extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @return array
+	 */
+	public function behaviors()
+	{
+		return array_merge(
+			parent::behaviors(),
+			array(
+				 //	Secure JSON
+				 'base_platform_model.secure_json' => array(
+					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					 'salt'               => $this->getDb()->password,
+					 'insecureAttributes' => array(
+						 'filters',
+					 )
+				 ),
+			)
+		);
+	}
+
+	/**
 	 * @return array validation rules for model attributes.
 	 */
 	public function rules()
@@ -56,8 +78,9 @@ class RoleSystemAccess extends BasePlatformSystemModel
 		return array(
 			array( 'role_id', 'required' ),
 			array( 'role_id', 'numerical', 'integerOnly' => true ),
-			array( 'access', 'length', 'max' => 64 ),
+			array( 'access, filter_op', 'length', 'max' => 64 ),
 			array( 'component', 'length', 'max' => 128 ),
+			array( 'filters', 'safe' ),
 		);
 	}
 
@@ -80,9 +103,11 @@ class RoleSystemAccess extends BasePlatformSystemModel
 	{
 		$_labels = array_merge(
 			array(
-				'role_id'   => 'Role',
-				'component' => 'Component',
-				'access'    => 'Access',
+				 'role_id'   => 'Role',
+				 'component' => 'Component',
+				 'access'    => 'Access',
+				 'filters'   => 'Filters',
+				 'filter_op' => 'Filter Operator',
 			),
 			$additionalLabels
 		);
@@ -103,9 +128,11 @@ class RoleSystemAccess extends BasePlatformSystemModel
 			$requested,
 			array_merge(
 				array(
-					'role_id',
-					'component',
-					'access',
+					 'role_id',
+					 'component',
+					 'access',
+					 'filters',
+					 'filter_op',
 				),
 				$columns
 			),

@@ -48,8 +48,8 @@ use Kisma\Core\Utility\Sql;
  * @property string              $credentials
  * @property string              $native_format
  * @property string              $base_url
- * @property string              $parameters
- * @property string              $headers
+ * @property array               $parameters
+ * @property array               $headers
  *
  * Related:
  *
@@ -285,6 +285,7 @@ MYSQL;
 		return parent::attributeLabels(
 			array_merge(
 				array(
+<<<<<<< HEAD:src/Yii/Models/Service.php
 					'name'          => 'Name',
 					'api_name'      => 'API Name',
 					'description'   => 'Description',
@@ -299,6 +300,22 @@ MYSQL;
 					'base_url'      => 'Base Url',
 					'parameters'    => 'Parameters',
 					'headers'       => 'Headers',
+=======
+					 'name'          => 'Name',
+					 'api_name'      => 'API Name',
+					 'description'   => 'Description',
+					 'is_active'     => 'Is Active',
+					 'is_system'     => 'Is System',
+					 'type'          => 'Type',
+					 'type_id'       => 'Type ID',
+					 'storage_name'  => 'Storage Name',
+					 'storage_type'  => 'Storage Type',
+					 'credentials'   => 'Credentials',
+					 'native_format' => 'Native Format',
+					 'base_url'      => 'Base Url',
+					 'parameters'    => 'Parameters',
+					 'headers'       => 'Headers',
+>>>>>>> develop:Yii/Models/Service.php
 				),
 				$additionalLabels
 			)
@@ -456,10 +473,17 @@ MYSQL;
 			Log::debug(
 				'>> Service::afterFind(\'' . $this->api_name . '\')',
 				array(
+<<<<<<< HEAD:src/Yii/Models/Service.php
 					'type_id'         => $this->type_id,
 					'storage_type_id' => $this->storage_type_id,
 					'type'            => $this->type,
 					'storage_type'    => $this->storage_type
+=======
+					 'type_id'         => $this->type_id,
+					 'storage_type_id' => $this->storage_type_id,
+					 'type'            => $this->type,
+					 'storage_type'    => $this->storage_type
+>>>>>>> develop:Yii/Models/Service.php
 				)
 			);
 
@@ -538,10 +562,17 @@ MYSQL;
 			Log::debug(
 				'<< Service::afterFind(\'' . $this->api_name . '\')',
 				array(
+<<<<<<< HEAD:src/Yii/Models/Service.php
 					'type_id'         => $this->type_id,
 					'storage_type_id' => $this->storage_type_id,
 					'type'            => $this->type,
 					'storage_type'    => $this->storage_type
+=======
+					 'type_id'         => $this->type_id,
+					 'storage_type_id' => $this->storage_type_id,
+					 'type'            => $this->type,
+					 'storage_type'    => $this->storage_type
+>>>>>>> develop:Yii/Models/Service.php
 				)
 			);
 		}
@@ -560,6 +591,7 @@ MYSQL;
 			$requested,
 			array_merge(
 				array(
+<<<<<<< HEAD:src/Yii/Models/Service.php
 					'name',
 					'api_name',
 					'description',
@@ -576,6 +608,24 @@ MYSQL;
 					'base_url',
 					'parameters',
 					'headers',
+=======
+					 'name',
+					 'api_name',
+					 'description',
+					 'is_active',
+					 'type',
+					 'type_id',
+					 'is_system',
+					 'storage_name',
+					 'storage_type',
+					 'storage_type_id',
+					 'credentials',
+					 'native_format',
+					 'native_format_id',
+					 'base_url',
+					 'parameters',
+					 'headers',
+>>>>>>> develop:Yii/Models/Service.php
 				),
 				$columns
 			),
