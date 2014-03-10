@@ -83,7 +83,7 @@ class Event extends BasePlatformSystemModel
 		return parent::attributeLabels(
 			array(
 				'event_name' => 'Event Name',
-				'listeners'   => 'Callbacks',
+				'listeners'  => 'Callbacks',
 			) + $additionalLabels
 		);
 	}
@@ -115,7 +115,7 @@ class Event extends BasePlatformSystemModel
 	 */
 	public function upsert( $eventName, $listeners )
 	{
-		$_model = Event::model()->byEventListener( $eventName, $listeners )->find();
+		$_model = Event::model()->byEventName( $eventName, $listeners )->find();
 
 		if ( null === $_model )
 		{
@@ -130,18 +130,16 @@ class Event extends BasePlatformSystemModel
 
 	/**
 	 * @param string $eventName
-	 * @param array  $listeners
 	 *
 	 * @return $this
 	 */
-	public function byEventListener( $eventName, $listeners )
+	public function byEventName( $eventName )
 	{
 		$this->getDbCriteria()->mergeWith(
 			array(
-				'condition' => 'event_name = :event_name AND listeners = :listeners',
+				'condition' => 'event_name = :event_name',
 				'params'    => array(
 					':event_name' => $eventName,
-					':listeners'   => json_encode( $listeners ),
 				)
 			)
 		);

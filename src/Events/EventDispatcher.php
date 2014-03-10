@@ -95,21 +95,32 @@ class EventDispatcher implements EventDispatcherInterface
 	public function __destruct()
 	{
 		//	Store any events
-		foreach ( $this->_listeners as $_eventName => $_listeners )
+		if ( !Pii::guest() )
 		{
-			/** @var Event $_model */
-			$_model = ResourceStore::model( 'event' )->byEventListener( $_eventName, $_listeners )->find();
-
-			if ( null === $_model )
+			foreach ( array_keys( $this->_listeners ) as $_eventName )
 			{
-				/** @var \DreamFactory\Platform\Yii\Models\Event $_model */
-				$_model = ResourceStore::model( 'event' );
-				$_model->setIsNewRecord( true );
-				$_model->event_name = $_eventName;
-			}
+				/** @var Event $_model */
+				$_model = ResourceStore::model( 'event' )->byEventName( $_eventName )->find();
 
-			$_model->listeners = $_listeners;
-			$_model->save();
+				if ( null === $_model )
+				{
+					/** @var \DreamFactory\Platform\Yii\Models\Event $_model */
+					$_model = ResourceStore::model( 'event' );
+					$_model->setIsNewRecord( true );
+					$_model->event_name = $_eventName;
+				}
+
+				$_model->listeners = $this->_listeners;
+
+				try
+				{
+					$_model->save();
+				}
+				catch ( \Exception $_ex )
+				{
+					Log::error( 'Exception saving event configuration: ' . $_ex->getMessage() );
+				}
+			}
 		}
 	}
 
@@ -147,6 +158,11 @@ class EventDispatcher implements EventDispatcherInterface
 		//	Queue up the posts
 		$_posts = array();
 		$_dispatched = true;
+
+		if ( empty( $this->_listeners[$eventName] ) )
+		{
+			return false;
+		}
 
 		foreach ( $this->getListeners( $eventName ) as $_listener )
 		{
@@ -197,11 +213,6 @@ class EventDispatcher implements EventDispatcherInterface
 					)
 				);
 
-				if ( JSON_ERROR_NONE != json_last_error() )
-				{
-					throw new EventException( 'The event data appears corrupt.' );
-				}
-
 				$_payload = $this->_envelope( $_event );
 
 				$_posts[] = static::$_client->post(
@@ -220,7 +231,7 @@ class EventDispatcher implements EventDispatcherInterface
 				try
 				{
 					//	Send the posts all at once
-					$_responses = static::$_client->send( $_posts );
+					static::$_client->send( $_posts );
 				}
 				catch ( MultiTransferException $_exceptions )
 				{
@@ -254,6 +265,8 @@ class EventDispatcher implements EventDispatcherInterface
 				break;
 			}
 		}
+
+		return $_dispatched;
 	}
 
 	/**
@@ -314,11 +327,25 @@ class EventDispatcher implements EventDispatcherInterface
 
 	/**
 	 * @see EventDispatcherInterface::addListener
-	 *
-	 * @api
 	 */
 	public function addListener( $eventName, $listener, $priority = 0 )
 	{
+		if ( !isset( $this->_listeners[$eventName] ) )
+		{
+			$this->_listeners[$eventName] = array();
+		}
+
+		foreach ( $this->_listeners[$eventName] as $priority => $listeners )
+		{
+			if ( false !== ( $_key = array_search( $listener, $listeners, true ) ) )
+			{
+				$this->_listeners[$eventName][$priority][$_key] = $listener;
+				unset( $this->_sorted[$eventName] );
+
+				return;
+			}
+		}
+
 		$this->_listeners[$eventName][$priority][] = $listener;
 		unset( $this->_sorted[$eventName] );
 	}
@@ -344,8 +371,6 @@ class EventDispatcher implements EventDispatcherInterface
 
 	/**
 	 * @see EventDispatcherInterface::addSubscriber
-	 *
-	 * @api
 	 */
 	public function addSubscriber( EventSubscriberInterface $subscriber )
 	{
