@@ -31,6 +31,7 @@ use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Yii\Models\BasePlatformModel;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Interfaces\UtilityLike;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Inflector;
@@ -840,7 +841,7 @@ class ResourceStore implements UtilityLike
 
 		if ( !$_loader )
 		{
-			$_loader = \Kisma::getAutoLoader();
+			$_loader = \Kisma::get(CoreSettings::AUTO_LOADER);
 		};
 
 		if ( true === $resourceName && false === $returnResource )

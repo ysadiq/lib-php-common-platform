@@ -105,16 +105,13 @@ class User extends BasePlatformSystemModel
 	 */
 	public function behaviors()
 	{
-		//	Default salt to database password if the config is low-sodium
-		$_salt = Pii::getParam( 'dsp.salts.secure_json', $this->getDb()->password );
-
 		return array_merge(
 			parent::behaviors(),
 			array(
 				 //	Secure JSON
 				 'base_platform_model.secure_json' => array(
 					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'               => $_salt,
+					 'salt'               => $this->getDb()->password,
 					 'secureAttributes'   => array(
 						 'lookup_keys',
 					 ),
