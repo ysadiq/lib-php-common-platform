@@ -22,7 +22,11 @@ namespace DreamFactory\Platform\Events;
 use Composer\Util\ProcessExecutor;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Yii\Utility\Pii;
 use Guzzle\Http\Client;
+use Guzzle\Http\Exception\MultiTransferException;
+use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\Event;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -93,7 +97,19 @@ class EventDispatcher implements EventDispatcherInterface
 		//	Store any events
 		foreach ( $this->_listeners as $_eventName => $_listeners )
 		{
-			ResourceStore::model( 'event' )->upsert( array( 'event_name' => $_eventName, 'handlers' => $_listeners ) );
+			/** @var Event $_model */
+			$_model = ResourceStore::model( 'event' )->byEventListener( $_eventName, $_listeners )->find();
+
+			if ( null === $_model )
+			{
+				/** @var \DreamFactory\Platform\Yii\Models\Event $_model */
+				$_model = ResourceStore::model( 'event' );
+				$_model->setIsNewRecord( true );
+				$_model->event_name = $_eventName;
+			}
+
+			$_model->listeners = $_listeners;
+			$_model->save();
 		}
 	}
 
@@ -117,19 +133,26 @@ class EventDispatcher implements EventDispatcherInterface
 	}
 
 	/**
-	 * @param \DreamFactory\Platform\Events\PlatformEvent $event
-	 * @param string                                      $eventName
-	 * @param EventDispatcher                             $dispatcher
+	 * @param DspEvent|RestServiceEvent|\DreamFactory\Platform\Events\PlatformEvent $event
+	 * @param string                                                                $eventName
+	 * @param EventDispatcher                                                       $dispatcher
 	 *
+	 * @throws EventException
+	 * @throws \InvalidArgumentException
 	 * @throws \Exception
+	 * @return bool
 	 */
 	protected function _doDispatch( $event, $eventName, $dispatcher )
 	{
+		//	Queue up the posts
+		$_posts = array();
+		$_dispatched = true;
+
 		foreach ( $this->getListeners( $eventName ) as $_listener )
 		{
 			if ( !is_string( $_listener ) && is_callable( $_listener ) )
 			{
-				call_user_func( $_listener, $event );
+				call_user_func( $_listener, $event, $eventName, $dispatcher );
 			}
 			elseif ( $this->isPhpScript( $_listener ) )
 			{
@@ -150,7 +173,7 @@ class EventDispatcher implements EventDispatcherInterface
 
 				try
 				{
-					$this->_executeEventPhpScript( $_className, $_methodName, $event );
+					$this->_executeEventPhpScript( $_className, $_methodName, $event, $eventName, $dispatcher );
 				}
 				catch ( \Exception $_ex )
 				{
@@ -158,9 +181,72 @@ class EventDispatcher implements EventDispatcherInterface
 					throw $_ex;
 				}
 			}
+			elseif ( is_string( $_listener ) && (bool)@parse_url( $_listener ) )
+			{
+				if ( !static::$_client )
+				{
+					static::$_client = static::$_client ? : new Client();
+					static::$_client->setUserAgent( static::DEFAULT_USER_AGENT );
+				}
+
+				$_event = array_merge(
+					$event->toArray(),
+					array(
+						'event_name'    => $eventName,
+						'dispatcher_id' => spl_object_hash( $dispatcher )
+					)
+				);
+
+				if ( JSON_ERROR_NONE != json_last_error() )
+				{
+					throw new EventException( 'The event data appears corrupt.' );
+				}
+
+				$_payload = $this->_envelope( $_event );
+
+				$_posts[] = static::$_client->post(
+					$_listener,
+					array( 'content-type' => 'application/json' ),
+					json_encode( $_payload, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT )
+				);
+			}
 			else
 			{
+				$_dispatched = false;
+			}
 
+			if ( !empty( $_posts ) )
+			{
+				try
+				{
+					//	Send the posts all at once
+					$_responses = static::$_client->send( $_posts );
+				}
+				catch ( MultiTransferException $_exceptions )
+				{
+					/** @var \Exception $_exception */
+					foreach ( $_exceptions as $_exception )
+					{
+						Log::error( '  * Action event exception: ' . $_exception->getMessage() );
+					}
+
+					foreach ( $_exceptions->getFailedRequests() as $_request )
+					{
+						Log::error( '  * Dispatch Failure: ' . $_request );
+					}
+
+					foreach ( $_exceptions->getSuccessfulRequests() as $_request )
+					{
+						Log::debug( '  * Dispatch success: ' . $_request );
+					}
+				}
+			}
+
+			if ( $_dispatched && static::$_logEvents )
+			{
+				Log::debug(
+					'/' . $event->getApiName() . '/' . $event->getResource() . ' triggered event: ' . $eventName
+				);
 			}
 
 			if ( $event->isPropagationStopped() )
@@ -318,6 +404,76 @@ class EventDispatcher implements EventDispatcherInterface
 			krsort( $this->_listeners[$eventName] );
 			$this->_sorted[$eventName] = call_user_func_array( 'array_merge', $this->_listeners[$eventName] );
 		}
+	}
+
+	/**
+	 * Creates a JSON encoded array (as a string) with a standard REST response. Override to provide
+	 * a different response format.
+	 *
+	 * @param array   $resultList
+	 * @param boolean $isError
+	 * @param string  $errorMessage
+	 * @param integer $errorCode
+	 * @param array   $additionalInfo
+	 *
+	 * @return string JSON encoded array
+	 */
+	protected function _envelope( $resultList = null, $isError = false, $errorMessage = 'failure', $errorCode = 0, $additionalInfo = array() )
+	{
+		if ( $isError )
+		{
+			$_info = array(
+				'error_code'    => $errorCode,
+				'error_message' => $errorMessage,
+			);
+
+			if ( !empty( $additionalInfo ) )
+			{
+				$_info = array_merge( $additionalInfo, $_info );
+			}
+
+			return $this->_buildContainer( false, $resultList, $_info );
+		}
+
+		return $this->_buildContainer( true, $resultList );
+	}
+
+	/**
+	 * Builds a v2 response container
+	 *
+	 * @param bool  $success
+	 * @param mixed $details   Additional details/data/payload
+	 * @param array $extraInfo Additional data to add to the _info object
+	 *
+	 * @return array
+	 */
+	protected function _buildContainer( $success = true, $details = null, $extraInfo = null )
+	{
+		$_id = sha1(
+			Option::server( 'REQUEST_TIME_FLOAT', microtime( true ) ) .
+			Option::server( 'HTTP_HOST', $_host = gethostname() ) .
+			Option::server( 'REMOTE_ADDR', gethostbyname( $_host ) )
+		);
+
+		$_ro = Pii::app()->getRequestObject();
+
+		$_container = array(
+			'success' => $success,
+			'details' => $details,
+			'_info'   => array_merge(
+				array(
+					'id'        => $_id,
+					'timestamp' => date( 'c', $_start = $_SERVER['REQUEST_TIME'] ),
+					'elapsed'   => (float)number_format( microtime( true ) - $_start, 4 ),
+					'verb'      => $_ro->getMethod(),
+					'uri'       => $_ro->server->get( 'request-uri' ),
+					'signature' => base64_encode( hash_hmac( 'sha256', $_id, $_id, true ) ),
+				),
+				Option::clean( $extraInfo )
+			),
+		);
+
+		return $_container;
 	}
 
 	/**

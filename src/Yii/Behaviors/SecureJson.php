@@ -22,7 +22,6 @@ namespace DreamFactory\Platform\Yii\Behaviors;
 use CModelEvent;
 use DreamFactory\Yii\Behaviors\BaseModelBehavior;
 use Kisma\Core\Utility\Hasher;
-use Kisma\Core\Utility\Option;
 
 /**
  * SecureJson.php
@@ -120,91 +119,65 @@ class SecureJson extends BaseModelBehavior
 	//*************************************************************************
 
 	/**
-	 * @param \CEvent $event
+	 * @param \CModelEvent $event
+	 * @param array        $attributes
+	 * @param bool         $fromJson
+	 * @param bool         $secure
+	 */
+	protected function _convertAttributes( $event, $attributes, $fromJson = false, $secure = true )
+	{
+		if ( !empty( $attributes ) && is_array( $attributes ) )
+		{
+			foreach ( $attributes as $_attribute )
+			{
+				if ( $event->sender->hasAttribute( $_attribute ) )
+				{
+					$_value = $event->sender->getAttribute( $_attribute );
+
+					switch ( $fromJson )
+					{
+						case true:
+							$_value = $this->_fromSecureJson( $_value, $secure ? null : false );
+							break;
+
+						case false:
+							$_value = $this->_toSecureJson( $_value, $secure ? null : false );
+							break;
+					}
+
+					if ( JSON_ERROR_NONE == json_last_error() )
+					{
+						$event->sender->setAttribute( $_attribute, $_value );
+						continue;
+					}
+
+					$event->handled = true;
+					$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" is malformed or otherwise invalid.' );
+				}
+			}
+		}
+	}
+
+	/**
+	 * @param \CModelEvent $event
 	 */
 	protected function _convertTo( $event )
 	{
-		if ( !empty( $this->_secureAttributes ) )
-		{
-			foreach ( Option::clean( $this->_secureAttributes ) as $_attribute )
-			{
-				if ( $event->sender->hasAttribute( $_attribute ) )
-				{
-					if ( false !== ( $_secrets = $this->_toSecureJson( $event->sender->getAttribute( $_attribute ) ) ) )
-					{
-						$event->sender->setAttribute( $_attribute, $_secrets );
-						continue;
-					}
-
-					$event->isValid = false;
-					$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" is malformed or otherwise invalid.' );
-				}
-			}
-		}
-
-		if ( !empty( $this->_insecureAttributes ) )
-		{
-			foreach ( Option::clean( $this->_insecureAttributes ) as $_attribute )
-			{
-				if ( $event->sender->hasAttribute( $_attribute ) )
-				{
-					if ( false !== ( $_secrets = $this->_toSecureJson( $event->sender->getAttribute( $_attribute ), false ) ) )
-					{
-						$event->sender->setAttribute( $_attribute, $_secrets );
-						continue;
-					}
-
-					$event->isValid = false;
-					$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" is malformed or otherwise invalid.' );
-				}
-			}
-		}
+		$this->_convertAttributes( $event, $this->_secureAttributes, false, true );
+		$this->_convertAttributes( $event, $this->_insecureAttributes, false, false );
 	}
 
 	/**
-	 * @param \CEvent $event
+	 * @param \CModelEvent $event
 	 */
 	protected function _convertFrom( $event )
 	{
-		if ( !empty( $this->_secureAttributes ) )
-		{
-			foreach ( Option::clean( $this->_secureAttributes ) as $_attribute )
-			{
-				if ( $event->sender->hasAttribute( $_attribute ) )
-				{
-					if ( false !== ( $_secrets = $this->_fromSecureJson( $event->sender->getAttribute( $_attribute ) ) ) )
-					{
-						$event->sender->setAttribute( $_attribute, $_secrets );
-						continue;
-					}
-
-					$event->isValid = false;
-					$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" encryption malformed or otherwise invalid.' );
-				}
-			}
-		}
-
-		if ( !empty( $this->_insecureAttributes ) )
-		{
-			foreach ( Option::clean( $this->_insecureAttributes ) as $_attribute )
-			{
-				if ( $event->sender->hasAttribute( $_attribute ) )
-				{
-					if ( false !== ( $_secrets = $this->_fromSecureJson( $event->sender->getAttribute( $_attribute ), false ) ) )
-					{
-						$event->sender->setAttribute( $_attribute, $_secrets );
-						continue;
-					}
-
-					$event->isValid = false;
-					$event->sender->addError( $_attribute, 'The column "' . $_attribute . '" is malformed or otherwise invalid.' );
-				}
-			}
-		}
+		$this->_convertAttributes( $event, $this->_secureAttributes, true, true );
+		$this->_convertAttributes( $event, $this->_insecureAttributes, true, false );
 	}
 
 	/**
-	 * @param \CEvent $event
+	 * @param \CModelEvent $event
 	 */
 	protected function beforeFind( $event )
 	{
@@ -242,7 +215,6 @@ class SecureJson extends BaseModelBehavior
 	public function afterFind( $event )
 	{
 		$this->_convertFrom( $event );
-
 		parent::afterFind( $event );
 	}
 

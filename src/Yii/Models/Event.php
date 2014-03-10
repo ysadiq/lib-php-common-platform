@@ -19,8 +19,6 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
-use Kisma\Core\Utility\Storage;
-
 /**
  * Event.php
  * Model for table dreamfactory.df_sys_event
@@ -28,7 +26,7 @@ use Kisma\Core\Utility\Storage;
  * Columns
  *
  * @property string $event_name
- * @property string $handlers
+ * @property string $listeners
  */
 class Event extends BasePlatformSystemModel
 {
@@ -57,7 +55,7 @@ class Event extends BasePlatformSystemModel
 					'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
 					'salt'               => $this->getDb()->password,
 					'insecureAttributes' => array(
-						'handlers',
+						'listeners',
 					)
 				),
 			)
@@ -71,7 +69,7 @@ class Event extends BasePlatformSystemModel
 	{
 		return array(
 			array( 'event_name', 'length', 'max' => 1024 ),
-			array( 'handlers', 'safe' ),
+			array( 'listeners', 'safe' ),
 		);
 	}
 
@@ -85,7 +83,7 @@ class Event extends BasePlatformSystemModel
 		return parent::attributeLabels(
 			array(
 				'event_name' => 'Event Name',
-				'handlers'   => 'Callbacks',
+				'listeners'   => 'Callbacks',
 			) + $additionalLabels
 		);
 	}
@@ -110,16 +108,44 @@ class Event extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @param string $eventName
+	 * @param array  $listeners
 	 *
+	 * @return bool
 	 */
-	protected function beforeFind()
+	public function upsert( $eventName, $listeners )
 	{
-		if ( is_array( $this->handlers ) )
+		$_model = Event::model()->byEventListener( $eventName, $listeners )->find();
+
+		if ( null === $_model )
 		{
-			$this->handlers = Storage::freeze( $this->handlers );
+			$_model = new Event();
+			$_model->event_name = $eventName;
 		}
 
-		parent::beforeFind();
+		$_model->listeners = $listeners;
+
+		return $_model->save();
 	}
 
+	/**
+	 * @param string $eventName
+	 * @param array  $listeners
+	 *
+	 * @return $this
+	 */
+	public function byEventListener( $eventName, $listeners )
+	{
+		$this->getDbCriteria()->mergeWith(
+			array(
+				'condition' => 'event_name = :event_name AND listeners = :listeners',
+				'params'    => array(
+					':event_name' => $eventName,
+					':listeners'   => json_encode( $listeners ),
+				)
+			)
+		);
+
+		return $this;
+	}
 }

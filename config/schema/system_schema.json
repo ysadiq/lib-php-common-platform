@@ -1,5 +1,5 @@
 {
-	"version": "1.4.2",
+	"version": "1.4.2.1",
 	"scripts": {
 		"install": null,
 		"update":  "1.4.0-update.sql"
@@ -1298,12 +1298,12 @@
 				{
 					"name":       "event_name",
 					"type":       "string",
-					"length":     1024,
+					"length":     128,
 					"allow_null": false,
 					"is_unique":  true
 				},
 				{
-					"name":               "handlers",
+					"name":               "listeners",
 					"type":               "mediumtext",
 					"supports_multibyte": true,
 					"allow_null":         true

@@ -21,7 +21,6 @@ namespace DreamFactory\Platform\Utility;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -79,17 +78,7 @@ class EventManager
 	 */
 	public static function trigger( &$eventName, PlatformEvent $event = null, $values = array() )
 	{
-		$_request = Pii::app()->getRequestObject() ? : Request::createFromGlobals();
-		$eventName = static::normalizeEventName( $eventName, $values );
-
-		if ( static::$_logEvents )
-		{
-			Log::debug(
-				'Event "' . $eventName . '" triggered for:  ' . $_request->getPathInfo()
-			);
-		}
-
-		return static::_getDispatcher()->dispatch( $eventName, $event );
+		return static::_getDispatcher()->dispatch( static::normalizeEventName( $eventName, $values ), $event );
 	}
 
 	/**

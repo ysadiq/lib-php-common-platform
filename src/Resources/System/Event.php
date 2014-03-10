@@ -77,19 +77,19 @@ class Event extends BaseSystemRestResource
 		$_request = Request::createFromGlobals();
 
 		$_body = @json_decode( $_request->getContent(), true );
-		$_eventName = $_handlers = $_apiKey = $_priority = null;
+		$_eventName = $_listeners = $_apiKey = $_priority = null;
 
 		if ( !empty( $_body ) && JSON_ERROR_NONE == json_last_error() )
 		{
 			$_eventName = Option::get( $_body, 'event_name' );
-			$_handlers = Option::get( $_body, 'handlers' );
+			$_listeners = Option::get( $_body, 'listeners' );
 			$_apiKey = Option::get( $_body, 'api_key', 'unknown' );
 			$_priority = Option::get( $_body, 'priority', 0 );
 		}
 
-		if ( empty( $_eventName ) || ( !is_array( $_handlers ) || empty( $_handlers ) ) || empty( $_apiKey ) )
+		if ( empty( $_eventName ) || ( !is_array( $_listeners ) || empty( $_listeners ) ) || empty( $_apiKey ) )
 		{
-			throw new BadRequestException( 'You must specify an "event_name", "handlers", and an "api_key" in your POST.' );
+			throw new BadRequestException( 'You must specify an "event_name", "listeners", and an "api_key" in your POST.' );
 		}
 
 		$_model = ResourceStore::model( 'event' )->find(
@@ -108,8 +108,8 @@ class Event extends BaseSystemRestResource
 			$_model->event_name = $_eventName;
 		}
 
-		//	Merge handlers
-		$_model->handlers = array_merge( $_model->handlers, $_handlers );
+		//	Merge listeners
+		$_model->listeners = array_merge( $_model->listeners, $_listeners );
 
 		try
 		{
@@ -124,7 +124,7 @@ class Event extends BaseSystemRestResource
 			throw new InternalServerErrorException( $_ex->getMessage() );
 		}
 
-		Pii::app()->on( $_eventName, $_handlers, $_priority );
+		Pii::app()->on( $_eventName, $_listeners, $_priority );
 
 		return array( 'record' => $_model->getAttributes() );
 	}

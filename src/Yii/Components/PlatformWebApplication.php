@@ -177,7 +177,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 			{
 				foreach ( $_events as $_event )
 				{
-					foreach ( $_event->handlers as $_listener )
+					foreach ( $_event->listeners as $_listener )
 					{
 						static::$_dispatcher->addListener( $_event->event_name, $_listener );
 					}

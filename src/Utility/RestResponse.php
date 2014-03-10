@@ -168,10 +168,14 @@ class RestResponse extends HttpResponse
 	public static function sendErrors( $exception, $desired_format = 'json' )
 	{
 		$_status = $exception->getCode();
+		if ( 0 == $_status )
+		{
+			$_status = HttpResponse::InternalServerError;
+		}
 
 		$_errorInfo = array(
 			'message' => htmlentities( $exception->getMessage() ),
-			'code'    => $exception->getCode()
+			'code'    => $_status,
 		);
 
 		if ( $exception instanceof RestException )
@@ -214,7 +218,8 @@ class RestResponse extends HttpResponse
 			return Pii::end();
 		}
 
-		$_response = new Response( null, $code );
+		$_response = new Response();
+		$_response->setStatusCode( $code );
 
 		switch ( $format )
 		{
@@ -239,28 +244,23 @@ class RestResponse extends HttpResponse
 
 			case OutputFormats::XML:
 			case 'xml':
-				$_response->setContent( '<?xml version="1.0" ?><dfapi>' . $result . '</dfapi>', $code )
-					->headers->set( 'Content-Type', 'application/xml' );
+				$_response->setContent( '<?xml version="1.0" ?><dfapi>' . $result . '</dfapi>', $code )->headers->set( 'Content-Type', 'application/xml' );
 				break;
 
 			case OutputFormats::CSV:
-				$_response->setContent( $result )
-					->headers->set( 'Content-Type', 'text/csv; application/csv;' );
+				$_response->setContent( $result )->headers->set( 'Content-Type', 'text/csv; application/csv;' );
 				break;
 
 			case OutputFormats::TSV:
-				$_response->setContent( $result )
-					->headers->set( 'Content-Type', 'text/tsv; application/tsv;' );
+				$_response->setContent( $result )->headers->set( 'Content-Type', 'text/tsv; application/tsv;' );
 				break;
 
 			case OutputFormats::PSV:
-				$_response->setContent( $result )
-					->headers->set( 'Content-Type', 'text/psv; application/psv;' );
+				$_response->setContent( $result )->headers->set( 'Content-Type', 'text/psv; application/psv;' );
 				break;
 
 			default:
-				$_response->setContent( $result )
-					->headers->set( 'Content-Type', 'application/octet-stream' );
+				$_response->setContent( $result )->headers->set( 'Content-Type', 'application/octet-stream' );
 				break;
 		}
 
