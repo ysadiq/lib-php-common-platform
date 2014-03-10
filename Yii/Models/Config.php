@@ -41,6 +41,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
  * @property integer             $guest_role_id
  * @property string              $editable_profile_fields
  * @property string              $custom_settings
+ * @property array               $lookup_keys
  *
  * Relations
  *
@@ -79,6 +80,9 @@ class Config extends BasePlatformSystemModel
 				 'base_platform_model.secure_json' => array(
 					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
 					 'salt'               => $this->getDb()->password,
+					 'secureAttributes'   => array(
+						 'lookup_keys',
+					 ),
 					 'insecureAttributes' => array(
 						 'custom_settings',
 					 )
@@ -104,7 +108,7 @@ class Config extends BasePlatformSystemModel
 				'numerical',
 				'integerOnly' => true
 			),
-			array( 'custom_settings', 'safe' ),
+			array( 'custom_settings, lookup_keys', 'safe' ),
 		);
 	}
 
@@ -149,6 +153,7 @@ class Config extends BasePlatformSystemModel
 				'guest_role_id'              => 'Guest Role Id',
 				'editable_profile_fields'    => 'Editable Profile Fields',
 				'custom_settings'            => 'Custom System-Level Settings',
+				'lookup_keys'                => 'Lookup Keys',
 			) + $additionalLabels
 		);
 	}
@@ -179,6 +184,7 @@ class Config extends BasePlatformSystemModel
 					 'guest_role_id',
 					 'editable_profile_fields',
 					 'custom_settings',
+					 'lookup_keys',
 				),
 				$columns
 			),

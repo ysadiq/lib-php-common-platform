@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Exceptions\StorageException;
@@ -34,6 +35,7 @@ use Kisma\Core\Exceptions\StorageException;
  * @property string              $description
  * @property boolean             $is_active
  * @property integer             $default_app_id
+ * @property array               $lookup_keys
  *
  * Relations:
  *
@@ -59,6 +61,26 @@ class Role extends BasePlatformSystemModel
 	}
 
 	/**
+	 * @return array
+	 */
+	public function behaviors()
+	{
+		return array_merge(
+			parent::behaviors(),
+			array(
+				 //	Secure JSON
+				 'base_platform_model.secure_json' => array(
+					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					 'salt'             => $this->getDb()->password,
+					 'secureAttributes' => array(
+						 'lookup_keys',
+					 )
+				 ),
+			)
+		);
+	}
+
+	/**
 	 * @return array validation rules for model attributes.
 	 */
 	public function rules()
@@ -69,7 +91,7 @@ class Role extends BasePlatformSystemModel
 			array( 'name', 'length', 'max' => 64 ),
 			array( 'default_app_id', 'numerical', 'integerOnly' => true ),
 			array( 'is_active', 'boolean' ),
-			array( 'description', 'safe' ),
+			array( 'description, lookup_keys', 'safe' ),
 		);
 
 		return array_merge( parent::rules(), $_rules );
@@ -104,6 +126,7 @@ class Role extends BasePlatformSystemModel
 			'description'    => 'Description',
 			'is_active'      => 'Is Active',
 			'default_app_id' => 'Default App',
+			'lookup_keys'    => 'Lookup Keys',
 		);
 
 		return parent::attributeLabels( array_merge( $_labels, $additionalLabels ) );
@@ -177,17 +200,18 @@ class Role extends BasePlatformSystemModel
 	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
 	{
 		return parent::getRetrievableAttributes(
-					 $requested,
-					 array_merge(
-						 array(
-							  'name',
-							  'description',
-							  'is_active',
-							  'default_app_id',
-						 ),
-						 $columns
-					 ),
-					 $hidden
+			$requested,
+			array_merge(
+				array(
+					 'name',
+					 'description',
+					 'is_active',
+					 'default_app_id',
+					 'lookup_keys',
+				),
+				$columns
+			),
+			$hidden
 		);
 	}
 
@@ -234,7 +258,7 @@ class Role extends BasePlatformSystemModel
 			$pkMapField = 'id';
 			// use query builder
 			$command = Pii::db()->createCommand();
-			$command->select( 'id,service_id,component,access' );
+			$command->select( 'id,service_id,component,access,filters,filter_op' );
 			$command->from( $map_table );
 			$command->where( 'role_id = :id' );
 			$maps = $command->queryAll( true, array( ':id' => $role_id ) );
@@ -252,14 +276,37 @@ class Role extends BasePlatformSystemModel
 					$assignComponent = Option::get( $item, 'component', '' );
 					if ( ( $assignId == $manyId ) && ( $assignComponent == $manyComponent ) )
 					{
+						$_needUpdate = false;
 						// found it, make sure nothing needs to be updated
 						$oldAccess = Option::get( $map, 'access', '' );
 						$newAccess = Option::get( $item, 'access', '' );
 						if ( ( $oldAccess != $newAccess ) )
 						{
 							$map['access'] = $newAccess;
+							$_needUpdate = true;
+						}
+						$oldFilters = Option::get( $map, 'filters' );
+						$oldFilters = empty( $oldFilters ) ? array() : json_decode( $oldFilters, true );
+						$newFilters = Option::get( $item, 'filters' );
+						$newFilters = is_array( $newFilters ) ? $newFilters : array();
+						$_diff = Utilities::array_diff_recursive( $oldFilters, $newFilters, true );
+						if ( !empty( $_diff ) )
+						{
+							$map['filters'] = json_encode( $newFilters );
+							$_needUpdate = true;
+						}
+						$oldOp = Option::get( $map, 'filter_op', '' );
+						$newOp = Option::get( $item, 'filter_op', '' );
+						if ( ( $oldOp != $newOp ) )
+						{
+							$map['filter_op'] = $newOp;
+							$_needUpdate = true;
+						}
+						if ( $_needUpdate )
+						{
 							$toUpdate[] = $map;
 						}
+
 						// otherwise throw it out
 						unset( $accesses[$key] );
 						$found = true;
@@ -296,12 +343,16 @@ class Role extends BasePlatformSystemModel
 			{
 				foreach ( $accesses as $item )
 				{
+					$_filters = Option::get( $item, 'filters' );
+					$_filters = empty( $_filters ) ? null : json_encode( $_filters );
 					// simple insert request
 					$record = array(
 						'role_id'    => $role_id,
 						'service_id' => Option::get( $item, 'service_id' ),
 						'component'  => Option::get( $item, 'component', '' ),
-						'access'     => Option::get( $item, 'access', '' )
+						'access'     => Option::get( $item, 'access', '' ),
+						'filters'    => $_filters,
+						'filter_op'  => Option::get( $item, 'filter_op', 'AND' )
 					);
 					$command->reset();
 					$rows = $command->insert( $map_table, $record );
@@ -359,7 +410,7 @@ class Role extends BasePlatformSystemModel
 			$pkMapField = 'id';
 			// use query builder
 			$command = Pii::db()->createCommand();
-			$command->select( 'id,component,access' );
+			$command->select( 'id,component,access,filters,filter_op' );
 			$command->from( $map_table );
 			$command->where( 'role_id = :id' );
 			$maps = $command->queryAll( true, array( ':id' => $role_id ) );
@@ -375,14 +426,37 @@ class Role extends BasePlatformSystemModel
 					$assignComponent = Option::get( $item, 'component', '' );
 					if ( $assignComponent == $manyComponent )
 					{
+						$_needUpdate = false;
 						// found it, make sure nothing needs to be updated
 						$oldAccess = Option::get( $map, 'access', '' );
 						$newAccess = Option::get( $item, 'access', '' );
 						if ( ( $oldAccess != $newAccess ) )
 						{
 							$map['access'] = $newAccess;
+							$_needUpdate = true;
+						}
+						$oldFilters = Option::get( $map, 'filters' );
+						$oldFilters = is_array( $oldFilters ) ? $oldFilters : array();
+						$newFilters = Option::get( $item, 'filters' );
+						$newFilters = is_array( $newFilters ) ? $newFilters : array();
+						$_diff = Utilities::array_diff_recursive( $oldFilters, $newFilters, true );
+						if ( !empty( $_diff ) )
+						{
+							$map['filters'] = json_encode( $newFilters );
+							$_needUpdate = true;
+						}
+						$oldOp = Option::get( $map, 'filter_op', '' );
+						$newOp = Option::get( $item, 'filter_op', '' );
+						if ( ( $oldOp != $newOp ) )
+						{
+							$map['filter_op'] = $newOp;
+							$_needUpdate = true;
+						}
+						if ( $_needUpdate )
+						{
 							$toUpdate[] = $map;
 						}
+
 						// otherwise throw it out
 						unset( $accesses[$key] );
 						$found = true;
@@ -419,11 +493,15 @@ class Role extends BasePlatformSystemModel
 			{
 				foreach ( $accesses as $item )
 				{
+					$_filters = Option::get( $item, 'filters' );
+					$_filters = empty( $_filters ) ? null : json_encode( $_filters );
 					// simple insert request
 					$record = array(
 						'role_id'   => $role_id,
 						'component' => Option::get( $item, 'component', '' ),
-						'access'    => Option::get( $item, 'access', '' )
+						'access'    => Option::get( $item, 'access', '' ),
+						'filters'   => $_filters,
+						'filter_op' => Option::get( $item, 'filter_op', 'AND' )
 					);
 					$command->reset();
 					$rows = $command->insert( $map_table, $record );
@@ -459,7 +537,7 @@ class Role extends BasePlatformSystemModel
 			foreach ( $this->role_service_accesses as $_perm )
 			{
 				$_permServiceId = $_perm->service_id;
-				$_temp = $_perm->getAttributes( $columns ? : array( 'service_id', 'component', 'access' ) );
+				$_temp = $_perm->getAttributes( $columns ? : array( 'service_id', 'component', 'access', 'filters', 'filter_op' ) );
 
 				if ( $this->services )
 				{
@@ -484,7 +562,7 @@ class Role extends BasePlatformSystemModel
 			/** @var Role $_perm */
 			foreach ( $this->role_system_accesses as $_perm )
 			{
-				$_temp = $_perm->getAttributes( $columns ? : array( 'component', 'access' ) );
+				$_temp = $_perm->getAttributes( $columns ? : array( 'component', 'access', 'filters', 'filter_op' ) );
 				$_temp['service'] = 'system';
 				$_perms[] = $_temp;
 			}

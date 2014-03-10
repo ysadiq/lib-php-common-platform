@@ -33,6 +33,7 @@ use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
 use DreamFactory\Platform\Yii\Models\App;
 use DreamFactory\Platform\Yii\Models\AppGroup;
+use DreamFactory\Platform\Yii\Models\Config;
 use DreamFactory\Platform\Yii\Models\Role;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
@@ -78,17 +79,17 @@ class Session extends BasePlatformRestResource
 		parent::__construct(
 			$consumer,
 			array(
-				 'name'           => 'User Session',
-				 'service_name'   => 'user',
-				 'type'           => 'System',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'session',
-				 'description'    => 'Resource for a user to manage their session.',
-				 'is_active'      => true,
-				 'resource_array' => $resources,
-				 'verb_aliases'   => array(
-					 static::Put => static::Post,
-				 )
+				'name'           => 'User Session',
+				'service_name'   => 'user',
+				'type'           => 'System',
+				'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				'api_name'       => 'session',
+				'description'    => 'Resource for a user to manage their session.',
+				'is_active'      => true,
+				'resource_array' => $resources,
+				'verb_aliases'   => array(
+					static::Put => static::Post,
+				)
 			)
 		);
 	}
@@ -138,69 +139,49 @@ class Session extends BasePlatformRestResource
 	 */
 	protected static function _getSession( $ticket = null )
 	{
-		//	Process ticket
-		if ( !empty( $ticket ) )
+		try
 		{
-			$_userId = static::_validateTicket( $ticket );
-		}
-		else
-		{
-			try
+			if ( !empty( $ticket ) )
+			{
+				//	Process ticket
+				$_userId = static::_validateTicket( $ticket );
+			}
+			else
 			{
 				$_userId = static::validateSession();
 			}
-			catch ( \Exception $ex )
+
+			$_result = static::generateSessionDataFromUser( $_userId );
+
+			//	Additional stuff for session - launchpad mainly
+			return static::addSessionExtras( $_result, Option::getDeep( $_result, 'data', 'is_sys_admin', false ), true );
+		}
+		catch ( \Exception $_ex )
+		{
+			static::userLogout();
+
+			//	Special case for guest user
+			$_config = ResourceStore::model( 'config' )->with(
+				'guest_role.role_service_accesses',
+				'guest_role.role_system_accesses',
+				'guest_role.apps',
+				'guest_role.services'
+			)->find();
+
+			if ( !empty( $_config ) )
 			{
-				static::userLogout();
-
-				//	Special case for guest user
-				$_config = ResourceStore::model( 'config' )->with(
-					'guest_role.role_service_accesses',
-					'guest_role.role_system_accesses',
-					'guest_role.apps',
-					'guest_role.services'
-				)->find();
-
-				if ( !empty( $_config ) )
+				if ( $_config->allow_guest_user )
 				{
-					if ( $_config->allow_guest_user )
-					{
-						$_result = static::generateSessionDataFromRole( null, $_config->getRelated( 'guest_role' ) );
+					$_result = static::generateSessionDataFromRole( null, $_config->getRelated( 'guest_role' ) );
 
-						// additional stuff for session - launchpad mainly
-						return static::addSessionExtras( $_result, false, true );
-					}
+					// additional stuff for session - launchpad mainly
+					return static::addSessionExtras( $_result, false, true );
 				}
-
-				//	Otherwise throw original exception
-				throw $ex;
 			}
-		}
 
-		//	Load user...
-		try
-		{
-			$_user = ResourceStore::model( 'user' )->with(
-				'role.role_service_accesses',
-				'role.role_system_accesses',
-				'role.apps',
-				'role.services'
-			)->findByPk( $_userId );
+			//	Otherwise throw original exception
+			throw $_ex;
 		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed lookup of user matching id '$_userId'." );
-		}
-
-		if ( empty( $_user ) )
-		{
-			throw new UnauthorizedException( "No user found matching the user Id '$_userId'." );
-		}
-
-		$_result = static::generateSessionDataFromUser( null, $_user );
-
-		//	Additional stuff for session - launchpad mainly
-		return static::addSessionExtras( $_result, $_user->is_sys_admin, true );
 	}
 
 	/**
@@ -330,16 +311,26 @@ class Session extends BasePlatformRestResource
 	}
 
 	/**
-	 * @param int  $userId
+	 * @param int  $user_id
 	 * @param User $user
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\UnauthorizedException
 	 * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
 	 * @return array
 	 */
-	public static function generateSessionDataFromUser( $userId, $user = null )
+	public static function generateSessionDataFromUser( $user_id, $user = null )
 	{
-		static $_fields = array( 'id', 'display_name', 'first_name', 'last_name', 'email', 'is_sys_admin', 'last_login_date' );
+		// fields returned in session to client
+		static $_fields = array(
+			'id',
+			'display_name',
+			'first_name',
+			'last_name',
+			'email',
+			'is_sys_admin',
+			'last_login_date'
+		);
+
 		static $_appFields = array( 'id', 'api_name', 'is_active' );
 
 		/** @var User $_user */
@@ -349,16 +340,21 @@ class Session extends BasePlatformRestResource
 				'role.role_system_accesses',
 				'role.apps',
 				'role.services'
-			)->findByPk( $userId );
+			)->findByPk( $user_id );
 
 		if ( empty( $_user ) )
 		{
-			throw new UnauthorizedException( 'The user id ' . $userId . ' is invalid.' );
+			if ( empty( $user_id ) )
+			{
+				throw new UnauthorizedException( 'The user is invalid.' );
+			}
+
+			throw new UnauthorizedException( 'The user id ' . $user_id . ' is invalid.' );
 		}
 
-		if ( null !== $userId && $_user->id != $userId )
+		if ( null !== $user_id && $_user->id != $user_id )
 		{
-			throw new ForbiddenException( 'Naughty, naughty... Not yours. ' . $_user->id . ' != ' . print_r( $userId, true ) );
+			throw new ForbiddenException( 'Naughty, naughty... Not yours. ' . $_user->id . ' != ' . print_r( $user_id, true ) );
 		}
 
 		$_email = $_user->email;
@@ -371,6 +367,13 @@ class Session extends BasePlatformRestResource
 		$_isAdmin = $_user->getAttribute( 'is_sys_admin' );
 		$_defaultAppId = $_user->getAttribute( 'default_app_id' );
 		$_data = $_userInfo = $_user->getAttributes( $_fields );
+
+		$_userLookup = $_user->lookup_keys;
+		$_roleLookup = array();
+
+		/** @var Config $_config */
+		$_config = ResourceStore::model( 'config' )->find();
+		$_globalLookup = $_config ? $_config->lookup_keys : array();
 
 		$_roleApps = $_allowedApps = array();
 
@@ -392,8 +395,6 @@ class Session extends BasePlatformRestResource
 				$_defaultAppId = $_user->role->default_app_id;
 			}
 
-			$_data['role'] = $_roleName;
-
 			if ( $_user->role->apps )
 			{
 				/**
@@ -410,11 +411,16 @@ class Session extends BasePlatformRestResource
 				}
 			}
 
-			$_role = $_user->role->attributes;
+			$_role = array( 'name' => $_roleName );
 			$_role['apps'] = $_roleApps;
 			$_role['services'] = $_user->getRoleServicePermissions();
+			$_roleLookup = $_user->role->lookup_keys;
+
 			$_userInfo['role'] = $_role;
+			$_data['role'] = $_roleName;
 		}
+
+		$_userInfo['lookup'] = static::prepareLookupArray( array( $_globalLookup, $_roleLookup, $_userLookup ) );
 
 		return array(
 			'public'         => $_userInfo,
@@ -452,12 +458,12 @@ class Session extends BasePlatformRestResource
 
 		if ( !$_role->is_active )
 		{
-			throw new ForbiddenException( "The role '$role->name' is not currently active." );
+			throw new ForbiddenException( "The role '$_role->name' is not currently active." );
 		}
 
 		$_allowedApps = $_data = $_userInfo = array();
 		$_defaultAppId = $_role->default_app_id;
-		$_roleData = $role->attributes;
+		$_roleData = array( 'name', $_role->name );
 
 		/**
 		 * @var App[] $_apps
@@ -481,7 +487,14 @@ class Session extends BasePlatformRestResource
 		}
 
 		$_roleData['services'] = $_role->getRoleServicePermissions();
+		$_roleLookup = $_role->lookup_keys;
+
+		/** @var Config $_config */
+		$_config = ResourceStore::model( 'config' )->find();
+		$_globalLookup = $_config ? $_config->lookup_keys : array();
+
 		$_userInfo['role'] = $_roleData;
+		$_userInfo['lookup'] = static::prepareLookupArray( array( $_globalLookup, $_roleLookup ) );
 
 		return array(
 			'public'         => $_userInfo,
@@ -524,6 +537,31 @@ class Session extends BasePlatformRestResource
 		}
 
 		throw new UnauthorizedException( "There is no valid session for the current request." );
+	}
+
+	public static function prepareLookupArray( $lookup_arrays = null )
+	{
+		$_lookup = array();
+
+		if ( !empty( $lookup_arrays ) )
+		{
+			foreach ( $lookup_arrays as $_lookupArray )
+			{
+				// build and override in the following order
+				if ( !empty( $_lookupArray ) )
+				{
+					foreach ( $_lookupArray as $_entry )
+					{
+						$_key = Option::get( $_entry, 'name', '' );
+						$_value = Option::get( $_entry, 'value' );
+
+						$_lookup[$_key] = $_value;
+					}
+				}
+			}
+		}
+
+		return $_lookup;
 	}
 
 	/**
@@ -672,6 +710,90 @@ class Session extends BasePlatformRestResource
 	}
 
 	/**
+	 * @param string $service
+	 * @param string $component
+	 *
+	 * @returns boolean | array
+	 */
+	public static function getServiceAccess( $service, $component = null )
+	{
+		static::_checkCache();
+
+		$_public = Option::get( static::$_cache, 'public' );
+
+		if ( Option::getBool( $_public, 'is_sys_admin' ) )
+		{
+			return true; // no need to check role
+		}
+
+		if ( null === ( $_roleInfo = Option::get( $_public, 'role' ) ) )
+		{
+			// no role assigned
+			return false;
+		}
+
+		$_services = Option::clean( Option::get( $_roleInfo, 'services' ) );
+
+		if ( !is_array( $_services ) || empty( $_services ) )
+		{
+			// no service assigned
+			return false;
+		}
+
+		$_allFound = false;
+		$_serviceFound = false;
+
+		foreach ( $_services as $_svcInfo )
+		{
+			$_theService = Option::get( $_svcInfo, 'service', '' );
+
+			if ( 0 == strcasecmp( $service, $_theService ) )
+			{
+				$_theComponent = Option::get( $_svcInfo, 'component' );
+				if ( !empty( $component ) )
+				{
+					if ( 0 == strcasecmp( $component, $_theComponent ) )
+					{
+						// component specific found
+
+						return $_svcInfo;
+					}
+
+					if ( empty( $_theComponent ) || ( '*' == $_theComponent ) )
+					{
+						$_serviceFound = $_svcInfo;
+					}
+				}
+				else
+				{
+					if ( empty( $_theComponent ) || ( '*' == $_theComponent ) )
+					{
+						// service specific found
+
+						return $_svcInfo;
+					}
+				}
+			}
+			elseif ( empty( $_theService ) || ( '*' == $_theService ) )
+			{
+				$_allFound = $_svcInfo;
+			}
+		}
+
+		if ( false !== $_serviceFound )
+		{
+			return $_serviceFound;
+		}
+
+		if ( false !== $_allFound )
+		{
+			return $_allFound;
+		}
+
+		return false;
+	}
+
+	/**
 	 * @param $request
 	 * @param $access
 	 *
@@ -716,6 +838,82 @@ class Session extends BasePlatformRestResource
 						return true;
 				}
 				break;
+		}
+
+		return false;
+	}
+
+	/**
+	 * @param string $service
+	 * @param string $component
+	 *
+	 * @returns bool
+	 */
+	public static function getServiceFilters( $service, $component = null )
+	{
+		$_access = static::getServiceAccess( $service, $component );
+		if ( !is_array( $_access ) )
+		{
+			return null;
+		}
+
+		$_filters = Option::get( $_access, 'filters' );
+		$_operator = Option::get( $_access, 'filter_op', 'AND' );
+		if ( empty( $_filters ) )
+		{
+			return null;
+		}
+
+		return array( 'filters' => $_filters, 'filter_op' => $_operator );
+	}
+
+	/**
+	 * @param string $lookup
+	 * @param string $value
+	 *
+	 * @returns bool
+	 */
+	public static function getLookupValue( $lookup, &$value )
+	{
+		if (empty($lookup))
+		{
+			return false;
+		}
+
+		static::_checkCache();
+
+		$_public = Option::get( static::$_cache, 'public' );
+
+		$_parts = explode( '.', $lookup );
+		if ( count( $_parts ) > 1 )
+		{
+			$_section = array_shift( $_parts );
+			$_lookup = implode( '.', $_parts );
+			if ( !empty( $_section ) )
+			{
+				switch ( $_section )
+				{
+					case 'user':
+						// get fields here
+						if ( !empty( $_lookup ) )
+						{
+							if ( isset( $_public, $_public[$_lookup] ) )
+							{
+								$value = $_public[$_lookup];
+
+								return true;
+							}
+						}
+						break;
+				}
+			}
+		}
+
+		if ( isset( $_public, $_public['lookup'], $_public['lookup'][$lookup] ) )
+		{
+			$value = $_public['lookup'][$lookup];
+
+			return true;
 		}
 
 		return false;
