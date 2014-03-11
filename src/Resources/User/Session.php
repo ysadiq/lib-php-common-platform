@@ -521,12 +521,12 @@ class Session extends BasePlatformRestResource
 	{
 		$_lookup = array();
 
-		if ( !empty( $lookup_arrays ) )
+		if ( !empty( $lookup_arrays ) && is_array( $lookup_arrays ) )
 		{
 			foreach ( $lookup_arrays as $_lookupArray )
 			{
 				// build and override in the following order
-				if ( !empty( $_lookupArray ) )
+				if ( !empty( $_lookupArray ) && is_array( $_lookupArray ) )
 				{
 					foreach ( $_lookupArray as $_entry )
 					{
@@ -914,11 +914,10 @@ class Session extends BasePlatformRestResource
 
 	/**
 	 * @param int   $setToIfNull If not null, static::$_userId will be set to this value
-	 * @param mixed $inquirer    For future use
 	 *
 	 * @return int|null
 	 */
-	public static function getCurrentUserId( $setToIfNull = null, $inquirer = null )
+	public static function getCurrentUserId( $setToIfNull = null )
 	{
 		if ( !empty( static::$_userId ) )
 		{
