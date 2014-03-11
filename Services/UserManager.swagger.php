@@ -19,14 +19,14 @@
  */
 use Kisma\Core\Utility\Option;
 
-$_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
+$_base = require(__DIR__ . '/BasePlatformRestSvc.swagger.php');
 
-$_custom = require( __DIR__ . '/../Resources/User/CustomSettings.swagger.php' );
-$_device = require( __DIR__ . '/../Resources/User/Device.swagger.php' );
-$_password = require( __DIR__ . '/../Resources/User/Password.swagger.php' );
-$_profile = require( __DIR__ . '/../Resources/User/Profile.swagger.php' );
-$_register = require( __DIR__ . '/../Resources/User/Register.swagger.php' );
-$_session = require( __DIR__ . '/../Resources/User/Session.swagger.php' );
+$_custom = require(__DIR__ . '/../Resources/User/CustomSettings.swagger.php');
+$_device = require(__DIR__ . '/../Resources/User/Device.swagger.php');
+$_password = require(__DIR__ . '/../Resources/User/Password.swagger.php');
+$_profile = require(__DIR__ . '/../Resources/User/Profile.swagger.php');
+$_register = require(__DIR__ . '/../Resources/User/Register.swagger.php');
+$_session = require(__DIR__ . '/../Resources/User/Session.swagger.php');
 
 $_base['apis'] = array_merge(
 	array(

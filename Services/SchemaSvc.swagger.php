@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-$_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
+$_base = require(__DIR__ . '/BasePlatformRestSvc.swagger.php');
 
 $_base['apis'] = array(
 	array(

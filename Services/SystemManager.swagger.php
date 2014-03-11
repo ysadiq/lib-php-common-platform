@@ -19,20 +19,20 @@
  */
 use Kisma\Core\Utility\Option;
 
-$_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
+$_base = require(__DIR__ . '/BasePlatformRestSvc.swagger.php');
 
-$_app = require( __DIR__ . '/../Resources/System/App.swagger.php' );
-$_appGroup = require( __DIR__ . '/../Resources/System/AppGroup.swagger.php' );
-$_config = require( __DIR__ . '/../Resources/System/Config.swagger.php' );
-$_constant = require( __DIR__ . '/../Resources/System/Constant.swagger.php' );
-$_custom = require( __DIR__ . '/../Resources/System/CustomSettings.swagger.php' );
-$_device = require( __DIR__ . '/../Resources/System/Device.swagger.php' );
-$_email = require( __DIR__ . '/../Resources/System/EmailTemplate.swagger.php' );
-$_event = require( __DIR__ . '/../Resources/System/Event.swagger.php' );
-$_device = require( __DIR__ . '/../Resources/System/Device.swagger.php' );
-$_role = require( __DIR__ . '/../Resources/System/Role.swagger.php' );
-$_service = require( __DIR__ . '/../Resources/System/Service.swagger.php' );
-$_user = require( __DIR__ . '/../Resources/System/User.swagger.php' );
+$_app = require(__DIR__ . '/../Resources/System/App.swagger.php');
+$_appGroup = require(__DIR__ . '/../Resources/System/AppGroup.swagger.php');
+$_config = require(__DIR__ . '/../Resources/System/Config.swagger.php');
+$_constant = require(__DIR__ . '/../Resources/System/Constant.swagger.php');
+$_custom = require(__DIR__ . '/../Resources/System/CustomSettings.swagger.php');
+$_device = require(__DIR__ . '/../Resources/System/Device.swagger.php');
+$_email = require(__DIR__ . '/../Resources/System/EmailTemplate.swagger.php');
+$_event = require(__DIR__ . '/../Resources/System/Event.swagger.php');
+$_device = require(__DIR__ . '/../Resources/System/Device.swagger.php');
+$_role = require(__DIR__ . '/../Resources/System/Role.swagger.php');
+$_service = require(__DIR__ . '/../Resources/System/Service.swagger.php');
+$_user = require(__DIR__ . '/../Resources/System/User.swagger.php');
 
 $_base['apis'] = array_merge(
 	array(
