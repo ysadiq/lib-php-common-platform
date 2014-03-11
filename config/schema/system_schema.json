@@ -327,6 +327,11 @@
 					"allow_null":    true
 				},
 				{
+					"name":       "lookup_keys",
+					"type":       "mediumtext",
+					"allow_null": true
+				},
+				{
 					"name":       "created_date",
 					"type":       "datetime",
 					"validation": "api_read_only"
