@@ -153,6 +153,23 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	//*************************************************************************
 
 	/**
+	 * Initialize
+	 */
+	protected function init()
+	{
+		parent::init();
+
+		$this->_loadCorsConfig();
+
+		//	Debug options
+		static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
+
+		//	Setup the request handler and events
+		$this->onBeginRequest = array( $this, '_onBeginRequest' );
+		$this->onEndRequest = array( $this, '_onEndRequest' );
+	}
+
+	/**
 	 * Start a profiler
 	 *
 	 * @param string $id The id of the profiler
@@ -184,23 +201,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	}
 
 	/**
-	 * Initialize
-	 */
-	protected function init()
-	{
-		parent::init();
-
-		$this->_loadCorsConfig();
-
-		//	Debug options
-		static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
-
-		//	Setup the request handler and events
-		$this->onBeginRequest = array( $this, '_onBeginRequest' );
-		$this->onEndRequest = array( $this, '_onEndRequest' );
-	}
-
-	/**
+	 * Triggers a DSP-level event
+	 *
 	 * @param string        $eventName
 	 * @param PlatformEvent $event
 	 *
@@ -261,6 +263,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 			return true;
 		}
 
+		$_originUri = null;
 		$_origin = trim( $this->_requestObject->headers->get( 'origin' ) );
 
 		//	Was an origin header passed? If not, don't do CORS.
@@ -269,6 +272,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 			return $returnHeaders ? array() : true;
 		}
 
+		$_originUri = null;
 		$_requestSource = $_SERVER['SERVER_NAME'];
 
 		if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
@@ -297,6 +301,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
 				return Pii::end( HttpResponse::Forbidden );
 			}
+
+			// Commit origin to the CORS cache
+			$_cache[$_key] = $_originUri;
+			$_cacheVerbs[$_key] = $_allowedMethods;
 		}
 		else
 		{
@@ -400,11 +408,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	protected function _onEndRequest( \CEvent $event )
 	{
 		$this->trigger( DspEvents::AFTER_REQUEST );
-
-		if ( static::$_enableProfiler )
-		{
-			Log::debug( '~~ "app.request" profile: ' . Profiler::stop( 'app.request' ) );
-		}
+		$this->stopProfiler( 'app.request' );
 	}
 
 	/**
@@ -827,6 +831,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	public function addResourceNamespace( $namespace, $path, $prepend = false )
 	{
 		static::_mapNamespace( static::NS_RESOURCES, $namespace, $path, $prepend );
+		array_unshift( $this->_modelNamespaces, $_entry );
 
 		return $this;
 	}
