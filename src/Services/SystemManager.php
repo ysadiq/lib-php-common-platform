@@ -266,6 +266,7 @@ class SystemManager extends BaseSystemRestService
 		try
 		{
 			$_jsonSchema = static::_loadSchema();
+			$_exists = false;
 			$version = Option::get( $_jsonSchema, 'version' );
 			$tables = Option::get( $_jsonSchema, 'table' );
 			$command = $_db->createCommand();
@@ -275,6 +276,7 @@ class SystemManager extends BaseSystemRestService
 			{
 				$command->reset();
 				$oldVersion = $command->select( 'db_version' )->from( 'df_sys_config' )->queryScalar();
+				$_exists = true;
 			}
 
 			// create system tables
