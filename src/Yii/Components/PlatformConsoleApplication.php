@@ -20,12 +20,11 @@
 namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
-use DreamFactory\Platform\Components\EventProxy;
 use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Events\DspEvent;
 use DreamFactory\Platform\Events\Enums\DspEvents;
+use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Enums\HttpMethod;
@@ -117,10 +116,6 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	 */
 	protected static $_namespaceMap = array( self::NS_MODELS => array(), self::NS_SERVICES => array(), self::NS_RESOURCES => array() );
 	/**
-	 * @var EventProxy Our application-wide event proxy
-	 */
-	protected static $_eventProxy = null;
-	/**
 	 * @var array An indexed array of white-listed hosts (ajax.example.com or foo.bar.com or just bar.com)
 	 */
 	protected $_corsWhitelist = array();
@@ -170,16 +165,12 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	 */
 	protected function init()
 	{
-		//	Kickstart the proxy
-		static::$_eventProxy = static::$_eventProxy ? : new EventProxy();
-
 		parent::init();
 
 		$this->_loadCorsConfig();
 
 		//	Debug options
 		static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
-		EventManager::setLogEvents( Pii::getParam( 'dsp.log_events', false ) );
 
 		//	Setup the request handler and events
 		$this->onBeginRequest = array( $this, '_onBeginRequest' );
@@ -229,7 +220,7 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	{
 		$_event = $event ? : new DspEvent( $this, $this->_requestObject, $this->_responseObject );
 
-		return EventManager::trigger( $eventName, $_event );
+		return static::getDispatcher()->dispatch( $eventName, $_event );
 	}
 
 	/**
@@ -244,7 +235,7 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	 */
 	public function on( $eventName, $listener, $priority = 0 )
 	{
-		EventManager::on( $eventName, $listener, $priority );
+		static::getDispatcher()->addListener( $eventName, $listener, $priority );
 	}
 
 	/**
@@ -257,7 +248,7 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	 */
 	public function off( $eventName, $listener )
 	{
-		EventManager::off( $eventName, $listener );
+		static::getDispatcher()->removeListener( $eventName, $listener );
 	}
 
 	/**
@@ -903,18 +894,24 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	}
 
 	/**
-	 * @param \DreamFactory\Platform\Components\EventProxy $eventProxy
+	 * @param EventDispatcher $dispatcher
 	 */
-	public static function setEventProxy( $eventProxy )
+	public static function setDispatcher( $dispatcher )
 	{
-		static::$_eventProxy = $eventProxy;
+		static::$_dispatcher = $dispatcher;
 	}
 
 	/**
-	 * @return \DreamFactory\Platform\Components\EventProxy
+	 * @return EventDispatcher
 	 */
-	public static function getEventProxy()
+	public static function getDispatcher()
 	{
-		return static::$_eventProxy;
+		if ( empty( static::$_dispatcher ) )
+		{
+			static::$_dispatcher = new EventDispatcher();
+			static::$_dispatcher->setLogEvents( Pii::getParam( 'dsp.log_events', false ) );
+		}
+
+		return static::$_dispatcher;
 	}
 }

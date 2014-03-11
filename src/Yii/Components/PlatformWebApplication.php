@@ -153,44 +153,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	//*************************************************************************
 
 	/**
-	 * @param array $config
-	 */
-	public function __construct( $config = null )
-	{
-		parent::__construct( $config );
-
-		$this->_initEvents();
-	}
-
-	/**
-	 * Initialize and load any events
-	 */
-	protected function _initEvents()
-	{
-		if ( null === static::$_dispatcher )
-		{
-			static::$_dispatcher = new EventDispatcher();
-
-			$_events = ResourceStore::model( 'event' )->findAll();
-
-			if ( !empty( $_events ) )
-			{
-				foreach ( $_events as $_event )
-				{
-					foreach ( $_event->listeners as $_listener )
-					{
-						static::$_dispatcher->addListener( $_event->event_name, $_listener );
-					}
-
-					unset( $_event );
-				}
-
-				unset( $_events );
-			}
-		}
-	}
-
-	/**
 	 * Start a profiler
 	 *
 	 * @param string $id The id of the profiler
@@ -226,15 +188,12 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	protected function init()
 	{
-		static::$_dispatcher = new EventDispatcher();
-
 		parent::init();
 
 		$this->_loadCorsConfig();
 
 		//	Debug options
 		static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
-		EventDispatcher::setLogEvents( Pii::getParam( 'dsp.log_events', false ) );
 
 		//	Setup the request handler and events
 		$this->onBeginRequest = array( $this, '_onBeginRequest' );
@@ -249,7 +208,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function trigger( $eventName, $event = null )
 	{
-		return static::$_dispatcher->dispatch( $eventName, $event );
+		return static::getDispatcher()->dispatch( $eventName, $event );
 	}
 
 	/**
@@ -264,7 +223,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function on( $eventName, $listener, $priority = 0 )
 	{
-		static::$_dispatcher->addListener( $eventName, $listener, $priority );
+		static::getDispatcher()->addListener( $eventName, $listener, $priority );
 	}
 
 	/**
@@ -277,7 +236,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function off( $eventName, $listener )
 	{
-		static::$_dispatcher->removeListener( $eventName, $listener );
+		static::getDispatcher()->removeListener( $eventName, $listener );
 	}
 
 	/**
@@ -796,7 +755,12 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	 */
 	public function getResponseObject()
 	{
-		return $this->_responseObject ? : $this->_responseObject = Response::create();
+		if ( null === $this->_responseObject )
+		{
+			$this->setResponseObject( Response::create() );
+		}
+
+		return $this->_responseObject;
 	}
 
 	/**
@@ -936,7 +900,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	}
 
 	/**
-	 * @param \DreamFactory\Platform\Components\EventDispatcher $dispatcher
+	 * @param EventDispatcher $dispatcher
 	 */
 	public static function setDispatcher( $dispatcher )
 	{
@@ -944,11 +908,16 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 	}
 
 	/**
-	 * @return \DreamFactory\Platform\Components\EventDispatcher
+	 * @return EventDispatcher
 	 */
 	public static function getDispatcher()
 	{
+		if ( empty( static::$_dispatcher ) )
+		{
+			static::$_dispatcher = new EventDispatcher();
+			static::$_dispatcher->setLogEvents( Pii::getParam( 'dsp.log_events', false ) );
+		}
+
 		return static::$_dispatcher;
 	}
-
 }

@@ -8,7 +8,6 @@ use DreamFactory\Common\Services\Graylog\GelfLogger;
 use DreamFactory\Platform\Events\Enums\ApiEvents;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Interfaces\EventPublisherLike;
-use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Yii\Actions\RestAction;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
@@ -117,7 +116,7 @@ class BaseApiController extends \CController implements EventPublisherLike
 	 */
 	protected function afterAction( $action )
 	{
-		EventManager::trigger( ApiEvents::AFTER_REQUEST, new PlatformEvent( $this->_request, $this->_response ) );
+		Pii::app()->trigger( ApiEvents::AFTER_REQUEST, new PlatformEvent() );
 
 		parent::afterAction( $action );
 	}
@@ -129,7 +128,7 @@ class BaseApiController extends \CController implements EventPublisherLike
 	 */
 	protected function beforeAction( $action )
 	{
-		EventManager::trigger( ApiEvents::BEFORE_REQUEST, new PlatformEvent( $this->_request ) );
+		Pii::app()->trigger( ApiEvents::BEFORE_REQUEST, new PlatformEvent() );
 
 		return parent::beforeAction( $action );
 	}

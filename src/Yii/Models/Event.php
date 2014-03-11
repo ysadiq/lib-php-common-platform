@@ -109,27 +109,6 @@ class Event extends BasePlatformSystemModel
 
 	/**
 	 * @param string $eventName
-	 * @param array  $listeners
-	 *
-	 * @return bool
-	 */
-	public function upsert( $eventName, $listeners )
-	{
-		$_model = Event::model()->byEventName( $eventName, $listeners )->find();
-
-		if ( null === $_model )
-		{
-			$_model = new Event();
-			$_model->event_name = $eventName;
-		}
-
-		$_model->listeners = $listeners;
-
-		return $_model->save();
-	}
-
-	/**
-	 * @param string $eventName
 	 *
 	 * @return $this
 	 */

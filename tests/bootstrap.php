@@ -37,8 +37,8 @@ $_autoloader = require( $_basePath . '/vendor/autoload.php' );
 require_once $_basePath . '/vendor/dreamfactory/yii/framework/yii.php';
 
 //	Yii debug settings
-defined( 'YII_DEBUG' ) or define( 'YII_DEBUG', true );
-defined( 'YII_TRACE_LEVEL' ) or define( 'YII_TRACE_LEVEL', 3 );
+defined( YII_DEBUG ) or define( YII_DEBUG, true );
+defined( YII_TRACE_LEVEL ) or define( YII_TRACE_LEVEL, 3 );
 
 $_config = require( __DIR__ . '/config/test.config.php' );
 

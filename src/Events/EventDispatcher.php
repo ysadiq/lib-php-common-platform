@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Events;
 
-use Composer\Util\ProcessExecutor;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
@@ -83,18 +82,30 @@ class EventDispatcher implements EventDispatcherInterface
 	 */
 	public function __construct()
 	{
-		/** @var \DreamFactory\Platform\Yii\Models\Event[] $_events */
-		$_events = ResourceStore::model( 'event' )->findAll();
-
-		if ( !empty( $_events ) )
+		try
 		{
-			foreach ( $_events as $_event )
-			{
-				$this->_listeners[$_event->event_name] = $_event->listeners;
-				unset( $_event );
-			}
+			/** @var \DreamFactory\Platform\Yii\Models\Event[] $_events */
+			$_model = ResourceStore::model( 'event' );
 
-			unset( $_events );
+			if ( is_object( $_model ) )
+			{
+				$_events = $_model->findAll();
+
+				if ( !empty( $_events ) )
+				{
+					foreach ( $_events as $_event )
+					{
+						$this->_listeners[$_event->event_name] = $_event->listeners;
+						unset( $_event );
+					}
+
+					unset( $_events );
+				}
+			}
+		}
+		catch ( \Exception $_ex )
+		{
+			Log::notice( 'Event system unavailable at this time.' );
 		}
 	}
 
