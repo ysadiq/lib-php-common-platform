@@ -137,11 +137,11 @@ class SecureJson extends BaseModelBehavior
 					switch ( $fromJson )
 					{
 						case true:
-							$_value = $this->_fromSecureJson( $_value, $secure ? null : false );
+							$_value = $this->_fromSecureJson( $_value, $secure ? $this->_salt : false );
 							break;
 
 						case false:
-							$_value = $this->_toSecureJson( $_value, $secure ? null : false );
+							$_value = $this->_toSecureJson( $_value, $secure ? $this->_salt : false );
 							break;
 					}
 

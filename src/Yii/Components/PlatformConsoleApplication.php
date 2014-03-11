@@ -24,7 +24,9 @@ use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Events\DspEvent;
 use DreamFactory\Platform\Events\Enums\DspEvents;
 use DreamFactory\Platform\Events\EventDispatcher;
+use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Enums\HttpMethod;
@@ -150,17 +152,6 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	//*************************************************************************
 
 	/**
-	 * @param array $config
-	 */
-	public function __construct( $config = null )
-	{
-		$this->_requestObject = Request::createFromGlobals();
-		$this->_responseObject = Response::create();
-
-		parent::__construct( $config );
-	}
-
-	/**
 	 * Initialize
 	 */
 	protected function init()
@@ -218,9 +209,7 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	 */
 	public function trigger( $eventName, $event = null )
 	{
-		$_event = $event ? : new DspEvent( $this, $this->_requestObject, $this->_responseObject );
-
-		return static::getDispatcher()->dispatch( $eventName, $_event );
+		return static::getDispatcher()->dispatch( $eventName, $event );
 	}
 
 	/**
@@ -273,9 +262,8 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 			return true;
 		}
 
-		$_origin = trim( $this->_requestObject->headers->get( 'origin' ) );
-
 		$_originUri = null;
+		$_origin = trim( $this->_requestObject->headers->get( 'origin' ) );
 
 		//	Was an origin header passed? If not, don't do CORS.
 		if ( empty( $_origin ) )
@@ -284,7 +272,7 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 		}
 
 		$_originUri = null;
-		$_requestSource = $_SERVER['SERVER_NAME'];
+		$_requestSource = Option::server( 'SERVER_NAME', gethostname() );
 
 		if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
 		{
@@ -310,15 +298,10 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 				 */
 				$this->_responseObject->setStatusCode( HttpResponse::Forbidden )->send();
 
-				Pii::end( HttpResponse::Forbidden );
-
-				Pii::end();
-
-				//	If end fails for some unknown impossible reason...
-				return false;
+				return Pii::end( HttpResponse::Forbidden );
 			}
 
-//			Log::debug( 'Committing origin to the CORS cache > Source: ' . $_requestSource . ' > Origin: ' . $_originUri );
+			// Commit origin to the CORS cache
 			$_cache[$_key] = $_originUri;
 			$_cacheVerbs[$_key] = $_allowedMethods;
 		}
@@ -372,12 +355,19 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	 *
 	 * @param \CEvent $event
 	 *
+	 * @return bool
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 */
 	protected function _onBeginRequest( \CEvent $event )
 	{
 		//	Start the request-only profile
-		Profiler::start( 'app.request' );
+		if ( static::$_enableProfiler )
+		{
+			Profiler::start( 'app.request' );
+		}
+
+		$this->_requestObject = Request::createFromGlobals();
+		$_response = Response::create();
 
 		//	Load any plug-ins
 		$this->_loadPlugins();
@@ -387,9 +377,9 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 			//	OPTIONS goooooooooood!!!!!
 			case HttpMethod::OPTIONS:
 				$this->addCorsHeaders();
-				$this->_responseObject->setStatusCode( HttpResponse::NoContent )->send();
-				Pii::end( HttpResponse::NoContent );
-				break;
+				$_response->setStatusCode( HttpResponse::NoContent )->send();
+
+				return Pii::end( HttpResponse::NoContent );
 
 			//	TRACE baaaaaadddddddddd!!!!!
 			case HttpMethod::TRACE:
@@ -404,11 +394,8 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 				throw new BadRequestException();
 		}
 
-		//	Auto-add the CORS headers...
-		if ( $this->_autoAddHeaders )
-		{
-			$this->addCorsHeaders();
-		}
+		//	Save to object and add headers
+		$this->setResponseObject( $_response );
 
 		//	Trigger request event
 		$this->trigger( DspEvents::BEFORE_REQUEST );
@@ -604,7 +591,7 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	{
 		$_list = $this->_corsWhitelist;
 
-		if ( false !== $_list && !is_array( $_list ) || null === ( $_list = \Kisma::get( static::CORS_WHITELIST_KEY ) ) )
+		if ( false !== $_list && ( !is_array( $_list ) || null === ( $_list = \Kisma::get( static::CORS_WHITELIST_KEY ) ) ) )
 		{
 			//	Get CORS data from config file
 			$_config = Pii::getParam( 'storage_base_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
@@ -771,7 +758,30 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
 	 */
 	public function getResponseObject()
 	{
-		return $this->_responseObject ? : $this->_responseObject = Response::create();
+		if ( null === $this->_responseObject )
+		{
+			$this->setResponseObject( Response::create() );
+		}
+
+		return $this->_responseObject;
+	}
+
+	/**
+	 * @param \Symfony\Component\HttpFoundation\Response $responseObject
+	 *
+	 * @return PlatformWebApplication
+	 */
+	public function setResponseObject( Response $responseObject )
+	{
+		$this->_responseObject = $responseObject;
+
+		//	Auto-add the CORS headers...
+		if ( $this->_autoAddHeaders )
+		{
+			$this->addCorsHeaders();
+		}
+
+		return $this;
 	}
 
 	/**

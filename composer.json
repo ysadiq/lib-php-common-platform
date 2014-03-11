@@ -16,14 +16,13 @@
 			"role":  "Lead Developer, server-side/client-side"
 		}
 	],
-	"minimum-stability": "dev",
 	"require":           {
 		"php":                             ">=5.3.10",
 		"kisma/kisma":                     "~0.2@dev",
 		"dreamfactory/yii":                "=1.1.13",
 		"dreamfactory/lib-php-common":     "~1.4@dev",
 		"dreamfactory/lib-php-common-yii": "~1.4@dev",
-		"dreamfactory/oasys":              "~0.4@dev",
+		"dreamfactory/oasys":              "~0.4.0@dev",
 		"dreamfactory/javascript-sdk":     "~1.0@dev",
 		"swiftmailer/swiftmailer":         "~4.3.0@stable",
 		"aws/aws-sdk-php":                 "~2.4.0@stable",
@@ -40,6 +39,7 @@
 		"phpunit/phpunit":          "~3.7@stable",
 		"phpunit/phpunit-selenium": "@stable",
 		"phpunit/phpunit-story":    "@stable",
+		"phpunit/php-invoker":      "@stable",
 		"phpunit/dbunit":           "@stable"
 	},
 	"autoload":          {
@@ -51,5 +51,6 @@
 		"branch-alias": {
 			"dev-develop": "1.5.x-dev"
 		}
-	}
+	},
+	"minimum-stability": "dev"
 }

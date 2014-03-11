@@ -800,6 +800,20 @@
 					"default":    "No Access",
 					"allow_null": false,
 					"validation": "picklist"
+				},
+				{
+					"name":       "filters",
+					"type":       "mediumtext",
+					"allow_null": true
+				},
+				{
+					"name":       "filter_op",
+					"type":       "string",
+					"length":     64,
+					"value":      ["and", "or"],
+					"default":    "and",
+					"allow_null": false,
+					"validation": "picklist"
 				}
 			]
 		},
