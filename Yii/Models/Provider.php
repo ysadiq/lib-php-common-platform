@@ -19,8 +19,6 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
-use CEvent;
-use CModelEvent;
 use DreamFactory\Oasys\Oasys;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Yii\Utility\Pii;
@@ -82,14 +80,14 @@ class Provider extends BasePlatformSystemModel
 		return array_merge(
 			parent::behaviors(),
 			array(
-				 //	Secure JSON
-				 'base_platform_model.secure_json' => array(
-					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'             => $this->getDb()->password,
-					 'secureAttributes' => array(
-						 'config_text',
-					 )
-				 ),
+				//	Secure JSON
+				'base_platform_model.secure_json' => array(
+					'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					'salt'             => $this->getDb()->password,
+					'secureAttributes' => array(
+						'config_text',
+					)
+				),
 			)
 		);
 	}
@@ -105,13 +103,13 @@ class Provider extends BasePlatformSystemModel
 			array_merge(
 				$additionalLabels,
 				array(
-					 'provider_name'     => 'Name',
-					 'api_name'          => 'API Name',
-					 'config_text'       => 'Configuration',
-					 'is_active'         => 'Active',
-					 'is_system'         => 'Is a System Provider',
-					 'is_login_provider' => 'Provider Login Services',
-					 'base_provider_id'  => 'Base Provider',
+					'provider_name'     => 'Name',
+					'api_name'          => 'API Name',
+					'config_text'       => 'Configuration',
+					'is_active'         => 'Active',
+					'is_system'         => 'Is a System Provider',
+					'is_login_provider' => 'Provider Login Services',
+					'base_provider_id'  => 'Base Provider',
 				)
 			)
 		);
@@ -126,8 +124,8 @@ class Provider extends BasePlatformSystemModel
 	{
 		$this->getDbCriteria()->mergeWith(
 			array(
-				 'condition' => 'lower(provider_name) = lower(:provider_name) or lower(api_name) = lower(:api_name)',
-				 'params'    => array( ':provider_name' => $portal, ':api_name' => Inflector::neutralize( $portal ) ),
+				'condition' => 'lower(provider_name) = lower(:provider_name) or lower(api_name) = lower(:api_name)',
+				'params'    => array( ':provider_name' => $portal, ':api_name' => Inflector::neutralize( $portal ) ),
 			)
 		);
 

@@ -19,32 +19,31 @@
  */
 use Kisma\Core\Utility\Option;
 
-$_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
+$_base = require(__DIR__ . '/BasePlatformRestSvc.swagger.php');
 
-$_custom = require( __DIR__ . '/../Resources/User/CustomSettings.swagger.php' );
-$_device = require( __DIR__ . '/../Resources/User/Device.swagger.php' );
-$_password = require( __DIR__ . '/../Resources/User/Password.swagger.php' );
-$_profile = require( __DIR__ . '/../Resources/User/Profile.swagger.php' );
-$_register = require( __DIR__ . '/../Resources/User/Register.swagger.php' );
-$_session = require( __DIR__ . '/../Resources/User/Session.swagger.php' );
+$_custom = require(__DIR__ . '/../Resources/User/CustomSettings.swagger.php');
+$_device = require(__DIR__ . '/../Resources/User/Device.swagger.php');
+$_password = require(__DIR__ . '/../Resources/User/Password.swagger.php');
+$_profile = require(__DIR__ . '/../Resources/User/Profile.swagger.php');
+$_register = require(__DIR__ . '/../Resources/User/Register.swagger.php');
+$_session = require(__DIR__ . '/../Resources/User/Session.swagger.php');
 
 $_base['apis'] = array_merge(
 	array(
-		 array(
-			 'path'        => '/{api_name}',
-			 'operations'  =>
-			 array(
-				 0 =>
-				 array(
-					 'method'   => 'GET',
-					 'summary'  => 'getResources() - List resources available for user session management.',
-					 'nickname' => 'getResources',
-					 'type'     => 'Resources',
-					 'notes'    => 'See listed operations for each resource available.',
-				 ),
-			 ),
-			 'description' => 'Operations available for user session management.',
-		 ),
+		array(
+			'path'        => '/{api_name}',
+			'operations'  => array(
+				0 => array(
+					'method'     => 'GET',
+					'summary'    => 'getResources() - List resources available for user session management.',
+					'nickname'   => 'getResources',
+					'type'       => 'Resources',
+					'notes'      => 'See listed operations for each resource available.',
+					'event_name' => '{api_name}.list',
+				),
+			),
+			'description' => 'Operations available for user session management.',
+		),
 	),
 	Option::get( $_custom, 'apis' ),
 	Option::get( $_device, 'apis' ),

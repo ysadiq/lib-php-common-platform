@@ -20,20 +20,20 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\BlobServiceException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use Kisma\Core\Utility\Option;
-use DreamFactory\Platform\Exceptions\BlobServiceException;
-use DreamFactory\Platform\Exceptions\BadRequestException;
 use WindowsAzure\Blob\BlobRestProxy;
 use WindowsAzure\Blob\Models\CreateBlobOptions;
 use WindowsAzure\Blob\Models\CreateContainerOptions;
+use WindowsAzure\Blob\Models\GetBlobPropertiesResult;
+use WindowsAzure\Blob\Models\GetBlobResult;
 use WindowsAzure\Blob\Models\ListBlobsOptions;
 use WindowsAzure\Blob\Models\ListBlobsResult;
-use WindowsAzure\Blob\Models\GetBlobResult;
-use WindowsAzure\Blob\Models\GetBlobPropertiesResult;
-use WindowsAzure\Common\ServicesBuilder;
 use WindowsAzure\Common\ServiceException;
+use WindowsAzure\Common\ServicesBuilder;
 
 /**
  * RemoteFileSvc.php

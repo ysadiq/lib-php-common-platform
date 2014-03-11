@@ -84,10 +84,10 @@ class AppServiceRelation extends BasePlatformSystemModel
 		return parent::attributeLabels(
 			array_merge(
 				array(
-					 'id'         => 'Id',
-					 'app_id'     => 'App',
-					 'service_id' => 'Service',
-					 'component'  => 'Component',
+					'id'         => 'Id',
+					'app_id'     => 'App',
+					'service_id' => 'Service',
+					'component'  => 'Component',
 				),
 				$additionalLabels
 			)
@@ -108,9 +108,9 @@ class AppServiceRelation extends BasePlatformSystemModel
 			$requested,
 			array_merge(
 				array(
-					 'app_id',
-					 'service_id',
-					 'component',
+					'app_id',
+					'service_id',
+					'component',
 				),
 				$columns
 			),
@@ -125,7 +125,7 @@ class AppServiceRelation extends BasePlatformSystemModel
 	 */
 	public function getAttributes( $names = true )
 	{
-		$_record =  parent::getAttributes( $names );
+		$_record = parent::getAttributes( $names );
 
 		$_component = Option::get( $_record, 'component' );
 		if ( !empty( $_component ) )

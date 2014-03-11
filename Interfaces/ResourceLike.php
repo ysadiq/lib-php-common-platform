@@ -1,8 +1,5 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
- *
- * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
  * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,10 +17,9 @@
 namespace DreamFactory\Platform\Interfaces;
 
 /**
- * Something that subscribes to platform events
- *
- * @author    Jerry Ablan <jerryablan@dreamfactory.com>
+ * ResourceLike
+ * Something that acts like a resource
  */
-class PlatformSubscriberLike extends EventSubscriberInterface
+interface ResourceLike
 {
 }

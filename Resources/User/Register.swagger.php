@@ -23,15 +23,14 @@ $_register = array();
 $_register['apis'] = array(
 	array(
 		'path'        => '/{api_name}/register',
-		'operations'  =>
-		array(
+		'operations'  => array(
 			array(
 				'method'           => 'POST',
 				'summary'          => 'register() - Register a new user in the system.',
 				'nickname'         => 'register',
 				'type'             => 'Success',
-				'parameters'       =>
-				array(
+				'event_name'       => 'user.create',
+				'parameters'       => array(
 					array(
 						'name'          => 'body',
 						'description'   => 'Data containing name-value pairs for new user registration.',
@@ -41,8 +40,7 @@ $_register['apis'] = array(
 						'required'      => true,
 					),
 				),
-				'responseMessages' =>
-				array(
+				'responseMessages' => array(
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
 						'code'    => 401,
@@ -52,9 +50,10 @@ $_register['apis'] = array(
 						'code'    => 500,
 					),
 				),
-				'notes'            => 'The new user is created and, if required, sent an email for confirmation. '.
-									  'This also handles the registration confirmation by posting email, '.
-									  'confirmation code and new password.',
+				'notes'            =>
+					'The new user is created and, if required, sent an email for confirmation. ' .
+					'This also handles the registration confirmation by posting email, ' .
+					'confirmation code and new password.',
 			),
 		),
 		'description' => 'Operations to register a new user.',
@@ -62,39 +61,31 @@ $_register['apis'] = array(
 );
 
 $_register['models'] = array(
-	'Register'          =>
-	array(
+	'Register' => array(
 		'id'         => 'Register',
-		'properties' =>
-		array(
-			'email'        =>
-			array(
+		'properties' => array(
+			'email'        => array(
 				'type'        => 'string',
 				'description' => 'Email address of the new user.',
 				'required'    => true,
 			),
-			'first_name'   =>
-			array(
+			'first_name'   => array(
 				'type'        => 'string',
 				'description' => 'First name of the new user.',
 			),
-			'last_name'    =>
-			array(
+			'last_name'    => array(
 				'type'        => 'string',
 				'description' => 'Last name of the new user.',
 			),
-			'display_name' =>
-			array(
+			'display_name' => array(
 				'type'        => 'string',
 				'description' => 'Full display name of the new user.',
 			),
-			'new_password' =>
-			array(
+			'new_password' => array(
 				'type'        => 'string',
 				'description' => 'Password for the new user.',
 			),
-			'code'         =>
-			array(
+			'code'         => array(
 				'type'        => 'string',
 				'description' => 'Code required with new_password when using email confirmation.',
 			),

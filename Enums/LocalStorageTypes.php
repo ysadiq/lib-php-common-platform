@@ -31,6 +31,14 @@ class LocalStorageTypes extends SeedEnum
 	//*************************************************************************
 
 	/**
+	 * @type string The storage base for hosted DSPs
+	 */
+	const FABRIC_STORAGE_BASE_PATH = '/data/storage';
+	/**
+	 * @type string The storage base for non-hosted DSPs
+	 */
+	const LOCAL_STORAGE_BASE_PATH = '/storage';
+	/**
 	 * @type string
 	 */
 	const STORAGE_PATH = 'storage_path';
@@ -62,4 +70,12 @@ class LocalStorageTypes extends SeedEnum
 	 * @type string
 	 */
 	const SWAGGER_PATH = 'swagger_path';
+	/**
+	 * @type string
+	 */
+	const TEMPLATE_PATH = 'template_path';
+	/**
+	 * @type string The relative path to any user-specified configuration files
+	 */
+	const LOCAL_CONFIG_PATH = 'local_config_path';
 }

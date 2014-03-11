@@ -18,6 +18,6 @@
  * limitations under the License.
  */
 
-$_base = require( __DIR__ . '/BaseFileSvc.swagger.php' );
+$_base = require(__DIR__ . '/BaseFileSvc.swagger.php');
 
 return $_base;

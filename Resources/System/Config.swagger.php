@@ -23,170 +23,147 @@ $_config = array();
 $_config['apis'] = array(
 	array(
 		'path'        => '/{api_name}/config',
-		'operations'  =>
+		'operations'  => array(
 			array(
-				array(
-					'method'   => 'GET',
-					'summary'  => 'getConfig() - Retrieve system configuration properties.',
-					'nickname' => 'getConfig',
-					'type'     => 'ConfigResponse',
-					'notes'    => 'The retrieved properties control how the system behaves.',
-				),
-				array(
-					'method'           => 'POST',
-					'summary'          => 'setConfig() - Update one or more system configuration properties.',
-					'nickname'         => 'setConfig',
-					'type'             => 'ConfigResponse',
-					'parameters'       =>
-						array(
-							array(
-								'name'          => 'body',
-								'description'   => 'Data containing name-value pairs of properties to set.',
-								'allowMultiple' => false,
-								'type'          => 'ConfigRequest',
-								'paramType'     => 'body',
-								'required'      => true,
-							),
-						),
-					'responseMessages' =>
-						array(
-							array(
-								'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-								'code'    => 400,
-							),
-							array(
-								'message' => 'Unauthorized Access - No currently valid session available.',
-								'code'    => 401,
-							),
-							array(
-								'message' => 'System Error - Specific reason is included in the error message.',
-								'code'    => 500,
-							),
-						),
-					'notes'            => 'Post data should be an array of properties.',
-				),
+				'method'     => 'GET',
+				'summary'    => 'getConfig() - Retrieve system configuration properties.',
+				'nickname'   => 'getConfig',
+				'type'       => 'ConfigResponse',
+				'event_name' => 'config.read',
+				'notes'      => 'The retrieved properties control how the system behaves.',
 			),
+			array(
+				'method'           => 'POST',
+				'summary'          => 'setConfig() - Update one or more system configuration properties.',
+				'nickname'         => 'setConfig',
+				'type'             => 'ConfigResponse',
+				'event_name'       => 'config.update',
+				'parameters'       => array(
+					array(
+						'name'          => 'body',
+						'description'   => 'Data containing name-value pairs of properties to set.',
+						'allowMultiple' => false,
+						'type'          => 'ConfigRequest',
+						'paramType'     => 'body',
+						'required'      => true,
+					),
+				),
+				'responseMessages' => array(
+					array(
+						'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+						'code'    => 400,
+					),
+					array(
+						'message' => 'Unauthorized Access - No currently valid session available.',
+						'code'    => 401,
+					),
+					array(
+						'message' => 'System Error - Specific reason is included in the error message.',
+						'code'    => 500,
+					),
+				),
+				'notes'            => 'Post data should be an array of properties.',
+			),
+		),
 		'description' => 'Operations for system configuration options.',
 	),
 );
 
 $_commonProperties = array(
-	'open_reg_role_id'           =>
-		array(
-			'type'        => 'integer',
-			'format'      => 'int32',
-			'description' => 'Default Role Id assigned to newly registered users, set to null to turn off open registration.',
+	'open_reg_role_id'           => array(
+		'type'        => 'integer',
+		'format'      => 'int32',
+		'description' => 'Default Role Id assigned to newly registered users, set to null to turn off open registration.',
+	),
+	'open_reg_email_service_id'  => array(
+		'type'        => 'integer',
+		'format'      => 'int32',
+		'description' => 'Set to an email-type service id to require email confirmation of newly registered users.',
+	),
+	'open_reg_email_template_id' => array(
+		'type'        => 'integer',
+		'format'      => 'int32',
+		'description' => 'Default email template used for open registration email confirmations.',
+	),
+	'invite_email_service_id'    => array(
+		'type'        => 'integer',
+		'format'      => 'int32',
+		'description' => 'Set to an email-type service id to allow user invites and invite confirmations via email service.',
+	),
+	'invite_email_template_id'   => array(
+		'type'        => 'integer',
+		'format'      => 'int32',
+		'description' => 'Default email template used for user invitations and confirmations via email service.',
+	),
+	'password_email_service_id'  => array(
+		'type'        => 'integer',
+		'format'      => 'int32',
+		'description' => 'Set to an email-type service id to require email confirmation to reset passwords, otherwise defaults to security question and answer.',
+	),
+	'password_email_template_id' => array(
+		'type'        => 'integer',
+		'format'      => 'int32',
+		'description' => 'Default email template used for password reset email confirmations.',
+	),
+	'guest_role_id'              => array(
+		'type'        => 'integer',
+		'format'      => 'int32',
+		'description' => 'Role Id assigned for all guest sessions, set to null to require authenticated sessions.',
+	),
+	'editable_profile_fields'    => array(
+		'type'        => 'string',
+		'description' => 'Comma-delimited list of fields the user is allowed to edit.',
+	),
+	'allowed_hosts'              => array(
+		'type'        => 'Array',
+		'description' => 'CORS whitelist of allowed remote hosts.',
+		'items'       => array(
+			'$ref' => 'HostInfo',
 		),
-	'open_reg_email_service_id'  =>
-		array(
-			'type'        => 'integer',
-			'format'      => 'int32',
-			'description' => 'Set to an email-type service id to require email confirmation of newly registered users.',
-		),
-	'open_reg_email_template_id' =>
-		array(
-			'type'        => 'integer',
-			'format'      => 'int32',
-			'description' => 'Default email template used for open registration email confirmations.',
-		),
-	'invite_email_service_id'    =>
-		array(
-			'type'        => 'integer',
-			'format'      => 'int32',
-			'description' => 'Set to an email-type service id to allow user invites and invite confirmations via email service.',
-		),
-	'invite_email_template_id'   =>
-		array(
-			'type'        => 'integer',
-			'format'      => 'int32',
-			'description' => 'Default email template used for user invitations and confirmations via email service.',
-		),
-	'password_email_service_id'  =>
-		array(
-			'type'        => 'integer',
-			'format'      => 'int32',
-			'description' => 'Set to an email-type service id to require email confirmation to reset passwords, otherwise defaults to security question and answer.',
-		),
-	'password_email_template_id' =>
-		array(
-			'type'        => 'integer',
-			'format'      => 'int32',
-			'description' => 'Default email template used for password reset email confirmations.',
-		),
-	'guest_role_id'              =>
-		array(
-			'type'        => 'integer',
-			'format'      => 'int32',
-			'description' => 'Role Id assigned for all guest sessions, set to null to require authenticated sessions.',
-		),
-	'editable_profile_fields'    =>
-		array(
-			'type'        => 'string',
-			'description' => 'Comma-delimited list of fields the user is allowed to edit.',
-		),
-	'allowed_hosts'              =>
-		array(
-			'type'        => 'Array',
-			'description' => 'CORS whitelist of allowed remote hosts.',
-			'items'       =>
-				array(
-					'$ref' => 'HostInfo',
-				),
-		),
+	),
 );
 
 $_config['models'] = array(
-	'ConfigRequest'  =>
-		array(
-			'id'         => 'ConfigRequest',
-			'properties' => $_commonProperties,
-		),
-	'ConfigResponse' =>
-		array(
-			'id'         => 'ConfigResponse',
-			'properties' =>
-				array_merge(
-					$_commonProperties,
-					array(
-						 'dsp_version' =>
-							 array(
-								 'type'        => 'string',
-								 'description' => 'Version of the DSP software.',
-							 ),
-						 'db_version'  =>
-							 array(
-								 'type'        => 'string',
-								 'description' => 'Version of the database schema.',
-							 ),
-					)
+	'ConfigRequest'  => array(
+		'id'         => 'ConfigRequest',
+		'properties' => $_commonProperties,
+	),
+	'ConfigResponse' => array(
+		'id'         => 'ConfigResponse',
+		'properties' => array_merge(
+			$_commonProperties,
+			array(
+				'dsp_version' => array(
+					'type'        => 'string',
+					'description' => 'Version of the DSP software.',
 				),
-		),
-	'HostInfo'       =>
-		array(
-			'id'         => 'HostInfo',
-			'properties' =>
-				array(
-					'host'       =>
-						array(
-							'type'        => 'string',
-							'description' => 'URL, server name, or * to define the CORS host.',
-						),
-					'is_enabled' =>
-						array(
-							'type'        => 'boolean',
-							'description' => 'Allow this host\'s configuration to be used by CORS.',
-						),
-					'verbs'      =>
-						array(
-							'type'        => 'Array',
-							'description' => 'Allowed HTTP verbs for this host.',
-							'items'       =>
-								array(
-									'type' => 'string',
-								),
-						),
+				'db_version'  => array(
+					'type'        => 'string',
+					'description' => 'Version of the database schema.',
 				),
+			)
 		),
+	),
+	'HostInfo'       => array(
+		'id'         => 'HostInfo',
+		'properties' => array(
+			'host'       => array(
+				'type'        => 'string',
+				'description' => 'URL, server name, or * to define the CORS host.',
+			),
+			'is_enabled' => array(
+				'type'        => 'boolean',
+				'description' => 'Allow this host\'s configuration to be used by CORS.',
+			),
+			'verbs'      => array(
+				'type'        => 'Array',
+				'description' => 'Allowed HTTP verbs for this host.',
+				'items'       => array(
+					'type' => 'string',
+				),
+			),
+		),
+	),
 );
 
 return $_config;

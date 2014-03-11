@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Enums;
 
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Enums\SeedEnum;
 use Kisma\Core\Utility\Option;
 
 /**

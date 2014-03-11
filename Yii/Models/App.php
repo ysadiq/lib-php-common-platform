@@ -20,11 +20,9 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Services\BaseFileSvc;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Curl;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -91,13 +89,13 @@ class App extends BasePlatformSystemModel
 		return array_merge(
 			parent::rules(),
 			array(
-				 array( 'name, api_name', 'required' ),
-				 array( 'name, api_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
-				 array( 'storage_service_id', 'numerical', 'integerOnly' => true ),
-				 array( 'name, api_name', 'length', 'max' => 64 ),
-				 array( 'storage_container', 'length', 'max' => 255 ),
-				 array( 'is_active, is_url_external, requires_fullscreen, allow_fullscreen_toggle, requires_plugin', 'boolean' ),
-				 array( 'description, url, import_url, launch_url, storage_container, toggle_location', 'safe' )
+				array( 'name, api_name', 'required' ),
+				array( 'name, api_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
+				array( 'storage_service_id', 'numerical', 'integerOnly' => true ),
+				array( 'name, api_name', 'length', 'max' => 64 ),
+				array( 'storage_container', 'length', 'max' => 255 ),
+				array( 'is_active, is_url_external, requires_fullscreen, allow_fullscreen_toggle, requires_plugin', 'boolean' ),
+				array( 'description, url, import_url, launch_url, storage_container, toggle_location', 'safe' )
 			)
 		);
 	}
@@ -283,20 +281,20 @@ class App extends BasePlatformSystemModel
 			$requested,
 			array_merge(
 				array(
-					 'name',
-					 'api_name',
-					 'description',
-					 'is_active',
-					 'url',
-					 'is_url_external',
-					 'import_url',
-					 'storage_service_id',
-					 'storage_container',
-					 'launch_url',
-					 'requires_fullscreen',
-					 'allow_fullscreen_toggle',
-					 'toggle_location',
-					 'requires_plugin',
+					'name',
+					'api_name',
+					'description',
+					'is_active',
+					'url',
+					'is_url_external',
+					'import_url',
+					'storage_service_id',
+					'storage_container',
+					'launch_url',
+					'requires_fullscreen',
+					'allow_fullscreen_toggle',
+					'toggle_location',
+					'requires_plugin',
 				),
 				$columns
 			),
@@ -485,7 +483,7 @@ class App extends BasePlatformSystemModel
 			/** @var \CDbCommand $_command */
 			$_mapRows = Sql::findAll(
 				<<<MYSQL
-SELECT
+		SELECT
 	id,
 	{$relationKey},
 	component
@@ -496,7 +494,7 @@ WHERE
 MYSQL
 				,
 				array(
-					 ':app_id' => $id,
+					':app_id' => $id,
 				),
 				Pii::pdo()
 			);
@@ -574,9 +572,9 @@ MYSQL
 
 					$rows = static::model()->insert(
 						array(
-							 'app_id'     => $id,
-							 'service_id' => Option::get( $_item, 'service_id' ),
-							 'component'  => $_newComponent
+							'app_id'     => $id,
+							'service_id' => Option::get( $_item, 'service_id' ),
+							'component'  => $_newComponent
 						)
 					);
 

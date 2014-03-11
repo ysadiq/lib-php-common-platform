@@ -17,14 +17,15 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\EventManager;
 use DreamFactory\Platform\Utility\ServiceHandler;
-use DreamFactory\Platform\Yii\Models\Service;
-use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -97,7 +98,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 
 		if ( empty( $this->_apiName ) )
 		{
-			throw new \InvalidArgumentException( '"api_name" can not be empty.' );
+			throw new \InvalidArgumentException( '"api_name" cannot be empty.' );
 		}
 
 		if ( null === $this->_typeId )
@@ -125,7 +126,63 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 			$this->_description = $this->_name;
 		}
 
+		//	Get the current user ID if one...
 		$this->_currentUserId = $this->_currentUserId ? : Session::getCurrentUserId();
+	}
+
+	/**
+	 * Destructor
+	 */
+	public function __destruct()
+	{
+		//	Save myself!
+		ServiceHandler::cacheService( $this->_apiName, $this );
+
+		parent::__destruct();
+	}
+
+	/**
+	 * {@InheritDoc}
+	 */
+	public function on( $eventName, $listener, $priority = 0 )
+	{
+		EventManager::on( $eventName, $listener, $priority, get_object_vars( $this ) );
+	}
+
+	/**
+	 * {@InheritDoc}
+	 */
+	public function off( $eventName, $callback )
+	{
+		EventManager::off( $eventName, $callback, get_object_vars( $this ) );
+	}
+
+	/**
+	 * {@InheritDoc}
+	 */
+	public function trigger( $eventName, $event = null )
+	{
+		return EventManager::trigger( $eventName, $event, get_object_vars( $this ) );
+	}
+
+	/**
+	 * @param string          $resource     The name of the resource
+	 * @param string          $action       The action to perform
+	 * @param int|string|bool $outputFormat The return format. Defaults to native, or PHP array.
+	 * @param string          $appName      The optional app_name setting for this call. Defaults to called class name hash
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\NotImplementedException
+	 * @return mixed
+	 */
+	public static function processInlineRequest( $resource, $action = HttpMethod::GET, $outputFormat = false, $appName = null )
+	{
+		throw new NotImplementedException();
+//		//	Get the resource and set the app_name
+//		$_resource = ResourceStore::resource( $resource );
+//		$_SERVER['HTTP_X_DREAMFACTORY_APPLICATION_NAME'] = $appName ? : sha1( get_called_class() );
+//
+//		//	Make the call
+//		return $_resource->processInlineRequest( $resource, $action, $outputFormat );
 	}
 
 	/**
@@ -153,33 +210,22 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
 		{
 			if ( empty( $_type ) )
 			{
-				Log::notice( '  * Empty "type", assuming this is a system resource ( type_id == 0 )' );
+				Log::notice( ' * Empty "type", assuming this is a system resource( type_id == 0 )' );
 
 				return PlatformServiceTypes::SYSTEM_SERVICE;
 			}
 
-			Log::error( '  * Unknown service type ID request for "' . $type . '".' );
+			Log::error( ' * Unknown service type ID request for "' . $type . '" . ' );
 
 			return false;
 		}
 	}
 
 	/**
-	 * Destructor
-	 */
-	public function __destruct()
-	{
-		//	Save myself!
-		ServiceHandler::cacheService( $this->_apiName, $this );
-
-		parent::__destruct();
-	}
-
-	/**
 	 * @param string $request
 	 * @param string $component
 	 *
-	 * @throws \Kisma\Core\Exceptions\NotImplementedException
+	 * @throws NotImplementedException
 	 */
 	protected function _checkPermission( $request, $component )
 	{

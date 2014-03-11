@@ -47,11 +47,11 @@ return array(
 	'apiVersion'     => API_VERSION,
 	'authorizations' => array( "apiKey" => array( "type" => "apiKey", "passAs" => "header" ) ),
 	'info'           => array(
-		"title"             => "DreamFactory Live API Documentation",
-		"description"       => $_description,
-//		"termsOfServiceUrl" => "http://www.dreamfactory.com/terms/",
-		"contact"           => "support@dreamfactory.com",
-		"license"           => "Apache 2.0",
-		"licenseUrl"        => "http://www.apache.org/licenses/LICENSE-2.0.html"
+		"title"       => "DreamFactory Live API Documentation",
+		"description" => $_description,
+		//		"termsOfServiceUrl" => "http://www.dreamfactory.com/terms/",
+		"contact"     => "support@dreamfactory.com",
+		"license"     => "Apache 2.0",
+		"licenseUrl"  => "http://www.apache.org/licenses/LICENSE-2.0.html"
 	)
 );

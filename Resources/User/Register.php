@@ -52,19 +52,19 @@ class Register extends BasePlatformRestResource
 		parent::__construct(
 			$consumer,
 			array(
-				 'name'           => 'User Registration',
-				 'service_name'   => 'user',
-				 'type'           => 'System',
-				 'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'api_name'       => 'register',
-				 'description'    => 'Resource for a user registration.',
-				 'is_active'      => true,
-				 'resource_array' => $resources,
-				 'verb_aliases'   => array(
-					 static::Put   => static::Post,
-					 static::Patch => static::Post,
-					 static::Merge => static::Post,
-				 )
+				'name'           => 'User Registration',
+				'service_name'   => 'user',
+				'type'           => 'System',
+				'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				'api_name'       => 'register',
+				'description'    => 'Resource for a user registration.',
+				'is_active'      => true,
+				'resource_array' => $resources,
+				'verb_aliases'   => array(
+					static::Put   => static::Post,
+					static::Patch => static::Post,
+					static::Merge => static::Post,
+				)
 			)
 		);
 	}
@@ -150,8 +150,9 @@ class Register extends BasePlatformRestResource
 			'email'        => $_email,
 			'first_name'   => ( !empty( $_firstName ) ) ? $_firstName : $_temp,
 			'last_name'    => ( !empty( $_lastName ) ) ? $_lastName : $_temp,
-			'display_name' => ( !empty( $_displayName ) ) ? $_displayName
-					: ( !empty( $_firstName ) && !empty( $_lastName ) ) ? $_firstName . ' ' . $_lastName : $_temp,
+			'display_name' => ( !empty( $_displayName ) )
+					? $_displayName : ( !empty( $_firstName ) && !empty( $_lastName ) ) ? $_firstName . ' ' . $_lastName
+						: $_temp,
 			'role_id'      => $_roleId,
 			'confirm_code' => $_confirmCode
 		);
@@ -191,7 +192,8 @@ class Register extends BasePlatformRestResource
 				}
 				else
 				{
-					$_defaultPath = dirname( dirname( __DIR__ ) ) . '/templates/email/confirm_user_registration.json';
+					$_defaultPath = Platform::getLibraryTemplatePath( '/email/confirm_user_registration.json' );
+
 					if ( !file_exists( $_defaultPath ) )
 					{
 						throw new \Exception( "No default email template for user registration." );

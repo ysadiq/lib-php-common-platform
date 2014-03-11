@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
-use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\SwaggerManager;
 
@@ -44,13 +43,13 @@ class Service extends BaseSystemRestResource
 		return parent::__construct(
 			$consumer,
 			array(
-				 'service_name'   => 'system',
-				 'name'           => 'Service',
-				 'api_name'       => 'service',
-				 'type'           => 'System',
-				 'description'    => 'System service administration.',
-				 'is_active'      => true,
-				 'resource_array' => $resources,
+				'service_name'   => 'system',
+				'name'           => 'Service',
+				'api_name'       => 'service',
+				'type'           => 'System',
+				'description'    => 'System service administration.',
+				'is_active'      => true,
+				'resource_array' => $resources,
 			)
 		);
 	}

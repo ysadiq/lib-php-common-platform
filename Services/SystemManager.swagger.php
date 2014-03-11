@@ -19,36 +19,37 @@
  */
 use Kisma\Core\Utility\Option;
 
-$_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
+$_base = require(__DIR__ . '/BasePlatformRestSvc.swagger.php');
 
-$_app = require( __DIR__ . '/../Resources/System/App.swagger.php' );
-$_appGroup = require( __DIR__ . '/../Resources/System/AppGroup.swagger.php' );
-$_config = require( __DIR__ . '/../Resources/System/Config.swagger.php' );
-$_constant = require( __DIR__ . '/../Resources/System/Constant.swagger.php' );
-$_custom = require( __DIR__ . '/../Resources/System/CustomSettings.swagger.php' );
-$_device = require( __DIR__ . '/../Resources/System/Device.swagger.php' );
-$_email = require( __DIR__ . '/../Resources/System/EmailTemplate.swagger.php' );
-$_role = require( __DIR__ . '/../Resources/System/Role.swagger.php' );
-$_service = require( __DIR__ . '/../Resources/System/Service.swagger.php' );
-$_user = require( __DIR__ . '/../Resources/System/User.swagger.php' );
+$_app = require(__DIR__ . '/../Resources/System/App.swagger.php');
+$_appGroup = require(__DIR__ . '/../Resources/System/AppGroup.swagger.php');
+$_config = require(__DIR__ . '/../Resources/System/Config.swagger.php');
+$_constant = require(__DIR__ . '/../Resources/System/Constant.swagger.php');
+$_custom = require(__DIR__ . '/../Resources/System/CustomSettings.swagger.php');
+$_device = require(__DIR__ . '/../Resources/System/Device.swagger.php');
+$_email = require(__DIR__ . '/../Resources/System/EmailTemplate.swagger.php');
+$_event = require(__DIR__ . '/../Resources/System/Event.swagger.php');
+$_device = require(__DIR__ . '/../Resources/System/Device.swagger.php');
+$_role = require(__DIR__ . '/../Resources/System/Role.swagger.php');
+$_service = require(__DIR__ . '/../Resources/System/Service.swagger.php');
+$_user = require(__DIR__ . '/../Resources/System/User.swagger.php');
 
 $_base['apis'] = array_merge(
 	array(
-		 array(
-			 'path'        => '/{api_name}',
-			 'operations'  =>
-				 array(
-					 0 =>
-						 array(
-							 'method'   => 'GET',
-							 'summary'  => 'getResources() - List resources available for system management.',
-							 'nickname' => 'getResources',
-							 'type'     => 'Resources',
-							 'notes'    => 'See listed operations for each resource available.',
-						 ),
-				 ),
-			 'description' => 'Operations available for system management.',
-		 ),
+		array(
+			'path'        => '/{api_name}',
+			'operations'  => array(
+				0 => array(
+					'method'     => 'GET',
+					'summary'    => 'getResources() - List resources available for system management.',
+					'nickname'   => 'getResources',
+					'type'       => 'Resources',
+					'notes'      => 'See listed operations for each resource available.',
+					'event_name' => '{api_name}.list',
+				),
+			),
+			'description' => 'Operations available for system management.',
+		),
 	),
 	Option::get( $_app, 'apis' ),
 	Option::get( $_appGroup, 'apis' ),
@@ -57,6 +58,7 @@ $_base['apis'] = array_merge(
 	Option::get( $_custom, 'apis' ),
 	Option::get( $_device, 'apis' ),
 	Option::get( $_email, 'apis' ),
+	Option::get( $_event, 'apis' ),
 	Option::get( $_role, 'apis' ),
 	Option::get( $_service, 'apis' ),
 	Option::get( $_user, 'apis' )
@@ -64,28 +66,23 @@ $_base['apis'] = array_merge(
 
 $_base['models'] = array_merge(
 	array(
-		 'Metadata' =>
-			 array(
-				 'id'         => 'Metadata',
-				 'properties' =>
-					 array(
-						 'schema' =>
-							 array(
-								 'type'        => 'Array',
-								 'description' => 'Array of table schema.',
-								 'items'       =>
-									 array(
-										 'type' => 'string',
-									 ),
-							 ),
-						 'count'  =>
-							 array(
-								 'type'        => 'integer',
-								 'format'      => 'int32',
-								 'description' => 'Record count returned for GET requests.',
-							 ),
-					 ),
-			 ),
+		'Metadata' => array(
+			'id'         => 'Metadata',
+			'properties' => array(
+				'schema' => array(
+					'type'        => 'Array',
+					'description' => 'Array of table schema.',
+					'items'       => array(
+						'type' => 'string',
+					),
+				),
+				'count'  => array(
+					'type'        => 'integer',
+					'format'      => 'int32',
+					'description' => 'Record count returned for GET requests.',
+				),
+			),
+		),
 	),
 	Option::get( $_base, 'models' ),
 	Option::get( $_app, 'models' ),
@@ -95,6 +92,7 @@ $_base['models'] = array_merge(
 	Option::get( $_custom, 'models' ),
 	Option::get( $_device, 'models' ),
 	Option::get( $_email, 'models' ),
+	Option::get( $_event, 'models' ),
 	Option::get( $_role, 'models' ),
 	Option::get( $_service, 'models' ),
 	Option::get( $_user, 'models' )

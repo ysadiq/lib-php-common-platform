@@ -21,7 +21,7 @@ use Kisma\Core\Interfaces\HttpMethod;
 /**
  * RestResourceLike
  */
-interface RestResourceLike extends HttpMethod
+interface RestResourceLike extends HttpMethod, ResourceLike
 {
 	/**
 	 * Process the request

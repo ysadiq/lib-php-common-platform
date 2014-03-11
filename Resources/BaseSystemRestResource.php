@@ -104,8 +104,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		$settings['verb_aliases'] = $this->_verbAliases
 			? : array_merge(
 				array(
-					 static::Patch => static::Put,
-					 static::Merge => static::Put,
+					static::Patch => static::Put,
+					static::Merge => static::Put,
 				),
 				Option::get( $settings, 'verb_aliases', array(), true )
 			);
@@ -166,6 +166,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	protected function _preProcess()
 	{
+		parent::_preProcess();
+
 		//	Do validation here
 		$this->checkPermission( PermissionMap::fromMethod( $this->getRequestedAction() ), $this->_resource );
 
@@ -193,15 +195,15 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
 		ResourceStore::reset(
 			array(
-				 'service'          => $this->_serviceName,
-				 'resource_name'    => $this->_apiName,
-				 'resource_id'      => $this->_resourceId,
-				 'resource_array'   => $this->_resourceArray,
-				 'related_resource' => $this->_relatedResource,
-				 'fields'           => $this->_fields,
-				 'extras'           => $this->_extras,
-				 'include_count'    => $this->_includeCount,
-				 'include_schema'   => $this->_includeSchema,
+				'service'          => $this->_serviceName,
+				'resource_name'    => $this->_apiName,
+				'resource_id'      => $this->_resourceId,
+				'resource_array'   => $this->_resourceArray,
+				'related_resource' => $this->_relatedResource,
+				'fields'           => $this->_fields,
+				'extras'           => $this->_extras,
+				'include_count'    => $this->_includeCount,
+				'include_schema'   => $this->_includeSchema,
 			)
 		);
 	}
@@ -248,6 +250,9 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 	 */
 	protected function _handleGet()
 	{
+		//	Phone home...
+		parent::_handleGet();
+
 		//	Single resource by ID
 		if ( !empty( $this->_resourceId ) )
 		{
@@ -402,6 +407,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 		{
 			$_rollback = Option::getBool( $_payload, 'rollback' );
 			$_continue = Option::getBool( $_payload, 'continue' );
+
 			return ResourceStore::insert( $_records, $_rollback, null, null, $_continue );
 		}
 

@@ -69,7 +69,7 @@ class Device extends BasePlatformSystemModel
 		return array_merge(
 			parent::relations(),
 			array(
-				 'user' => array( static::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id' ),
+				'user' => array( static::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id' ),
 			)
 		);
 	}
@@ -85,12 +85,12 @@ class Device extends BasePlatformSystemModel
 			array_merge(
 				$additionalLabels,
 				array(
-					 'user_id'  => 'User ID',
-					 'uuid'     => 'UUID',
-					 'platform' => 'Platform',
-					 'version'  => 'Version',
-					 'model'    => 'Model',
-					 'extra'    => 'Extra',
+					'user_id'  => 'User ID',
+					'uuid'     => 'UUID',
+					'platform' => 'Platform',
+					'version'  => 'Version',
+					'model'    => 'Model',
+					'extra'    => 'Extra',
 				)
 			)
 		);
@@ -106,7 +106,7 @@ class Device extends BasePlatformSystemModel
 		return static::model()->findAll(
 			'user_id = :user_id',
 			array(
-				 ':user_id' => $userId,
+				':user_id' => $userId,
 			)
 		);
 	}
@@ -122,8 +122,8 @@ class Device extends BasePlatformSystemModel
 		return static::model()->find(
 			'user_id = :user_id and uuid = :uuid',
 			array(
-				 ':user_id' => $userId,
-				 ':uuid'    => $uuid,
+				':user_id' => $userId,
+				':uuid'    => $uuid,
 			)
 		);
 	}

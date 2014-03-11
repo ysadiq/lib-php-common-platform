@@ -26,7 +26,6 @@ use Aws\DynamoDb\Enum\KeyType;
 use Aws\DynamoDb\Enum\ReturnValue;
 use Aws\DynamoDb\Enum\Type;
 use Aws\DynamoDb\Model\Attribute;
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use Kisma\Core\Utility\Option;
@@ -56,25 +55,24 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * @var array
 	 */
-	protected $_defaultCreateTable
-		= array(
-			'AttributeDefinitions'  => array(
-				array(
-					'AttributeName' => 'id',
-					'AttributeType' => Type::S
-				)
-			),
-			'KeySchema'             => array(
-				array(
-					'AttributeName' => 'id',
-					'KeyType'       => KeyType::HASH
-				)
-			),
-			'ProvisionedThroughput' => array(
-				'ReadCapacityUnits'  => 10,
-				'WriteCapacityUnits' => 20
+	protected $_defaultCreateTable = array(
+		'AttributeDefinitions'  => array(
+			array(
+				'AttributeName' => 'id',
+				'AttributeType' => Type::S
 			)
-		);
+		),
+		'KeySchema'             => array(
+			array(
+				'AttributeName' => 'id',
+				'KeyType'       => KeyType::HASH
+			)
+		),
+		'ProvisionedThroughput' => array(
+			'ReadCapacityUnits'  => 10,
+			'WriteCapacityUnits' => 20
+		)
+	);
 
 	//*************************************************************************
 	//	Methods
@@ -189,8 +187,8 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			$_result = $this->_dbConn->listTables(
 				array(
-					 'Limit'                   => 100, // arbitrary limit
-					 'ExclusiveStartTableName' => isset( $_result ) ? $_result['LastEvaluatedTableName'] : null
+					'Limit'                   => 100, // arbitrary limit
+					'ExclusiveStartTableName' => isset( $_result ) ? $_result['LastEvaluatedTableName'] : null
 				)
 			);
 
@@ -294,7 +292,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			$_result = $this->_dbConn->describeTable(
 				array(
-					 'TableName' => $table
+					'TableName' => $table
 				)
 			);
 
@@ -334,7 +332,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			// Wait until the table is created and active
 			$this->_dbConn->waitUntilTableExists(
 				array(
-					 'TableName' => $_name
+					'TableName' => $_name
 				)
 			);
 
@@ -369,7 +367,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			// Wait until the table is active again after updating
 			$this->_dbConn->waitUntilTableExists(
 				array(
-					 'TableName' => $_name
+					'TableName' => $_name
 				)
 			);
 
@@ -399,13 +397,13 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			$_result = $this->_dbConn->deleteTable(
 				array(
-					 'TableName' => $table
+					'TableName' => $table
 				)
 			);
 
 			$this->_dbConn->waitUntilTableNotExists(
 				array(
-					 'TableName' => $table
+					'TableName' => $table
 				)
 			);
 
@@ -465,9 +463,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			$_result = $this->_dbConn->batchWriteItem(
 				array(
-					 'RequestItems' => array(
-						 $table => $_items,
-					 )
+					'RequestItems' => array(
+						$table => $_items,
+					)
 				)
 			);
 
@@ -509,8 +507,8 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			// simple insert request
 			$_result = $this->_dbConn->putItem(
 				array(
-					 'TableName' => $table,
-					 'Item'      => $this->_dbConn->formatAttributes( $record )
+					'TableName' => $table,
+					'Item'      => $this->_dbConn->formatAttributes( $record )
 				)
 			);
 
@@ -568,9 +566,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			$_result = $this->_dbConn->batchWriteItem(
 				array(
-					 'RequestItems' => array(
-						 $table => $_items,
-					 )
+					'RequestItems' => array(
+						$table => $_items,
+					)
 				)
 			);
 
@@ -612,9 +610,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			// simple insert request
 			$_result = $this->_dbConn->putItem(
 				array(
-					 'TableName'    => $table,
-					 'Item'         => $this->_dbConn->formatAttributes( $record ),
-					 'ReturnValues' => ReturnValue::ALL_NEW
+					'TableName'    => $table,
+					'Item'         => $this->_dbConn->formatAttributes( $record ),
+					'ReturnValues' => ReturnValue::ALL_NEW
 				)
 			);
 
@@ -694,9 +692,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			$_result = $this->_dbConn->batchWriteItem(
 				array(
-					 'RequestItems' => array(
-						 $table => $_items,
-					 )
+					'RequestItems' => array(
+						$table => $_items,
+					)
 				)
 			);
 
@@ -739,9 +737,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			// simple insert request
 			$_result = $this->_dbConn->putItem(
 				array(
-					 'TableName'    => $table,
-					 'Item'         => $this->_dbConn->formatAttributes( $record ),
-					 'ReturnValues' => ReturnValue::ALL_NEW
+					'TableName'    => $table,
+					'Item'         => $this->_dbConn->formatAttributes( $record ),
+					'ReturnValues' => ReturnValue::ALL_NEW
 				)
 			);
 
@@ -788,10 +786,10 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 				// simple insert request
 				$_result = $this->_dbConn->updateItem(
 					array(
-						 'TableName'        => $table,
-						 'Key'              => $_keys,
-						 'AttributeUpdates' => $this->_dbConn->formatAttributes( $_record, Attribute::FORMAT_UPDATE ),
-						 'ReturnValues'     => ReturnValue::ALL_NEW
+						'TableName'        => $table,
+						'Key'              => $_keys,
+						'AttributeUpdates' => $this->_dbConn->formatAttributes( $_record, Attribute::FORMAT_UPDATE ),
+						'ReturnValues'     => ReturnValue::ALL_NEW
 					)
 				);
 
@@ -833,10 +831,10 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			// simple insert request
 			$_result = $this->_dbConn->updateItem(
 				array(
-					 'TableName'        => $table,
-					 'Key'              => $_keys,
-					 'AttributeUpdates' => $this->_dbConn->formatAttributes( $record, Attribute::FORMAT_UPDATE ),
-					 'ReturnValues'     => ReturnValue::ALL_NEW
+					'TableName'        => $table,
+					'Key'              => $_keys,
+					'AttributeUpdates' => $this->_dbConn->formatAttributes( $record, Attribute::FORMAT_UPDATE ),
+					'ReturnValues'     => ReturnValue::ALL_NEW
 				)
 			);
 
@@ -909,10 +907,10 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 				// simple insert request
 				$_result = $this->_dbConn->updateItem(
 					array(
-						 'TableName'        => $table,
-						 'Key'              => $_keys,
-						 'AttributeUpdates' => $_updates,
-						 'ReturnValues'     => ReturnValue::ALL_NEW
+						'TableName'        => $table,
+						'Key'              => $_keys,
+						'AttributeUpdates' => $_updates,
+						'ReturnValues'     => ReturnValue::ALL_NEW
 					)
 				);
 
@@ -960,10 +958,10 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			// simple insert request
 			$_result = $this->_dbConn->updateItem(
 				array(
-					 'TableName'        => $table,
-					 'Key'              => $_keys,
-					 'AttributeUpdates' => $this->_dbConn->formatAttributes( $record, Attribute::FORMAT_UPDATE ),
-					 'ReturnValues'     => ReturnValue::ALL_NEW
+					'TableName'        => $table,
+					'Key'              => $_keys,
+					'AttributeUpdates' => $this->_dbConn->formatAttributes( $record, Attribute::FORMAT_UPDATE ),
+					'ReturnValues'     => ReturnValue::ALL_NEW
 				)
 			);
 
@@ -1023,9 +1021,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			$_result = $this->_dbConn->batchWriteItem(
 				array(
-					 'RequestItems' => array(
-						 $table => $_items,
-					 )
+					'RequestItems' => array(
+						$table => $_items,
+					)
 				)
 			);
 
@@ -1138,9 +1136,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		{
 			$_result = $this->_dbConn->batchWriteItem(
 				array(
-					 'RequestItems' => array(
-						 $table => $_items,
-					 )
+					'RequestItems' => array(
+						$table => $_items,
+					)
 				)
 			);
 
@@ -1281,9 +1279,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			// Get multiple items by key in a BatchGetItem request
 			$_result = $this->_dbConn->batchGetItem(
 				array(
-					 'RequestItems' => array(
-						 $table => $_scanProperties
-					 )
+					'RequestItems' => array(
+						$table => $_scanProperties
+					)
 				)
 			);
 
@@ -1391,9 +1389,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			// Get multiple items by key in a BatchGetItem request
 			$_result = $this->_dbConn->batchGetItem(
 				array(
-					 'RequestItems' => array(
-						 $table => $_scanProperties
-					 )
+					'RequestItems' => array(
+						$table => $_scanProperties
+					)
 				)
 			);
 
@@ -1480,7 +1478,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 					return $actual;
 				case Type::NS:
 					$_out = array();
-					foreach ($actual as $_item)
+					foreach ( $actual as $_item )
 					{
 						if ( intval( $_item ) == $_item )
 						{
@@ -1507,7 +1505,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	protected static function _unformatAttributes( $record )
 	{
 		$_out = array();
-		foreach( $record as $_key => $_value )
+		foreach ( $record as $_key => $_value )
 		{
 			$_out[$_key] = static::_unformatValue( $_value );
 		}
@@ -1627,8 +1625,36 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		// the rest should be comparison operators
-		$_search = array( ' eq ', ' ne ', ' <> ', ' gte ', ' lte ', ' gt ', ' lt ', ' in ', ' between ', ' begins_with ', ' contains ', ' not_contains ', ' like ' );
-		$_replace = array( ' = ', ' != ', ' != ', ' >= ', ' <= ', ' > ', ' < ', ' IN ', ' BETWEEN ', ' BEGINS_WITH ', ' CONTAINS ', ' NOT_CONTAINS ', ' LIKE ' );
+		$_search = array(
+			' eq ',
+			' ne ',
+			' <> ',
+			' gte ',
+			' lte ',
+			' gt ',
+			' lt ',
+			' in ',
+			' between ',
+			' begins_with ',
+			' contains ',
+			' not_contains ',
+			' like '
+		);
+		$_replace = array(
+			' = ',
+			' != ',
+			' != ',
+			' >= ',
+			' <= ',
+			' > ',
+			' < ',
+			' IN ',
+			' BETWEEN ',
+			' BEGINS_WITH ',
+			' CONTAINS ',
+			' NOT_CONTAINS ',
+			' LIKE '
+		);
 		$filter = trim( str_ireplace( $_search, $_replace, $filter ) );
 
 		$_ops = array_map( 'trim', explode( ' != ', $filter ) );

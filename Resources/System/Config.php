@@ -54,20 +54,20 @@ class Config extends BaseSystemRestResource
 	public function __construct( $consumer = null, $resourceArray = array() )
 	{
 		parent::__construct(
-			  $consumer,
-			  array(
-				  'name'           => 'Configuration',
-				  'type'           => 'System',
-				  'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				  'api_name'       => 'config',
-				  'description'    => 'Service general configuration',
-				  'is_active'      => true,
-				  'resource_array' => $resourceArray,
-				  'verb_aliases'   => array(
-					  static::Patch => static::Post,
-					  static::Merge => static::Post,
-				  )
-			  )
+			$consumer,
+			array(
+				'name'           => 'Configuration',
+				'type'           => 'System',
+				'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+				'api_name'       => 'config',
+				'description'    => 'Service general configuration',
+				'is_active'      => true,
+				'resource_array' => $resourceArray,
+				'verb_aliases'   => array(
+					static::Patch => static::Post,
+					static::Merge => static::Post,
+				)
+			)
 		);
 	}
 
@@ -148,7 +148,7 @@ class Config extends BaseSystemRestResource
 		/**
 		 * Versioning and upgrade support
 		 */
-		if ( null === ( $_versionInfo = Pii::getState( 'platform.version_info' ) ) )
+		if ( null === ( $_versionInfo = \Kisma::get( 'platform.version_info' ) ) )
 		{
 			$_versionInfo = array(
 				'dsp_version'       => $_currentVersion = SystemManager::getCurrentVersion(),
@@ -156,7 +156,7 @@ class Config extends BaseSystemRestResource
 				'upgrade_available' => version_compare( $_currentVersion, $_latestVersion, '<' ),
 			);
 
-			Pii::setState( 'platform.version_info', $_versionInfo );
+			\Kisma::set( 'platform.version_info', $_versionInfo );
 		}
 
 		$this->_response = array_merge( $this->_response, $_versionInfo );
@@ -165,9 +165,10 @@ class Config extends BaseSystemRestResource
 		/**
 		 * Remote login support
 		 */
+		$this->_response['is_guest'] = Pii::guest();
 		$this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
-		$this->_response['allow_remote_logins'] = ( Pii::getParam( 'dsp.allow_remote_logins', false ) &&
-													Option::getBool( $this->_response, 'allow_open_registration' ) );
+		$this->_response['allow_remote_logins'] =
+			( Pii::getParam( 'dsp.allow_remote_logins', false ) && Option::getBool( $this->_response, 'allow_open_registration' ) );
 
 		if ( false !== $this->_response['allow_remote_logins'] )
 		{

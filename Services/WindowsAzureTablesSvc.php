@@ -19,28 +19,27 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\FilterInput;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Common\Utility\DataFormat;
-use WindowsAzure\Table\Models\BatchError;
-use WindowsAzure\Table\TableRestProxy;
-use WindowsAzure\Common\ServicesBuilder;
+use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Option;
 use WindowsAzure\Common\ServiceException;
-use WindowsAzure\Table\Models\Entity;
-use WindowsAzure\Table\Models\EdmType;
-use WindowsAzure\Table\Models\Property;
-use WindowsAzure\Table\Models\GetTableResult;
-use WindowsAzure\Table\Models\QueryTablesResult;
-use WindowsAzure\Table\Models\GetEntityResult;
-use WindowsAzure\Table\Models\QueryEntitiesOptions;
-use WindowsAzure\Table\Models\QueryEntitiesResult;
-use WindowsAzure\Table\Models\InsertEntityResult;
-use WindowsAzure\Table\Models\UpdateEntityResult;
+use WindowsAzure\Common\ServicesBuilder;
+use WindowsAzure\Table\Models\BatchError;
 use WindowsAzure\Table\Models\BatchOperations;
 use WindowsAzure\Table\Models\BatchResult;
+use WindowsAzure\Table\Models\EdmType;
+use WindowsAzure\Table\Models\Entity;
 use WindowsAzure\Table\Models\Filters\QueryStringFilter;
+use WindowsAzure\Table\Models\GetEntityResult;
+use WindowsAzure\Table\Models\GetTableResult;
+use WindowsAzure\Table\Models\InsertEntityResult;
+use WindowsAzure\Table\Models\Property;
+use WindowsAzure\Table\Models\QueryEntitiesOptions;
+use WindowsAzure\Table\Models\QueryEntitiesResult;
+use WindowsAzure\Table\Models\QueryTablesResult;
+use WindowsAzure\Table\Models\UpdateEntityResult;
+use WindowsAzure\Table\TableRestProxy;
 
 /**
  * WindowsAzureTablesSvc.php

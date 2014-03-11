@@ -21,7 +21,6 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Common\Utility\DataFormat;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 

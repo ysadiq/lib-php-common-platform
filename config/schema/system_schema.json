@@ -1,5 +1,5 @@
 {
-	"version": "1.4.1",
+	"version": "1.5.0",
 	"scripts": {
 		"install": null,
 		"update":  "1.4.0-update.sql"
@@ -800,20 +800,6 @@
 					"default":    "No Access",
 					"allow_null": false,
 					"validation": "picklist"
-				},
-				{
-					"name":       "filters",
-					"type":       "mediumtext",
-					"allow_null": true
-				},
-				{
-					"name":       "filter_op",
-					"type":       "string",
-					"length":     64,
-					"value":      ["and", "or"],
-					"default":    "and",
-					"allow_null": false,
-					"validation": "picklist"
 				}
 			]
 		},
@@ -1247,6 +1233,48 @@
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
+					"validation": "api_read_only"
+				}
+			]
+		},
+		{
+			"name":  "df_sys_event",
+			"field": [
+				{
+					"name": "id",
+					"type": "id"
+				},
+				{
+					"name":       "event_name",
+					"type":       "string",
+					"length":     128,
+					"allow_null": false,
+					"is_unique":  true
+				},
+				{
+					"name":               "listeners",
+					"type":               "mediumtext",
+					"supports_multibyte": true,
+					"allow_null":         true
+				},
+				{
+					"name":       "created_date",
+					"type":       "datetime",
+					"validation": "api_read_only"
+				},
+				{
+					"name":       "created_by_id",
+					"type":       "user_id_on_create",
+					"validation": "api_read_only"
+				},
+				{
+					"name":       "last_modified_date",
+					"type":       "timestamp_on_update",
+					"validation": "api_read_only"
+				},
+				{
+					"name":       "last_modified_by_id",
+					"type":       "user_id_on_update",
 					"validation": "api_read_only"
 				}
 			]

@@ -20,10 +20,10 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Components\Counter;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\SeedBag;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Sql;
-use DreamFactory\Yii\Utility\Pii;
 
 /**
  * AsgardService
@@ -52,11 +52,10 @@ class AsgardService extends SeedBag
 	/**
 	 * @var array Used to determine if an app is a system app or not
 	 */
-	protected static $_repoUrls
-		= array(
-			'github.com/dreamfactorysoftware/',
-			'bitbucket.org/dreamfactory/',
-		);
+	protected static $_repoUrls = array(
+		'github.com/dreamfactorysoftware/',
+		'bitbucket.org/dreamfactory/',
+	);
 
 	//*************************************************************************
 	//	Methods
@@ -108,28 +107,28 @@ class AsgardService extends SeedBag
 			$_stats->set(
 				'app_groups',
 				array(
-					 'counts' => static::_rowCount( 'df_sys_app_group', $_dspName, $_pdo )
+					'counts' => static::_rowCount( 'df_sys_app_group', $_dspName, $_pdo )
 				)
 			);
 
 			$_stats->set(
 				'roles',
 				array(
-					 'counts' => static::_rowCount( 'df_sys_role', $_dspName, $_pdo )
+					'counts' => static::_rowCount( 'df_sys_role', $_dspName, $_pdo )
 				)
 			);
 
 			$_stats->set(
 				'services',
 				array(
-					 'counts' => static::_rowCount( 'df_sys_service', $_dspName, $_pdo )
+					'counts' => static::_rowCount( 'df_sys_service', $_dspName, $_pdo )
 				)
 			);
 
 			$_stats->set(
 				'users',
 				array(
-					 'counts' => static::_rowCount( 'df_sys_user', $_dspName, $_pdo )
+					'counts' => static::_rowCount( 'df_sys_user', $_dspName, $_pdo )
 				)
 			);
 		}
@@ -199,8 +198,7 @@ class AsgardService extends SeedBag
 		/**
 		 * DB Stats
 		 */
-		$_sql
-			= <<<MYSQL
+		$_sql = <<<MYSQL
 SELECT
 	SUM( data_length + index_length ) / 1024 / 1024 AS mb_used_nbr,
 	SUM( data_free ) / 1024 / 1024 AS mb_free_nbr
@@ -236,8 +234,7 @@ MYSQL;
 	{
 		Sql::setConnection( $pdo );
 
-		$_sql
-			= <<<MYSQL
+		$_sql = <<<MYSQL
 SELECT
 	a.api_name,
 	a.is_active,
@@ -308,8 +305,7 @@ MYSQL;
 	{
 		Sql::setConnection( $pdo );
 
-		$_sql
-			= <<<MYSQL
+		$_sql = <<<MYSQL
 SELECT
 	COUNT(*)
 FROM

@@ -25,18 +25,18 @@ use DreamFactory\Platform\Utility\SwaggerUtilities;
 use Swagger\Annotations as SWG;
 
 /**
- * Portal
- * DSP portal service
+ * Provider
+ * DSP portal service provider
  *
  */
-class Portal extends BaseSystemRestResource
+class Provider extends BaseSystemRestResource
 {
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
 
 	/**
-	 * Creates a new Portal
+	 * Creates a new Provider
 	 *
 	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
 	 * @param array                                               $resources
@@ -46,13 +46,17 @@ class Portal extends BaseSystemRestResource
 		return parent::__construct(
 			$consumer,
 			array(
-				 'service_name'   => 'system',
-				 'name'           => 'Service',
-				 'api_name'       => 'service',
-				 'type'           => 'System',
-				 'description'    => 'System service administration.',
-				 'is_active'      => true,
-				 'resource_array' => $resources,
+				'service_name'   => 'system',
+				'name'           => 'provider',
+				'api_name'       => 'provider',
+				'type_id'        => PlatformServiceTypes::LOCAL_PORTAL_SERVICE,
+				'type'           => 'Service',
+				'description'    => 'Service provider configuration.',
+				'is_active'      => true,
+				'resource_array' => $resources,
+				'verb_aliases'   => array(
+					static::PATCH => static::POST,
+				),
 			)
 		);
 	}
@@ -62,9 +66,9 @@ class Portal extends BaseSystemRestResource
 	 */
 	protected function _postProcess( $results = null )
 	{
-		if ( static::Get != $this->_action )
+		if ( static::GET != $this->_action )
 		{
-			// clear swagger cache upon any portal changes.
+			//	Clear swagger cache upon any Provider changes.
 			SwaggerManager::clearCache();
 		}
 

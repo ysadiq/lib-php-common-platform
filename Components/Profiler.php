@@ -20,6 +20,16 @@
 namespace DreamFactory\Platform\Components;
 
 use Kisma\Core\Enums\DateTime;
+use Kisma\Core\Utility\Log;
+
+/**
+ * Profiler includes
+ */
+if ( !function_exists( 'xhprof_error' ) )
+{
+	require_once 'xhprof_lib/utils/xhprof_lib.php';
+	require_once 'xhprof_lib/utils/xhprof_runs.php';
+}
 
 /**
  * A simple profiling class
@@ -46,7 +56,16 @@ class Profiler
 	 */
 	public static function start( $id )
 	{
-		return static::$_runs[$id] = microtime( true );
+		static::$_runs[$id] = array( 'start' => microtime( true ), 'xhprof' => false );
+
+		if ( function_exists( 'xhprof_enable' ) )
+		{
+			/** @noinspection PhpUndefinedConstantInspection */
+			xhprof_enable( XHPROF_FLAGS_CPU + XHPROF_FLAGS_MEMORY );
+			static::$_runs[$id]['xhprof'] = true;
+		}
+
+		return static::$_runs[$id];
 	}
 
 	/**
@@ -59,9 +78,30 @@ class Profiler
 	 */
 	public static function stop( $id, $prettyPrint = true )
 	{
-		$_elapsed = microtime( true ) - ( isset( static::$_runs[$id] ) ? static::$_runs[$id] : 0.0 );
+		if ( !isset( static::$_runs[$id]['start'] ) )
+		{
+			return 'not profiled';
+		}
 
-		return $prettyPrint ? static::elapsedAsString( $_elapsed ) : $_elapsed;
+		static::$_runs[$id]['stop'] = microtime( true );
+		static::$_runs[$id]['elapsed'] = ( static::$_runs[$id]['stop'] - static::$_runs[$id]['start'] );
+
+		if ( static::$_runs[$id]['xhprof'] )
+		{
+			/** @noinspection PhpUndefinedFunctionInspection */
+			/** @noinspection PhpUndefinedMethodInspection */
+			static::$_runs[$id]['xhprof'] = array(
+				'data'     => $_data = xhprof_disable(),
+				'run_name' => $_runName = $id . microtime( true ),
+				'runs'     => $_runs = new \XHProfRuns_Default(),
+				'run_id'   => $_runId = $_runs->save_run( $_data, $_runName ),
+				'url'      => '/xhprof/index.php?run=' . $_runId . '&source=' . $_runName,
+			);
+
+			Log::debug( '~!~ profiler link: ' . static::$_runs[$id]['xhprof']['url'] );
+		}
+
+		return $prettyPrint ? static::elapsedAsString( static::$_runs[$id]['elapsed'] ) : static::$_runs[$id]['elapsed'];
 	}
 
 	/**
@@ -81,9 +121,30 @@ class Profiler
 
 		while ( $count >= $_runCount-- )
 		{
-			$_time = microtime( true );
+			$_run = array(
+				'start'   => $_time = microtime( true ),
+				'end'     => 0,
+				'elapsed' => 0,
+				'xhprof'  => null,
+			);
+
+			if ( function_exists( 'xhprof_enable' ) )
+			{
+				xhprof_enable();
+			}
+
 			call_user_func_array( $callable, $arguments );
-			$_runs[] = ( microtime( true ) - $_time );
+
+			if ( function_exists( 'xhprof_disable' ) )
+			{
+				$_run['xhprof'] = xhprof_disable();
+			}
+
+			$_run['elapsed'] = ( $_run['end'] = microtime( true ) ) - $_run['start'];
+
+			$_runs[] = $_run;
+
+			unset( $_run );
 		}
 
 		//	Summarize the runs
@@ -120,9 +181,9 @@ class Profiler
 	public static function elapsedAsString( $start, $stop = false )
 	{
 		static $_divisors = array(
-			'hour'   => DateTime::US_PER_HOUR,
-			'minute' => DateTime::US_PER_MINUTE,
-			'second' => DateTime::US_PER_SECOND,
+			'h' => DateTime::US_PER_HOUR,
+			'm' => DateTime::US_PER_MINUTE,
+			's' => DateTime::US_PER_SECOND,
 		);
 
 		$_ms = round( ( false === $stop ? $start : ( $stop - $start ) ) * 1000 );
@@ -133,7 +194,7 @@ class Profiler
 			{
 				$_time = floor( $_ms / $_divisor * 100.0 ) / 100.0;
 
-				return $_time . ' ' . ( $_time == 1 ? $_label : $_label . 's' );
+				return $_time . $_label;
 			}
 		}
 

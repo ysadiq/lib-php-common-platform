@@ -39,6 +39,10 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	 * @var string
 	 */
 	const DEFAULT_PASSTHRU_CLASS = 'DreamFactory\\Platform\\Utility\\ResourceStore';
+	/**
+	 * @var string Our event namespace
+	 */
+	const EVENT_NAMESPACE = '{resource}.';
 
 	//*************************************************************************
 	//* Members
@@ -91,9 +95,9 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
 	 */
 	protected function _postProcess()
 	{
-		parent::_postProcess();
-
 		$this->_formatResponse();
+
+		parent::_postProcess();
 	}
 
 	/**

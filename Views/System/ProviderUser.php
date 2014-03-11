@@ -21,14 +21,7 @@ namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\BasePlatformService;
-use DreamFactory\Platform\Utility\ResourceStore;
-use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Sql;
-use DreamFactory\Platform\Services\SystemManager;
-use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\Platform\Utility\SqlDbUtilities;
 
 /**
  * ProviderUser
@@ -50,17 +43,17 @@ class ProviderUser extends BaseSystemRestResource
 		parent::__construct(
 			$consumer,
 			array(
-				 'name'           => 'portal account',
-				 'type'           => 'Service',
-				 'service_name'   => 'system',
-				 'type_id'        => PlatformServiceTypes::LOCAL_PORTAL_SERVICE,
-				 'api_name'       => 'portal_account',
-				 'description'    => 'Service provider account configuration.',
-				 'is_active'      => true,
-				 'resource_array' => $resourceArray,
-				 'verb_aliases'   => array(
-					 static::Patch => static::Post,
-				 ),
+				'name'           => 'provider user',
+				'type'           => 'Service',
+				'service_name'   => 'system',
+				'type_id'        => PlatformServiceTypes::LOCAL_PORTAL_SERVICE,
+				'api_name'       => 'provider_user',
+				'description'    => 'Service provider account configuration.',
+				'is_active'      => true,
+				'resource_array' => $resourceArray,
+				'verb_aliases'   => array(
+					static::Patch => static::Post,
+				),
 			)
 		);
 	}

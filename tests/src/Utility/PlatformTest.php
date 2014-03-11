@@ -29,6 +29,7 @@ class PlatformTest extends \PHPUnit_Framework_TestCase
 {
 	/**
 	 * @covers DreamFactory\Platform\Utility\Platform::getStoragePath()
+	 * @covers DreamFactory\Platform\Utility\Platform::_getPlatformPath()
 	 */
 	public function testGetStoragePath()
 	{
@@ -38,6 +39,7 @@ class PlatformTest extends \PHPUnit_Framework_TestCase
 
 	/**
 	 * @covers DreamFactory\Platform\Utility\Platform::getPrivatePath()
+	 * @covers DreamFactory\Platform\Utility\Platform::_getPlatformPath()
 	 */
 	public function testGetPrivatePath()
 	{
@@ -47,19 +49,11 @@ class PlatformTest extends \PHPUnit_Framework_TestCase
 
 	/**
 	 * @covers DreamFactory\Platform\Utility\Platform::getSnapshotPath()
+	 * @covers DreamFactory\Platform\Utility\Platform::_getPlatformPath()
 	 */
 	public function testGetSnapshotPath()
 	{
 		$_control = Pii::getParam( LocalStorageTypes::SNAPSHOT_PATH );
 		$this->assertEquals( $_control, Platform::getSnapshotPath() );
-	}
-
-	/**
-	 * @covers DreamFactory\Platform\Utility\Platform::getStoragePath()
-	 */
-	public function testGetLibraryPath()
-	{
-		$_control = Pii::getParam( LocalStorageTypes::LIBRARY_PATH );
-		$this->assertEquals( $_control, Platform::getLibraryPath() );
 	}
 }

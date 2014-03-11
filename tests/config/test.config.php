@@ -49,7 +49,6 @@ return array(
 	'resourceNamespaces' => array(
 		'DreamFactory\\Platform\\Resources',
 		'DreamFactory\\Platform\\Resources\\System',
-		'DreamFactory\\Platform\\Resources\\Portal',
 		'DreamFactory\\Platform\\Resources\\User',
 	),
 	/**

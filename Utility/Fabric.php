@@ -114,8 +114,7 @@ class Fabric extends SeedUtility
 		/**
 		 * Add host names to this list to white-list...
 		 */
-		static $_allowedHosts
-		= array(
+		static $_allowedHosts = array(
 			'launchpad-dev.dreamfactory.com',
 			'launchpad-demo.dreamfactory.com',
 			'next.cloud.dreamfactory.com',
@@ -141,14 +140,12 @@ class Fabric extends SeedUtility
 
 		if ( !static::hostedPrivatePlatform() && false === strpos( $_host, static::DSP_DEFAULT_SUBDOMAIN ) )
 		{
-			Log::setDefaultLog( \Kisma::get( 'app.log_path' ) . '/error.log' );
-			Log::error( 'Attempt to access system from non-provisioned host: ' . $_host );
+			static::_errorLog( 'Attempt to access system from non-provisioned host: ' . $_host );
 			throw new \CHttpException( HttpResponse::Forbidden, 'You are not authorized to access this system you cheeky devil you. (' . $_host . ').' );
 		}
 
 		//	What has it gots in its pocketses? Cookies first, then session
-		$_privateKey
-			= FilterInput::cookie( static::PrivateFigNewton, FilterInput::session( static::PrivateFigNewton ), \Kisma::get( 'platform.user_key' ) );
+		$_privateKey = FilterInput::cookie( static::PrivateFigNewton, FilterInput::session( static::PrivateFigNewton ), \Kisma::get( 'platform.user_key' ) );
 		$_dspName = str_ireplace( static::DSP_DEFAULT_SUBDOMAIN, null, $_host );
 
 		$_dbConfigFileName = str_ireplace(
@@ -169,38 +166,45 @@ class Fabric extends SeedUtility
 
 			if ( HttpResponse::NotFound == Curl::getLastHttpCode() )
 			{
-				Log::setDefaultLog( \Kisma::get( 'app.log_path' ) . '/error.log' );
-				Log::error( 'DB Credential pull failure. Redirecting to df.com: ' . $_host );
+				static::_errorLog( 'DB Credential pull failure. Redirecting to df.com: ' . $_host );
 				header( 'Location: https://www.dreamfactory.com/dsp-not-found?dn=' . urlencode( $_dspName ) );
 				exit();
 			}
 
 			if ( is_object(
-					$_response
-				) && isset( $_response->details, $_response->details->code ) && HttpResponse::NotFound == $_response->details->code
+					 $_response
+				 ) && isset( $_response->details, $_response->details->code ) && HttpResponse::NotFound == $_response->details->code
 			)
 			{
-				Log::setDefaultLog( \Kisma::get( 'app.log_path' ) . '/error.log' );
-				Log::error( 'Instance "' . $_dspName . '" not found during web initialize.' );
+				static::_errorLog( 'Instance "' . $_dspName . '" not found during web initialize.' );
 				throw new \CHttpException( HttpResponse::NotFound, 'Instance not available.' );
 			}
 
 			if ( !$_response || !is_object( $_response ) || false == $_response->success )
 			{
-				Log::setDefaultLog( \Kisma::get( 'app.log_path' ) . '/error.log' );
-				Log::error( 'Error connecting to authentication service: ' . print_r( $_response, true ) );
+				static::_errorLog( 'Error connecting to authentication service: ' . print_r( $_response, true ) );
 				throw new \CHttpException( HttpResponse::InternalServerError, 'Cannot connect to authentication service' );
 			}
 
 			$_instance = $_cache = $_response->details;
 			$_dbName = $_instance->db_name;
 			$_dspName = $_instance->instance->instance_name_text;
-			\Kisma::set( 'dsp.credentials', $_cache );
-			\Kisma::set( 'platform.private_path', $_privatePath = $_cache->private_path );
+
+			$_privatePath = $_cache->private_path;
 			$_privateKey = basename( dirname( $_privatePath ) );
-			\Kisma::set( 'platform.storage_key', $_instance->storage_key );
-			\Kisma::set( 'platform.private_storage_key', $_privateKey );
-			\Kisma::set( 'platform.db_config_file', $_privatePath . '/' . $_dbConfigFileName );
+
+			//	Stick this in persistent storage
+			\Kisma::set(
+				array(
+					'dsp.credentials'              => $_cache,
+					'platform.dsp_name'            => $_dspName,
+					'platform.private_path'        => $_privatePath,
+					'platform.storage_key'         => $_instance->storage_key,
+					'platform.private_storage_key' => $_privateKey,
+					'platform.db_config_file'      => $_privatePath . '/' . $_dbConfigFileName,
+					'platform.db_config_file_name' => $_dbConfigFileName,
+				)
+			);
 
 			/** @noinspection PhpIncludeInspection */
 			//	File should be there from provisioning... If not, tenemos una problema!
@@ -212,9 +216,6 @@ class Fabric extends SeedUtility
 				$_settings = static::_cacheSettings( $_host, $_settings, $_instance );
 			}
 		}
-
-		\Kisma::set( 'platform.dsp_name', $_dspName );
-		\Kisma::set( 'platform.db_config_file_name', $_dbConfigFileName );
 
 		//	Save it for later (don't run away and let me down <== extra points if you get the reference)
 		setcookie( static::PrivateFigNewton, $_privateKey, time() + DateTime::TheEnd, '/' );
@@ -247,7 +248,7 @@ class Fabric extends SeedUtility
 
 			if ( false !== ( $_data = json_decode( file_get_contents( $_cacheFile ), true ) ) )
 			{
-				return array($_data['settings'], $_data['instance']);
+				return array( $_data['settings'], $_data['instance'] );
 			}
 		}
 
@@ -315,12 +316,21 @@ class Fabric extends SeedUtility
 
 		if ( HttpResponse::Ok != Curl::getLastHttpCode() || !$_response->success )
 		{
-			Log::error( 'Global provider credential pull failed: ' . Curl::getLastHttpCode() . PHP_EOL . print_r( $_response, true ) );
+			static::_errorLog( 'Global provider credential pull failed: ' . Curl::getLastHttpCode() . PHP_EOL . print_r( $_response, true ) );
 
 			return array();
 		}
 
 		return Option::get( $_response, 'details', array() );
+	}
+
+	/**
+	 * @param string $message
+	 * @param array  $context
+	 */
+	protected static function _errorLog( $message, $context = array() )
+	{
+		Log::error( $message, $context );
 	}
 }
 

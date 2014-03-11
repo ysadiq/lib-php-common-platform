@@ -1,12 +1,16 @@
 <?php
 /**
  * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
+ *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
  * Copyright 2012-2014 DreamFactory Software, Inc. <developer-support@dreamfactory.com>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,18 +20,28 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\LocalStorageTypes;
+use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Exceptions\FileSystemException;
+use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Inflector;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
  * Platform
- * Generic platform helpers
+ * System constants and generic platform helpers
  */
-class Platform
+class Platform extends SeedUtility
 {
+	//*************************************************************************
+	//	Constants
+	//*************************************************************************
+
+	/**
+	 * @var string The name of the storage container that stores applications
+	 */
+	const APP_STORAGE_CONTAINER = 'applications';
+
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
@@ -40,11 +54,14 @@ class Platform
 	 * @param bool   $createIfMissing If true and final directory does not exist, it is created.
 	 *
 	 * @throws \InvalidArgumentException
+	 * @throws \Kisma\Core\Exceptions\FileSystemException
 	 * @return string
 	 */
 	protected static function _getPlatformPath( $type, $append = null, $createIfMissing = true )
 	{
 		static $_cache = array();
+
+		$_appendage = ( $append ? '/' . ltrim( $append, '/' ) : null );
 
 		if ( !LocalStorageTypes::contains( $_tag = Inflector::neutralize( $type ) ) )
 		{
@@ -52,7 +69,7 @@ class Platform
 		}
 
 		//	Make a cache tag that includes the requested path...
-		$_cacheTag = Inflector::neutralize( $type . ( $append ? '/' . $append : null ) );
+		$_cacheTag = $_tag . '/' . Inflector::neutralize( $_appendage );
 
 		if ( null === ( $_path = Option::get( $_cache, $_cacheTag ) ) )
 		{
@@ -60,23 +77,37 @@ class Platform
 
 			if ( empty( $_path ) )
 			{
-				$_path = \Kisma::get( 'app.project_root' ) . '/storage/' . $_tag;
-				Log::notice( 'Empty path for platform path type "' . $type . '". Assume "' . $_path . '"' );
+				$_path = \Kisma::get( 'app.project_root' ) . '/storage';
+				Log::notice( 'Empty path for platform path type "' . $type . '". Defaulting to "' . $_path . '"' );
 			}
 
-			if ( !is_dir( $_path ) && true === $createIfMissing )
+			if ( true === $createIfMissing && !is_dir( $_path . $_appendage ) )
 			{
-				if ( false === @\mkdir( $_path, 0777, true ) )
+				if ( false === @\mkdir( $_path . $_appendage, 0777, true ) )
 				{
-					throw new FileSystemException( 'File system error creating directory: ' . $_path );
+					throw new FileSystemException( 'File system error creating directory: ' . $_path . $_appendage );
 				}
 			}
+
+			$_path .= $_appendage;
 
 			//	Store path for next time...
 			Option::set( $_cache, $_cacheTag, $_path );
 		}
 
-		return $_path . ( $append ? '/' . ltrim( $append, '/' ) : null );
+		return $_path;
+	}
+
+	/**
+	 * Constructs the virtual storage path
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getStorageBasePath( $append = null )
+	{
+		return static::_getPlatformPath( LocalStorageTypes::STORAGE_BASE_PATH, $append );
 	}
 
 	/**
@@ -104,6 +135,42 @@ class Platform
 	}
 
 	/**
+	 * Returns the library configuration path, not the platform's config path in the root
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getLibraryConfigPath( $append = null )
+	{
+		return SystemManager::getConfigPath() . ( $append ? '/' . ltrim( $append, '/' ) : null );
+	}
+
+	/**
+	 * Returns the library template configuration path, not the platform's config path in the root
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getLibraryTemplatePath( $append = null )
+	{
+		return static::getLibraryConfigPath( '/templates' ) . ( $append ? '/' . ltrim( $append, '/' ) : null );
+	}
+
+	/**
+	 * Returns the platform configuration path, in the root
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getPlatformConfigPath( $append = null )
+	{
+		return Pii::getPathOfAlias( 'application.config' ) . ( $append ? '/' . ltrim( $append, '/' ) : null );
+	}
+
+	/**
 	 * Constructs the virtual private path
 	 *
 	 * @param string $append
@@ -116,15 +183,27 @@ class Platform
 	}
 
 	/**
-	 * Constructs the virtual private path
+	 * Constructs the virtual swagger path
 	 *
 	 * @param string $append
 	 *
 	 * @return string
 	 */
-	public static function getLibraryPath( $append = null )
+	public static function getSwaggerPath( $append = null )
 	{
-		return static::_getPlatformPath( LocalStorageTypes::LIBRARY_PATH, $append );
+		return static::_getPlatformPath( LocalStorageTypes::SWAGGER_PATH, $append );
+	}
+
+	/**
+	 * Constructs the virtual plugins path
+	 *
+	 * @param string $append
+	 *
+	 * @return string
+	 */
+	public static function getPluginsPath( $append = null )
+	{
+		return static::_getPlatformPath( LocalStorageTypes::PLUGINS_PATH, $append );
 	}
 
 	/**
@@ -137,30 +216,6 @@ class Platform
 	public static function getApplicationsPath( $append = null )
 	{
 		return static::_getPlatformPath( LocalStorageTypes::APPLICATIONS_PATH, $append );
-	}
-
-	/**
-	 * Constructs the virtual private path
-	 *
-	 * @param string $append
-	 *
-	 * @return string
-	 */
-	public static function getPluginsPath( $append = null )
-	{
-		return static::_getPlatformPath( LocalStorageTypes::PLUGINS_PATH, $append );
-	}
-
-	/**
-	 * Constructs the virtual swagger path
-	 *
-	 * @param string $append
-	 *
-	 * @return string
-	 */
-	public static function getSwaggerPath( $append = null )
-	{
-		return static::_getPlatformPath( LocalStorageTypes::SWAGGER_PATH, $append );
 	}
 
 	/**
@@ -182,11 +237,18 @@ class Platform
 			)
 		);
 
-		$_uuid = '{' . substr( $_hash, 0, 8 ) . '-' . substr( $_hash, 8, 4 ) . '-' . substr( $_hash, 12, 4 ) . '-' . substr( $_hash, 16, 4 ) . '-' . substr(
-				$_hash,
-				20,
-				12
-			) . '}';
+		$_uuid =
+			'{' .
+			substr( $_hash, 0, 8 ) .
+			'-' .
+			substr( $_hash, 8, 4 ) .
+			'-' .
+			substr( $_hash, 12, 4 ) .
+			'-' .
+			substr( $_hash, 16, 4 ) .
+			'-' .
+			substr( $_hash, 20, 12 ) .
+			'}';
 
 		return $_uuid;
 	}

@@ -22,8 +22,6 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Common\Utility\DataFormat;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -953,7 +951,7 @@ class MongoDbSvc extends NoSqlDbSvc
 			$_result = $_result->limit( $_limit );
 
 			$_out = iterator_to_array( $_result );
-			$_out =  static::cleanRecords( $_out );
+			$_out = static::cleanRecords( $_out );
 			if ( $_addCount || $_needMore )
 			{
 				$_out['meta']['count'] = $_count;

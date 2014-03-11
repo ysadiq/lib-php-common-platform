@@ -52,12 +52,12 @@ class UserManager extends BaseSystemRestService
 	{
 		parent::__construct(
 			array(
-				 'name'        => 'User Session Management',
-				 'apiName'     => 'user',
-				 'type'        => 'User',
-				 'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-				 'description' => 'Service for a user to manage their session, profile and password.',
-				 'is_active'   => true,
+				'name'        => 'User Session Management',
+				'apiName'     => 'user',
+				'type'        => 'User',
+				'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+				'description' => 'Service for a user to manage their session, profile and password.',
+				'is_active'   => true,
 			)
 		);
 	}
@@ -92,7 +92,7 @@ class UserManager extends BaseSystemRestService
 			case '':
 				switch ( $this->_action )
 				{
-					case self::Get:
+					case static::GET:
 						return $this->_listResources();
 						break;
 					default:
@@ -102,7 +102,7 @@ class UserManager extends BaseSystemRestService
 
 			case 'session':
 				//	Handle remote login
-				if ( HttpMethod::Post == $this->_action && Pii::getParam( 'dsp.allow_remote_logins' ) )
+				if ( HttpMethod::POST == $this->_action && Pii::getParam( 'dsp.allow_remote_logins' ) )
 				{
 					$_provider = FilterInput::post( 'provider', null, FILTER_SANITIZE_STRING );
 
@@ -146,7 +146,7 @@ class UserManager extends BaseSystemRestService
 			case 'ticket':
 				switch ( $this->_action )
 				{
-					case self::Get:
+					case static::GET:
 						$result = $this->userTicket();
 						break;
 					default:
@@ -174,6 +174,7 @@ class UserManager extends BaseSystemRestService
 	{
 		try
 		{
+			Pii::app()->trigger( 'session.validate' );
 			$userId = Session::validateSession();
 		}
 		catch ( \Exception $ex )

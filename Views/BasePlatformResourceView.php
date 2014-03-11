@@ -22,7 +22,6 @@ namespace DreamFactory\Platform\Views;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Interfaces\ResourceViewLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
-use DreamFactory\Platform\Services\BasePlatformRestService;
 use Kisma\Core\Exceptions\NotImplementedException;
 use Kisma\Core\Seed;
 

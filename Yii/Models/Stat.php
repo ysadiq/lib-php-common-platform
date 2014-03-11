@@ -19,8 +19,8 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
-use Kisma\Core\Utility\Sql;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Sql;
 
 /**
  * Stats.php
@@ -74,8 +74,7 @@ class Stat extends BasePlatformSystemModel
 	 */
 	public static function create( $type, $userId, $statData, $date = null )
 	{
-		$_sql
-			= <<<SQL
+		$_sql = <<<SQL
 INSERT INTO df_sys_stat
 (
 	type,

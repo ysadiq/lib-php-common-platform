@@ -108,7 +108,7 @@ class Config extends BasePlatformSystemModel
 				'numerical',
 				'integerOnly' => true
 			),
-			array( 'custom_settings, lookup_keys', 'safe' ),
+			array( 'custom_settings', 'safe' ),
 		);
 	}
 
@@ -153,7 +153,6 @@ class Config extends BasePlatformSystemModel
 				'guest_role_id'              => 'Guest Role Id',
 				'editable_profile_fields'    => 'Editable Profile Fields',
 				'custom_settings'            => 'Custom System-Level Settings',
-				'lookup_keys'                => 'Lookup Keys',
 			) + $additionalLabels
 		);
 	}

@@ -20,15 +20,17 @@
 namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
-use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\EmailSvc;
+use DreamFactory\Platform\Utility\Platform;
+use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Yii\Models\Config;
 use Kisma\Core\Utility\Hasher;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -66,8 +68,6 @@ class User extends BaseSystemRestResource
 	 */
 	protected function _postProcess()
 	{
-		parent::_postProcess();
-
 		switch ( $this->_action )
 		{
 			case static::Post:
@@ -97,10 +97,10 @@ class User extends BaseSystemRestResource
 									{
 										static::_sendInvite( $_id );
 									}
-									catch ( \Exception $ex )
+									catch ( \Exception $_ex )
 									{
-										// log it but don't error on batch
-										error_log( "Error processing user invite.\n{$ex->getMessage()}" );
+										//	Log it but don't error on batch
+										Log::error( 'Error processing user invitation: ' . $_ex->getMessage() );
 									}
 								}
 							}
@@ -115,8 +115,18 @@ class User extends BaseSystemRestResource
 				}
 				break;
 		}
+
+		parent::_postProcess();
 	}
 
+	/**
+	 * @param int  $user_id
+	 * @param bool $delete_on_error
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 */
 	protected static function _sendInvite( $user_id, $delete_on_error = false )
 	{
 		$_model = ResourceStore::model( 'user' );
@@ -165,7 +175,8 @@ class User extends BaseSystemRestResource
 			}
 			else
 			{
-				$_defaultPath = __DIR__ . '/../../templates/email/confirm_user_invitation.json';
+				$_defaultPath = Platform::getLibraryTemplatePath( '/email/confirm_user_invitation.json' );
+
 				if ( !file_exists( $_defaultPath ) )
 				{
 					throw new InternalServerErrorException( "No default email template for user invite." );

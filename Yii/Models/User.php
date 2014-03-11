@@ -351,9 +351,9 @@ class User extends BasePlatformSystemModel
 		);
 
 		return parent::getRetrievableAttributes(
-					 $requested,
-					 $_myColumns,
-					 $hidden
+			$requested,
+			$_myColumns,
+			$hidden
 		);
 	}
 
@@ -385,9 +385,9 @@ class User extends BasePlatformSystemModel
 	 */
 	public static function authenticate( $userName, $password )
 	{
-		$_user = static::model()
-					   ->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
-					   ->findByAttributes( array( 'email' => $userName ) );
+		$_user = static::model()->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )->findByAttributes(
+			array( 'email' => $userName )
+		);
 
 		if ( empty( $_user ) )
 		{

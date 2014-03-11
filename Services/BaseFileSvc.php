@@ -19,10 +19,10 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Interfaces\FileServiceLike;
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Utility\FileUtilities;
 use DreamFactory\Platform\Utility\RestData;
 use Kisma\Core\Utility\FilterInput;
@@ -504,8 +504,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 * @throws \Exception
 	 * @return array
 	 */
-	protected function _handleFile( $dest_path, $dest_name, $source_file, $contentType = '',
-		$extract = false, $clean = false, $check_exist = false )
+	protected function _handleFile( $dest_path, $dest_name, $source_file, $contentType = '', $extract = false, $clean = false, $check_exist = false )
 	{
 		$ext = FileUtilities::getFileExtension( $source_file );
 		if ( empty( $contentType ) )
@@ -547,8 +546,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 	 * @throws \Exception
 	 * @return array
 	 */
-	protected function _handleFileContent( $dest_path, $dest_name, $content, $contentType = '',
-		$extract = false, $clean = false, $check_exist = false )
+	protected function _handleFileContent( $dest_path, $dest_name, $content, $contentType = '', $extract = false, $clean = false, $check_exist = false )
 	{
 		$ext = FileUtilities::getFileExtension( $dest_name );
 		if ( empty( $contentType ) )

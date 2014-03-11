@@ -66,7 +66,8 @@ class DrupalUserIdentity extends \CUserIdentity
 	 */
 	public function authenticate()
 	{
-		if ( false === ( $_user = Drupal::authenticateUser( $this->username, $this->password ) ) )
+		/** @var \stdClass $_user */
+		if ( false === ( $_user = Drupal::authenticateUser( $this->username, $this->password ) ) || !is_object( $_user ) || !$_user->success )
 		{
 			$this->errorCode = self::ERROR_USERNAME_INVALID;
 
@@ -75,9 +76,16 @@ class DrupalUserIdentity extends \CUserIdentity
 
 		if ( !isset( $_user->drupal_id ) )
 		{
-			if ( isset( $_user->success ) && !$_user->success )
+			if ( is_string( $_user->success ) )
+			{
+				$_user->success = ( 'false' != $_user->success );
+			}
+
+			if ( !$_user->success )
 			{
 				Log::error( 'Drupal user login of "' . $this->username . '" failed.' );
+
+				return false;
 			}
 			else
 			{

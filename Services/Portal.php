@@ -302,6 +302,16 @@ class Portal extends BaseSystemRestService
 			/** @noinspection PhpIncludeInspection */
 			$_config = @include( $_configPath );
 		}
+		else
+		{
+			$_configPath = \Kisma::get( 'app.local_config_path' ) . '/portal/' . $this->_resource . '.config.php';
+
+			if ( file_exists( $_configPath ) )
+			{
+				/** @noinspection PhpIncludeInspection */
+				$_config = @include( $_configPath );
+			}
+		}
 
 		$_service = Option::get( $this->_serviceMap, $this->_resource, array() );
 
@@ -313,10 +323,10 @@ class Portal extends BaseSystemRestService
 		$_config = array_merge(
 			$_config,
 			Option::getDeep(
-				  $this->_serviceMap,
-				  $this->_resource,
-				  'config_text',
-				  array()
+				$this->_serviceMap,
+				$this->_resource,
+				'config_text',
+				array()
 			)
 		);
 

@@ -54,10 +54,10 @@ class AppGroup extends BasePlatformSystemModel
 		return array_merge(
 			parent::rules(),
 			array(
-				 array( 'name', 'required' ),
-				 array( 'name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
-				 array( 'name', 'length', 'max' => 64 ),
-				 array( 'description', 'safe' ),
+				array( 'name', 'required' ),
+				array( 'name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
+				array( 'name', 'length', 'max' => 64 ),
+				array( 'description', 'safe' ),
 			)
 		);
 	}
@@ -114,8 +114,8 @@ class AppGroup extends BasePlatformSystemModel
 			$requested,
 			array_merge(
 				array(
-					 'name',
-					 'description',
+					'name',
+					'description',
 				),
 				$columns
 			),

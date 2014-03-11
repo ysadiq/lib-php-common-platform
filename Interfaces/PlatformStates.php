@@ -30,31 +30,33 @@ interface PlatformStates
 	//*************************************************************************
 
 	/**
-	 * @var string
+	 * @var int
 	 */
 	const ADMIN_REQUIRED = 0;
 	/**
-	 * @var string
+	 * @var int
 	 */
 	const DATA_REQUIRED = 1;
 	/**
-	 * @var string
+	 * @var int
 	 */
 	const INIT_REQUIRED = 2;
 	/**
-	 * @var string
+	 * @var int
 	 */
 	const READY = 3;
 	/**
-	 * @var string
+	 * @var int
 	 */
 	const SCHEMA_REQUIRED = 4;
 	/**
-	 * @var string
+	 * @var int
 	 */
 	const UPGRADE_REQUIRED = 5;
 	/**
-	 * @var string
+	 * @var int
 	 */
 	const WELCOME_REQUIRED = 6;
+	/** @var int Indicates that the database is in place and the schema has been created */
+	const DATABASE_READY = 7;
 }
