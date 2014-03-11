@@ -43,11 +43,10 @@
 		"phpunit/dbunit":           "@stable"
 	},
 	"autoload":          {
-		"psr-0": {
-			"DreamFactory\\Platform\\": ""
+		"psr-4": {
+			"DreamFactory\\Platform\\": "src/"
 		}
 	},
-	"target-dir":        "DreamFactory/Platform",
 	"extra":             {
 		"branch-alias": {
 			"dev-develop": "1.5.x-dev"
