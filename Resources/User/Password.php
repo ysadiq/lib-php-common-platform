@@ -23,9 +23,9 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Services\EmailSvc;
-use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Yii\Models\Config;
@@ -45,8 +45,8 @@ class Password extends BasePlatformRestResource
 	//*************************************************************************
 
 	/**
-	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
-	 * @param array                                               $resources
+	 * @param RestServiceLike $consumer
+	 * @param array           $resources
 	 */
 	public function __construct( $consumer, $resources = array() )
 	{
@@ -62,9 +62,9 @@ class Password extends BasePlatformRestResource
 				'is_active'      => true,
 				'resource_array' => $resources,
 				'verb_aliases'   => array(
-					static::Put   => static::Post,
-					static::Patch => static::Post,
-					static::Merge => static::Post,
+					static::PUT   => static::POST,
+					static::PATCH => static::POST,
+					static::MERGE => static::POST,
 				)
 			)
 		);
@@ -90,22 +90,22 @@ class Password extends BasePlatformRestResource
 		}
 
 		$_email = Option::get( $_data, 'email', FilterInput::request( 'email' ) );
-		$_reset = Option::getBool( $_data, 'reset', FilterInput::request( 'reset' ) );
-		if ( $_reset )
+		$_code = Option::get( $_data, 'code', FilterInput::request( 'code' ) );
+		$_answer = Option::get( $_data, 'security_answer' );
+
+		if ( Option::getBool( $_data, 'reset', FilterInput::request( 'reset' ) ) )
 		{
 			return $this->passwordReset( $_email );
 		}
 
-		$_code = Option::get( $_data, 'code', FilterInput::request( 'code' ) );
 		if ( !empty( $_code ) )
 		{
-			return $this->changePasswordByCode( $_email, $_code, $_new );
+			return $this->changePasswordByCode( $_email, $_code, $_new, true, true );
 		}
 
-		$_answer = Option::get( $_data, 'security_answer' );
 		if ( !empty( $_answer ) )
 		{
-			return $this->changePasswordBySecurityAnswer( $_email, $_answer, $_new );
+			return $this->changePasswordBySecurityAnswer( $_email, $_answer, $_new, true, true );
 		}
 
 		return false;
@@ -172,14 +172,14 @@ class Password extends BasePlatformRestResource
 	 * @param string $code
 	 * @param string $new_password
 	 * @param bool   $login
-	 * @param bool   $return_identity
+	 * @param bool   $return_extras
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @return mixed
 	 */
-	public static function changePasswordByCode( $email, $code, $new_password, $login = true, $return_identity = false )
+	public static function changePasswordByCode( $email, $code, $new_password, $login = true, $return_extras = false )
 	{
 		if ( empty( $email ) )
 		{
@@ -221,7 +221,7 @@ class Password extends BasePlatformRestResource
 		{
 			try
 			{
-				return Session::userLogin( $_theUser->email, $new_password, $return_identity );
+				return Session::userLogin( $_theUser->email, $new_password, 0, $return_extras );
 			}
 			catch ( \Exception $ex )
 			{
@@ -237,14 +237,14 @@ class Password extends BasePlatformRestResource
 	 * @param string $answer
 	 * @param string $new_password
 	 * @param bool   $login
-	 * @param bool   $return_identity
+	 * @param bool   $return_extras
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @return mixed
 	 */
-	public static function changePasswordBySecurityAnswer( $email, $answer, $new_password, $login = true, $return_identity = false )
+	public static function changePasswordBySecurityAnswer( $email, $answer, $new_password, $login = true, $return_extras = false )
 	{
 		if ( empty( $email ) )
 		{
@@ -297,7 +297,7 @@ class Password extends BasePlatformRestResource
 		{
 			try
 			{
-				return Session::userLogin( $_theUser->email, $new_password, $return_identity );
+				return Session::userLogin( $_theUser->email, $new_password, 0, $return_extras );
 			}
 			catch ( \Exception $ex )
 			{
@@ -398,7 +398,6 @@ class Password extends BasePlatformRestResource
 			}
 		}
 
-		throw new InternalServerErrorException( 'No security question found or email confirmation available for this user. ' .
-												'Please contact your administrator.' );
+		throw new InternalServerErrorException( 'No security question found or email confirmation available for this user. Please contact your administrator.' );
 	}
 }

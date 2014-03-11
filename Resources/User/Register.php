@@ -23,6 +23,7 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Services\EmailSvc;
@@ -44,8 +45,8 @@ class Register extends BasePlatformRestResource
 	//*************************************************************************
 
 	/**
-	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
-	 * @param array                                               $resources
+	 * @param RestServiceLike $consumer
+	 * @param array           $resources
 	 */
 	public function __construct( $consumer, $resources = array() )
 	{
@@ -61,9 +62,9 @@ class Register extends BasePlatformRestResource
 				'is_active'      => true,
 				'resource_array' => $resources,
 				'verb_aliases'   => array(
-					static::Put   => static::Post,
-					static::Patch => static::Post,
-					static::Merge => static::Post,
+					static::PUT   => static::POST,
+					static::PATCH => static::POST,
+					static::MERGE => static::POST,
 				)
 			)
 		);
@@ -78,7 +79,7 @@ class Register extends BasePlatformRestResource
 	{
 		$_data = RestData::getPostedData( false, true );
 		$_login = FilterInput::request( 'login', true, FILTER_VALIDATE_BOOLEAN );
-		$_result = $this->userRegister( $_data, $_login );
+		$_result = $this->userRegister( $_data, $_login, $_login );
 
 		return $_result;
 	}
@@ -88,14 +89,14 @@ class Register extends BasePlatformRestResource
 	/**
 	 * @param array $data
 	 * @param bool  $login
-	 * @param bool  $return_identity
+	 * @param bool  $return_extras
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
 	 * @throws \Exception
 	 * @return array
 	 */
-	public static function userRegister( $data, $login = true, $return_identity = false )
+	public static function userRegister( $data, $login = true, $return_extras = false )
 	{
 		/** @var $_config Config */
 		if ( false === ( $_config = Config::getOpenRegistration() ) )
@@ -120,7 +121,7 @@ class Register extends BasePlatformRestResource
 			$_code = Option::get( $data, 'code', FilterInput::request( 'code' ) );
 			if ( !empty( $_code ) )
 			{
-				return static::userConfirm( $_email, $_code, $_newPassword, $login, $return_identity );
+				return static::userConfirm( $_email, $_code, $_newPassword, $login, $return_extras );
 			}
 
 			$_confirmCode = Hasher::generateUnique( $_email, 32 );
@@ -150,9 +151,8 @@ class Register extends BasePlatformRestResource
 			'email'        => $_email,
 			'first_name'   => ( !empty( $_firstName ) ) ? $_firstName : $_temp,
 			'last_name'    => ( !empty( $_lastName ) ) ? $_lastName : $_temp,
-			'display_name' => ( !empty( $_displayName ) )
-					? $_displayName : ( !empty( $_firstName ) && !empty( $_lastName ) ) ? $_firstName . ' ' . $_lastName
-						: $_temp,
+			'display_name' => ( !empty( $_displayName ) ) ? $_displayName
+					: ( !empty( $_firstName ) && !empty( $_lastName ) ) ? $_firstName . ' ' . $_lastName : $_temp,
 			'role_id'      => $_roleId,
 			'confirm_code' => $_confirmCode
 		);
@@ -223,7 +223,7 @@ class Register extends BasePlatformRestResource
 			{
 				try
 				{
-					return Session::userLogin( $_theUser->email, $_newPassword, $return_identity );
+					return Session::userLogin( $_theUser->email, $_newPassword, 0, $return_extras );
 				}
 				catch ( \Exception $ex )
 				{
@@ -240,7 +240,7 @@ class Register extends BasePlatformRestResource
 	 * @param string $code
 	 * @param string $new_password
 	 * @param bool   $login
-	 * @param bool   $return_identity
+	 * @param bool   $return_extras
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
@@ -248,7 +248,7 @@ class Register extends BasePlatformRestResource
 	 *
 	 * @return array
 	 */
-	public static function userConfirm( $email, $code, $new_password, $login = true, $return_identity = false )
+	public static function userConfirm( $email, $code, $new_password, $login = true, $return_extras = false )
 	{
 		if ( empty( $email ) )
 		{
@@ -290,7 +290,7 @@ class Register extends BasePlatformRestResource
 		{
 			try
 			{
-				return Session::userLogin( $_theUser->email, $new_password, $return_identity );
+				return Session::userLogin( $_theUser->email, $new_password, 0, $return_extras );
 			}
 			catch ( \Exception $ex )
 			{

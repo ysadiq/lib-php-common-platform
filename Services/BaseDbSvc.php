@@ -93,9 +93,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		parent::_detectResourceMembers( $resourcePath );
 
 		$this->_resourceId = ( isset( $this->_resourceArray, $this->_resourceArray[1] ) ) ? $this->_resourceArray[1] : '';
-
 		$this->_requestData = RestData::getPostedData( true, true );
-
 	}
 
 	/**
@@ -225,9 +223,11 @@ abstract class BaseDbSvc extends BasePlatformRestService
 	 */
 	protected function _handleAdmin()
 	{
+		$_result = false;
+
 		switch ( $this->_action )
 		{
-			case self::GET:
+			case static::GET:
 				$_ids = FilterInput::request( 'names', Option::get( $this->_requestData, 'names' ) );
 				if ( empty( $_ids ) )
 				{
@@ -238,7 +238,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 				$_result = array( 'table' => $_result );
 				break;
 
-			case self::POST:
+			case static::POST:
 				$_tables = Option::get( $this->_requestData, 'table', null );
 				if ( empty( $_tables ) )
 				{
@@ -255,9 +255,10 @@ abstract class BaseDbSvc extends BasePlatformRestService
 					$_result = array( 'table' => $_result );
 				}
 				break;
-			case self::PUT:
-			case self::PATCH:
-			case self::MERGE:
+
+			case static::PUT:
+			case static::PATCH:
+			case static::MERGE:
 				$_tables = Option::get( $this->_requestData, 'table', null );
 				if ( empty( $_tables ) )
 				{
@@ -274,7 +275,8 @@ abstract class BaseDbSvc extends BasePlatformRestService
 					$_result = array( 'table' => $_result );
 				}
 				break;
-			case self::DELETE:
+
+			case static::DELETE:
 				$_ids = FilterInput::request( 'names', Option::get( $this->_requestData, 'names', '' ) );
 				if ( !empty( $_ids ) )
 				{
@@ -306,8 +308,6 @@ abstract class BaseDbSvc extends BasePlatformRestService
 					}
 				}
 				break;
-			default:
-				return false;
 		}
 
 		return $_result;
@@ -692,6 +692,12 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		return $_out;
 	}
 
+	/**
+	 * @param      $record
+	 * @param null $id_field
+	 *
+	 * @return bool
+	 */
 	protected static function _containsIdFields( $record, $id_field = null )
 	{
 		if ( empty( $id_field ) )
@@ -778,6 +784,11 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		return $first_array;
 	}
 
+	/**
+	 * @param $value
+	 *
+	 * @return bool|int|null|string
+	 */
 	public static function interpretFilterValue( $value )
 	{
 		// all other data types besides strings, just return
@@ -792,6 +803,22 @@ abstract class BaseDbSvc extends BasePlatformRestService
 		)
 		{
 			return substr( $value, 1, ( strlen( $value ) - 1 ) );
+		}
+
+		// check for boolean or null values
+		switch ( strtolower( $value ) )
+		{
+			case 'true':
+				return true;
+			case 'false':
+				return false;
+			case 'null':
+				return null;
+		}
+
+		if ( is_numeric( $value ) )
+		{
+			return $value + 0; // trick to get int or float
 		}
 
 		// the rest should be lookup keys
