@@ -794,6 +794,22 @@ abstract class BaseDbSvc extends BasePlatformRestService
 			return substr( $value, 1, ( strlen( $value ) - 1 ) );
 		}
 
+		// check for boolean or null values
+		switch( strtolower($value) )
+		{
+			case 'true':
+				return true;
+			case 'false':
+				return false;
+			case 'null':
+				return null;
+		}
+
+		if ( is_numeric($value))
+		{
+			return $value + 0;  // trick to get int or float
+		}
+
 		// the rest should be lookup keys
 		if ( Session::getLookupValue( $value, $_result ) )
 		{

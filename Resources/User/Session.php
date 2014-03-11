@@ -23,14 +23,12 @@ use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
-use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\UnauthorizedException;
 use DreamFactory\Platform\Interfaces\PermissionTypes;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
-use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
 use DreamFactory\Platform\Yii\Models\App;
 use DreamFactory\Platform\Yii\Models\AppGroup;
 use DreamFactory\Platform\Yii\Models\Config;
@@ -88,7 +86,7 @@ class Session extends BasePlatformRestResource
 				'is_active'      => true,
 				'resource_array' => $resources,
 				'verb_aliases'   => array(
-					static::Put => static::Post,
+					static::PUT => static::POST,
 				)
 			)
 		);
@@ -113,7 +111,12 @@ class Session extends BasePlatformRestResource
 	{
 		$_data = RestData::getPostedData( false, true );
 
-		return $this->userLogin( Option::get( $_data, 'email' ), Option::get( $_data, 'password' ) );
+		return $this->userLogin(
+			Option::get( $_data, 'email' ),
+			Option::get( $_data, 'password' ),
+			Option::get( $_data, 'duration', 0 ),
+			true
+		);
 	}
 
 	/**
@@ -218,47 +221,17 @@ class Session extends BasePlatformRestResource
 	/**
 	 * @param string  $email
 	 * @param string  $password
-	 * @param boolean $return_identity
+	 * @param integer $duration
+	 * @param boolean $return_extras
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return PlatformUserIdentity | array
+	 * @return boolean | array
 	 */
-	public static function userLogin( $email, $password, $return_identity = false )
+	public static function userLogin( $email, $password, $duration = 0, $return_extras = false )
 	{
-		if ( empty( $email ) )
-		{
-			throw new BadRequestException( "Login request is missing required email." );
-		}
-
-		if ( empty( $password ) )
-		{
-			throw new BadRequestException( "Login request is missing required password." );
-		}
-
-		$_identity = new PlatformUserIdentity( $email, $password );
-
-		if ( !$_identity->authenticate() )
-		{
-			throw new BadRequestException( "Invalid user name and password combination." );
-		}
-
-		if ( \CBaseUserIdentity::ERROR_NONE != $_identity->errorCode )
-		{
-			throw new InternalServerErrorException( "Failed to authenticate user. code = " . $_identity->errorCode );
-		}
-
 		/** @var User $_user */
-		if ( null === ( $_user = $_identity->getUser() ) )
-		{
-			// bad user object
-			throw new InternalServerErrorException( 'The user session contains no data.' );
-		}
-
-		if ( 'y' !== $_user->confirm_code )
-		{
-			throw new BadRequestException( 'User registration or password reset request has not been confirmed.' );
-		}
+		$_user = User::loginRequest( $email, $password, $duration );
 
 		$_result = static::generateSessionDataFromUser( $_user->id, $_user );
 
@@ -267,14 +240,9 @@ class Session extends BasePlatformRestResource
 
 		static::$_userId = $_user->id;
 
-		if ( $return_identity )
+		if ( !$return_extras )
 		{
-			return $_identity;
-		}
-
-		if ( !Pii::user()->login( $_identity ) )
-		{
-			throw new InternalServerErrorException( 'Failed to login user.' );
+			return true;
 		}
 
 		// 	Additional stuff for session - launchpad mainly
@@ -303,11 +271,9 @@ class Session extends BasePlatformRestResource
 				}
 			}
 		}
-		else
-		{
-			// otherwise logout browser session
-			Pii::user()->logout();
-		}
+
+		// otherwise logout browser session
+		Pii::user()->logout();
 	}
 
 	/**
@@ -875,7 +841,7 @@ class Session extends BasePlatformRestResource
 	 */
 	public static function getLookupValue( $lookup, &$value )
 	{
-		if (empty($lookup))
+		if ( empty( $lookup ) )
 		{
 			return false;
 		}

@@ -25,7 +25,9 @@ use DreamFactory\Oasys\Components\GenericUser;
 use DreamFactory\Oasys\Interfaces\ProviderLike;
 use DreamFactory\Oasys\Oasys;
 use DreamFactory\Platform\Enums\ProviderUserTypes;
+use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
 use DreamFactory\Yii\Utility\Pii;
@@ -108,17 +110,17 @@ class User extends BasePlatformSystemModel
 		return array_merge(
 			parent::behaviors(),
 			array(
-				 //	Secure JSON
-				 'base_platform_model.secure_json' => array(
-					 'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'               => $this->getDb()->password,
-					 'secureAttributes'   => array(
-						 'lookup_keys',
-					 ),
-					 'insecureAttributes' => array(
-						 'user_data',
-					 )
-				 ),
+				//	Secure JSON
+				'base_platform_model.secure_json' => array(
+					'class'              => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+					'salt'               => $this->getDb()->password,
+					'secureAttributes'   => array(
+						'lookup_keys',
+					),
+					'insecureAttributes' => array(
+						'user_data',
+					)
+				),
 			)
 		);
 	}
@@ -333,27 +335,27 @@ class User extends BasePlatformSystemModel
 
 		$_myColumns = array_merge(
 			array(
-				 'display_name',
-				 'first_name',
-				 'last_name',
-				 'email',
-				 'phone',
-				 'confirmed',
-				 'is_active',
-				 'is_sys_admin',
-				 'role_id',
-				 'default_app_id',
-				 'user_source',
-				 'user_data',
-				 'lookup_keys',
+				'display_name',
+				'first_name',
+				'last_name',
+				'email',
+				'phone',
+				'confirmed',
+				'is_active',
+				'is_sys_admin',
+				'role_id',
+				'default_app_id',
+				'user_source',
+				'user_data',
+				'lookup_keys',
 			),
 			$columns
 		);
 
 		return parent::getRetrievableAttributes(
-					 $requested,
-					 $_myColumns,
-					 $hidden
+			$requested,
+			$_myColumns,
+			$hidden
 		);
 	}
 
@@ -386,8 +388,8 @@ class User extends BasePlatformSystemModel
 	public static function authenticate( $userName, $password )
 	{
 		$_user = static::model()
-					   ->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
-					   ->findByAttributes( array( 'email' => $userName ) );
+			->with( 'role.role_service_accesses', 'role.role_system_accesses', 'role.apps', 'role.services' )
+			->findByAttributes( array( 'email' => $userName ) );
 
 		if ( empty( $_user ) )
 		{
@@ -480,6 +482,61 @@ class User extends BasePlatformSystemModel
 	{
 		return static::model()->find( 'email = :email', array( ':email' => $email ) );
 	}
+
+	/**
+	 * @param string  $email
+	 * @param string  $password
+	 * @param integer $duration
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @return boolean | array
+	 */
+	public static function loginRequest( $email, $password, $duration = 0 )
+	{
+		if ( empty( $email ) )
+		{
+			throw new BadRequestException( "Login request is missing required email." );
+		}
+
+		if ( empty( $password ) )
+		{
+			throw new BadRequestException( "Login request is missing required password." );
+		}
+
+		$_identity = new PlatformUserIdentity( $email, $password );
+
+		if ( !$_identity->authenticate() )
+		{
+			throw new BadRequestException( "Invalid user name and password combination." );
+		}
+
+		if ( \CBaseUserIdentity::ERROR_NONE != $_identity->errorCode )
+		{
+			throw new InternalServerErrorException( "Failed to authenticate user. code = " . $_identity->errorCode );
+		}
+
+		if ( !Pii::user()->login( $_identity, $duration ) )
+		{
+			throw new InternalServerErrorException( 'Failed to login user.' );
+		}
+
+		/** @var User $_user */
+		if ( null === ( $_user = $_identity->getUser() ) )
+		{
+			// bad user object
+			throw new InternalServerErrorException( 'The user session contains no data.' );
+		}
+
+		if ( 'y' !== $_user->confirm_code )
+		{
+			throw new BadRequestException( 'User registration or password reset request has not been confirmed.' );
+		}
+
+		return $_user;
+	}
+
+	/** Remote Login Helper Methods */
 
 	/**
 	 * @param string       $email
