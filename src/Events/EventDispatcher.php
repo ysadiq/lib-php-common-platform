@@ -79,14 +79,23 @@ class EventDispatcher implements EventDispatcherInterface
 	//*************************************************************************
 
 	/**
-	 * @param string $eventName
-	 * @param Event  $event
-	 *
-	 * @return \Symfony\Component\EventDispatcher\Event|void
+	 * Load any stored events
 	 */
-	public function dispatch( $eventName, Event $event = null )
+	public function __construct()
 	{
-		$this->_doDispatch( $event ? : new PlatformEvent( $eventName ), $eventName, $this );
+		/** @var \DreamFactory\Platform\Yii\Models\Event[] $_events */
+		$_events = ResourceStore::model( 'event' )->findAll();
+
+		if ( !empty( $_events ) )
+		{
+			foreach ( $_events as $_event )
+			{
+				$this->_listeners[$_event->event_name] = $_event->listeners;
+				unset( $_event );
+			}
+
+			unset( $_events );
+		}
 	}
 
 	/**
@@ -110,7 +119,7 @@ class EventDispatcher implements EventDispatcherInterface
 					$_model->event_name = $_eventName;
 				}
 
-				$_model->listeners = $this->_listeners;
+				$_model->listeners = $this->_listeners[$_eventName];
 
 				try
 				{
@@ -122,6 +131,17 @@ class EventDispatcher implements EventDispatcherInterface
 				}
 			}
 		}
+	}
+
+	/**
+	 * @param string $eventName
+	 * @param Event  $event
+	 *
+	 * @return \Symfony\Component\EventDispatcher\Event|void
+	 */
+	public function dispatch( $eventName, Event $event = null )
+	{
+		$this->_doDispatch( $event ? : new PlatformEvent( $eventName ), $eventName, $this );
 	}
 
 	/**

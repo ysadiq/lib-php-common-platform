@@ -281,6 +281,7 @@ class SystemManager extends BaseSystemRestService
 			Log::debug( 'Checking database schema' );
 
 			SqlDbUtilities::createTables( $_db, $tables, true, false );
+			$_tableName = static::SYSTEM_TABLE_PREFIX . 'config';
 
 			if ( !empty( $oldVersion ) )
 			{
@@ -290,7 +291,9 @@ class SystemManager extends BaseSystemRestService
 					try
 					{
 						$command->reset();
+
 						$serviceId = $command->select( 'id' )->from( 'df_sys_service' )->where( 'api_name = :name', array( ':name' => 'app' ) )->queryScalar();
+
 						if ( false === $serviceId )
 						{
 							throw new \Exception( 'Could not find local file storage service id.' );
@@ -307,16 +310,14 @@ class SystemManager extends BaseSystemRestService
 						Log::error( 'Exception upgrading apps to 1.0.6+ version: ' . $_ex->getMessage() );
 					}
 				}
+
+				$_sql = <<<SQL
+UPDATE df_sys_config SET
+	db_version = :db_version
+SQL;
 			}
-
-			// initialize config table if not already
-			try
+			else
 			{
-				$command->reset();
-
-				$_tableName = static::SYSTEM_TABLE_PREFIX . 'config';
-				$_params = array( ':db_version' => $version );
-
 				$_sql = <<<SQL
 INSERT INTO {$_tableName}
 (
@@ -327,6 +328,14 @@ INSERT INTO {$_tableName}
 ON DUPLICATE KEY UPDATE
 	db_version = VALUES( db_version )
 SQL;
+			}
+
+			// initialize config table if not already
+			try
+			{
+				$command->reset();
+
+				$_params = array( ':db_version' => $version );
 
 				if ( 0 >= ( $_count = Sql::execute( $_sql, $_params ) ) && $oldVersion != $version )
 				{
@@ -565,6 +574,7 @@ SQL;
 		{
 			throw new \Exception( "Error zipping contents to backup file - $_backupDir\n.{$ex->getMessage()}" );
 		}
+
 		if ( !$_backupZip->close() )
 		{
 			throw new \Exception( "Error writing backup file - $_backupZipFile." );

@@ -85,12 +85,12 @@ class SqlDbUtilities implements SqlDbDriverTypes
 		$_tables = is_array( $db ) ? $db : $db->schema->getTableNames();
 
 		//	Make search case insensitive
-		if ( null === ( $_table = Option::get( $_tables, $name ) ) )
+		if ( false === ( $_key = array_search( strtolower( $name ), array_map( 'strtolower', $_tables ) ) ) )
 		{
 			return false;
 		}
 
-		return $returnName ? $_table : true;
+		return $returnName ? $_tables[$_key] : true;
 	}
 
 	/**
@@ -1428,6 +1428,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 						// using user id references from a remote db
 						continue;
 					}
+					/** @noinspection PhpUnusedLocalVariableInspection */
 					$rows = $command->addForeignKey(
 						$name,
 						$table,
@@ -1461,6 +1462,8 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					}
 				}
 				$unique = Utilities::boolval( Utilities::getArrayValue( 'unique', $index, false ) );
+
+				/** @noinspection PhpUnusedLocalVariableInspection */
 				$rows = $command->createIndex( $name, $table, $index['column'], $unique );
 			}
 		}
@@ -1664,7 +1667,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 					throw new NotFoundException( "Table '$table_name' does not exist in the database." );
 				}
 				$results = static::buildTableFields( $table_name, $fields, true, $schema );
-				$columns = Utilities::getArrayValue( 'columns', $results, array() );
+				$columns = Option::get( $results, 'columns', array() );
 				foreach ( $columns as $name => $definition )
 				{
 					$command->reset();
