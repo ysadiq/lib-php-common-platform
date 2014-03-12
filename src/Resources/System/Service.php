@@ -60,7 +60,7 @@ class Service extends BaseSystemRestResource
 	 */
 	protected function _postProcess()
 	{
-		if ( static::Get != $this->_action )
+		if ( static::GET != $this->_action )
 		{
 			// clear swagger cache upon any service changes.
 			SwaggerManager::clearCache();

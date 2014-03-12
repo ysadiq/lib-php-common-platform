@@ -525,7 +525,7 @@ SQL;
 			$files = array_diff( scandir( $_swaggerPath ), array( '.', '..' ) );
 			foreach ( $files as $file )
 			{
-				@unlink( $_swaggerPath . $file );
+				@unlink( $_swaggerPath . '/' . $file );
 			}
 		}
 	}
