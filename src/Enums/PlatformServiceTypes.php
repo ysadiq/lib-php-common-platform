@@ -82,7 +82,7 @@ class PlatformServiceTypes extends SeedEnum
     /**
      * @var int
      */
-    const LOCAL_RUNNER_SERVICE = 0x1040;
+    const SCRIPT_SERVICE = 0x1040;
     /**
      * @var string The system manager endpoint
      */
@@ -116,7 +116,7 @@ class PlatformServiceTypes extends SeedEnum
         self::NOSQL_DB               => 'NoSqlDbSvc',
         self::SALESFORCE             => 'SalesforceDbSvc',
         self::REMOTE_WEB_SERVICE     => 'RemoteWebSvc',
-        self::LOCAL_RUNNER_SERVICE   => 'Runner',
+        self::SCRIPT_SERVICE         => 'Script',
     );
 
     //*************************************************************************

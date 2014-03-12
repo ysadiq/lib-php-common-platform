@@ -20,17 +20,21 @@
 
 $_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
 
+$_base['produces'] = array( 'application/json' );
+$_base['consumes'] = array( 'application/json' );
+
 $_base['apis'] = array(
     array(
         'path'        => '/{api_name}',
-        'description' => 'Operations available for Script Runner Service.',
+        'description' => 'Operations available for Script Service.',
         'operations'  => array(
             array(
                 'method'           => 'GET',
-                'summary'          => 'getScripts() - List all resources.',
+                'summary'          => 'getScripts() - List all scripts.',
                 'nickname'         => 'getScripts',
                 'type'             => 'Scripts',
                 'event_name'       => 'scripts.list',
+                'notes'            => 'List the available scripts.',
                 'responseMessages' => array(
                     array(
                         'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
@@ -45,7 +49,6 @@ $_base['apis'] = array(
                         'code'    => 500,
                     ),
                 ),
-                'notes'            => 'List the available scripts. ',
             ),
         ),
     ),
@@ -102,6 +105,86 @@ $_base['apis'] = array(
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'path',
+                        'required'      => true,
+                    ),
+                ),
+                'responseMessages' => array(
+                    array(
+                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+                        'code'    => 400,
+                    ),
+                    array(
+                        'message' => 'Unauthorized Access - No currently valid session available.',
+                        'code'    => 401,
+                    ),
+                    array(
+                        'message' => 'Not Found - Requested container does not exist.',
+                        'code'    => 404,
+                    ),
+                    array(
+                        'message' => 'System Error - Specific reason is included in the error message.',
+                        'code'    => 500,
+                    ),
+                ),
+                'notes'            => 'Post data as an array of folders and/or files.',
+            ),
+            array(
+                'method'           => 'POST',
+                'summary'          => 'runScript() - Runs the specified script.',
+                'nickname'         => 'runScript',
+                'type'             => 'ScriptResponse',
+                'event_name'       => 'script.run',
+                'parameters'       => array(
+                    array(
+                        'name'          => 'script_id',
+                        'description'   => 'The ID of the script which you want to retrieve.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'path',
+                        'required'      => true,
+                    ),
+                ),
+                'responseMessages' => array(
+                    array(
+                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+                        'code'    => 400,
+                    ),
+                    array(
+                        'message' => 'Unauthorized Access - No currently valid session available.',
+                        'code'    => 401,
+                    ),
+                    array(
+                        'message' => 'Not Found - Requested container does not exist.',
+                        'code'    => 404,
+                    ),
+                    array(
+                        'message' => 'System Error - Specific reason is included in the error message.',
+                        'code'    => 500,
+                    ),
+                ),
+                'notes'            => 'Post data as an array of folders and/or files.',
+            ),
+            array(
+                'method'           => 'PUT',
+                'summary'          => 'writeScript() - Writes the specified script to the file system.',
+                'nickname'         => 'writeScript',
+                'type'             => 'ScriptResponse',
+                'event_name'       => 'script.write',
+                'parameters'       => array(
+                    array(
+                        'name'          => 'script_id',
+                        'description'   => 'The ID of the script which you want to retrieve.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'path',
+                        'required'      => true,
+                    ),
+                    array(
+                        'name'          => 'script_body',
+                        'description'   => 'The body of the script to write.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
                         'required'      => true,
                     ),
                 ),
