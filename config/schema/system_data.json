@@ -57,6 +57,14 @@
 			"type":        "Local Portal Service",
 			"type_id":     64,
 			"description": "Portal service to authenticated resources"
+		},
+		{
+			"api_name":    "runner",
+			"name":        "Script Runner Service",
+			"is_active":   1,
+			"type":        "Script Runner Service",
+			"type_id":     0x1040,
+			"description": "Internal script running service"
 		}
 	],
 	"df_sys_email_template": [

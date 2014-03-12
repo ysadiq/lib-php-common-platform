@@ -80,6 +80,10 @@ class PlatformServiceTypes extends SeedEnum
 	 */
 	const REMOTE_WEB_SERVICE = 0x1020;
 	/**
+	 * @var int
+	 */
+	const LOCAL_RUNNER_SERVICE = 0x1040;
+	/**
 	 * @var string The system manager endpoint
 	 */
 	const SYSTEM_MANAGER_SERVICE = 'system';
