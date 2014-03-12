@@ -25,9 +25,11 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Utility\Platform;
+use DreamFactory\Platform\Utility\RestData;
 use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 
 /**
  * Script.php
@@ -131,15 +133,16 @@ class Script extends BasePlatformRestService
         }
 
         $_path = $this->_scriptPath . '/' . trim( $this->_resource, '/ ' ) . '.js';
+        $_data = RestData::getPostedData( false, true );
 
-        $_scriptId = Options::get( $this->_requestPayload, 'script_id' );
-        $_scriptBody = Options::get( $this->_requestPayload, 'script_body' );
+        $_scriptId = $this->_resource;
+        $_scriptBody = Option::get( $_data, 'script_body' );
 
-        Log::debug( print_r( $this->_requestPayload, true ) );
+        Log::debug( print_r( $_data, true ) );
 
-        if ( empty( $_scriptId ) || empty( $_scriptBody ) )
+        if ( empty( $_scriptBody ) )
         {
-            throw new BadRequestException( 'You must supply both a "script_id" and a "script_body".' );
+            throw new BadRequestException( 'You must supply a "script_body".' );
         }
 
         $_body = @file_get_contents( $_path );
