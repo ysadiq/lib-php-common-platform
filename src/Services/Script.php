@@ -31,6 +31,7 @@ use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Interfaces\HttpResponse;
 use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 
 /**
  * Script.php
