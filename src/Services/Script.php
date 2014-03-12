@@ -24,12 +24,13 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\RestData;
 use Kisma\Core\Enums\GlobFlags;
+use Kisma\Core\Interfaces\HttpResponse;
 use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
 
 /**
  * Script.php
@@ -80,22 +81,33 @@ class Script extends BasePlatformRestService
         parent::__construct( $_settings );
 
         $this->_scriptPath = Platform::getPrivatePath( static::DEFAULT_SCRIPT_PATH );
+
+        if ( empty( $this->_scriptPath ) || !extension_loaded( 'v8js' ) )
+        {
+            throw new RestException(
+                HttpResponse::ServiceUnavailable, 'This service is not available. Storage path and/or required libraries not available.'
+            );
+        }
     }
 
     /**
+     * LIST all scripts
+     *
      * @return array|bool
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      */
     protected function _listResources()
     {
-        if ( empty( $this->_scriptPath ) )
-        {
-            throw new BadRequestException( 'The storage path for scripts has not yet been configured.' );
-        }
-
         return FileSystem::glob( $this->_scriptPath . static::DEFAULT_SCRIPT_PATTERN, GlobFlags::GLOB_NODOTS );
     }
 
+    /**
+     * GET a script
+     *
+     * @return array|bool
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     */
     protected function _handleGet()
     {
         if ( empty( $this->_resource ) )
@@ -103,16 +115,11 @@ class Script extends BasePlatformRestService
             return $this->_listResources();
         }
 
-        if ( empty( $this->_scriptPath ) )
-        {
-            throw new BadRequestException( 'The storage path for scripts has not yet been configured.' );
-        }
-
         $_path = $this->_scriptPath . '/' . trim( $this->_resource, '/ ' ) . '.js';
 
         if ( !file_exists( $_path ) )
         {
-            throw new NotFoundException( 'The script "' . $this->_resource . '" was not found.' );
+            throw new NotFoundException( 'A script with ID "' . $this->_resource . '" was not found.' );
         }
 
         $_body = @file_get_contents( $_path );
@@ -120,6 +127,13 @@ class Script extends BasePlatformRestService
         return array( 'script_id' => $this->_resource, 'script_body' => $_body );
     }
 
+    /**
+     * WRITE a script
+     *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array|bool
+     */
     protected function _handlePut()
     {
         if ( empty( $this->_resource ) )
@@ -127,52 +141,83 @@ class Script extends BasePlatformRestService
             return $this->_listResources();
         }
 
-        if ( empty( $this->_scriptPath ) )
-        {
-            throw new BadRequestException( 'The storage path for scripts has not yet been configured.' );
-        }
-
         $_path = $this->_scriptPath . '/' . trim( $this->_resource, '/ ' ) . '.js';
-        $_data = RestData::getPostedData( false, true );
-
-        $_scriptId = $this->_resource;
-        $_scriptBody = Option::get( $_data, 'script_body' );
-
-        Log::debug( print_r( $_data, true ) );
+        $_scriptBody = RestData::getPostedData();
 
         if ( empty( $_scriptBody ) )
         {
             throw new BadRequestException( 'You must supply a "script_body".' );
         }
 
-        $_body = @file_get_contents( $_path );
-
-        return array( 'script_id' => $this->_resource, 'script_body' => $_body );
-    }
-
-    protected function _handlePost()
-    {
-        if ( !extension_loaded( 'v8js' ) )
+        if ( false === $_bytes = @file_put_contents( $_path, $_scriptBody ) )
         {
-            throw new InternalServerErrorException  ( 'This system does not support server-side scripts.' );
+            throw new InternalServerErrorException( 'Error writing file to storage area.' );
         }
 
-        $_runner = new \V8Js();
-        $_data = array( 'a' => 1, 'b' => 2, 'c' => 3 );
-        $_runner->request = $_data;
+        //  Clear the swagger cache...
+        SwaggerManager::clearCache();
 
-        $_script = <<< EOT
-print( PHP.request.a);
-EOT;
+        return array( 'script_id' => $this->_resource, 'script_body' => $_scriptBody, 'bytes_written' => $_bytes );
+    }
+
+    /**
+     * RUN a script
+     *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array
+     */
+    protected function _handlePost()
+    {
+        if ( empty( $this->_resource ) )
+        {
+            throw new BadRequestException();
+        }
+
+        return static::runScript( $this->_getScriptPath() );
+    }
+
+    /**
+     * @param string $scriptName
+     * @param string $scriptId
+     * @param array  $data Bi-directional data to/from function
+     *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @return array
+     */
+    public static function runScript( $scriptName, $scriptId = null, array &$data = array() )
+    {
+        $scriptId = $scriptId ? : $scriptName;
+
+        if ( !is_file( $scriptName ) || !is_readable( $scriptName ) )
+        {
+            throw new InternalServerErrorException( 'The script ID "' . $scriptId . '" is not valid or unreadable.' );
+        }
+
+        if ( false === ( $_script = @file_get_contents( $scriptName ) ) )
+        {
+            throw new InternalServerErrorException( 'The script ID "' . $scriptId . '" cannot be retrieved at this time.' );
+        }
 
         try
         {
+            $_runner = new \V8Js();
+
+            /** @noinspection PhpUndefinedFieldInspection */
+            $_runner->scriptData = $data;
+
             //  Don't show output
             ob_start();
-            $_runner->executeString( $_script, $this->_resource . '.js' );
+
+            /** @noinspection PhpUndefinedMethodInspection */
+            $_lastVariable = $_runner->executeString( $_script, $scriptId );
+
+            /** @noinspection PhpUndefinedFieldInspection */
+            $data = $_runner->scriptData;
+
             $_result = ob_get_clean();
 
-            return array( 'response' => $_result );
+            return array( 'script_output' => $_result, 'script_last_variable' => $_lastVariable );
         }
         catch ( \V8JsException $_ex )
         {
@@ -180,6 +225,19 @@ EOT;
             Log::error( 'Exception executing javascript: ' . $_ex->getMessage() );
             throw new InternalServerErrorException( $_ex->getMessage() );
         }
+
+    }
+
+    /**
+     * Constructs the full path to a server-side script
+     *
+     * @param string $scriptName The script name or null if $this->_resource is to be used
+     *
+     * @return string
+     */
+    protected function _getScriptPath( $scriptName = null )
+    {
+        return $this->_scriptPath . '/' . trim( $scriptName ? : $this->_resource, '/ ' ) . '.js';
 
     }
 }

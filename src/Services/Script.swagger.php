@@ -20,8 +20,8 @@
 
 $_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
 
-$_base['produces'] = array( 'application/json' );
-$_base['consumes'] = array( 'application/javascript', 'text/javascript', 'text/plain' );
+$_base['consumes'] = array( 'text/javascript', 'text/plain' );
+$_base['produces'] = array( 'application/json', 'application/xml' );
 
 $_base['apis'] = array(
     array(

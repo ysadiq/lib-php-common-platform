@@ -24,6 +24,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
+use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -315,11 +316,11 @@ SQL;
      */
     protected static function _parseSwaggerEvents( $apiName, $data )
     {
-        $_eventMap = $_events = array();
+        $_eventMap = array();
 
         foreach ( Option::get( $data, 'apis', array() ) as $_api )
         {
-            $_events = array();
+            $_scripts = $_events = array();
 
             foreach ( Option::get( $_api, 'operations', array() ) as $_operation )
             {
@@ -327,34 +328,70 @@ SQL;
                 {
                     $_method = strtolower( Option::get( $_operation, 'method', HttpMethod::GET ) );
 
-                    $_events[$_method] = str_ireplace(
-                        array( '{api_name}', '{action}', '{request.method}' ),
-                        array( $apiName, $_method, $_method ),
-                        $_eventName
+                    $_events[$_method] = array(
+                        'event'   => str_ireplace(
+                            array( '{api_name}', '{action}', '{request.method}' ),
+                            array( $apiName, $_method, $_method ),
+                            $_eventName
+                        ),
+                        'scripts' => static::_findScripts( $apiName, $_method ),
                     );
                 }
+
+                unset( $_operation );
             }
 
             $_eventMap[str_ireplace( '{api_name}', $apiName, $_api['path'] )] = $_events;
+
+            unset( $_scripts, $_events, $_api );
         }
 
         return $_eventMap;
     }
 
     /**
+     * Returns a list of scripts that can response to specified events
+     *
+     * @param string $apiName
+     * @param string $method
+     *
+     * @return array|bool
+     */
+    protected static function _findScripts( $apiName, $method = HttpMethod::GET )
+    {
+        $_scriptPath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
+
+        $_scripts = FileSystem::glob( $_scriptPath . '/' . strtolower( $apiName ) . '.' . strtolower( $method ) . '*.js' );
+
+        if ( empty( $_scripts ) )
+        {
+            return array();
+        }
+
+        $_response = array();
+
+        foreach ( $_scripts as $_script )
+        {
+            $_response[] = str_ireplace( array( $apiName . '.' . $method . '.', '.js' ), null, $_script );
+        }
+
+        return $_response;
+    }
+
+    /**
      * @param BasePlatformRestService $service
-     * @param string                  $action
+     * @param string                  $method
      * @param string                  $eventName Global search for event name
      *
      * @return string
      */
-    public static function findEvent( BasePlatformRestService $service, $action, $eventName = null )
+    public static function findEvent( BasePlatformRestService $service, $method, $eventName = null )
     {
         static $_cache = array();
 
         $_map = static::getEventMap();
 
-        $_hash = sha1( ( $service ? get_class( $service ) : '*' ) . $action );
+        $_hash = sha1( ( $service ? get_class( $service ) : '*' ) . $method );
 
         if ( isset( $_cache[$_hash] ) )
         {
@@ -364,11 +401,16 @@ SQL;
         //  Global search by name
         if ( null !== $eventName )
         {
-            foreach ( $_map as $_resources => $_path )
+            foreach ( $_map as $_path )
             {
-                foreach ( $_path as $_action => $_eventName )
+                foreach ( $_path as $_method => $_info )
                 {
-                    if ( $_eventName == $eventName )
+                    if ( 0 !== strcasecmp( $_method, $method ) )
+                    {
+                        continue;
+                    }
+
+                    if ( $eventName == ( $_eventName = Option::get( $_info, 'event' ) ) )
                     {
                         $_cache[$_hash] = $_eventName;
 
@@ -423,7 +465,7 @@ SQL;
 
         foreach ( $_matches as $_match )
         {
-            if ( null !== ( $_eventName = Option::getDeep( $_resources, $_match, $action ) ) )
+            if ( null !== ( $_eventName = Option::get( Option::getDeep( $_resources, $_match, $method ), 'event' ) ) )
             {
                 return $_cache[$_hash] = $_eventName;
             }
@@ -546,7 +588,7 @@ SQL;
             $files = array_diff( scandir( $_swaggerPath ), array( '.', '..' ) );
             foreach ( $files as $file )
             {
-                @unlink( $_swaggerPath . $file );
+                @unlink( $_swaggerPath . '/' . $file );
             }
         }
     }

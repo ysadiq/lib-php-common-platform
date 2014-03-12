@@ -31,265 +31,270 @@ use Kisma\Core\Utility\Option;
  */
 class RemoteWebSvc extends BasePlatformRestService
 {
-	//*************************************************************************
-	//* Members
-	//*************************************************************************
+    //*************************************************************************
+    //* Members
+    //*************************************************************************
 
-	/**
-	 * @var string
-	 */
-	protected $_baseUrl;
-	/**
-	 * @var array
-	 */
-	protected $_credentials;
-	/**
-	 * @var array
-	 */
-	protected $_headers;
-	/**
-	 * @var array
-	 */
-	protected $_parameters;
-	/**
-	 * @var string
-	 */
-	protected $_query;
-	/**
-	 * @var string
-	 */
-	protected $_url;
-	/**
-	 * @var array
-	 */
-	protected $_curlOptions = array();
+    /**
+     * @var string
+     */
+    protected $_baseUrl;
+    /**
+     * @var array
+     */
+    protected $_credentials;
+    /**
+     * @var array
+     */
+    protected $_headers;
+    /**
+     * @var array
+     */
+    protected $_parameters;
+    /**
+     * @var string
+     */
+    protected $_query;
+    /**
+     * @var string
+     */
+    protected $_url;
+    /**
+     * @var array
+     */
+    protected $_curlOptions = array();
 
-	//*************************************************************************
-	//* Methods
-	//*************************************************************************
+    //*************************************************************************
+    //* Methods
+    //*************************************************************************
 
-	/**
-	 * Create a new RemoteWebSvc
-	 *
-	 * @param array $config configuration array
-	 *
-	 * @throws \InvalidArgumentException
-	 */
-	public function __construct( $config )
-	{
-		parent::__construct( $config );
+    /**
+     * Create a new RemoteWebSvc
+     *
+     * @param array $config configuration array
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function __construct( $config )
+    {
+        parent::__construct( $config );
 
-		$this->setAutoDispatch( false );
+        $this->setAutoDispatch( false );
 
-		// Validate url setup
-		if ( empty( $this->_baseUrl ) )
-		{
-			throw new \InvalidArgumentException( 'Remote Web Service base url can not be empty.' );
-		}
-	}
+        // Validate url setup
+        if ( empty( $this->_baseUrl ) )
+        {
+            throw new \InvalidArgumentException( 'Remote Web Service base url can not be empty.' );
+        }
+    }
 
-	/**
-	 * @param $action
-	 *
-	 * @return string
-	 */
-	protected function buildParameterString( $action )
-	{
-		$param_str = '';
+    /**
+     * @param $action
+     *
+     * @return string
+     */
+    protected function buildParameterString( $action )
+    {
+        $param_str = '';
 
-		foreach ( $_REQUEST as $key => $value )
-		{
-			switch ( strtolower( $key ) )
-			{
-				case '_': // timestamp added by jquery
-				case 'app_name': // app_name required by our api
-				case 'method': // method option for our api
-				case 'format': //	Output format
-				case 'path': //	Added by Yii router
-					break;
-				default:
-					$param_str .= ( !empty( $param_str ) ) ? '&' : '';
-					$param_str .= urlencode( $key );
-					$param_str .= ( empty( $value ) ) ? '' : '=' . urlencode( $value );
-					break;
-			}
-		}
+        foreach ( $_REQUEST as $key => $value )
+        {
+            switch ( strtolower( $key ) )
+            {
+                case '_': // timestamp added by jquery
+                case 'app_name': // app_name required by our api
+                case 'method': // method option for our api
+                case 'format': //	Output format
+                case 'path': //	Added by Yii router
+                    break;
+                default:
+                    $param_str .= ( !empty( $param_str ) ) ? '&' : '';
+                    $param_str .= urlencode( $key );
+                    $param_str .= ( empty( $value ) ) ? '' : '=' . urlencode( $value );
+                    break;
+            }
+        }
 
-		if ( !empty( $this->_parameters ) )
-		{
-			foreach ( $this->_parameters as $param )
-			{
-				$paramAction = Option::get( $param, 'action' );
-				if ( !empty( $paramAction ) && ( 0 !== strcasecmp( 'all', $paramAction ) ) )
-				{
-					if ( 0 !== strcasecmp( $action, $paramAction ) )
-					{
-						continue;
-					}
-				}
-				$key = Option::get( $param, 'name' );
-				$value = Option::get( $param, 'value' );
-				$param_str .= ( !empty( $param_str ) ) ? '&' : '';
-				$param_str .= urlencode( $key );
-				$param_str .= ( empty( $value ) ) ? '' : '=' . urlencode( $value );
-			}
-		}
+        if ( !empty( $this->_parameters ) )
+        {
+            foreach ( $this->_parameters as $param )
+            {
+                $paramAction = Option::get( $param, 'action' );
+                if ( !empty( $paramAction ) && ( 0 !== strcasecmp( 'all', $paramAction ) ) )
+                {
+                    if ( 0 !== strcasecmp( $action, $paramAction ) )
+                    {
+                        continue;
+                    }
+                }
+                $key = Option::get( $param, 'name' );
+                $value = Option::get( $param, 'value' );
+                $param_str .= ( !empty( $param_str ) ) ? '&' : '';
+                $param_str .= urlencode( $key );
+                $param_str .= ( empty( $value ) ) ? '' : '=' . urlencode( $value );
+            }
+        }
 
-		return $param_str;
-	}
+        return $param_str;
+    }
 
-	/**
-	 * @param string $action
-	 * @param array  $options
-	 *
-	 * @return array
-	 */
-	protected function addHeaders( $action, $options = array() )
-	{
-		if ( !empty( $this->_headers ) )
-		{
-			foreach ( $this->_headers as $header )
-			{
-				$headerAction = Option::get( $header, 'action' );
+    /**
+     * @param string $action
+     * @param array  $options
+     *
+     * @return array
+     */
+    protected function addHeaders( $action, $options = array() )
+    {
+        if ( !empty( $this->_headers ) )
+        {
+            foreach ( $this->_headers as $header )
+            {
+                $headerAction = Option::get( $header, 'action' );
 
-				if ( !empty( $headerAction ) && ( 0 !== strcasecmp( 'all', $headerAction ) ) )
-				{
-					if ( 0 !== strcasecmp( $action, $headerAction ) )
-					{
-						continue;
-					}
-				}
+                if ( !empty( $headerAction ) && ( 0 !== strcasecmp( 'all', $headerAction ) ) )
+                {
+                    if ( 0 !== strcasecmp( $action, $headerAction ) )
+                    {
+                        continue;
+                    }
+                }
 
-				$key = Option::get( $header, 'name' );
-				$value = Option::get( $header, 'value' );
+                $key = Option::get( $header, 'name' );
+                $value = Option::get( $header, 'value' );
 
-				if ( null === Options::get( $options, CURLOPT_HTTPHEADER ) )
-				{
-					$options[CURLOPT_HTTPHEADER] = array();
-				}
+                if ( null === Option::get( $options, CURLOPT_HTTPHEADER ) )
+                {
+                    $options[CURLOPT_HTTPHEADER] = array();
+                }
 
-				$options[CURLOPT_HTTPHEADER][] = $key . ': ' . $value;
-			}
-		}
+                $options[CURLOPT_HTTPHEADER][] = $key . ': ' . $value;
+            }
+        }
 
-		return $options;
-	}
+        return $options;
+    }
 
-	protected function _preProcess()
-	{
-		parent::_preProcess();
+    /**
+     * A chance to pre-process the data.
+     *
+     * @return mixed|void
+     */
+    protected function _preProcess()
+    {
+        parent::_preProcess();
 
-		$this->_query = $this->buildParameterString( $this->_action );
-		$this->_url =
-			rtrim( $this->_baseUrl, '/' ) . ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null ) . '?' . $this->_query;
+        $this->_query = $this->buildParameterString( $this->_action );
+        $this->_url =
+            rtrim( $this->_baseUrl, '/' ) . ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null ) . '?' . $this->_query;
 
-		//	set additional headers
-		$this->_curlOptions = $this->addHeaders( $this->_action, $this->_curlOptions );
+        //	set additional headers
+        $this->_curlOptions = $this->addHeaders( $this->_action, $this->_curlOptions );
 
-		$this->checkPermission( PermissionMap::fromMethod( $this->_action ), $this->_apiName );
-	}
+        $this->checkPermission( PermissionMap::fromMethod( $this->_action ), $this->_apiName );
+    }
 
-	/**
-	 * @throws \DreamFactory\Platform\Exceptions\RestException
-	 * @return bool
-	 */
-	protected function _handleResource()
-	{
+    /**
+     * @throws \DreamFactory\Platform\Exceptions\RestException
+     * @return bool
+     */
+    protected function _handleResource()
+    {
 //		Log::debug( 'Outbound HTTP request: ' . $this->_action . ': ' . $this->_url );
 
-		$_result = Curl::request(
-			$this->_action,
-			$this->_url,
-			RestData::getPostedData() ? : array(),
-			$this->_curlOptions
-		);
+        $_result = Curl::request(
+            $this->_action,
+            $this->_url,
+            RestData::getPostedData() ? : array(),
+            $this->_curlOptions
+        );
 
-		if ( false === $_result )
-		{
-			$_error = Curl::getError();
-			throw new RestException( Option::get( $_error, 'code', 500 ), Option::get( $_error, 'message' ) );
-		}
+        if ( false === $_result )
+        {
+            $_error = Curl::getError();
+            throw new RestException( Option::get( $_error, 'code', 500 ), Option::get( $_error, 'message' ) );
+        }
 
-		return $_result;
-	}
+        return $_result;
+    }
 
-	/**
-	 * @param string $baseUrl
-	 *
-	 * @return RemoteWebSvc
-	 */
-	public function setBaseUrl( $baseUrl )
-	{
-		$this->_baseUrl = $baseUrl;
+    /**
+     * @param string $baseUrl
+     *
+     * @return RemoteWebSvc
+     */
+    public function setBaseUrl( $baseUrl )
+    {
+        $this->_baseUrl = $baseUrl;
 
-		return $this;
-	}
+        return $this;
+    }
 
-	/**
-	 * @return string
-	 */
-	public function getBaseUrl()
-	{
-		return $this->_baseUrl;
-	}
+    /**
+     * @return string
+     */
+    public function getBaseUrl()
+    {
+        return $this->_baseUrl;
+    }
 
-	/**
-	 * @param array $credentials
-	 *
-	 * @return RemoteWebSvc
-	 */
-	public function setCredentials( $credentials )
-	{
-		$this->_credentials = $credentials;
+    /**
+     * @param array $credentials
+     *
+     * @return RemoteWebSvc
+     */
+    public function setCredentials( $credentials )
+    {
+        $this->_credentials = $credentials;
 
-		return $this;
-	}
+        return $this;
+    }
 
-	/**
-	 * @return array
-	 */
-	public function getCredentials()
-	{
-		return $this->_credentials;
-	}
+    /**
+     * @return array
+     */
+    public function getCredentials()
+    {
+        return $this->_credentials;
+    }
 
-	/**
-	 * @param array $headers
-	 *
-	 * @return RemoteWebSvc
-	 */
-	public function setHeaders( $headers )
-	{
-		$this->_headers = $headers;
+    /**
+     * @param array $headers
+     *
+     * @return RemoteWebSvc
+     */
+    public function setHeaders( $headers )
+    {
+        $this->_headers = $headers;
 
-		return $this;
-	}
+        return $this;
+    }
 
-	/**
-	 * @return array
-	 */
-	public function getHeaders()
-	{
-		return $this->_headers;
-	}
+    /**
+     * @return array
+     */
+    public function getHeaders()
+    {
+        return $this->_headers;
+    }
 
-	/**
-	 * @param array $parameters
-	 *
-	 * @return RemoteWebSvc
-	 */
-	public function setParameters( $parameters )
-	{
-		$this->_parameters = $parameters;
+    /**
+     * @param array $parameters
+     *
+     * @return RemoteWebSvc
+     */
+    public function setParameters( $parameters )
+    {
+        $this->_parameters = $parameters;
 
-		return $this;
-	}
+        return $this;
+    }
 
-	/**
-	 * @return array
-	 */
-	public function getParameters()
-	{
-		return $this->_parameters;
-	}
+    /**
+     * @return array
+     */
+    public function getParameters()
+    {
+        return $this->_parameters;
+    }
 }
