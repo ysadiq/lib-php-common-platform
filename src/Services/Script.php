@@ -204,7 +204,7 @@ class Script extends BasePlatformRestService
             $_runner = new \V8Js();
 
             /** @noinspection PhpUndefinedFieldInspection */
-            $_runner->scriptData = $data;
+            $_runner->event_data = $data;
 
             //  Don't show output
             ob_start();
@@ -213,7 +213,7 @@ class Script extends BasePlatformRestService
             $_lastVariable = $_runner->executeString( $_script, $scriptId );
 
             /** @noinspection PhpUndefinedFieldInspection */
-            $data = $_runner->scriptData;
+            $data = $_runner->event_data;
 
             $_result = ob_get_clean();
 

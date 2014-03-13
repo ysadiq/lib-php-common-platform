@@ -126,7 +126,7 @@ $_custom['apis'] = array(
 				'summary'          => 'deleteCustomSetting() - Delete one custom setting.',
 				'nickname'         => 'deleteCustomSetting',
 				'type'             => 'Success',
-				'event_name'       => 'user.settings.delete',
+				'event_name'       => 'user.setting.delete',
 				'parameters'       => array(
 					array(
 						'name'          => 'setting',

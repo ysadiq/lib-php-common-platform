@@ -26,6 +26,7 @@ use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Services\EmailSvc;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Yii\Models\Config;
@@ -370,7 +371,7 @@ class Password extends BasePlatformRestResource
 				}
 				else
 				{
-					$_defaultPath = Platform::getLibraryTemplatePath( '/email/confirm_password_reset.json' );
+					$_defaultPath = Platform::getLibraryTemplatePath( '/email/confirm_password_reset.json', true, true );
 
 					if ( !file_exists( $_defaultPath ) )
 					{

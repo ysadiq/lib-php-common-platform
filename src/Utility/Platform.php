@@ -53,11 +53,13 @@ class Platform extends SeedUtility
      * @param string $append
      * @param bool   $createIfMissing If true and final directory does not exist, it is created.
      *
+     * @param bool   $includesFile
+     *
      * @throws \InvalidArgumentException
      * @throws \Kisma\Core\Exceptions\FileSystemException
      * @return string
      */
-    protected static function _getPlatformPath( $type, $append = null, $createIfMissing = true )
+    protected static function _getPlatformPath( $type, $append = null, $createIfMissing = true, $includesFile = false )
     {
         static $_cache = array();
 
@@ -81,7 +83,12 @@ class Platform extends SeedUtility
                 Log::notice( 'Empty path for platform path type "' . $type . '". Defaulting to "' . $_path . '"' );
             }
 
-            $_checkPath = dirname( $_path . $_appendage );
+            $_checkPath = $_path . $_appendage;
+
+            if ( $includesFile )
+            {
+                $_checkPath = dirname( $_checkPath );
+            }
 
             if ( true === $createIfMissing && !is_dir( $_checkPath ) )
             {
@@ -104,42 +111,50 @@ class Platform extends SeedUtility
      * Constructs the virtual storage path
      *
      * @param string $append
+     * @param bool   $createIfMissing
+     * @param bool   $includesFile
      *
      * @return string
      */
-    public static function getStorageBasePath( $append = null )
+    public static function getStorageBasePath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::_getPlatformPath( LocalStorageTypes::STORAGE_BASE_PATH, $append );
+        return static::_getPlatformPath( LocalStorageTypes::STORAGE_BASE_PATH, $append, $createIfMissing, $includesFile );
     }
 
     /**
      * Constructs the virtual storage path
      *
      * @param string $append
+     * @param bool   $createIfMissing
+     * @param bool   $includesFile
      *
      * @return string
      */
-    public static function getStoragePath( $append = null )
+    public static function getStoragePath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::_getPlatformPath( LocalStorageTypes::STORAGE_PATH, $append );
+        return static::_getPlatformPath( LocalStorageTypes::STORAGE_PATH, $append, $createIfMissing, $includesFile );
     }
 
     /**
      * Constructs the virtual private path
      *
      * @param string $append
+     * @param bool   $createIfMissing
+     * @param bool   $includesFile
      *
      * @return string
      */
-    public static function getPrivatePath( $append = null )
+    public static function getPrivatePath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::_getPlatformPath( LocalStorageTypes::PRIVATE_PATH, $append );
+        return static::_getPlatformPath( LocalStorageTypes::PRIVATE_PATH, $append, $createIfMissing, $includesFile );
     }
 
     /**
      * Returns the library configuration path, not the platform's config path in the root
      *
      * @param string $append
+     * @param bool   $createIfMissing
+     * @param bool   $includesFile
      *
      * @return string
      */
@@ -152,12 +167,14 @@ class Platform extends SeedUtility
      * Returns the library template configuration path, not the platform's config path in the root
      *
      * @param string $append
+     * @param bool   $createIfMissing
+     * @param bool   $includesFile
      *
      * @return string
      */
-    public static function getLibraryTemplatePath( $append = null )
+    public static function getLibraryTemplatePath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::getLibraryConfigPath( '/templates' ) . ( $append ? '/' . ltrim( $append, '/' ) : null );
+        return static::getLibraryConfigPath( '/templates', $append, $createIfMissing, $includesFile );
     }
 
     /**
@@ -176,48 +193,56 @@ class Platform extends SeedUtility
      * Constructs the virtual private path
      *
      * @param string $append
+     * @param bool   $createIfMissing
+     * @param bool   $includesFile
      *
      * @return string
      */
-    public static function getSnapshotPath( $append = null )
+    public static function getSnapshotPath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::_getPlatformPath( LocalStorageTypes::SNAPSHOT_PATH, $append );
+        return static::_getPlatformPath( LocalStorageTypes::SNAPSHOT_PATH, $append, $createIfMissing, $includesFile );
     }
 
     /**
      * Constructs the virtual swagger path
      *
      * @param string $append
+     * @param bool   $createIfMissing
+     * @param bool   $includesFile
      *
      * @return string
      */
-    public static function getSwaggerPath( $append = null )
+    public static function getSwaggerPath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::_getPlatformPath( LocalStorageTypes::SWAGGER_PATH, $append );
+        return static::_getPlatformPath( LocalStorageTypes::SWAGGER_PATH, $append, $createIfMissing, $includesFile );
     }
 
     /**
      * Constructs the virtual plugins path
      *
      * @param string $append
+     * @param bool   $createIfMissing
+     * @param bool   $includesFile
      *
      * @return string
      */
-    public static function getPluginsPath( $append = null )
+    public static function getPluginsPath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::_getPlatformPath( LocalStorageTypes::PLUGINS_PATH, $append );
+        return static::_getPlatformPath( LocalStorageTypes::PLUGINS_PATH, $append, $createIfMissing, $includesFile );
     }
 
     /**
      * Constructs the virtual private path
      *
      * @param string $append
+     * @param bool   $createIfMissing
+     * @param bool   $includesFile
      *
      * @return string
      */
-    public static function getApplicationsPath( $append = null )
+    public static function getApplicationsPath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::_getPlatformPath( LocalStorageTypes::APPLICATIONS_PATH, $append );
+        return static::_getPlatformPath( LocalStorageTypes::APPLICATIONS_PATH, $append, $createIfMissing, $includesFile );
     }
 
     /**

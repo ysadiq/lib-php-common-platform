@@ -40,153 +40,157 @@ use Kisma\Core\Utility\FilterInput;
  */
 class UserManager extends BaseSystemRestService
 {
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * Create a new UserManager
-	 *
-	 */
-	public function __construct()
-	{
-		parent::__construct(
-			array(
-				'name'        => 'User Session Management',
-				'apiName'     => 'user',
-				'type'        => 'User',
-				'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
-				'description' => 'Service for a user to manage their session, profile and password.',
-				'is_active'   => true,
-			)
-		);
-	}
+    /**
+     * Create a new UserManager
+     *
+     */
+    public function __construct()
+    {
+        parent::__construct(
+            array(
+                'name'        => 'User Session Management',
+                'apiName'     => 'user',
+                'type'        => 'User',
+                'type_id'     => PlatformServiceTypes::SYSTEM_SERVICE,
+                'description' => 'Service for a user to manage their session, profile and password.',
+                'is_active'   => true,
+            )
+        );
+    }
 
-	/**
-	 * @return array
-	 */
-	protected function _listResources()
-	{
-		$resources = array(
-			array( 'name' => 'custom' ),
-			array( 'name' => 'device' ),
-			array( 'name' => 'password' ),
-			array( 'name' => 'profile' ),
-			array( 'name' => 'register' ),
-			array( 'name' => 'session' ),
-			array( 'name' => 'ticket' )
-		);
+    /**
+     * @return array
+     */
+    protected function _listResources()
+    {
+        $resources = array(
+            array( 'name' => 'custom' ),
+            array( 'name' => 'device' ),
+            array( 'name' => 'password' ),
+            array( 'name' => 'profile' ),
+            array( 'name' => 'register' ),
+            array( 'name' => 'session' ),
+            array( 'name' => 'ticket' )
+        );
 
-		return array( 'resource' => $resources );
-	}
+        $_response = array( 'resource' => $resources );
 
-	/**
-	 *
-	 * @return array|bool
-	 * @throws BadRequestException
-	 */
-	protected function _handleResource()
-	{
-		switch ( $this->_resource )
-		{
-			case '':
-				switch ( $this->_action )
-				{
-					case static::GET:
-						return $this->_listResources();
-						break;
-					default:
-						return false;
-				}
-				break;
+        $this->_triggerActionEvent( $_response );
+    }
 
-			case 'session':
-				//	Handle remote login
-				if ( HttpMethod::POST == $this->_action && Pii::getParam( 'dsp.allow_remote_logins' ) )
-				{
-					$_provider = FilterInput::post( 'provider', null, FILTER_SANITIZE_STRING );
+    /**
+     *
+     * @return array|bool
+     * @throws BadRequestException
+     */
+    protected function _handleResource()
+    {
+        if ( empty( $this->_resource ) )
+        {
+            if ( static::GET == $this->_action )
+            {
+                return $this->_listResources();
+            }
 
-					if ( !empty( $_provider ) )
-					{
-						Pii::redirect( '/web/remoteLogin?pid=' . $_provider . '&flow=' . Flows::SERVER_SIDE );
-					}
-				}
+            return false;
+        }
 
-				$obj = new Session( $this );
-				$result = $obj->processRequest( null, $this->_action );
-				break;
+        switch ( $this->_resource )
+        {
+            case 'session':
+                //	Handle remote login
+                if ( HttpMethod::POST == $this->_action && Pii::getParam( 'dsp.allow_remote_logins' ) )
+                {
+                    $_provider = FilterInput::post( 'provider', null, FILTER_SANITIZE_STRING );
 
-			case 'custom':
-				$obj = new CustomSettings( $this, $this->_resourceArray );
-				$result = $obj->processRequest( null, $this->_action );
-				break;
+                    if ( !empty( $_provider ) )
+                    {
+                        Pii::redirect( '/web/remoteLogin?pid=' . $_provider . '&flow=' . Flows::SERVER_SIDE );
+                    }
+                }
 
-			case 'device':
-				$obj = new Device( $this, $this->_resourceArray );
-				$result = $obj->processRequest( null, $this->_action );
-				break;
+                $obj = new Session( $this );
+                $result = $obj->processRequest( null, $this->_action );
+                break;
 
-			case 'profile':
-				$obj = new Profile( $this );
-				$result = $obj->processRequest( null, $this->_action );
-				break;
+            case 'custom':
+                $obj = new CustomSettings( $this, $this->_resourceArray );
+                $result = $obj->processRequest( null, $this->_action );
+                break;
 
-			case 'challenge': // backward compatibility
-			case 'password':
-				$obj = new Password( $this );
-				$result = $obj->processRequest( null, $this->_action );
-				break;
+            case 'device':
+                $obj = new Device( $this, $this->_resourceArray );
+                $result = $obj->processRequest( null, $this->_action );
+                break;
 
-			case 'confirm': // backward compatibility
-			case 'register':
-				$obj = new Register( $this );
-				$result = $obj->processRequest( null, $this->_action );
-				break;
+            case 'profile':
+                $obj = new Profile( $this );
+                $result = $obj->processRequest( null, $this->_action );
+                break;
 
-			case 'ticket':
-				switch ( $this->_action )
-				{
-					case static::GET:
-						$result = $this->userTicket();
-						break;
-					default:
-						return false;
-				}
-				break;
+            case 'challenge': // backward compatibility
+            case 'password':
+                $obj = new Password( $this );
+                $result = $obj->processRequest( null, $this->_action );
+                break;
 
-			default:
-				return false;
-				break;
-		}
+            case 'confirm': // backward compatibility
+            case 'register':
+                $obj = new Register( $this );
+                $result = $obj->processRequest( null, $this->_action );
+                break;
 
-		return $result;
-	}
+            case 'ticket':
+                switch ( $this->_action )
+                {
+                    case static::GET:
+                        $result = $this->userTicket();
+                        break;
+                    default:
+                        return false;
+                }
+                break;
 
-	//-------- User Operations ------------------------------------------------
+            default:
+                return false;
+                break;
+        }
 
-	/**
-	 * userTicket generates a SSO timed ticket for current valid session
-	 *
-	 * @return array
-	 * @throws \Exception
-	 */
-	public static function userTicket()
-	{
-		try
-		{
-			Pii::app()->trigger( 'session.validate' );
-			$userId = Session::validateSession();
-		}
-		catch ( \Exception $ex )
-		{
-			Session::userLogout();
-			throw $ex;
-		}
+        //  Send out an event
+        $this->_triggerActionEvent( $result );
 
-		// regenerate new timed ticket
-		$timestamp = time();
-		$ticket = Utilities::encryptCreds( "$userId,$timestamp", "gorilla" );
+        return $result;
+    }
 
-		return array( 'ticket' => $ticket, 'ticket_expiry' => time() + ( 5 * 60 ) );
-	}
+    //-------- User Operations ------------------------------------------------
+
+    /**
+     * userTicket generates a SSO timed ticket for current valid session
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public static function userTicket()
+    {
+        try
+        {
+            Pii::app()->trigger( 'session.validate' );
+            $userId = Session::validateSession();
+        }
+        catch ( \Exception $ex )
+        {
+            Session::userLogout();
+            throw $ex;
+        }
+
+        // regenerate new timed ticket
+        $timestamp = time();
+        $ticket = Utilities::encryptCreds( "$userId,$timestamp", "gorilla" );
+
+        return array( 'ticket' => $ticket, 'ticket_expiry' => time() + ( 5 * 60 ) );
+    }
 }

@@ -38,612 +38,621 @@ use Kisma\Core\Utility\Option;
  */
 abstract class BaseSystemRestResource extends BasePlatformRestResource
 {
-	//*************************************************************************
-	//* Constants
-	//*************************************************************************
-
-	/**
-	 * @var string
-	 */
-	const DEFAULT_SERVICE_NAME = 'system';
-
-	//*************************************************************************
-	//* Members
-	//*************************************************************************
-
-	/**
-	 * @var array
-	 */
-	protected $_resourceArray;
-	/**
-	 * @var int
-	 */
-	protected $_resourceId;
-	/**
-	 * @var string
-	 */
-	protected $_relatedResource;
-	/**
-	 * @var array
-	 */
-	protected $_fields;
-	/**
-	 * @var array
-	 */
-	protected $_extras;
-	/**
-	 * @var bool
-	 */
-	protected $_includeSchema = false;
-	/**
-	 * @var bool
-	 */
-	protected $_includeCount = false;
-
-	//*************************************************************************
-	//* Methods
-	//*************************************************************************
-
-	/**
-	 * Create a new service
-	 *
-	 * @param RestServiceLike $consumer
-	 * @param array           $settings      configuration array
-	 * @param array           $resourceArray Or you can pass in through $settings['resource_array'] = array(...)
-	 *
-	 * @throws \InvalidArgumentException
-	 */
-	public function __construct( $consumer, $settings = array(), $resourceArray = array() )
-	{
-		$this->_resourceArray = $resourceArray ? : Option::get( $settings, 'resource_array', array(), true );
-
-		//	Default service name if not supplied. Should work for subclasses by defining the constant in your class
-		$settings['service_name'] = $this->_serviceName ? : Option::get( $settings, 'service_name', static::DEFAULT_SERVICE_NAME, true );
-
-		//	Default verb aliases for all system resources
-		$settings['verb_aliases'] = $this->_verbAliases
-			? : array_merge(
-				array(
-					static::Patch => static::Put,
-					static::Merge => static::Put,
-				),
-				Option::get( $settings, 'verb_aliases', array(), true )
-			);
-
-		parent::__construct( $consumer, $settings );
-	}
-
-	/**
-	 * @param string $resource
-	 *
-	 * @return BasePlatformSystemModel
-	 */
-	public static function model( $resource = null )
-	{
-		return ResourceStore::model( $resource );
-	}
-
-	/**
-	 * @param string $ids
-	 * @param string $fields
-	 * @param array  $extras
-	 * @param bool   $singleRow
-	 * @param bool   $includeSchema
-	 * @param bool   $includeCount
-	 *
-	 * @return array
-	 */
-	public static function select( $ids = null, $fields = null, $extras = array(), $singleRow = false, $includeSchema = false, $includeCount = false )
-	{
-		return ResourceStore::bulkSelectById(
-			$ids,
-			empty( $fields ) ? null : array( 'select' => $fields ),
-			$extras,
-			$singleRow,
-			$includeSchema,
-			$includeCount
-		);
-	}
-
-	/**
-	 * Apply the commonly used REST path members to the class
-	 *
-	 * @param string $resourcePath
-	 *
-	 * @return $this|void
-	 */
-	protected function _detectResourceMembers( $resourcePath = null )
-	{
-		parent::_detectResourceMembers( $resourcePath );
-
-		$this->_resourceId = Option::get( $this->_resourceArray, 1 );
-
-		return $this;
-	}
-
-	/**
-	 * @return bool
-	 */
-	protected function _preProcess()
-	{
-		parent::_preProcess();
-
-		//	Do validation here
-		$this->checkPermission( PermissionMap::fromMethod( $this->getRequestedAction() ), $this->_resource );
-
-		//	Most requests contain 'returned fields' parameter, all by default
-		$this->_extras = array();
-		$this->_fields = Option::get( $_REQUEST, 'fields', '*' );
-		$this->_includeSchema = Option::getBool( $_REQUEST, 'include_schema', false );
-		$this->_includeCount = Option::getBool( $_REQUEST, 'include_count', false );
-
-		$_related = Option::get( $_REQUEST, 'related' );
-
-		if ( !empty( $_related ) )
-		{
-			$_related = array_map( 'trim', explode( ',', $_related ) );
-
-			foreach ( $_related as $_relative )
-			{
-				$this->_extras[] = array(
-					'name'   => $_relative,
-					'fields' => Option::get( $_REQUEST, $_relative . '_fields', '*' ),
-					'order'  => Option::get( $_REQUEST, $_relative . '_order' ),
-				);
-			}
-		}
-
-		ResourceStore::reset(
-			array(
-				'service'          => $this->_serviceName,
-				'resource_name'    => $this->_apiName,
-				'resource_id'      => $this->_resourceId,
-				'resource_array'   => $this->_resourceArray,
-				'related_resource' => $this->_relatedResource,
-				'fields'           => $this->_fields,
-				'extras'           => $this->_extras,
-				'include_count'    => $this->_includeCount,
-				'include_schema'   => $this->_includeSchema,
-			)
-		);
-	}
-
-	/**
-	 * @param string $operation
-	 * @param string $resource
-	 *
-	 * @return bool
-	 */
-	public function checkPermission( $operation, $resource = null )
-	{
-		return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource );
-	}
-
-	/**
-	 * @param array $ids     IDs returned here
-	 * @param array $records Records returned here
-	 *
-	 * @return array The payload operated upon
-	 */
-	protected function _determineRequestedResource( &$ids = null, &$records = null )
-	{
-		//	Which payload do we love?
-		$_payload = RestData::getPostedData( true, true );
-
-		//	Use $_REQUEST instead of POSTed data
-		if ( empty( $_payload ) )
-		{
-			$_payload = $_REQUEST;
-		}
-
-		//	Multiple resources by ID
-		$ids = Option::get( $_payload, 'ids' );
-		$records = Option::get( $_payload, 'record', Option::getDeep( $_payload, 'records', 'record' ) );
-
-		return $_payload;
-	}
-
-	/**
-	 * Default GET implementation
-	 *
-	 * @return bool
-	 */
-	protected function _handleGet()
-	{
-		//	Phone home...
-		parent::_handleGet();
-
-		//	Single resource by ID
-		if ( !empty( $this->_resourceId ) )
-		{
-			return ResourceStore::select( $this->_resourceId, null, array(), true );
-		}
-
-		$_singleRow = false;
-
-		$_payload = $this->_determineRequestedResource( $_ids, $_records );
-
-		//	Multiple resources by ID
-		if ( !empty( $_ids ) )
-		{
-			return ResourceStore::bulkSelectById( $_ids );
-		}
-
-		if ( !empty( $_records ) )
-		{
-			$_pk = static::model()->primaryKey;
-			$_ids = array();
-
-			foreach ( $_records as $_record )
-			{
-				$_ids[] = Option::get( $_record, $_pk );
-			}
-
-			return ResourceStore::bulkSelectById( $_ids );
-		}
-
-		//	Build our criteria
-		$_criteria = array(
-			'params' => array(),
-		);
-
-		if ( !empty( $this->_fields ) )
-		{
-			$_criteria['select'] = $this->_fields;
-		}
-
-		if ( null !== ( $_value = Option::get( $_payload, 'params' ) ) )
-		{
-			$_criteria['params'] = $_value;
-		}
-
-		if ( null !== ( $_value = Option::get( $_payload, 'filter' ) ) )
-		{
-			$_criteria['condition'] = $_value;
-
-			//	Add current user ID into parameter array if in condition, but not specified.
-			if ( false !== stripos( $_value, ':user_id' ) )
-			{
-				if ( !isset( $_criteria['params'][':user_id'] ) )
-				{
-					$_criteria['params'][':user_id'] = Session::getCurrentUserId();
-				}
-			}
-		}
-
-		if ( null !== ( $_value = Option::get( $_payload, 'limit' ) ) )
-		{
-			$_criteria['limit'] = $_value;
-
-			if ( null !== ( $_value = Option::get( $_payload, 'offset' ) ) )
-			{
-				$_criteria['offset'] = $_value;
-			}
-		}
-
-		if ( null !== ( $_value = Option::get( $_payload, 'order' ) ) )
-		{
-			$_criteria['order'] = $_value;
-		}
-
-		return ResourceStore::select(
-			null,
-			$_criteria,
-			array(),
-			$_singleRow,
-			Option::getBool( $_payload, 'include_count' ),
-			Option::getBool( $_payload, 'include_schema' )
-		);
-	}
-
-	/**
-	 * Default PUT implementation
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return bool
-	 */
-	protected function _handlePut()
-	{
-		$_payload = $this->_determineRequestedResource( $_ids, $_records );
-		$_rollback = Option::getBool( $_payload, 'rollback' );
-		$_continue = Option::getBool( $_payload, 'continue' );
-
-		if ( !empty( $this->_resourceId ) )
-		{
-			return ResourceStore::bulkUpdateById( $this->_resourceId, $_payload, $_rollback, null, null, true, $_continue );
-		}
-
-		if ( !empty( $_ids ) )
-		{
-			return ResourceStore::bulkUpdateById( $_ids, $_payload, $_rollback, null, null, false, $_continue );
-		}
-
-		if ( !empty( $_records ) )
-		{
-			return ResourceStore::bulkUpdate( $_records, $_rollback, null, null, false, $_continue );
-		}
-
-		if ( empty( $_payload ) )
-		{
-			throw new BadRequestException( 'No record in PUT update request.' );
-		}
-
-		return ResourceStore::updateOne( $_payload );
-	}
-
-	/**
-	 * Default PATCH implementation
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return bool
-	 */
-	protected function _handlePatch()
-	{
-		throw new BadRequestException();
-	}
-
-	/**
-	 * Default MERGE implementation
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return bool
-	 */
-	protected function _handleMerge()
-	{
-		throw new BadRequestException();
-	}
-
-	/**
-	 * Default POST implementation
-	 *
-	 * @return array|bool
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 */
-	protected function _handlePost()
-	{
-		$_payload = $this->_determineRequestedResource( $_ids, $_records );
-
-		if ( !empty( $_records ) )
-		{
-			$_rollback = Option::getBool( $_payload, 'rollback' );
-			$_continue = Option::getBool( $_payload, 'continue' );
-
-			return ResourceStore::insert( $_records, $_rollback, null, null, $_continue );
-		}
-
-		if ( empty( $_payload ) )
-		{
-			throw new BadRequestException( 'No record in POST create request.' );
-		}
-
-		return ResourceStore::insertOne( $_payload );
-	}
-
-	/**
-	 * Default DELETE implementation
-	 *
-	 * @return bool|void
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 */
-	protected function _handleDelete()
-	{
-		if ( !empty( $this->_resourceId ) )
-		{
-			return ResourceStore::bulkDeleteById( $this->_resourceId, false, null, null, true );
-		}
-
-		$_payload = $this->_determineRequestedResource( $_ids, $_records );
-
-		$_rollback = Option::getBool( $_payload, 'rollback' );
-		$_continue = Option::getBool( $_payload, 'continue' );
-		if ( !empty( $_ids ) )
-		{
-			return ResourceStore::bulkDeleteById( $_ids, $_rollback, null, null, false, $_continue );
-		}
-
-		if ( !empty( $_records ) )
-		{
-			return ResourceStore::delete( $_records, $_rollback, null, null, $_continue );
-		}
-
-		if ( empty( $_payload ) )
-		{
-			throw new BadRequestException( "Id list or record containing Id field required to delete $this->_apiName records." );
-		}
-
-		return ResourceStore::deleteOne( $_payload );
-	}
-
-	/**
-	 * Formats the output
-	 */
-	protected function _formatResponse()
-	{
-		parent::_formatResponse();
-
-		$_data = $this->_response;
-
-		switch ( $this->_responseFormat )
-		{
-			case ResponseFormats::DATATABLES:
-				$_data = DataTablesFormatter::format( $_data );
-				break;
-
-			case ResponseFormats::JTABLE:
-				$_data = JTablesFormatter::format( $_data, array( 'action' => $this->_action ) );
-				break;
-		}
-
-		$this->_response = $_data;
-	}
-
-	/**
-	 * @param string $relatedResource
-	 *
-	 * @return BaseSystemRestResource
-	 */
-	public function setRelatedResource( $relatedResource )
-	{
-		$this->_relatedResource = $relatedResource;
-
-		return $this;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function getRelatedResource()
-	{
-		return $this->_relatedResource;
-	}
-
-	/**
-	 * @param array $resourceArray
-	 *
-	 * @return BaseSystemRestResource
-	 */
-	public function setResourceArray( $resourceArray )
-	{
-		$this->_resourceArray = $resourceArray;
-
-		return $this;
-	}
-
-	/**
-	 * @return array
-	 */
-	public function getResourceArray()
-	{
-		return $this->_resourceArray;
-	}
-
-	/**
-	 * @param int $resourceId
-	 *
-	 * @return BaseSystemRestResource
-	 */
-	public function setResourceId( $resourceId )
-	{
-		$this->_resourceId = $resourceId;
-
-		return $this;
-	}
-
-	/**
-	 * @return int
-	 */
-	public function getResourceId()
-	{
-		return $this->_resourceId;
-	}
-
-	/**
-	 * @param array $extras
-	 *
-	 * @return BaseSystemRestResource
-	 */
-	public function setExtras( $extras )
-	{
-		$this->_extras = $extras;
-
-		return $this;
-	}
-
-	/**
-	 * @return array
-	 */
-	public function getExtras()
-	{
-		return $this->_extras;
-	}
-
-	/**
-	 * @param array $fields
-	 *
-	 * @return BaseSystemRestResource
-	 */
-	public function setFields( $fields )
-	{
-		$this->_fields = $fields;
-
-		return $this;
-	}
-
-	/**
-	 * @return array
-	 */
-	public function getFields()
-	{
-		return $this->_fields;
-	}
-
-	/**
-	 * @param int $responseFormat
-	 *
-	 * @return BaseSystemRestResource
-	 */
-	public function setResponseFormat( $responseFormat )
-	{
-		$this->_responseFormat = $responseFormat;
-
-		return $this;
-	}
-
-	/**
-	 * @return int
-	 */
-	public function getResponseFormat()
-	{
-		return $this->_responseFormat;
-	}
-
-	/**
-	 * @param boolean $includeCount
-	 *
-	 * @return BaseSystemRestResource
-	 */
-	public function setIncludeCount( $includeCount )
-	{
-		$this->_includeCount = $includeCount;
-
-		return $this;
-	}
-
-	/**
-	 * @return boolean
-	 */
-	public function getIncludeCount()
-	{
-		return $this->_includeCount;
-	}
-
-	/**
-	 * @param boolean $includeSchema
-	 *
-	 * @return BaseSystemRestResource
-	 */
-	public function setIncludeSchema( $includeSchema )
-	{
-		$this->_includeSchema = $includeSchema;
-
-		return $this;
-	}
-
-	/**
-	 * @return boolean
-	 */
-	public function getIncludeSchema()
-	{
-		return $this->_includeSchema;
-	}
-
-	/**
-	 * @param BasePlatformSystemModel $resource
-	 *
-	 * @return mixed
-	 */
-	public function getSchema( $resource )
-	{
-		return SqlDbUtilities::describeTable( $resource->getDb(), $resource->tableName(), $resource->tableNamePrefix() );
-	}
+    //*************************************************************************
+    //* Constants
+    //*************************************************************************
+
+    /**
+     * @var string
+     */
+    const DEFAULT_SERVICE_NAME = 'system';
+
+    //*************************************************************************
+    //* Members
+    //*************************************************************************
+
+    /**
+     * @var array
+     */
+    protected $_resourceArray;
+    /**
+     * @var int
+     */
+    protected $_resourceId;
+    /**
+     * @var string
+     */
+    protected $_relatedResource;
+    /**
+     * @var array
+     */
+    protected $_fields;
+    /**
+     * @var array
+     */
+    protected $_extras;
+    /**
+     * @var bool
+     */
+    protected $_includeSchema = false;
+    /**
+     * @var bool
+     */
+    protected $_includeCount = false;
+
+    //*************************************************************************
+    //* Methods
+    //*************************************************************************
+
+    /**
+     * Create a new service
+     *
+     * @param RestServiceLike $consumer
+     * @param array           $settings      configuration array
+     * @param array           $resourceArray Or you can pass in through $settings['resource_array'] = array(...)
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function __construct( $consumer, $settings = array(), $resourceArray = array() )
+    {
+        $this->_resourceArray = $resourceArray ? : Option::get( $settings, 'resource_array', array(), true );
+
+        //	Default service name if not supplied. Should work for subclasses by defining the constant in your class
+        $settings['service_name'] = $this->_serviceName ? : Option::get( $settings, 'service_name', static::DEFAULT_SERVICE_NAME, true );
+
+        //	Default verb aliases for all system resources
+        $settings['verb_aliases'] = $this->_verbAliases
+            ? : array_merge(
+                array(
+                    static::PATCH => static::PUT,
+                    static::MERGE => static::PUT,
+                ),
+                Option::get( $settings, 'verb_aliases', array(), true )
+            );
+
+        parent::__construct( $consumer, $settings );
+    }
+
+    /**
+     * @param string $resource
+     *
+     * @return BasePlatformSystemModel
+     */
+    public static function model( $resource = null )
+    {
+        return ResourceStore::model( $resource );
+    }
+
+    /**
+     * @param string $ids
+     * @param string $fields
+     * @param array  $extras
+     * @param bool   $singleRow
+     * @param bool   $includeSchema
+     * @param bool   $includeCount
+     *
+     * @return array
+     */
+    public static function select( $ids = null, $fields = null, $extras = array(), $singleRow = false, $includeSchema = false, $includeCount = false )
+    {
+        return ResourceStore::bulkSelectById(
+            $ids,
+            empty( $fields ) ? null : array( 'select' => $fields ),
+            $extras,
+            $singleRow,
+            $includeSchema,
+            $includeCount
+        );
+    }
+
+    /**
+     * Apply the commonly used REST path members to the class
+     *
+     * @param string $resourcePath
+     *
+     * @return $this|void
+     */
+    protected function _detectResourceMembers( $resourcePath = null )
+    {
+        parent::_detectResourceMembers( $resourcePath );
+
+        $this->_resourceId = Option::get( $this->_resourceArray, 1 );
+
+        return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    protected function _preProcess()
+    {
+        parent::_preProcess();
+
+        //	Do validation here
+        $this->checkPermission( PermissionMap::fromMethod( $this->getRequestedAction() ), $this->_resource );
+
+        //	Most requests contain 'returned fields' parameter, all by default
+        $this->_extras = array();
+        $this->_fields = Option::get( $_REQUEST, 'fields', '*' );
+        $this->_includeSchema = Option::getBool( $_REQUEST, 'include_schema', false );
+        $this->_includeCount = Option::getBool( $_REQUEST, 'include_count', false );
+
+        $_related = Option::get( $_REQUEST, 'related' );
+
+        if ( !empty( $_related ) )
+        {
+            $_related = array_map( 'trim', explode( ',', $_related ) );
+
+            foreach ( $_related as $_relative )
+            {
+                $this->_extras[] = array(
+                    'name'   => $_relative,
+                    'fields' => Option::get( $_REQUEST, $_relative . '_fields', '*' ),
+                    'order'  => Option::get( $_REQUEST, $_relative . '_order' ),
+                );
+            }
+        }
+
+        ResourceStore::reset(
+            array(
+                'service'          => $this->_serviceName,
+                'resource_name'    => $this->_apiName,
+                'resource_id'      => $this->_resourceId,
+                'resource_array'   => $this->_resourceArray,
+                'related_resource' => $this->_relatedResource,
+                'fields'           => $this->_fields,
+                'extras'           => $this->_extras,
+                'include_count'    => $this->_includeCount,
+                'include_schema'   => $this->_includeSchema,
+            )
+        );
+    }
+
+    /**
+     * @param string $operation
+     * @param string $resource
+     *
+     * @return bool
+     */
+    public function checkPermission( $operation, $resource = null )
+    {
+        return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource );
+    }
+
+    /**
+     * @param array $ids     IDs returned here
+     * @param array $records Records returned here
+     *
+     * @return array The payload operated upon
+     */
+    protected function _determineRequestedResource( &$ids = null, &$records = null )
+    {
+        //	Which payload do we love?
+        $_payload = RestData::getPostedData( true, true );
+
+        //	Use $_REQUEST instead of POSTed data
+        if ( empty( $_payload ) )
+        {
+            $_payload = $_REQUEST;
+        }
+
+        //	Multiple resources by ID
+        $ids = Option::get( $_payload, 'ids' );
+        $records = Option::get( $_payload, 'record', Option::getDeep( $_payload, 'records', 'record' ) );
+
+        return $_payload;
+    }
+
+    /**
+     * Default GET implementation
+     *
+     * @return bool
+     */
+    protected function _handleGet()
+    {
+        //	Phone home...
+        parent::_handleGet();
+
+        //	Single resource by ID
+        if ( !empty( $this->_resourceId ) )
+        {
+            return ResourceStore::select( $this->_resourceId, null, array(), true );
+        }
+
+        $_singleRow = false;
+
+        $_payload = $this->_determineRequestedResource( $_ids, $_records );
+
+        //	Multiple resources by ID
+        if ( !empty( $_ids ) )
+        {
+            return ResourceStore::bulkSelectById( $_ids );
+        }
+
+        if ( !empty( $_records ) )
+        {
+            $_pk = static::model()->primaryKey;
+            $_ids = array();
+
+            foreach ( $_records as $_record )
+            {
+                $_ids[] = Option::get( $_record, $_pk );
+            }
+
+            return ResourceStore::bulkSelectById( $_ids );
+        }
+
+        //	Build our criteria
+        $_criteria = array(
+            'params' => array(),
+        );
+
+        if ( !empty( $this->_fields ) )
+        {
+            $_criteria['select'] = $this->_fields;
+        }
+
+        if ( null !== ( $_value = Option::get( $_payload, 'params' ) ) )
+        {
+            $_criteria['params'] = $_value;
+        }
+
+        if ( null !== ( $_value = Option::get( $_payload, 'filter' ) ) )
+        {
+            $_criteria['condition'] = $_value;
+
+            //	Add current user ID into parameter array if in condition, but not specified.
+            if ( false !== stripos( $_value, ':user_id' ) )
+            {
+                if ( !isset( $_criteria['params'][':user_id'] ) )
+                {
+                    $_criteria['params'][':user_id'] = Session::getCurrentUserId();
+                }
+            }
+        }
+
+        if ( null !== ( $_value = Option::get( $_payload, 'limit' ) ) )
+        {
+            $_criteria['limit'] = $_value;
+
+            if ( null !== ( $_value = Option::get( $_payload, 'offset' ) ) )
+            {
+                $_criteria['offset'] = $_value;
+            }
+        }
+
+        if ( null !== ( $_value = Option::get( $_payload, 'order' ) ) )
+        {
+            $_criteria['order'] = $_value;
+        }
+
+        return ResourceStore::select(
+            null,
+            $_criteria,
+            array(),
+            $_singleRow,
+            Option::getBool( $_payload, 'include_count' ),
+            Option::getBool( $_payload, 'include_schema' )
+        );
+    }
+
+    /**
+     * Default PUT implementation
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return bool
+     */
+    protected function _handlePut()
+    {
+        //	Phone home...
+        parent::_handlePut();
+
+        $_payload = $this->_determineRequestedResource( $_ids, $_records );
+        $_rollback = Option::getBool( $_payload, 'rollback' );
+        $_continue = Option::getBool( $_payload, 'continue' );
+
+        if ( !empty( $this->_resourceId ) )
+        {
+            return ResourceStore::bulkUpdateById( $this->_resourceId, $_payload, $_rollback, null, null, true, $_continue );
+        }
+
+        if ( !empty( $_ids ) )
+        {
+            return ResourceStore::bulkUpdateById( $_ids, $_payload, $_rollback, null, null, false, $_continue );
+        }
+
+        if ( !empty( $_records ) )
+        {
+            return ResourceStore::bulkUpdate( $_records, $_rollback, null, null, false, $_continue );
+        }
+
+        if ( empty( $_payload ) )
+        {
+            throw new BadRequestException( 'No record in PUT update request.' );
+        }
+
+        return ResourceStore::updateOne( $_payload );
+    }
+
+    /**
+     * Default PATCH implementation
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return bool
+     */
+    protected function _handlePatch()
+    {
+        throw new BadRequestException();
+    }
+
+    /**
+     * Default MERGE implementation
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return bool
+     */
+    protected function _handleMerge()
+    {
+        throw new BadRequestException();
+    }
+
+    /**
+     * Default POST implementation
+     *
+     * @return array|bool
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     */
+    protected function _handlePost()
+    {
+        //	Phone home...
+        $this->trigger( $this->_apiName . '.create' );
+
+        $_payload = $this->_determineRequestedResource( $_ids, $_records );
+
+        if ( !empty( $_records ) )
+        {
+            $_rollback = Option::getBool( $_payload, 'rollback' );
+            $_continue = Option::getBool( $_payload, 'continue' );
+
+            return ResourceStore::insert( $_records, $_rollback, null, null, $_continue );
+        }
+
+        if ( empty( $_payload ) )
+        {
+            throw new BadRequestException( 'No record in POST create request.' );
+        }
+
+        return ResourceStore::insertOne( $_payload );
+    }
+
+    /**
+     * Default DELETE implementation
+     *
+     * @return bool|void
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     */
+    protected function _handleDelete()
+    {
+        //	Phone home...
+        parent::_handleDelete();
+
+        if ( !empty( $this->_resourceId ) )
+        {
+            return ResourceStore::bulkDeleteById( $this->_resourceId, false, null, null, true );
+        }
+
+        $_payload = $this->_determineRequestedResource( $_ids, $_records );
+
+        $_rollback = Option::getBool( $_payload, 'rollback' );
+        $_continue = Option::getBool( $_payload, 'continue' );
+        if ( !empty( $_ids ) )
+        {
+            return ResourceStore::bulkDeleteById( $_ids, $_rollback, null, null, false, $_continue );
+        }
+
+        if ( !empty( $_records ) )
+        {
+            return ResourceStore::delete( $_records, $_rollback, null, null, $_continue );
+        }
+
+        if ( empty( $_payload ) )
+        {
+            throw new BadRequestException( "Id list or record containing Id field required to delete $this->_apiName records." );
+        }
+
+        return ResourceStore::deleteOne( $_payload );
+    }
+
+    /**
+     * Formats the output
+     */
+    protected function _formatResponse()
+    {
+        parent::_formatResponse();
+
+        $_data = $this->_response;
+
+        switch ( $this->_responseFormat )
+        {
+            case ResponseFormats::DATATABLES:
+                $_data = DataTablesFormatter::format( $_data );
+                break;
+
+            case ResponseFormats::JTABLE:
+                $_data = JTablesFormatter::format( $_data, array( 'action' => $this->_action ) );
+                break;
+        }
+
+        $this->_response = $_data;
+    }
+
+    /**
+     * @param string $relatedResource
+     *
+     * @return BaseSystemRestResource
+     */
+    public function setRelatedResource( $relatedResource )
+    {
+        $this->_relatedResource = $relatedResource;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getRelatedResource()
+    {
+        return $this->_relatedResource;
+    }
+
+    /**
+     * @param array $resourceArray
+     *
+     * @return BaseSystemRestResource
+     */
+    public function setResourceArray( $resourceArray )
+    {
+        $this->_resourceArray = $resourceArray;
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getResourceArray()
+    {
+        return $this->_resourceArray;
+    }
+
+    /**
+     * @param int $resourceId
+     *
+     * @return BaseSystemRestResource
+     */
+    public function setResourceId( $resourceId )
+    {
+        $this->_resourceId = $resourceId;
+
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getResourceId()
+    {
+        return $this->_resourceId;
+    }
+
+    /**
+     * @param array $extras
+     *
+     * @return BaseSystemRestResource
+     */
+    public function setExtras( $extras )
+    {
+        $this->_extras = $extras;
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getExtras()
+    {
+        return $this->_extras;
+    }
+
+    /**
+     * @param array $fields
+     *
+     * @return BaseSystemRestResource
+     */
+    public function setFields( $fields )
+    {
+        $this->_fields = $fields;
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFields()
+    {
+        return $this->_fields;
+    }
+
+    /**
+     * @param int $responseFormat
+     *
+     * @return BaseSystemRestResource
+     */
+    public function setResponseFormat( $responseFormat )
+    {
+        $this->_responseFormat = $responseFormat;
+
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getResponseFormat()
+    {
+        return $this->_responseFormat;
+    }
+
+    /**
+     * @param boolean $includeCount
+     *
+     * @return BaseSystemRestResource
+     */
+    public function setIncludeCount( $includeCount )
+    {
+        $this->_includeCount = $includeCount;
+
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getIncludeCount()
+    {
+        return $this->_includeCount;
+    }
+
+    /**
+     * @param boolean $includeSchema
+     *
+     * @return BaseSystemRestResource
+     */
+    public function setIncludeSchema( $includeSchema )
+    {
+        $this->_includeSchema = $includeSchema;
+
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getIncludeSchema()
+    {
+        return $this->_includeSchema;
+    }
+
+    /**
+     * @param BasePlatformSystemModel $resource
+     *
+     * @return mixed
+     */
+    public function getSchema( $resource )
+    {
+        return SqlDbUtilities::describeTable( $resource->getDb(), $resource->tableName(), $resource->tableNamePrefix() );
+    }
 }

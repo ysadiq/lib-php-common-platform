@@ -27,6 +27,7 @@ use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
 use Guzzle\Http\Client;
 use Guzzle\Http\Exception\MultiTransferException;
+use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\Event;
@@ -56,9 +57,13 @@ class EventDispatcher implements EventDispatcherInterface
     //*************************************************************************
 
     /**
-     * @var bool Will log events if true
+     * @var bool Will log dispatched events if true
      */
     protected static $_logEvents = false;
+    /**
+     * @var bool Will log all events if true
+     */
+    protected static $_logAllEvents = false;
     /**
      * @var Client
      */
@@ -112,16 +117,15 @@ class EventDispatcher implements EventDispatcherInterface
 
             $_scriptPath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
 
-            foreach ( SwaggerManager::getEventMap() as $_service => $_routes )
+            foreach ( SwaggerManager::getEventMap() as $_routes )
             {
-                foreach ( $_routes as $_method => $_info )
+                foreach ( $_routes as $_routeInfo )
                 {
-                    if ( isset( $_info['scripts'] ) && !empty( $_info['scripts'] ) )
+                    foreach ( $_routeInfo as $_methodInfo )
                     {
-                        foreach ( $_info['scripts'] as $_script )
+                        foreach ( Option::get( $_methodInfo, 'scripts', array() ) as $_script )
                         {
-                            $_eventName = $_service . '.' . strtolower( $_method ) . '.' . $_script;
-                            $this->_scripts[$_eventName] = $_scriptPath . '/' . $_eventName;
+                            $this->_scripts[str_replace( '.js', null, $_script )] = $_scriptPath . '/' . $_script;
                         }
                     }
                 }
@@ -143,7 +147,7 @@ class EventDispatcher implements EventDispatcherInterface
         {
             foreach ( array_keys( $this->_listeners ) as $_eventName )
             {
-                /** @var Event $_model */
+                /** @var \DreamFactory\Platform\Yii\Models\Event $_model */
                 $_model = ResourceStore::model( 'event' )->byEventName( $_eventName )->find();
 
                 if ( null === $_model )
@@ -214,7 +218,17 @@ class EventDispatcher implements EventDispatcherInterface
         $_posts = array();
         $_dispatched = true;
 
-        if ( empty( $this->_listeners[$eventName] ) && empty( $this->_scripts[$eventName] ) )
+        //  Anything to do?
+        $eventName = $this->_normalizeEventName( $event, $eventName );
+
+        if ( static::$_logAllEvents )
+        {
+            Log::debug(
+                'Triggered: event "' . $eventName . '" triggered by ' . Pii::app()->getRequestObject()->getPathInfo()
+            );
+        }
+
+        if ( null === Option::get( $this->_listeners, $eventName ) && null === Option::get( $this->_scripts, $eventName ) )
         {
             return false;
         }
@@ -228,9 +242,9 @@ class EventDispatcher implements EventDispatcherInterface
         );
 
         //  Run scripts
-        foreach ( $this->_scripts as $_eventName => $_scripts )
+        foreach ( $this->_scripts as $_eventName => $_script )
         {
-            foreach ( $_scripts as $_script )
+            if ( $_eventName == $eventName )
             {
                 Log::debug( 'Running event "' . $_eventName . '" script: ' . $_script );
                 Log::info( 'Script output: ' . print_r( Script::runScript( $_script, null, $_event ), true ) );
@@ -319,10 +333,14 @@ class EventDispatcher implements EventDispatcherInterface
                 }
             }
 
-            if ( $_dispatched && static::$_logEvents )
+            if ( $_dispatched && static::$_logEvents && !static::$_logAllEvents )
             {
                 Log::debug(
-                    '/' . $event->getApiName() . '/' . $event->getResource() . ' triggered event: ' . $eventName
+                    ( $_dispatched ? 'Dispatcher' : 'Unhandled' ) .
+                    ': event "' .
+                    $eventName .
+                    '" triggered by /' .
+                    Option::get( $_GET, 'path', $event->getApiName() . '/' . $event->getResource() )
                 );
             }
 
@@ -583,4 +601,109 @@ class EventDispatcher implements EventDispatcherInterface
         return self::$_logEvents;
     }
 
+    /**
+     * @return boolean
+     */
+    public static function getLogAllEvents()
+    {
+        return self::$_logAllEvents;
+    }
+
+    /**
+     * @param boolean $logAllEvents
+     */
+    public static function setLogAllEvents( $logAllEvents )
+    {
+        self::$_logAllEvents = $logAllEvents;
+    }
+
+    /**
+     * @param PlatformEvent $event
+     * @param string        $eventName
+     * @param Request|array $values The values to use for replacements in the event name templates.
+     *                              If none specified, the $_REQUEST variables will be used.
+     *                              The current class's variables are also available for replacement.
+     *
+     * @return string
+     */
+    protected function _normalizeEventName( PlatformEvent $event, &$eventName, $values = null )
+    {
+        static $_requestValues = null, $_replacements;
+
+        if ( false === strpos( $eventName, '{' ) )
+        {
+            return $eventName;
+        }
+
+        $_tag = Inflector::neutralize( $eventName );
+
+        if ( null === $_requestValues )
+        {
+            $_requestValues = array();
+            $_request = Pii::app()->getRequestObject();
+
+            if ( !empty( $_request ) )
+            {
+                $_requestValues = array(
+                    'headers'    => $_request->headers,
+                    'attributes' => $_request->attributes,
+                    'cookie'     => $_request->cookies,
+                    'files'      => $_request->files,
+                    'query'      => $_request->query,
+                    'request'    => $_request->request,
+                    'server'     => $_request->server,
+                    'action'     => $_request->getMethod(),
+                );
+            }
+        }
+
+        $_combinedValues = Option::merge(
+            Option::clean( $_requestValues ),
+            is_object( $values ) ? Inflector::neutralizeObject( $values ) : Option::clean( $values ),
+            $event->toArray()
+        );
+
+        if ( empty( $_replacements ) && !empty( $_combinedValues ) )
+        {
+            $_replacements = array();
+
+            foreach ( $_combinedValues as $_key => $_value )
+            {
+                if ( is_scalar( $_value ) )
+                {
+                    $_replacements['{' . $_key . '}'] = $_value;
+                }
+                else if ( $_value instanceof \IteratorAggregate && $_value instanceof \Countable )
+                {
+                    foreach ( $_value as $_bagKey => $_bagValue )
+                    {
+                        $_bagKey = Inflector::neutralize( ltrim( $_bagKey, '_' ) );
+
+                        if ( is_array( $_bagValue ) )
+                        {
+                            if ( !empty( $_bagValue ) )
+                            {
+                                $_bagValue = current( $_bagValue );
+                            }
+                            else
+                            {
+                                $_bagValue = null;
+                            }
+                        }
+                        elseif ( !is_scalar( $_bagValue ) )
+                        {
+                            continue;
+                        }
+
+                        $_replacements['{' . $_key . '.' . $_bagKey . '}'] = $_bagValue;
+                    }
+                }
+            }
+        }
+
+        //	Construct and neutralize...
+        $_tag = Inflector::neutralize( str_ireplace( array_keys( $_replacements ), array_values( $_replacements ), $_tag ) );
+
+        return $eventName = $_tag;
+    }
 }

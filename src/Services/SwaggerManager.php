@@ -322,6 +322,12 @@ SQL;
         {
             $_scripts = $_events = array();
 
+            $_path = str_replace(
+                array( '{api_name}', '/' ),
+                array( $apiName, '.' ),
+                trim( Option::get( $_api, 'path' ), '/' )
+            );
+
             foreach ( Option::get( $_api, 'operations', array() ) as $_operation )
             {
                 if ( null !== ( $_eventName = Option::get( $_operation, 'event_name' ) ) )
@@ -329,12 +335,12 @@ SQL;
                     $_method = strtolower( Option::get( $_operation, 'method', HttpMethod::GET ) );
 
                     $_events[$_method] = array(
-                        'event'   => str_ireplace(
-                            array( '{api_name}', '{action}', '{request.method}' ),
-                            array( $apiName, $_method, $_method ),
-                            $_eventName
-                        ),
-                        'scripts' => static::_findScripts( $apiName, $_method ),
+                        'event'   => $_eventName = str_ireplace(
+                                array( '{api_name}', '{action}', '{request.method}' ),
+                                array( $apiName, $_method, $_method ),
+                                $_eventName
+                            ),
+                        'scripts' => static::_findScripts( $_path, $_method ),
                     );
                 }
 
@@ -359,9 +365,15 @@ SQL;
      */
     protected static function _findScripts( $apiName, $method = HttpMethod::GET )
     {
-        $_scriptPath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
+        static $_scriptPath;
 
-        $_scripts = FileSystem::glob( $_scriptPath . '/' . strtolower( $apiName ) . '.' . strtolower( $method ) . '*.js' );
+        if ( empty( $_scriptPath ) )
+        {
+            $_scriptPath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
+        }
+
+        $_scriptPattern = strtolower( $apiName ) . '.' . strtolower( $method ) . '.*.js';
+        $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
 
         if ( empty( $_scripts ) )
         {
@@ -369,10 +381,14 @@ SQL;
         }
 
         $_response = array();
+        $_eventPattern = '/^' . str_replace( array( '.*.js', '.' ), array( null, '\\.' ), $_scriptPattern ) . '\\.(\w)\\.js$/i';
 
         foreach ( $_scripts as $_script )
         {
-            $_response[] = str_ireplace( array( $apiName . '.' . $method . '.', '.js' ), null, $_script );
+            if ( 0 === preg_match( $_eventPattern, $_script ) )
+            {
+                $_response[] = $_script;
+            }
         }
 
         return $_response;

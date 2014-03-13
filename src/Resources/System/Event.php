@@ -69,6 +69,8 @@ class Event extends BaseSystemRestResource
 	 */
 	protected function _handlePost()
 	{
+        parent::_handlePost();
+
 		$_request = Pii::app()->getRequestObject();
 
 		$_body = @json_decode( $_request->getContent(), true );

@@ -23,7 +23,6 @@ use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\DataFormats;
-use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
 use DreamFactory\Platform\Events\ResourceEvent;
@@ -42,7 +41,6 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
-use Symfony\Component\HttpFoundation\Request;
 
 /**
  * BasePlatformRestService
@@ -185,6 +183,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
         $this->_preProcess();
 
+        if ( $this instanceOf BasePlatformRestResource )
+        {
+            $this->trigger( ResourceServiceEvents::PRE_PROCESS );
+        }
+
         //	Inherent failure?
         if ( false === ( $this->_response = $this->_handleResource() ) )
         {
@@ -200,6 +203,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         }
 
         $this->_postProcess();
+
+        if ( $this instanceOf BasePlatformRestResource )
+        {
+            $this->trigger( ResourceServiceEvents::POST_PROCESS );
+        }
 
         return $this->_respond();
     }
@@ -346,20 +354,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     }
 
     /**
-     * If you override this method, be sure to call the parent (this)
-     * or else events will not be triggered.
-     *
      * @return mixed
      */
     protected function _preProcess()
     {
-        //	The system service shouldn't trigger events, only the resources...
-        if ( PlatformServiceTypes::SYSTEM_MANAGER_SERVICE == $this->_apiName && !empty( $this->_resource ) )
-        {
-            return;
-        }
-
-        return $this->trigger( ResourceServiceEvents::PRE_PROCESS );
         // throw exception here to stop processing
     }
 
@@ -367,20 +365,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      * Handles all processing after a request.
      * Calls the default output formatter, which, like the goggles, does nothing.
      *
-     * If you override this method, be sure to call the parent (this)
-     * or else events will not be triggered.
-     *
      * @return mixed
      */
     protected function _postProcess()
     {
-        //	The system service shouldn't trigger events, only the resources...
-        if ( PlatformServiceTypes::SYSTEM_MANAGER_SERVICE == $this->_apiName && !empty( $this->_resource ) )
-        {
-            return;
-        }
-
-        return $this->trigger( ResourceServiceEvents::POST_PROCESS );
         // throw exception here to stop processing
     }
 
@@ -422,7 +410,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
         }
 
-        $this->trigger( ResourceServiceEvents::AFTER_DATA_FORMAT );
+        $this->_triggerActionEvent( $_result, ResourceServiceEvents::AFTER_DATA_FORMAT );
 
         if ( !empty( $this->_outputFormat ) )
         {
@@ -441,7 +429,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _detectAppName()
     {
-        $_request = Pii::app()->getRequestObject() ? : Request::createFromGlobals();
+        $_request = Pii::app()->getRequestObject();
 
         // 	Determine application if any
         $_appName = $_request->get(
@@ -514,9 +502,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _handleMerge()
     {
-        $_eventName = $this->_apiName . '.update';
-        $this->trigger( $_eventName );
-
         return false;
     }
 
@@ -549,9 +534,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _handlePost()
     {
-        $_eventName = $this->_apiName . '.create';
-        $this->trigger( $_eventName );
-
         return false;
     }
 
@@ -560,9 +542,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _handlePut()
     {
-        $_eventName = $this->_apiName . '.update';
-        $this->trigger( $_eventName );
-
         return false;
     }
 
@@ -571,9 +550,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _handlePatch()
     {
-        $_eventName = $this->_apiName . '.update';
-        $this->trigger( $_eventName );
-
         return false;
     }
 
@@ -613,7 +589,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     public function trigger( $eventName, $event = null, $priority = 0 )
     {
         return parent::trigger(
-            $eventName,
+            str_ireplace( array( '{api_name}', '{action}' ), array( $this->_apiName, strtolower( $this->_action ) ), $eventName ),
             $event ? : new RestServiceEvent( $this->_apiName, $this->_resource ),
             $priority
         );
@@ -637,7 +613,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             return false;
         }
 
-        return Pii::app()->trigger(
+        return $this->trigger(
             $_eventName,
             $event ? : new RestServiceEvent( $this instanceOf BaseSystemRestResource ? 'system' : $this->_apiName, $this->_resource, $result )
         );
