@@ -46,7 +46,7 @@ class LocalFileSvc extends BaseFileSvc
 	 */
 	public function checkContainerForWrite( $container )
 	{
-		$container = self::addContainerToName( $container, '' );
+		$container = static::addContainerToName( $container, '' );
 		if ( !is_dir( $container ) )
 		{
 			if ( !mkdir( $container, 0777, true ) )
@@ -98,7 +98,7 @@ class LocalFileSvc extends BaseFileSvc
 	 */
 	public function containerExists( $container )
 	{
-		$_dir = self::addContainerToName( $container, '' );
+		$_dir = static::addContainerToName( $container, '' );
 
 		return is_dir( $_dir );
 	}
@@ -148,7 +148,7 @@ class LocalFileSvc extends BaseFileSvc
 		else
 		{
 			// create the container
-			$_dir = self::addContainerToName( $_container, '' );
+			$_dir = static::addContainerToName( $_container, '' );
 
 			if ( !mkdir( $_dir, 0777, true ) )
 			{
@@ -216,7 +216,7 @@ class LocalFileSvc extends BaseFileSvc
 		}
 		// update the file that holds folder properties
 //            $properties = json_encode($properties);
-//            $key = self::addContainerToName($container, '');
+//            $key = static::addContainerToName($container, '');
 //            $result = file_put_contents($key, $properties);
 //            if (false === $result) {
 //                throw InternalServerErrorException('Failed to create container properties.');
@@ -294,7 +294,7 @@ class LocalFileSvc extends BaseFileSvc
 	public function folderExists( $container, $path )
 	{
 		$path = FileUtilities::fixFolderPath( $path );
-		$_dir = self::addContainerToName( $container, $path );
+		$_dir = static::addContainerToName( $container, $path );
 
 		return is_dir( $_dir );
 	}
@@ -322,7 +322,7 @@ class LocalFileSvc extends BaseFileSvc
 
 		if ( $include_properties )
 		{
-			$_dirPath = self::addContainerToName( $container, $path );
+			$_dirPath = static::addContainerToName( $container, $path );
 			$_temp = stat( $_dirPath );
 			$_out['last_modified'] = gmdate( 'D, d M Y H:i:s \G\M\T', Option::get( $_temp, 'mtime', 0 ) );
 		}
@@ -330,7 +330,7 @@ class LocalFileSvc extends BaseFileSvc
 		$_delimiter = ( $full_tree ) ? '' : DIRECTORY_SEPARATOR;
 		$_files = array();
 		$_folders = array();
-		$_dirPath = FileUtilities::fixFolderPath( self::asFullPath( '' ) );
+		$_dirPath = FileUtilities::fixFolderPath( static::asFullPath( '' ) );
 		if ( is_dir( $_dirPath ) )
 		{
 			$_localizer = $container . '/' . $path;
@@ -405,7 +405,7 @@ class LocalFileSvc extends BaseFileSvc
 
 		// create the folder
 		$this->checkContainerForWrite( $container ); // need to be able to write to storage
-		$_dir = self::addContainerToName( $container, $path );
+		$_dir = static::addContainerToName( $container, $path );
 
 		if ( false === @mkdir( $_dir, 0777, true ) )
 		{
@@ -476,7 +476,7 @@ class LocalFileSvc extends BaseFileSvc
 		}
 		// update the file that holds folder properties
 //            $properties = json_encode($properties);
-//            $key = self::addContainerToName($container, $path);
+//            $key = static::addContainerToName($container, $path);
 //            $result = file_put_contents($key, $properties);
 //            if (false === $result) {
 //                throw new InternalServerErrorException('Failed to create folder properties.');
@@ -619,7 +619,7 @@ class LocalFileSvc extends BaseFileSvc
 		{
 			throw new NotFoundException( "File '$path' does not exist in storage." );
 		}
-		$_file = self::addContainerToName( $container, $path );
+		$_file = static::addContainerToName( $container, $path );
 		$_shortName = FileUtilities::getNameFromPath( $path );
 		$_ext = FileUtilities::getFileExtension( $_file );
 		$_temp = stat( $_file );
@@ -724,7 +724,7 @@ class LocalFileSvc extends BaseFileSvc
 		{
 			$content = base64_decode( $content );
 		}
-		$_file = self::addContainerToName( $container, $path );
+		$_file = static::addContainerToName( $container, $path );
 		$_result = file_put_contents( $_file, $content );
 		if ( false === $_result )
 		{
@@ -809,8 +809,8 @@ class LocalFileSvc extends BaseFileSvc
 
 		// create the file
 		$this->checkContainerForWrite( $container ); // need to be able to write to storage
-		$_file = self::addContainerToName( $src_container, $dest_path );
-		$_srcFile = self::addContainerToName( $container, $src_path );
+		$_file = static::addContainerToName( $src_container, $dest_path );
+		$_srcFile = static::addContainerToName( $container, $src_path );
 		$_result = copy( $_srcFile, $_file );
 		if ( !$_result )
 		{
@@ -828,7 +828,7 @@ class LocalFileSvc extends BaseFileSvc
 	 */
 	public function deleteFile( $container, $path )
 	{
-		$_file = self::addContainerToName( $container, $path );
+		$_file = static::addContainerToName( $container, $path );
 		if ( !is_file( $_file ) )
 		{
 			throw new BadRequestException( "'$_file' is not a valid filename." );
@@ -858,7 +858,7 @@ class LocalFileSvc extends BaseFileSvc
 				$_path = Option::get( $_fileInfo, 'path' );
 				if ( !empty( $_path ) )
 				{
-					$_file = self::asFullPath( $_path );
+					$_file = static::asFullPath( $_path );
 					if ( !is_file( $_file ) )
 					{
 						throw new BadRequestException( "'$_path' is not a valid file." );
@@ -905,7 +905,7 @@ class LocalFileSvc extends BaseFileSvc
 	 */
 	public function getFolderAsZip( $container, $path, $zip = null, $zipFileName = '', $overwrite = false )
 	{
-		$_root = self::addContainerToName( $container, '' );
+		$_root = static::addContainerToName( $container, '' );
 		if ( !is_dir( $_root ) )
 		{
 			throw new BadRequestException( "Can not find directory '$_root'." );
@@ -1080,7 +1080,7 @@ class LocalFileSvc extends BaseFileSvc
 					);
 					if ( empty( $delimiter ) )
 					{
-						$out = array_merge( $out, self::listTree( $root, $local . DIRECTORY_SEPARATOR ) );
+						$out = array_merge( $out, static::listTree( $root, $local . DIRECTORY_SEPARATOR ) );
 					}
 				}
 				elseif ( is_file( $key ) )

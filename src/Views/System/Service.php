@@ -29,42 +29,45 @@ use DreamFactory\Platform\Services\SwaggerManager;
  */
 class Service extends BaseSystemRestResource
 {
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * Creates a new Service
-	 *
-	 * @param array $resources
-	 */
-	public function __construct( $consumer, $resources = array() )
-	{
-		return parent::__construct(
-			$consumer,
-			array(
-				'service_name'   => 'system',
-				'name'           => 'Service',
-				'api_name'       => 'service',
-				'type'           => 'System',
-				'description'    => 'System service administration.',
-				'is_active'      => true,
-				'resource_array' => $resources,
-			)
-		);
-	}
+    /**
+     * Creates a new Service
+     *
+     * @param \DreamFactory\Platform\Interfaces\RestServiceLike $consumer
+     * @param array                                             $resources
+     */
+    public function __construct( $consumer, $resources = array() )
+    {
+        return parent::__construct(
+            $consumer,
+            array(
+                'service_name'   => 'system',
+                'name'           => 'Service',
+                'api_name'       => 'service',
+                'type'           => 'System',
+                'description'    => 'System service administration.',
+                'is_active'      => true,
+                'resource_array' => $resources,
+            )
+        );
+    }
 
-	/**
-	 * @param mixed $results
-	 */
-	protected function _postProcess( $results = null )
-	{
-		if ( static::Get != $this->_action )
-		{
-			// clear swagger cache upon any service changes.
-			SwaggerManager::clearCache();
-		}
+    /**
+     * @param mixed $results
+     *
+     * @return mixed|void
+     */
+    protected function _postProcess( $results = null )
+    {
+        if ( static::GET != $this->_action )
+        {
+            // clear swagger cache upon any service changes.
+            SwaggerManager::clearCache();
+        }
 
-		parent::_postProcess( $results );
-	}
+        parent::_postProcess( $results );
+    }
 }

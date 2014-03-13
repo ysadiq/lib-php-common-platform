@@ -31,47 +31,33 @@ use Swagger\Annotations as SWG;
  */
 class Provider extends BaseSystemRestResource
 {
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * Creates a new Provider
-	 *
-	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
-	 * @param array                                               $resources
-	 */
-	public function __construct( $consumer, $resources = array() )
-	{
-		return parent::__construct(
-			$consumer,
-			array(
-				'service_name'   => 'system',
-				'name'           => 'provider',
-				'api_name'       => 'provider',
-				'type_id'        => PlatformServiceTypes::LOCAL_PORTAL_SERVICE,
-				'type'           => 'Service',
-				'description'    => 'Service provider configuration.',
-				'is_active'      => true,
-				'resource_array' => $resources,
-				'verb_aliases'   => array(
-					static::PATCH => static::POST,
-				),
-			)
-		);
-	}
-
-	/**
-	 * @param mixed $results
-	 */
-	protected function _postProcess( $results = null )
-	{
-		if ( static::GET != $this->_action )
-		{
-			//	Clear swagger cache upon any Provider changes.
-			SwaggerManager::clearCache();
-		}
-
-		parent::_postProcess( $results );
-	}
+    /**
+     * Creates a new Provider
+     *
+     * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+     * @param array                                               $resources
+     */
+    public function __construct( $consumer, $resources = array() )
+    {
+        return parent::__construct(
+            $consumer,
+            array(
+                'service_name'   => 'system',
+                'name'           => 'provider',
+                'api_name'       => 'provider',
+                'type_id'        => PlatformServiceTypes::LOCAL_PORTAL_SERVICE,
+                'type'           => 'Service',
+                'description'    => 'Service provider configuration.',
+                'is_active'      => true,
+                'resource_array' => $resources,
+                'verb_aliases'   => array(
+                    static::PATCH => static::POST,
+                ),
+            )
+        );
+    }
 }

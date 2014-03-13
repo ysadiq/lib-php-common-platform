@@ -30,7 +30,7 @@ $_base['apis'] = array(
                 'summary'    => 'getResources() - List resources available for database schema.',
                 'nickname'   => 'getResources',
                 'type'       => 'Resources',
-                'event_name' => '{api_name}.list',
+                'event_name' => 'tables.list',
                 'notes'      => 'See listed operations for each resource available.',
             ),
             array(
@@ -142,7 +142,7 @@ $_base['apis'] = array(
                 'summary'          => 'createFields() - Create one or more fields in the given table.',
                 'nickname'         => 'createFields',
                 'type'             => 'Success',
-                'event_name'       => '{table_name}.fields.create',
+                'event_name'       => 'table.fields.create',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -182,7 +182,7 @@ $_base['apis'] = array(
                 'summary'          => 'updateFields() - Update one or more fields in the given table.',
                 'nickname'         => 'updateFields',
                 'type'             => 'Success',
-                'event_name'       => '{table_name}.fields.update',
+                'event_name'       => 'table.fields.update',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -222,7 +222,7 @@ $_base['apis'] = array(
                 'summary'          => 'deleteTable() - Delete (aka drop) the given table.',
                 'nickname'         => 'deleteTable',
                 'type'             => 'Success',
-                'event_name'       => '{table_name}.fields.delete',
+                'event_name'       => 'table.fields.delete',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -260,7 +260,7 @@ $_base['apis'] = array(
                 'summary'          => 'describeField() - Retrieve the definition of the given field for the given table.',
                 'nickname'         => 'describeField',
                 'type'             => 'FieldSchema',
-                'event_name'       => '{table_name}.field.describe',
+                'event_name'       => 'table.field.describe',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -300,7 +300,7 @@ $_base['apis'] = array(
                 'summary'          => 'updateField() - Update one record by identifier.',
                 'nickname'         => 'updateField',
                 'type'             => 'Success',
-                'event_name'       => '{table_name}.field.update',
+                'event_name'       => 'table.field.update',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -348,7 +348,7 @@ $_base['apis'] = array(
                 'summary'          => 'deleteField() - Remove the given field from the given table.',
                 'nickname'         => 'deleteField',
                 'type'             => 'Success',
-                'event_name'       => '{table_name}.field.delete',
+                'event_name'       => 'table.field.delete',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',

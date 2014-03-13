@@ -921,6 +921,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 		{
 			static::$_dispatcher = new EventDispatcher();
 			static::$_dispatcher->setLogEvents( Pii::getParam( 'dsp.log_events', false ) );
+			static::$_dispatcher->setLogAllEvents( Pii::getParam( 'dsp.log_all_events', false ) );
 		}
 
 		return static::$_dispatcher;
