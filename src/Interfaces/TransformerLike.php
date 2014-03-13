@@ -34,7 +34,7 @@ interface TransformerLike
 	 *
 	 * @return mixed The formatted data
 	 */
-	public function format( $dataToFormat, $options = array() );
+	public static function format( $dataToFormat, $options = array() );
 
 	/**
 	 * Adds criteria garnered from the query string from DataTables
@@ -44,5 +44,5 @@ interface TransformerLike
 	 *
 	 * @return array|\CDbCriteria
 	 */
-	public function buildCriteria( $columns, $criteria = null );
+	public static function buildCriteria( $columns, $criteria = null );
 }

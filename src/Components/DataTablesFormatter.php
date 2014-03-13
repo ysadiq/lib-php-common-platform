@@ -29,98 +29,98 @@ use Kisma\Core\Utility\Option;
  */
 class DataTablesFormatter implements TransformerLike
 {
-	/**
-	 * @param mixed $dataToFormat
-	 * @param array $options Any formatter-specific options
-	 *
-	 * @return mixed The formatted data
-	 */
-	public function format( $dataToFormat, $options = array() )
-	{
-		if ( null === ( $_data = Option::get( $dataToFormat, 'resource' ) ) )
-		{
-			if ( null === ( $_data = Option::get( $dataToFormat, 'record' ) ) )
-			{
-				$_key = null;
-				$_data = $dataToFormat;
-			}
-		}
+    /**
+     * @param mixed $dataToFormat
+     * @param array $options Any formatter-specific options
+     *
+     * @return mixed The formatted data
+     */
+    public static function format( $dataToFormat, $options = array() )
+    {
+        if ( null === ( $_data = Option::get( $dataToFormat, 'resource' ) ) )
+        {
+            if ( null === ( $_data = Option::get( $dataToFormat, 'record' ) ) )
+            {
+                $_key = null;
+                $_data = $dataToFormat;
+            }
+        }
 
-		$_count = 0;
-		$_echo = FilterInput::get( $_GET, 'sEcho', FILTER_SANITIZE_NUMBER_INT );
-		$_response = array();
+        $_count = 0;
+        $_echo = FilterInput::get( $_GET, 'sEcho', FILTER_SANITIZE_NUMBER_INT );
+        $_response = array();
 
-		if ( !empty( $_data ) )
-		{
-			foreach ( $_data as $_row )
-			{
-				//	DataTables just gets the values, not the keys
-				$_response[] = array_values( $_row );
-				$_count++;
+        if ( !empty( $_data ) )
+        {
+            foreach ( $_data as $_row )
+            {
+                //	DataTables just gets the values, not the keys
+                $_response[] = array_values( $_row );
+                $_count++;
 
-				unset( $_row );
-			}
+                unset( $_row );
+            }
 
-			unset( $_rows );
-		}
+            unset( $_rows );
+        }
 
-		//	DT expected format
-		return array(
-			'sEcho'                => $_echo,
-			'iTotalRecords'        => $_count,
-			'iTotalDisplayRecords' => $_count,
-			'aaData'               => $_response,
-		);
-	}
+        //	DT expected format
+        return array(
+            'sEcho'                => $_echo,
+            'iTotalRecords'        => $_count,
+            'iTotalDisplayRecords' => $_count,
+            'aaData'               => $_response,
+        );
+    }
 
-	/**
-	 * Adds criteria garnered from the query string from DataTables
-	 *
-	 * @param array|\CDbCriteria $criteria
-	 * @param array              $columns
-	 *
-	 * @return array|\CDbCriteria
-	 */
-	public function buildCriteria( $columns, $criteria = null )
-	{
-		$criteria = $criteria ? : array();
+    /**
+     * Adds criteria garnered from the query string from DataTables
+     *
+     * @param array|\CDbCriteria $criteria
+     * @param array              $columns
+     *
+     * @return array|\CDbCriteria
+     */
+    public static function buildCriteria( $columns, $criteria = null )
+    {
+        $criteria = $criteria ? : array();
 
-		$_criteria = ( !( $criteria instanceof \CDbCriteria ) ? new \CDbCriteria( $criteria ) : $criteria );
+        $_criteria = ( !( $criteria instanceof \CDbCriteria ) ? new \CDbCriteria( $criteria ) : $criteria );
 
-		//	Columns
-		$_criteria->select = ( !empty( $_columns ) ? implode( ', ', $_columns ) : '*' );
+        //	Columns
+        $_criteria->select = ( !empty( $_columns ) ? implode( ', ', $_columns ) : '*' );
 
-		//	Limits
-		$_limit = FilterInput::get( INPUT_GET, 'iDisplayLength', -1, FILTER_SANITIZE_NUMBER_INT );
-		$_limitStart = FilterInput::get( INPUT_GET, 'iDisplayStart', 0, FILTER_SANITIZE_NUMBER_INT );
+        //	Limits
+        $_limit = FilterInput::get( INPUT_GET, 'iDisplayLength', -1, FILTER_SANITIZE_NUMBER_INT );
+        $_limitStart = FilterInput::get( INPUT_GET, 'iDisplayStart', 0, FILTER_SANITIZE_NUMBER_INT );
 
-		if ( -1 != $_limit )
-		{
-			$_criteria->limit = $_limit;
-			$_criteria->offset = $_limitStart;
-		}
+        if ( -1 != $_limit )
+        {
+            $_criteria->limit = $_limit;
+            $_criteria->offset = $_limitStart;
+        }
 
-		//	Sort
-		$_order = array();
+        //	Sort
+        $_order = array();
 
-		if ( isset( $_GET['iSortCol_0'] ) )
-		{
-			for ( $_i = 0, $_count = FilterInput::get( INPUT_GET, 'iSortingCols', 0, FILTER_SANITIZE_NUMBER_INT ); $_i < $_count; $_i++ )
-			{
-				$_column = FilterInput::get( INPUT_GET, 'iSortCol_' . $_i, 0, FILTER_SANITIZE_NUMBER_INT );
+        if ( isset( $_GET['iSortCol_0'] ) )
+        {
+            for ( $_i = 0, $_count = FilterInput::get( INPUT_GET, 'iSortingCols', 0, FILTER_SANITIZE_NUMBER_INT ); $_i < $_count; $_i++ )
+            {
+                $_column = FilterInput::get( INPUT_GET, 'iSortCol_' . $_i, 0, FILTER_SANITIZE_NUMBER_INT );
 
-				if ( isset( $_GET['bSortable_' . $_column] ) && 'true' == $_GET['bSortable_' . $_column] )
-				{
-					$_order[] = $columns[$_column] . ' ' . FilterInput::get( INPUT_GET, 'sSortDir_' . $_i, null, FILTER_SANITIZE_STRING );
-				}
-			}
-		}
+                if ( isset( $_GET['bSortable_' . $_column] ) && 'true' == $_GET['bSortable_' . $_column] )
+                {
+                    $_order[] = $columns[$_column] . ' ' . FilterInput::get( INPUT_GET, 'sSortDir_' . $_i, null, FILTER_SANITIZE_STRING );
+                }
+            }
+        }
 
-		if ( !empty( $_order ) )
-		{
-			$_criteria->order = implode( ', ', $_order );
-		}
+        if ( !empty( $_order ) )
+        {
+            $_criteria->order = implode( ', ', $_order );
+        }
 
-		return $_criteria;
-	}
+        return $_criteria;
+    }
 }
