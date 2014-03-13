@@ -63,7 +63,7 @@
 			"name":        "Script Service",
 			"is_active":   1,
 			"type":        "Script Service",
-			"type_id":     0x1040,
+			"type_id":     4160,
 			"description": "Script service"
 		}
 	],

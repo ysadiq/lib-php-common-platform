@@ -421,7 +421,7 @@ SQL;
 				}
 				catch ( \Exception $_ex )
 				{
-					Log::error( 'Exception executing script: ' . $_ex->getMessage() );
+					Log::error( '  * Exception executing script: ' . $_ex->getMessage() );
 				}
 			}
 		}
@@ -939,6 +939,7 @@ SQL;
 	public static function getResourceModel( $resource )
 	{
 		//@todo should we consider a resource map somewhere in the config for things like this? And dev overriding?
+		//@todo YES!
 		if ( 'custom' == $resource )
 		{
 			$resource .= '_settings';
@@ -1006,7 +1007,7 @@ SQL;
 		{
 			$_admins = Sql::scalar(
 				<<<SQL
-		SELECT
+SELECT
 	COUNT(id)
 FROM
 	{$_tableName}
@@ -1212,52 +1213,19 @@ SQL
 				}
 				catch ( \Exception $_ex )
 				{
-					throw new InternalServerErrorException( 'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(), array(
-						'data'          => $data,
-						'bogus_row'     => $_row,
-						'unique_column' => $uniqueColumn
-					) );
+					throw new InternalServerErrorException(
+						'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(),
+						array(
+							'data'          => $data,
+							'bogus_row'     => $_row,
+							'unique_column' => $uniqueColumn
+						)
+					);
 				}
 			}
 		}
 
 		return $_added;
-	}
-
-	/**
-	 * @param string $action
-	 *
-	 * @return void
-	 */
-	protected static function _stateRedirect( $action = null )
-	{
-		static $_map = array(
-			PlatformStates::INIT_REQUIRED    => 'initSystem',
-			PlatformStates::SCHEMA_REQUIRED  => 'upgradeSchema',
-			PlatformStates::ADMIN_REQUIRED   => 'initAdmin',
-			PlatformStates::DATA_REQUIRED    => 'initData',
-			PlatformStates::WELCOME_REQUIRED => 'welcome',
-			PlatformStates::UPGRADE_REQUIRED => 'upgrade',
-		);
-
-		if ( is_numeric( $action ) )
-		{
-			$action = Option::get( $_map, $action );
-		}
-
-		if ( !empty( $action ) )
-		{
-			//	Forward to that action page
-			$_returnUrl = '/' . Pii::controller()->id . '/' . $action;
-		}
-		//	Redirect to back from which you came
-		elseif ( null === ( $_returnUrl = Pii::user()->getReturnUrl() ) )
-		{
-			//	Or take me home
-			$_returnUrl = Pii::url( Pii::controller()->id . '/index' );
-		}
-
-		Pii::redirect( $_returnUrl );
 	}
 
 	/**
