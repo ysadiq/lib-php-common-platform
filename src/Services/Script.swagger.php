@@ -20,8 +20,8 @@
 
 $_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
 
-$_base['consumes'] = array( 'text/javascript', 'text/plain' );
-$_base['produces'] = array( 'application/json', 'application/xml' );
+$_base['produces'] = array( 'application/json' );
+$_base['consumes'] = array( 'application/json' );
 
 $_base['apis'] = array(
     array(
@@ -129,9 +129,44 @@ $_base['apis'] = array(
                 'notes'            => 'Post data as an array of folders and/or files.',
             ),
             array(
+                'method'           => 'POST',
+                'summary'          => 'runScript() - Runs the specified script.',
+                'nickname'         => 'runScript',
+                'type'             => 'ScriptResponse',
+                'event_name'       => 'script.run',
+                'parameters'       => array(
+                    array(
+                        'name'          => 'script_id',
+                        'description'   => 'The ID of the script which you want to retrieve.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'path',
+                        'required'      => true,
+                    ),
+                ),
+                'responseMessages' => array(
+                    array(
+                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+                        'code'    => 400,
+                    ),
+                    array(
+                        'message' => 'Unauthorized Access - No currently valid session available.',
+                        'code'    => 401,
+                    ),
+                    array(
+                        'message' => 'Not Found - Requested container does not exist.',
+                        'code'    => 404,
+                    ),
+                    array(
+                        'message' => 'System Error - Specific reason is included in the error message.',
+                        'code'    => 500,
+                    ),
+                ),
+                'notes'            => 'Post data as an array of folders and/or files.',
+            ),
+            array(
                 'method'           => 'PUT',
                 'summary'          => 'writeScript() - Writes the specified script to the file system.',
-                'notes'            => 'Post data as a string.',
                 'nickname'         => 'writeScript',
                 'type'             => 'ScriptResponse',
                 'event_name'       => 'script.write',
@@ -149,7 +184,7 @@ $_base['apis'] = array(
                         'description'   => 'The body of the script to write.',
                         'allowMultiple' => false,
                         'type'          => 'string',
-                        'paramType'     => 'body',
+                        'paramType'     => 'query',
                         'required'      => true,
                     ),
                 ),
@@ -163,10 +198,15 @@ $_base['apis'] = array(
                         'code'    => 401,
                     ),
                     array(
+                        'message' => 'Not Found - Requested container does not exist.',
+                        'code'    => 404,
+                    ),
+                    array(
                         'message' => 'System Error - Specific reason is included in the error message.',
                         'code'    => 500,
                     ),
                 ),
+                'notes'            => 'Post data as an array of folders and/or files.',
             ),
         ),
     ),
