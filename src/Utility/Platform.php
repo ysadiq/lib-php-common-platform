@@ -153,8 +153,6 @@ class Platform extends SeedUtility
      * Returns the library configuration path, not the platform's config path in the root
      *
      * @param string $append
-     * @param bool   $createIfMissing
-     * @param bool   $includesFile
      *
      * @return string
      */
@@ -258,13 +256,8 @@ class Platform extends SeedUtility
             hash(
                 'ripemd128',
                 uniqid( '', true ) . ( $_uuid ? : microtime( true ) ) . md5(
-                    $namespace .
-                    $_SERVER['REQUEST_TIME'] .
-                    $_SERVER['HTTP_USER_AGENT'] .
-                    $_SERVER['LOCAL_ADDR'] .
-                    $_SERVER['LOCAL_PORT'] .
-                    $_SERVER['REMOTE_ADDR'] .
-                    $_SERVER['REMOTE_PORT']
+                    $namespace . $_SERVER['REQUEST_TIME'] . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['LOCAL_ADDR'] . $_SERVER['LOCAL_PORT'] .
+                    $_SERVER['REMOTE_ADDR'] . $_SERVER['REMOTE_PORT']
                 )
             )
         );
