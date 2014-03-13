@@ -125,7 +125,11 @@ class EventDispatcher implements EventDispatcherInterface
                     {
                         foreach ( Option::get( $_methodInfo, 'scripts', array() ) as $_script )
                         {
-                            $this->_scripts[str_replace( '.js', null, $_script )] = $_scriptPath . '/' . $_script;
+                            $_eventKey = str_replace( '.js', null, $_script );
+
+                            $this->_scripts[$_eventKey] = $_scriptPath . '/' . $_script;
+
+                            Log::debug( 'Registered script "' . $this->_scripts[$_eventKey] . '" for event "' . $_eventKey . '"' );
                         }
                     }
                 }
@@ -221,10 +225,12 @@ class EventDispatcher implements EventDispatcherInterface
         //  Anything to do?
         $eventName = $this->_normalizeEventName( $event, $eventName );
 
+        $_pathInfo = str_replace( '/rest', null, Pii::app()->getRequestObject()->getPathInfo() );
+
         if ( static::$_logAllEvents )
         {
             Log::debug(
-                'Triggered: event "' . $eventName . '" triggered by ' . Pii::app()->getRequestObject()->getPathInfo()
+                'Triggered: event "' . $eventName . '" triggered by ' . $_pathInfo
             );
         }
 
@@ -237,7 +243,8 @@ class EventDispatcher implements EventDispatcherInterface
             $event->toArray(),
             array(
                 'event_name'    => $eventName,
-                'dispatcher_id' => spl_object_hash( $dispatcher )
+                'dispatcher_id' => spl_object_hash( $dispatcher ),
+                'trigger'       => $_pathInfo,
             )
         );
 

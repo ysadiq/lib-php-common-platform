@@ -481,7 +481,9 @@ SQL;
 
         foreach ( $_matches as $_match )
         {
-            if ( null !== ( $_eventName = Option::get( Option::getDeep( $_resources, $_match, $method ), 'event' ) ) )
+            $_methodInfo = Option::getDeep( $_resources, $_match, $method );
+
+            if ( null !== ( $_eventName = Option::get( $_methodInfo, 'event' ) ) )
             {
                 return $_cache[$_hash] = $_eventName;
             }
