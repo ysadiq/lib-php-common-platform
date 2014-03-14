@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Enums\InstallationTypes;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
@@ -1214,12 +1215,11 @@ SQL
 				catch ( \Exception $_ex )
 				{
 					throw new InternalServerErrorException(
-						'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(),
-						array(
-							'data'          => $data,
-							'bogus_row'     => $_row,
-							'unique_column' => $uniqueColumn
-						)
+						'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(), array(
+																									   'data'          => $data,
+																									   'bogus_row'     => $_row,
+																									   'unique_column' => $uniqueColumn
+																								   )
 					);
 				}
 			}

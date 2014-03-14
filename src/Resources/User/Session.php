@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Resources\User;
 
+use DreamFactory\Common\Components\DataCache;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -261,6 +262,12 @@ class Session extends BasePlatformRestResource
 	 */
 	public static function userLogout()
 	{
+		//	Delete any cached configs...
+		if ( null !== ( $_sessionKey = Pii::getParam( 'session.key' ) ) )
+		{
+			DataCache::load( $_sessionKey, null, true );
+		}
+
 		// helper for non-browser-managed sessions
 		$_sessionId = FilterInput::server( 'HTTP_X_DREAMFACTORY_SESSION_TOKEN' );
 
@@ -913,7 +920,7 @@ class Session extends BasePlatformRestResource
 	}
 
 	/**
-	 * @param int   $setToIfNull If not null, static::$_userId will be set to this value
+	 * @param int $setToIfNull If not null, static::$_userId will be set to this value
 	 *
 	 * @return int|null
 	 */
