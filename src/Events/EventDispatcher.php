@@ -174,11 +174,11 @@ class EventDispatcher implements EventDispatcherInterface
             foreach ( array_keys( $this->_listeners ) as $_eventName )
             {
                 /** @var \DreamFactory\Platform\Yii\Models\Event $_model */
+                /** @noinspection PhpUndefinedMethodInspection */
                 $_model = ResourceStore::model( 'event' )->byEventName( $_eventName )->find();
 
                 if ( null === $_model )
                 {
-                    /** @var \DreamFactory\Platform\Yii\Models\Event $_model */
                     $_model = ResourceStore::model( 'event' );
                     $_model->setIsNewRecord( true );
                     $_model->event_name = $_eventName;
@@ -217,6 +217,8 @@ class EventDispatcher implements EventDispatcherInterface
      * @param BasePlatformRestService                        $service
      * @param string                                         $eventName
      * @param \DreamFactory\Platform\Events\RestServiceEvent $event
+     *
+     * @return \DreamFactory\Platform\Events\RestServiceEvent
      */
     public function dispatchRestServiceEvent( $service, $eventName, RestServiceEvent $event = null )
     {
@@ -230,6 +232,8 @@ class EventDispatcher implements EventDispatcherInterface
     /**
      * @param string                                 $eventName
      * @param \DreamFactory\Platform\Events\DspEvent $event
+     *
+     * @return \DreamFactory\Platform\Events\DspEvent
      */
     public function dispatchDspEvent( $eventName, DspEvent $event = null )
     {
@@ -241,9 +245,9 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param \DreamFactory\Platform\Events\PlatformEvent $event
-     * @param string                                      $eventName
-     * @param EventDispatcher                             $dispatcher
+     * @param \DreamFactory\Platform\Events\RestServiceEvent $event
+     * @param string                                         $eventName
+     * @param EventDispatcher                                $dispatcher
      *
      * @throws EventException
      * @throws \InvalidArgumentException
@@ -296,10 +300,10 @@ class EventDispatcher implements EventDispatcherInterface
             $_script = $this->_scripts[$eventName];
             Script::runScript( $_script, $eventName . '.js', $_event );
 
-            //  Repopulate the event object with data from script
+            //  Reconstitute the event object with data from script
             $event->fromArray( $_event );
 
-            if ( $event->stopPropagation() )
+            if ( $event->isPropagationStopped() )
             {
                 return true;
             }
@@ -411,13 +415,22 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param string $className
-     * @param string $methodName
-     * @param Event  $event
+     * @param string          $className
+     * @param string          $methodName
+     * @param Event           $event
+     * @param string          $eventName
+     * @param EventDispatcher $dispatcher
+     *
+     * @return mixed
      */
-    protected function _executeEventPhpScript( $className, $methodName, Event $event )
+    protected function _executeEventPhpScript( $className, $methodName, Event $event, $eventName = null, $dispatcher = null )
     {
-        $className::{$methodName}( $event );
+        return call_user_func(
+            array( $className, $methodName ),
+            $event,
+            $eventName,
+            $dispatcher
+        );
     }
 
     /**
