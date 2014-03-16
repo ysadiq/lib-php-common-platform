@@ -35,7 +35,6 @@ use Kisma\Core\Exceptions\StorageException;
  * @property string              $description
  * @property boolean             $is_active
  * @property integer             $default_app_id
- * @property array               $lookup_keys
  *
  * Relations:
  *
@@ -45,529 +44,522 @@ use Kisma\Core\Exceptions\StorageException;
  * @property User[]              $users
  * @property App[]               $apps
  * @property Service[]           $services
+ * @property LookupKey[]         $lookup_keys
  */
 class Role extends BasePlatformSystemModel
 {
-	//*************************************************************************
-	//* Methods
-	//*************************************************************************
+    //*************************************************************************
+    //* Methods
+    //*************************************************************************
 
-	/**
-	 * @return string the associated database table name
-	 */
-	public function tableName()
-	{
-		return static::tableNamePrefix() . 'role';
-	}
+    /**
+     * @return string the associated database table name
+     */
+    public function tableName()
+    {
+        return static::tableNamePrefix() . 'role';
+    }
 
-	/**
-	 * @return array
-	 */
-	public function behaviors()
-	{
-		return array_merge(
-			parent::behaviors(),
-			array(
-				 //	Secure JSON
-				 'base_platform_model.secure_json' => array(
-					 'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
-					 'salt'             => $this->getDb()->password,
-					 'secureAttributes' => array(
-						 'lookup_keys',
-					 )
-				 ),
-			)
-		);
-	}
+    /**
+     * @return array validation rules for model attributes.
+     */
+    public function rules()
+    {
+        $_rules = array(
+            array( 'name', 'required' ),
+            array( 'name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
+            array( 'name', 'length', 'max' => 64 ),
+            array( 'default_app_id', 'numerical', 'integerOnly' => true ),
+            array( 'is_active', 'boolean' ),
+            array( 'description', 'safe' ),
+        );
 
-	/**
-	 * @return array validation rules for model attributes.
-	 */
-	public function rules()
-	{
-		$_rules = array(
-			array( 'name', 'required' ),
-			array( 'name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false ),
-			array( 'name', 'length', 'max' => 64 ),
-			array( 'default_app_id', 'numerical', 'integerOnly' => true ),
-			array( 'is_active', 'boolean' ),
-			array( 'description, lookup_keys', 'safe' ),
-		);
+        return array_merge( parent::rules(), $_rules );
+    }
 
-		return array_merge( parent::rules(), $_rules );
-	}
+    /**
+     * @return array relational rules.
+     */
+    public function relations()
+    {
+        $_relations = array(
+            'default_app'           => array( self::BELONGS_TO, __NAMESPACE__ . '\\App', 'default_app_id' ),
+            'role_service_accesses' => array( self::HAS_MANY, __NAMESPACE__ . '\\RoleServiceAccess', 'role_id' ),
+            'role_system_accesses'  => array( self::HAS_MANY, __NAMESPACE__ . '\\RoleSystemAccess', 'role_id' ),
+            'lookup_keys'           => array( self::HAS_MANY, __NAMESPACE__ . '\\LookupKey', 'role_id' ),
+            'users'                 => array( self::HAS_MANY, __NAMESPACE__ . '\\User', 'role_id' ),
+            'apps'                  => array( self::MANY_MANY, __NAMESPACE__ . '\\App', 'df_sys_app_to_role(app_id, role_id)' ),
+            'services'              => array( self::MANY_MANY, __NAMESPACE__ . '\\Service', 'df_sys_role_service_access(role_id, service_id)' ),
+        );
 
-	/**
-	 * @return array relational rules.
-	 */
-	public function relations()
-	{
-		$_relations = array(
-			'default_app'           => array( self::BELONGS_TO, __NAMESPACE__ . '\\App', 'default_app_id' ),
-			'role_service_accesses' => array( self::HAS_MANY, __NAMESPACE__ . '\\RoleServiceAccess', 'role_id' ),
-			'role_system_accesses'  => array( self::HAS_MANY, __NAMESPACE__ . '\\RoleSystemAccess', 'role_id' ),
-			'users'                 => array( self::HAS_MANY, __NAMESPACE__ . '\\User', 'role_id' ),
-			'apps'                  => array( self::MANY_MANY, __NAMESPACE__ . '\\App', 'df_sys_app_to_role(app_id, role_id)' ),
-			'services'              => array( self::MANY_MANY, __NAMESPACE__ . '\\Service', 'df_sys_role_service_access(role_id, service_id)' ),
-		);
+        return array_merge( parent::relations(), $_relations );
+    }
 
-		return array_merge( parent::relations(), $_relations );
-	}
+    /**
+     * @param array $additionalLabels
+     *
+     * @return array customized attribute labels (name=>label)
+     */
+    public function attributeLabels( $additionalLabels = array() )
+    {
+        $_labels = array(
+            'name'           => 'Name',
+            'description'    => 'Description',
+            'is_active'      => 'Is Active',
+            'default_app_id' => 'Default App',
+        );
 
-	/**
-	 * @param array $additionalLabels
-	 *
-	 * @return array customized attribute labels (name=>label)
-	 */
-	public function attributeLabels( $additionalLabels = array() )
-	{
-		$_labels = array(
-			'name'           => 'Name',
-			'description'    => 'Description',
-			'is_active'      => 'Is Active',
-			'default_app_id' => 'Default App',
-			'lookup_keys'    => 'Lookup Keys',
-		);
+        return parent::attributeLabels( array_merge( $_labels, $additionalLabels ) );
+    }
 
-		return parent::attributeLabels( array_merge( $_labels, $additionalLabels ) );
-	}
+    /**
+     * @param array $values
+     * @param int   $id
+     */
+    public function setRelated( $values, $id )
+    {
+        if ( isset( $values['role_service_accesses'] ) )
+        {
+            $this->assignRoleServiceAccesses( $id, $values['role_service_accesses'] );
+        }
 
-	/**
-	 * @param array $values
-	 * @param int   $id
-	 */
-	public function setRelated( $values, $id )
-	{
-		if ( isset( $values['role_service_accesses'] ) )
-		{
-			$this->assignRoleServiceAccesses( $id, $values['role_service_accesses'] );
-		}
+        if ( isset( $values['role_system_accesses'] ) )
+        {
+            $this->assignRoleSystemAccesses( $id, $values['role_system_accesses'] );
+        }
 
-		if ( isset( $values['role_system_accesses'] ) )
-		{
-			$this->assignRoleSystemAccesses( $id, $values['role_system_accesses'] );
-		}
+        if ( isset( $values['lookup_keys'] ) )
+        {
+            LookupKey::assignLookupKeys( $values['lookup_keys'], $id );
+        }
 
-		if ( isset( $values['apps'] ) )
-		{
-			$this->assignManyToOneByMap( $id, 'app', 'app_to_role', 'role_id', 'app_id', $values['apps'] );
-		}
+        if ( isset( $values['apps'] ) )
+        {
+            $this->assignManyToOneByMap( $id, 'app', 'app_to_role', 'role_id', 'app_id', $values['apps'] );
+        }
 
-		if ( isset( $values['users'] ) )
-		{
-			$this->assignManyToOne( $id, 'user', 'role_id', $values['users'] );
-		}
+        if ( isset( $values['users'] ) )
+        {
+            $this->assignManyToOne( $id, 'user', 'role_id', $values['users'] );
+        }
 
-		if ( isset( $values['services'] ) )
-		{
-			$this->assignManyToOneByMap( $id, 'service', 'role_service_access', 'role_id', 'service_id', $values['services'] );
-		}
-	}
+        if ( isset( $values['services'] ) )
+        {
+            $this->assignManyToOneByMap( $id, 'service', 'role_service_access', 'role_id', 'service_id', $values['services'] );
+        }
+    }
 
-	/** {@InheritDoc} */
-	protected function beforeValidate()
-	{
-		if ( empty( $this->default_app_id ) )
-		{
-			$this->default_app_id = null;
-		}
+    /** {@InheritDoc} */
+    protected function beforeValidate()
+    {
+        if ( empty( $this->default_app_id ) )
+        {
+            $this->default_app_id = null;
+        }
 
-		return parent::beforeValidate();
-	}
+        return parent::beforeValidate();
+    }
 
-	/**
-	 * @param \CModelEvent $event
-	 *
-	 * @throws StorageException
-	 */
-	public function onBeforeDelete( $event )
-	{
-		if ( Pii::getState( 'role_id' ) == $this->id )
-		{
-			throw new StorageException( 'The current role may not be deleted.' );
-		}
+    /**
+     * @param \CModelEvent $event
+     *
+     * @throws StorageException
+     */
+    public function onBeforeDelete( $event )
+    {
+        if ( Pii::getState( 'role_id' ) == $this->id )
+        {
+            throw new StorageException( 'The current role may not be deleted.' );
+        }
 
-		parent::onBeforeDelete( $event );
-	}
+        parent::onBeforeDelete( $event );
+    }
 
-	/**
-	 * @param string $requested
-	 * @param array  $columns
-	 * @param array  $hidden
-	 *
-	 * @return array
-	 */
-	public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
-	{
-		return parent::getRetrievableAttributes(
-			$requested,
-			array_merge(
-				array(
-					 'name',
-					 'description',
-					 'is_active',
-					 'default_app_id',
-					 'lookup_keys',
-				),
-				$columns
-			),
-			$hidden
-		);
-	}
+    /**
+     * @param string $requested
+     * @param array  $columns
+     * @param array  $hidden
+     *
+     * @return array
+     */
+    public function getRetrievableAttributes( $requested, $columns = array(), $hidden = array() )
+    {
+        return parent::getRetrievableAttributes(
+            $requested,
+            array_merge(
+                array(
+                    'name',
+                    'description',
+                    'is_active',
+                    'default_app_id',
+                ),
+                $columns
+            ),
+            $hidden
+        );
+    }
 
-	/**
-	 * @param       $role_id
-	 * @param array $accesses
-	 *
-	 * @throws \Exception
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return void
-	 */
-	protected function assignRoleServiceAccesses( $role_id, $accesses = array() )
-	{
-		if ( empty( $role_id ) )
-		{
-			throw new BadRequestException( 'Role ID can not be empty.' );
-		}
+    /**
+     * @param       $role_id
+     * @param array $accesses
+     *
+     * @throws \Exception
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return void
+     */
+    protected function assignRoleServiceAccesses( $role_id, $accesses = array() )
+    {
+        if ( empty( $role_id ) )
+        {
+            throw new BadRequestException( 'Role ID can not be empty.' );
+        }
 
-		try
-		{
-			$accesses = array_values( $accesses ); // reset indices if needed
-			$count = count( $accesses );
+        try
+        {
+            $accesses = array_values( $accesses ); // reset indices if needed
+            $count = count( $accesses );
 
-			// check for dupes before processing
-			for ( $key1 = 0; $key1 < $count; $key1++ )
-			{
-				$access = $accesses[$key1];
-				$serviceId = Option::get( $access, 'service_id' );
-				$component = Option::get( $access, 'component', '' );
+            // check for dupes before processing
+            for ( $key1 = 0; $key1 < $count; $key1++ )
+            {
+                $access = $accesses[$key1];
+                $serviceId = Option::get( $access, 'service_id' );
+                $component = Option::get( $access, 'component', '' );
 
-				for ( $key2 = $key1 + 1; $key2 < $count; $key2++ )
-				{
-					$access2 = $accesses[$key2];
-					$serviceId2 = Option::get( $access2, 'service_id' );
-					$component2 = Option::get( $access2, 'component', '' );
-					if ( ( $serviceId == $serviceId2 ) && ( $component == $component2 ) )
-					{
-						throw new BadRequestException( "Duplicated service and component combination '$serviceId $component' in role service access." );
-					}
-				}
-			}
+                for ( $key2 = $key1 + 1; $key2 < $count; $key2++ )
+                {
+                    $access2 = $accesses[$key2];
+                    $serviceId2 = Option::get( $access2, 'service_id' );
+                    $component2 = Option::get( $access2, 'component', '' );
+                    if ( ( $serviceId == $serviceId2 ) && ( $component == $component2 ) )
+                    {
+                        throw new BadRequestException( "Duplicated service and component combination '$serviceId $component' in role service access." );
+                    }
+                }
+            }
 
-			$map_table = static::tableNamePrefix() . 'role_service_access';
-			$pkMapField = 'id';
-			// use query builder
-			$command = Pii::db()->createCommand();
-			$command->select( 'id,service_id,component,access,filters,filter_op' );
-			$command->from( $map_table );
-			$command->where( 'role_id = :id' );
-			$maps = $command->queryAll( true, array( ':id' => $role_id ) );
-			$toDelete = array();
-			$toUpdate = array();
-			foreach ( $maps as $map )
-			{
-				$manyId = Option::get( $map, 'service_id' );
-				$manyComponent = Option::get( $map, 'component', '' );
-				$id = Option::get( $map, $pkMapField, '' );
-				$found = false;
-				foreach ( $accesses as $key => $item )
-				{
-					$assignId = Option::get( $item, 'service_id' );
-					$assignComponent = Option::get( $item, 'component', '' );
-					if ( ( $assignId == $manyId ) && ( $assignComponent == $manyComponent ) )
-					{
-						$_needUpdate = false;
-						// found it, make sure nothing needs to be updated
-						$oldAccess = Option::get( $map, 'access', '' );
-						$newAccess = Option::get( $item, 'access', '' );
-						if ( ( $oldAccess != $newAccess ) )
-						{
-							$map['access'] = $newAccess;
-							$_needUpdate = true;
-						}
-						$oldFilters = Option::get( $map, 'filters' );
-						$oldFilters = empty( $oldFilters ) ? array() : json_decode( $oldFilters, true );
-						$newFilters = Option::get( $item, 'filters' );
-						$newFilters = is_array( $newFilters ) ? $newFilters : array();
-						$_diff = Utilities::array_diff_recursive( $oldFilters, $newFilters, true );
-						if ( !empty( $_diff ) )
-						{
-							$map['filters'] = json_encode( $newFilters );
-							$_needUpdate = true;
-						}
-						$oldOp = Option::get( $map, 'filter_op', '' );
-						$newOp = Option::get( $item, 'filter_op', '' );
-						if ( ( $oldOp != $newOp ) )
-						{
-							$map['filter_op'] = $newOp;
-							$_needUpdate = true;
-						}
-						if ( $_needUpdate )
-						{
-							$toUpdate[] = $map;
-						}
+            $map_table = static::tableNamePrefix() . 'role_service_access';
+            $pkMapField = 'id';
+            // use query builder
+            $command = Pii::db()->createCommand();
+            $command->select( 'id,service_id,component,access,filters,filter_op' );
+            $command->from( $map_table );
+            $command->where( 'role_id = :id' );
+            $maps = $command->queryAll( true, array( ':id' => $role_id ) );
+            $toDelete = array();
+            $toUpdate = array();
+            foreach ( $maps as $map )
+            {
+                $manyId = Option::get( $map, 'service_id' );
+                $manyComponent = Option::get( $map, 'component', '' );
+                $id = Option::get( $map, $pkMapField, '' );
+                $found = false;
+                foreach ( $accesses as $key => $item )
+                {
+                    $assignId = Option::get( $item, 'service_id' );
+                    $assignComponent = Option::get( $item, 'component', '' );
+                    if ( ( $assignId == $manyId ) && ( $assignComponent == $manyComponent ) )
+                    {
+                        $_needUpdate = false;
+                        // found it, make sure nothing needs to be updated
+                        $oldAccess = Option::get( $map, 'access', '' );
+                        $newAccess = Option::get( $item, 'access', '' );
+                        if ( ( $oldAccess != $newAccess ) )
+                        {
+                            $map['access'] = $newAccess;
+                            $_needUpdate = true;
+                        }
+                        $oldFilters = Option::get( $map, 'filters' );
+                        $oldFilters = empty( $oldFilters ) ? array() : json_decode( $oldFilters, true );
+                        $newFilters = Option::get( $item, 'filters' );
+                        $newFilters = is_array( $newFilters ) ? $newFilters : array();
+                        $_diff = Utilities::array_diff_recursive( $oldFilters, $newFilters, true );
+                        if ( !empty( $_diff ) )
+                        {
+                            $map['filters'] = json_encode( $newFilters );
+                            $_needUpdate = true;
+                        }
+                        $oldOp = Option::get( $map, 'filter_op', '' );
+                        $newOp = Option::get( $item, 'filter_op', '' );
+                        if ( ( $oldOp != $newOp ) )
+                        {
+                            $map['filter_op'] = $newOp;
+                            $_needUpdate = true;
+                        }
+                        if ( $_needUpdate )
+                        {
+                            $toUpdate[] = $map;
+                        }
 
-						// otherwise throw it out
-						unset( $accesses[$key] );
-						$found = true;
-						continue;
-					}
-				}
-				if ( !$found )
-				{
-					$toDelete[] = $id;
-					continue;
-				}
-			}
-			if ( !empty( $toDelete ) )
-			{
-				// simple delete request
-				$command->reset();
-				$rows = $command->delete( $map_table, array( 'in', $pkMapField, $toDelete ) );
-			}
-			if ( !empty( $toUpdate ) )
-			{
-				foreach ( $toUpdate as $item )
-				{
-					$itemId = Option::get( $item, 'id', '', true );
-					// simple update request
-					$command->reset();
-					$rows = $command->update( $map_table, $item, 'id = :id', array( ':id' => $itemId ) );
-					if ( 0 >= $rows )
-					{
-						throw new \Exception( "Record update failed." );
-					}
-				}
-			}
-			if ( !empty( $accesses ) )
-			{
-				foreach ( $accesses as $item )
-				{
-					$_filters = Option::get( $item, 'filters' );
-					$_filters = empty( $_filters ) ? null : json_encode( $_filters );
-					// simple insert request
-					$record = array(
-						'role_id'    => $role_id,
-						'service_id' => Option::get( $item, 'service_id' ),
-						'component'  => Option::get( $item, 'component', '' ),
-						'access'     => Option::get( $item, 'access', '' ),
-						'filters'    => $_filters,
-						'filter_op'  => Option::get( $item, 'filter_op', 'AND' )
-					);
-					$command->reset();
-					$rows = $command->insert( $map_table, $record );
-					if ( 0 >= $rows )
-					{
-						throw new \Exception( "Record insert failed." );
-					}
-				}
-			}
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Error updating accesses to role assignment.\n{$ex->getMessage()}" );
-		}
-	}
+                        // otherwise throw it out
+                        unset( $accesses[$key] );
+                        $found = true;
+                        continue;
+                    }
+                }
+                if ( !$found )
+                {
+                    $toDelete[] = $id;
+                    continue;
+                }
+            }
+            if ( !empty( $toDelete ) )
+            {
+                // simple delete request
+                $command->reset();
+                $rows = $command->delete( $map_table, array( 'in', $pkMapField, $toDelete ) );
+                if ( 0 >= $rows )
+                {
+                    throw new \Exception( "Record delete failed." );
+                }
+            }
+            if ( !empty( $toUpdate ) )
+            {
+                foreach ( $toUpdate as $item )
+                {
+                    $itemId = Option::get( $item, 'id', '', true );
+                    // simple update request
+                    $command->reset();
+                    $rows = $command->update( $map_table, $item, 'id = :id', array( ':id' => $itemId ) );
+                    if ( 0 >= $rows )
+                    {
+                        throw new \Exception( "Record update failed." );
+                    }
+                }
+            }
+            if ( !empty( $accesses ) )
+            {
+                foreach ( $accesses as $item )
+                {
+                    $_filters = Option::get( $item, 'filters' );
+                    $_filters = empty( $_filters ) ? null : json_encode( $_filters );
+                    // simple insert request
+                    $record = array(
+                        'role_id'    => $role_id,
+                        'service_id' => Option::get( $item, 'service_id' ),
+                        'component'  => Option::get( $item, 'component', '' ),
+                        'access'     => Option::get( $item, 'access', '' ),
+                        'filters'    => $_filters,
+                        'filter_op'  => Option::get( $item, 'filter_op', 'AND' )
+                    );
+                    $command->reset();
+                    $rows = $command->insert( $map_table, $record );
+                    if ( 0 >= $rows )
+                    {
+                        throw new \Exception( "Record insert failed." );
+                    }
+                }
+            }
+        }
+        catch ( \Exception $ex )
+        {
+            throw new \Exception( "Error updating accesses to role assignment.\n{$ex->getMessage()}" );
+        }
+    }
 
-	/**
-	 * @param       $role_id
-	 * @param array $accesses
-	 *
-	 * @throws \Exception
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return void
-	 */
-	protected function assignRoleSystemAccesses( $role_id, $accesses = array() )
-	{
-		if ( empty( $role_id ) )
-		{
-			throw new BadRequestException( 'Role ID can not be empty.' );
-		}
+    /**
+     * @param       $role_id
+     * @param array $accesses
+     *
+     * @throws \Exception
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return void
+     */
+    protected function assignRoleSystemAccesses( $role_id, $accesses = array() )
+    {
+        if ( empty( $role_id ) )
+        {
+            throw new BadRequestException( 'Role ID can not be empty.' );
+        }
 
-		try
-		{
-			$accesses = array_values( $accesses ); // reset indices if needed
-			$count = count( $accesses );
+        try
+        {
+            $accesses = array_values( $accesses ); // reset indices if needed
+            $count = count( $accesses );
 
-			// check for dupes before processing
-			for ( $key1 = 0; $key1 < $count; $key1++ )
-			{
-				$access = $accesses[$key1];
-				$component = Option::get( $access, 'component', '' );
+            // check for dupes before processing
+            for ( $key1 = 0; $key1 < $count; $key1++ )
+            {
+                $access = $accesses[$key1];
+                $component = Option::get( $access, 'component', '' );
 
-				for ( $key2 = $key1 + 1; $key2 < $count; $key2++ )
-				{
-					$access2 = $accesses[$key2];
-					$component2 = Option::get( $access2, 'component', '' );
-					if ( $component == $component2 )
-					{
-						throw new BadRequestException( "Duplicated system component '$component' in role system access." );
-					}
-				}
-			}
+                for ( $key2 = $key1 + 1; $key2 < $count; $key2++ )
+                {
+                    $access2 = $accesses[$key2];
+                    $component2 = Option::get( $access2, 'component', '' );
+                    if ( $component == $component2 )
+                    {
+                        throw new BadRequestException( "Duplicated system component '$component' in role system access." );
+                    }
+                }
+            }
 
-			$map_table = static::tableNamePrefix() . 'role_system_access';
-			$pkMapField = 'id';
-			// use query builder
-			$command = Pii::db()->createCommand();
-			$command->select( 'id,component,access,filters,filter_op' );
-			$command->from( $map_table );
-			$command->where( 'role_id = :id' );
-			$maps = $command->queryAll( true, array( ':id' => $role_id ) );
-			$toDelete = array();
-			$toUpdate = array();
-			foreach ( $maps as $map )
-			{
-				$manyComponent = Option::get( $map, 'component', '' );
-				$id = Option::get( $map, $pkMapField, '' );
-				$found = false;
-				foreach ( $accesses as $key => $item )
-				{
-					$assignComponent = Option::get( $item, 'component', '' );
-					if ( $assignComponent == $manyComponent )
-					{
-						$_needUpdate = false;
-						// found it, make sure nothing needs to be updated
-						$oldAccess = Option::get( $map, 'access', '' );
-						$newAccess = Option::get( $item, 'access', '' );
-						if ( ( $oldAccess != $newAccess ) )
-						{
-							$map['access'] = $newAccess;
-							$_needUpdate = true;
-						}
-						$oldFilters = Option::get( $map, 'filters' );
-						$oldFilters = is_array( $oldFilters ) ? $oldFilters : array();
-						$newFilters = Option::get( $item, 'filters' );
-						$newFilters = is_array( $newFilters ) ? $newFilters : array();
-						$_diff = Utilities::array_diff_recursive( $oldFilters, $newFilters, true );
-						if ( !empty( $_diff ) )
-						{
-							$map['filters'] = json_encode( $newFilters );
-							$_needUpdate = true;
-						}
-						$oldOp = Option::get( $map, 'filter_op', '' );
-						$newOp = Option::get( $item, 'filter_op', '' );
-						if ( ( $oldOp != $newOp ) )
-						{
-							$map['filter_op'] = $newOp;
-							$_needUpdate = true;
-						}
-						if ( $_needUpdate )
-						{
-							$toUpdate[] = $map;
-						}
+            $map_table = static::tableNamePrefix() . 'role_system_access';
+            $pkMapField = 'id';
+            // use query builder
+            $command = Pii::db()->createCommand();
+            $command->select( 'id,component,access,filters,filter_op' );
+            $command->from( $map_table );
+            $command->where( 'role_id = :id' );
+            $maps = $command->queryAll( true, array( ':id' => $role_id ) );
+            $toDelete = array();
+            $toUpdate = array();
+            foreach ( $maps as $map )
+            {
+                $manyComponent = Option::get( $map, 'component', '' );
+                $id = Option::get( $map, $pkMapField, '' );
+                $found = false;
+                foreach ( $accesses as $key => $item )
+                {
+                    $assignComponent = Option::get( $item, 'component', '' );
+                    if ( $assignComponent == $manyComponent )
+                    {
+                        $_needUpdate = false;
+                        // found it, make sure nothing needs to be updated
+                        $oldAccess = Option::get( $map, 'access', '' );
+                        $newAccess = Option::get( $item, 'access', '' );
+                        if ( ( $oldAccess != $newAccess ) )
+                        {
+                            $map['access'] = $newAccess;
+                            $_needUpdate = true;
+                        }
+                        $oldFilters = Option::get( $map, 'filters' );
+                        $oldFilters = is_array( $oldFilters ) ? $oldFilters : array();
+                        $newFilters = Option::get( $item, 'filters' );
+                        $newFilters = is_array( $newFilters ) ? $newFilters : array();
+                        $_diff = Utilities::array_diff_recursive( $oldFilters, $newFilters, true );
+                        if ( !empty( $_diff ) )
+                        {
+                            $map['filters'] = json_encode( $newFilters );
+                            $_needUpdate = true;
+                        }
+                        $oldOp = Option::get( $map, 'filter_op', '' );
+                        $newOp = Option::get( $item, 'filter_op', '' );
+                        if ( ( $oldOp != $newOp ) )
+                        {
+                            $map['filter_op'] = $newOp;
+                            $_needUpdate = true;
+                        }
+                        if ( $_needUpdate )
+                        {
+                            $toUpdate[] = $map;
+                        }
 
-						// otherwise throw it out
-						unset( $accesses[$key] );
-						$found = true;
-						continue;
-					}
-				}
-				if ( !$found )
-				{
-					$toDelete[] = $id;
-					continue;
-				}
-			}
-			if ( !empty( $toDelete ) )
-			{
-				// simple delete request
-				$command->reset();
-				$rows = $command->delete( $map_table, array( 'in', $pkMapField, $toDelete ) );
-			}
-			if ( !empty( $toUpdate ) )
-			{
-				foreach ( $toUpdate as $item )
-				{
-					$itemId = Option::get( $item, 'id', '', true );
-					// simple update request
-					$command->reset();
-					$rows = $command->update( $map_table, $item, 'id = :id', array( ':id' => $itemId ) );
-					if ( 0 >= $rows )
-					{
-						throw new \Exception( "Record update failed." );
-					}
-				}
-			}
-			if ( !empty( $accesses ) )
-			{
-				foreach ( $accesses as $item )
-				{
-					$_filters = Option::get( $item, 'filters' );
-					$_filters = empty( $_filters ) ? null : json_encode( $_filters );
-					// simple insert request
-					$record = array(
-						'role_id'   => $role_id,
-						'component' => Option::get( $item, 'component', '' ),
-						'access'    => Option::get( $item, 'access', '' ),
-						'filters'   => $_filters,
-						'filter_op' => Option::get( $item, 'filter_op', 'AND' )
-					);
-					$command->reset();
-					$rows = $command->insert( $map_table, $record );
-					if ( 0 >= $rows )
-					{
-						throw new \Exception( "Record insert failed." );
-					}
-				}
-			}
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Error updating accesses to role assignment.\n{$ex->getMessage()}" );
-		}
-	}
+                        // otherwise throw it out
+                        unset( $accesses[$key] );
+                        $found = true;
+                        continue;
+                    }
+                }
+                if ( !$found )
+                {
+                    $toDelete[] = $id;
+                    continue;
+                }
+            }
+            if ( !empty( $toDelete ) )
+            {
+                // simple delete request
+                $command->reset();
+                $rows = $command->delete( $map_table, array( 'in', $pkMapField, $toDelete ) );
+                if ( 0 >= $rows )
+                {
+                    throw new \Exception( "Record delete failed." );
+                }
+            }
+            if ( !empty( $toUpdate ) )
+            {
+                foreach ( $toUpdate as $item )
+                {
+                    $itemId = Option::get( $item, 'id', '', true );
+                    // simple update request
+                    $command->reset();
+                    $rows = $command->update( $map_table, $item, 'id = :id', array( ':id' => $itemId ) );
+                    if ( 0 >= $rows )
+                    {
+                        throw new \Exception( "Record update failed." );
+                    }
+                }
+            }
+            if ( !empty( $accesses ) )
+            {
+                foreach ( $accesses as $item )
+                {
+                    $_filters = Option::get( $item, 'filters' );
+                    $_filters = empty( $_filters ) ? null : json_encode( $_filters );
+                    // simple insert request
+                    $record = array(
+                        'role_id'   => $role_id,
+                        'component' => Option::get( $item, 'component', '' ),
+                        'access'    => Option::get( $item, 'access', '' ),
+                        'filters'   => $_filters,
+                        'filter_op' => Option::get( $item, 'filter_op', 'AND' )
+                    );
+                    $command->reset();
+                    $rows = $command->insert( $map_table, $record );
+                    if ( 0 >= $rows )
+                    {
+                        throw new \Exception( "Record insert failed." );
+                    }
+                }
+            }
+        }
+        catch ( \Exception $ex )
+        {
+            throw new \Exception( "Error updating accesses to role assignment.\n{$ex->getMessage()}" );
+        }
+    }
 
-	/**
-	 * @param array $columns The columns to return in the permissions array
-	 *
-	 * @return array|null
-	 */
-	public function getRoleServicePermissions( $columns = null )
-	{
-		$_perms = null;
+    /**
+     * @param array $columns The columns to return in the permissions array
+     *
+     * @return array|null
+     */
+    public function getRoleServicePermissions( $columns = null )
+    {
+        $_perms = null;
 
-		/**
-		 * @var RoleServiceAccess[] $_permissions
-		 * @var Service[]           $_services
-		 */
-		if ( $this->role_service_accesses )
-		{
-			/** @var Role $_perm */
-			foreach ( $this->role_service_accesses as $_perm )
-			{
-				$_permServiceId = $_perm->service_id;
-				$_temp = $_perm->getAttributes( $columns ? : array( 'service_id', 'component', 'access', 'filters', 'filter_op' ) );
+        /**
+         * @var RoleServiceAccess[] $_permissions
+         * @var Service[]           $_services
+         */
+        if ( $this->role_service_accesses )
+        {
+            /** @var Role $_perm */
+            foreach ( $this->role_service_accesses as $_perm )
+            {
+                $_permServiceId = $_perm->service_id;
+                $_temp = $_perm->getAttributes( $columns ? : array( 'service_id', 'component', 'access', 'filters', 'filter_op' ) );
 
-				if ( $this->services )
-				{
-					foreach ( $this->services as $_service )
-					{
-						if ( $_permServiceId == $_service->id )
-						{
-							$_temp['service'] = $_service->api_name;
-						}
-					}
-				}
+                if ( $this->services )
+                {
+                    foreach ( $this->services as $_service )
+                    {
+                        if ( $_permServiceId == $_service->id )
+                        {
+                            $_temp['service'] = $_service->api_name;
+                        }
+                    }
+                }
 
-				$_perms[] = $_temp;
-			}
-		}
+                $_perms[] = $_temp;
+            }
+        }
 
-		/**
-		 * @var RoleSystemAccess[] $_permissions
-		 */
-		if ( $this->role_system_accesses )
-		{
-			/** @var Role $_perm */
-			foreach ( $this->role_system_accesses as $_perm )
-			{
-				$_temp = $_perm->getAttributes( $columns ? : array( 'component', 'access', 'filters', 'filter_op' ) );
-				$_temp['service'] = 'system';
-				$_perms[] = $_temp;
-			}
-		}
+        /**
+         * @var RoleSystemAccess[] $_permissions
+         */
+        if ( $this->role_system_accesses )
+        {
+            /** @var Role $_perm */
+            foreach ( $this->role_system_accesses as $_perm )
+            {
+                $_temp = $_perm->getAttributes( $columns ? : array( 'component', 'access', 'filters', 'filter_op' ) );
+                $_temp['service'] = 'system';
+                $_perms[] = $_temp;
+            }
+        }
 
-		return $_perms;
-	}
+        return $_perms;
+    }
 }

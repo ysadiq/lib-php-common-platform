@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Resources\User\Session;
@@ -27,6 +28,7 @@ use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Yii\Models\LookupKey;
 use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
@@ -39,280 +41,330 @@ use Kisma\Core\Utility\Option;
  */
 class Config extends BaseSystemRestResource
 {
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * Constructor
-	 *
-	 * @param BasePlatformService $consumer
-	 * @param array               $resourceArray
-	 *
-	 * @return Config
-	 */
-	public function __construct( $consumer = null, $resourceArray = array() )
-	{
-		parent::__construct(
-			$consumer,
-			array(
-				'name'           => 'Configuration',
-				'type'           => 'System',
-				'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				'api_name'       => 'config',
-				'description'    => 'Service general configuration',
-				'is_active'      => true,
-				'resource_array' => $resourceArray,
-				'verb_aliases'   => array(
-					static::Patch => static::Post,
-					static::Merge => static::Post,
-				)
-			)
-		);
-	}
+    /**
+     * Constructor
+     *
+     * @param BasePlatformService $consumer
+     * @param array               $resourceArray
+     *
+     * @return Config
+     */
+    public function __construct( $consumer = null, $resourceArray = array() )
+    {
+        parent::__construct(
+            $consumer,
+            array(
+                'name'           => 'Configuration',
+                'type'           => 'System',
+                'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+                'api_name'       => 'config',
+                'description'    => 'Service general configuration',
+                'is_active'      => true,
+                'resource_array' => $resourceArray,
+                'verb_aliases'   => array(
+                    static::PATCH => static::POST,
+                    static::MERGE => static::POST,
+                )
+            )
+        );
+    }
 
-	/**
-	 * @return array|bool
-	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 */
-	public static function getOpenRegistration()
-	{
-		/** @var $_config \DreamFactory\Platform\Yii\Models\Config */
-		$_fields = 'allow_open_registration, open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id';
+    /**
+     * @return array|bool
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     */
+    public static function getOpenRegistration()
+    {
+        /** @var $_config \DreamFactory\Platform\Yii\Models\Config */
+        $_fields = 'allow_open_registration, open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id';
 
-		$_config = ResourceStore::model( 'config' )->find( array( 'select' => $_fields ) );
+        $_config = ResourceStore::model( 'config' )->find( array( 'select' => $_fields ) );
 
-		if ( null === $_config )
-		{
-			throw new InternalServerErrorException( 'Unable to load system configuration.' );
-		}
+        if ( null === $_config )
+        {
+            throw new InternalServerErrorException( 'Unable to load system configuration.' );
+        }
 
-		if ( !$_config->allow_open_registration )
-		{
-			return false;
-		}
+        if ( !$_config->allow_open_registration )
+        {
+            return false;
+        }
 
-		return $_config->getAttributes( null );
-	}
+        return $_config->getAttributes( null );
+    }
 
-	/**
-	 * Override for GET of public info
-	 *
-	 * @param string $operation
-	 * @param null   $resource
-	 *
-	 * @return bool
-	 */
-	public function checkPermission( $operation, $resource = null )
-	{
-		if ( 'read' == $operation )
-		{
-			return true;
-		}
+    /**
+     * Override for GET of public info
+     *
+     * @param string $operation
+     * @param null   $resource
+     *
+     * @return bool
+     */
+    public function checkPermission( $operation, $resource = null )
+    {
+        if ( 'read' == $operation )
+        {
+            return true;
+        }
 
-		return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource );
-	}
+        return ResourceStore::checkPermission( $operation, $this->_serviceName, $resource );
+    }
 
-	/**
-	 * {@InheritDoc}
-	 */
-	protected function _determineRequestedResource( &$ids = null, &$records = null )
-	{
-		$_payload = parent::_determineRequestedResource( $ids, $records );
+    /**
+     * {@InheritDoc}
+     */
+    protected function _determineRequestedResource( &$ids = null, &$records = null )
+    {
+        $_payload = parent::_determineRequestedResource( $ids, $records );
 
-		//	Check for CORS changes...
-		if ( null !== ( $_hostList = Option::get( $_payload, 'allowed_hosts', null, true ) ) )
-		{
+        if ( 'GET' != $this->_action )
+        {
+            //	Check for CORS changes...
+            if ( null !== ( $_hostList = Option::get( $_payload, 'allowed_hosts', null, true ) ) )
+            {
 //			Log::debug( 'Allowed hosts given: ' . print_r( $_hostList, true ) );
-			SystemManager::setAllowedHosts( $_hostList );
-		}
+                SystemManager::setAllowedHosts( $_hostList );
+            }
 
-		return $_payload;
-	}
+            try
+            {
+                if ( ResourceStore::checkPermission( 'admin', $this->_serviceName, 'config' ) )
+                {
+                    if ( isset( $_payload['lookup_keys'] ) )
+                    {
+                        LookupKey::assignLookupKeys( $_payload['lookup_keys'] );
+                    }
+                }
+            }
+            catch ( ForbiddenException $_ex )
+            {
+                // do nothing
+            }
+        }
 
-	/**
-	 * {@InheritDoc}
-	 */
-	protected function _postProcess()
-	{
-		static $_fabricHosted;
+        return $_payload;
+    }
 
-		$_fabricHosted = $_fabricHosted ? : \Kisma::get( 'platform.fabric_hosted', Fabric::fabricHosted() );
+    /**
+     * {@InheritDoc}
+     */
+    protected function _postProcess()
+    {
+        static $_fabricHosted;
 
-		//	Only return a single row, not in an array
-		if ( is_array( $this->_response ) && !Pii::isEmpty( $_record = Option::get( $this->_response, 'record' ) ) && count( $_record ) >= 1 )
-		{
-			$this->_response = current( $_record );
-		}
+        $_fabricHosted = $_fabricHosted ? : \Kisma::get( 'platform.fabric_hosted', Fabric::fabricHosted() );
 
-		/**
-		 * Versioning and upgrade support
-		 */
-		if ( null === ( $_versionInfo = \Kisma::get( 'platform.version_info' ) ) )
-		{
-			$_versionInfo = array(
-				'dsp_version'       => $_currentVersion = SystemManager::getCurrentVersion(),
-				'latest_version'    => $_latestVersion = ( $_fabricHosted ? $_currentVersion : SystemManager::getLatestVersion() ),
-				'upgrade_available' => version_compare( $_currentVersion, $_latestVersion, '<' ),
-			);
+        //	Only return a single row, not in an array
+        if ( is_array( $this->_response ) && !Pii::isEmpty( $_record = Option::get( $this->_response, 'record' ) ) && count( $_record ) >= 1 )
+        {
+            $this->_response = current( $_record );
+        }
 
-			\Kisma::set( 'platform.version_info', $_versionInfo );
-		}
+        /**
+         * Versioning and upgrade support
+         */
+        if ( null === ( $_versionInfo = \Kisma::get( 'platform.version_info' ) ) )
+        {
+            $_versionInfo = array(
+                'dsp_version'       => $_currentVersion = SystemManager::getCurrentVersion(),
+                'latest_version'    => $_latestVersion = ( $_fabricHosted ? $_currentVersion : SystemManager::getLatestVersion() ),
+                'upgrade_available' => version_compare( $_currentVersion, $_latestVersion, '<' ),
+            );
 
-		$this->_response = array_merge( $this->_response, $_versionInfo );
-		unset( $_versionInfo );
+            \Kisma::set( 'platform.version_info', $_versionInfo );
+        }
 
-		/**
-		 * Remote login support
-		 */
-		$this->_response['is_guest'] = Pii::guest();
-		$this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
-		$this->_response['allow_remote_logins'] =
-			( Pii::getParam( 'dsp.allow_remote_logins', false ) && Option::getBool( $this->_response, 'allow_open_registration' ) );
+        $this->_response = array_merge( $this->_response, $_versionInfo );
+        unset( $_versionInfo );
 
-		if ( false !== $this->_response['allow_remote_logins'] )
-		{
-			$_remoteProviders = $this->_getRemoteProviders();
+        /**
+         * Remote login support
+         */
+        $this->_response['is_guest'] = Pii::guest();
+        $this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
+        $this->_response['allow_remote_logins'] =
+            ( Pii::getParam( 'dsp.allow_remote_logins', false ) && Option::getBool( $this->_response, 'allow_open_registration' ) );
 
-			if ( empty( $_remoteProviders ) )
-			{
-				$this->_response['allow_remote_logins'] = false;
-			}
-			else
-			{
-				$this->_response['remote_login_providers'] = array_values( $_remoteProviders );
-			}
+        if ( false !== $this->_response['allow_remote_logins'] )
+        {
+            $_remoteProviders = $this->_getRemoteProviders();
 
-			unset( $_remoteProviders );
-		}
-		else
-		{
-			//	No providers, no admin remote logins
-			$this->_response['allow_admin_remote_logins'] = false;
-		}
+            if ( empty( $_remoteProviders ) )
+            {
+                $this->_response['allow_remote_logins'] = false;
+            }
+            else
+            {
+                $this->_response['remote_login_providers'] = array_values( $_remoteProviders );
+            }
 
-		/** CORS support **/
-		$this->_response['allowed_hosts'] = SystemManager::getAllowedHosts();
+            unset( $_remoteProviders );
+        }
+        else
+        {
+            //	No providers, no admin remote logins
+            $this->_response['allow_admin_remote_logins'] = false;
+        }
 
-		parent::_postProcess();
-	}
+        /** CORS support **/
+        $this->_response['allowed_hosts'] = SystemManager::getAllowedHosts();
 
-	/**
-	 * @return array|mixed
-	 */
-	protected function _getRemoteProviders()
-	{
-		if ( null === ( $_remoteProviders = Pii::getState( 'platform.remote_login_providers' ) ) )
-		{
-			$_remoteProviders = array();
+        try
+        {
+            if ( ResourceStore::checkPermission( 'admin', $this->_serviceName, 'config' ) )
+            {
+                $this->_response['lookup_keys'] = $this->_getLookupKeys();
+            }
+        }
+        catch ( ForbiddenException $_ex )
+        {
+            // do nothing
+        }
 
-			//*************************************************************************
-			//	Global Providers
-			//*************************************************************************
+        parent::_postProcess();
+    }
 
-			if ( null === ( $_providers = Pii::getState( 'platform.global_providers' ) ) )
-			{
-				Pii::setState( 'platform.global_providers', $_providers = Fabric::getProviderCredentials() );
-			}
+    /**
+     * @return array|mixed
+     */
+    protected function _getLookupKeys()
+    {
+        /** @var LookupKey[] $_models */
+        $_models = ResourceStore::model( 'lookup_key' )->findAll( 'user_id IS NULL AND role_id IS NULL' );
 
-			if ( !empty( $_providers ) )
-			{
-				foreach ( $_providers as $_row )
-				{
-					if ( 1 == $_row->login_provider_ind )
-					{
-						$_config = $this->_sanitizeProviderConfig( $_row->config_text, true );
+        $_lookups = array();
+        if ( !empty( $_models ) )
+        {
+            foreach ( $_models as $_row )
+            {
+                $_lookups[] = $_row->getAttributes( array( 'name', 'value', 'private' ) );
+            }
+        }
 
-						$_remoteProviders[] = array(
-							'id'            => $_row->id,
-							'provider_name' => $_row->provider_name_text,
-							'api_name'      => $_row->endpoint_text,
-							'config_text'   => $_config,
-							'is_active'     => $_row->enable_ind,
-							'is_system'     => true,
-						);
-					}
+        return $_lookups;
+    }
 
-					unset( $_row );
-				}
-			}
+    /**
+     * @return array|mixed
+     */
+    protected function _getRemoteProviders()
+    {
+        if ( null === ( $_remoteProviders = Pii::getState( 'platform.remote_login_providers' ) ) )
+        {
+            $_remoteProviders = array();
 
-			unset( $_providers );
+            //*************************************************************************
+            //	Global Providers
+            //*************************************************************************
 
-			//*************************************************************************
-			//	Local Providers
-			//*************************************************************************
+            if ( null === ( $_providers = Pii::getState( 'platform.global_providers' ) ) )
+            {
+                Pii::setState( 'platform.global_providers', $_providers = Fabric::getProviderCredentials() );
+            }
 
-			/** @var Provider[] $_models */
-			$_models = ResourceStore::model( 'provider' )->findAll( array( 'order' => 'provider_name' ) );
+            if ( !empty( $_providers ) )
+            {
+                foreach ( $_providers as $_row )
+                {
+                    if ( 1 == $_row->login_provider_ind )
+                    {
+                        $_config = $this->_sanitizeProviderConfig( $_row->config_text, true );
 
-			if ( !empty( $_models ) )
-			{
-				foreach ( $_models as $_row )
-				{
-					if ( 1 == $_row->is_login_provider )
-					{
-						$_config = $this->_sanitizeProviderConfig( $_row->config_text );
+                        $_remoteProviders[] = array(
+                            'id'            => $_row->id,
+                            'provider_name' => $_row->provider_name_text,
+                            'api_name'      => $_row->endpoint_text,
+                            'config_text'   => $_config,
+                            'is_active'     => $_row->enable_ind,
+                            'is_system'     => true,
+                        );
+                    }
 
-						//	Local providers take precedent over global...
-						foreach ( $_remoteProviders as $_index => $_priorRow )
-						{
-							if ( $_priorRow['api_name'] == $_row->api_name )
-							{
-								unset( $_remoteProviders[$_index] );
-								break;
-							}
-						}
+                    unset( $_row );
+                }
+            }
 
-						$_remoteProviders[] = array_merge( $_row->getAttributes(), array( 'config_text' => $_config ) );
-					}
+            unset( $_providers );
 
-					unset( $_row );
-				}
+            //*************************************************************************
+            //	Local Providers
+            //*************************************************************************
 
-				unset( $_models );
-			}
+            /** @var Provider[] $_models */
+            $_models = ResourceStore::model( 'provider' )->findAll( array( 'order' => 'provider_name' ) );
 
-			Pii::setState( 'platform.remote_login_providers', $_remoteProviders );
-		}
+            if ( !empty( $_models ) )
+            {
+                foreach ( $_models as $_row )
+                {
+                    if ( 1 == $_row->is_login_provider )
+                    {
+                        $_config = $this->_sanitizeProviderConfig( $_row->config_text );
 
-		return $_remoteProviders;
-	}
+                        //	Local providers take precedent over global...
+                        foreach ( $_remoteProviders as $_index => $_priorRow )
+                        {
+                            if ( $_priorRow['api_name'] == $_row->api_name )
+                            {
+                                unset( $_remoteProviders[$_index] );
+                                break;
+                            }
+                        }
 
-	/**
-	 * Strictly for your protection!
-	 *
-	 * @param array $config
-	 * @param bool  $force
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	protected function _sanitizeProviderConfig( $config, $force = false )
-	{
-		try
-		{
-			if ( false === $force && Session::isSystemAdmin() )
-			{
-				return $config;
-			}
-		}
-		catch ( \Exception $_ex )
-		{
-			//	Ignored 401
-			if ( HttpResponse::Unauthorized != $_ex->getCode() )
-			{
-				throw $_ex;
-			}
-		}
+                        $_remoteProviders[] = array_merge( $_row->getAttributes(), array( 'config_text' => $_config ) );
+                    }
 
-		$_config = Option::clean( $config );
+                    unset( $_row );
+                }
 
-		//	Remove sensitive information before returning for non-admins
-		Option::remove( $_config, 'client_secret' );
-		Option::remove( $_config, 'access_token' );
-		Option::remove( $_config, 'refresh_token' );
+                unset( $_models );
+            }
 
-		return $_config;
-	}
+            Pii::setState( 'platform.remote_login_providers', $_remoteProviders );
+        }
+
+        return $_remoteProviders;
+    }
+
+    /**
+     * Strictly for your protection!
+     *
+     * @param array $config
+     * @param bool  $force
+     *
+     * @throws \Exception
+     * @return array
+     */
+    protected function _sanitizeProviderConfig( $config, $force = false )
+    {
+        try
+        {
+            if ( false === $force && Session::isSystemAdmin() )
+            {
+                return $config;
+            }
+        }
+        catch ( \Exception $_ex )
+        {
+            //	Ignored 401
+            if ( HttpResponse::Unauthorized != $_ex->getCode() )
+            {
+                throw $_ex;
+            }
+        }
+
+        $_config = Option::clean( $config );
+
+        //	Remove sensitive information before returning for non-admins
+        Option::remove( $_config, 'client_secret' );
+        Option::remove( $_config, 'access_token' );
+        Option::remove( $_config, 'refresh_token' );
+
+        return $_config;
+    }
 }
