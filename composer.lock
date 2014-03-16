@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "906293bbd55a8f72b3952d39c1d82faa",
+    "hash": "391a059d259453269fccc2cff75b2389",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -243,7 +243,7 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Sr. Software Engineer"
                 },
                 {
                     "name": "Lee Hicks",
@@ -465,13 +465,13 @@
             "version": "dev-master",
             "source": {
                 "type": "git",
-                "url": "https://github.com/guzzle/guzzle.git",
-                "reference": "eb1f3693243e1686ce4014c6de32ae7295883d76"
+                "url": "https://github.com/guzzle/guzzle3.git",
+                "reference": "8a0a8d72cbff0c58752af0badd6820f5f87c9c84"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/eb1f3693243e1686ce4014c6de32ae7295883d76",
-                "reference": "eb1f3693243e1686ce4014c6de32ae7295883d76",
+                "url": "https://api.github.com/repos/guzzle/guzzle3/zipball/8a0a8d72cbff0c58752af0badd6820f5f87c9c84",
+                "reference": "8a0a8d72cbff0c58752af0badd6820f5f87c9c84",
                 "shasum": ""
             },
             "require": {
@@ -550,7 +550,7 @@
                 "rest",
                 "web service"
             ],
-            "time": "2014-03-09 16:11:27"
+            "time": "2014-03-15 23:37:34"
         },
         {
             "name": "kisma/kisma",
@@ -558,12 +558,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "4b8daa4da1cc872cf645eb69481c8ca8e05766fe"
+                "reference": "254c1aed9de18d87e048f43bceda1aca1d477c94"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/4b8daa4da1cc872cf645eb69481c8ca8e05766fe",
-                "reference": "4b8daa4da1cc872cf645eb69481c8ca8e05766fe",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/254c1aed9de18d87e048f43bceda1aca1d477c94",
+                "reference": "254c1aed9de18d87e048f43bceda1aca1d477c94",
                 "shasum": ""
             },
             "require": {
@@ -607,7 +607,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-03-11 01:11:34"
+            "time": "2014-03-15 21:37:30"
         },
         {
             "name": "monolog/monolog",
@@ -615,12 +615,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
-                "reference": "dc75a998d83ebb285b94b1a6fd96644b457ed33c"
+                "reference": "db7e2aa311869aaf3c2cc76237b2beff05322629"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/dc75a998d83ebb285b94b1a6fd96644b457ed33c",
-                "reference": "dc75a998d83ebb285b94b1a6fd96644b457ed33c",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/db7e2aa311869aaf3c2cc76237b2beff05322629",
+                "reference": "db7e2aa311869aaf3c2cc76237b2beff05322629",
                 "shasum": ""
             },
             "require": {
@@ -675,7 +675,7 @@
                 "logging",
                 "psr-3"
             ],
-            "time": "2014-03-09 20:51:48"
+            "time": "2014-03-14 09:32:58"
         },
         {
             "name": "pear-pear.php.net/Archive_Tar",

@@ -292,8 +292,6 @@ class EventDispatcher implements EventDispatcherInterface
 
         if ( static::$_enableEventScripts && isset( $this->_scripts[$eventName] ) )
         {
-            Log::debug( 'Running event "' . $_eventName . '" script: ' . $_script );
-
             //  Run scripts
             $_script = $this->_scripts[$eventName];
             Script::runScript( $_script, $eventName . '.js', $_event );

@@ -19,7 +19,7 @@
 	"require":           {
 		"php":                             ">=5.3.10",
 		"kisma/kisma":                     "~0.2@dev",
-		"dreamfactory/yii":                "=1.1.13",
+		"dreamfactory/yii":                "1.1.13",
 		"dreamfactory/lib-php-common":     "~1.4@dev",
 		"dreamfactory/lib-php-common-yii": "~1.4@dev",
 		"dreamfactory/oasys":              "~0.4.0@dev",

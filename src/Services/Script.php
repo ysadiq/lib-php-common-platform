@@ -31,7 +31,6 @@ use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Interfaces\HttpResponse;
 use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
 
 /**
  * Script.php
@@ -56,6 +55,10 @@ class Script extends BasePlatformRestService
      * @var string The path to script storage area
      */
     protected $_scriptPath = null;
+    /**
+     * @var int The maximum time (in ms) to allow scripts to run
+     */
+    protected static $_scriptTimeout = 60000;
 
     //*************************************************************************
     //	Methods
@@ -85,9 +88,7 @@ class Script extends BasePlatformRestService
 
         if ( empty( $this->_scriptPath ) || !extension_loaded( 'v8js' ) )
         {
-            throw new RestException(
-                HttpResponse::ServiceUnavailable, 'This service is not available. Storage path and/or required libraries not available.'
-            );
+            throw new RestException( HttpResponse::ServiceUnavailable, 'This service is not available. Storage path and/or required libraries not available.' );
         }
     }
 
@@ -200,21 +201,23 @@ class Script extends BasePlatformRestService
             throw new InternalServerErrorException( 'The script ID "' . $scriptId . '" cannot be retrieved at this time.' );
         }
 
+        Log::debug( 'Running script: ' . $scriptId );
+
         try
         {
             $_runner = new \V8Js();
 
             /** @noinspection PhpUndefinedFieldInspection */
-            $_runner->event_data = $data;
+            $_runner->event = $data;
 
             //  Don't show output
             ob_start();
 
             /** @noinspection PhpUndefinedMethodInspection */
-            $_lastVariable = $_runner->executeString( $_script, $scriptId );
+            $_lastVariable = $_runner->executeString( $_script, $scriptId, \V8Js::FLAG_NONE, static::$_scriptTimeout );
 
             /** @noinspection PhpUndefinedFieldInspection */
-            $data = $_runner->event_data;
+            $data = $_runner->event;
 
             $_result = ob_get_clean();
 
@@ -223,7 +226,15 @@ class Script extends BasePlatformRestService
         catch ( \V8JsException $_ex )
         {
             ob_end_clean();
-            Log::error( 'Exception executing javascript: ' . $_ex->getMessage() );
+
+            if ( $_ex instanceof \V8JsTimeLimitException )
+            {
+                Log::error( 'Timeout while running script "' . $scriptId . '": ' . $_ex->getMessage() );
+            }
+            else
+            {
+                Log::error( 'Exception executing javascript: ' . $_ex->getMessage() );
+            }
             throw new InternalServerErrorException( $_ex->getMessage() );
         }
 
@@ -239,6 +250,41 @@ class Script extends BasePlatformRestService
     protected function _getScriptPath( $scriptName = null )
     {
         return $this->_scriptPath . '/' . trim( $scriptName ? : $this->_resource, '/ ' ) . '.js';
+    }
 
+    /**
+     * @param int $scriptTimeout
+     */
+    public static function setScriptTimeout( $scriptTimeout )
+    {
+        self::$_scriptTimeout = $scriptTimeout;
+    }
+
+    /**
+     * @return int
+     */
+    public static function getScriptTimeout()
+    {
+        return self::$_scriptTimeout;
+    }
+
+    /**
+     * @param string $scriptPath
+     *
+     * @return Script
+     */
+    public function setScriptPath( $scriptPath )
+    {
+        $this->_scriptPath = $scriptPath;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getScriptPath()
+    {
+        return $this->_scriptPath;
     }
 }
