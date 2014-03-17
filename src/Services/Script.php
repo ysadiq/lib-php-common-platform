@@ -214,7 +214,7 @@ class Script extends BasePlatformRestService
             ob_start();
 
             /** @noinspection PhpUndefinedMethodInspection */
-            $_lastVariable = $_runner->executeString( $_script, $scriptId, \V8Js::FLAG_NONE, static::$_scriptTimeout );
+            $_lastVariable = $_runner->executeString( $_script, $scriptId, \V8Js::FLAG_NONE );//, static::$_scriptTimeout );
 
             /** @noinspection PhpUndefinedFieldInspection */
             $data = $_runner->event;
