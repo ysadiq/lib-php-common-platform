@@ -42,7 +42,6 @@ use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\Scalar;
 
 /**
  * Session
@@ -162,9 +161,11 @@ class Session extends BasePlatformRestResource
             }
 
             $_result = static::generateSessionDataFromUser( $_userId );
+            static::$_cache = Option::get( $_result, 'cached' );
+            Pii::setState( 'cached', static::$_cache );
 
             //	Additional stuff for session - launchpad mainly
-            return static::addSessionExtras( $_result, Option::getDeep( $_result, 'data', 'is_sys_admin', false ), true );
+            return static::addSessionExtras( $_result, Option::getDeep( $_result, 'public', 'is_sys_admin', false ), true );
         }
         catch ( \Exception $_ex )
         {
@@ -242,20 +243,22 @@ class Session extends BasePlatformRestResource
         $_user = User::loginRequest( $email, $password, $duration );
 
         $_result = static::generateSessionDataFromUser( $_user->id, $_user );
-
-        // write back login datetime
-        $_user->update( array( 'last_login_date' => date( 'c' ) ) );
+        static::$_cache = Option::get( $_result, 'cached' );
+        Pii::setState( 'cached', static::$_cache );
 
         static::$_userId = $_user->id;
         static::$_ownerId = sha1( $_user->email );
 
-        if ( !$return_extras )
+        // write back login datetime
+        $_user->update( array( 'last_login_date' => date( 'c' ) ) );
+
+        if ( $return_extras )
         {
-            return true;
+            // 	Additional stuff for session - launchpad mainly
+            return static::addSessionExtras( $_result, $_user->is_sys_admin, true );
         }
 
-        // 	Additional stuff for session - launchpad mainly
-        return static::addSessionExtras( $_result, $_user->is_sys_admin, true );
+        return true;
     }
 
     /**
@@ -309,6 +312,8 @@ class Session extends BasePlatformRestResource
             'last_name',
             'email',
             'is_sys_admin',
+            'role_id',
+            'default_app_id',
             'last_login_date'
         );
 
@@ -345,13 +350,13 @@ class Session extends BasePlatformRestResource
             throw new ForbiddenException( "The user '$_email' is not currently active." );
         }
 
-        $_isAdmin = $_user->getAttribute( 'is_sys_admin' );
-        $_defaultAppId = $_user->getAttribute( 'default_app_id' );
-        $_data = $_userInfo = $_user->getAttributes( $_fields );
+        $_cached = $_user->getAttributes( $_fields );
+        $_public = $_cached;
+        $_defaultAppId = Option::get( $_public, 'default_app_id', null, true );
 
         $_roleApps = $_allowedApps = array();
-        $_roleId = null;
-        if ( !$_isAdmin )
+        $_roleId = Option::get( $_public, 'role_id', null, true );;
+        if ( !$_user->is_sys_admin )
         {
             if ( !$_user->role )
             {
@@ -364,7 +369,6 @@ class Session extends BasePlatformRestResource
                 throw new ForbiddenException( "The role '$_roleName' is not currently active." );
             }
 
-            $_roleId = $_user->role->id;
             if ( !isset( $_defaultAppId ) )
             {
                 $_defaultAppId = $_user->role->default_app_id;
@@ -390,15 +394,15 @@ class Session extends BasePlatformRestResource
             $_role['apps'] = $_roleApps;
             $_role['services'] = $_user->getRoleServicePermissions();
 
-            $_userInfo['role'] = $_role;
-            $_data['role'] = $_roleName;
+            $_cached['role'] = $_role;
+            $_public['role'] = $_roleName;
         }
 
-        $_userInfo['lookup'] = LookupKey::getForSession( $_roleId, $_user->id );
+        $_cached['lookup'] = LookupKey::getForSession( $_roleId, $_user->id );
 
         return array(
-            'public'         => $_userInfo,
-            'data'           => $_data,
+            'cached'         => $_cached,
+            'public'         => $_public,
             'allowed_apps'   => $_allowedApps,
             'default_app_id' => $_defaultAppId
         );
@@ -435,7 +439,9 @@ class Session extends BasePlatformRestResource
             throw new ForbiddenException( "The role '$_role->name' is not currently active." );
         }
 
-        $_allowedApps = $_data = $_userInfo = array();
+        $_cached = array();
+        $_public = array();
+        $_allowedApps = array();
         $_defaultAppId = $_role->default_app_id;
         $_roleData = array( 'name', $_role->name );
 
@@ -462,12 +468,12 @@ class Session extends BasePlatformRestResource
 
         $_roleData['services'] = $_role->getRoleServicePermissions();
 
-        $_userInfo['role'] = $_roleData;
-        $_userInfo['lookup'] = LookupKey::getForSession( $_role->id );
+        $_cached['role'] = $_roleData;
+        $_cached['lookup'] = LookupKey::getForSession( $_role->id );
 
         return array(
-            'public'         => $_userInfo,
-            'data'           => $_data,
+            'cached'         => $_cached,
+            'public'         => $_public,
             'allowed_apps'   => $_allowedApps,
             'default_app_id' => $_defaultAppId
         );
@@ -545,7 +551,7 @@ class Session extends BasePlatformRestResource
     {
         static::_checkCache();
 
-        return Scalar::boolval( Option::getDeep( static::$_cache, 'public', 'is_sys_admin' ) );
+        return Option::getBool( static::$_cache, 'is_sys_admin' );
     }
 
     /**
@@ -560,14 +566,12 @@ class Session extends BasePlatformRestResource
     {
         static::_checkCache();
 
-        $_public = Option::get( static::$_cache, 'public' );
-
-        if ( false !== ( $_admin = Option::getBool( $_public, 'is_sys_admin' ) ) )
+        if ( false !== ( $_admin = Option::getBool( static::$_cache, 'is_sys_admin' ) ) )
         {
             return; // no need to check role
         }
 
-        if ( null === ( $_roleInfo = Option::get( $_public, 'role' ) ) )
+        if ( null === ( $_roleInfo = Option::get( static::$_cache, 'role' ) ) )
         {
             // no role assigned, if not sys admin, denied service
             throw new ForbiddenException( "A valid user role or system administrator is required to access services." );
@@ -693,14 +697,12 @@ class Session extends BasePlatformRestResource
     {
         static::_checkCache();
 
-        $_public = Option::get( static::$_cache, 'public' );
-
-        if ( Option::getBool( $_public, 'is_sys_admin' ) )
+        if ( Option::getBool( static::$_cache, 'is_sys_admin' ) )
         {
             return true; // no need to check role
         }
 
-        if ( null === ( $_roleInfo = Option::get( $_public, 'role' ) ) )
+        if ( null === ( $_roleInfo = Option::get( static::$_cache, 'role' ) ) )
         {
             // no role assigned
             return false;
@@ -856,8 +858,6 @@ class Session extends BasePlatformRestResource
 
         static::_checkCache();
 
-        $_public = Option::get( static::$_cache, 'public' );
-
         $_parts = explode( '.', $lookup );
         if ( count( $_parts ) > 1 )
         {
@@ -871,9 +871,9 @@ class Session extends BasePlatformRestResource
                         // get fields here
                         if ( !empty( $_lookup ) )
                         {
-                            if ( isset( $_public, $_public[$_lookup] ) )
+                            if ( isset( static::$_cache, static::$_cache[$_lookup] ) )
                             {
-                                $value = $_public[$_lookup];
+                                $value = static::$_cache[$_lookup];
 
                                 return true;
                             }
@@ -883,9 +883,9 @@ class Session extends BasePlatformRestResource
             }
         }
 
-        if ( isset( $_public, $_public['lookup'], $_public['lookup'][$lookup] ) )
+        if ( isset( static::$_cache, static::$_cache['lookup'], static::$_cache['lookup'][$lookup] ) )
         {
-            $value = $_public['lookup'][$lookup];
+            $value = static::$_cache['lookup'][$lookup];
 
             return true;
         }
@@ -954,7 +954,17 @@ class Session extends BasePlatformRestResource
             try
             {
                 $_userId = static::validateSession();
-                static::$_cache = static::generateSessionDataFromUser( $_userId );
+                $_result = Pii::getState( 'cached' );
+                if ( !empty( $_result ) )
+                {
+                    static::$_cache = $_result;
+                }
+                else
+                {
+                    $_result = static::generateSessionDataFromUser( $_userId );
+                    static::$_cache = Option::get( $_result, 'cached' );
+                    Pii::setState( 'cached', static::$_cache );
+                }
             }
             catch ( \Exception $ex )
             {
@@ -971,7 +981,8 @@ class Session extends BasePlatformRestResource
                 {
                     if ( DataFormat::boolval( $_config->allow_guest_user ) )
                     {
-                        static::$_cache = static::generateSessionDataFromRole( null, $_config->getRelated( 'guest_role' ) );
+                        $_result = static::generateSessionDataFromRole( null, $_config->getRelated( 'guest_role' ) );
+                        static::$_cache = Option::get( $_result, 'cached' );
 
                         return;
                     }
@@ -992,13 +1003,13 @@ class Session extends BasePlatformRestResource
      */
     public static function addSessionExtras( $session, $is_sys_admin = false, $add_apps = false )
     {
-        $data = Option::get( $session, 'data' );
-        $_userId = Option::get( $data, 'id', '' );
+        $_data = Option::get( $session, 'public' );
+        $_userId = Option::get( $_data, 'id', '' );
         $_timestamp = time();
 
-        $data['ticket'] = static::$_ticket = $ticket = Utilities::encryptCreds( "$_userId,$_timestamp", "gorilla" );
-        $data['ticket_expiry'] = time() + ( 5 * 60 );
-        $data['session_id'] = session_id();
+        $_data['ticket'] = static::$_ticket = $ticket = Utilities::encryptCreds( "$_userId,$_timestamp", "gorilla" );
+        $_data['ticket_expiry'] = time() + ( 5 * 60 );
+        $_data['session_id'] = session_id();
 
         if ( $add_apps )
         {
@@ -1056,11 +1067,11 @@ class Session extends BasePlatformRestResource
                     unset( $appGroups[$g_key] );
                 }
             }
-            $data['app_groups'] = array_values( $appGroups ); // reset indexing
-            $data['no_group_apps'] = $noGroupApps;
+            $_data['app_groups'] = array_values( $appGroups ); // reset indexing
+            $_data['no_group_apps'] = $noGroupApps;
         }
 
-        return $data;
+        return $_data;
     }
 
     /**
