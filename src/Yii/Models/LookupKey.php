@@ -238,19 +238,33 @@ class LookupKey extends BasePlatformSystemModel
                         $_assignValue = Option::get( $_item, 'value' );
                         $_oldPrivate = Option::getBool( $_old, 'private' );
                         $_assignPrivate = Option::getBool( $_item, 'private' );
+                        $_oldAllow = Option::getBool( $_old, 'allow_user_update' );
+                        $_assignAllow = Option::getBool( $_item, 'allow_user_update' );
                         if ( $_oldPrivate && !$_assignPrivate )
                         {
                             throw new BadRequestException( 'Private lookups can not be made not private.' );
                         }
 
-                        if ( !( $_oldPrivate && ( '********' === $_assignValue ) ) )
+                        $_needUpdate = false;
+                        if ( !( $_oldPrivate && ( '********' === $_assignValue ) ) && ( $_oldValue != $_assignValue ) )
                         {
-                            if ( ( $_oldValue != $_assignValue ) || ( $_oldPrivate != $_assignPrivate ) )
-                            {
-                                $_old['value'] = is_array( $_assignValue ) ? json_encode( $_assignValue ) : $_assignValue;
-                                $_old['private'] = $_assignPrivate;
-                                $_toUpdate[] = $_old;
-                            }
+                            $_old['value'] = is_array( $_assignValue ) ? json_encode( $_assignValue ) : $_assignValue;
+                            $_needUpdate = true;
+                        }
+                        if ( $_oldPrivate != $_assignPrivate )
+                        {
+                            $_old['private'] = $_assignPrivate;
+                            $_needUpdate = true;
+                        }
+                        if ( $_oldAllow != $_assignAllow )
+                        {
+                            $_old['allow_user_update'] = $_assignAllow;
+                            $_needUpdate = true;
+                        }
+
+                        if ( $_needUpdate )
+                        {
+                            $_toUpdate[] = $_old;
                         }
 
                         // otherwise throw it out
