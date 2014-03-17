@@ -19,9 +19,7 @@
  */
 namespace DreamFactory\Platform\Events;
 
-use Symfony\Component\EventDispatcher\Event;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use DreamFactory\Platform\Events\Client\RemoteEvent;
 
 /**
  * EventStreamProxy.php
@@ -29,80 +27,73 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
  */
 class EventStreamProxy
 {
-	//*************************************************************************
-	//	Members
-	//*************************************************************************
+    //*************************************************************************
+    //	Members
+    //*************************************************************************
 
-	/**
-	 * @var PlatformEvent
-	 */
-	protected $_event;
-	/**
-	 * @var callable
-	 */
-	protected $_source;
+    /**
+     * @var PlatformEvent
+     */
+    protected $_event;
+    /**
+     * @var callable
+     */
+    protected $_source;
 
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * @param PlatformEvent $event
-	 * @param callable      $source
-	 *
-	 * @throws \InvalidArgumentException
-	 */
-	public function __construct( PlatformEvent $event, $source = null )
-	{
-		if ( $source && !is_callable( $source ) )
-		{
-			throw new \InvalidArgumentException( 'The value for $source must be callable.' );
-		}
+    /**
+     * @param RemoteEvent $event
+     * @param callable    $source
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function __construct( RemoteEvent $event, $source = null )
+    {
+        if ( $source && !is_callable( $source ) )
+        {
+            throw new \InvalidArgumentException( 'The value for $source must be callable.' );
+        }
 
-		$this->_event = $event;
-		$this->_source = $source;
-	}
+        $this->_event = $event;
+        $this->_source = $source;
+    }
 
-	/**
-	 * @return PlatformEvent
-	 */
-	public function getEvent()
-	{
-		return $this->_event;
-	}
+    /**
+     * @return PlatformEvent
+     */
+    public function getEvent()
+    {
+        return $this->_event;
+    }
 
-	/**
-	 * @return mixed
-	 */
-	public function end()
-	{
-		if ( $this->_source && is_callable( $this->_source ) )
-		{
-			return call_user_func( $this->_source );
-		}
-	}
+    /**
+     * @return mixed
+     */
+    public function end()
+    {
+        if ( $this->_source && is_callable( $this->_source ) )
+        {
+            return call_user_func( $this->_source );
+        }
+    }
 
-	/**
-	 * @param $name
-	 * @param $args
-	 *
-	 * @throws \BadMethodCallException
-	 * @return $this|mixed
-	 */
-	public function __call( $name, $args )
-	{
-		if ( !method_exists( $this->_event, $name ) )
-		{
-			throw new \BadMethodCallException();
-		}
+    /**
+     * @param string $name
+     * @param array  $args
+     *
+     * @throws \BadMethodCallException
+     * @return RemoteEvent
+     */
+    public function __call( $name, $args )
+    {
+        if ( !method_exists( $this->_event, $name ) && !is_callable( $name ) )
+        {
+            throw new \BadMethodCallException( 'The method "' . get_class( $this->_event ) . '::' . $name . '" could not be found.' );
+        }
 
-		$_value = call_user_func_array( array( $this->_event, $name ), $args );
-
-		if ( $this->_event === $_value )
-		{
-			return $this;
-		}
-
-		return $_value;
-	}
+        return call_user_func_array( is_callable( $name ) ? $name : array( $this->_event, $name ), $args );
+    }
 }

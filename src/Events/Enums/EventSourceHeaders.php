@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
+ * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,32 +17,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Events;
-
-use DreamFactory\Platform\Events\Client\RemoteEvent;
-use DreamFactory\Platform\Interfaces\StreamListenerLike;
+namespace DreamFactory\Platform\Events\Enums;
 
 /**
- * EchoListener.php
- * A dummy listener that echos output
+ * EventSourceHeaders
+ * EventSource headers for channels
  */
-class EchoListener implements StreamListenerLike
+class EventSourceHeaders
 {
     //*************************************************************************
     //	Methods
     //*************************************************************************
 
     /**
-     * @param RemoteEvent     $event
-     * @param string          $eventName
-     * @param EventDispatcher $dispatcher
-     *
-     * @return mixed|void
+     * @return array
      */
-    public function processEvent( $event, $eventName = null, $dispatcher = null )
+    public static function all()
     {
-        echo $event->dump();
-        ob_flush();
-        flush();
+        return array(
+            'Content-Type'      => 'text/event-stream',
+            'Transfer-Encoding' => 'identity',
+            'Cache-Control'     => 'no-cache',
+        );
     }
 }

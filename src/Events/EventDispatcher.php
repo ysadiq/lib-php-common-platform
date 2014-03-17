@@ -34,6 +34,9 @@ use Symfony\Component\EventDispatcher\Event;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
+ini_set( 'error_reporting', -1 );
+ini_set( 'display_errors', true );
+
 /**
  * EventDispatcher
  */
@@ -299,13 +302,20 @@ class EventDispatcher implements EventDispatcherInterface
             //  Run scripts
             $_script = $this->_scripts[$eventName];
             $_output = Script::runScript( $_script, $eventName . '.js', $_event );
-            Log::info( 'Script output: ' . $_output['script_output'] );
+            Log::info( 'Script "' . $eventName . '.js" output: ' . $_output['script_output'] );
 
             //  Reconstitute the event object with data from script
             $event->fromArray( $_event );
 
+            if ( Option::getBool( $_event, 'stop_propagation' ) )
+            {
+                $event->stopPropagation();
+            }
+
             if ( $event->isPropagationStopped() )
             {
+                Log::info( '  * Propagation stopped by script.' );
+
                 return true;
             }
         }

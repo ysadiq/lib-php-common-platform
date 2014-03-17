@@ -1,15 +1,65 @@
 <?php
 namespace DreamFactory\Platform\Events;
 
+use DreamFactory\Platform\Events\Enums\EventSourceHeaders;
+use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Curl;
+
 /**
  * Chunnel
  * An event channel/tunnel for clients
  */
 class Chunnel extends Seed
 {
+    //*************************************************************************
+    //	Members
+    //*************************************************************************
+
+    /**
+     * @var string
+     */
     protected $_callbackUrl;
+    /**
+     * @var string
+     */
     protected $_clientId;
+    /**
+     * @var string
+     */
     protected $_clientSecret;
+    /**
+     * @var Chunnel[]
+     */
+    protected static $_chunnels = array();
+
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
+
+    /**
+     * Run the process
+     */
+    public static function run( $id )
+    {
+        if ( empty( $id ) )
+        {
+            throw new \InvalidArgumentException( 'You must give this process an ID. $id cannot be blank.' );
+        }
+
+        $_response = clone ( $_response = Pii::app()->getResponseObject() );
+        $_response->headers->add( EventSourceHeaders::all() );
+
+        $_stream = new EventStream( new static() );
+        $_proxy = $_stream->createProxy();
+
+        while ( true )
+        {
+            /** @noinspection PhpUndefinedMethodInspection */
+            $_proxy->setData( 'Hello World' )->end()->flush();
+
+            sleep( 2 );
+        }
+    }
 
     /**
      * @param string $callbackUrl
@@ -19,7 +69,7 @@ class Chunnel extends Seed
      *
      * @throws InvalidArgumentException
      */
-    public function __construct( $callbackUrl, $clientId, $clientSecret, $options = array() )
+    public function __construct( $callbackUrl = null, $clientId = null, $clientSecret = null, $options = array() )
     {
         $this->_callbackUrl = $callbackUrl;
         $this->_clientId = $clientId;
@@ -27,97 +77,99 @@ class Chunnel extends Seed
 
         parent::__construct( $options );
 
-        if ( empty( $this->_callbackUrl ) || empty( $this->_clientId ) || empty( $this->_clientSecret ) )
-        {
-            throw new InvalidArgumentException( 'Invalid $callbackUrl, $clientId, and/or $clientSecret.' );
-        }
+//        if ( empty( $this->_callbackUrl ) || empty( $this->_clientId ) || empty( $this->_clientSecret ) )
+//        {
+//            throw new InvalidArgumentException( 'Invalid $callbackUrl, $clientId, and/or $clientSecret.' );
+//        }
     }
 
     /**
      * Open a chunnel
      *
-     * @param string $chunnelName The name of the chunnel to open
+     * @param string $name
+     *
+     * @throws \RuntimeException
+     * @internal param string $chunnelName The name of the chunnel to open
+     *
      * @return string A token for opening an EventSource chunnel
      */
-    public function open( $chunnelName )
+    public function open( $name )
     {
-        $response = $this->post( "/socket", array( "channel" => $options['channel'] ) );
+        $_response = $this->_doSend( '/socket', array( 'channel' => $name ) );
 
-        if ( $response )
+        if ( $_response )
         {
-            $json = json_decode( $response );
+            $_json = @json_decode( $_response );
 
-            return $json->socket;
+            if ( JSON_ERROR_NONE !== $_json )
+            {
+                throw new \RuntimeException( 'The client did not respond properly. Invalid JSON received.' );
+            }
+
+            return $_json->socket;
         }
-        else
-        {
-            return false;
-        }
+
+        return false;
     }
 
     /**
      * Send a message to a channel
      *
-     * @param array $options
-     *  array("channel" => "your-channel", "data" => "data-to-send")
+     * @param array $options The sending options
      *
-     * @return
-     *  true or false
+     * @return bool true or false
      */
     public function send( $options )
     {
-        $response = $this->post(
-            "/event",
+        $_result = $this->_doSend(
+            '/event',
             array(
-                "channel" => $options['channel'],
-                "data"    => $options['data']
+                'channel' => $options['channel'],
+                'data'    => $options['data']
             )
         );
 
-        return $response ? true : false;
+        return $_result ? true : false;
     }
 
-    private function post( $path, $params )
+    /**
+     * @param string $route
+     * @param array  $params
+     *
+     * @return bool|mixed|\stdClass
+     * @throws \RuntimeException
+     */
+    protected function _doSend( $route, $params )
     {
-        $url = $this->_callbackUrl . $path;
-        $fields = array_merge( $params, $this->credentials() );
+        $_url = $this->_callbackUrl . '/' . ltrim( $route, '/' );
 
-        $defaults = array(
-            CURLOPT_POST           => 1,
-            CURLOPT_HEADER         => 0,
-            CURLOPT_URL            => $url,
-            CURLOPT_FRESH_CONNECT  => 1,
-            CURLOPT_RETURNTRANSFER => 1,
-            CURLOPT_FORBID_REUSE   => 1,
+        $_fields = array_merge( $params, $this->_getSignature() );
+
+        $_options = array(
+            CURLOPT_HEADER         => false,
+            CURLOPT_FRESH_CONNECT  => true,
+            CURLOPT_FORBID_REUSE   => true,
             CURLOPT_TIMEOUT        => 10,
-            CURLOPT_POSTFIELDS     => http_build_query( $fields ),
-            CURLOPT_SSL_VERIFYPEER => 0
+            CURLOPT_SSL_VERIFYPEER => false,
         );
 
-        $ch = curl_init();
-        curl_setopt_array( $ch, $defaults );
-        if ( !$result = curl_exec( $ch ) )
+        if ( false === ( $_result = Curl::post( $_url, $_fields, $_options ) ) )
         {
-            throw new Exception( "Request to ESHQ failed" );
+            throw new \RuntimeException( 'Unable to connect to client.' );
         }
-        curl_close( $ch );
 
-        return $result;
+        return $_result;
     }
 
-    private function credentials()
+    /**
+     * @return array
+     */
+    protected function _getSignature()
     {
-        $time = time();
-
         return array(
-            'timestamp' => $time,
-            'token'     => $this->token( $time ),
-            'key'       => $this->_clientId
+            'timestamp' => $_timestamp = microtime( true ),
+            'client_id' => $this->_clientId,
+            'signature' => sha1( $this->_clientId . '.' . $this->_clientSecret . '.' . $_timestamp ),
         );
-    }
-
-    private function token( $time )
-    {
-        return sha1( $this->_clientId . ":" . $this->_clientSecret . ":" . $time );
     }
 }

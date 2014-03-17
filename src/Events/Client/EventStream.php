@@ -22,9 +22,6 @@ namespace DreamFactory\Platform\Events;
 use DreamFactory\Platform\Events\Client\RemoteEvent;
 use DreamFactory\Platform\Interfaces\StreamListenerLike;
 use Kisma\Core\Seed;
-use Symfony\Component\EventDispatcher\Event;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
  * EventStream.php
@@ -65,9 +62,9 @@ class EventStream extends Seed
      *
      * @return EventStreamProxy
      */
-    public function createEvent( $data = array() )
+    public function createProxy( $data = array() )
     {
-        $_data = ( $data instanceof PlatformEvent ) ? $data->toArray() : $data;
+        $_data = ( $data instanceof RemoteEvent ) ? $data->toArray() : $data;
 
         $this->_outputBuffer->enqueue(
             $_event = new RemoteEvent( $_data )
@@ -75,12 +72,10 @@ class EventStream extends Seed
 
         $_this = $this;
 
-        $_proxy = new EventStreamProxy( $_event, function () use ( $_this )
+        return new static( $_event, function () use ( $_this )
         {
             return $_this;
         } );
-
-        return $_proxy;
     }
 
     /**
@@ -88,15 +83,10 @@ class EventStream extends Seed
      */
     public function flush()
     {
-        /** @var PlatformEvent $_event */
+        /** @var RemoteEvent $_event */
         foreach ( $this->_outputBuffer as $_event )
         {
-            $_hunk = @json_encode( $_event->toArray(), JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT );
-
-            if ( !empty( $_hunk ) && JSON_ERROR_NONE == json_last_error() )
-            {
-                $this->_listener->processEvent( $_event );
-            }
+            $this->_listener->processEvent( $_event );
         }
     }
 
@@ -108,15 +98,4 @@ class EventStream extends Seed
         return $this->_listener;
     }
 
-    /**
-     * @return array
-     */
-    static public function getHeaders()
-    {
-        return array(
-            'Content-Type'      => 'text/event-stream',
-            'Transfer-Encoding' => 'identity',
-            'Cache-Control'     => 'no-cache',
-        );
-    }
 }

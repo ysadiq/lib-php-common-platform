@@ -19,17 +19,33 @@
  */
 namespace DreamFactory\Platform\Events\Client;
 
-use Kisma\Core\Events\SeedEvent;
+use DreamFactory\Platform\Events\PlatformEvent;
 
 /**
  * RemoteEvent
  */
-class RemoteEvent extends SeedEvent
+class RemoteEvent extends PlatformEvent
 {
+    //*************************************************************************
+    //	Members
+    //*************************************************************************
+
+    /**
+     * @var array
+     */
     protected $_comments = array();
+    /**
+     * @var string
+     */
     protected $_event;
+    /**
+     * @var int
+     */
     protected $_retry;
-    protected $_data = array();
+
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
     /**
      * @param string $comment
