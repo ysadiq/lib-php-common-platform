@@ -298,7 +298,8 @@ class EventDispatcher implements EventDispatcherInterface
         {
             //  Run scripts
             $_script = $this->_scripts[$eventName];
-            Script::runScript( $_script, $eventName . '.js', $_event );
+            $_output = Script::runScript( $_script, $eventName . '.js', $_event );
+            Log::info( 'Script output: ' . $_output['script_output'] );
 
             //  Reconstitute the event object with data from script
             $event->fromArray( $_event );

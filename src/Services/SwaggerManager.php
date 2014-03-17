@@ -198,7 +198,7 @@ SQL;
 
             $_filePath = $_scanPath . '/' . $_fileName . '.swagger.php';
 
-            //	Check cache path, then custom...
+            //	Check php file path, then custom...
             if ( file_exists( $_filePath ) )
             {
                 /** @noinspection PhpIncludeInspection */
@@ -209,9 +209,9 @@ SQL;
                     $_content = json_encode( array_merge( $_baseSwagger, $_fromFile ), JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT );
                 }
             }
-            else //	Check custom path
+            else //	Check custom path, uses api name
             {
-                $_filePath = $_customPath . '/' . $_fileName . '.json';
+                $_filePath = $_customPath . '/' . $_apiName . '.json';
 
                 if ( file_exists( $_filePath ) )
                 {
@@ -222,25 +222,21 @@ SQL;
                         $_content = $_fromFile;
                     }
                 }
+                else
+                {
+                    $_filePath = $_customPath . '/' . $_apiName . '.raml';
+
+                    if ( file_exists( $_filePath ) )
+                    {
+                        // todo check for RAML and convert
+                    }
+                }
             }
 
             if ( empty( $_content ) )
             {
-                Log::error( '  * No Swagger content found for service "' . $_apiName . '" in "' . $_filePath . '"' );
-
-                // nothing exists for this service, build from the default base service
-                $_filePath = $_scanPath . static::SWAGGER_DEFAULT_BASE_FILE;
-
-                /** @noinspection PhpIncludeInspection */
-                $_fromFile = require( $_filePath );
-
-                if ( !is_array( $_fromFile ) )
-                {
-                    Log::error( '  * Failed to get default swagger file contents for service "' . $_apiName . '"' );
-                    continue;
-                }
-
-                $_content = json_encode( array_merge( $_baseSwagger, $_fromFile ), JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT );
+                Log::info( '  * No Swagger content found for service "' . $_apiName . '"' );
+                continue;
             }
 
             // replace service type placeholder with api name for this service instance

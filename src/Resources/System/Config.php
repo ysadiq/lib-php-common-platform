@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Resources\System;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\UnauthorizedException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Services\BasePlatformService;
@@ -145,6 +146,10 @@ class Config extends BaseSystemRestResource
             {
                 // do nothing
             }
+            catch ( UnauthorizedException $_ex )
+            {
+                // do nothing
+            }
         }
 
         return $_payload;
@@ -222,6 +227,10 @@ class Config extends BaseSystemRestResource
             }
         }
         catch ( ForbiddenException $_ex )
+        {
+            // do nothing
+        }
+        catch ( UnauthorizedException $_ex )
         {
             // do nothing
         }
