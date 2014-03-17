@@ -25,26 +25,26 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
- * DummyListener.php
+ * EchoListener.php
  * A dummy listener that echos output
  */
-class DummyListener implements StreamListenerLike
+class EchoListener implements StreamListenerLike
 {
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * @param PlatformEvent   $event
-	 * @param string          $eventName
-	 * @param EventDispatcher $dispatcher
-	 *
-	 * @return mixed|void
-	 */
-	public function processEvent( $event, $eventName = null, $dispatcher = null )
-	{
-		echo $event->getData();
-		ob_flush();
-		flush();
-	}
+    /**
+     * @param PlatformEvent   $event
+     * @param string          $eventName
+     * @param EventDispatcher $dispatcher
+     *
+     * @return mixed|void
+     */
+    public function processEvent( $event, $eventName = null, $dispatcher = null )
+    {
+        echo $event->getData();
+        ob_flush();
+        flush();
+    }
 }
