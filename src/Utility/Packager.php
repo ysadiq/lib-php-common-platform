@@ -484,6 +484,7 @@ class Packager
 				ResourceStore::setResourceName( 'app' );
 				ResourceStore::delete( array( 'id' => $id ) );
 			}
+
 			throw $ex;
 		}
 

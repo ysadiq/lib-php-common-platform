@@ -21,9 +21,11 @@ namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Enums\PlatformStorageDrivers;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InvalidJsonException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Interfaces\SqlDbDriverTypes;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -35,765 +37,778 @@ use Kisma\Core\Utility\Sql;
  */
 class SqlDbUtilities implements SqlDbDriverTypes
 {
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Members
+    //*************************************************************************
 
-	/**
-	 * @param \CDbConnection $db
-	 *
-	 * @return int
-	 */
-	public static function getDbDriverType( $db )
-	{
-		return PlatformStorageDrivers::driverType( $db->driverName );
-	}
+    /**
+     * @var array
+     */
+    protected static $_tableCache;
+    /**
+     * @var array
+     */
+    protected static $_schemaCache;
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param string         $name
-	 *
-	 * @throws BadRequestException
-	 * @throws NotFoundException
-	 * @return string
-	 */
-	public static function correctTableName( $db, $name )
-	{
-		if ( false !== ( $_table = static::doesTableExist( $db, $name, true ) ) )
-		{
-			return $_table;
-		}
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-		throw new NotFoundException( 'Table "' . $name . '" does not exist in the database.' );
-	}
+    /**
+     * @param \CDbConnection $db
+     *
+     * @return int
+     */
+    public static function getDbDriverType( $db )
+    {
+        return PlatformStorageDrivers::driverType( $db->driverName );
+    }
 
-	/**
-	 * @param \CDbConnection|array $db         A database connection or the array of tables if you already have it pulled
-	 * @param string               $name       The name of the table to check
-	 * @param bool                 $returnName If true, the table name is returned instead of TRUE
-	 *
-	 * @throws \InvalidArgumentException
-	 * @return bool
-	 */
-	public static function doesTableExist( $db, $name, $returnName = false )
-	{
-		if ( empty( $name ) )
-		{
-			throw new \InvalidArgumentException( 'Table name can not be empty.' );
-		}
+    /**
+     * @param \CDbConnection $db
+     * @param string         $name
+     *
+     * @throws BadRequestException
+     * @throws NotFoundException
+     * @return string
+     */
+    public static function correctTableName( $db, $name )
+    {
+        if ( false !== ( $_table = static::doesTableExist( $db, $name, true ) ) )
+        {
+            return Inflector::deneutralize( $_table );
+        }
 
-		$_tables = is_array( $db ) ? $db : $db->schema->getTableNames();
+        throw new NotFoundException( 'Table "' . $name . '" does not exist in the database.' );
+    }
 
-		//	Make search case insensitive
-		if ( false === ( $_key = array_search( strtolower( $name ), array_map( 'strtolower', $_tables ) ) ) )
-		{
-			return false;
-		}
+    /**
+     * @param \CDbConnection|array $db         A database connection or the array of tables if you already have it pulled
+     * @param string               $name       The name of the table to check
+     * @param bool                 $returnName If true, the table name is returned instead of TRUE
+     *
+     * @throws \InvalidArgumentException
+     * @return bool
+     */
+    public static function doesTableExist( $db, $name, $returnName = false )
+    {
+        if ( empty( $name ) )
+        {
+            throw new \InvalidArgumentException( 'Table name can not be empty.' );
+        }
 
-		return $returnName ? $_tables[$_key] : true;
-	}
+        $_tables = is_array( $db ) ? $db : static::_getCachedTables();
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param string         $include
-	 * @param string         $exclude
-	 *
-	 * @return array
-	 * @throws \Exception
-	 */
-	public static function listTables( $db, $include = null, $exclude = null )
-	{
-		//	Todo need to assess schemas in ms sql and load them separately.
-		try
-		{
-			$_names = $db->schema->getTableNames();
-			$includeArray = array_map( 'trim', explode( ',', strtolower( $include ) ) );
-			$excludeArray = array_map( 'trim', explode( ',', strtolower( $exclude ) ) );
-			$temp = array();
+        //	Make search case insensitive
+        if ( false === ( $_key = array_search( Inflector::neutralize( $name ), $_tables ) ) )
+        {
+            return false;
+        }
 
-			foreach ( $_names as $name )
-			{
-				if ( !empty( $include ) )
-				{
-					if ( false === array_search( strtolower( $name ), $includeArray ) )
-					{
-						continue;
-					}
-				}
-				elseif ( !empty( $exclude ) )
-				{
-					if ( false !== array_search( strtolower( $name ), $excludeArray ) )
-					{
-						continue;
-					}
-				}
-				$temp[] = $name;
-			}
-			$_names = $temp;
-			natcasesort( $_names );
+        return $returnName ? $_tables[$_key] : true;
+    }
 
-			return array_values( $_names );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Failed to list database tables.\n{$ex->getMessage()}" );
-		}
-	}
+    /**
+     * @param \CDbConnection $db
+     * @param string         $include
+     * @param string         $exclude
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public static function listTables( $db, $include = null, $exclude = null )
+    {
+        //	Todo need to assess schemas in ms sql and load them separately.
+        try
+        {
+            $_names = $db->schema->getTableNames();
+            $includeArray = array_map( 'trim', explode( ',', strtolower( $include ) ) );
+            $excludeArray = array_map( 'trim', explode( ',', strtolower( $exclude ) ) );
+            $temp = array();
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param string         $include_prefix
-	 * @param string         $exclude_prefix
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public static function describeDatabase( $db, $include_prefix = '', $exclude_prefix = '' )
-	{
-		try
-		{
-			$_names = $db->schema->getTableNames();
-			$temp = array();
-			foreach ( $_names as $name )
-			{
-				if ( !empty( $include_prefix ) )
-				{
-					if ( 0 != substr_compare( $name, $include_prefix, 0, strlen( $include_prefix ), true ) )
-					{
-						continue;
-					}
-				}
-				elseif ( !empty( $exclude_prefix ) )
-				{
-					if ( 0 == substr_compare( $name, $exclude_prefix, 0, strlen( $exclude_prefix ), true ) )
-					{
-						continue;
-					}
-				}
-				$temp[] = $name;
-			}
-			$_names = $temp;
-			natcasesort( $_names );
-			$labels = static::getLabels(
-				array( 'and', "field=''", array( 'in', 'table', $_names ) ),
-				array(),
-				'table,label,plural'
-			);
-			$tables = array();
-			foreach ( $_names as $name )
-			{
-				$label = '';
-				$plural = '';
-				foreach ( $labels as $each )
-				{
-					if ( 0 == strcasecmp( $name, $each['table'] ) )
-					{
-						$label = Option::get( $each, 'label' );
-						$plural = Option::get( $each, 'plural' );
-						break;
-					}
-				}
+            foreach ( $_names as $name )
+            {
+                if ( !empty( $include ) )
+                {
+                    if ( false === array_search( strtolower( $name ), $includeArray ) )
+                    {
+                        continue;
+                    }
+                }
+                elseif ( !empty( $exclude ) )
+                {
+                    if ( false !== array_search( strtolower( $name ), $excludeArray ) )
+                    {
+                        continue;
+                    }
+                }
+                $temp[] = $name;
+            }
+            $_names = $temp;
+            natcasesort( $_names );
 
-				if ( empty( $label ) )
-				{
-					$label = Inflector::camelize( $name );
-				}
+            return array_values( $_names );
+        }
+        catch ( \Exception $ex )
+        {
+            throw new \Exception( "Failed to list database tables.\n{$ex->getMessage()}" );
+        }
+    }
 
-				if ( empty( $plural ) )
-				{
-					$plural = Inflector::pluralize( $label );
-				}
+    /**
+     * @param \CDbConnection $db
+     * @param string         $include_prefix
+     * @param string         $exclude_prefix
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public static function describeDatabase( $db, $include_prefix = '', $exclude_prefix = '' )
+    {
+        try
+        {
+            $_names = $db->schema->getTableNames();
+            $temp = array();
+            foreach ( $_names as $name )
+            {
+                if ( !empty( $include_prefix ) )
+                {
+                    if ( 0 != substr_compare( $name, $include_prefix, 0, strlen( $include_prefix ), true ) )
+                    {
+                        continue;
+                    }
+                }
+                elseif ( !empty( $exclude_prefix ) )
+                {
+                    if ( 0 == substr_compare( $name, $exclude_prefix, 0, strlen( $exclude_prefix ), true ) )
+                    {
+                        continue;
+                    }
+                }
+                $temp[] = $name;
+            }
+            $_names = $temp;
+            natcasesort( $_names );
+            $labels = static::getLabels(
+                array( 'and', "field=''", array( 'in', 'table', $_names ) ),
+                array(),
+                'table,label,plural'
+            );
+            $tables = array();
+            foreach ( $_names as $name )
+            {
+                $label = '';
+                $plural = '';
+                foreach ( $labels as $each )
+                {
+                    if ( 0 == strcasecmp( $name, $each['table'] ) )
+                    {
+                        $label = Option::get( $each, 'label' );
+                        $plural = Option::get( $each, 'plural' );
+                        break;
+                    }
+                }
 
-				$tables[] = array( 'name' => $name, 'label' => $label, 'plural' => $plural );
-			}
+                if ( empty( $label ) )
+                {
+                    $label = Inflector::camelize( $name );
+                }
 
-			return $tables;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Failed to query database schema.\n{$ex->getMessage()}" );
-		}
-	}
+                if ( empty( $plural ) )
+                {
+                    $plural = Inflector::pluralize( $label );
+                }
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param null           $names
-	 * @param string         $remove_prefix
-	 *
-	 * @throws \Exception
-	 * @return array|string
-	 */
-	public static function describeTables( $db, $names = null, $remove_prefix = '' )
-	{
-		try
-		{
-			$out = array();
-			foreach ( $names as $table )
-			{
-				$out[] = static::describeTable( $db, $table, $remove_prefix );
-			}
+                $tables[] = array( 'name' => $name, 'label' => $label, 'plural' => $plural );
+            }
 
-			return $out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Failed to query database schema.\n{$ex->getMessage()}" );
-		}
-	}
+            return $tables;
+        }
+        catch ( \Exception $ex )
+        {
+            throw new \Exception( "Failed to query database schema.\n{$ex->getMessage()}" );
+        }
+    }
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param string         $name
-	 * @param string         $remove_prefix
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public static function describeTable( $db, $name, $remove_prefix = '' )
-	{
-		$name = static::correctTableName( $db, $name );
-		try
-		{
-			$table = $db->schema->getTable( $name );
-			if ( !$table )
-			{
-				throw new NotFoundException( "Table '$name' does not exist in the database." );
-			}
-			$localdb = Pii::db();
-			$query = $localdb->quoteColumnName( 'table' ) . ' = :tn';
-			$labels = static::getLabels( $query, array( ':tn' => $name ) );
-			$labels = static::reformatFieldLabelArray( $labels );
-			$labelInfo = Option::get( $labels, '', array() );
-			$schemaName = $table->schemaName;
-			if ( !empty( $schemaName ) && 'dbo' !== $schemaName )
-			{
-				$publicName = $schemaName . '.' . $table->name;
-			}
-			else
-			{
-				$publicName = $table->name;
-			}
+    /**
+     * @param \CDbConnection $db
+     * @param null           $names
+     * @param string         $remove_prefix
+     *
+     * @throws \Exception
+     * @return array|string
+     */
+    public static function describeTables( $db, $names = null, $remove_prefix = '' )
+    {
+        try
+        {
+            $out = array();
+            foreach ( $names as $table )
+            {
+                $out[] = static::describeTable( $db, $table, $remove_prefix );
+            }
 
-			if ( !empty( $remove_prefix ) )
-			{
-				if ( substr( $publicName, 0, strlen( $remove_prefix ) ) == $remove_prefix )
-				{
-					$publicName = substr( $publicName, strlen( $remove_prefix ), strlen( $publicName ) );
-				}
-			}
+            return $out;
+        }
+        catch ( \Exception $ex )
+        {
+            throw new \Exception( "Failed to query database schema.\n{$ex->getMessage()}" );
+        }
+    }
 
-			$label = Option::get( $labelInfo, 'label', Inflector::camelize( $publicName ) );
-			$plural = Option::get( $labelInfo, 'plural', Inflector::pluralize( $label ) );
-			$name_field = Option::get( $labelInfo, 'name_field' );
+    /**
+     * @param \CDbConnection $db
+     * @param string         $name
+     * @param string         $remove_prefix
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public static function describeTable( $db, $name, $remove_prefix = '' )
+    {
+        $name = static::correctTableName( $db, $name );
+        try
+        {
+            $table = $db->schema->getTable( $name );
+            if ( !$table )
+            {
+                throw new NotFoundException( "Table '$name' does not exist in the database." );
+            }
+            $localdb = Pii::db();
+            $query = $localdb->quoteColumnName( 'table' ) . ' = :tn';
+            $labels = static::getLabels( $query, array( ':tn' => $name ) );
+            $labels = static::reformatFieldLabelArray( $labels );
+            $labelInfo = Option::get( $labels, '', array() );
+            $schemaName = $table->schemaName;
+            if ( !empty( $schemaName ) && 'dbo' !== $schemaName )
+            {
+                $publicName = $schemaName . '.' . $table->name;
+            }
+            else
+            {
+                $publicName = $table->name;
+            }
 
-			return array(
-				'name'        => $publicName,
-				'label'       => $label,
-				'plural'      => $plural,
-				'primary_key' => $table->primaryKey,
-				'name_field'  => $name_field,
-				'field'       => static::describeTableFields( $db, $name, $labels ),
-				'related'     => static::describeTableRelated( $db, $name )
-			);
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Failed to query database schema.\n{$ex->getMessage()}" );
-		}
-	}
+            if ( !empty( $remove_prefix ) )
+            {
+                if ( substr( $publicName, 0, strlen( $remove_prefix ) ) == $remove_prefix )
+                {
+                    $publicName = substr( $publicName, strlen( $remove_prefix ), strlen( $publicName ) );
+                }
+            }
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param                $name
-	 * @param array          $labels
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public static function describeTableFields( $db, $name, $labels = array() )
-	{
-		$name = static::correctTableName( $db, $name );
-		$table = $db->schema->getTable( $name );
-		if ( !$table )
-		{
-			throw new NotFoundException( "Table '$name' does not exist in the database." );
-		}
-		try
-		{
-			if ( empty( $labels ) )
-			{
-				$localdb = Pii::db();
-				$query = $localdb->quoteColumnName( 'table' ) . ' = :tn';
-				$labels = static::getLabels( $query, array( ':tn' => $name ) );
-				$labels = static::reformatFieldLabelArray( $labels );
-			}
-			$fields = array();
-			foreach ( $table->columns as $column )
-			{
-				$labelInfo = Option::get( $labels, $column->name, array() );
-				$field = static::describeFieldInternal( $column, $table->foreignKeys, $labelInfo );
-				$fields[] = $field;
-			}
+            $label = Option::get( $labelInfo, 'label', Inflector::camelize( $publicName ) );
+            $plural = Option::get( $labelInfo, 'plural', Inflector::pluralize( $label ) );
+            $name_field = Option::get( $labelInfo, 'name_field' );
 
-			return $fields;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Failed to query table schema.\n{$ex->getMessage()}" );
-		}
-	}
+            return array(
+                'name'        => $publicName,
+                'label'       => $label,
+                'plural'      => $plural,
+                'primary_key' => $table->primaryKey,
+                'name_field'  => $name_field,
+                'field'       => static::describeTableFields( $db, $name, $labels ),
+                'related'     => static::describeTableRelated( $db, $name )
+            );
+        }
+        catch ( \Exception $ex )
+        {
+            throw new \Exception( "Failed to query database schema.\n{$ex->getMessage()}" );
+        }
+    }
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param string         $table_name
-	 * @param array          $field_names
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public static function describeFields( $db, $table_name, $field_names )
-	{
-		$table_name = static::correctTableName( $db, $table_name );
-		$table = $db->schema->getTable( $table_name );
-		if ( !$table )
-		{
-			throw new NotFoundException( "Table '$table_name' does not exist in the database." );
-		}
-		$field = array();
-		try
-		{
-			foreach ( $table->columns as $column )
-			{
-				if ( false === array_search( $column->name, $field_names ) )
-				{
-					continue;
-				}
-				$localdb = Pii::db();
-				$query = $localdb->quoteColumnName( 'table' ) . ' = :tn and ' . $localdb->quoteColumnName( 'field' ) . ' = :fn';
-				$labels = static::getLabels( $query, array( ':tn' => $table_name, ':fn' => $column->name ) );
-				$labelInfo = Option::get( $labels, 0, array() );
-				$field[] = static::describeFieldInternal( $column, $table->foreignKeys, $labelInfo );
-				break;
-			}
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Failed to query table schema.\n{$ex->getMessage()}" );
-		}
+    /**
+     * @param \CDbConnection $db
+     * @param                $name
+     * @param array          $labels
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public static function describeTableFields( $db, $name, $labels = array() )
+    {
+        $name = static::correctTableName( $db, $name );
+        $table = $db->schema->getTable( $name );
+        if ( !$table )
+        {
+            throw new NotFoundException( "Table '$name' does not exist in the database." );
+        }
+        try
+        {
+            if ( empty( $labels ) )
+            {
+                $localdb = Pii::db();
+                $query = $localdb->quoteColumnName( 'table' ) . ' = :tn';
+                $labels = static::getLabels( $query, array( ':tn' => $name ) );
+                $labels = static::reformatFieldLabelArray( $labels );
+            }
+            $fields = array();
+            foreach ( $table->columns as $column )
+            {
+                $labelInfo = Option::get( $labels, $column->name, array() );
+                $field = static::describeFieldInternal( $column, $table->foreignKeys, $labelInfo );
+                $fields[] = $field;
+            }
 
-		if ( empty( $field ) )
-		{
-			throw new NotFoundException( "No fields not found in table '$table_name'." );
-		}
+            return $fields;
+        }
+        catch ( \Exception $ex )
+        {
+            throw new \Exception( "Failed to query table schema.\n{$ex->getMessage()}" );
+        }
+    }
 
-		return $field;
-	}
+    /**
+     * @param \CDbConnection $db
+     * @param string         $table_name
+     * @param array          $field_names
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public static function describeFields( $db, $table_name, $field_names )
+    {
+        $table_name = static::correctTableName( $db, $table_name );
+        $table = $db->schema->getTable( $table_name );
+        if ( !$table )
+        {
+            throw new NotFoundException( "Table '$table_name' does not exist in the database." );
+        }
+        $field = array();
+        try
+        {
+            foreach ( $table->columns as $column )
+            {
+                if ( false === array_search( $column->name, $field_names ) )
+                {
+                    continue;
+                }
+                $localdb = Pii::db();
+                $query = $localdb->quoteColumnName( 'table' ) . ' = :tn and ' . $localdb->quoteColumnName( 'field' ) . ' = :fn';
+                $labels = static::getLabels( $query, array( ':tn' => $table_name, ':fn' => $column->name ) );
+                $labelInfo = Option::get( $labels, 0, array() );
+                $field[] = static::describeFieldInternal( $column, $table->foreignKeys, $labelInfo );
+                break;
+            }
+        }
+        catch ( \Exception $ex )
+        {
+            throw new \Exception( "Failed to query table schema.\n{$ex->getMessage()}" );
+        }
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param                $table_name
-	 * @param                $field_name
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public static function describeField( $db, $table_name, $field_name )
-	{
-		$table_name = static::correctTableName( $db, $table_name );
-		$table = $db->schema->getTable( $table_name );
-		if ( !$table )
-		{
-			throw new NotFoundException( "Table '$table_name' does not exist in the database." );
-		}
-		$field = array();
-		try
-		{
-			foreach ( $table->columns as $column )
-			{
-				if ( 0 != strcasecmp( $column->name, $field_name ) )
-				{
-					continue;
-				}
-				$localdb = Pii::db();
-				$query = $localdb->quoteColumnName( 'table' ) . ' = :tn and ' . $localdb->quoteColumnName( 'field' ) . ' = :fn';
-				$labels = static::getLabels( $query, array( ':tn' => $table_name, ':fn' => $field_name ) );
-				$labelInfo = Option::get( $labels, 0, array() );
-				$field = static::describeFieldInternal( $column, $table->foreignKeys, $labelInfo );
-				break;
-			}
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Failed to query table schema.\n{$ex->getMessage()}" );
-		}
+        if ( empty( $field ) )
+        {
+            throw new NotFoundException( "No fields not found in table '$table_name'." );
+        }
 
-		if ( empty( $field ) )
-		{
-			throw new NotFoundException( "Field '$field_name' not found in table '$table_name'." );
-		}
+        return $field;
+    }
 
-		return $field;
-	}
+    /**
+     * @param \CDbConnection $db
+     * @param                $table_name
+     * @param                $field_name
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public static function describeField( $db, $table_name, $field_name )
+    {
+        $table_name = static::correctTableName( $db, $table_name );
+        $table = $db->schema->getTable( $table_name );
+        if ( !$table )
+        {
+            throw new NotFoundException( "Table '$table_name' does not exist in the database." );
+        }
+        $field = array();
+        try
+        {
+            foreach ( $table->columns as $column )
+            {
+                if ( 0 != strcasecmp( $column->name, $field_name ) )
+                {
+                    continue;
+                }
+                $localdb = Pii::db();
+                $query = $localdb->quoteColumnName( 'table' ) . ' = :tn and ' . $localdb->quoteColumnName( 'field' ) . ' = :fn';
+                $labels = static::getLabels( $query, array( ':tn' => $table_name, ':fn' => $field_name ) );
+                $labelInfo = Option::get( $labels, 0, array() );
+                $field = static::describeFieldInternal( $column, $table->foreignKeys, $labelInfo );
+                break;
+            }
+        }
+        catch ( \Exception $ex )
+        {
+            throw new \Exception( "Failed to query table schema.\n{$ex->getMessage()}" );
+        }
 
-	/**
-	 * @param \CDbColumnSchema $column
-	 * @param array            $foreign_keys
-	 * @param array            $label_info
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public static function describeFieldInternal( $column, $foreign_keys, $label_info )
-	{
-		try
-		{
-			$label = Option::get( $label_info, 'label', Inflector::camelize( $column->name ) );
-			$validation = Option::get( $label_info, 'validation' );
-			$picklist = Option::get( $label_info, 'picklist' );
-			$picklist = ( !empty( $picklist ) ) ? explode( "/n", $picklist ) : array();
-			$refTable = '';
-			$refFields = '';
-			if ( 1 == $column->isForeignKey )
-			{
-				$referenceTo = Option::get( $foreign_keys, $column->name );
-				$refTable = Option::get( $referenceTo, 0 );
-				$refFields = Option::get( $referenceTo, 1 );
-			}
+        if ( empty( $field ) )
+        {
+            throw new NotFoundException( "Field '$field_name' not found in table '$table_name'." );
+        }
 
-			return array(
-				'name'               => $column->name,
-				'label'              => $label,
-				'type'               => static::_determineDfType( $column, $label_info ),
-				'db_type'            => $column->dbType,
-				'length'             => intval( $column->size ),
-				'precision'          => intval( $column->precision ),
-				'scale'              => intval( $column->scale ),
-				'default'            => $column->defaultValue,
-				'required'           => static::determineRequired( $column ),
-				'allow_null'         => $column->allowNull,
-				'fixed_length'       => static::determineIfFixedLength( $column->dbType ),
-				'supports_multibyte' => static::determineMultiByteSupport( $column->dbType ),
-				'auto_increment'     => $column->autoIncrement,
-				'is_primary_key'     => $column->isPrimaryKey,
-				'is_foreign_key'     => $column->isForeignKey,
-				'ref_table'          => $refTable,
-				'ref_fields'         => $refFields,
-				'validation'         => $validation,
-				'values'             => $picklist
-			);
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Failed to query table schema.\n{$ex->getMessage()}" );
-		}
-	}
+        return $field;
+    }
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param                $parent_table
-	 *
-	 * @return array
-	 * @throws \Exception
-	 */
-	public static function describeTableRelated( $db, $parent_table )
-	{
-		$names = $db->schema->getTableNames();
-		natcasesort( $names );
-		$names = array_values( $names );
-		$related = array();
-		foreach ( $names as $name )
-		{
-			$table = $db->schema->getTable( $name );
-			if ( !$table )
-			{
-				throw new NotFoundException( "Table '$name' does not exist in the database." );
-			}
-			$fks = $fks2 = $table->foreignKeys;
-			foreach ( $fks as $key => $value )
-			{
-				$refTable = Option::get( $value, 0 );
-				$refField = Option::get( $value, 1 );
-				if ( 0 == strcasecmp( $refTable, $parent_table ) )
-				{
-					// other, must be has_many or many_many
-					$relationName = Inflector::pluralize( $name ) . '_by_' . $key;
-					$related[] = array(
-						'name'      => $relationName,
-						'type'      => 'has_many',
-						'ref_table' => $name,
-						'ref_field' => $key,
-						'field'     => $refField
-					);
-					// if other has many relationships exist, we can say these are related as well
-					foreach ( $fks2 as $key2 => $value2 )
-					{
-						$tmpTable = Option::get( $value2, 0 );
-						$tmpField = Option::get( $value2, 1 );
-						if ( ( 0 != strcasecmp( $key, $key2 ) ) && // not same key
-							 ( 0 != strcasecmp( $tmpTable, $name ) ) && // not self-referencing table
-							 ( 0 != strcasecmp( $parent_table, $name ) )
-						)
-						{ // not same as parent, i.e. via reference back to self
-							// not the same key
-							$relationName = Inflector::pluralize( $tmpTable ) . '_by_' . $name;
-							$related[] = array(
-								'name'      => $relationName,
-								'type'      => 'many_many',
-								'ref_table' => $tmpTable,
-								'ref_field' => $tmpField,
-								'join'      => "$name($key,$key2)",
-								'field'     => $refField
-							);
-						}
-					}
-				}
-				if ( 0 == strcasecmp( $name, $parent_table ) )
-				{
-					// self, get belongs to relations
-					$relationName = $refTable . '_by_' . $key;
-					$related[] = array(
-						'name'      => $relationName,
-						'type'      => 'belongs_to',
-						'ref_table' => $refTable,
-						'ref_field' => $refField,
-						'field'     => $key
-					);
-				}
-			}
-		}
+    /**
+     * @param \CDbColumnSchema $column
+     * @param array            $foreign_keys
+     * @param array            $label_info
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public static function describeFieldInternal( $column, $foreign_keys, $label_info )
+    {
+        try
+        {
+            $label = Option::get( $label_info, 'label', Inflector::camelize( $column->name ) );
+            $validation = Option::get( $label_info, 'validation' );
+            $picklist = Option::get( $label_info, 'picklist' );
+            $picklist = ( !empty( $picklist ) ) ? explode( "/n", $picklist ) : array();
+            $refTable = '';
+            $refFields = '';
+            if ( 1 == $column->isForeignKey )
+            {
+                $referenceTo = Option::get( $foreign_keys, $column->name );
+                $refTable = Option::get( $referenceTo, 0 );
+                $refFields = Option::get( $referenceTo, 1 );
+            }
 
-		return $related;
-	}
+            return array(
+                'name'               => $column->name,
+                'label'              => $label,
+                'type'               => static::_determineDfType( $column, $label_info ),
+                'db_type'            => $column->dbType,
+                'length'             => intval( $column->size ),
+                'precision'          => intval( $column->precision ),
+                'scale'              => intval( $column->scale ),
+                'default'            => $column->defaultValue,
+                'required'           => static::determineRequired( $column ),
+                'allow_null'         => $column->allowNull,
+                'fixed_length'       => static::determineIfFixedLength( $column->dbType ),
+                'supports_multibyte' => static::determineMultiByteSupport( $column->dbType ),
+                'auto_increment'     => $column->autoIncrement,
+                'is_primary_key'     => $column->isPrimaryKey,
+                'is_foreign_key'     => $column->isForeignKey,
+                'ref_table'          => $refTable,
+                'ref_fields'         => $refFields,
+                'validation'         => $validation,
+                'values'             => $picklist
+            );
+        }
+        catch ( \Exception $ex )
+        {
+            throw new \Exception( "Failed to query table schema.\n{$ex->getMessage()}" );
+        }
+    }
 
-	/**
-	 * @param            $column
-	 * @param null|array $label_info
-	 *
-	 * @return string
-	 */
-	protected static function _determineDfType( $column, $label_info = null )
-	{
-		$_simpleType = static::determineGenericType( $column );
+    /**
+     * @param \CDbConnection $db
+     * @param                $parent_table
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public static function describeTableRelated( $db, $parent_table )
+    {
+        $names = $db->schema->getTableNames();
+        natcasesort( $names );
+        $names = array_values( $names );
+        $related = array();
+        foreach ( $names as $name )
+        {
+            $table = $db->schema->getTable( $name );
+            if ( !$table )
+            {
+                throw new NotFoundException( "Table '$name' does not exist in the database." );
+            }
+            $fks = $fks2 = $table->foreignKeys;
+            foreach ( $fks as $key => $value )
+            {
+                $refTable = Option::get( $value, 0 );
+                $refField = Option::get( $value, 1 );
+                if ( 0 == strcasecmp( $refTable, $parent_table ) )
+                {
+                    // other, must be has_many or many_many
+                    $relationName = Inflector::pluralize( $name ) . '_by_' . $key;
+                    $related[] = array(
+                        'name'      => $relationName,
+                        'type'      => 'has_many',
+                        'ref_table' => $name,
+                        'ref_field' => $key,
+                        'field'     => $refField
+                    );
+                    // if other has many relationships exist, we can say these are related as well
+                    foreach ( $fks2 as $key2 => $value2 )
+                    {
+                        $tmpTable = Option::get( $value2, 0 );
+                        $tmpField = Option::get( $value2, 1 );
+                        if ( ( 0 != strcasecmp( $key, $key2 ) ) && // not same key
+                             ( 0 != strcasecmp( $tmpTable, $name ) ) && // not self-referencing table
+                             ( 0 != strcasecmp( $parent_table, $name ) )
+                        )
+                        { // not same as parent, i.e. via reference back to self
+                            // not the same key
+                            $relationName = Inflector::pluralize( $tmpTable ) . '_by_' . $name;
+                            $related[] = array(
+                                'name'      => $relationName,
+                                'type'      => 'many_many',
+                                'ref_table' => $tmpTable,
+                                'ref_field' => $tmpField,
+                                'join'      => "$name($key,$key2)",
+                                'field'     => $refField
+                            );
+                        }
+                    }
+                }
+                if ( 0 == strcasecmp( $name, $parent_table ) )
+                {
+                    // self, get belongs to relations
+                    $relationName = $refTable . '_by_' . $key;
+                    $related[] = array(
+                        'name'      => $relationName,
+                        'type'      => 'belongs_to',
+                        'ref_table' => $refTable,
+                        'ref_field' => $refField,
+                        'field'     => $key
+                    );
+                }
+            }
+        }
 
-		switch ( $_simpleType )
-		{
-			case 'integer':
-				if ( $column->isPrimaryKey && $column->autoIncrement )
-				{
-					return 'id';
-				}
+        return $related;
+    }
 
-				if ( isset( $label_info['user_id_on_update'] ) )
-				{
-					return 'user_id_on_' . ( Option::getBool( $label_info, 'user_id_on_update' ) ? 'update' : 'create' );
-				}
+    /**
+     * @param            $column
+     * @param null|array $label_info
+     *
+     * @return string
+     */
+    protected static function _determineDfType( $column, $label_info = null )
+    {
+        $_simpleType = static::determineGenericType( $column );
 
-				if ( null !== Option::get( $label_info, 'user_id' ) )
-				{
-					return 'user_id';
-				}
+        switch ( $_simpleType )
+        {
+            case 'integer':
+                if ( $column->isPrimaryKey && $column->autoIncrement )
+                {
+                    return 'id';
+                }
 
-				if ( $column->isForeignKey )
-				{
-					return 'reference';
-				}
-				break;
+                if ( isset( $label_info['user_id_on_update'] ) )
+                {
+                    return 'user_id_on_' . ( Option::getBool( $label_info, 'user_id_on_update' ) ? 'update' : 'create' );
+                }
 
-			case 'datetimeoffset':
-			case 'timestamp':
-				if ( isset( $label_info['timestamp_on_update'] ) )
-				{
-					return 'timestamp_on_' . ( Option::getBool( $label_info, 'timestamp_on_update' ) ? 'update' : 'create' );
-				}
-				break;
-		}
+                if ( null !== Option::get( $label_info, 'user_id' ) )
+                {
+                    return 'user_id';
+                }
 
-		if ( ( 0 == strcasecmp( $column->dbType, 'datetimeoffset' ) ) || ( 0 == strcasecmp( $column->dbType, 'timestamp' ) ) )
-		{
-			if ( isset( $label_info['timestamp_on_update'] ) )
-			{
-				return 'timestamp_on_' . ( Option::getBool( $label_info, 'timestamp_on_update' ) ? 'update' : 'create' );
-			}
-		}
+                if ( $column->isForeignKey )
+                {
+                    return 'reference';
+                }
+                break;
 
-		return $_simpleType;
-	}
+            case 'datetimeoffset':
+            case 'timestamp':
+                if ( isset( $label_info['timestamp_on_update'] ) )
+                {
+                    return 'timestamp_on_' . ( Option::getBool( $label_info, 'timestamp_on_update' ) ? 'update' : 'create' );
+                }
+                break;
+        }
 
-	/**
-	 * @param $type
-	 *
-	 * @return bool
-	 */
-	protected static function determineMultiByteSupport( $type )
-	{
-		switch ( $type )
-		{
-			case 'nchar':
-			case 'nvarchar':
-				return true;
-			// todo mysql shows these are varchar with a utf8 character set, not in column data
-			default:
-				return false;
-		}
-	}
+        if ( ( 0 == strcasecmp( $column->dbType, 'datetimeoffset' ) ) || ( 0 == strcasecmp( $column->dbType, 'timestamp' ) ) )
+        {
+            if ( isset( $label_info['timestamp_on_update'] ) )
+            {
+                return 'timestamp_on_' . ( Option::getBool( $label_info, 'timestamp_on_update' ) ? 'update' : 'create' );
+            }
+        }
 
-	/**
-	 * @param $type
-	 *
-	 * @return bool
-	 */
-	protected static function determineIfFixedLength( $type )
-	{
-		switch ( $type )
-		{
-			case 'char':
-			case 'nchar':
-			case 'binary':
-				return true;
-			default:
-				return false;
-		}
-	}
+        return $_simpleType;
+    }
 
-	/**
-	 * @param $column
-	 *
-	 * @return bool
-	 */
-	protected static function determineRequired( $column )
-	{
-		if ( ( 1 == $column->allowNull ) || ( isset( $column->defaultValue ) ) || ( 1 == $column->autoIncrement ) )
-		{
-			return false;
-		}
+    /**
+     * @param $type
+     *
+     * @return bool
+     */
+    protected static function determineMultiByteSupport( $type )
+    {
+        switch ( $type )
+        {
+            case 'nchar':
+            case 'nvarchar':
+                return true;
+            // todo mysql shows these are varchar with a utf8 character set, not in column data
+            default:
+                return false;
+        }
+    }
 
-		return true;
-	}
+    /**
+     * @param $type
+     *
+     * @return bool
+     */
+    protected static function determineIfFixedLength( $type )
+    {
+        switch ( $type )
+        {
+            case 'char':
+            case 'nchar':
+            case 'binary':
+                return true;
+            default:
+                return false;
+        }
+    }
 
-	/**
-	 * @param $avail_fields
-	 *
-	 * @return string
-	 */
-	public static function listAllFieldsFromDescribe( $avail_fields )
-	{
-		$out = '';
-		foreach ( $avail_fields as $field_info )
-		{
-			if ( !empty( $out ) )
-			{
-				$out .= ',';
-			}
-			$out .= $field_info['name'];
-		}
+    /**
+     * @param $column
+     *
+     * @return bool
+     */
+    protected static function determineRequired( $column )
+    {
+        if ( ( 1 == $column->allowNull ) || ( isset( $column->defaultValue ) ) || ( 1 == $column->autoIncrement ) )
+        {
+            return false;
+        }
 
-		return $out;
-	}
+        return true;
+    }
 
-	/**
-	 * @param $field_name
-	 * @param $avail_fields
-	 *
-	 * @return null
-	 */
-	public static function getFieldFromDescribe( $field_name, $avail_fields )
-	{
-		foreach ( $avail_fields as $field_info )
-		{
-			if ( 0 == strcasecmp( $field_name, $field_info['name'] ) )
-			{
-				return $field_info;
-			}
-		}
+    /**
+     * @param $avail_fields
+     *
+     * @return string
+     */
+    public static function listAllFieldsFromDescribe( $avail_fields )
+    {
+        $out = '';
+        foreach ( $avail_fields as $field_info )
+        {
+            if ( !empty( $out ) )
+            {
+                $out .= ',';
+            }
+            $out .= $field_info['name'];
+        }
 
-		return null;
-	}
+        return $out;
+    }
 
-	/**
-	 * @param $field_name
-	 * @param $avail_fields
-	 *
-	 * @return bool|int|string
-	 */
-	public static function findFieldFromDescribe( $field_name, $avail_fields )
-	{
-		foreach ( $avail_fields as $key => $field_info )
-		{
-			if ( 0 == strcasecmp( $field_name, $field_info['name'] ) )
-			{
-				return $key;
-			}
-		}
+    /**
+     * @param $field_name
+     * @param $avail_fields
+     *
+     * @return null
+     */
+    public static function getFieldFromDescribe( $field_name, $avail_fields )
+    {
+        foreach ( $avail_fields as $field_info )
+        {
+            if ( 0 == strcasecmp( $field_name, $field_info['name'] ) )
+            {
+                return $field_info;
+            }
+        }
 
-		return false;
-	}
+        return null;
+    }
 
-	/**
-	 * @param $avail_fields
-	 *
-	 * @return string
-	 */
-	public static function getPrimaryKeyFieldFromDescribe( $avail_fields )
-	{
-		foreach ( $avail_fields as $field_info )
-		{
-			if ( $field_info['is_primary_key'] )
-			{
-				return $field_info['name'];
-			}
-		}
+    /**
+     * @param $field_name
+     * @param $avail_fields
+     *
+     * @return bool|int|string
+     */
+    public static function findFieldFromDescribe( $field_name, $avail_fields )
+    {
+        foreach ( $avail_fields as $key => $field_info )
+        {
+            if ( 0 == strcasecmp( $field_name, $field_info['name'] ) )
+            {
+                return $key;
+            }
+        }
 
-		return '';
-	}
+        return false;
+    }
 
-	/**
-	 * @param array   $avail_fields
-	 * @param boolean $names_only Return only an array of names, otherwise return all properties
-	 *
-	 * @return array
-	 */
-	public static function getPrimaryKeys( $avail_fields, $names_only = false )
-	{
-		$_keys = array();
-		foreach ( $avail_fields as $_info )
-		{
-			if ( $_info['is_primary_key'] )
-			{
-				$_keys[] = ( $names_only ? $_info['name'] : $_info );
-			}
-		}
+    /**
+     * @param $avail_fields
+     *
+     * @return string
+     */
+    public static function getPrimaryKeyFieldFromDescribe( $avail_fields )
+    {
+        foreach ( $avail_fields as $field_info )
+        {
+            if ( $field_info['is_primary_key'] )
+            {
+                return $field_info['name'];
+            }
+        }
 
-		return $_keys;
-	}
+        return '';
+    }
 
-	/**
-	 * @param     $field
-	 * @param int $driver_type
-	 *
-	 * @throws \Exception
-	 * @return array|string
-	 */
-	protected static function buildColumnType( $field, $driver_type = self::DRV_MYSQL )
-	{
-		if ( empty( $field ) )
-		{
-			throw new BadRequestException( "No field given." );
-		}
+    /**
+     * @param array   $avail_fields
+     * @param boolean $names_only Return only an array of names, otherwise return all properties
+     *
+     * @return array
+     */
+    public static function getPrimaryKeys( $avail_fields, $names_only = false )
+    {
+        $_keys = array();
+        foreach ( $avail_fields as $_info )
+        {
+            if ( $_info['is_primary_key'] )
+            {
+                $_keys[] = ( $names_only ? $_info['name'] : $_info );
+            }
+        }
 
-		try
-		{
-			$sql = Option::get( $field, 'sql' );
-			if ( !empty( $sql ) )
-			{
-				// raw sql definition, just pass it on
-				return $sql;
-			}
-			$type = Option::get( $field, 'type' );
-			if ( empty( $type ) )
-			{
-				throw new BadRequestException( "Invalid schema detected - no type element." );
-			}
-			/* abstract types handled by yii directly for each driver type
+        return $_keys;
+    }
+
+    /**
+     * @param     $field
+     * @param int $driver_type
+     *
+     * @throws \Exception
+     * @return array|string
+     */
+    protected static function buildColumnType( $field, $driver_type = self::DRV_MYSQL )
+    {
+        if ( empty( $field ) )
+        {
+            throw new BadRequestException( "No field given." );
+        }
+
+        try
+        {
+            $sql = Option::get( $field, 'sql' );
+            if ( !empty( $sql ) )
+            {
+                // raw sql definition, just pass it on
+                return $sql;
+            }
+            $type = Option::get( $field, 'type' );
+            if ( empty( $type ) )
+            {
+                throw new BadRequestException( "Invalid schema detected - no type element." );
+            }
+            /* abstract types handled by yii directly for each driver type
 
                 pk: a generic primary key type, will be converted into int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY for MySQL;
                 string: string type, will be converted into varchar(255) for MySQL;
@@ -810,1142 +825,1135 @@ class SqlDbUtilities implements SqlDbDriverTypes
                 money: money/currency type, will be converted into decimal(19,4) for MySQL.
             */
 
-			if ( ( 0 == strcasecmp( 'id', $type ) ) || ( 0 == strcasecmp( 'pk', $type ) ) )
-			{
-				return 'pk'; // simple primary key
-			}
+            if ( ( 0 == strcasecmp( 'id', $type ) ) || ( 0 == strcasecmp( 'pk', $type ) ) )
+            {
+                return 'pk'; // simple primary key
+            }
 
-			$allowNull = Utilities::getArrayValue( 'allow_null', $field, true );
-			$length = Utilities::getArrayValue( 'length', $field, null );
-			if ( !isset( $length ) )
-			{
-				$length = Utilities::getArrayValue( 'size', $field, null ); // alias
-			}
-			$default = Utilities::getArrayValue( 'default', $field, null );
-			$quoteDefault = false;
-			$isPrimaryKey = Utilities::getArrayValue( 'is_primary_key', $field, false );
+            $allowNull = Utilities::getArrayValue( 'allow_null', $field, true );
+            $length = Utilities::getArrayValue( 'length', $field, null );
+            if ( !isset( $length ) )
+            {
+                $length = Utilities::getArrayValue( 'size', $field, null ); // alias
+            }
+            $default = Utilities::getArrayValue( 'default', $field, null );
+            $quoteDefault = false;
+            $isPrimaryKey = Utilities::getArrayValue( 'is_primary_key', $field, false );
 
-			switch ( strtolower( $type ) )
-			{
-				// some types need massaging, some need other required properties
-				case "reference":
-					$definition = 'int';
-					break;
-				case "timestamp_on_create":
-					$definition = 'timestamp';
-					$default = 0; // override
-					$allowNull = ( isset( $field['allow_null'] ) ) ? $allowNull : false;
-					break;
-				case "timestamp_on_update":
-					$definition = 'timestamp';
-					$default = 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'; // override
-					$allowNull = ( isset( $field['allow_null'] ) ) ? $allowNull : false;
-					break;
-				case "user_id":
-				case "user_id_on_create":
-				case "user_id_on_update":
-					$definition = 'int';
-					$allowNull = ( isset( $field['allow_null'] ) ) ? $allowNull : false;
-					break;
-				// numbers
-				case 'bit': // ms sql alias
-				case 'bool': // alias
-				case 'boolean': // alias
-					$definition = 'boolean';
-					// convert to bit 0 or 1
-					$default = ( isset( $default ) ) ? intval( Utilities::boolval( $default ) ) : $default;
-					break;
-				case 'tinyint':
-				case 'smallint':
-				case 'mediumint':
-				case 'int':
-				case 'bigint':
-				case 'integer':
-					$definition =
-						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( 'mediumint' == $type ) )
-							? 'int' : $type;
-					if ( isset( $length ) )
-					{
-						if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) &&
-							 ( $length <= 255 ) &&
-							 ( $length > 0 )
-						)
-						{
-							$definition .= '(' . intval( $length ) . ')'; // sets the viewable length
-						}
-					}
-					// convert to int
-					$default = ( isset( $default ) ) ? intval( $default ) : $default;
-					break;
-				case 'decimal':
-				case 'numeric': // alias
-				case 'number': // alias
-				case 'percent': // alias
-					$definition = 'decimal';
-					if ( !isset( $length ) )
-					{
-						$length = Utilities::getArrayValue( 'precision', $field, null ); // alias
-					}
-					if ( isset( $length ) )
-					{
-						$length = intval( $length );
-						if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 65 ) ) ||
-							 ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 38 ) )
-						)
-						{
-							throw new BadRequestException( "Decimal precision '$length' is out of valid range." );
-						}
-						$scale = Utilities::getArrayValue( 'scale', $field, null );
-						if ( empty( $scale ) )
-						{
-							$scale = Utilities::getArrayValue( 'decimals', $field, null ); // alias
-						}
-						if ( !empty( $scale ) )
-						{
-							if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $scale > 30 ) ) ||
-								 ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $scale > 18 ) ) ||
-								 ( $scale > $length )
-							)
-							{
-								throw new BadRequestException( "Decimal scale '$scale' is out of valid range." );
-							}
-							$definition .= "($length,$scale)";
-						}
-						else
-						{
-							$definition .= "($length)";
-						}
-					}
-					// convert to float
-					$default = ( isset( $default ) ) ? floatval( $default ) : $default;
-					break;
-				case 'float':
-				case 'double':
-					$definition = ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'float' : $type;
-					if ( !isset( $length ) )
-					{
-						$length = Utilities::getArrayValue( 'precision', $field, null ); // alias
-					}
-					if ( isset( $length ) )
-					{
-						$length = intval( $length );
-						if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 53 ) ) ||
-							 ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 38 ) )
-						)
-						{
-							throw new BadRequestException( "Decimal precision '$length' is out of valid range." );
-						}
-						$scale = Utilities::getArrayValue( 'scale', $field, null );
-						if ( empty( $scale ) )
-						{
-							$scale = Utilities::getArrayValue( 'decimals', $field, null ); // alias
-						}
-						if ( !empty( $scale ) && !( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) )
-						{
-							if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $scale > 30 ) ) || ( $scale > $length )
-							)
-							{
-								throw new BadRequestException( "Decimal scale '$scale' is out of valid range." );
-							}
-							$definition .= "($length,$scale)";
-						}
-						else
-						{
-							$definition .= "($length)";
-						}
-					}
-					// convert to float
-					$default = ( isset( $default ) ) ? floatval( $default ) : $default;
-					break;
-				case 'money':
-				case 'smallmoney':
-					$definition =
-						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? $type
-							: 'money'; // let yii handle it
-					// convert to float
-					$default = ( isset( $default ) ) ? floatval( $default ) : $default;
-					break;
-				// string types
-				case 'string':
-				case 'binary':
-				case 'varbinary':
-				case 'char':
-				case 'varchar':
-				case 'nchar':
-				case 'nvarchar':
-					$fixed = Utilities::boolval( Utilities::getArrayValue( 'fixed_length', $field, false ) );
-					$national = Utilities::boolval( Utilities::getArrayValue( 'supports_multibyte', $field, false ) );
-					if ( 0 == strcasecmp( 'string', $type ) )
-					{
-						if ( $fixed )
-						{
-							$type = ( $national ) ? 'nchar' : 'char';
-						}
-						else
-						{
-							$type = ( $national ) ? 'nvarchar' : 'varchar';
-						}
-						if ( !isset( $length ) )
-						{
-							$length = 255;
-						}
-					}
-					elseif ( 0 == strcasecmp( 'binary', $type ) )
-					{
-						$type = ( $fixed ) ? 'binary' : 'varbinary';
-						if ( !isset( $length ) )
-						{
-							$length = 255;
-						}
-					}
-					$definition = $type;
-					switch ( $type )
-					{
-						case 'varbinary':
-						case 'varchar':
-							if ( isset( $length ) )
-							{
-								$length = intval( $length );
-								if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 8000 ) )
-								{
-									$length = 'max';
-								}
-								if ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 65535 ) )
-								{
-									// max allowed is really dependent number of string columns
-									throw new BadRequestException( "String length '$length' is out of valid range." );
-								}
-								$definition .= "($length)";
-							}
-							break;
-						case 'binary':
-						case 'char':
-							if ( isset( $length ) )
-							{
-								$length = intval( $length );
-								if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 8000 ) )
-								{
-									throw new BadRequestException( "String length '$length' is out of valid range." );
-								}
-								if ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 255 ) )
-								{
-									throw new BadRequestException( "String length '$length' is out of valid range." );
-								}
-								$definition .= "($length)";
-							}
-							break;
-						case 'nvarchar':
-							if ( isset( $length ) )
-							{
-								$length = intval( $length );
-								if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 4000 ) )
-								{
-									$length = 'max';
-								}
-								if ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 65535 ) )
-								{
-									// max allowed is really dependent number of string columns
-									throw new BadRequestException( "String length '$length' is out of valid range." );
-								}
-								$definition .= "($length)";
-							}
-							break;
-						case 'nchar':
-							if ( isset( $length ) )
-							{
-								$length = intval( $length );
-								if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 4000 ) )
-								{
-									throw new BadRequestException( "String length '$length' is out of valid range." );
-								}
-								if ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 255 ) )
-								{
-									throw new BadRequestException( "String length '$length' is out of valid range." );
-								}
-								$definition .= "($length)";
-							}
-							break;
-					}
-					$quoteDefault = true;
-					break;
-				case 'text':
-					$definition =
-						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varchar(max)'
-							: 'text'; // microsoft recommended
-					$quoteDefault = true;
-					break;
-				case 'blob':
-					$definition =
-						( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varbinary(max)'
-							: 'blob'; // microsoft recommended
-					$quoteDefault = true;
-					break;
-				case 'datetime':
-					$definition =
-						( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ? 'datetime2'
-							: 'datetime'; // microsoft recommends
-					break;
-				default:
-					// blind copy of column type
-					$definition = $type;
-			}
+            switch ( strtolower( $type ) )
+            {
+                // some types need massaging, some need other required properties
+                case "reference":
+                    $definition = 'int';
+                    break;
+                case "timestamp_on_create":
+                    $definition = 'timestamp';
+                    $default = 0; // override
+                    $allowNull = ( isset( $field['allow_null'] ) ) ? $allowNull : false;
+                    break;
+                case "timestamp_on_update":
+                    $definition = 'timestamp';
+                    $default = 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'; // override
+                    $allowNull = ( isset( $field['allow_null'] ) ) ? $allowNull : false;
+                    break;
+                case "user_id":
+                case "user_id_on_create":
+                case "user_id_on_update":
+                    $definition = 'int';
+                    $allowNull = ( isset( $field['allow_null'] ) ) ? $allowNull : false;
+                    break;
+                // numbers
+                case 'bit': // ms sql alias
+                case 'bool': // alias
+                case 'boolean': // alias
+                    $definition = 'boolean';
+                    // convert to bit 0 or 1
+                    $default = ( isset( $default ) ) ? intval( Utilities::boolval( $default ) ) : $default;
+                    break;
+                case 'tinyint':
+                case 'smallint':
+                case 'mediumint':
+                case 'int':
+                case 'bigint':
+                case 'integer':
+                    $definition =
+                        ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( 'mediumint' == $type ) )
+                            ? 'int' : $type;
+                    if ( isset( $length ) )
+                    {
+                        if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) &&
+                             ( $length <= 255 ) &&
+                             ( $length > 0 )
+                        )
+                        {
+                            $definition .= '(' . intval( $length ) . ')'; // sets the viewable length
+                        }
+                    }
+                    // convert to int
+                    $default = ( isset( $default ) ) ? intval( $default ) : $default;
+                    break;
+                case 'decimal':
+                case 'numeric': // alias
+                case 'number': // alias
+                case 'percent': // alias
+                    $definition = 'decimal';
+                    if ( !isset( $length ) )
+                    {
+                        $length = Utilities::getArrayValue( 'precision', $field, null ); // alias
+                    }
+                    if ( isset( $length ) )
+                    {
+                        $length = intval( $length );
+                        if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 65 ) ) ||
+                             ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 38 ) )
+                        )
+                        {
+                            throw new BadRequestException( "Decimal precision '$length' is out of valid range." );
+                        }
+                        $scale = Utilities::getArrayValue( 'scale', $field, null );
+                        if ( empty( $scale ) )
+                        {
+                            $scale = Utilities::getArrayValue( 'decimals', $field, null ); // alias
+                        }
+                        if ( !empty( $scale ) )
+                        {
+                            if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $scale > 30 ) ) ||
+                                 ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $scale > 18 ) ) ||
+                                 ( $scale > $length )
+                            )
+                            {
+                                throw new BadRequestException( "Decimal scale '$scale' is out of valid range." );
+                            }
+                            $definition .= "($length,$scale)";
+                        }
+                        else
+                        {
+                            $definition .= "($length)";
+                        }
+                    }
+                    // convert to float
+                    $default = ( isset( $default ) ) ? floatval( $default ) : $default;
+                    break;
+                case 'float':
+                case 'double':
+                    $definition = ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'float' : $type;
+                    if ( !isset( $length ) )
+                    {
+                        $length = Utilities::getArrayValue( 'precision', $field, null ); // alias
+                    }
+                    if ( isset( $length ) )
+                    {
+                        $length = intval( $length );
+                        if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 53 ) ) ||
+                             ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 38 ) )
+                        )
+                        {
+                            throw new BadRequestException( "Decimal precision '$length' is out of valid range." );
+                        }
+                        $scale = Utilities::getArrayValue( 'scale', $field, null );
+                        if ( empty( $scale ) )
+                        {
+                            $scale = Utilities::getArrayValue( 'decimals', $field, null ); // alias
+                        }
+                        if ( !empty( $scale ) && !( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) )
+                        {
+                            if ( ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $scale > 30 ) ) || ( $scale > $length )
+                            )
+                            {
+                                throw new BadRequestException( "Decimal scale '$scale' is out of valid range." );
+                            }
+                            $definition .= "($length,$scale)";
+                        }
+                        else
+                        {
+                            $definition .= "($length)";
+                        }
+                    }
+                    // convert to float
+                    $default = ( isset( $default ) ) ? floatval( $default ) : $default;
+                    break;
+                case 'money':
+                case 'smallmoney':
+                    $definition =
+                        ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? $type
+                            : 'money'; // let yii handle it
+                    // convert to float
+                    $default = ( isset( $default ) ) ? floatval( $default ) : $default;
+                    break;
+                // string types
+                case 'string':
+                case 'binary':
+                case 'varbinary':
+                case 'char':
+                case 'varchar':
+                case 'nchar':
+                case 'nvarchar':
+                    $fixed = Utilities::boolval( Utilities::getArrayValue( 'fixed_length', $field, false ) );
+                    $national = Utilities::boolval( Utilities::getArrayValue( 'supports_multibyte', $field, false ) );
+                    if ( 0 == strcasecmp( 'string', $type ) )
+                    {
+                        if ( $fixed )
+                        {
+                            $type = ( $national ) ? 'nchar' : 'char';
+                        }
+                        else
+                        {
+                            $type = ( $national ) ? 'nvarchar' : 'varchar';
+                        }
+                        if ( !isset( $length ) )
+                        {
+                            $length = 255;
+                        }
+                    }
+                    elseif ( 0 == strcasecmp( 'binary', $type ) )
+                    {
+                        $type = ( $fixed ) ? 'binary' : 'varbinary';
+                        if ( !isset( $length ) )
+                        {
+                            $length = 255;
+                        }
+                    }
+                    $definition = $type;
+                    switch ( $type )
+                    {
+                        case 'varbinary':
+                        case 'varchar':
+                            if ( isset( $length ) )
+                            {
+                                $length = intval( $length );
+                                if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 8000 ) )
+                                {
+                                    $length = 'max';
+                                }
+                                if ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 65535 ) )
+                                {
+                                    // max allowed is really dependent number of string columns
+                                    throw new BadRequestException( "String length '$length' is out of valid range." );
+                                }
+                                $definition .= "($length)";
+                            }
+                            break;
+                        case 'binary':
+                        case 'char':
+                            if ( isset( $length ) )
+                            {
+                                $length = intval( $length );
+                                if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 8000 ) )
+                                {
+                                    throw new BadRequestException( "String length '$length' is out of valid range." );
+                                }
+                                if ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 255 ) )
+                                {
+                                    throw new BadRequestException( "String length '$length' is out of valid range." );
+                                }
+                                $definition .= "($length)";
+                            }
+                            break;
+                        case 'nvarchar':
+                            if ( isset( $length ) )
+                            {
+                                $length = intval( $length );
+                                if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 4000 ) )
+                                {
+                                    $length = 'max';
+                                }
+                                if ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 65535 ) )
+                                {
+                                    // max allowed is really dependent number of string columns
+                                    throw new BadRequestException( "String length '$length' is out of valid range." );
+                                }
+                                $definition .= "($length)";
+                            }
+                            break;
+                        case 'nchar':
+                            if ( isset( $length ) )
+                            {
+                                $length = intval( $length );
+                                if ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) && ( $length > 4000 ) )
+                                {
+                                    throw new BadRequestException( "String length '$length' is out of valid range." );
+                                }
+                                if ( ( SqlDbUtilities::DRV_MYSQL == $driver_type ) && ( $length > 255 ) )
+                                {
+                                    throw new BadRequestException( "String length '$length' is out of valid range." );
+                                }
+                                $definition .= "($length)";
+                            }
+                            break;
+                    }
+                    $quoteDefault = true;
+                    break;
+                case 'text':
+                    $definition =
+                        ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varchar(max)'
+                            : 'text'; // microsoft recommended
+                    $quoteDefault = true;
+                    break;
+                case 'blob':
+                    $definition =
+                        ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'varbinary(max)'
+                            : 'blob'; // microsoft recommended
+                    $quoteDefault = true;
+                    break;
+                case 'datetime':
+                    $definition =
+                        ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ? 'datetime2'
+                            : 'datetime'; // microsoft recommends
+                    break;
+                default:
+                    // blind copy of column type
+                    $definition = $type;
+            }
 
-			// additional properties
-			if ( !Utilities::boolval( $allowNull ) )
-			{
-				$definition .= ' NOT NULL';
-			}
-			if ( isset( $default ) )
-			{
-				if ( $quoteDefault )
-				{
-					$default = "'" . $default . "'";
-				}
-				$definition .= ' DEFAULT ' . $default;
-			}
-			if ( $isPrimaryKey )
-			{
-				$definition .= ' PRIMARY KEY';
-			}
+            // additional properties
+            if ( !Utilities::boolval( $allowNull ) )
+            {
+                $definition .= ' NOT NULL';
+            }
+            if ( isset( $default ) )
+            {
+                if ( $quoteDefault )
+                {
+                    $default = "'" . $default . "'";
+                }
+                $definition .= ' DEFAULT ' . $default;
+            }
+            if ( $isPrimaryKey )
+            {
+                $definition .= ' PRIMARY KEY';
+            }
 
-			return $definition;
-		}
-		catch ( \Exception $ex )
-		{
-			throw $ex;
-		}
-	}
+            return $definition;
+        }
+        catch ( \Exception $ex )
+        {
+            throw $ex;
+        }
+    }
 
-	/**
-	 * @param string               $table_name
-	 * @param array                $fields
-	 * @param bool                 $allow_update
-	 * @param null|\CDbTableSchema $schema
-	 *
-	 * @throws \Exception
-	 * @return string
-	 */
-	protected static function buildTableFields( $table_name, $fields, $allow_update = true, $schema = null )
-	{
-		if ( empty( $fields ) )
-		{
-			throw new BadRequestException( "No fields given." );
-		}
-		$columns = array();
-		$alter_columns = array();
-		$references = array();
-		$indexes = array();
-		$labels = array();
-		$primaryKey = '';
-		if ( isset( $schema ) )
-		{
-			$primaryKey = $schema->primaryKey;
-		}
-		if ( !isset( $fields[0] ) )
-		{
-			$fields = array( $fields );
-		}
-		foreach ( $fields as $field )
-		{
-			try
-			{
-				$name = Utilities::getArrayValue( 'name', $field, '' );
-				if ( empty( $name ) )
-				{
-					throw new BadRequestException( "Invalid schema detected - no name element." );
-				}
-				$type = Utilities::getArrayValue( 'type', $field, '' );
-				$colSchema = ( isset( $schema ) ) ? $schema->getColumn( $name ) : null;
-				$isAlter = false;
-				if ( isset( $colSchema ) )
-				{
-					if ( !$allow_update )
-					{
-						throw new BadRequestException( "Field '$name' already exists in table '$table_name'." );
-					}
-					if ( ( ( 0 == strcasecmp( 'id', $type ) ) ||
-						   ( 0 == strcasecmp( 'pk', $type ) ) ||
-						   Utilities::boolval( Utilities::getArrayValue( 'is_primary_key', $field, false ) ) ) && ( $colSchema->isPrimaryKey )
-					)
-					{
-						// don't try to alter
-					}
-					else
-					{
-						$definition = static::buildColumnType( $field );
-						if ( !empty( $definition ) )
-						{
-							$alter_columns[$name] = $definition;
-						}
-					}
-					$isAlter = true;
-					// todo manage type changes, data migration?
-				}
-				else
-				{
-					$definition = static::buildColumnType( $field );
-					if ( !empty( $definition ) )
-					{
-						$columns[$name] = $definition;
-					}
-				}
+    /**
+     * @param string               $table_name
+     * @param array                $fields
+     * @param bool                 $allow_update
+     * @param null|\CDbTableSchema $schema
+     *
+     * @throws \Exception
+     * @return string
+     */
+    protected static function buildTableFields( $table_name, $fields, $allow_update = true, $schema = null )
+    {
+        if ( empty( $fields ) )
+        {
+            throw new BadRequestException( "No fields given." );
+        }
+        $columns = array();
+        $alter_columns = array();
+        $references = array();
+        $indexes = array();
+        $labels = array();
+        $primaryKey = '';
+        if ( isset( $schema ) )
+        {
+            $primaryKey = $schema->primaryKey;
+        }
+        if ( !isset( $fields[0] ) )
+        {
+            $fields = array( $fields );
+        }
+        foreach ( $fields as $field )
+        {
+            try
+            {
+                $name = Utilities::getArrayValue( 'name', $field, '' );
+                if ( empty( $name ) )
+                {
+                    throw new BadRequestException( "Invalid schema detected - no name element." );
+                }
+                $type = Utilities::getArrayValue( 'type', $field, '' );
+                $colSchema = ( isset( $schema ) ) ? $schema->getColumn( $name ) : null;
+                $isAlter = false;
+                if ( isset( $colSchema ) )
+                {
+                    if ( !$allow_update )
+                    {
+                        throw new BadRequestException( "Field '$name' already exists in table '$table_name'." );
+                    }
+                    if ( ( ( 0 == strcasecmp( 'id', $type ) ) ||
+                           ( 0 == strcasecmp( 'pk', $type ) ) ||
+                           Utilities::boolval( Utilities::getArrayValue( 'is_primary_key', $field, false ) ) ) && ( $colSchema->isPrimaryKey )
+                    )
+                    {
+                        // don't try to alter
+                    }
+                    else
+                    {
+                        $definition = static::buildColumnType( $field );
+                        if ( !empty( $definition ) )
+                        {
+                            $alter_columns[$name] = $definition;
+                        }
+                    }
+                    $isAlter = true;
+                    // todo manage type changes, data migration?
+                }
+                else
+                {
+                    $definition = static::buildColumnType( $field );
+                    if ( !empty( $definition ) )
+                    {
+                        $columns[$name] = $definition;
+                    }
+                }
 
-				// extra checks
-				if ( empty( $type ) )
-				{
-					// raw definition, just pass it on
-					if ( $isAlter )
-					{
-						// may need to clean out references, etc?
-					}
-					continue;
-				}
+                // extra checks
+                if ( empty( $type ) )
+                {
+                    // raw definition, just pass it on
+                    if ( $isAlter )
+                    {
+                        // may need to clean out references, etc?
+                    }
+                    continue;
+                }
 
-				$temp = array();
-				if ( ( 0 == strcasecmp( 'id', $type ) ) || ( 0 == strcasecmp( 'pk', $type ) ) )
-				{
-					if ( !empty( $primaryKey ) && ( 0 != strcasecmp( $primaryKey, $name ) ) )
-					{
-						throw new BadRequestException( "Designating more than one column as a primary key is not allowed." );
-					}
-					$primaryKey = $name;
-				}
-				elseif ( Utilities::boolval( Utilities::getArrayValue( 'is_primary_key', $field, false ) ) )
-				{
-					if ( !empty( $primaryKey ) && ( 0 != strcasecmp( $primaryKey, $name ) ) )
-					{
-						throw new BadRequestException( "Designating more than one column as a primary key is not allowed." );
-					}
-					$primaryKey = $name;
-				}
-				elseif ( ( 0 == strcasecmp( 'reference', $type ) ) || Utilities::boolval( Utilities::getArrayValue( 'is_foreign_key', $field, false ) )
-				)
-				{
-					// special case for references because the table referenced may not be created yet
-					$refTable = Utilities::getArrayValue( 'ref_table', $field, '' );
-					if ( empty( $refTable ) )
-					{
-						throw new BadRequestException( "Invalid schema detected - no table element for reference type of $name." );
-					}
-					$refColumns = Utilities::getArrayValue( 'ref_fields', $field, 'id' );
-					$refOnDelete = Utilities::getArrayValue( 'ref_on_delete', $field, null );
-					$refOnUpdate = Utilities::getArrayValue( 'ref_on_update', $field, null );
+                $temp = array();
+                if ( ( 0 == strcasecmp( 'id', $type ) ) || ( 0 == strcasecmp( 'pk', $type ) ) )
+                {
+                    if ( !empty( $primaryKey ) && ( 0 != strcasecmp( $primaryKey, $name ) ) )
+                    {
+                        throw new BadRequestException( "Designating more than one column as a primary key is not allowed." );
+                    }
+                    $primaryKey = $name;
+                }
+                elseif ( Utilities::boolval( Utilities::getArrayValue( 'is_primary_key', $field, false ) ) )
+                {
+                    if ( !empty( $primaryKey ) && ( 0 != strcasecmp( $primaryKey, $name ) ) )
+                    {
+                        throw new BadRequestException( "Designating more than one column as a primary key is not allowed." );
+                    }
+                    $primaryKey = $name;
+                }
+                elseif ( ( 0 == strcasecmp( 'reference', $type ) ) || Utilities::boolval( Utilities::getArrayValue( 'is_foreign_key', $field, false ) )
+                )
+                {
+                    // special case for references because the table referenced may not be created yet
+                    $refTable = Utilities::getArrayValue( 'ref_table', $field, '' );
+                    if ( empty( $refTable ) )
+                    {
+                        throw new BadRequestException( "Invalid schema detected - no table element for reference type of $name." );
+                    }
+                    $refColumns = Utilities::getArrayValue( 'ref_fields', $field, 'id' );
+                    $refOnDelete = Utilities::getArrayValue( 'ref_on_delete', $field, null );
+                    $refOnUpdate = Utilities::getArrayValue( 'ref_on_update', $field, null );
 
-					// will get to it later, $refTable may not be there
-					$keyName = 'fk_' . $table_name . '_' . $name;
-					if ( !$isAlter || !$colSchema->isForeignKey )
-					{
-						$references[] = array(
-							'name'       => $keyName,
-							'table'      => $table_name,
-							'column'     => $name,
-							'ref_table'  => $refTable,
-							'ref_fields' => $refColumns,
-							'delete'     => $refOnDelete,
-							'update'     => $refOnUpdate
-						);
-					}
-				}
-				elseif ( ( 0 == strcasecmp( 'user_id_on_create', $type ) ) )
-				{ // && static::is_local_db()
-					// special case for references because the table referenced may not be created yet
-					$temp['user_id_on_update'] = false;
-					$keyName = 'fk_' . $table_name . '_' . $name;
-					if ( !$isAlter || !$colSchema->isForeignKey )
-					{
-						$references[] = array(
-							'name'       => $keyName,
-							'table'      => $table_name,
-							'column'     => $name,
-							'ref_table'  => 'df_sys_user',
-							'ref_fields' => 'id',
-							'delete'     => null,
-							'update'     => null
-						);
-					}
-				}
-				elseif ( ( 0 == strcasecmp( 'user_id_on_update', $type ) ) )
-				{ // && static::is_local_db()
-					// special case for references because the table referenced may not be created yet
-					$temp['user_id_on_update'] = true;
-					$keyName = 'fk_' . $table_name . '_' . $name;
-					if ( !$isAlter || !$colSchema->isForeignKey )
-					{
-						$references[] = array(
-							'name'       => $keyName,
-							'table'      => $table_name,
-							'column'     => $name,
-							'ref_table'  => 'df_sys_user',
-							'ref_fields' => 'id',
-							'delete'     => null,
-							'update'     => null
-						);
-					}
-				}
-				elseif ( ( 0 == strcasecmp( 'user_id', $type ) ) )
-				{ // && static::is_local_db()
-					// special case for references because the table referenced may not be created yet
-					$temp['user_id'] = true;
-					$keyName = 'fk_' . $table_name . '_' . $name;
-					if ( !$isAlter || !$colSchema->isForeignKey )
-					{
-						$references[] = array(
-							'name'       => $keyName,
-							'table'      => $table_name,
-							'column'     => $name,
-							'ref_table'  => 'df_sys_user',
-							'ref_fields' => 'id',
-							'delete'     => null,
-							'update'     => null
-						);
-					}
-				}
-				elseif ( ( 0 == strcasecmp( 'timestamp_on_create', $type ) ) )
-				{
-					$temp['timestamp_on_update'] = false;
-				}
-				elseif ( ( 0 == strcasecmp( 'timestamp_on_update', $type ) ) )
-				{
-					$temp['timestamp_on_update'] = true;
-				}
-				// regardless of type
-				if ( Utilities::boolval( Utilities::getArrayValue( 'is_unique', $field, false ) ) )
-				{
-					// will get to it later, create after table built
-					$keyName = 'undx_' . $table_name . '_' . $name;
-					$indexes[] = array(
-						'name'   => $keyName,
-						'table'  => $table_name,
-						'column' => $name,
-						'unique' => true,
-						'drop'   => $isAlter
-					);
-				}
-				elseif ( Utilities::boolval( Utilities::getArrayValue( 'is_index', $field, false ) ) )
-				{
-					// will get to it later, create after table built
-					$keyName = 'ndx_' . $table_name . '_' . $name;
-					$indexes[] = array(
-						'name'   => $keyName,
-						'table'  => $table_name,
-						'column' => $name,
-						'drop'   => $isAlter
-					);
-				}
+                    // will get to it later, $refTable may not be there
+                    $keyName = 'fk_' . $table_name . '_' . $name;
+                    if ( !$isAlter || !$colSchema->isForeignKey )
+                    {
+                        $references[] = array(
+                            'name'       => $keyName,
+                            'table'      => $table_name,
+                            'column'     => $name,
+                            'ref_table'  => $refTable,
+                            'ref_fields' => $refColumns,
+                            'delete'     => $refOnDelete,
+                            'update'     => $refOnUpdate
+                        );
+                    }
+                }
+                elseif ( ( 0 == strcasecmp( 'user_id_on_create', $type ) ) )
+                { // && static::is_local_db()
+                    // special case for references because the table referenced may not be created yet
+                    $temp['user_id_on_update'] = false;
+                    $keyName = 'fk_' . $table_name . '_' . $name;
+                    if ( !$isAlter || !$colSchema->isForeignKey )
+                    {
+                        $references[] = array(
+                            'name'       => $keyName,
+                            'table'      => $table_name,
+                            'column'     => $name,
+                            'ref_table'  => 'df_sys_user',
+                            'ref_fields' => 'id',
+                            'delete'     => null,
+                            'update'     => null
+                        );
+                    }
+                }
+                elseif ( ( 0 == strcasecmp( 'user_id_on_update', $type ) ) )
+                { // && static::is_local_db()
+                    // special case for references because the table referenced may not be created yet
+                    $temp['user_id_on_update'] = true;
+                    $keyName = 'fk_' . $table_name . '_' . $name;
+                    if ( !$isAlter || !$colSchema->isForeignKey )
+                    {
+                        $references[] = array(
+                            'name'       => $keyName,
+                            'table'      => $table_name,
+                            'column'     => $name,
+                            'ref_table'  => 'df_sys_user',
+                            'ref_fields' => 'id',
+                            'delete'     => null,
+                            'update'     => null
+                        );
+                    }
+                }
+                elseif ( ( 0 == strcasecmp( 'user_id', $type ) ) )
+                { // && static::is_local_db()
+                    // special case for references because the table referenced may not be created yet
+                    $temp['user_id'] = true;
+                    $keyName = 'fk_' . $table_name . '_' . $name;
+                    if ( !$isAlter || !$colSchema->isForeignKey )
+                    {
+                        $references[] = array(
+                            'name'       => $keyName,
+                            'table'      => $table_name,
+                            'column'     => $name,
+                            'ref_table'  => 'df_sys_user',
+                            'ref_fields' => 'id',
+                            'delete'     => null,
+                            'update'     => null
+                        );
+                    }
+                }
+                elseif ( ( 0 == strcasecmp( 'timestamp_on_create', $type ) ) )
+                {
+                    $temp['timestamp_on_update'] = false;
+                }
+                elseif ( ( 0 == strcasecmp( 'timestamp_on_update', $type ) ) )
+                {
+                    $temp['timestamp_on_update'] = true;
+                }
+                // regardless of type
+                if ( Utilities::boolval( Utilities::getArrayValue( 'is_unique', $field, false ) ) )
+                {
+                    // will get to it later, create after table built
+                    $keyName = 'undx_' . $table_name . '_' . $name;
+                    $indexes[] = array(
+                        'name'   => $keyName,
+                        'table'  => $table_name,
+                        'column' => $name,
+                        'unique' => true,
+                        'drop'   => $isAlter
+                    );
+                }
+                elseif ( Utilities::boolval( Utilities::getArrayValue( 'is_index', $field, false ) ) )
+                {
+                    // will get to it later, create after table built
+                    $keyName = 'ndx_' . $table_name . '_' . $name;
+                    $indexes[] = array(
+                        'name'   => $keyName,
+                        'table'  => $table_name,
+                        'column' => $name,
+                        'drop'   => $isAlter
+                    );
+                }
 
-				$picklist = '';
-				$values = Utilities::getArrayValue( 'value', $field, '' );
-				if ( empty( $values ) )
-				{
-					$values = ( isset( $field['values']['value'] ) ) ? $field['values']['value'] : array();
-				}
-				if ( !empty( $values ) )
-				{
-					foreach ( $values as $value )
-					{
-						if ( !empty( $picklist ) )
-						{
-							$picklist .= "\r";
-						}
-						$picklist .= $value;
-					}
-				}
-				if ( !empty( $picklist ) )
-				{
-					$temp['picklist'] = $picklist;
-				}
+                $picklist = '';
+                $values = Utilities::getArrayValue( 'value', $field, '' );
+                if ( empty( $values ) )
+                {
+                    $values = ( isset( $field['values']['value'] ) ) ? $field['values']['value'] : array();
+                }
+                if ( !empty( $values ) )
+                {
+                    foreach ( $values as $value )
+                    {
+                        if ( !empty( $picklist ) )
+                        {
+                            $picklist .= "\r";
+                        }
+                        $picklist .= $value;
+                    }
+                }
+                if ( !empty( $picklist ) )
+                {
+                    $temp['picklist'] = $picklist;
+                }
 
-				// labels
-				$label = Utilities::getArrayValue( 'label', $field, '' );
-				if ( !empty( $label ) )
-				{
-					$temp['label'] = $label;
-				}
+                // labels
+                $label = Utilities::getArrayValue( 'label', $field, '' );
+                if ( !empty( $label ) )
+                {
+                    $temp['label'] = $label;
+                }
 
-				$validation = Utilities::getArrayValue( 'validation', $field, '' );
-				if ( !empty( $validation ) )
-				{
-					$temp['validation'] = $validation;
-				}
+                $validation = Utilities::getArrayValue( 'validation', $field, '' );
+                if ( !empty( $validation ) )
+                {
+                    $temp['validation'] = $validation;
+                }
 
-				if ( !empty( $temp ) )
-				{
-					$temp['table'] = $table_name;
-					$temp['field'] = $name;
-					$labels[] = $temp;
-				}
-			}
-			catch ( \Exception $ex )
-			{
-				throw $ex;
-			}
-		}
+                if ( !empty( $temp ) )
+                {
+                    $temp['table'] = $table_name;
+                    $temp['field'] = $name;
+                    $labels[] = $temp;
+                }
+            }
+            catch ( \Exception $ex )
+            {
+                throw $ex;
+            }
+        }
 
-		return array(
-			'columns'       => $columns,
-			'alter_columns' => $alter_columns,
-			'references'    => $references,
-			'indexes'       => $indexes,
-			'labels'        => $labels
-		);
-	}
+        return array(
+            'columns'       => $columns,
+            'alter_columns' => $alter_columns,
+            'references'    => $references,
+            'indexes'       => $indexes,
+            'labels'        => $labels
+        );
+    }
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param array          $extras
-	 *
-	 * @return array
-	 */
-	protected static function createFieldExtras( $db, $extras )
-	{
-		$command = $db->createCommand();
-		$references = Utilities::getArrayValue( 'references', $extras, array() );
-		if ( !empty( $references ) )
-		{
-			foreach ( $references as $reference )
-			{
-				$command->reset();
-				$name = $reference['name'];
-				$table = $reference['table'];
-				$drop = Utilities::boolval( Utilities::getArrayValue( 'drop', $reference, false ) );
-				if ( $drop )
-				{
-					try
-					{
-						$command->dropForeignKey( $name, $table );
-					}
-					catch ( \Exception $ex )
-					{
-						\Yii::log( $ex->getMessage() );
-					}
-				}
-				// add new reference
-				$refTable = Utilities::getArrayValue( 'ref_table', $reference, null );
-				if ( !empty( $refTable ) )
-				{
-					if ( ( 0 == strcasecmp( 'df_sys_user', $refTable ) ) && ( $db != Pii::db() ) )
-					{
-						// using user id references from a remote db
-						continue;
-					}
-					/** @noinspection PhpUnusedLocalVariableInspection */
-					$rows = $command->addForeignKey(
-						$name,
-						$table,
-						$reference['column'],
-						$refTable,
-						$reference['ref_fields'],
-						$reference['delete'],
-						$reference['update']
-					);
-				}
-			}
-		}
-		$indexes = Utilities::getArrayValue( 'indexes', $extras, array() );
-		if ( !empty( $indexes ) )
-		{
-			foreach ( $indexes as $index )
-			{
-				$command->reset();
-				$name = $index['name'];
-				$table = $index['table'];
-				$drop = Utilities::boolval( Utilities::getArrayValue( 'drop', $index, false ) );
-				if ( $drop )
-				{
-					try
-					{
-						$command->dropIndex( $name, $table );
-					}
-					catch ( \Exception $ex )
-					{
-						\Yii::log( $ex->getMessage() );
-					}
-				}
-				$unique = Utilities::boolval( Utilities::getArrayValue( 'unique', $index, false ) );
+    /**
+     * @param \CDbConnection $db
+     * @param array          $extras
+     *
+     * @return array
+     */
+    protected static function createFieldExtras( $db, $extras )
+    {
+        $command = $db->createCommand();
+        $references = Utilities::getArrayValue( 'references', $extras, array() );
+        if ( !empty( $references ) )
+        {
+            foreach ( $references as $reference )
+            {
+                $command->reset();
+                $name = $reference['name'];
+                $table = $reference['table'];
+                $drop = Utilities::boolval( Utilities::getArrayValue( 'drop', $reference, false ) );
+                if ( $drop )
+                {
+                    try
+                    {
+                        $command->dropForeignKey( $name, $table );
+                    }
+                    catch ( \Exception $ex )
+                    {
+                        \Yii::log( $ex->getMessage() );
+                    }
+                }
+                // add new reference
+                $refTable = Utilities::getArrayValue( 'ref_table', $reference, null );
+                if ( !empty( $refTable ) )
+                {
+                    if ( ( 0 == strcasecmp( 'df_sys_user', $refTable ) ) && ( $db != Pii::db() ) )
+                    {
+                        // using user id references from a remote db
+                        continue;
+                    }
+                    /** @noinspection PhpUnusedLocalVariableInspection */
+                    $rows = $command->addForeignKey(
+                        $name,
+                        $table,
+                        $reference['column'],
+                        $refTable,
+                        $reference['ref_fields'],
+                        $reference['delete'],
+                        $reference['update']
+                    );
+                }
+            }
+        }
+        $indexes = Utilities::getArrayValue( 'indexes', $extras, array() );
+        if ( !empty( $indexes ) )
+        {
+            foreach ( $indexes as $index )
+            {
+                $command->reset();
+                $name = $index['name'];
+                $table = $index['table'];
+                $drop = Utilities::boolval( Utilities::getArrayValue( 'drop', $index, false ) );
+                if ( $drop )
+                {
+                    try
+                    {
+                        $command->dropIndex( $name, $table );
+                    }
+                    catch ( \Exception $ex )
+                    {
+                        \Yii::log( $ex->getMessage() );
+                    }
+                }
+                $unique = Utilities::boolval( Utilities::getArrayValue( 'unique', $index, false ) );
 
-				/** @noinspection PhpUnusedLocalVariableInspection */
-				$rows = $command->createIndex( $name, $table, $index['column'], $unique );
-			}
-		}
+                /** @noinspection PhpUnusedLocalVariableInspection */
+                $rows = $command->createIndex( $name, $table, $index['column'], $unique );
+            }
+        }
 
-		$labels = Utilities::getArrayValue( 'labels', $extras, array() );
+        $labels = Utilities::getArrayValue( 'labels', $extras, array() );
 
-		if ( !empty( $labels ) )
-		{
-			static::setLabels( $labels );
-		}
-	}
+        if ( !empty( $labels ) )
+        {
+            static::setLabels( $labels );
+        }
+    }
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param string         $table_name
-	 * @param array          $fields
-	 * @param bool           $allow_update
-	 *
-	 * @return array
-	 * @throws \Exception
-	 */
-	public static function createFields( $db, $table_name, $fields, $allow_update = true )
-	{
-		if ( empty( $table_name ) )
-		{
-			throw new BadRequestException( "Table schema received does not have a valid name." );
-		}
-		// does it already exist
-		if ( !static::doesTableExist( $db, $table_name ) )
-		{
-			throw new NotFoundException( "Update schema called on a table with name '$table_name' that does not exist in the database." );
-		}
+    /**
+     * @param \CDbConnection $db
+     * @param string         $table_name
+     * @param array          $fields
+     * @param bool           $allow_update
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public static function createFields( $db, $table_name, $fields, $allow_update = true )
+    {
+        if ( empty( $table_name ) )
+        {
+            throw new BadRequestException( "Table schema received does not have a valid name." );
+        }
+        // does it already exist
+        if ( !static::doesTableExist( $db, $table_name ) )
+        {
+            throw new NotFoundException( "Update schema called on a table with name '$table_name' that does not exist in the database." );
+        }
 
-		$schema = $db->schema->getTable( $table_name );
-		if ( !$table_name )
-		{
-			throw new NotFoundException( "Table '$table_name' does not exist in the database." );
-		}
-		try
-		{
-			$names = array();
-			$results = static::buildTableFields( $table_name, $fields, $allow_update, $schema );
-			$command = $db->createCommand();
-			$columns = Utilities::getArrayValue( 'columns', $results, array() );
-			foreach ( $columns as $name => $definition )
-			{
-				$command->reset();
-				$command->addColumn( $table_name, $name, $definition );
-				$names[] = $name;
-			}
-			$columns = Utilities::getArrayValue( 'alter_columns', $results, array() );
-			foreach ( $columns as $name => $definition )
-			{
-				$command->reset();
-				$command->alterColumn( $table_name, $name, $definition );
-				$names[] = $name;
-			}
-			static::createFieldExtras( $db, $results );
+        $schema = $db->schema->getTable( $table_name );
+        if ( !$table_name )
+        {
+            throw new NotFoundException( "Table '$table_name' does not exist in the database." );
+        }
+        try
+        {
+            $names = array();
+            $results = static::buildTableFields( $table_name, $fields, $allow_update, $schema );
+            $command = $db->createCommand();
+            $columns = Utilities::getArrayValue( 'columns', $results, array() );
+            foreach ( $columns as $name => $definition )
+            {
+                $command->reset();
+                $command->addColumn( $table_name, $name, $definition );
+                $names[] = $name;
+            }
+            $columns = Utilities::getArrayValue( 'alter_columns', $results, array() );
+            foreach ( $columns as $name => $definition )
+            {
+                $command->reset();
+                $command->alterColumn( $table_name, $name, $definition );
+                $names[] = $name;
+            }
+            static::createFieldExtras( $db, $results );
 
-			// refresh the schema that we just added
-			$db->schema->refresh();
+            // refresh the schema that we just added
+            $db->schema->refresh();
+            static::_getCachedTables( true );
 
-			return $names;
-		}
-		catch ( \Exception $ex )
-		{
-			Log::error( 'Exception creating fields: ' . $ex->getMessage() );
-			throw $ex;
-		}
-	}
+            return $names;
+        }
+        catch ( \Exception $ex )
+        {
+            Log::error( 'Exception creating fields: ' . $ex->getMessage() );
+            throw $ex;
+        }
+    }
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param string         $table_name
-	 * @param array          $data
-	 * @param bool           $return_labels_refs
-	 * @param bool           $checkExist
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @throws \Exception
-	 * @return array
-	 */
-	public static function createTable( $db, $table_name, $data, $return_labels_refs = false, $checkExist = true )
-	{
-		if ( empty( $table_name ) )
-		{
-			throw new BadRequestException( "Table schema received does not have a valid name." );
-		}
+    /**
+     * @param \CDbConnection $db
+     * @param string         $table_name
+     * @param array          $data
+     * @param bool           $return_labels_refs
+     * @param bool           $checkExist
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \Exception
+     * @return array
+     */
+    public static function createTable( $db, $table_name, $data, $return_labels_refs = false, $checkExist = true )
+    {
+        if ( empty( $table_name ) )
+        {
+            throw new BadRequestException( "Table schema received does not have a valid name." );
+        }
 
-		// does it already exist
-		if ( true === $checkExist && static::doesTableExist( $db, $table_name ) )
-		{
-			throw new BadRequestException( "A table with name '$table_name' already exist in the database." );
-		}
+        // does it already exist
+        if ( true === $checkExist && static::doesTableExist( $db, $table_name ) )
+        {
+            throw new BadRequestException( "A table with name '$table_name' already exist in the database." );
+        }
 
-		$fields = Utilities::getArrayValue( 'field', $data, array() );
+        $fields = Utilities::getArrayValue( 'field', $data, array() );
 
-		if ( empty( $fields ) )
-		{
-			$fields = ( isset( $data['fields']['field'] ) ) ? $data['fields']['field'] : array();
-		}
+        if ( empty( $fields ) )
+        {
+            $fields = ( isset( $data['fields']['field'] ) ) ? $data['fields']['field'] : array();
+        }
 
-		if ( empty( $fields ) )
-		{
-			throw new BadRequestException( "No valid fields exist in the received table schema." );
-		}
+        if ( empty( $fields ) )
+        {
+            throw new BadRequestException( "No valid fields exist in the received table schema." );
+        }
 
-		if ( !isset( $fields[0] ) )
-		{
-			$fields = array( $fields );
-		}
+        if ( !isset( $fields[0] ) )
+        {
+            $fields = array( $fields );
+        }
 
-		try
-		{
-			$results = static::buildTableFields( $table_name, $fields );
-			$columns = Utilities::getArrayValue( 'columns', $results, array() );
+        try
+        {
+            $results = static::buildTableFields( $table_name, $fields );
+            $columns = Utilities::getArrayValue( 'columns', $results, array() );
 
-			if ( empty( $columns ) )
-			{
-				throw new BadRequestException( "No valid fields exist in the received table schema." );
-			}
+            if ( empty( $columns ) )
+            {
+                throw new BadRequestException( "No valid fields exist in the received table schema." );
+            }
 
-			$command = $db->createCommand();
-			$command->createTable( $table_name, $columns );
+            $command = $db->createCommand();
+            $command->createTable( $table_name, $columns );
 
-			$labels = Utilities::getArrayValue( 'labels', $results, array() );
-			// add table labels
-			$label = Utilities::getArrayValue( 'label', $data, '' );
-			$plural = Utilities::getArrayValue( 'plural', $data, '' );
-			if ( !empty( $label ) || !empty( $plural ) )
-			{
-				$labels[] = array(
-					'table'  => $table_name,
-					'field'  => '',
-					'label'  => $label,
-					'plural' => $plural
-				);
-			}
-			$results['labels'] = $labels;
-			if ( $return_labels_refs )
-			{
-				return $results;
-			}
+            $labels = Utilities::getArrayValue( 'labels', $results, array() );
+            // add table labels
+            $label = Utilities::getArrayValue( 'label', $data, '' );
+            $plural = Utilities::getArrayValue( 'plural', $data, '' );
+            if ( !empty( $label ) || !empty( $plural ) )
+            {
+                $labels[] = array(
+                    'table'  => $table_name,
+                    'field'  => '',
+                    'label'  => $label,
+                    'plural' => $plural
+                );
+            }
+            $results['labels'] = $labels;
+            if ( $return_labels_refs )
+            {
+                return $results;
+            }
 
-			static::createFieldExtras( $db, $results );
+            static::createFieldExtras( $db, $results );
 
-			return array( 'name' => $table_name );
-		}
-		catch ( \Exception $ex )
-		{
-			Log::error( 'Exception creating table: ' . $ex->getMessage() );
-			throw $ex;
-		}
-	}
+            return array( 'name' => $table_name );
+        }
+        catch ( \Exception $ex )
+        {
+            Log::error( 'Exception creating table: ' . $ex->getMessage() );
+            throw $ex;
+        }
+    }
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param string         $table_name
-	 * @param array          $data
-	 * @param bool           $return_labels_refs
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public static function updateTable( $db, $table_name, $data, $return_labels_refs = false )
-	{
-		if ( empty( $table_name ) )
-		{
-			throw new BadRequestException( "Table schema received does not have a valid name." );
-		}
-		// does it already exist
-		if ( !static::doesTableExist( $db, $table_name ) )
-		{
-			throw new BadRequestException( "Update schema called on a table with name '$table_name' that does not exist in the database." );
-		}
+    /**
+     * @param \CDbConnection $db
+     * @param string         $table_name
+     * @param array          $data
+     * @param bool           $return_labels_refs
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public static function updateTable( $db, $table_name, $data, $return_labels_refs = false )
+    {
+        if ( empty( $table_name ) )
+        {
+            throw new BadRequestException( "Table schema received does not have a valid name." );
+        }
+        // does it already exist
+        if ( !static::doesTableExist( $db, $table_name ) )
+        {
+            throw new BadRequestException( "Update schema called on a table with name '$table_name' that does not exist in the database." );
+        }
 
-		// is there a name update
-		$newName = Utilities::getArrayValue( 'new_name', $data, '' );
-		if ( !empty( $newName ) )
-		{
-			// todo change table name, has issue with references
-		}
+        //  Is there a name update
+        $newName = Utilities::getArrayValue( 'new_name', $data, '' );
 
-		// update column types
-		$fields = Utilities::getArrayValue( 'field', $data, array() );
-		if ( empty( $fields ) )
-		{
-			$fields = ( isset( $data['fields']['field'] ) ) ? $data['fields']['field'] : array();
-		}
-		try
-		{
-			$command = $db->createCommand();
-			$labels = array();
-			$references = array();
-			$indexes = array();
-			if ( !empty( $fields ) )
-			{
-				$schema = $db->schema->getTable( $table_name );
-				if ( !$table_name )
-				{
-					throw new NotFoundException( "Table '$table_name' does not exist in the database." );
-				}
-				$results = static::buildTableFields( $table_name, $fields, true, $schema );
-				$columns = Option::get( $results, 'columns', array() );
-				foreach ( $columns as $name => $definition )
-				{
-					$command->reset();
-					$command->addColumn( $table_name, $name, $definition );
-				}
-				$columns = Utilities::getArrayValue( 'alter_columns', $results, array() );
-				foreach ( $columns as $name => $definition )
-				{
-					$command->reset();
-					$command->alterColumn( $table_name, $name, $definition );
-				}
+        if ( !empty( $newName ) )
+        {
+            // todo change table name, has issue with references
+        }
 
-				$labels = Utilities::getArrayValue( 'labels', $results, array() );
-				$references = Utilities::getArrayValue( 'references', $results, array() );
-				$indexes = Utilities::getArrayValue( 'indexes', $results, array() );
-			}
-			// add table labels
-			$label = Utilities::getArrayValue( 'label', $data, '' );
-			$plural = Utilities::getArrayValue( 'plural', $data, '' );
-			if ( !empty( $label ) || !empty( $plural ) )
-			{
-				$labels[] = array(
-					'table'  => $table_name,
-					'field'  => '',
-					'label'  => $label,
-					'plural' => $plural
-				);
-			}
+        // update column types
+        $fields = Utilities::getArrayValue( 'field', $data, array() );
+        if ( empty( $fields ) )
+        {
+            $fields = ( isset( $data['fields']['field'] ) ) ? $data['fields']['field'] : array();
+        }
+        try
+        {
+            $command = $db->createCommand();
+            $labels = array();
+            $references = array();
+            $indexes = array();
+            if ( !empty( $fields ) )
+            {
+                $schema = $db->schema->getTable( $table_name );
+                if ( !$table_name )
+                {
+                    throw new NotFoundException( "Table '$table_name' does not exist in the database." );
+                }
+                $results = static::buildTableFields( $table_name, $fields, true, $schema );
+                $columns = Option::get( $results, 'columns', array() );
+                foreach ( $columns as $name => $definition )
+                {
+                    $command->reset();
+                    $command->addColumn( $table_name, $name, $definition );
+                }
+                $columns = Utilities::getArrayValue( 'alter_columns', $results, array() );
+                foreach ( $columns as $name => $definition )
+                {
+                    $command->reset();
+                    $command->alterColumn( $table_name, $name, $definition );
+                }
 
-			$results = array( 'references' => $references, 'indexes' => $indexes, 'labels' => $labels );
-			if ( $return_labels_refs )
-			{
-				return $results;
-			}
+                $labels = Utilities::getArrayValue( 'labels', $results, array() );
+                $references = Utilities::getArrayValue( 'references', $results, array() );
+                $indexes = Utilities::getArrayValue( 'indexes', $results, array() );
+            }
+            // add table labels
+            $label = Utilities::getArrayValue( 'label', $data, '' );
+            $plural = Utilities::getArrayValue( 'plural', $data, '' );
+            if ( !empty( $label ) || !empty( $plural ) )
+            {
+                $labels[] = array(
+                    'table'  => $table_name,
+                    'field'  => '',
+                    'label'  => $label,
+                    'plural' => $plural
+                );
+            }
 
-			static::createFieldExtras( $db, $results );
+            $results = array( 'references' => $references, 'indexes' => $indexes, 'labels' => $labels );
+            if ( $return_labels_refs )
+            {
+                return $results;
+            }
 
-			return array( 'name' => $table_name );
-		}
-		catch ( \Exception $ex )
-		{
-			Log::error( 'Exception updating table: ' . $ex->getMessage() );
-			throw $ex;
-		}
-	}
+            static::createFieldExtras( $db, $results );
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param array          $tables
-	 * @param bool           $allow_merge
-	 * @param bool           $rollback
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public static function createTables( $db, $tables, $allow_merge = false, $rollback = false )
-	{
-		// refresh the schema so we have the latest
-		$db->schema->refresh();
-		$references = array();
-		$indexes = array();
-		$labels = array();
-		$out = array();
-		$count = 0;
-		$created = array();
+            return array( 'name' => $table_name );
+        }
+        catch ( \Exception $ex )
+        {
+            Log::error( 'Exception updating table: ' . $ex->getMessage() );
+            throw $ex;
+        }
+    }
 
-		if ( isset( $tables[0] ) )
-		{
-			foreach ( $tables as $table )
-			{
-				try
-				{
-					if ( null === ( $name = Option::get( $table, 'name' ) ) )
-					{
-						throw new BadRequestException( "Table schema received does not have a valid name." );
-					}
+    /**
+     * @param \CDbConnection $db
+     * @param array          $tables
+     * @param bool           $allow_merge
+     * @param bool           $rollback
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public static function createTables( $db, $tables, $allow_merge = false, $rollback = false )
+    {
+        //  Refresh the schema so we have the latest
+        $db->schema->refresh();
+        static::_getCachedTables( true );
 
-					//	Does it already exist
-					if ( static::doesTableExist( $db, $name ) )
-					{
-						if ( $allow_merge )
-						{
-							Log::debug( 'Updating table schema: ' . $name );
+        $_created = $_references = $_indexes = $_labels = $_out = array();
+        $_count = 0;
+        $_singleTable = false;
 
-							$results = static::updateTable( $db, $name, $table, true );
-						}
-						else
-						{
-							throw new BadRequestException( "A table with name '$name' already exist in the database." );
-						}
-					}
-					else
-					{
-						Log::debug( 'Creating table: ' . $name );
+        if ( !isset( $tables[0] ) )
+        {
+            $tables = array( $tables );
+            $_singleTable = true;
+        }
 
-						$results = static::createTable( $db, $name, $table, true, false );
+        foreach ( $tables as $_table )
+        {
+            try
+            {
+                if ( null === ( $_tableName = Option::get( $_table, 'name' ) ) )
+                {
+                    throw new InvalidJsonException( 'Table name missing from schema.' );
+                }
 
-						if ( $rollback )
-						{
-							$created[] = $name;
-						}
-					}
-					$labels = array_merge( $labels, Utilities::getArrayValue( 'labels', $results, array() ) );
-					$references = array_merge( $references, Utilities::getArrayValue( 'references', $results, array() ) );
-					$indexes = array_merge( $indexes, Utilities::getArrayValue( 'indexes', $results, array() ) );
-					$out[$count] = array( 'name' => $name );
-				}
-				catch ( \Exception $ex )
-				{
-					if ( $rollback )
-					{
-						// delete any created tables
-						throw $ex;
-					}
-					$out[$count] = array(
-						'error' => array(
-							'message' => $ex->getMessage(),
-							'code'    => $ex->getCode()
-						)
-					);
-				}
-				$count++;
-			}
+                //	Does it already exist
+                if ( static::doesTableExist( $db, $_tableName ) )
+                {
+                    if ( !$allow_merge )
+                    {
+                        throw new BadRequestException( 'A table with name "' . $_tableName . '" already exist in the database.' );
+                    }
 
-			// refresh the schema that we just added
-			$db->schema->refresh();
-			$results = array( 'references' => $references, 'indexes' => $indexes, 'labels' => $labels );
-			static::createFieldExtras( $db, $results );
-		}
-		else
-		{ // single table, references must already be present
-			try
-			{
-				$name = Utilities::getArrayValue( 'name', $tables, '' );
-				if ( empty( $name ) )
-				{
-					throw new BadRequestException( "Table schema received does not have a valid name." );
-				}
-				// does it already exist
-				if ( static::doesTableExist( $db, $name ) )
-				{
-					if ( $allow_merge )
-					{
-						$results = static::updateTable( $db, $name, $tables, false );
-					}
-					else
-					{
-						throw new BadRequestException( "A table with name '$name' already exist in the database." );
-					}
-				}
-				else
-				{
-					$results = static::createTable( $db, $name, $tables, false );
-				}
-				$out[] = $results;
-			}
-			catch ( \Exception $ex )
-			{
-				throw $ex;
-			}
-		}
+                    Log::debug( 'Schema update: ' . $_tableName );
 
-		// refresh the schema that we just added
-		$db->schema->refresh();
+                    $_results = static::updateTable( $db, $_tableName, $_table, true );
+                }
+                else
+                {
+                    Log::debug( 'Creating table: ' . $_tableName );
 
-		return $out;
-	}
+                    $_results = static::createTable( $db, $_tableName, $_table, !$_singleTable, false );
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param string         $table_name
-	 *
-	 * @throws \Exception
-	 */
-	public static function dropTable( $db, $table_name )
-	{
-		if ( empty( $table_name ) )
-		{
-			throw new BadRequestException( "Table name received is empty." );
-		}
-		// does it exist
-		if ( !static::doesTableExist( $db, $table_name ) )
-		{
-			throw new NotFoundException( "A table with name '$table_name' does not exist in the database." );
-		}
-		try
-		{
-			$command = $db->createCommand();
-			$command->dropTable( $table_name );
-			$where = Pii::db()->quoteColumnName( 'table' ) . ' = :tn';
-			static::removeLabels( $where, array( ':tn' => $table_name ) );
+                    if ( !$_singleTable && $rollback )
+                    {
+                        $_created[] = $_tableName;
+                    }
+                }
 
-			// refresh the schema that we just added
-			$db->schema->refresh();
-		}
-		catch ( \Exception $ex )
-		{
-			Log::error( 'Exception dropping table: ' . $ex->getMessage() );
-			throw $ex;
-		}
-	}
+                if ( $_singleTable )
+                {
+                    $_out[] = $_results;
+                }
+                else
+                {
+                    $_labels = array_merge( $_labels, Option::get( $_results, 'labels', array() ) );
+                    $_references = array_merge( $_references, Option::get( $_results, 'references', array() ) );
+                    $_indexes = array_merge( $_indexes, Option::get( $_results, 'indexes', array() ) );
+                    $_out[$_count] = array( 'name' => $_tableName );
+                }
+            }
+            catch ( \Exception $ex )
+            {
+                if ( $rollback || $_singleTable )
+                {
+                    //  Delete any created tables
+                    throw $ex;
+                }
 
-	/**
-	 * @param \CDbConnection $db
-	 * @param string         $table_name
-	 * @param string         $field_name
-	 *
-	 * @throws \Exception
-	 */
-	public static function dropField( $db, $table_name, $field_name )
-	{
-		if ( empty( $table_name ) )
-		{
-			throw new BadRequestException( "Table name received is empty." );
-		}
-		// does it already exist
-		if ( !static::doesTableExist( $db, $table_name ) )
-		{
-			throw new NotFoundException( "A table with name '$table_name' does not exist in the database." );
-		}
-		try
-		{
-			$command = $db->createCommand();
-			$command->dropColumn( $table_name, $field_name );
-			/** @var \CDbConnection $_dbLocal Local connection */
-			$_dbLocal = Pii::db();
-			$where = $_dbLocal->quoteColumnName( 'table' ) . ' = :tn';
-			$where .= ' and ' . $_dbLocal->quoteColumnName( 'field' ) . ' = :fn';
-			static::removeLabels( $where, array( ':tn' => $table_name, ':fn' => $field_name ) );
+                $_out[$_count] = array(
+                    'error' => array(
+                        'message' => $ex->getMessage(),
+                        'code'    => $ex->getCode()
+                    )
+                );
+            }
 
-			// refresh the schema that we just added
-			$db->schema->refresh();
-		}
-		catch ( \Exception $ex )
-		{
-			error_log( $ex->getMessage() );
-			throw $ex;
-		}
-	}
+            $_count++;
+        }
 
-	/**
-	 * @param string | array $where
-	 * @param array          $params
-	 * @param string         $select
-	 *
-	 * @return array
-	 */
-	public static function getLabels( $where, $params = array(), $select = '*' )
-	{
-		$_db = Pii::db();
-		$labels = array();
-		if ( static::doesTableExist( $_db, 'df_sys_schema_extras' ) )
-		{
-			$command = $_db->createCommand();
-			$command->select( $select );
-			$command->from( 'df_sys_schema_extras' );
-			$command->where( $where, $params );
-			$labels = $command->queryAll();
-		}
+        //  Refresh the schema that we just added
+        $db->schema->refresh();
+        static::_getCachedTables( true );
 
-		return $labels;
-	}
+        if ( !$_singleTable )
+        {
+            $_results = array( 'references' => $_references, 'indexes' => $_indexes, 'labels' => $_labels );
 
-	/**
-	 * @param array $labels
-	 *
-	 * @throws \CDbException
-	 * @return void
-	 */
-	public static function setLabels( $labels )
-	{
-		$_db = Pii::db();
+            static::createFieldExtras( $db, $_results );
+        }
 
-		if ( !empty( $labels ) && static::doesTableExist( $_db, 'df_sys_schema_extras' ) )
-		{
-			// todo batch this for speed
-			//@TODO Batched it a bit... still probably slow...
-			$_sql = <<<SQL
+        return $_out;
+    }
+
+    /**
+     * @param \CDbConnection $db
+     * @param string         $table_name
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws StorageException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \Exception
+     */
+    public static function dropTable( $db, $table_name )
+    {
+        if ( empty( $table_name ) )
+        {
+            throw new BadRequestException( "Table name received is empty." );
+        }
+
+        //  Does it exist
+        if ( !static::doesTableExist( $db, $table_name ) )
+        {
+            throw new NotFoundException( 'Table "' . $table_name . '" not found.' );
+        }
+        try
+        {
+            if ( !Sql::execute( 'DROP TABLE :table', array( ':table' => $table_name ), $db->getPdoInstance() ) )
+            {
+                throw new StorageException( 'Error dropping table "' . $table_name . '": ' . print_r( $db->getPdoInstance()->errorInfo(), true ) );
+            }
+
+            $_column = Pii::db()->quoteColumnName( 'table' );
+            static::removeLabels( $_column . ' = :table_name', array( ':table_name' => $table_name ) );
+
+            //  Refresh the schema that we just added
+            $db->schema->refresh();
+            static::_getCachedTables( true );
+        }
+        catch ( \Exception $_ex )
+        {
+            Log::error( 'Exception dropping table: ' . $_ex->getMessage() );
+
+            throw $_ex;
+        }
+    }
+
+    /**
+     * @param \CDbConnection $db
+     * @param string         $table_name
+     * @param string         $field_name
+     *
+     * @throws \Exception
+     */
+    public static function dropField( $db, $table_name, $field_name )
+    {
+        if ( empty( $table_name ) )
+        {
+            throw new BadRequestException( "Table name received is empty." );
+        }
+        // does it already exist
+        if ( !static::doesTableExist( $db, $table_name ) )
+        {
+            throw new NotFoundException( "A table with name '$table_name' does not exist in the database." );
+        }
+        try
+        {
+            $command = $db->createCommand();
+            $command->dropColumn( $table_name, $field_name );
+            /** @var \CDbConnection $_dbLocal Local connection */
+            $_dbLocal = Pii::db();
+            $where = $_dbLocal->quoteColumnName( 'table' ) . ' = :tn';
+            $where .= ' and ' . $_dbLocal->quoteColumnName( 'field' ) . ' = :fn';
+            static::removeLabels( $where, array( ':tn' => $table_name, ':fn' => $field_name ) );
+
+            // refresh the schema that we just added
+            $db->schema->refresh();
+            static::_getCachedTables( true );
+        }
+        catch ( \Exception $ex )
+        {
+            error_log( $ex->getMessage() );
+            throw $ex;
+        }
+    }
+
+    /**
+     * @param string | array $where
+     * @param array          $params
+     * @param string         $select
+     *
+     * @return array
+     */
+    public static function getLabels( $where, $params = array(), $select = '*' )
+    {
+        $_db = Pii::db();
+        $labels = array();
+        if ( static::doesTableExist( $_db, 'df_sys_schema_extras' ) )
+        {
+            $command = $_db->createCommand();
+            $command->select( $select );
+            $command->from( 'df_sys_schema_extras' );
+            $command->where( $where, $params );
+            $labels = $command->queryAll();
+        }
+
+        return $labels;
+    }
+
+    /**
+     * @param array $labels
+     *
+     * @throws \CDbException
+     * @return void
+     */
+    public static function setLabels( $labels )
+    {
+        $_db = Pii::db();
+
+        if ( !empty( $labels ) && static::doesTableExist( $_db, 'df_sys_schema_extras' ) )
+        {
+            // todo batch this for speed
+            //@TODO Batched it a bit... still probably slow...
+            $_sql = <<<SQL
 SELECT
 	id
 FROM
@@ -1955,252 +1963,285 @@ WHERE
 	:field_column = :field_value
 SQL;
 
-			$_inserts = $_updates = array();
+            $_inserts = $_updates = array();
 
-			$_tableColumn = $_db->quoteColumnName( 'table' );
-			$_fieldColumn = $_db->quoteColumnName( 'field' );
+            $_tableColumn = $_db->quoteColumnName( 'table' );
+            $_fieldColumn = $_db->quoteColumnName( 'field' );
 
-			Sql::setConnection( Pii::pdo() );
+            Sql::setConnection( Pii::pdo() );
 
-			foreach ( $labels as $_label )
-			{
-				$_id = Sql::scalar(
-					$_sql,
-					0,
-					array(
-						':table_column' => $_tableColumn,
-						':table_value'  => Option::get( $_label, 'table' ),
-						':field_column' => $_fieldColumn,
-						':field_value'  => Option::get( $_label, 'field' ),
-					)
-				);
+            foreach ( $labels as $_label )
+            {
+                $_id = Sql::scalar(
+                    $_sql,
+                    0,
+                    array(
+                        ':table_column' => $_tableColumn,
+                        ':table_value'  => Option::get( $_label, 'table' ),
+                        ':field_column' => $_fieldColumn,
+                        ':field_value'  => Option::get( $_label, 'field' ),
+                    )
+                );
 
-				if ( empty( $_id ) )
-				{
-					$_inserts[] = $_label;
-				}
-				else
-				{
-					$_updates[$_id] = $_label;
-				}
-			}
+                if ( empty( $_id ) )
+                {
+                    $_inserts[] = $_label;
+                }
+                else
+                {
+                    $_updates[$_id] = $_label;
+                }
+            }
 
-			$_transaction = null;
+            $_transaction = null;
 
-			try
-			{
-				$_transaction = $_db->beginTransaction();
-			}
-			catch ( \Exception $_ex )
-			{
-				//	No transaction support
-				$_transaction = false;
-			}
+            try
+            {
+                $_transaction = $_db->beginTransaction();
+            }
+            catch ( \Exception $_ex )
+            {
+                //	No transaction support
+                $_transaction = false;
+            }
 
-			try
-			{
-				$_command = new \CDbCommand( $_db );
+            try
+            {
+                $_command = new \CDbCommand( $_db );
 
-				if ( !empty( $_inserts ) )
-				{
-					foreach ( $_inserts as $_insert )
-					{
-						$_command->reset();
-						$_command->insert( 'df_sys_schema_extras', $_insert );
-					}
-				}
+                if ( !empty( $_inserts ) )
+                {
+                    foreach ( $_inserts as $_insert )
+                    {
+                        $_command->reset();
+                        $_command->insert( 'df_sys_schema_extras', $_insert );
+                    }
+                }
 
-				if ( !empty( $_updates ) )
-				{
-					foreach ( $_updates as $_id => $_update )
-					{
-						$_command->reset();
-						$_command->update( 'df_sys_schema_extras', $_update, 'id = :id', array( ':id' => $_id ) );
-					}
-				}
+                if ( !empty( $_updates ) )
+                {
+                    foreach ( $_updates as $_id => $_update )
+                    {
+                        $_command->reset();
+                        $_command->update( 'df_sys_schema_extras', $_update, 'id = :id', array( ':id' => $_id ) );
+                    }
+                }
 
-				if ( $_transaction )
-				{
-					$_transaction->commit();
-				}
-			}
-			catch ( \Exception $_ex )
-			{
-				Log::error( 'Exception storing schema updates: ' . $_ex->getMessage() );
+                if ( $_transaction )
+                {
+                    $_transaction->commit();
+                }
+            }
+            catch ( \Exception $_ex )
+            {
+                Log::error( 'Exception storing schema updates: ' . $_ex->getMessage() );
 
-				if ( $_transaction )
-				{
-					$_transaction->rollback();
-				}
-			}
-		}
-	}
+                if ( $_transaction )
+                {
+                    $_transaction->rollback();
+                }
+            }
+        }
+    }
 
-	/**
-	 * @param      $where
-	 * @param null $params
-	 */
-	public static function removeLabels( $where, $params = null )
-	{
-		$_db = Pii::db();
+    /**
+     * @param      $where
+     * @param null $params
+     */
+    public static function removeLabels( $where, $params = null )
+    {
+        $_db = Pii::db();
 
-		if ( static::doesTableExist( $_db, 'df_sys_schema_extras' ) )
-		{
-			$command = $_db->createCommand();
-			$command->delete( 'df_sys_schema_extras', $where, $params );
-		}
-	}
+        if ( static::doesTableExist( $_db, 'df_sys_schema_extras' ) )
+        {
+            $command = $_db->createCommand();
+            $command->delete( 'df_sys_schema_extras', $where, $params );
+        }
+    }
 
-	/**
-	 * @param array $original
-	 *
-	 * @return array
-	 */
-	public static function reformatFieldLabelArray( $original )
-	{
-		$_new = array();
+    /**
+     * @param array $original
+     *
+     * @return array
+     */
+    public static function reformatFieldLabelArray( $original )
+    {
+        $_new = array();
 
-		foreach ( $original as $_label )
-		{
-			$_new[Option::get( $_label, 'field' )] = $_label;
-		}
+        foreach ( $original as $_label )
+        {
+            $_new[Option::get( $_label, 'field' )] = $_label;
+        }
 
-		return $_new;
-	}
+        return $_new;
+    }
 
-	/**
-	 * Returns a generic type suitable for type-casting
-	 *
-	 * @param \CDbColumnSchema $column
-	 *
-	 * @return string
-	 */
-	public static function determineGenericType( $column )
-	{
-		$_simpleType = strstr( $column->dbType, '(', true );
-		$_simpleType = strtolower( $_simpleType ? : $column->dbType );
+    /**
+     * Returns a generic type suitable for type-casting
+     *
+     * @param \CDbColumnSchema $column
+     *
+     * @return string
+     */
+    public static function determineGenericType( $column )
+    {
+        $_simpleType = strstr( $column->dbType, '(', true );
+        $_simpleType = strtolower( $_simpleType ? : $column->dbType );
 
-		switch ( $_simpleType )
-		{
-			case 'bit':
-			case 'bool':
-				return 'boolean';
+        switch ( $_simpleType )
+        {
+            case 'bit':
+            case 'bool':
+                return 'boolean';
 
-			case 'decimal':
-			case 'numeric':
-			case 'number':
-			case 'percent':
-				return 'decimal';
+            case 'decimal':
+            case 'numeric':
+            case 'number':
+            case 'percent':
+                return 'decimal';
 
-			case 'double':
-			case 'float':
-				return 'float';
+            case 'double':
+            case 'float':
+                return 'float';
 
-			case 'tinyint':
-			case 'smallint':
-			case 'mediumint':
-			case 'int':
-			case 'bigint':
-			case 'integer':
-				if ( $column->size == 1 )
-				{
-					return 'boolean';
-				}
+            case 'tinyint':
+            case 'smallint':
+            case 'mediumint':
+            case 'int':
+            case 'bigint':
+            case 'integer':
+                if ( $column->size == 1 )
+                {
+                    return 'boolean';
+                }
 
-				return 'integer';
+                return 'integer';
 
-			case 'binary':
-			case 'varbinary':
-			case 'blob':
-			case 'mediumblob':
-			case 'largeblob':
-				return 'binary';
+            case 'binary':
+            case 'varbinary':
+            case 'blob':
+            case 'mediumblob':
+            case 'largeblob':
+                return 'binary';
 
-			case 'datetimeoffset':
-			case 'timestamp':
-			case 'datetime':
-			case 'datetime2':
-				return 'datetime';
+            case 'datetimeoffset':
+            case 'timestamp':
+            case 'datetime':
+            case 'datetime2':
+                return 'datetime';
 
-			//	String types
-			case 'string':
-			case 'char':
-			case 'text':
-			case 'mediumtext':
-			case 'longtext':
-			case 'varchar':
-			case 'nchar':
-			case 'nvarchar':
-			default:
-				return 'string';
-		}
-	}
+            //	String types
+            case 'string':
+            case 'char':
+            case 'text':
+            case 'mediumtext':
+            case 'longtext':
+            case 'varchar':
+            case 'nchar':
+            case 'nvarchar':
+            default:
+                return 'string';
+        }
+    }
 
-	/**
-	 * @param $type
-	 * @param $db_type
-	 *
-	 * @return int | null
-	 */
-	public static function determinePdoBindingType( $type, $db_type )
-	{
-		switch ( $type )
-		{
-			case 'boolean':
-				return \PDO::PARAM_BOOL;
-				break;
-			case 'integer':
-			case 'id':
-			case 'reference':
-			case 'user_id':
-			case 'user_id_on_create':
-			case 'user_id_on_update':
-				return \PDO::PARAM_INT;
-				break;
-			case 'string':
-				return \PDO::PARAM_STR;
-				break;
-			case 'decimal':
-			case 'float':
-			default:
-				break;
-		}
+    /**
+     * @param $type
+     * @param $db_type
+     *
+     * @return int | null
+     */
+    public static function determinePdoBindingType( $type, $db_type = null )
+    {
+        switch ( $type )
+        {
+            case 'boolean':
+                return \PDO::PARAM_BOOL;
 
-		return null;
-	}
+            case 'integer':
+            case 'id':
+            case 'reference':
+            case 'user_id':
+            case 'user_id_on_create':
+            case 'user_id_on_update':
+                return \PDO::PARAM_INT;
 
-	/**
-	 * @param $type
-	 * @param $db_type
-	 *
-	 * @return null|string
-	 */
-	public static function determinePhpConversionType( $type, $db_type )
-	{
-		switch ( $type )
-		{
-			case 'boolean':
-				return 'bool';
-				break;
-			case 'integer':
-			case 'id':
-			case 'reference':
-			case 'user_id':
-			case 'user_id_on_create':
-			case 'user_id_on_update':
-				return 'int';
-				break;
-			case 'decimal':
-			case 'float':
-			case 'double':
-				return 'float';
-			case 'string':
-				return 'string';
-				break;
-			default:
-				break;
-		}
+            case 'string':
+                return \PDO::PARAM_STR;
 
-		return null;
-	}
+            case 'decimal':
+            case 'float':
+                break;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param $type
+     * @param $db_type
+     *
+     * @return null|string
+     */
+    public static function determinePhpConversionType( $type, $db_type = null )
+    {
+        switch ( $type )
+        {
+            case 'boolean':
+                return 'bool';
+
+            case 'integer':
+            case 'id':
+            case 'reference':
+            case 'user_id':
+            case 'user_id_on_create':
+            case 'user_id_on_update':
+                return 'int';
+
+            case 'decimal':
+            case 'float':
+            case 'double':
+                return 'float';
+
+            case 'string':
+                return 'string';
+        }
+
+        return null;
+    }
+
+    /**
+     * @param bool $reset
+     *
+     * @return array
+     */
+    protected static function _getCachedTables( $reset = false )
+    {
+        if ( $reset )
+        {
+            static::$_tableCache = null;
+        }
+
+        if ( !static::$_tableCache )
+        {
+            static::$_tableCache = Pii::db()->getSchema()->getTableNames();
+
+            //  Make a new column for the search version of the table name
+            foreach ( static::$_tableCache as &$_value )
+            {
+                $_value = Inflector::neutralize( $_value );
+            }
+        }
+
+        return static::$_tableCache;
+    }
+
+    /**
+     * @param string $tableName
+     *
+     * @return array|bool
+     */
+    protected static function _getCachedTable( $tableName )
+    {
+        return Option::get( static::$_tableCache, $tableName, false );
+    }
 }

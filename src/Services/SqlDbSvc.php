@@ -471,7 +471,7 @@ class SqlDbSvc extends BaseDbSvc
                     $_parsed = $this->parseRecord( $_record, $_fieldInfo );
                     if ( 0 >= count( $_parsed ) )
                     {
-                        throw new BadRequestException( "No valid fields were passed in the record [$_key] request." );
+                        throw new BadRequestException( 'No valid fields found in request: ' . print_r( $_record, true ) );
                     }
 
                     if ( !empty( $_ssFilters ) )
