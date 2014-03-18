@@ -153,7 +153,10 @@ class EventDispatcher implements EventDispatcherInterface
 
                                 $this->_scripts[$_eventKey] = $_scriptPath . '/' . $_script;
 
-                                Log::debug( 'Registered script "' . $this->_scripts[$_eventKey] . '" for event "' . $_eventKey . '"' );
+                                if ( static::$_logAllEvents )
+                                {
+                                    Log::debug( 'Registered script "' . $this->_scripts[$_eventKey] . '" for event "' . $_eventKey . '"' );
+                                }
                             }
                         }
                     }
