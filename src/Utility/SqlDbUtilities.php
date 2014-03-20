@@ -48,6 +48,10 @@ class SqlDbUtilities implements SqlDbDriverTypes
     /**
      * @var array
      */
+    protected static $_tableNameCache;
+    /**
+     * @var array
+     */
     protected static $_schemaCache;
 
     //*************************************************************************
@@ -76,7 +80,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
     {
         if ( false !== ( $_table = static::doesTableExist( $db, $name, true ) ) )
         {
-            return Inflector::deneutralize( $_table );
+            return $_table;
         }
 
         throw new NotFoundException( 'Table "' . $name . '" does not exist in the database.' );
@@ -94,13 +98,14 @@ class SqlDbUtilities implements SqlDbDriverTypes
     {
         if ( empty( $name ) )
         {
-            throw new \InvalidArgumentException( 'Table name can not be empty.' );
+            throw new \InvalidArgumentException( 'Table name cannot be empty.' );
         }
 
+        //  Build the lower-cased table array
         $_tables = is_array( $db ) ? $db : static::_getCachedTables();
 
         //	Make search case insensitive
-        if ( false === ( $_key = array_search( Inflector::neutralize( $name ), $_tables ) ) )
+        if ( false === ( $_key = array_search( strtolower( $name ), is_array( $db ) ? $_tables : static::$_tableNameCache ) ) )
         {
             return false;
         }
@@ -2219,29 +2224,20 @@ SQL;
         if ( $reset )
         {
             static::$_tableCache = null;
+            static::$_tableNameCache = null;
         }
 
         if ( !static::$_tableCache )
         {
-            static::$_tableCache = Pii::db()->getSchema()->getTableNames();
+            static::$_tableCache = static::$_tableNameCache = Pii::db()->getSchema()->getTableNames();
 
             //  Make a new column for the search version of the table name
-            foreach ( static::$_tableCache as &$_value )
+            foreach ( static::$_tableNameCache as &$_value )
             {
-                $_value = Inflector::neutralize( $_value );
+                $_value = strtolower( $_value );
             }
         }
 
         return static::$_tableCache;
-    }
-
-    /**
-     * @param string $tableName
-     *
-     * @return array|bool
-     */
-    protected static function _getCachedTable( $tableName )
-    {
-        return Option::get( static::$_tableCache, $tableName, false );
     }
 }
