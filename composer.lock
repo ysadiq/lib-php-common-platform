@@ -265,12 +265,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "8a02457d751369af02e3a8e7c55f121ca248a7e0"
+                "reference": "2646362ac09cb992368404283b5f63d221558d51"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/8a02457d751369af02e3a8e7c55f121ca248a7e0",
-                "reference": "8a02457d751369af02e3a8e7c55f121ca248a7e0",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/2646362ac09cb992368404283b5f63d221558d51",
+                "reference": "2646362ac09cb992368404283b5f63d221558d51",
                 "shasum": ""
             },
             "require": {
@@ -304,7 +304,7 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer"
+                    "role": "Lead Developer, server-side/client-side"
                 },
                 {
                     "name": "Jason Sykes",
@@ -328,7 +328,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-03-19 21:58:40"
+            "time": "2014-03-20 20:49:35"
         },
         {
             "name": "dreamfactory/oasys",
