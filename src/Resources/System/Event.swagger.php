@@ -34,74 +34,8 @@ $_event['apis'] = array(
                 'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'parameters'       => array(
                     array(
-                        'name'          => 'ids',
-                        'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
-                        'allowMultiple' => true,
-                        'type'          => 'string',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
-                        'name'          => 'filter',
-                        'description'   => 'SQL-like filter to limit the records to retrieve.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
-                        'name'          => 'limit',
-                        'description'   => 'Set to limit the filter results.',
-                        'allowMultiple' => false,
-                        'type'          => 'integer',
-                        'format'        => 'int32',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
-                        'name'          => 'order',
-                        'description'   => 'SQL-like order containing field and direction for filter results.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
-                        'name'          => 'offset',
-                        'description'   => 'Set to offset the filter results to a particular record count.',
-                        'allowMultiple' => false,
-                        'type'          => 'integer',
-                        'format'        => 'int32',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
-                        'name'          => 'fields',
-                        'description'   => 'Comma-delimited list of field names to retrieve for each record.',
-                        'allowMultiple' => true,
-                        'type'          => 'string',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
-                        'name'          => 'related',
-                        'description'   => 'Comma-delimited list of related names to retrieve for each record.',
-                        'allowMultiple' => true,
-                        'type'          => 'string',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
-                        'name'          => 'include_count',
-                        'description'   => 'Include the total number of filter results in returned metadata.',
-                        'allowMultiple' => false,
-                        'type'          => 'boolean',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
-                        'name'          => 'include_schema',
-                        'description'   => 'Include the schema of the table queried in returned metadata.',
+                        'name'          => 'all_events',
+                        'description'   => 'If set to true, all events that are available are returned. Otherwise only events that are have registered listeners are returned.',
                         'allowMultiple' => false,
                         'type'          => 'boolean',
                         'paramType'     => 'query',
@@ -122,13 +56,6 @@ $_event['apis'] = array(
                         'code'    => 500,
                     ),
                 ),
-                'notes'            =>
-                    'Use the \'ids\' or \'filter\' parameter to limit records that are returned. ' .
-                    'By default, all records up to the maximum are returned. <br>' .
-                    'Use the \'fields\' and \'related\' parameters to limit properties returned for each record. ' .
-                    'By default, all fields and no relations are returned for each record. <br>' .
-                    'Alternatively, to retrieve by record, a large list of ids, or a complicated filter, ' .
-                    'use the POST request with X-HTTP-METHOD = GET header and post records or ids.',
             ),
             array(
                 'method'           => 'POST',

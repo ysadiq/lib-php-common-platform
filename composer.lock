@@ -265,19 +265,19 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "794fda8f9c526c5050fee7d4ec2084c7150b8383"
+                "reference": "8a02457d751369af02e3a8e7c55f121ca248a7e0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/794fda8f9c526c5050fee7d4ec2084c7150b8383",
-                "reference": "794fda8f9c526c5050fee7d4ec2084c7150b8383",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/8a02457d751369af02e3a8e7c55f121ca248a7e0",
+                "reference": "8a02457d751369af02e3a8e7c55f121ca248a7e0",
                 "shasum": ""
             },
             "require": {
                 "dreamfactory/lib-php-common": "~1.4@stable",
-                "dreamfactory/yii": "=1.1.13",
+                "dreamfactory/yii": "1.1.13",
                 "kisma/kisma": "~0.2@stable",
-                "php": ">=5.3.10"
+                "php": ">=5.3.18"
             },
             "require-dev": {
                 "phpunit/dbunit": "@stable",
@@ -309,17 +309,17 @@
                 {
                     "name": "Jason Sykes",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Developer, client-side"
+                    "role": "Lead Engineer, client-side"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Developer, server-side"
+                    "role": "Lead Developer, server-side/client-side"
                 },
                 {
                     "name": "Todd Appleton",
                     "email": "toddappleton@dreamfactory.com",
-                    "role": "Lead Developer and QA, client-side"
+                    "role": "Lead Engineer, client-side; UX/QA"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Yii Components Library",
@@ -328,7 +328,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-03-11 14:42:37"
+            "time": "2014-03-19 21:58:40"
         },
         {
             "name": "dreamfactory/oasys",
@@ -466,12 +466,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/guzzle3.git",
-                "reference": "8a0a8d72cbff0c58752af0badd6820f5f87c9c84"
+                "reference": "2be45eff422162fea0b1cf5f2f62987409789270"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle3/zipball/8a0a8d72cbff0c58752af0badd6820f5f87c9c84",
-                "reference": "8a0a8d72cbff0c58752af0badd6820f5f87c9c84",
+                "url": "https://api.github.com/repos/guzzle/guzzle3/zipball/2be45eff422162fea0b1cf5f2f62987409789270",
+                "reference": "2be45eff422162fea0b1cf5f2f62987409789270",
                 "shasum": ""
             },
             "require": {
@@ -550,7 +550,7 @@
                 "rest",
                 "web service"
             ],
-            "time": "2014-03-15 23:37:34"
+            "time": "2014-03-19 04:39:36"
         },
         {
             "name": "kisma/kisma",
@@ -558,12 +558,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "254c1aed9de18d87e048f43bceda1aca1d477c94"
+                "reference": "84ac8a3faf6ebab7c123f01ea5c6e25dde663d47"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/254c1aed9de18d87e048f43bceda1aca1d477c94",
-                "reference": "254c1aed9de18d87e048f43bceda1aca1d477c94",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/84ac8a3faf6ebab7c123f01ea5c6e25dde663d47",
+                "reference": "84ac8a3faf6ebab7c123f01ea5c6e25dde663d47",
                 "shasum": ""
             },
             "require": {
@@ -607,7 +607,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-03-15 21:37:30"
+            "time": "2014-03-18 13:47:10"
         },
         {
             "name": "monolog/monolog",

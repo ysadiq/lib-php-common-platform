@@ -19,12 +19,15 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
+use Composer\Json\JsonFile;
 use DreamFactory\Platform\Components\EventProxy;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
+use DreamFactory\Platform\Services\SwaggerManager;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Exceptions\StorageException;
@@ -37,160 +40,210 @@ use Kisma\Core\Utility\Option;
  */
 class Event extends BaseSystemRestResource
 {
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
-	 * @param array                                               $resources
-	 */
-	public function __construct( $consumer, $resources = array() )
-	{
-		$_config = array(
-			'service_name' => 'system',
-			'name'         => 'Event',
-			'api_name'     => 'event',
-			'type'         => 'System',
-			'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
-			'description'  => 'System event manager',
-			'is_active'    => true,
-		);
+    /**
+     * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+     * @param array                                               $resources
+     */
+    public function __construct( $consumer, $resources = array() )
+    {
+        $_config = array(
+            'service_name' => 'system',
+            'name'         => 'Event',
+            'api_name'     => 'event',
+            'type'         => 'System',
+            'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
+            'description'  => 'System event manager',
+            'is_active'    => true,
+        );
 
-		parent::__construct( $consumer, $_config, $resources );
-	}
+        parent::__construct( $consumer, $_config, $resources );
+    }
 
-	/**F
-	 * Post/create event handler
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array|bool
-	 */
-	protected function _handlePost()
-	{
+    /**
+     * Default GET implementation
+     *
+     * @return bool
+     */
+    protected function _handleGet()
+    {
+        if ( empty( $this->_resourceId ) && Pii::requestObject()->getrequest->get( 'all_events' ) )
+        {
+            return $this->_getAllEvents();
+        }
+
+        return parent::_handleGet();
+    }
+
+    /**
+     * Retrieves the event cache file detailing all registered events
+     *
+     * @return array|mixed
+     */
+    protected function _getAllEvents()
+    {
+        //  Make sure the file exists.
+        $_cacheFile = Platform::getSwaggerPath( SwaggerManager::SWAGGER_CACHE_DIR . SwaggerManager::SWAGGER_EVENT_CACHE_FILE, true, true );
+
+        //  If not, rebuild the swagger cache
+        if ( !file_exists( $_cacheFile ) )
+        {
+            SwaggerManager::clearCache();
+
+            //  Still not here? No events then
+            if ( !file_exists( $_cacheFile ) )
+            {
+                return array();
+            }
+        }
+
+        $_json = new JsonFile( $_cacheFile );
+
+        return $_json->read();
+    }
+
+    /**
+     * Post/create event handler
+     *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array|bool
+     */
+    protected function _handlePost()
+    {
         parent::_handlePost();
 
-		$_request = Pii::app()->getRequestObject();
+        $_request = Pii::app()->getRequestObject();
 
-		$_body = @json_decode( $_request->getContent(), true );
-		$_eventName = $_listeners = $_apiKey = $_priority = null;
+        $_body = @json_decode( $_request->getContent(), true );
+        $_eventName = $_listeners = $_apiKey = $_priority = null;
 
-		if ( !empty( $_body ) && JSON_ERROR_NONE == json_last_error() )
-		{
-			$_eventName = Option::get( $_body, 'event_name' );
-			$_listeners = Option::get( $_body, 'listeners' );
-			$_apiKey = Option::get( $_body, 'api_key', 'unknown' );
-			$_priority = Option::get( $_body, 'priority', 0 );
-		}
+        if ( !empty( $_body ) && JSON_ERROR_NONE == json_last_error() )
+        {
+            $_eventName = Option::get( $_body, 'event_name' );
+            $_listeners = Option::get( $_body, 'listeners' );
+            $_apiKey = Option::get( $_body, 'api_key', 'unknown' );
+            $_priority = Option::get( $_body, 'priority', 0 );
+        }
 
-		if ( empty( $_eventName ) || ( !is_array( $_listeners ) || empty( $_listeners ) ) )
-		{
-			throw new BadRequestException( 'You must specify an "event_name", "listeners", and an "api_key" in your POST.' );
-		}
+        if ( empty( $_eventName ) || ( !is_array( $_listeners ) || empty( $_listeners ) ) )
+        {
+            throw new BadRequestException( 'You must specify an "event_name", "listeners", and an "api_key" in your POST.' );
+        }
 
-		$_model = ResourceStore::model( 'event' )->find(
-			array(
-				'condition' => 'event_name = :event_name',
-				'params'    => array(
-					':event_name' => $_eventName
-				)
-			)
-		);
+        /** @var \DreamFactory\Platform\Yii\Models\Event $_model */
+        $_model = ResourceStore::model( 'event' )->find(
+            array(
+                'condition' => 'event_name = :event_name',
+                'params'    => array(
+                    ':event_name' => $_eventName
+                )
+            )
+        );
 
-		if ( null === $_model )
-		{
-			$_model = ResourceStore::model( 'event' );
-			$_model->setIsNewRecord( true );
-			$_model->event_name = $_eventName;
-		}
+        if ( null === $_model )
+        {
+            $_model = ResourceStore::model( 'event' );
+            $_model->setIsNewRecord( true );
+            $_model->event_name = $_eventName;
+        }
 
-		//	Merge listeners
-		$_model->listeners = array_merge( $_model->listeners, $_listeners );
+        //	Merge listeners
+        $_model->listeners = array_merge( $_model->listeners, $_listeners );
 
-		try
-		{
-			if ( !$_model->save() )
-			{
-				throw new StorageException( $_model->getErrorsForLogging() );
-			}
-		}
-		catch ( \Exception $_ex )
-		{
-			//	Log error
-			throw new InternalServerErrorException( $_ex->getMessage() );
-		}
+        try
+        {
+            if ( !$_model->save() )
+            {
+                throw new StorageException( $_model->getErrorsForLogging() );
+            }
+        }
+        catch ( \Exception $_ex )
+        {
+            //	Log error
+            throw new InternalServerErrorException( $_ex->getMessage() );
+        }
 
-		Pii::app()->on( $_eventName, $_listeners, $_priority );
+        Pii::app()->on( $_eventName, $_listeners, $_priority );
 
-		return array( 'record' => $_model->getAttributes() );
-	}
+        return array( 'record' => $_model->getAttributes() );
+    }
 
-	protected function _handleDelete()
-	{
-		$_request = Pii::app()->getRequestObject();
+    /**
+     * @return array
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     */
+    protected function _handleDelete()
+    {
+        $_request = Pii::app()->getRequestObject();
 
-		$_body = @json_decode( $_request->getContent(), true );
-		$_eventName = $_listeners = $_apiKey = $_priority = null;
+        $_body = @json_decode( $_request->getContent(), true );
+        $_eventName = $_listeners = $_apiKey = $_priority = null;
 
-		if ( !empty( $_body ) && JSON_ERROR_NONE == json_last_error() )
-		{
-			$_eventName = Option::get( $_body, 'event_name' );
-			$_listeners = Option::get( $_body, 'listeners' );
-			$_priority = Option::get( $_body, 'priority', 0 );
-		}
+        if ( !empty( $_body ) && JSON_ERROR_NONE == json_last_error() )
+        {
+            $_eventName = Option::get( $_body, 'event_name' );
+            $_listeners = Option::get( $_body, 'listeners' );
+            $_priority = Option::get( $_body, 'priority', 0 );
+        }
 
-		if ( empty( $_eventName ) || ( !is_array( $_listeners ) || empty( $_listeners ) ) || empty( $_apiKey ) )
-		{
-			throw new BadRequestException( 'You must specify an "event_name", "listeners", and an "api_key" in your POST.' );
-		}
+        if ( empty( $_eventName ) || ( !is_array( $_listeners ) || empty( $_listeners ) ) || empty( $_apiKey ) )
+        {
+            throw new BadRequestException( 'You must specify an "event_name", "listeners", and an "api_key" in your POST.' );
+        }
 
-		$_model = ResourceStore::model( 'event' )->find(
-			array(
-				'condition' => 'event_name = :event_name',
-				'params'    => array(
-					':event_name' => $_eventName
-				)
-			)
-		);
+        /** @var \DreamFactory\Platform\Yii\Models\Event $_model */
+        $_model = ResourceStore::model( 'event' )->find(
+            array(
+                'condition' => 'event_name = :event_name',
+                'params'    => array(
+                    ':event_name' => $_eventName
+                )
+            )
+        );
 
-		if ( null === $_model )
-		{
-			throw new NotFoundException( 'The requested event "' . $_eventName . '" could not be found.' );
-		}
+        if ( null === $_model )
+        {
+            throw new NotFoundException( 'The requested event "' . $_eventName . '" could not be found.' );
+        }
 
-		//	Remove requested listener
-		$_storedListeners = $_model->listeners;
+        //	Remove requested listener
+        $_storedListeners = $_model->listeners;
 
-		foreach ( $_storedListeners as $_key => $_listener )
-		{
-			foreach ( $_listeners as $_listenerToRemove )
-			{
-				if ( $_listener == $_listenerToRemove )
-				{
-					unset( $_storedListeners[$_key] );
-				}
-			}
-		}
+        foreach ( $_storedListeners as $_key => $_listener )
+        {
+            foreach ( $_listeners as $_listenerToRemove )
+            {
+                if ( $_listener == $_listenerToRemove )
+                {
+                    unset( $_storedListeners[$_key] );
+                }
+            }
+        }
 
-		$_model->listeners = $_storedListeners;
+        $_model->listeners = $_storedListeners;
 
-		try
-		{
-			if ( !$_model->save() )
-			{
-				throw new StorageException( $_model->getErrorsForLogging() );
-			}
-		}
-		catch ( \Exception $_ex )
-		{
-			//	Log error
-			throw new InternalServerErrorException( $_ex->getMessage() );
-		}
+        try
+        {
+            if ( !$_model->save() )
+            {
+                throw new StorageException( $_model->getErrorsForLogging() );
+            }
+        }
+        catch ( \Exception $_ex )
+        {
+            //	Log error
+            throw new InternalServerErrorException( $_ex->getMessage() );
+        }
 
-		Pii::app()->on( $_eventName, $_listeners, $_priority );
+        Pii::app()->on( $_eventName, $_listeners, $_priority );
 
-		return array( 'record' => $_model->getAttributes() );
-	}
+        return array( 'record' => $_model->getAttributes() );
+    }
 
 }

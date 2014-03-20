@@ -35,52 +35,52 @@ use Kisma\Core\Events\SeedEvent;
  */
 class PlatformEvent extends SeedEvent
 {
-	//**************************************************************************
-	//* Members
-	//**************************************************************************
+    //**************************************************************************
+    //* Members
+    //**************************************************************************
 
-	/**
-	 * @var bool Set to true to stop the default action from being performed
-	 */
-	protected $_defaultPrevented = false;
-	/**
-	 * @var bool Indicates that a listener in the chain has changed the data
-	 */
-	protected $_dirty = false;
+    /**
+     * @var bool Set to true to stop the default action from being performed
+     */
+    protected $_defaultPrevented = false;
+    /**
+     * @var bool Indicates that a listener in the chain has changed the data
+     */
+    protected $_dirty = false;
 
-	//**************************************************************************
-	//* Methods
-	//**************************************************************************
+    //**************************************************************************
+    //* Methods
+    //**************************************************************************
 
-	/**
-	 * @param array $data
-	 */
-	public function __construct( $data = array() )
-	{
-		parent::__construct( $data );
-	}
+    /**
+     * @param array $data
+     */
+    public function __construct( $data = array() )
+    {
+        parent::__construct( $data );
+    }
 
-	/**
-	 * Tells the event manager to prevent the default action from being performed
-	 */
-	public function preventDefault()
-	{
-		$this->_defaultPrevented = true;
-	}
+    /**
+     * Tells the event manager to prevent the default action from being performed
+     */
+    public function preventDefault()
+    {
+        $this->_defaultPrevented = true;
+    }
 
-	/**
-	 * @return bool
-	 */
-	public function isDefaultPrevented()
-	{
-		return $this->_defaultPrevented;
-	}
+    /**
+     * @return bool
+     */
+    public function isDefaultPrevented()
+    {
+        return $this->_defaultPrevented;
+    }
 
-	/**
-	 * @return boolean
-	 */
-	public function isDirty()
-	{
-		return $this->_dirty;
-	}
+    /**
+     * @return boolean
+     */
+    public function isDirty()
+    {
+        return $this->_dirty;
+    }
 }

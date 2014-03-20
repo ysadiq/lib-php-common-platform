@@ -31,6 +31,7 @@ use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 /**
  * RestResponse
@@ -277,7 +278,7 @@ class RestResponse extends HttpResponse
 
         if ( !empty( $as_file ) )
         {
-            $_response->headers->makeDisposition( 'attachment', $as_file );
+            $_response->headers->makeDisposition( ResponseHeaderBag::DISPOSITION_ATTACHMENT, $as_file );
         }
 
         if ( ( !$_response instanceof JsonResponse ) )
