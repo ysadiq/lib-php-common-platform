@@ -21,7 +21,6 @@ namespace DreamFactory\Platform\Resources;
 
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Components\JTablesFormatter;
-use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
@@ -169,7 +168,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         parent::_preProcess();
 
         //	Do validation here
-        $this->checkPermission( PermissionMap::fromMethod( $this->getRequestedAction() ), $this->_resource );
+        $this->checkPermission( $this->getRequestedAction(), $this->_resource );
 
         //	Most requests contain 'returned fields' parameter, all by default
         $this->_extras = array();

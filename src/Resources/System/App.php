@@ -79,15 +79,12 @@ class App extends BaseSystemRestResource
 				$_includeSchema = Option::getBool( $_REQUEST, 'include_schema' );
 				$_includeData = Option::getBool( $_REQUEST, 'include_data' );
 
-				$this->checkPermission( 'admin', $this->_resource );
-
 				return Packager::exportAppAsPackage( $this->_resourceId, $_includeFiles, $_includeServices, $_includeSchema, $_includeData );
 			}
 
 			// Export the sdk amended for this app
 			if ( Option::getBool( $_REQUEST, 'sdk' ) )
 			{
-				$this->checkPermission( 'read', $this->_resource );
 
 				return static::exportAppSDK( $this->_resourceId );
 			}
@@ -106,8 +103,6 @@ class App extends BaseSystemRestResource
 		$_importUrl = FilterInput::request( 'url' );
 		if ( !empty( $_importUrl ) )
 		{
-			$this->checkPermission( 'admin', $this->_resource );
-
 			$_extension = strtolower( pathinfo( $_importUrl, PATHINFO_EXTENSION ) );
 			if ( 'dfpkg' == $_extension )
 			{
@@ -150,8 +145,6 @@ class App extends BaseSystemRestResource
 			{
 				throw new InternalServerErrorException( 'Failed to receive upload of "' . $_files['name'] . '": ' . $_error );
 			}
-
-			$this->checkPermission( 'admin', $this->_resource );
 
 			$_filename = $_files['tmp_name'];
 			$_extension = strtolower( pathinfo( $_files['name'], PATHINFO_EXTENSION ) );

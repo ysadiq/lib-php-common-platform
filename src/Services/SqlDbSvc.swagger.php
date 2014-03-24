@@ -206,8 +206,8 @@ $_base['apis'] = array(
                     'By default, all fields are returned for all resources. ' .
                     'Use the \'related\' parameter to return related records for each resource. ' .
                     'By default, no related records are returned. ' .
-                    'Alternatively, to send the \'ids\' or \'filter\' as posted data ' .
-                    'use the POST request with X-HTTP-METHOD = GET header and post array of ids or a filter.',
+                    'Alternatively, to send the \'ids\' or a \'filter\' with or without \'params\' as posted data ' .
+                    'use the POST request with X-HTTP-METHOD = GET header and post array of ids or a filter with params.',
             ),
             array(
                 'method'           => 'POST',

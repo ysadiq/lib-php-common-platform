@@ -108,7 +108,8 @@ class Config extends BaseSystemRestResource
      */
     public function checkPermission( $operation, $resource = null )
     {
-        if ( 'read' == $operation )
+        // clients use basic GET on global config to startup
+        if ( static::GET == $operation )
         {
             return true;
         }
@@ -134,7 +135,7 @@ class Config extends BaseSystemRestResource
 
             try
             {
-                if ( ResourceStore::checkPermission( 'admin', $this->_serviceName, 'config' ) )
+                if ( Session::isSystemAdmin() )
                 {
                     if ( isset( $_payload['lookup_keys'] ) )
                     {
@@ -171,7 +172,7 @@ class Config extends BaseSystemRestResource
         }
 
         /**
-         * Versioning and upgrade support
+         * Version and upgrade support
          */
         if ( null === ( $_versionInfo = \Kisma::get( 'platform.version_info' ) ) )
         {
@@ -221,7 +222,7 @@ class Config extends BaseSystemRestResource
 
         try
         {
-            if ( ResourceStore::checkPermission( 'admin', $this->_serviceName, 'config' ) )
+            if ( Session::isSystemAdmin() )
             {
                 $this->_response['lookup_keys'] = $this->_getLookupKeys();
             }

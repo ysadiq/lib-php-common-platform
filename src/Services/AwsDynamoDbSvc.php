@@ -167,17 +167,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		return $name;
 	}
 
-	/**
-	 * @param string $table
-	 * @param string $access
-	 *
-	 * @throws \Exception
-	 */
-	protected function validateTableAccess( $table, $access = 'read' )
-	{
-		parent::validateTableAccess( $table, $access );
-	}
-
 	// REST service implementation
 
 	protected function _getTablesAsArray()
@@ -974,6 +963,14 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			throw new InternalServerErrorException( "Failed to merge item in '$table' on DynamoDb Tables service.\n" . $ex->getMessage() );
 		}
 	}
+
+    public function truncateTable( $table )
+    {
+        // todo faster way?
+        $_records = $this->retrieveRecordsByFilter( $table, '', '' );
+
+        return $this->deleteRecords( $table, $_records );
+    }
 
 	/**
 	 * {@inheritdoc}

@@ -126,18 +126,6 @@ class CouchDbSvc extends NoSqlDbSvc
 		return $name;
 	}
 
-	/**
-	 * @param string $table
-	 * @param string $access
-	 *
-	 * @throws \Exception
-	 */
-	protected function validateTableAccess( $table, $access = 'read' )
-	{
-
-		parent::validateTableAccess( $table, $access );
-	}
-
 	protected function _gatherExtrasFromRequest( $post_data = null )
 	{
 		$_extras = parent::_gatherExtrasFromRequest( $post_data );
@@ -679,7 +667,15 @@ class CouchDbSvc extends NoSqlDbSvc
 		return $this->mergeRecord( $table, $_update, $fields, $extras );
 	}
 
-	/**
+    public function truncateTable( $table )
+    {
+        // todo faster way?
+        $_records = $this->retrieveRecordsByFilter( $table, '', '' );
+
+        return $this->deleteRecords( $table, $_records );
+    }
+
+    /**
 	 * {@inheritdoc}
 	 */
 	public function deleteRecords( $table, $records, $fields = null, $extras = array() )

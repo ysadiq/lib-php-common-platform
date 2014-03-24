@@ -64,7 +64,7 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * @var \CDbConnection
      */
-    protected $_sqlConn;
+    protected $_dbConn;
     /**
      * @var boolean
      */
@@ -112,7 +112,7 @@ class SqlDbSvc extends BaseDbSvc
 
         if ( false !== ( $this->_isNative = $native ) )
         {
-            $this->_sqlConn = Pii::db();
+            $this->_dbConn = Pii::db();
         }
         else
         {
@@ -179,14 +179,14 @@ class SqlDbSvc extends BaseDbSvc
                 }
 
                 //	Save
-                $this->_sqlConn = $_db;
+                $this->_dbConn = $_db;
             }
         }
 
-        switch ( $this->_driverType = SqlDbUtilities::getDbDriverType( $this->_sqlConn ) )
+        switch ( $this->_driverType = SqlDbUtilities::getDbDriverType( $this->_dbConn ) )
         {
             case SqlDbUtilities::DRV_MYSQL:
-                $this->_sqlConn->setAttribute( \PDO::ATTR_EMULATE_PREPARES, true );
+                $this->_dbConn->setAttribute( \PDO::ATTR_EMULATE_PREPARES, true );
 //				$this->_sqlConn->setAttribute( 'charset', 'utf8' );
                 break;
 
@@ -199,7 +199,7 @@ class SqlDbSvc extends BaseDbSvc
                 break;
 
             case SqlDbUtilities::DRV_DBLIB:
-                $this->_sqlConn->setAttribute( \PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION );
+                $this->_dbConn->setAttribute( \PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION );
                 break;
         }
 
@@ -207,7 +207,7 @@ class SqlDbSvc extends BaseDbSvc
 
         if ( !empty( $_attributes ) )
         {
-            $this->_sqlConn->setAttributes( $_attributes );
+            $this->_dbConn->setAttributes( $_attributes );
         }
     }
 
@@ -216,12 +216,12 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function __destruct()
     {
-        if ( !$this->_isNative && isset( $this->_sqlConn ) )
+        if ( !$this->_isNative && isset( $this->_dbConn ) )
         {
             try
             {
-                $this->_sqlConn->active = false;
-                $this->_sqlConn = null;
+                $this->_dbConn->active = false;
+                $this->_dbConn = null;
             }
             catch ( \PDOException $ex )
             {
@@ -239,14 +239,14 @@ class SqlDbSvc extends BaseDbSvc
      */
     protected function checkConnection()
     {
-        if ( !isset( $this->_sqlConn ) )
+        if ( !isset( $this->_dbConn ) )
         {
             throw new InternalServerErrorException( 'Database driver has not been initialized.' );
         }
 
         try
         {
-            $this->_sqlConn->setActive( true );
+            $this->_dbConn->setActive( true );
         }
         catch ( \PDOException $ex )
         {
@@ -259,31 +259,8 @@ class SqlDbSvc extends BaseDbSvc
     }
 
     /**
-     * Ensures a table is not a system table
+     * Corrects capitalization, etc. on table names
      *
-     * @param string $table
-     *
-     * @throws NotFoundException
-     */
-    protected static function _checkTable( $table )
-    {
-        static $_length;
-
-        if ( !$_length )
-        {
-            $_length = strlen( SystemManager::SYSTEM_TABLE_PREFIX );
-        }
-
-        foreach ( Option::clean( $table ) as $_table )
-        {
-            if ( 0 === substr_compare( $_table, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
-            {
-                throw new NotFoundException( "Table '$_table' not found." );
-            }
-        }
-    }
-
-    /**
      * @param $name
      *
      * @return string
@@ -292,23 +269,35 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function correctTableName( $name )
     {
-        return SqlDbUtilities::correctTableName( $this->_sqlConn, $name );
+        return SqlDbUtilities::correctTableName( $this->_dbConn, $name );
     }
 
     /**
+     * Ensures a table is not a system table and that you have permission to access it
+     *
      * @param string $table
-     * @param string $access
+     * @param string $action
      *
      * @throws \Exception
      */
-    protected function validateTableAccess( $table, $access = 'read' )
+    protected function validateTableAccess( $table, $action = null )
     {
-        parent::validateTableAccess( $table, $access );
-
         if ( $this->_isNative )
         {
-            static::_checkTable( $table );
+            static $_length;
+
+            if ( !$_length )
+            {
+                $_length = strlen( SystemManager::SYSTEM_TABLE_PREFIX );
+            }
+
+            if ( 0 === substr_compare( $table, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
+            {
+                throw new NotFoundException( "Table '$table' not found." );
+            }
         }
+
+        parent::validateTableAccess( $table, $action );
     }
 
     /**
@@ -391,14 +380,106 @@ class SqlDbSvc extends BaseDbSvc
         }
         try
         {
-            $_result = SqlDbUtilities::describeDatabase( $this->_sqlConn, '', $_exclude );
+            $_result = SqlDbUtilities::describeDatabase( $this->_dbConn, '', $_exclude );
 
-            return array( 'resource' => $_result );
+            $_resources = array();
+            foreach ( $_result as $_table )
+            {
+                try
+                {
+                    if ( null != $_name = Option::get( $_table, 'name' ) )
+                    {
+                        $this->validateTableAccess( $_name );
+                        $_resources[] = $_table;
+                    }
+                }
+                catch ( \Exception $_ex )
+                {
+                    // do not include in listing
+                }
+            }
+
+            return array( 'resource' => $_resources );
         }
         catch ( \Exception $ex )
         {
             throw new InternalServerErrorException( "Error describing database tables.\n{$ex->getMessage()}" );
         }
+    }
+
+    // Handle administrative options, table add, delete, etc
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getTable( $table )
+    {
+        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
+        if ( empty( $_name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        try
+        {
+            return SqlDbUtilities::describeTable( $this->_dbConn, $_name );
+        }
+        catch ( RestException $_ex )
+        {
+            throw $_ex;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Error describing database table '$_name'.\n{$_ex->getMessage()}", $_ex->getCode() );
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function createTables( $tables = array() )
+    {
+        throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function createTable( $properties = array() )
+    {
+        throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateTables( $tables = array() )
+    {
+        throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateTable( $properties = array() )
+    {
+        throw new BadRequestException( 'Creating database schema is only allowed through a SQL DB Schema service.' );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function deleteTables( $tables = array(), $check_empty = false )
+    {
+        throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function deleteTable( $table, $check_empty = false )
+    {
+        throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
     }
 
     //-------- Table Records Operations ---------------------
@@ -454,29 +535,24 @@ class SqlDbSvc extends BaseDbSvc
             }
 
             /** @var \CDbCommand $command */
-            $command = $this->_sqlConn->createCommand();
+            $command = $this->_dbConn->createCommand();
             $_ids = array();
             $_errors = array();
             $_transaction = null;
 
             if ( $_rollback && !$_isSingle )
             {
-                $_transaction = $this->_sqlConn->beginTransaction();
+                $_transaction = $this->_dbConn->beginTransaction();
             }
 
             foreach ( $records as $_key => $_record )
             {
                 try
                 {
-                    $_parsed = $this->parseRecord( $_record, $_fieldInfo );
+                    $_parsed = $this->parseRecord( $_record, $_fieldInfo, $_ssFilters );
                     if ( 0 >= count( $_parsed ) )
                     {
                         throw new BadRequestException( 'No valid fields found in request: ' . print_r( $_record, true ) );
-                    }
-
-                    if ( !empty( $_ssFilters ) )
-                    {
-                        $this->validateRecord( $_record, $_fieldInfo, $_ssFilters );
                     }
 
                     // simple insert request
@@ -495,7 +571,7 @@ class SqlDbSvc extends BaseDbSvc
                             // todo support multi-field keys
                             if ( Option::getBool( $_info, 'auto_increment' ) )
                             {
-                                $_id = (int)$this->_sqlConn->lastInsertID;
+                                $_id = (int)$this->_dbConn->lastInsertID;
                             }
                             else
                             {
@@ -609,35 +685,29 @@ class SqlDbSvc extends BaseDbSvc
             }
 
             /** @var \CDbCommand $command */
-            $command = $this->_sqlConn->createCommand();
+            $command = $this->_dbConn->createCommand();
             $_ids = array();
             $_errors = array();
             $_transaction = null;
 
             if ( $_rollback && !$_isSingle )
             {
-                $_transaction = $this->_sqlConn->beginTransaction();
+                $_transaction = $this->_dbConn->beginTransaction();
             }
 
             foreach ( $records as $_key => $_record )
             {
                 try
                 {
-                    $_id = Option::get( $_record, $_idField );
+                    $_id = Option::get( $_record, $_idField, null, true );
                     if ( empty( $_id ) )
                     {
                         throw new BadRequestException( "Identifying field '$_idField' can not be empty for update record [$_key] request." );
                     }
 
-                    $_record = DataFormat::removeOneFromArray( $_idField, $_record );
-                    $_parsed = $this->parseRecord( $_record, $_fieldInfo, true );
+                    $_parsed = $this->parseRecord( $_record, $_fieldInfo, $_ssFilters, true );
                     if ( !empty( $_parsed ) )
                     {
-                        if ( !empty( $_ssFilters ) )
-                        {
-                            $this->validateRecord( $_record, $_fieldInfo, $_ssFilters );
-                        }
-
                         // simple update request
                         $command->reset();
                         /*$rows = */
@@ -708,13 +778,15 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function updateRecordsByFilter( $table, $record, $filter = null, $extras = array() )
+    public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
         if ( !is_array( $record ) || empty( $record ) )
         {
             throw new BadRequestException( 'There are no fields in the record.' );
         }
+
         $table = $this->correctTableName( $table );
+
         try
         {
             $_fields = Option::get( $extras, 'fields' );
@@ -722,28 +794,21 @@ class SqlDbSvc extends BaseDbSvc
             $fieldInfo = $this->describeTableFields( $table );
 //			$relatedInfo = $this->describeTableRelated( $table );
             // simple update request
-            $parsed = $this->parseRecord( $record, $fieldInfo, true );
+            $parsed = $this->parseRecord( $record, $fieldInfo, $_ssFilters, true );
             if ( empty( $parsed ) )
             {
                 throw new BadRequestException( "No valid field values were passed in the request." );
             }
 
-            if ( !empty( $_ssFilters ) )
-            {
-                $this->validateRecord( $record, $fieldInfo, $_ssFilters );
-            }
-
-            // parse filter
             /** @var \CDbCommand $command */
-            $command = $this->_sqlConn->createCommand();
-            /*$rows = */
+            $command = $this->_dbConn->createCommand();
             $command->update( $table, $parsed, $filter );
             // todo how to update relations here?
 
             $results = array();
             if ( !empty( $_fields ) )
             {
-                $results = $this->retrieveRecordsByFilter( $table, $filter );
+                $results = $this->retrieveRecordsByFilter( $table, $filter, $params );
             }
 
             return $results;
@@ -771,7 +836,6 @@ class SqlDbSvc extends BaseDbSvc
         $_idField = Option::get( $extras, 'id_field' );
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
-        $_isSingle = ( 1 == count( $ids ) );
         if ( !is_array( $ids ) )
         {
             $ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
@@ -781,6 +845,7 @@ class SqlDbSvc extends BaseDbSvc
             throw new BadRequestException( "Identifying values for '$_idField' can not be empty for update request." );
         }
 
+        $_isSingle = ( 1 == count( $ids ) );
         try
         {
             $_fieldInfo = $this->describeTableFields( $table );
@@ -797,24 +862,22 @@ class SqlDbSvc extends BaseDbSvc
 
             $record = DataFormat::removeOneFromArray( $_idField, $record );
             // simple update request
-            $_parsed = $this->parseRecord( $record, $_fieldInfo, true );
+            $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
+            $_filter = "$_idField = :$_idField";
+            $_params = array();
+            $_criteria = $this->_convertFilterStringToNative( $_filter, $_params, $_ssFilters );
 
-            if ( !empty( $parsed ) )
-            {
-                if ( !empty( $_ssFilters ) )
-                {
-                    $this->validateRecord( $record, $_fieldInfo, $_ssFilters );
-                }
-            }
+            $_where = Option::get( $_criteria, 'where' );
+            $_params = Option::get( $_criteria, 'params', array() );
 
             /** @var \CDbCommand $command */
-            $command = $this->_sqlConn->createCommand();
+            $command = $this->_dbConn->createCommand();
             $_errors = array();
             $_transaction = null;
 
             if ( $_rollback && !$_isSingle )
             {
-                $_transaction = $this->_sqlConn->beginTransaction();
+                $_transaction = $this->_dbConn->beginTransaction();
             }
 
             foreach ( $ids as $_key => $_id )
@@ -828,10 +891,11 @@ class SqlDbSvc extends BaseDbSvc
 
                     if ( !empty( $_parsed ) )
                     {
+                        $_params[":$_idField"] = $_id;
                         // simple update request
                         $command->reset();
                         /*$rows = */
-                        $command->update( $table, $_parsed, array( 'in', $_idField, $_id ) );
+                        $command->update( $table, $_parsed, $_where, $_params );
                     }
 
                     if ( !empty( $_relatedInfo ) )
@@ -905,10 +969,10 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function mergeRecordsByFilter( $table, $record, $filter = null, $extras = array() )
+    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
         // currently the same as update here
-        return $this->updateRecordsByFilter( $table, $record, $filter, $extras );
+        return $this->updateRecordsByFilter( $table, $record, $filter, $params, $extras );
     }
 
     /**
@@ -920,6 +984,9 @@ class SqlDbSvc extends BaseDbSvc
         return $this->updateRecordsByIds( $table, $record, $ids, $extras );
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function truncateTable( $table )
     {
         // truncate the table, return success
@@ -927,7 +994,7 @@ class SqlDbSvc extends BaseDbSvc
         try
         {
             /** @var \CDbCommand $command */
-            $command = $this->_sqlConn->createCommand();
+            $command = $this->_dbConn->createCommand();
             $results = array();
             /*$rows = */
             $command->truncateTable( $table );
@@ -985,7 +1052,7 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function deleteRecordsByFilter( $table, $filter, $extras = array() )
+    public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() )
     {
         if ( empty( $filter ) )
         {
@@ -996,37 +1063,25 @@ class SqlDbSvc extends BaseDbSvc
         try
         {
             // get the returnable fields first, then issue delete
-            $results = $this->retrieveRecordsByFilter( $table, $filter, $extras );
+            $results = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
 
-            // build condition, parse filter
-            $_condition = '';
-            $_params = array();
-            if ( !empty( $filter ) )
-            {
-                if ( is_array( $filter ) )
-                {
-                    // todo convert record-based filter to string
-                }
-                else
-                {
-                    $_condition = $filter;
-                }
-            }
-
-            // add server-side filters if necessary
+            // build filter string if necessary, add server-side filters if necessary
             $_ssFilters = Option::get( $extras, 'ss_filters' );
-            $_serverFilter = $this->buildQueryStringFromData( $_ssFilters );
-            if ( !empty( $_serverFilter ) )
+            if ( is_array( $filter ) )
             {
-                $_condition = '(' . $_condition . ') AND (' . $_serverFilter['filter'] . ')';
-                $_params = array_merge( $_params, $_serverFilter['params'] );
+                $_criteria = $this->_convertFilterArrayToNative( $filter, $params, $_ssFilters );
             }
+            else
+            {
+                $_criteria = $this->_convertFilterStringToNative( $filter, $params, $_ssFilters );
+            }
+
+            $_where = Option::get( $_criteria, 'where' );
+            $_params = Option::get( $_criteria, 'params', array() );
 
             /** @var \CDbCommand $command */
-            $command = $this->_sqlConn->createCommand();
-
-            /*$rows = */
-            $command->delete( $table, $_condition, $_params );
+            $command = $this->_dbConn->createCommand();
+            $command->delete( $table, $_where, $_params );
 
             return $results;
         }
@@ -1046,6 +1101,7 @@ class SqlDbSvc extends BaseDbSvc
         $_continue = Option::getBool( $extras, 'continue', false );
         $_idField = Option::get( $extras, 'id_field' );
         $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
         try
         {
             if ( empty( $_idField ) )
@@ -1078,23 +1134,19 @@ class SqlDbSvc extends BaseDbSvc
             $_transaction = null;
             if ( $_rollback && !$_isSingle )
             {
-                $_transaction = $this->_sqlConn->beginTransaction();
+                $_transaction = $this->_dbConn->beginTransaction();
             }
 
-            // build condition, add server-side filters if necessary
-            $_ssFilters = Option::get( $extras, 'ss_filters' );
-            $_serverFilter = $this->buildQueryStringFromData( $_ssFilters );
+            // build filter string if necessary, add server-side filters if necessary
+            $_filter = "$_idField = :$_idField";
+            $_params = array();
+            $_criteria = $this->_convertFilterStringToNative( $_filter, $_params, $_ssFilters );
+
+            $_where = Option::get( $_criteria, 'where' );
+            $_params = Option::get( $_criteria, 'params', array() );
 
             /** @var \CDbCommand $command */
-            $command = $this->_sqlConn->createCommand();
-            $_condition = "$_idField = :$_idField";
-            $_params = array();
-
-            if ( !empty( $_serverFilter ) )
-            {
-                $_condition = '(' . $_condition . ') AND (' . $_serverFilter['filter'] . ')';
-                $_params = array_merge( $_params, $_serverFilter['params'] );
-            }
+            $command = $this->_dbConn->createCommand();
 
             $_errors = array();
             foreach ( $ids as $_key => $_id )
@@ -1108,7 +1160,7 @@ class SqlDbSvc extends BaseDbSvc
 
                     // simple delete request
                     $_params[":$_idField"] = $_id;
-                    $rows = $command->delete( $table, $_condition, $_params );
+                    $rows = $command->delete( $table, $_where, $_params );
                     if ( 0 >= $rows )
                     {
                         throw new NotFoundException( "Record with $_idField '$_id' not found in table '$table'." );
@@ -1171,23 +1223,20 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function retrieveRecordsByFilter( $table, $filter = null, $extras = array() )
+    public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
     {
         $table = $this->correctTableName( $table );
         try
         {
             $_availFields = $this->describeTableFields( $table );
             $_related = Option::get( $extras, 'related' );
-            $_relations = ( empty( $_related ) ? array() : $this->describeTableRelated( $table ) );
+            $_relations = ( empty( $_related ) ) ? array() : $this->describeTableRelated( $table );
 
             $_fields = Option::get( $extras, 'fields' );
             $_result = $this->parseFieldsForSqlSelect( $_fields, $_availFields );
             $_bindings = Option::get( $_result, 'bindings' );
             $_fields = Option::get( $_result, 'fields' );
-            if ( empty( $_fields ) )
-            {
-                $_fields = '*';
-            }
+            $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
             $_order = Option::get( $extras, 'order' );
             $_limit = intval( Option::get( $extras, 'limit', 0 ) );
@@ -1197,28 +1246,32 @@ class SqlDbSvc extends BaseDbSvc
 
             // build filter string if necessary, add server-side filters if necessary
             $_ssFilters = Option::get( $extras, 'ss_filters' );
-            $_serverFilter = $this->buildQueryStringFromData( $_ssFilters );
-
-            $_params = array();
-            if ( !empty( $filter ) && is_array( $filter ) )
+            if ( is_array( $filter ) )
             {
-                // todo convert record-based filter to string
+                $_criteria = $this->_convertFilterArrayToNative( $filter, $params, $_ssFilters );
+            }
+            else
+            {
+                $_criteria = $this->_convertFilterStringToNative( $filter, $params, $_ssFilters );
+            }
+
+            $_where = Option::get( $_criteria, 'where' );
+            $_params = Option::get( $_criteria, 'params', array() );
+            if ( isset( $_params[0] ) )
+            {
+                // using PDO ? prepare statements, requires 1-based array...yeah crazy, I know!
+                $_params = static::one_index_array( $_params );
             }
 
             // use query builder
             /** @var \CDbCommand $_command */
-            $_command = $this->_sqlConn->createCommand();
+            $_command = $this->_dbConn->createCommand();
             $_command->select( $_fields );
             $_command->from( $table );
 
-            if ( !empty( $filter ) )
+            if ( !empty( $_where ) )
             {
-                $_command->where( $filter );
-            }
-            if ( !empty( $_serverFilter ) )
-            {
-                $_command->andWhere( $_serverFilter['filter'] );
-                $_params = array_merge( $_params, $_serverFilter['params'] );
+                $_command->where( $_where );
             }
             if ( !empty( $_params ) )
             {
@@ -1284,15 +1337,11 @@ class SqlDbSvc extends BaseDbSvc
             if ( $_includeCount || $_needLimit )
             {
                 $_command->reset();
-                $_command->select( '(COUNT(*)) as ' . $this->_sqlConn->quoteColumnName( 'count' ) );
+                $_command->select( '(COUNT(*)) as ' . $this->_dbConn->quoteColumnName( 'count' ) );
                 $_command->from( $table );
-                if ( !empty( $filter ) )
+                if ( !empty( $_where ) )
                 {
-                    $_command->where( $filter );
-                }
-                if ( !empty( $_serverFilter ) )
-                {
-                    $_command->andWhere( $_serverFilter['filter'], $_serverFilter['params'] );
+                    $_command->where( $_where );
                 }
                 if ( !empty( $_params ) )
                 {
@@ -1313,7 +1362,7 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( Option::getBool( $extras, 'include_schema', false ) )
             {
-                $_data['meta']['schema'] = SqlDbUtilities::describeTable( $this->_sqlConn, $table );
+                $_data['meta']['schema'] = SqlDbUtilities::describeTable( $this->_dbConn, $table );
             }
 
             return $_data;
@@ -1405,22 +1454,19 @@ class SqlDbSvc extends BaseDbSvc
             $_bindings = Option::get( $_result, 'bindings' );
             $_fields = Option::get( $_result, 'fields' );
 
+            $_filter = array( 'in', $_idField, $ids );
             // build filter string if necessary, add server-side filters if necessary
             $_ssFilters = Option::get( $extras, 'ss_filters' );
-            $_serverFilter = $this->buildQueryStringFromData( $_ssFilters );
-            $_params = array();
+            $_criteria = $this->_convertFilterArrayToNative( $_filter, array(), $_ssFilters );
+            $_where = Option::get( $_criteria, 'where' );
+            $_params = Option::get( $_criteria, 'params', array() );
 
             // use query builder
             /** @var \CDbCommand $_command */
-            $_command = $this->_sqlConn->createCommand();
+            $_command = $this->_dbConn->createCommand();
             $_command->select( $_fields );
             $_command->from( $table );
-            $_command->where( array( 'in', $_idField, $ids ) );
-            if ( !empty( $_serverFilter ) )
-            {
-                $_command->andWhere( $_serverFilter['filter'] );
-                $_params = array_merge( $_params, $_serverFilter['params'] );
-            }
+            $_command->where( $_where );
             if ( !empty( $_params ) )
             {
                 $_command->bindValues( $_params );
@@ -1503,7 +1549,7 @@ class SqlDbSvc extends BaseDbSvc
             return $this->_fieldCache[$name];
         }
 
-        $fields = SqlDbUtilities::describeTableFields( $this->_sqlConn, $name );
+        $fields = SqlDbUtilities::describeTableFields( $this->_dbConn, $name );
         $this->_fieldCache[$name] = $fields;
 
         return $fields;
@@ -1522,7 +1568,7 @@ class SqlDbSvc extends BaseDbSvc
             return $this->_relatedCache[$name];
         }
 
-        $relations = SqlDbUtilities::describeTableRelated( $this->_sqlConn, $name );
+        $relations = SqlDbUtilities::describeTableRelated( $this->_dbConn, $name );
         $relatives = array();
         foreach ( $relations as $relation )
         {
@@ -1535,14 +1581,80 @@ class SqlDbSvc extends BaseDbSvc
     }
 
     /**
-     * @param      $record
-     * @param      $avail_fields
-     * @param bool $for_update
+     * {@inheritdoc}
+     */
+    protected function _convertFilterStringToNative( $filter, $params = array(), $ss_filters = array() )
+    {
+        // todo parse client filter?
+        $_filterString = $filter;
+        // search filter for index substitution
+        $_indexSub = ( false != strpos( $filter, '?' ) );
+        $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true, $_indexSub );
+        if ( !empty( $_serverFilter ) )
+        {
+            if ( empty( $filter ) )
+            {
+                $_filterString = $_serverFilter['filter'];
+            }
+            else
+            {
+                $_filterString = '(' . $_filterString . ') AND (' . $_serverFilter['filter'] . ')';
+            }
+            $params = array_merge( $params, $_serverFilter['params'] );
+        }
+
+        return array( 'where' => $_filterString, 'params' => $params );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function _convertFilterArrayToNative( $filter, $params = array(), $ss_filters = array() )
+    {
+        // todo parse client filter?
+        $_filterArray = $filter;
+        // implode filter into string and search for index substitution
+        $_indexSub = ( false != strpos(
+                implode(
+                    array_map(
+                        function ( $a )
+                        {
+                            return implode( $a, ' ' );
+                        },
+                        $filter
+                    ),
+                    ' '
+                ),
+                '?'
+            ) );
+        $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true, $_indexSub );
+        if ( !empty( $_serverFilter ) )
+        {
+            if ( empty( $filter ) )
+            {
+                $_filterArray = $_serverFilter['filter'];
+            }
+            else
+            {
+                $_filterArray = array( 'AND', $_filterArray, $_serverFilter['filter'] );
+            }
+            $params = array_merge( $params, $_serverFilter['params'] );
+        }
+
+        return array( 'where' => $_filterArray, 'params' => $params );
+    }
+
+    /**
+     * @param array $record
+     * @param array $avail_fields
+     * @param array $filter_info
+     * @param bool  $for_update
+     * @param array $old_record
      *
      * @return array
      * @throws \Exception
      */
-    protected function parseRecord( $record, $avail_fields, $for_update = false )
+    protected function parseRecord( $record, $avail_fields, $filter_info = null, $for_update = false, $old_record = null )
     {
         $parsed = array();
         $record = DataFormat::arrayKeyLower( $record );
@@ -1705,155 +1817,12 @@ class SqlDbSvc extends BaseDbSvc
             }
         }
 
+        if ( !empty( $filter_info ) )
+        {
+            $this->validateRecord( $record, $filter_info, $for_update, $old_record );
+        }
+
         return $parsed;
-    }
-
-    /**
-     * @param array $record
-     * @param array $avail_fields
-     * @param array $filter_info
-     * @param bool  $for_update
-     * @param array $old_record
-     *
-     * @throws \Exception
-     */
-    protected function validateRecord( $record, $avail_fields, $filter_info, $for_update = false, $old_record = null )
-    {
-        $_filters = Option::get( $filter_info, 'filters' );
-
-        if ( empty( $_filters ) || empty( $avail_fields ) || empty( $record ) )
-        {
-            return;
-        }
-
-        $_combiner = Option::get( $filter_info, 'filter_op', 'and' );
-        foreach ( $_filters as $_filter )
-        {
-            $_filterField = Option::get( $_filter, 'name' );
-            $_operator = Option::get( $_filter, 'operator' );
-            $_filterValue = Option::get( $_filter, 'value' );
-            $_filterValue = static::interpretFilterValue( $_filterValue );
-            $_foundInRecord = ( is_array( $record ) ) ? array_key_exists( $_filterField, $record ) : false;
-            $_recordValue = Option::get( $record, $_filterField );
-            $_foundInOld = ( is_array( $old_record ) ) ? array_key_exists( $_filterField, $old_record ) : false;
-            $_oldValue = Option::get( $old_record, $_filterField );
-            $_compareFound = ( $_foundInRecord || ( $for_update && $_foundInOld ) );
-            $_compareValue = $_foundInRecord ? $_recordValue : ( $for_update ? $_oldValue : null );
-
-            $_reason = null;
-            switch ( $_operator )
-            {
-                case '=':
-                    if ( !$_compareFound )
-                    {
-                        // if a value is not set, then "null" matches
-                        if ( isset( $_filterValue ) )
-                        {
-                            $_reason = "Required field not found in request records.";
-                        }
-                    }
-                    else
-                    {
-                        if ( $_filterValue !== $_compareValue )
-                        {
-                            $_reason = "No permission to write to requested fields.";
-                        }
-                    }
-                    break;
-                case '!=':
-                    if ( !$_compareFound )
-                    {
-                        // if a value is not set, then "null" matches
-                        if ( !isset( $_filterValue ) )
-                        {
-                            $_reason = "No permission to write to requested fields.";
-                        }
-                    }
-                    else
-                    {
-                        if ( $_filterValue === $_compareValue )
-                        {
-                            $_reason = "No permission to write to requested fields.";
-                        }
-                    }
-                    break;
-                case '>':
-                    if ( !$_compareFound )
-                    {
-                        $_reason = "No permission to write to requested fields.";
-                    }
-                    else
-                    {
-                        if ( $_compareValue > $_filterValue )
-                        {
-                            $_reason = "No permission to write to requested fields.";
-                        }
-                    }
-                    break;
-                case '<':
-                    if ( !$_compareFound )
-                    {
-                        $_reason = "No permission to write to requested fields.";
-                    }
-                    else
-                    {
-                        if ( $_compareValue < $_filterValue )
-                        {
-                            $_reason = "No permission to write to requested fields.";
-                        }
-                    }
-                    break;
-                case '>=':
-                    if ( !$_compareFound )
-                    {
-                        $_reason = "No permission to write to requested fields.";
-                    }
-                    else
-                    {
-                        if ( $_compareValue >= $_filterValue )
-                        {
-                            $_reason = "No permission to write to requested fields.";
-                        }
-                    }
-                    break;
-                case '<=':
-                    if ( !$_compareFound )
-                    {
-                        $_reason = "No permission to write to requested fields.";
-                    }
-                    else
-                    {
-                        if ( $_compareValue <= $_filterValue )
-                        {
-                            $_reason = "No permission to write to requested fields.";
-                        }
-                    }
-                    break;
-                default:
-                    throw new InternalServerErrorException( 'Invalid server configuration detected.' );
-            }
-
-            switch ( strtolower( $_combiner ) )
-            {
-                case 'and':
-                    if ( !empty( $_reason ) )
-                    {
-                        // any reason is a good reason to bail
-                        throw new ForbiddenException( $_reason );
-                    }
-                    break;
-                case 'or':
-                    if ( empty( $_reason ) )
-                    {
-                        // at least one was successful
-                        return;
-                    }
-                    break;
-                default:
-                    throw new InternalServerErrorException( 'Invalid server configuration detected.' );
-
-            }
-        }
     }
 
     /**
@@ -1953,7 +1922,7 @@ class SqlDbSvc extends BaseDbSvc
         $values = '';
         foreach ( $record as $value )
         {
-            $fieldVal = ( is_null( $value ) ) ? "NULL" : $this->_sqlConn->quoteValue( $value );
+            $fieldVal = ( is_null( $value ) ) ? "NULL" : $this->_dbConn->quoteValue( $value );
             $values .= ( !empty( $values ) ) ? ',' : '';
             $values .= $fieldVal;
         }
@@ -1971,7 +1940,7 @@ class SqlDbSvc extends BaseDbSvc
         $out = '';
         foreach ( $record as $key => $value )
         {
-            $fieldVal = ( is_null( $value ) ) ? "NULL" : $this->_sqlConn->quoteValue( $value );
+            $fieldVal = ( is_null( $value ) ) ? "NULL" : $this->_dbConn->quoteValue( $value );
             $out .= ( !empty( $out ) ) ? ',' : '';
             $out .= "$key = $fieldVal";
         }
@@ -2010,8 +1979,8 @@ class SqlDbSvc extends BaseDbSvc
             $out_as = ( empty( $as ) ? $field : $as );
             if ( $as_quoted_string )
             {
-                $context = $this->_sqlConn->quoteColumnName( $context );
-                $out_as = $this->_sqlConn->quoteColumnName( $out_as );
+                $context = $this->_dbConn->quoteColumnName( $context );
+                $out_as = $this->_dbConn->quoteColumnName( $out_as );
             }
             // find the type
             $field_info = SqlDbUtilities::getFieldFromDescribe( $field, $avail_fields );
@@ -2035,8 +2004,8 @@ class SqlDbSvc extends BaseDbSvc
                         case SqlDbUtilities::DRV_SQLSRV:
                             if ( !$as_quoted_string )
                             {
-                                $context = $this->_sqlConn->quoteColumnName( $context );
-                                $out_as = $this->_sqlConn->quoteColumnName( $out_as );
+                                $context = $this->_dbConn->quoteColumnName( $context );
+                                $out_as = $this->_dbConn->quoteColumnName( $out_as );
                             }
                             $out = "(CONVERT(nvarchar(30), $context, 127)) AS $out_as";
                             break;
@@ -2054,8 +2023,8 @@ class SqlDbSvc extends BaseDbSvc
                         case SqlDbUtilities::DRV_SQLSRV:
                             if ( !$as_quoted_string )
                             {
-                                $context = $this->_sqlConn->quoteColumnName( $context );
-                                $out_as = $this->_sqlConn->quoteColumnName( $out_as );
+                                $context = $this->_dbConn->quoteColumnName( $context );
+                                $out_as = $this->_dbConn->quoteColumnName( $out_as );
                             }
                             $out = "($context.ToString()) AS $out_as";
                             break;
@@ -2107,7 +2076,7 @@ class SqlDbSvc extends BaseDbSvc
             {
                 $out_str .= ', ';
             }
-            $out_str .= $prefix . '.' . $this->_sqlConn->quoteColumnName( $field );
+            $out_str .= $prefix . '.' . $this->_dbConn->quoteColumnName( $field );
         }
 
         return $out_str;
@@ -2177,7 +2146,7 @@ class SqlDbSvc extends BaseDbSvc
         $fieldVal = Option::get( $data, $field );
 
         // do we have permission to do so?
-        $this->validateTableAccess( $relatedTable, 'read' );
+        $this->validateTableAccess( $relatedTable, static::GET );
 
         switch ( $relationType )
         {
@@ -2307,7 +2276,7 @@ class SqlDbSvc extends BaseDbSvc
             {
                 // create new children
                 // do we have permission to do so?
-                $this->validateTableAccess( $many_table, 'create' );
+                $this->validateTableAccess( $many_table, static::POST );
                 $this->createRecords( $many_table, $createMany );
             }
 
@@ -2315,14 +2284,14 @@ class SqlDbSvc extends BaseDbSvc
             {
                 // destroy linked children that can't stand alone - sounds sinister
                 // do we have permission to do so?
-                $this->validateTableAccess( $many_table, 'delete' );
+                $this->validateTableAccess( $many_table, static::DELETE );
                 $this->deleteRecordsByIds( $many_table, $deleteMany );
             }
 
             if ( !empty( $updateMany ) || !empty( $relateMany ) || !empty( $disownMany ) )
             {
                 // do we have permission to do so?
-                $this->validateTableAccess( $many_table, 'update' );
+                $this->validateTableAccess( $many_table, static::PUT );
 
                 if ( !empty( $updateMany ) )
                 {
@@ -2377,7 +2346,7 @@ class SqlDbSvc extends BaseDbSvc
 //			$mapFields = $this->describeTableFields( $map_table );
 //			$pkMapField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $mapFields );
             $relatedExtras = array( 'fields' => $many_field, 'limit' => static::DB_MAX_RECORDS_RETURNED );
-            $maps = $this->retrieveRecordsByFilter( $map_table, "$one_field = '$one_id'", $relatedExtras );
+            $maps = $this->retrieveRecordsByFilter( $map_table, "$one_field = ?", array( $one_id ), $relatedExtras );
             $createMap = array(); // map records to create
             $deleteMap = array(); // ids of 'many' records to delete from maps
             $createMany = array();
@@ -2426,7 +2395,7 @@ class SqlDbSvc extends BaseDbSvc
             if ( !empty( $createMany ) )
             {
                 // do we have permission to do so?
-                $this->validateTableAccess( $many_table, 'create' );
+                $this->validateTableAccess( $many_table, static::POST );
                 // create new many records
                 $results = $this->createRecords( $many_table, $createMany );
                 // create new relationships for results
@@ -2444,21 +2413,21 @@ class SqlDbSvc extends BaseDbSvc
             {
                 // update existing many records
                 // do we have permission to do so?
-                $this->validateTableAccess( $many_table, 'update' );
+                $this->validateTableAccess( $many_table, static::PUT );
                 $this->updateRecords( $many_table, $updateMany );
             }
 
             if ( !empty( $createMap ) )
             {
                 // do we have permission to do so?
-                $this->validateTableAccess( $map_table, 'create' );
+                $this->validateTableAccess( $map_table, static::POST );
                 $this->createRecords( $map_table, $createMap );
             }
 
             if ( !empty( $deleteMap ) )
             {
                 // do we have permission to do so?
-                $this->validateTableAccess( $map_table, 'delete' );
+                $this->validateTableAccess( $map_table, static::DELETE );
                 $mapList = "'" . implode( "','", $deleteMap ) . "'";
                 $filter = "$one_field = '$one_id' && $many_field IN ($mapList)";
                 $this->deleteRecordsByFilter( $map_table, $filter );
@@ -2470,7 +2439,7 @@ class SqlDbSvc extends BaseDbSvc
         }
     }
 
-    protected function buildQueryStringFromData( $filter_info, $use_params = true )
+    protected function buildQueryStringFromData( $filter_info, $use_params = true, $index_substitution = false )
     {
         $_filters = Option::get( $filter_info, 'filters' );
         if ( empty( $_filters ) )
@@ -2500,7 +2469,7 @@ class SqlDbSvc extends BaseDbSvc
             $_value = static::interpretFilterValue( $_value );
             if ( $use_params )
             {
-                $_paramName = ':ssf_' . $_name;
+                $_paramName = ( $index_substitution ) ? '?' : ':ssf_' . $_name;
                 $_params[$_paramName] = $_value;
                 $_value = $_paramName;
             }
@@ -2511,7 +2480,7 @@ class SqlDbSvc extends BaseDbSvc
                     $_value = $_value ? 'true' : 'false';
                 }
 
-                $_value = ( is_null( $_value ) ) ? 'NULL' : $this->_sqlConn->quoteValue( $_value );
+                $_value = ( is_null( $_value ) ) ? 'NULL' : $this->_dbConn->quoteValue( $_value );
             }
 
             $_sql .= "$_name $_op $_value";
@@ -2533,7 +2502,7 @@ class SqlDbSvc extends BaseDbSvc
         try
         {
             /** @var \CDbCommand $command */
-            $command = $this->_sqlConn->createCommand( $query );
+            $command = $this->_dbConn->createCommand( $query );
             $reader = $command->query();
             $dummy = array();
             foreach ( $bindings as $binding )
@@ -2593,7 +2562,7 @@ class SqlDbSvc extends BaseDbSvc
         try
         {
             /** @var \CDbCommand $command */
-            $command = $this->_sqlConn->createCommand( $query );
+            $command = $this->_dbConn->createCommand( $query );
             if ( isset( $params ) && !empty( $params ) )
             {
                 $data = $command->queryAll( true, $params );
@@ -2626,7 +2595,7 @@ class SqlDbSvc extends BaseDbSvc
         try
         {
             /** @var \CDbCommand $command */
-            $command = $this->_sqlConn->createCommand( $query );
+            $command = $this->_dbConn->createCommand( $query );
             if ( isset( $params ) && !empty( $params ) )
             {
                 $data = $command->execute( $params );
@@ -2644,173 +2613,6 @@ class SqlDbSvc extends BaseDbSvc
 
             throw $ex;
         }
-    }
-
-    // Handle administrative options, table add, delete, etc
-
-    /**
-     * Get multiple tables and their properties
-     *
-     * @param array $tables Table names
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function getTables( $tables = array() )
-    {
-        if ( !is_array( $tables ) )
-        {
-            $tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
-        }
-
-        //	Check for system tables and deny
-        $_sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
-        $_length = strlen( $_sysPrefix );
-
-        foreach ( $tables as $_table )
-        {
-            if ( $this->_isNative )
-            {
-                if ( 0 === substr_compare( $_table, $_sysPrefix, 0, $_length ) )
-                {
-                    throw new NotFoundException( "Table '$_table' not found." );
-                }
-            }
-
-            $this->checkPermission( 'read', $_table );
-        }
-
-        try
-        {
-            return SqlDbUtilities::describeTables( $this->_sqlConn, $tables );
-        }
-        catch ( RestException $ex )
-        {
-            throw $ex;
-        }
-        catch ( \Exception $ex )
-        {
-            throw new InternalServerErrorException( "Error describing database tables.\n{$ex->getMessage()}", $ex->getCode() );
-        }
-    }
-
-    /**
-     * Get any properties of the table
-     *
-     * @param string $table Table name
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function getTable( $table )
-    {
-        if ( empty( $table ) )
-        {
-            throw new BadRequestException( 'Table name can not be empty.' );
-        }
-
-        if ( $this->_isNative )
-        {
-            // check for system tables and deny
-            if ( 0 === substr_compare( $table, SystemManager::SYSTEM_TABLE_PREFIX, 0, strlen( SystemManager::SYSTEM_TABLE_PREFIX ) ) )
-            {
-                throw new NotFoundException( "Table '$table' not found." );
-            }
-        }
-
-        $this->checkPermission( 'read', $table );
-
-        try
-        {
-            return SqlDbUtilities::describeTable( $this->_sqlConn, $table );
-        }
-        catch ( RestException $ex )
-        {
-            throw $ex;
-        }
-        catch ( \Exception $ex )
-        {
-            throw new InternalServerErrorException( "Error describing database table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
-        }
-    }
-
-    /**
-     * Create one or more tables by array of table properties
-     *
-     * @param array $tables
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function createTables( $tables = array() )
-    {
-        throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
-    }
-
-    /**
-     * Create a single table by name, additional properties
-     *
-     * @param array $properties
-     *
-     * @throws \Exception
-     */
-    public function createTable( $properties = array() )
-    {
-        throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
-    }
-
-    /**
-     * Update properties related to the table
-     *
-     * @param array $tables
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function updateTables( $tables = array() )
-    {
-        throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
-    }
-
-    /**
-     * Update properties related to the table
-     *
-     * @param array $properties
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function updateTable( $properties = array() )
-    {
-        throw new BadRequestException( 'Creating database schema is only allowed through a SQL DB Schema service.' );
-    }
-
-    /**
-     * Delete multiple tables and all of their contents
-     *
-     * @param array $tables
-     * @param bool  $check_empty
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function deleteTables( $tables = array(), $check_empty = false )
-    {
-        throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
-    }
-
-    /**
-     * Delete the table and all of its contents
-     *
-     * @param string $table
-     * @param bool   $check_empty
-     *
-     * @throws \Exception
-     * @return array
-     */
-    public function deleteTable( $table, $check_empty = false )
-    {
-        throw new BadRequestException( 'Editing database schema is only allowed through a SQL DB Schema service.' );
     }
 
     /**

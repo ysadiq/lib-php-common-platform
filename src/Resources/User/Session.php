@@ -28,6 +28,7 @@ use DreamFactory\Platform\Exceptions\UnauthorizedException;
 use DreamFactory\Platform\Interfaces\PermissionTypes;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
@@ -515,36 +516,6 @@ class Session extends BasePlatformRestResource
     }
 
     /**
-     * @param null $lookup_arrays
-     *
-     * @return array
-     */
-    public static function prepareLookupArray( $lookup_arrays = null )
-    {
-        $_lookup = array();
-
-        if ( !empty( $lookup_arrays ) && is_array( $lookup_arrays ) )
-        {
-            foreach ( $lookup_arrays as $_lookupArray )
-            {
-                // build and override in the following order
-                if ( !empty( $_lookupArray ) && is_array( $_lookupArray ) )
-                {
-                    foreach ( $_lookupArray as $_entry )
-                    {
-                        $_key = Option::get( $_entry, 'name', '' );
-                        $_value = Option::get( $_entry, 'value' );
-
-                        $_lookup[$_key] = $_value;
-                    }
-                }
-            }
-        }
-
-        return $_lookup;
-    }
-
-    /**
      * @return bool
      */
     public static function isSystemAdmin()
@@ -555,15 +526,22 @@ class Session extends BasePlatformRestResource
     }
 
     /**
-     * @param        $request
-     * @param        $service
-     * @param string $component
+     * @param string $app_name
      *
      * @throws ForbiddenException
      * @throws BadRequestException
      */
-    public static function checkSessionPermission( $request, $service, $component = null )
+    public static function checkAppPermission( $app_name = null )
     {
+        if ( empty( $app_name ) )
+        {
+            $app_name = SystemManager::getCurrentAppName();
+            if ( empty( $app_name ) )
+            {
+                throw new BadRequestException( 'A valid application name is required to access services.' );
+            }
+        }
+
         static::_checkCache();
 
         if ( false !== ( $_admin = Option::getBool( static::$_cache, 'is_sys_admin' ) ) )
@@ -578,74 +556,82 @@ class Session extends BasePlatformRestResource
         }
 
         // check if app allowed in role
-        if ( null === ( $_appName = Option::get( $GLOBALS, 'app_name' ) ) )
-        {
-            throw new BadRequestException( 'A valid application name is required to access services.' );
-        }
-
-        $_found = false;
-
         /** @var App $_app */
         foreach ( Option::clean( Option::get( $_roleInfo, 'apps' ) ) as $_app )
         {
-            if ( 0 == strcasecmp( $_appName, Option::get( $_app, 'api_name' ) ) )
+            if ( 0 == strcasecmp( $app_name, Option::get( $_app, 'api_name' ) ) )
             {
-                $_found = true;
-                break;
+                return;
             }
         }
 
-        if ( !$_found )
+        throw new ForbiddenException( "Access to application '$app_name' is not provisioned for this user's role." );
+    }
+
+    /**
+     * @param string $action    - REST API action name
+     * @param string $service   - API name of the service
+     * @param string $component - API component/resource name
+     *
+     * @throws ForbiddenException
+     * @throws BadRequestException
+     */
+    public static function checkServicePermission( $action, $service, $component = null )
+    {
+        static::_checkCache();
+
+        if ( false !== ( $_admin = Option::getBool( static::$_cache, 'is_sys_admin' ) ) )
         {
-            throw new ForbiddenException( "Access to application '$_appName' is not provisioned for this user's role." );
+            return; // no need to check role
+        }
+
+        if ( null === ( $_roleInfo = Option::get( static::$_cache, 'role' ) ) )
+        {
+            // no role assigned, if not sys admin, denied service
+            throw new ForbiddenException( "A valid user role or system administrator is required to access services." );
         }
 
         $_services = Option::clean( Option::get( $_roleInfo, 'services' ) );
 
-        if ( !is_array( $_services ) || empty( $_services ) )
+        $_allAllowed = false;
+        $_allFound = false;
+        $_serviceAllowed = false;
+        $_serviceFound = false;
+
+        foreach ( $_services as $_svcInfo )
         {
-            throw new ForbiddenException( "Access to service '$service' is not provisioned for this user's role." );
-        }
+            $_tempService = Option::get( $_svcInfo, 'service', '' );
+            $_tempAccess = Option::get( $_svcInfo, 'access', '' );
 
-        $allAllowed = false;
-        $allFound = false;
-        $serviceAllowed = false;
-        $serviceFound = false;
-
-        foreach ( $_services as $svcInfo )
-        {
-            $theService = Option::get( $svcInfo, 'service', '' );
-            $theAccess = Option::get( $svcInfo, 'access', '' );
-
-            if ( 0 == strcasecmp( $service, $theService ) )
+            if ( 0 == strcasecmp( $service, $_tempService ) )
             {
-                $theComponent = Option::get( $svcInfo, 'component' );
+                $_tempComponent = Option::get( $_svcInfo, 'component' );
                 if ( !empty( $component ) )
                 {
-                    if ( 0 == strcasecmp( $component, $theComponent ) )
+                    if ( 0 == strcasecmp( $component, $_tempComponent ) )
                     {
-                        if ( !static::isAllowed( $request, $theAccess ) )
+                        if ( !static::isAllowed( $action, $_tempAccess ) )
                         {
-                            $msg = ucfirst( $request ) . " access to component '$component' of service '$service' ";
+                            $msg = ucfirst( $action ) . " access to component '$component' of service '$service' ";
                             $msg .= "is not allowed by this user's role.";
                             throw new ForbiddenException( $msg );
                         }
 
                         return; // component specific found and allowed, so bail
                     }
-                    elseif ( empty( $theComponent ) || ( '*' == $theComponent ) )
+                    elseif ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
                     {
-                        $serviceAllowed = static::isAllowed( $request, $theAccess );
-                        $serviceFound = true;
+                        $_serviceAllowed = static::isAllowed( $action, $_tempAccess );
+                        $_serviceFound = true;
                     }
                 }
                 else
                 {
-                    if ( empty( $theComponent ) || ( '*' == $theComponent ) )
+                    if ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
                     {
-                        if ( !static::isAllowed( $request, $theAccess ) )
+                        if ( !static::isAllowed( $action, $_tempAccess ) )
                         {
-                            $msg = ucfirst( $request ) . " access to service '$service' ";
+                            $msg = ucfirst( $action ) . " access to service '$service' ";
                             $msg .= "is not allowed by this user's role.";
                             throw new ForbiddenException( $msg );
                         }
@@ -654,29 +640,29 @@ class Session extends BasePlatformRestResource
                     }
                 }
             }
-            elseif ( empty( $theService ) || ( '*' == $theService ) )
+            elseif ( empty( $_tempService ) || ( '*' == $_tempService ) )
             {
-                $allAllowed = static::isAllowed( $request, $theAccess );
-                $allFound = true;
+                $_allAllowed = static::isAllowed( $action, $_tempAccess );
+                $_allFound = true;
             }
         }
 
-        if ( $serviceFound )
+        if ( $_serviceFound )
         {
-            if ( $serviceAllowed )
+            if ( $_serviceAllowed )
             {
                 return; // service found and allowed, so bail
             }
         }
-        elseif ( $allFound )
+        elseif ( $_allFound )
         {
-            if ( $allAllowed )
+            if ( $_allAllowed )
             {
                 return; // all services found and allowed, so bail
             }
         }
 
-        $msg = ucfirst( $request ) . " access to ";
+        $msg = ucfirst( $action ) . " access to ";
         if ( !empty( $component ) )
         {
             $msg .= "component '$component' of ";
@@ -770,15 +756,16 @@ class Session extends BasePlatformRestResource
     }
 
     /**
-     * @param $request
-     * @param $access
+     * @param string       $action - requested REST action
+     * @param string|array $access - array of allowed
      *
      * @return bool
      */
-    protected static function isAllowed( $request, $access )
+    protected static function isAllowed( $action, $access )
     {
-        switch ( $request )
+        switch ( $action )
         {
+            case static::GET:
             case 'read':
                 switch ( $access )
                 {
@@ -792,7 +779,23 @@ class Session extends BasePlatformRestResource
                 }
                 break;
 
+            case static::POST:
             case 'create':
+                switch ( $access )
+                {
+                    case 'Write Only':
+                    case 'Read and Write':
+                    case 'Full Access':
+                    case PermissionTypes::WRITE_ONLY:
+                    case PermissionTypes::READ_WRITE:
+                    case PermissionTypes::FULL_ACCESS:
+                        return true;
+                }
+                break;
+
+            case static::PUT:
+            case static::PATCH:
+            case static::MERGE:
             case 'update':
                 switch ( $access )
                 {
@@ -806,6 +809,7 @@ class Session extends BasePlatformRestResource
                 }
                 break;
 
+            case static::DELETE:
             case 'delete':
                 switch ( $access )
                 {

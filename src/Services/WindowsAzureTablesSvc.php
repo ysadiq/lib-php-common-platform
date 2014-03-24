@@ -170,16 +170,6 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param string $access
-	 *
-	 */
-	protected function validateTableAccess( $table, $access = 'read' )
-	{
-		parent::validateTableAccess( $table, $access );
-	}
-
-	/**
 	 * @param null $post_data
 	 *
 	 * @return array
@@ -701,7 +691,18 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 		return $this->updateRecordById( $table, $record, $id, $fields, $extras );
 	}
 
-	/**
+    /**
+     * {@inheritdoc}
+     */
+    public function truncateTable( $table )
+    {
+        // todo faster way?
+        $_records = $this->retrieveRecordsByFilter( $table, '', '' );
+
+        return $this->deleteRecords( $table, $_records );
+    }
+
+    /**
 	 * {@inheritdoc}
 	 */
 	public function deleteRecords( $table, $records, $fields = '', $extras = array() )

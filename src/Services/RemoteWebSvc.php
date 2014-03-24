@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\RestData;
 use Kisma\Core\Utility\Curl;
@@ -191,7 +190,7 @@ class RemoteWebSvc extends BasePlatformRestService
         //	set additional headers
         $this->_curlOptions = $this->addHeaders( $this->_action, $this->_curlOptions );
 
-        $this->checkPermission( PermissionMap::fromMethod( $this->_action ), $this->_apiName );
+        $this->checkPermission( $this->_action, $this->_apiName );
     }
 
     /**

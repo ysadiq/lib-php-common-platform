@@ -1211,13 +1211,11 @@ SQL
                 }
                 catch ( \Exception $_ex )
                 {
-                    throw new InternalServerErrorException(
-                        'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(), array(
-                                                                                                       'data'          => $data,
-                                                                                                       'bogus_row'     => $_row,
-                                                                                                       'unique_column' => $uniqueColumn
-                                                                                                   )
-                    );
+                    throw new InternalServerErrorException( 'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(), array(
+                                                                                                                                           'data'          => $data,
+                                                                                                                                           'bogus_row'     => $_row,
+                                                                                                                                           'unique_column' => $uniqueColumn
+                                                                                                                                       ) );
                 }
             }
         }
@@ -1239,6 +1237,14 @@ SQL
     public static function setConfigPath( $configPath )
     {
         static::$_configPath = $configPath;
+    }
+
+    /**
+     * @param string $app_name
+     */
+    public static function setCurrentAppName( $app_name )
+    {
+        $GLOBALS['app_name'] = $app_name;
     }
 
     /**

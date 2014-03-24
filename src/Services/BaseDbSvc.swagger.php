@@ -187,8 +187,8 @@ $_base['apis'] = array(
                     'Use the \'ids\' or \'filter\' parameter to limit resources that are returned. ' .
                     'Use the \'fields\' parameter to limit properties returned for each resource. ' .
                     'By default, all fields are returned for all resources. ' .
-                    'Alternatively, to send the \'ids\' or \'filter\' as posted data ' .
-                    'use the POST request with X-HTTP-METHOD = GET header and post array of ids or a filter.',
+                    'Alternatively, to send the \'ids\' or a \'filter\' with or without \'params\' as posted data ' .
+                    'use the POST request with X-HTTP-METHOD = GET header and post array of ids or a filter with params.',
             ),
             array(
                 'method'           => 'POST',

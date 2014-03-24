@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
-use DreamFactory\Platform\Enums\PermissionMap;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
@@ -64,9 +63,9 @@ class CustomSettings extends BasePlatformRestResource
 				'description'  => 'Resource for an admin to manage custom system settings.',
 				'is_active'    => true,
 				'verb_aliases' => array(
-					static::Put   => static::Post,
-					static::Patch => static::Post,
-					static::Merge => static::Post,
+					static::PUT   => static::POST,
+					static::PATCH => static::POST,
+					static::MERGE => static::POST,
 				)
 			)
 		);
@@ -86,7 +85,8 @@ class CustomSettings extends BasePlatformRestResource
 	 */
 	public function checkPermission( $operation, $resource = null )
 	{
-		if ( 'read' == $operation )
+        // clients use basic GET on global config to startup
+        if ( static::GET == $operation )
 		{
 			return true;
 		}
@@ -102,7 +102,7 @@ class CustomSettings extends BasePlatformRestResource
 		parent::_preProcess();
 
 		//	Do validation here
-		$this->checkPermission( PermissionMap::fromMethod( $this->getRequestedAction() ), 'config' );
+		$this->checkPermission( $this->getRequestedAction(), 'config' );
 	}
 
 	/**

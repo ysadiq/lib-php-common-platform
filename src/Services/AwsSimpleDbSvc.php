@@ -147,17 +147,6 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		return $name;
 	}
 
-	/**
-	 * @param string $table
-	 * @param string $access
-	 *
-	 * @throws \Exception
-	 */
-	protected function validateTableAccess( $table, $access = 'read' )
-	{
-		parent::validateTableAccess( $table, $access );
-	}
-
 	// REST service implementation
 
 	protected function _getTablesAsArray()
@@ -957,7 +946,15 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 	}
 
-	/**
+    public function truncateTable( $table )
+    {
+        // todo faster way?
+        $_records = $this->retrieveRecordsByFilter( $table, '', '' );
+
+        return $this->deleteRecords( $table, $_records );
+    }
+
+    /**
 	 * @param        $table
 	 * @param        $records
 	 * @param string $fields

@@ -103,6 +103,16 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
     }
 
     /**
+     * @return mixed
+     */
+    protected function _preProcess()
+    {
+        parent::_preProcess();
+
+        $this->checkPermission( $this->_action, $this->_container );
+    }
+
+    /**
      *
      * @return array
      * @throws \Exception
@@ -112,8 +122,6 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
         switch ( $this->_action )
         {
             case static::GET:
-                $this->checkPermission( 'read', $this->_container );
-
                 if ( empty( $this->_container ) )
                 {
                     // no resource
@@ -220,8 +228,6 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 
             case static::POST:
             case static::PUT:
-                $this->checkPermission( 'create', $this->_container );
-
                 if ( empty( $this->_container ) )
                 {
                     // create one or more containers
@@ -388,7 +394,6 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 
             case static::PATCH:
             case static::MERGE:
-                $this->checkPermission( 'update', $this->_container );
                 if ( empty( $this->_container ) )
                 {
                     // nothing?
@@ -428,7 +433,6 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                 break;
 
             case static::DELETE:
-                $this->checkPermission( 'delete', $this->_container );
                 $force = FilterInput::request( 'force', false, FILTER_VALIDATE_BOOLEAN );
                 $content = RestData::getPostedData( false, true );
                 if ( empty( $this->_container ) )

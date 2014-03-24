@@ -931,7 +931,8 @@ class ResourceStore implements UtilityLike
 	 */
 	public static function checkPermission( $operation, $service = null, $resource = null )
 	{
-		Session::checkSessionPermission( $operation, $service ? : static::$_service, $resource );
+        Session::checkAppPermission();
+		Session::checkServicePermission( $operation, $service ? : static::$_service, $resource );
 
 		return true;
 	}

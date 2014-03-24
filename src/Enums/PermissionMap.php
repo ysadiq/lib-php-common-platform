@@ -35,15 +35,15 @@ class PermissionMap extends HttpMethod
 	 * @var array
 	 */
 	protected static $_map = array(
-		self::Get     => 'read',
-		self::Head    => 'read',
-		self::Options => 'read',
-		self::Post    => 'create',
-		self::Copy    => 'create',
-		self::Put     => 'update',
-		self::Patch   => 'update',
-		self::Merge   => 'update',
-		self::Delete  => 'delete',
+		self::GET     => 'read',
+		self::HEAD    => 'read',
+		self::OPTIONS => 'read',
+		self::POST    => 'create',
+		self::COPY    => 'create',
+		self::PUT     => 'update',
+		self::PATCH   => 'update',
+		self::MERGE   => 'update',
+		self::DELETE  => 'delete',
 	);
 
 	//*************************************************************************
