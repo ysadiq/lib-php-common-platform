@@ -29,95 +29,94 @@ use Kisma\Core\Utility\Option;
  */
 class RestData
 {
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * Checks for post data and performs gunzip functions
-	 * Also checks for single uploaded data in a file if requested
-	 * Also converts output to native php array if requested
-	 *
-	 * @param bool $from_file
-	 * @param bool $as_array
-	 *
-	 * @throws \Exception
-	 * @return string|array
-	 */
-	public static function getPostedData( $from_file = false, $as_array = false )
-	{
-		$_request = Pii::app()->getRequestObject();
-		$_data = $_request->getContent();
+    /**
+     * Checks for post data and performs gunzip functions
+     * Also checks for single uploaded data in a file if requested
+     * Also converts output to native php array if requested
+     *
+     * @param bool $from_file
+     * @param bool $as_array
+     *
+     * @throws \Exception
+     * @return string|array
+     */
+    public static function getPostedData( $from_file = false, $as_array = false )
+    {
+        $_request = Pii::app()->getRequestObject();
+        $_data = $_request->getContent();
 
-		if ( empty( $_data ) && $from_file )
-		{
-			if ( !$_request->files->count() )
-			{
-				return null;
-			}
+        if ( empty( $_data ) && $from_file )
+        {
+			$_file = Option::get( $_FILES, 'files' );
+			if ( empty( $_file ) )
+            {
+				return null; // can't find anything to return
+            }
 
-			$_file = $_request->files->all();
-
-			//	Older html multi-part/form-data post, single or multiple files
+            //	Older html multi-part/form-data post, single or multiple files
 			if ( is_array( $_file['error'] ) )
-			{
-				throw new \Exception( 'Only a single file is allowed for import of data.' );
-			}
+            {
+                throw new \Exception( 'Only a single file is allowed for import of data.' );
+            }
 
 			$_name = $_file['name'];
 			if ( UPLOAD_ERR_OK !== ( $_error = $_file['error'] ) )
-			{
-				throw new \Exception( "Failed to receive upload of \"$_name\": $_error" );
-			}
+            {
+                throw new \Exception( "Failed to receive upload of \"$_name\": $_error" );
+            }
 
 			$_contentType = $_file['type'];
-			$_extension = strtolower( pathinfo( $_name, PATHINFO_EXTENSION ) );
+//            $_extension = strtolower( pathinfo( $_name, PATHINFO_EXTENSION ) );
 			$_filename = $_file['tmp_name'];
-			$_data = file_get_contents( $_filename );
-		}
-		else
-		{
-			$_contentType = FilterInput::server( 'CONTENT_TYPE' );
-		}
+            $_data = file_get_contents( $_filename );
+        }
+        else
+        {
+            $_contentType = FilterInput::server( 'CONTENT_TYPE' );
+        }
 
-		if ( !empty( $_data ) && $as_array )
-		{
-			$_postData = $_data;
-			$_data = array();
-			if ( !empty( $_contentType ) )
-			{
-				if ( false !== stripos( $_contentType, '/json' ) )
-				{
-					// application/json
-					$_data = DataFormat::jsonToArray( $_postData );
-				}
-				elseif ( false !== stripos( $_contentType, '/xml' ) )
-				{
-					// application/xml or text/xml
-					$_data = DataFormat::xmlToArray( $_postData );
-				}
-				elseif ( false !== stripos( $_contentType, '/csv' ) )
-				{
-					// text/csv
-					$_data = DataFormat::csvToArray( $_postData );
-					// expected record array format is wrapped with 'record'
-					if ( !empty( $_data ) )
-					{
-						$_data = array( 'record' => $_data );
-					}
-				}
-			}
+        if ( !empty( $_data ) && $as_array )
+        {
+            $_postData = $_data;
+            $_data = array();
+            if ( !empty( $_contentType ) )
+            {
+                if ( false !== stripos( $_contentType, '/json' ) )
+                {
+                    // application/json
+                    $_data = DataFormat::jsonToArray( $_postData );
+                }
+                elseif ( false !== stripos( $_contentType, '/xml' ) )
+                {
+                    // application/xml or text/xml
+                    $_data = DataFormat::xmlToArray( $_postData );
+                }
+                elseif ( false !== stripos( $_contentType, '/csv' ) )
+                {
+                    // text/csv
+                    $_data = DataFormat::csvToArray( $_postData );
+                    // expected record array format is wrapped with 'record'
+                    if ( !empty( $_data ) )
+                    {
+                        $_data = array( 'record' => $_data );
+                    }
+                }
+            }
 
-			if ( empty( $_data ) )
-			{
-				// last chance, assume it is json
-				$_data = DataFormat::jsonToArray( $_postData );
-			}
+            if ( empty( $_data ) )
+            {
+                // last chance, assume it is json
+                $_data = DataFormat::jsonToArray( $_postData );
+            }
 
-			// get rid of xml wrapper if present
-			$_data = Option::get( $_data, 'dfapi', $_data );
-		}
+            // get rid of xml wrapper if present
+            $_data = Option::get( $_data, 'dfapi', $_data );
+        }
 
-		return $_data;
-	}
+        return $_data;
+    }
 }
