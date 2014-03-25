@@ -1862,10 +1862,8 @@ class SqlDbUtilities implements SqlDbDriverTypes
         }
         try
         {
-            if ( !Sql::execute( 'DROP TABLE :table', array( ':table' => $table_name ), $db->getPdoInstance() ) )
-            {
-                throw new StorageException( 'Error dropping table "' . $table_name . '": ' . print_r( $db->getPdoInstance()->errorInfo(), true ) );
-            }
+            $command = $db->createCommand();
+            $command->dropTable( $table_name );
 
             $_column = Pii::db()->quoteColumnName( 'table' );
             static::removeLabels( $_column . ' = :table_name', array( ':table_name' => $table_name ) );
