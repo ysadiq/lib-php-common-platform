@@ -46,32 +46,32 @@ class RestData
      */
     public static function getPostedData( $from_file = false, $as_array = false )
     {
-        $_request = Pii::app()->getRequestObject();
+        $_request = Pii::requestObject();
         $_data = $_request->getContent();
 
         if ( empty( $_data ) && $from_file )
         {
-			$_file = Option::get( $_FILES, 'files' );
-			if ( empty( $_file ) )
+            $_file = Option::get( $_FILES, 'files' );
+            if ( empty( $_file ) )
             {
-				return null; // can't find anything to return
+                return null; // can't find anything to return
             }
 
             //	Older html multi-part/form-data post, single or multiple files
-			if ( is_array( $_file['error'] ) )
+            if ( is_array( $_file['error'] ) )
             {
                 throw new \Exception( 'Only a single file is allowed for import of data.' );
             }
 
-			$_name = $_file['name'];
-			if ( UPLOAD_ERR_OK !== ( $_error = $_file['error'] ) )
+            $_name = $_file['name'];
+            if ( UPLOAD_ERR_OK !== ( $_error = $_file['error'] ) )
             {
                 throw new \Exception( "Failed to receive upload of \"$_name\": $_error" );
             }
 
-			$_contentType = $_file['type'];
+            $_contentType = $_file['type'];
 //            $_extension = strtolower( pathinfo( $_name, PATHINFO_EXTENSION ) );
-			$_filename = $_file['tmp_name'];
+            $_filename = $_file['tmp_name'];
             $_data = file_get_contents( $_filename );
         }
         else

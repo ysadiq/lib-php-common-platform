@@ -101,7 +101,7 @@ class Event extends BaseSystemRestResource
 
 		$_json = json_decode( file_get_contents( $_cacheFile ), true );
 
-		if ( JSON_ERROR_NONE !== json_last_error() )
+		if ( false === $_json || JSON_ERROR_NONE !== json_last_error() )
 		{
 			Log::error( 'Error reading contents of "' . $_cacheFile . '"' );
 

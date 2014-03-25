@@ -79,7 +79,7 @@ class RestResponse extends HttpResponse
 
         /** @var Request $_request */
         /** @noinspection PhpUndefinedMethodInspection */
-        $_request = Pii::app()->getRequestObject();
+        $_request = Pii::requestObject();
 
         if ( empty( $_format ) )
         {
@@ -170,17 +170,11 @@ class RestResponse extends HttpResponse
      *
      * @return bool
      */
-    public static function sendErrors( $exception, $desired_format = 'json', $as_file = null, $exitAfterSend = true )
+    public static function sendErrors( $exception, $desired_format = DataFormats::JSON, $as_file = null, $exitAfterSend = true )
     {
-        if ( 0 == ( $_status = $exception->getCode() ) )
-        {
-            $_status = HttpResponse::InternalServerError;
-        }
-
-        $_errorInfo = array(
-            'message' => htmlentities( $exception->getMessage() ),
-            'code'    => $_status,
-        );
+        //  Default to internal error
+        $_errorInfo = array();
+        $_status = HttpResponse::InternalServerError;
 
         if ( $exception instanceof RestException )
         {
@@ -195,6 +189,15 @@ class RestResponse extends HttpResponse
         {
             $_errorInfo['location'] = $exception->getRedirectUri();
         }
+        elseif ( 0 == ( $_status = $exception->getCode() ) )
+        {
+            $_status = HttpResponse::InternalServerError;
+        }
+
+        $_errorInfo = array(
+            'message' => htmlentities( $exception->getMessage() ),
+            'code'    => $_status,
+        );
 
         $_result = array(
             'error' => array( $_errorInfo )
@@ -216,7 +219,7 @@ class RestResponse extends HttpResponse
      */
     public static function sendResults( $result, $code = RestResponse::Ok, $format = 'json', $as_file = null, $exitAfterSend = true )
     {
-        $_response = Pii::app()->getResponseObject();
+        $_response = Pii::responseObject();
         $_response->setStatusCode( $code );
         $_response->headers->set( 'P3P', 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"' );
 
@@ -241,7 +244,7 @@ class RestResponse extends HttpResponse
 
                     if ( 'cli' !== PHP_SAPI )
                     {
-                        Pii::app()->setResponseObject( $_response );
+                        Pii::responseObject( $_response );
                     }
 
                     $_content = false;
