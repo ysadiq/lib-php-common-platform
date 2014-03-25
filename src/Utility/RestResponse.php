@@ -164,7 +164,7 @@ class RestResponse extends HttpResponse
 
     /**
      * @param \Exception $exception
-     * @param string     $desired_format
+     * @param int|string $desired_format
      * @param string     $as_file
      * @param bool       $exitAfterSend
      *
@@ -181,6 +181,19 @@ class RestResponse extends HttpResponse
             $_status = $exception->getStatusCode();
             $_errorInfo['context'] = $exception->getContext();
         }
+        elseif ( $exception instanceof \CDbException )
+        {
+            $_pdoInfo = $exception->errorInfo;
+
+            $_errorInfo['error_detail'] = array(
+                'SQLSTATE'             => Option::get( $_pdoInfo, 0 ),
+                'driver_name'          => Pii::pdo()->getAttribute( \PDO::ATTR_DRIVER_NAME ),
+                'driver_error_code'    => Option::get( $_pdoInfo, 1 ),
+                'driver_error_message' => Option::get( $_pdoInfo, 2 ),
+            );
+
+            $_status = HttpResponse::InternalServerError;
+        }
         elseif ( $exception instanceOf \CHttpException )
         {
             $_status = $exception->statusCode;
@@ -194,10 +207,8 @@ class RestResponse extends HttpResponse
             $_status = HttpResponse::InternalServerError;
         }
 
-        $_errorInfo = array(
-            'message' => htmlentities( $exception->getMessage() ),
-            'code'    => $_status,
-        );
+        $_errorInfo['message'] = htmlentities( $exception->getMessage() );
+        $_errorInfo['code'] = $_status;
 
         $_result = array(
             'error' => array( $_errorInfo )
