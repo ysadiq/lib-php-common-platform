@@ -191,11 +191,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 *
-	 * @param array $tables
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function getTables( $tables = array() )
 	{
@@ -208,12 +204,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * Get any properties related to the table
-	 *
-	 * @param string $table Table name
-	 *
-	 * @return array
-	 * @throws \Exception
+	 * {@inheritdoc}
 	 */
 	public function getTable( $table )
 	{
@@ -246,10 +237,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param array $properties
-	 *
-	 * @return array
-	 * @throws \Exception
+	 * {@inheritdoc}
 	 */
 	public function createTable( $properties = array() )
 	{
@@ -266,7 +254,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 				array( 'DomainName' => $_name ),
 				$properties
 			);
-			$_result = $this->_dbConn->createDomain( array( 'DomainName' => $_name ) );
+			$_result = $this->_dbConn->createDomain( $_properties );
 			$_out = array( 'name' => $_name, 'DomainName' => $_name );
 
 			return array_merge( $_out, $_result->toArray() );
@@ -278,12 +266,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * Get any properties related to the table
-	 *
-	 * @param array $properties
-	 *
-	 * @return array
-	 * @throws \Exception
+	 * {@inheritdoc}
 	 */
 	public function updateTable( $properties = array() )
 	{
@@ -297,13 +280,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * Delete the table and all of its contents
-	 *
-	 * @param string $table
-	 * @param bool   $check_empty
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
 	public function deleteTable( $table, $check_empty = false )
 	{
@@ -337,15 +314,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	// records is an array of field arrays
 
 	/**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function createRecords( $table, $records, $fields = null, $extras = array() )
+	public function createRecords( $table, $records, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -358,6 +329,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_idField = Option::get( $extras, 'id_field' );
 		if ( empty( $_idField ) )
 		{
@@ -390,7 +362,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 				)
 			);
 
-			return static::cleanRecords( $records, $fields, $_idField );
+			return static::cleanRecords( $records, $_fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -399,16 +371,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @throws BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function createRecord( $table, $record, $fields = null, $extras = array() )
+	public function createRecord( $table, $record, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -416,6 +381,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_idField = Option::get( $extras, 'id_field' );
 		if ( empty( $_idField ) )
 		{
@@ -438,7 +404,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 					'Attributes' => $this->_formatAttributes( $record )
 				)
 			);
-			$_out = array_merge( static::cleanRecord( $record, $fields ), array( $_idField => $_id ) );
+			$_out = array_merge( static::cleanRecord( $record, $_fields ), array( $_idField => $_id ) );
 
 			return $_out;
 		}
@@ -449,15 +415,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $records
-	 * @param mixed  $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function updateRecords( $table, $records, $fields = null, $extras = array() )
+	public function updateRecords( $table, $records, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -470,6 +430,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_idField = Option::get( $extras, 'id_field' );
 		if ( empty( $_idField ) )
 		{
@@ -501,7 +462,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 				)
 			);
 
-			return static::cleanRecords( $records, $fields, $_idField );
+			return static::cleanRecords( $records, $_fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -510,16 +471,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @throws BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function updateRecord( $table, $record, $fields = null, $extras = array() )
+	public function updateRecord( $table, $record, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -527,6 +481,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_idField = Option::get( $extras, 'id_field' );
 		if ( empty( $_idField ) )
 		{
@@ -548,7 +503,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 					'Attributes' => $this->_formatAttributes( $record, true ),
 				)
 			);
-			$_out = array_merge( static::cleanRecord( $record, $fields ), array( $_idField => $_id ) );
+			$_out = array_merge( static::cleanRecord( $record, $_fields ), array( $_idField => $_id ) );
 
 			return $_out;
 		}
@@ -559,16 +514,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function updateRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
+	public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -576,26 +524,19 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		// slow, but workable for now, maybe faster than updating individuals
-		$_records = $this->retrieveRecordsByFilter( $table, $filter, '', $extras );
+		$_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
 		foreach ( $_records as $_ndx => $_record )
 		{
 			$_records[$_ndx] = array_merge( $_record, $record );
 		}
 
-		return $this->updateRecords( $table, $_records, $fields, $extras );
+		return $this->updateRecords( $table, $_records, $extras );
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $record
-	 * @param string $id_list
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function updateRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
+	public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -612,6 +553,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 			$id_list = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
 		}
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_idField = Option::get( $extras, 'id_field' );
 		if ( empty( $_idField ) )
 		{
@@ -628,7 +570,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 				'Name'       => $_id,
 				'Attributes' => $this->_formatAttributes( $record, true )
 			);
-			$_out[] = array_merge( static::cleanRecord( $record, $fields ), array( $_idField => $_id ) );
+			$_out[] = array_merge( static::cleanRecord( $record, $_fields ), array( $_idField => $_id ) );
 		}
 
 		try
@@ -649,16 +591,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function updateRecordById( $table, $record, $id, $fields = null, $extras = array() )
+	public function updateRecordById( $table, $record, $id, $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
@@ -670,6 +605,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_idField = Option::get( $extras, 'id_field' );
 		if ( empty( $_idField ) )
 		{
@@ -687,7 +623,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 					'Attributes' => $this->_formatAttributes( $record, true )
 				)
 			);
-			$_out = array_merge( static::cleanRecord( $record, $fields ), array( $_idField => $id ) );
+			$_out = array_merge( static::cleanRecord( $record, $_fields ), array( $_idField => $id ) );
 
 			return $_out;
 		}
@@ -698,15 +634,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $records
-	 * @param mixed  $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function mergeRecords( $table, $records, $fields = null, $extras = array() )
+	public function mergeRecords( $table, $records, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -719,6 +649,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_idField = Option::get( $extras, 'id_field' );
 		if ( empty( $_idField ) )
 		{
@@ -750,7 +681,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 				)
 			);
 
-			return static::cleanRecords( $records, $fields, $_idField );
+			return static::cleanRecords( $records, $_fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -759,16 +690,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @throws BadRequestException
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function mergeRecord( $table, $record, $fields = null, $extras = array() )
+	public function mergeRecord( $table, $record, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -776,6 +700,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_idField = Option::get( $extras, 'id_field' );
 		if ( empty( $_idField ) )
 		{
@@ -797,7 +722,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 					'Attributes' => $this->_formatAttributes( $record, true ),
 				)
 			);
-			$_out = array_merge( static::cleanRecord( $record, $fields ), array( $_idField => $_id ) );
+			$_out = array_merge( static::cleanRecord( $record, $_fields ), array( $_idField => $_id ) );
 
 			return $_out;
 		}
@@ -808,43 +733,30 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function mergeRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
+	public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
 			throw new BadRequestException( 'There are no record fields in the request.' );
 		}
 
-		// slow, but workable for now, maybe faster than updating individuals
-		$_records = $this->retrieveRecordsByFilter( $table, $filter, '', $extras );
+		// slow, but workable for now, maybe faster than merging individuals
+        $_retrieveExtras = array( 'fields' => '*' );
+		$_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $_retrieveExtras );
 		foreach ( $_records as $_ndx => $_record )
 		{
 			$_records[$_ndx] = array_merge( $_record, $record );
 		}
 
-		return $this->updateRecords( $table, $_records, $fields, $extras );
+		return $this->updateRecords( $table, $_records, $extras );
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $record
-	 * @param string $id_list
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function mergeRecordsByIds( $table, $record, $id_list, $fields = null, $extras = array() )
+	public function mergeRecordsByIds( $table, $record, $ids, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -861,6 +773,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 			$id_list = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
 		}
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_idField = Option::get( $extras, 'id_field' );
 		if ( empty( $_idField ) )
 		{
@@ -877,7 +790,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 				'Name'       => $_id,
 				'Attributes' => $this->_formatAttributes( $record, true )
 			);
-			$_out[] = array_merge( static::cleanRecord( $record, $fields ), array( $_idField => $_id ) );
+			$_out[] = array_merge( static::cleanRecord( $record, $_fields ), array( $_idField => $_id ) );
 		}
 
 		try
@@ -898,16 +811,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function mergeRecordById( $table, $record, $id, $fields = null, $extras = array() )
+	public function mergeRecordById( $table, $record, $id, $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
@@ -919,6 +825,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_idField = Option::get( $extras, 'id_field' );
 		if ( empty( $_idField ) )
 		{
@@ -936,7 +843,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 					'Attributes' => $this->_formatAttributes( $record, true )
 				)
 			);
-			$_out = array_merge( static::cleanRecord( $record, $fields ), array( $_idField => $id ) );
+			$_out = array_merge( static::cleanRecord( $record, $_fields ), array( $_idField => $id ) );
 
 			return $_out;
 		}
@@ -946,29 +853,27 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 	}
 
+    /**
+     * {@inheritdoc}
+     */
     public function truncateTable( $table )
     {
         // todo faster way?
-        $_records = $this->retrieveRecordsByFilter( $table, '', '' );
+        $_records = $this->retrieveRecordsByFilter( $table, '' );
 
         return $this->deleteRecords( $table, $_records );
     }
 
     /**
-	 * @param        $table
-	 * @param        $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array|string
+	 * {@inheritdoc}
 	 */
-	public function deleteRecords( $table, $records, $fields = null, $extras = array() )
+	public function deleteRecords( $table, $records, $extras = array() )
 	{
 		if ( !is_array( $records ) || empty( $records ) )
 		{
 			throw new BadRequestException( 'There are no record sets in the request.' );
 		}
+
 		if ( !isset( $records[0] ) )
 		{
 			// single record
@@ -976,6 +881,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_idField = Option::get( $extras, 'id_field' );
 		if ( empty( $_idField ) )
 		{
@@ -983,9 +889,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		$_out = array();
-		if ( static::_requireMoreFields( $fields, $_idField ) )
+		if ( static::_requireMoreFields( $_fields, $_idField ) )
 		{
-			$_out = $this->retrieveRecords( $table, $records, $fields, $extras );
+			$_out = $this->retrieveRecords( $table, $records, $_fields, $extras );
 		}
 		$_items = array();
 		$_outIds = array();
@@ -1021,15 +927,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function deleteRecord( $table, $record, $fields = null, $extras = array() )
+	public function deleteRecord( $table, $record, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -1037,6 +937,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_idField = Option::get( $extras, 'id_field' );
 		if ( empty( $_idField ) )
 		{
@@ -1050,9 +951,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		$_out = array();
-		if ( static::_requireMoreFields( $fields, $_idField ) )
+		if ( static::_requireMoreFields( $_fields, $_idField ) )
 		{
-			$_out = $this->retrieveRecordById( $table, $_id, $fields, $extras );
+			$_out = $this->retrieveRecordById( $table, $_id, $_fields, $extras );
 		}
 		$_scanProperties = array(
 			'DomainName' => $table,
@@ -1072,47 +973,36 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function deleteRecordsByFilter( $table, $filter, $fields = null, $extras = array() )
+	public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() )
 	{
 		if ( empty( $filter ) )
 		{
 			throw new BadRequestException( "Filter for delete request can not be empty." );
 		}
 
-		$_records = $this->retrieveRecordsByFilter( $table, $filter, '', $extras );
+		$_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
 
-		return $this->deleteRecords( $table, $_records, $fields, $extras );
+		return $this->deleteRecords( $table, $_records, $extras );
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $id_list
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function deleteRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
+	public function deleteRecordsByIds( $table, $ids, $extras = array() )
 	{
-		if ( empty( $id_list ) )
+		if ( empty( $ids ) )
 		{
 			throw new BadRequestException( "Identifying values for id_field can not be empty for update request." );
 		}
 
-		if ( !is_array( $id_list ) )
+		if ( !is_array( $ids ) )
 		{
-			$id_list = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
+			$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
 		}
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_idField = Option::get( $extras, 'id_field' );
 		if ( empty( $_idField ) )
 		{
@@ -1120,13 +1010,13 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		$_out = array();
-		if ( static::_requireMoreFields( $fields, $_idField ) )
+		if ( static::_requireMoreFields( $_fields, $_idField ) )
 		{
-			$_out = $this->retrieveRecordsByIds( $table, $id_list, $fields, $extras );
+			$_out = $this->retrieveRecordsByIds( $table, $ids, $_fields, $extras );
 		}
 		$_items = array();
 		$_outIds = array();
-		foreach ( $id_list as $_id )
+		foreach ( $ids as $_id )
 		{
 			// Add operation to list of batch operations.
 			$_items[] = array(
@@ -1153,15 +1043,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function deleteRecordById( $table, $id, $fields = null, $extras = array() )
+	public function deleteRecordById( $table, $id, $extras = array() )
 	{
 		if ( empty( $id ) )
 		{
@@ -1169,6 +1053,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_idField = Option::get( $extras, 'id_field' );
 		if ( empty( $_idField ) )
 		{
@@ -1176,9 +1061,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		}
 
 		$_out = array();
-		if ( static::_requireMoreFields( $fields, $_idField ) )
+		if ( static::_requireMoreFields( $_fields, $_idField ) )
 		{
-			$_out = $this->retrieveRecordById( $table, $id, $fields, $extras );
+			$_out = $this->retrieveRecordById( $table, $id, $_fields, $extras );
 		}
 		$_scanProperties = array(
 			'DomainName' => $table,
@@ -1198,15 +1083,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param        $table
-	 * @param string $filter
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function retrieveRecordsByFilter( $table, $filter = null, $fields = null, $extras = array() )
+	public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
 	{
 		$table = $this->correctTableName( $table );
 
@@ -1267,15 +1146,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 	}
 
 	/**
-	 * @param string $table
-	 * @param array  $records
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
+	 * {@inheritdoc}
 	 */
-	public function retrieveRecords( $table, $records, $fields = null, $extras = array() )
+	public function retrieveRecords( $table, $records, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -1295,7 +1168,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 		$_ids = static::recordsAsIds( $records, $_idField );
 		$_filter = "itemName() in ('" . implode( "','", $_ids ) . "')";
 
-		return $this->retrieveRecordsByFilter( $table, $_filter, $fields, $extras );
+		return $this->retrieveRecordsByFilter( $table, $_filter, array(), $extras );
 	}
 
 	/**

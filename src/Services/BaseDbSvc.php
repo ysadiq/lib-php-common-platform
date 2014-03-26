@@ -19,13 +19,16 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Platform\Enums\DbFilterOperators;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\RestData;
+use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -108,13 +111,13 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $_extras = array();
 
         // Most requests contain 'returned fields' parameter
-        $_fields = FilterInput::request( 'fields', Option::get( $this->_requestData, 'fields' ) );
+        $_fields = FilterInput::request( 'fields', static::getFromPostedData( $post_data, 'fields' ) );
         $_fieldsDefault = ( static::GET == $this->_action ) ? '*' : null;
         $_extras['fields'] = ( empty( $_fields ) ) ? $_fieldsDefault : $_fields;
 
         // means to override the default identifier field for a table
         // or supply one when there is no default designated
-        $_idField = FilterInput::request( 'id_field', Option::get( $this->_requestData, 'id_field' ) );
+        $_idField = FilterInput::request( 'id_field', static::getFromPostedData( $post_data, 'id_field' ) );
         $_extras['id_field'] = ( empty( $_idField ) ) ? static::DEFAULT_ID_FIELD : $_idField;
 
         if ( null != $_ssFilters = Session::getServiceFilters( $this->_apiName, $this->_resource ) )
@@ -232,7 +235,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         switch ( $this->_action )
         {
             case static::GET:
-                $_ids = FilterInput::request( 'names', Option::get( $this->_requestData, 'names' ) );
+                $_ids = FilterInput::request( 'names', static::getFromPostedData( $this->_requestData, 'names' ) );
                 if ( empty( $_ids ) )
                 {
                     return $this->_listResources();
@@ -243,12 +246,8 @@ abstract class BaseDbSvc extends BasePlatformRestService
                 break;
 
             case static::POST:
-                $_tables = Option::get( $this->_requestData, 'table', null );
-                if ( empty( $_tables ) )
-                {
-                    // xml to array conversion leaves them in plural wrapper
-                    $_tables = Option::getDeep( $this->_requestData, 'tables', 'table' );
-                }
+                $_tables = static::getFromPostedData( $this->_requestData, 'table' );
+
                 if ( empty( $_tables ) )
                 {
                     $_result = $this->createTable( $this->_requestData );
@@ -263,12 +262,8 @@ abstract class BaseDbSvc extends BasePlatformRestService
             case static::PUT:
             case static::PATCH:
             case static::MERGE:
-                $_tables = Option::get( $this->_requestData, 'table', null );
-                if ( empty( $_tables ) )
-                {
-                    // xml to array conversion leaves them in plural wrapper
-                    $_tables = Option::getDeep( $this->_requestData, 'tables', 'table' );
-                }
+                $_tables = static::getFromPostedData( $this->_requestData, 'table' );
+
                 if ( empty( $_tables ) )
                 {
                     $_result = $this->updateTable( $this->_requestData );
@@ -281,7 +276,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                 break;
 
             case static::DELETE:
-                $_ids = FilterInput::request( 'names', Option::get( $this->_requestData, 'names', '' ) );
+                $_ids = FilterInput::request( 'names', static::getFromPostedData( $this->_requestData, 'names' ) );
                 if ( !empty( $_ids ) )
                 {
                     $_result = $this->deleteTables( $_ids );
@@ -289,21 +284,11 @@ abstract class BaseDbSvc extends BasePlatformRestService
                 }
                 else
                 {
-                    $_tables = Option::get( $this->_requestData, 'table' );
-                    if ( empty( $_tables ) )
-                    {
-                        // xml to array conversion leaves them in plural wrapper
-                        $_tables = Option::getDeep( $this->_requestData, 'tables', 'table' );
-                    }
-                    if ( empty( $_tables ) )
-                    {
-                        $_name = Option::get( $this->_requestData, 'name' );
-                        if ( empty( $_name ) )
-                        {
-                            throw new BadRequestException( 'No table name in DELETE request.' );
-                        }
+                    $_tables = static::getFromPostedData( $this->_requestData, 'table' );
 
-                        $_result = $this->deleteTable( $_name );
+                    if ( empty( $_tables ) )
+                    {
+                        $_result = $this->deleteTable( $this->_requestData );
                     }
                     else
                     {
@@ -326,7 +311,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         if ( empty( $this->_resourceId ) )
         {
-            $_ids = FilterInput::request( 'ids', Option::get( $this->_requestData, 'ids' ) );
+            $_ids = FilterInput::request( 'ids', static::getFromPostedData( $this->_requestData, 'ids' ) );
             if ( !empty( $_ids ) )
             {
                 $_result = $this->retrieveRecordsByIds( $this->_resource, $_ids, $_extras );
@@ -334,12 +319,8 @@ abstract class BaseDbSvc extends BasePlatformRestService
             }
             else
             {
-                $_records = Option::get( $this->_requestData, 'record' );
-                if ( empty( $_records ) )
-                {
-                    // xml to array conversion leaves them in plural wrapper
-                    $_records = Option::getDeep( $this->_requestData, 'records', 'record' );
-                }
+                $_records = static::getFromPostedData( $this->_requestData, 'record' );
+
                 if ( !empty( $_records ) )
                 {
                     // passing records to have them updated with new or more values, id field required
@@ -393,12 +374,8 @@ abstract class BaseDbSvc extends BasePlatformRestService
         }
 
         $_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
-        $_records = Option::get( $this->_requestData, 'record' );
-        if ( empty( $_records ) )
-        {
-            // xml to array conversion leaves them in plural wrapper
-            $_records = Option::getDeep( $this->_requestData, 'records', 'record' );
-        }
+        $_records = static::getFromPostedData( $this->_requestData, 'record' );
+
         if ( empty( $_records ) )
         {
             $_result = $this->createRecord( $this->_resource, $this->_requestData, $_extras );
@@ -426,7 +403,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
         if ( empty( $this->_resourceId ) )
         {
-            $_ids = FilterInput::request( 'ids', Option::get( $this->_requestData, 'ids' ) );
+            $_ids = FilterInput::request( 'ids', static::getFromPostedData( $this->_requestData, 'ids' ) );
             if ( !empty( $_ids ) )
             {
                 $_result = $this->updateRecordsByIds( $this->_resource, $this->_requestData, $_ids, $_extras );
@@ -434,30 +411,24 @@ abstract class BaseDbSvc extends BasePlatformRestService
             }
             else
             {
-                $_records = Option::get( $this->_requestData, 'record' );
-                if ( empty( $_records ) )
+                $_records = static::getFromPostedData( $this->_requestData, 'record' );
+                if ( !empty( $_records ) )
                 {
-                    // xml to array conversion leaves them in plural wrapper
-                    $_records = Option::getDeep( $this->_requestData, 'records', 'record' );
-                }
-
-                $_filter = FilterInput::request( 'filter', Option::get( $this->_requestData, 'filter' ) );
-                if ( !empty( $_filter ) )
-                {
-                    $_params = Option::get( $this->_requestData, 'params', array() );
-                    $_result = $this->updateRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $_extras );
+                    $_result = $this->updateRecords( $this->_resource, $_records, $_extras );
                     $_result = array( 'record' => $_result );
                 }
                 else
                 {
-                    if ( empty( $_records ) )
+                    $_filter = FilterInput::request( 'filter', Option::get( $this->_requestData, 'filter' ) );
+                    if ( !empty( $_filter ) )
                     {
-                        $_result = $this->updateRecord( $this->_resource, $this->_requestData, $_extras );
+                        $_params = Option::get( $this->_requestData, 'params', array() );
+                        $_result = $this->updateRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $_extras );
+                        $_result = array( 'record' => $_result );
                     }
                     else
                     {
-                        $_result = $this->updateRecords( $this->_resource, $_records, $_extras );
-                        $_result = array( 'record' => $_result );
+                        $_result = $this->updateRecord( $this->_resource, $this->_requestData, $_extras );
                     }
                 }
             }
@@ -484,7 +455,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
         if ( empty( $this->_resourceId ) )
         {
-            $_ids = FilterInput::request( 'ids', Option::get( $this->_requestData, 'ids' ) );
+            $_ids = FilterInput::request( 'ids', static::getFromPostedData( $this->_requestData, 'ids' ) );
             if ( !empty( $_ids ) )
             {
                 $_result = $this->mergeRecordsByIds( $this->_resource, $this->_requestData, $_ids, $_extras );
@@ -492,30 +463,24 @@ abstract class BaseDbSvc extends BasePlatformRestService
             }
             else
             {
-                $_records = Option::get( $this->_requestData, 'record' );
-                if ( empty( $_records ) )
+                $_records = static::getFromPostedData( $this->_requestData, 'record' );
+                if ( !empty( $_records ) )
                 {
-                    // xml to array conversion leaves them in plural wrapper
-                    $_records = Option::getDeep( $this->_requestData, 'records', 'record' );
-                }
-
-                $_filter = FilterInput::request( 'filter', Option::get( $this->_requestData, 'filter' ) );
-                if ( !empty( $_filter ) )
-                {
-                    $_params = Option::get( $this->_requestData, 'params', array() );
-                    $_result = $this->mergeRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $_extras );
+                    $_result = $this->mergeRecords( $this->_resource, $_records, $_extras );
                     $_result = array( 'record' => $_result );
                 }
                 else
                 {
-                    if ( empty( $_records ) )
+                    $_filter = FilterInput::request( 'filter', Option::get( $this->_requestData, 'filter' ) );
+                    if ( !empty( $_filter ) )
                     {
-                        $_result = $this->mergeRecord( $this->_resource, $this->_requestData, $_extras );
+                        $_params = Option::get( $this->_requestData, 'params', array() );
+                        $_result = $this->mergeRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $_extras );
+                        $_result = array( 'record' => $_result );
                     }
                     else
                     {
-                        $_result = $this->mergeRecords( $this->_resource, $_records, $_extras );
-                        $_result = array( 'record' => $_result );
+                        $_result = $this->mergeRecord( $this->_resource, $this->_requestData, $_extras );
                     }
                 }
             }
@@ -537,7 +502,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
         if ( empty( $this->_resourceId ) )
         {
-            $_ids = FilterInput::request( 'ids', Option::get( $_data, 'ids' ) );
+            $_ids = FilterInput::request( 'ids', static::getFromPostedData( $this->_requestData, 'ids' ) );
             if ( !empty( $_ids ) )
             {
                 $_result = $this->deleteRecordsByIds( $this->_resource, $_ids, $_extras );
@@ -545,22 +510,22 @@ abstract class BaseDbSvc extends BasePlatformRestService
             }
             else
             {
-                $_filter = FilterInput::request( 'filter', Option::get( $_data, 'filter' ) );
-                if ( isset( $_filter ) )
+                $_records = static::getFromPostedData( $this->_requestData, 'record' );
+                if ( !empty( $_records ) )
                 {
-                    $_params = Option::get( $this->_requestData, 'params', array() );
-                    $_result = $this->deleteRecordsByFilter( $this->_resource, $_filter, $_params, $_extras );
+                    $_result = $this->deleteRecords( $this->_resource, $_records, $_extras );
                     $_result = array( 'record' => $_result );
                 }
                 else
                 {
-                    $_records = Option::get( $this->_requestData, 'record' );
-                    if ( empty( $_records ) )
+                    $_filter = FilterInput::request( 'filter', Option::get( $this->_requestData, 'filter' ) );
+                    if ( !empty( $_filter ) )
                     {
-                        // xml to array conversion leaves them in plural wrapper
-                        $_records = Option::getDeep( $this->_requestData, 'records', 'record' );
+                        $_params = Option::get( $this->_requestData, 'params', array() );
+                        $_result = $this->deleteRecordsByFilter( $this->_resource, $_filter, $_params, $_extras );
+                        $_result = array( 'record' => $_result );
                     }
-                    if ( empty( $_records ) )
+                    else
                     {
                         if ( empty( $this->_requestData ) )
                         {
@@ -575,11 +540,6 @@ abstract class BaseDbSvc extends BasePlatformRestService
                         {
                             $_result = $this->deleteRecord( $this->_resource, $this->_requestData, $_extras );
                         }
-                    }
-                    else
-                    {
-                        $_result = $this->deleteRecords( $this->_resource, $_records, $_extras );
-                        $_result = array( 'record' => $_result );
                     }
                 }
             }
@@ -597,23 +557,24 @@ abstract class BaseDbSvc extends BasePlatformRestService
     /**
      * Get multiple tables and their properties
      *
-     * @param array $tables Table names
+     * @param string | array $tables Table names comma-delimited string or array
      *
      * @return array
      * @throws \Exception
      */
     public function getTables( $tables = array() )
     {
-        if ( !is_array( $tables ) )
-        {
-            // may be comma-delimited list of names
-            $tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
-        }
+        $_tables = static::checkIncomingData(
+            $tables,
+            ',',
+            true,
+            'Request requires a table name, or a list or array of tables names or properties.'
+        );
 
         $_out = array();
-        foreach ( $tables as $_table )
+        foreach ( $_tables as $_table )
         {
-            $_name = (is_array($_table)) ? Option::get($_table, 'name') : $_table;
+            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
             $this->validateTableAccess( $_name );
 
             $_out[] = $this->getTable( $_table );
@@ -625,7 +586,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
     /**
      * Get any properties related to the table
      *
-     * @param string $table Table name
+     * @param string | array $table Table name or defining properties
      *
      * @return array
      * @throws \Exception
@@ -645,14 +606,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $_out = array();
         foreach ( $tables as $_table )
         {
-            try
-            {
-                $_out[] = $this->createTable( $_table );
-            }
-            catch ( \Exception $ex )
-            {
-                throw $ex;
-            }
+            $_out[] = $this->createTable( $_table );
         }
 
         return $_out;
@@ -680,14 +634,9 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $_out = array();
         foreach ( $tables as $_table )
         {
-            try
-            {
-                $_out[] = $this->updateTable( $_table );
-            }
-            catch ( \Exception $ex )
-            {
-                throw $ex;
-            }
+            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
+            $this->validateTableAccess( $_name );
+            $_out[] = $this->updateTable( $_table );
         }
 
         return $_out;
@@ -714,22 +663,19 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function deleteTables( $tables = array(), $check_empty = false )
     {
-        if ( !is_array( $tables ) )
-        {
-            // may be comma-delimited list of names
-            $tables = array_map( 'trim', explode( ',', trim( $tables, ',' ) ) );
-        }
+        $_tables = static::checkIncomingData(
+            $tables,
+            ',',
+            true,
+            'Request requires a table name, or a list or array of tables names or properties.'
+        );
+
         $_out = array();
-        foreach ( $tables as $_table )
+        foreach ( $_tables as $_table )
         {
-            try
-            {
-                $_out[] = $this->deleteTable( $_table, $check_empty );
-            }
-            catch ( \Exception $ex )
-            {
-                throw new $ex;
-            }
+            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
+            $this->validateTableAccess( $_name );
+            $_out[] = $this->deleteTable( $_table, $check_empty );
         }
 
         return $_out;
@@ -778,12 +724,9 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function createRecord( $table, $record, $extras = array() )
     {
-        if ( !isset( $record ) || empty( $record ) )
-        {
-            throw new BadRequestException( 'There are no fields in the record.' );
-        }
+        $_records = static::checkIncomingData( $record, null, true, 'There are no fields in the record.' );
 
-        $_results = $this->createRecords( $table, array( $record ), $extras );
+        $_results = $this->createRecords( $table, $_records, $extras );
 
         return $_results[0];
     }
@@ -808,12 +751,9 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function updateRecord( $table, $record, $extras = array() )
     {
-        if ( !isset( $record ) || empty( $record ) )
-        {
-            throw new BadRequestException( 'There are no fields in the record.' );
-        }
+        $_records = static::checkIncomingData( $record, null, true, 'There are no fields in the record.' );
 
-        $_results = $this->updateRecords( $table, array( $record ), $extras );
+        $_results = $this->updateRecords( $table, $_records, $extras );
 
         return $_results[0];
     }
@@ -851,6 +791,8 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function updateRecordById( $table, $record, $id, $extras = array() )
     {
+        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
+
         $_results = $this->updateRecordsByIds( $table, $record, $id, $extras );
 
         return $_results[0];
@@ -876,12 +818,9 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function mergeRecord( $table, $record, $extras = array() )
     {
-        if ( !isset( $record ) || empty( $record ) )
-        {
-            throw new BadRequestException( 'There are no fields in the record.' );
-        }
+        $_records = static::checkIncomingData( $record, null, true, 'There are no fields in the record.' );
 
-        $_results = $this->mergeRecords( $table, array( $record ), $extras );
+        $_results = $this->mergeRecords( $table, $_records, $extras );
 
         return $_results[0];
     }
@@ -920,6 +859,8 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function mergeRecordById( $table, $record, $id, $extras = array() )
     {
+        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
+
         $_results = $this->mergeRecordsByIds( $table, $record, $id, $extras );
 
         return $_results[0];
@@ -945,10 +886,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function deleteRecord( $table, $record, $extras = array() )
     {
-        if ( !isset( $record ) || empty( $record ) )
-        {
-            throw new BadRequestException( 'There are no fields in the record.' );
-        }
+        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
 
         $_results = $this->deleteRecords( $table, array( $record ), $extras );
 
@@ -1022,10 +960,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function retrieveRecord( $table, $record, $extras = array() )
     {
-        if ( !isset( $record ) || empty( $record ) )
-        {
-            throw new BadRequestException( 'There are no fields in the record.' );
-        }
+        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
 
         $_results = $this->retrieveRecords( $table, array( $record ), $extras );
 
@@ -1091,96 +1026,9 @@ abstract class BaseDbSvc extends BasePlatformRestService
             $_compareValue = $_foundInRecord ? $_recordValue : ( $for_update ? $_oldValue : null );
 
             $_reason = null;
-            switch ( $_operator )
+            if ( !static::compareByOperator( $_operator, $_compareFound, $_compareValue, $_filterValue ) )
             {
-                case '=':
-                    if ( !$_compareFound )
-                    {
-                        // if a value is not set, then "null" matches
-                        if ( isset( $_filterValue ) )
-                        {
-                            $_reason = "Required field not found in request records.";
-                        }
-                    }
-                    else
-                    {
-                        if ( $_filterValue !== $_compareValue )
-                        {
-                            $_reason = "No permission to write to requested fields.";
-                        }
-                    }
-                    break;
-                case '!=':
-                    if ( !$_compareFound )
-                    {
-                        // if a value is not set, then "null" matches
-                        if ( !isset( $_filterValue ) )
-                        {
-                            $_reason = "No permission to write to requested fields.";
-                        }
-                    }
-                    else
-                    {
-                        if ( $_filterValue === $_compareValue )
-                        {
-                            $_reason = "No permission to write to requested fields.";
-                        }
-                    }
-                    break;
-                case '>':
-                    if ( !$_compareFound )
-                    {
-                        $_reason = "No permission to write to requested fields.";
-                    }
-                    else
-                    {
-                        if ( $_compareValue > $_filterValue )
-                        {
-                            $_reason = "No permission to write to requested fields.";
-                        }
-                    }
-                    break;
-                case '<':
-                    if ( !$_compareFound )
-                    {
-                        $_reason = "No permission to write to requested fields.";
-                    }
-                    else
-                    {
-                        if ( $_compareValue < $_filterValue )
-                        {
-                            $_reason = "No permission to write to requested fields.";
-                        }
-                    }
-                    break;
-                case '>=':
-                    if ( !$_compareFound )
-                    {
-                        $_reason = "No permission to write to requested fields.";
-                    }
-                    else
-                    {
-                        if ( $_compareValue >= $_filterValue )
-                        {
-                            $_reason = "No permission to write to requested fields.";
-                        }
-                    }
-                    break;
-                case '<=':
-                    if ( !$_compareFound )
-                    {
-                        $_reason = "No permission to write to requested fields.";
-                    }
-                    else
-                    {
-                        if ( $_compareValue <= $_filterValue )
-                        {
-                            $_reason = "No permission to write to requested fields.";
-                        }
-                    }
-                    break;
-                default:
-                    throw new InternalServerErrorException( 'Invalid server configuration detected.' );
+                $_reason = "Denied access to some of the requested fields.";
             }
 
             switch ( strtolower( $_combiner ) )
@@ -1203,6 +1051,45 @@ abstract class BaseDbSvc extends BasePlatformRestService
                     throw new InternalServerErrorException( 'Invalid server configuration detected.' );
 
             }
+        }
+    }
+
+    public static function compareByOperator( $operator, $left_found, $left, $right )
+    {
+        switch ( $operator )
+        {
+            case DbFilterOperators::EQ:
+                return ( $left == $right );
+            case DbFilterOperators::NE:
+                return ( $left != $right );
+            case DbFilterOperators::GT:
+                return ( $left > $right );
+            case DbFilterOperators::LT:
+                return ( $left < $right );
+            case DbFilterOperators::GE:
+                return ( $left >= $right );
+            case DbFilterOperators::LE:
+                return ( $left <= $right );
+            case DbFilterOperators::STARTS_WITH:
+                return static::startsWith( $left, $right );
+            case DbFilterOperators::ENDS_WITH:
+                return static::endswith( $left, $right );
+            case DbFilterOperators::CONTAINS:
+                return ( false !== strpos( $left, $right ) );
+            case DbFilterOperators::IN:
+                return Utilities::isInList( $right, $left );
+            case DbFilterOperators::NOT_IN:
+                return !Utilities::isInList( $right, $left );
+            case DbFilterOperators::IS_NULL:
+                return is_null( $left );
+            case DbFilterOperators::IS_NOT_NULL:
+                return !is_null( $left );
+            case DbFilterOperators::DOES_EXIST:
+                return ( $left_found );
+            case DbFilterOperators::DOES_NOT_EXIST:
+                return ( !$left_found );
+            default:
+                throw new InternalServerErrorException( 'Invalid server configuration detected.' );
         }
     }
 
@@ -1312,10 +1199,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     protected static function recordsAsIds( $records, $id_field = null )
     {
-        if ( empty( $id_field ) )
-        {
-            $id_field = static::DEFAULT_ID_FIELD;
-        }
+        $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
         $_ids = array();
         foreach ( $records as $_key => $_record )
         {
@@ -1338,10 +1222,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     protected static function idsAsRecords( $ids, $id_field = null )
     {
-        if ( empty( $id_field ) )
-        {
-            $id_field = static::DEFAULT_ID_FIELD;
-        }
+        $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
         $_out = array();
         foreach ( $ids as $_id )
         {
@@ -1359,10 +1240,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     protected static function _containsIdFields( $record, $id_field = null )
     {
-        if ( empty( $id_field ) )
-        {
-            $id_field = static::DEFAULT_ID_FIELD;
-        }
+        $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
         if ( !is_array( $id_field ) )
         {
             $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
@@ -1387,18 +1265,17 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     protected static function _requireMoreFields( $fields, $id_field = null )
     {
-        if ( empty( $id_field ) )
-        {
-            $id_field = static::DEFAULT_ID_FIELD;
-        }
         if ( empty( $fields ) )
         {
             return false;
         }
+
         if ( !is_array( $fields ) )
         {
             $fields = array_map( 'trim', explode( ',', trim( $fields, ',' ) ) );
         }
+
+        $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
         if ( !is_array( $id_field ) )
         {
             $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
@@ -1423,10 +1300,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     protected static function recordArrayMerge( $first_array, $second_array, $id_field = null )
     {
-        if ( empty( $id_field ) )
-        {
-            $id_field = static::DEFAULT_ID_FIELD;
-        }
+        $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
         foreach ( $first_array as $_key => $_first )
         {
             $_firstId = Option::get( $_first, $id_field );
@@ -1490,11 +1364,83 @@ abstract class BaseDbSvc extends BasePlatformRestService
         return $value;
     }
 
+    /**
+     * @param array $array
+     *
+     * @return array
+     */
     public static function one_index_array( $array )
     {
+        if ( !is_array( $array ) || empty( $array ) )
+        {
+            return array();
+        }
+
         array_unshift( $array, '' );
         unset( $array[0] );
 
         return $array;
+    }
+
+    /**
+     * @param array | string $data          Array to check or comma-delimited string to convert
+     * @param string | null  $str_delimiter Delimiter to check for string to array mapping, no op if null
+     * @param boolean        $check_single  Check if single (associative) needs to be made multiple (numeric)
+     * @param string | null  $on_fail       Error string to deliver in thrown exception
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array | boolean If requirements not met then throws exception if
+     * $on_fail string given, or returns false. Otherwise returns valid array
+     */
+    public static function checkIncomingData( $data, $str_delimiter = null, $check_single = false, $on_fail = null )
+    {
+        if ( !is_array( $data ) && ( is_string( $str_delimiter ) && !empty( $str_delimiter ) ) )
+        {
+            $data = array_map( 'trim', explode( $str_delimiter, trim( $data, $str_delimiter ) ) );
+        }
+
+        if ( !is_array( $data ) || empty( $data ) )
+        {
+            if ( !is_string( $on_fail ) || empty( $on_fail ) )
+            {
+                return false;
+            }
+
+            throw new BadRequestException( $on_fail );
+        }
+
+        if ( $check_single )
+        {
+            if ( !isset( $data[0] ) )
+            {
+                // single record possibly passed in without wrapper array
+                $data = array( $data );
+            }
+        }
+
+        return $data;
+    }
+
+    public static function getFromPostedData( $data, $marker )
+    {
+        $_found = Option::get( $data, $marker );
+        if ( empty( $_found ) )
+        {
+            // xml to array conversion leaves them in plural wrapper
+            $_found = Option::getDeep( $data, Inflector::pluralize( $marker ), $marker );
+        }
+
+        return $_found;
+    }
+
+    public static function startsWith( $haystack, $needle )
+    {
+        return ( substr( $haystack, 0, strlen( $needle ) ) === $needle );
+    }
+
+    public static function endsWith( $haystack, $needle )
+    {
+
+        return ( substr( $haystack, -strlen( $needle ) ) === $needle );
     }
 }

@@ -410,7 +410,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function createRecords( $table, $records, $fields = null, $extras = array() )
+	public function createRecords( $table, $records, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -423,6 +423,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -460,7 +461,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 			// todo check $_result['UnprocessedItems'] for 'PutRequest'
 
-			return static::cleanRecords( $records, $fields, $_idField );
+			return static::cleanRecords( $records, $_fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -471,7 +472,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function createRecord( $table, $record, $fields = null, $extras = array() )
+	public function createRecord( $table, $record, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -479,6 +480,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -503,7 +505,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 			$_out = Option::get( $_result, 'Attributes', array() );
 
-			return static::cleanRecord( $record, $fields, $_idField );
+			return static::cleanRecord( $record, $_fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -514,7 +516,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function updateRecords( $table, $records, $fields = null, $extras = array() )
+	public function updateRecords( $table, $records, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -527,6 +529,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -563,7 +566,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 			// todo check $_result['UnprocessedItems'] for 'PutRequest'
 
-			return static::cleanRecords( $records, $fields, $_idField );
+			return static::cleanRecords( $records, $_fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -574,7 +577,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function updateRecord( $table, $record, $fields = null, $extras = array() )
+	public function updateRecord( $table, $record, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -582,6 +585,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -607,7 +611,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 			$_out = Option::get( $_result, 'Attributes', array() );
 
-			return static::cleanRecord( $record, $fields, $_idField );
+			return static::cleanRecord( $record, $_fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -618,7 +622,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function updateRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
+	public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -626,19 +630,19 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		// slow, but workable for now, maybe faster than updating individuals
-		$_records = $this->retrieveRecordsByFilter( $table, $filter, '', $extras );
+		$_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
 		foreach ( $_records as $_ndx => $_record )
 		{
 			$_records[$_ndx] = array_merge( $_record, $record );
 		}
 
-		return $this->updateRecords( $table, $_records, $fields, $extras );
+		return $this->updateRecords( $table, $_records, $extras );
 	}
 
 	/**
 	 * {@inheritdoc}
 	 */
-	public function updateRecordsByIds( $table, $record, $ids, $fields = null, $extras = array() )
+	public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
 	{
 		if ( !is_array( $record ) || empty( $record ) )
 		{
@@ -655,6 +659,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
 		}
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -674,7 +679,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 					'Item' => $this->_dbConn->formatAttributes( $record )
 				)
 			);
-			$_out[] = static::cleanRecord( $record, $fields, $_idField );
+			$_out[] = static::cleanRecord( $record, $_fields, $_idField );
 		}
 
 		try
@@ -700,7 +705,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function updateRecordById( $table, $record, $id, $fields = null, $extras = array() )
+	public function updateRecordById( $table, $record, $id, $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
@@ -712,6 +717,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -734,7 +740,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 			$_out = Option::get( $_result, 'Attributes', array() );
 
-			return static::cleanRecord( $record, $fields, $_idField );
+			return static::cleanRecord( $record, $_fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -745,7 +751,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function mergeRecords( $table, $records, $fields = null, $extras = array() )
+	public function mergeRecords( $table, $records, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -753,6 +759,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -784,7 +791,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 				$_temp = Option::get( $_result, 'Attributes', array() );
 
-				$_out[] = static::cleanRecord( static::_unformatAttributes( $_temp ), $fields, $_idField );
+				$_out[] = static::cleanRecord( static::_unformatAttributes( $_temp ), $_fields, $_idField );
 			}
 			catch ( \Exception $ex )
 			{
@@ -798,7 +805,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function mergeRecord( $table, $record, $fields = null, $extras = array() )
+	public function mergeRecord( $table, $record, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -806,6 +813,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -829,7 +837,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 			$_out = Option::get( $_result, 'Attributes', array() );
 
-			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields, $_idField );
+			return static::cleanRecord( static::_unformatAttributes( $_out ), $_fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -840,7 +848,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function mergeRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
+	public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -848,19 +856,20 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		// slow, but workable for now, maybe faster than merging individuals
-		$_records = $this->retrieveRecordsByFilter( $table, $filter, '*', $extras );
+        $_retrieveExtras = array( 'fields' => '*' );
+		$_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $_retrieveExtras );
 		foreach ( $_records as $_ndx => $_record )
 		{
 			$_records[$_ndx] = array_merge( $_record, $record );
 		}
 
-		return $this->updateRecords( $table, $_records, $fields, $extras );
+		return $this->updateRecords( $table, $_records, $extras );
 	}
 
 	/**
 	 * {@inheritdoc}
 	 */
-	public function mergeRecordsByIds( $table, $record, $ids, $fields = null, $extras = array() )
+	public function mergeRecordsByIds( $table, $record, $ids, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -873,6 +882,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -905,7 +915,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 				$_temp = Option::get( $_result, 'Attributes', array() );
 
-				$_out[] = static::cleanRecord( static::_unformatAttributes( $_temp ), $fields, $_idField );
+				$_out[] = static::cleanRecord( static::_unformatAttributes( $_temp ), $_fields, $_idField );
 			}
 			catch ( \Exception $ex )
 			{
@@ -919,7 +929,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function mergeRecordById( $table, $record, $id, $fields = null, $extras = array() )
+	public function mergeRecordById( $table, $record, $id, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -932,6 +942,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -956,7 +967,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 			$_out = Option::get( $_result, 'Attributes', array() );
 
-			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields, $_idField );
+			return static::cleanRecord( static::_unformatAttributes( $_out ), $_fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -964,10 +975,13 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 	}
 
+    /**
+     * {@inheritdoc}
+     */
     public function truncateTable( $table )
     {
         // todo faster way?
-        $_records = $this->retrieveRecordsByFilter( $table, '', '' );
+        $_records = $this->retrieveRecordsByFilter( $table, '' );
 
         return $this->deleteRecords( $table, $_records );
     }
@@ -975,12 +989,13 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function deleteRecords( $table, $records, $fields = null, $extras = array() )
+	public function deleteRecords( $table, $records, $extras = array() )
 	{
 		if ( !is_array( $records ) || empty( $records ) )
 		{
 			throw new BadRequestException( 'There are no record sets in the request.' );
 		}
+
 		if ( !isset( $records[0] ) )
 		{
 			// single record
@@ -988,6 +1003,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -997,9 +1013,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$_out = array();
-		if ( static::_requireMoreFields( $fields, $_idField ) )
+		if ( static::_requireMoreFields( $_fields, $_idField ) )
 		{
-			$_out = $this->retrieveRecords( $table, $records, $fields, $extras );
+			$_out = $this->retrieveRecords( $table, $records, $_fields, $extras );
 		}
 		$_items = array();
 		$_outIds = array();
@@ -1037,7 +1053,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function deleteRecord( $table, $record, $fields = null, $extras = array() )
+	public function deleteRecord( $table, $record, $extras = array() )
 	{
 		if ( empty( $record ) || !is_array( $record ) )
 		{
@@ -1045,6 +1061,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -1064,7 +1081,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			$_out = Option::get( $_result, 'Attributes', array() );
 
 			// Grab value from the result object like an array
-			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields, $_idField );
+			return static::cleanRecord( static::_unformatAttributes( $_out ), $_fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -1075,22 +1092,22 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function deleteRecordsByFilter( $table, $filter, $fields = null, $extras = array() )
+	public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() )
 	{
 		if ( empty( $filter ) )
 		{
 			throw new BadRequestException( "Filter for delete request can not be empty." );
 		}
 
-		$_records = $this->retrieveRecordsByFilter( $table, $filter, '', $extras );
+		$_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
 
-		return $this->deleteRecords( $table, $_records, $fields, $extras );
+		return $this->deleteRecords( $table, $_records, $extras );
 	}
 
 	/**
 	 * {@inheritdoc}
 	 */
-	public function deleteRecordsByIds( $table, $ids, $fields = null, $extras = array() )
+	public function deleteRecordsByIds( $table, $ids, $extras = array() )
 	{
 		if ( empty( $ids ) )
 		{
@@ -1102,6 +1119,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
 		}
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -1111,9 +1129,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$_out = array();
-		if ( static::_requireMoreFields( $fields, $_idField ) )
+		if ( static::_requireMoreFields( $_fields, $_idField ) )
 		{
-			$_out = $this->retrieveRecordsByIds( $table, $ids, $fields, $extras );
+			$_out = $this->retrieveRecordsByIds( $table, $ids, $_fields, $extras );
 		}
 		$_items = array();
 		$_outIds = array();
@@ -1152,7 +1170,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function deleteRecordById( $table, $id, $fields = null, $extras = array() )
+	public function deleteRecordById( $table, $id, $extras = array() )
 	{
 		if ( empty( $id ) )
 		{
@@ -1160,6 +1178,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -1180,7 +1199,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			$_out = Option::get( $_result, 'Attributes', array() );
 
 			// Grab value from the result object like an array
-			return static::cleanRecord( static::_unformatAttributes( $_out ), $fields, $_idField );
+			return static::cleanRecord( static::_unformatAttributes( $_out ), $_fields, $_idField );
 		}
 		catch ( \Exception $ex )
 		{
@@ -1191,16 +1210,17 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function retrieveRecordsByFilter( $table, $filter = null, $fields = null, $extras = array() )
+	public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
 	{
 		$this->checkConnection();
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 
 		$_scanProperties = array( 'TableName' => $table );
-		$fields = static::_buildAttributesToGet( $fields );
-		if ( !empty( $fields ) )
+		$_fields = static::_buildAttributesToGet( $_fields );
+		if ( !empty( $_fields ) )
 		{
-			$_scanProperties['AttributesToGet'] = $fields;
+			$_scanProperties['AttributesToGet'] = $_fields;
 		}
 		$_limit = Option::get( $extras, 'limit' );
 		if ( $_limit > 0 )
@@ -1232,7 +1252,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function retrieveRecords( $table, $records, $fields = null, $extras = array() )
+	public function retrieveRecords( $table, $records, $extras = array() )
 	{
 		if ( empty( $records ) || !is_array( $records ) )
 		{
@@ -1245,6 +1265,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -1265,10 +1286,10 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			'Keys'           => $_keys,
 			'ConsistentRead' => true,
 		);
-		$fields = static::_buildAttributesToGet( $fields, $_idField );
-		if ( !empty( $fields ) )
+		$_fields = static::_buildAttributesToGet( $_fields, $_idField );
+		if ( !empty( $_fields ) )
 		{
-			$_scanProperties['AttributesToGet'] = $fields;
+			$_scanProperties['AttributesToGet'] = $_fields;
 		}
 
 		try
@@ -1300,7 +1321,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function retrieveRecord( $table, $record, $fields = null, $extras = array() )
+	public function retrieveRecord( $table, $record, $extras = array() )
 	{
 		if ( !isset( $record ) || empty( $record ) )
 		{
@@ -1308,6 +1329,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -1325,10 +1347,10 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			'Key'            => $_keys,
 			'ConsistentRead' => true,
 		);
-		$fields = static::_buildAttributesToGet( $fields, $_idField );
-		if ( !empty( $fields ) )
+		$_fields = static::_buildAttributesToGet( $_fields, $_idField );
+		if ( !empty( $_fields ) )
 		{
-			$_scanProperties['AttributesToGet'] = $fields;
+			$_scanProperties['AttributesToGet'] = $_fields;
 		}
 
 		try
@@ -1347,7 +1369,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function retrieveRecordsByIds( $table, $ids, $fields = null, $extras = array() )
+	public function retrieveRecordsByIds( $table, $ids, $extras = array() )
 	{
 		if ( empty( $ids ) )
 		{
@@ -1358,6 +1380,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
 		}
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -1375,10 +1398,10 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			'Keys'           => $_keys,
 			'ConsistentRead' => true,
 		);
-		$fields = static::_buildAttributesToGet( $fields, $_idField );
-		if ( !empty( $fields ) )
+		$_fields = static::_buildAttributesToGet( $_fields, $_idField );
+		if ( !empty( $_fields ) )
 		{
-			$_scanProperties['AttributesToGet'] = $fields;
+			$_scanProperties['AttributesToGet'] = $_fields;
 		}
 
 		try
@@ -1410,7 +1433,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 	/**
 	 * {@inheritdoc}
 	 */
-	public function retrieveRecordById( $table, $id, $fields = null, $extras = array() )
+	public function retrieveRecordById( $table, $id, $extras = array() )
 	{
 		if ( empty( $id ) )
 		{
@@ -1418,6 +1441,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 		}
 
 		$table = $this->correctTableName( $table );
+        $_fields = Option::get( $extras, 'fields' );
 		$_info = $this->_getKeyInfo( $table, $extras );
 		$_idField = $_info['fields'];
 		$_idType = $_info['types'];
@@ -1432,10 +1456,10 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 			'Key'            => $_keys,
 			'ConsistentRead' => true,
 		);
-		$fields = static::_buildAttributesToGet( $fields, $_idField );
-		if ( !empty( $fields ) )
+		$_fields = static::_buildAttributesToGet( $_fields, $_idField );
+		if ( !empty( $_fields ) )
 		{
-			$_scanProperties['AttributesToGet'] = $fields;
+			$_scanProperties['AttributesToGet'] = $_fields;
 		}
 
 		try
