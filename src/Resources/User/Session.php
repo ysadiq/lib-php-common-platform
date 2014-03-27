@@ -289,11 +289,7 @@ class Session extends BasePlatformRestResource
         Pii::user()->logout();
 
         //	Now, if we have a DFCC session key...
-        if ( null !== ( $_sessionKey = \Kisma::get( Pii::DFCC_SESSION_KEY ) ) )
-        {
-            //  Blow away the currently cached configuration
-            DataCache::load( $_sessionKey, null, true );
-        }
+        DataCache::flush( DataCache::getKey() );
     }
 
     /**
