@@ -42,6 +42,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * PlatformWebApplication
+ *
+ * @property callable onEndRequest
+ * @property callable onBeginRequest
  */
 class PlatformWebApplication extends \CWebApplication implements PublisherLike, SubscriberLike
 {
@@ -201,6 +204,57 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     }
 
     /**
+     * Loads up any plug-ins configured
+     *
+     * @return bool
+     */
+    protected function _loadPlugins()
+    {
+        if ( null === ( $_autoloadPath = \Kisma::get( 'dsp.plugin_autoload_path' ) ) )
+        {
+            //	Locate plug-in directory...
+            $_path = Pii::getParam( 'dsp.plugins_path', Pii::getParam( 'dsp.base_path' ) . static::DEFAULT_PLUGINS_PATH );
+
+            if ( !is_dir( $_path ) )
+            {
+                // No plug-ins installed
+
+                return false;
+            }
+
+            if ( file_exists( $_path . '/autoload.php' ) && is_readable( $_path . '/autoload.php' ) )
+            {
+                $_autoloadPath = $_path . '/autoload.php';
+                Log::debug( 'Found plug-in autoload.php' );
+            }
+            else
+            {
+                Log::debug( 'No autoload.php file found for installed plug-ins.' );
+
+                return false;
+            }
+
+            \Kisma::set( 'dsp.plugin_autoload_path', $_autoloadPath );
+        }
+
+        /** @noinspection PhpIncludeInspection */
+        if ( false === @require( $_autoloadPath ) )
+        {
+            Log::error( 'Error reading plug-in autoload.php file. Some plug-ins may not function properly.' );
+
+            return false;
+        }
+
+        $this->trigger( DspEvents::PLUGINS_LOADED );
+
+        return true;
+    }
+
+    //*************************************************************************
+    //  Server-Side Event Support
+    //*************************************************************************
+
+    /**
      * Triggers a DSP-level event
      *
      * @param string        $eventName
@@ -211,7 +265,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     public function trigger( $eventName, $event = null )
     {
         return static::getDispatcher()->dispatch( $eventName, $event );
-    }
+    }   
 
     /**
      * Adds an event listener that listens on the specified events.
@@ -240,6 +294,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         static::getDispatcher()->removeListener( $eventName, $listener );
     }
+
+    //*************************************************************************
+    //	CORS Support
+    //*************************************************************************
 
     /**
      * @param array|bool $whitelist Set to "false" to reset the internal method cache.
@@ -273,7 +331,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         $_originUri = null;
-        $_requestSource = $_SERVER['SERVER_NAME'];
+        $_requestSource = $this->_requestObject->get( 'server-name', \Kisma::get( 'platform.host_name', gethostname() ) );
 
         if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
         {
@@ -347,109 +405,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         {
             return $this->_responseObject->headers->all();
         }
-
-        return true;
-    }
-
-    /**
-     * Handles an OPTIONS request to the server to allow CORS and optionally sends the CORS headers
-     *
-     * @param \CEvent $event
-     *
-     * @return bool
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     */
-    protected function _onBeginRequest( \CEvent $event )
-    {
-        //	Start the request-only profile
-        if ( static::$_enableProfiler )
-        {
-            Profiler::start( 'app.request' );
-        }
-
-        $this->_requestObject = Request::createFromGlobals();
-        $_response = Response::create();
-
-        //	Load any plug-ins
-        $this->_loadPlugins();
-
-        switch ( $this->_requestObject->getMethod() )
-        {
-            //	OPTIONS goooooooooood!!!!!
-            case HttpMethod::OPTIONS:
-                $this->addCorsHeaders();
-                $_response->setStatusCode( HttpResponse::NoContent )->send();
-
-                return Pii::end( HttpResponse::NoContent );
-
-            //	TRACE baaaaaadddddddddd!!!!!
-            case HttpMethod::TRACE:
-                Log::error(
-                    'HTTP TRACE received!',
-                    array(
-                        'server'  => $this->_requestObject->server->all(),
-                        'request' => $this->_requestObject->request->all()
-                    )
-                );
-
-                throw new BadRequestException();
-        }
-
-        //	Save to object and add headers
-        $this->setResponseObject( $_response );
-    }
-
-    /**
-     * @param \CEvent $event
-     */
-    protected function _onEndRequest( \CEvent $event )
-    {
-        $this->stopProfiler( 'app.request' );
-    }
-
-    /**
-     * Loads up any plug-ins configured
-     *
-     * @return bool
-     */
-    protected function _loadPlugins()
-    {
-        if ( null === ( $_autoloadPath = \Kisma::get( 'dsp.plugin_autoload_path' ) ) )
-        {
-            //	Locate plug-in directory...
-            $_path = Pii::getParam( 'dsp.plugins_path', Pii::getParam( 'dsp.base_path' ) . static::DEFAULT_PLUGINS_PATH );
-
-            if ( !is_dir( $_path ) )
-            {
-                // No plug-ins installed
-
-                return false;
-            }
-
-            if ( file_exists( $_path . '/autoload.php' ) && is_readable( $_path . '/autoload.php' ) )
-            {
-                $_autoloadPath = $_path . '/autoload.php';
-                Log::debug( 'Found plug-in autoload.php' );
-            }
-            else
-            {
-                Log::debug( 'No autoload.php file found for installed plug-ins.' );
-
-                return false;
-            }
-
-            \Kisma::set( 'dsp.plugin_autoload_path', $_autoloadPath );
-        }
-
-        /** @noinspection PhpIncludeInspection */
-        if ( false === @require( $_autoloadPath ) )
-        {
-            Log::error( 'Error reading plug-in autoload.php file. Some plug-ins may not function properly.' );
-
-            return false;
-        }
-
-        $this->trigger( DspEvents::PLUGINS_LOADED );
 
         return true;
     }
@@ -659,25 +614,69 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         return $this;
     }
 
+    //*************************************************************************
+    //	Event Handlers
+    //*************************************************************************
+
     /**
-     * @param int    $which
-     * @param string $namespace
-     * @param string $path
-     * @param bool   $prepend If true, the namespace(s) will be placed at the beginning of the list
+     * Handles an OPTIONS request to the server to allow CORS and optionally sends the CORS headers
      *
-     * @return PlatformWebApplication
+     * @param \CEvent $event
+     *
+     * @return bool
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      */
-    protected static function _mapNamespace( $which, $namespace, $path, $prepend = false )
+    protected function _onBeginRequest( \CEvent $event )
     {
-        if ( $prepend )
+        //	Start the request-only profile
+        if ( static::$_enableProfiler )
         {
-            array_unshift( static::$_namespaceMap[$which], array( $namespace, $path ) );
+            Profiler::start( 'app.request' );
         }
-        else
+
+        $this->_requestObject = Request::createFromGlobals();
+        $_response = Response::create()->prepare( $this->_requestObject );
+
+        //	Load any plug-ins
+        $this->_loadPlugins();
+
+        switch ( $this->_requestObject->getMethod() )
         {
-            static::$_namespaceMap[$which][$namespace] = $path;
+            //	OPTIONS goooooooooood!!!!!
+            case HttpMethod::OPTIONS:
+                $this->addCorsHeaders();
+                $_response->setStatusCode( HttpResponse::NoContent )->send();
+
+                return Pii::end( HttpResponse::NoContent );
+
+            //	TRACE baaaaaadddddddddd!!!!!
+            case HttpMethod::TRACE:
+                Log::error(
+                    'HTTP TRACE received!',
+                    array(
+                        'server'  => $this->_requestObject->server->all(),
+                        'request' => $this->_requestObject->request->all()
+                    )
+                );
+
+                throw new BadRequestException();
         }
+
+        //	Save to object and add headers
+        $this->setResponseObject( $_response );
     }
+
+    /**
+     * @param \CEvent $event
+     */
+    protected function _onEndRequest( \CEvent $event )
+    {
+        $this->stopProfiler( 'app.request' );
+    }
+
+    //*************************************************************************
+    //	Accessors
+    //*************************************************************************
 
     /**
      * @param array $corsWhitelist
@@ -898,6 +897,26 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $_loader->addPsr4( $prefix, $paths, $prepend );
 
         return $_loader;
+    }
+
+    /**
+     * @param int    $which
+     * @param string $namespace
+     * @param string $path
+     * @param bool   $prepend If true, the namespace(s) will be placed at the beginning of the list
+     *
+     * @return PlatformWebApplication
+     */
+    protected static function _mapNamespace( $which, $namespace, $path, $prepend = false )
+    {
+        if ( $prepend )
+        {
+            array_unshift( static::$_namespaceMap[$which], array( $namespace, $path ) );
+        }
+        else
+        {
+            static::$_namespaceMap[$which][$namespace] = $path;
+        }
     }
 
     /**
