@@ -28,6 +28,7 @@ use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Enums\HttpMethod;
@@ -265,7 +266,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     public function trigger( $eventName, $event = null )
     {
         return static::getDispatcher()->dispatch( $eventName, $event );
-    }   
+    }
 
     /**
      * Adds an event listener that listens on the specified events.
@@ -322,16 +323,20 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         $_originUri = null;
-        $_origin = trim( $this->_requestObject->headers->get( 'origin' ) );
+        $_origin = trim( $this->_requestObject->server->get( 'HTTP_ORIGIN' ) );
 
         //	Was an origin header passed? If not, don't do CORS.
         if ( empty( $_origin ) )
         {
+            Log::debug( 'No "Origin" sent with request. No CORS headers added.' );
+
             return $returnHeaders ? array() : true;
         }
 
+        Log::debug( 'Adding CORS headers' );
+
         $_originUri = null;
-        $_requestSource = $this->_requestObject->get( 'server-name', \Kisma::get( 'platform.host_name', gethostname() ) );
+        $_requestSource = $this->_requestObject->server->get( 'SERVER_NAME', \Kisma::get( 'platform.host_name', gethostname() ) );
 
         if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
         {
@@ -381,18 +386,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->_responseObject->headers->set( 'Access-Control-Allow-Methods', $_allowedMethods );
         $this->_responseObject->headers->set( 'Access-Control-Max-Age', static::CORS_DEFAULT_MAX_AGE );
 
-        if ( $this->_extendedHeaders )
-        {
-            $this->_responseObject->headers->set( 'X-DreamFactory-Source', $_requestSource );
-
-            if ( $_origin )
-            {
-                $this->_responseObject->headers->set(
-                    'X-DreamFactory-Origin-Whitelisted',
-                    preg_match( '/^([\w_-]+\.)*' . $_requestSource . '$/', $_originUri )
-                );
-            }
-        }
+        $this->_addExtendedHeaders( $_requestSource, $_originUri, !empty( $_origin ) );
 
         //	Store in cache...
         $_cache[$_key] = $_originUri;
@@ -407,6 +401,29 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         return true;
+    }
+
+    /**
+     * @param string $requestSource
+     * @param string $originUri
+     * @param bool   $whitelisted
+     */
+    protected function _addExtendedHeaders( $requestSource, $originUri, $whitelisted = true )
+    {
+        if ( !$this->_extendedHeaders )
+        {
+            return;
+        }
+
+        $this->_responseObject->headers->set( 'X-DreamFactory-Source', $requestSource );
+
+        if ( $whitelisted )
+        {
+            $this->_responseObject->headers->set(
+                'X-DreamFactory-Origin-Whitelisted',
+                preg_match( '/^([\w_-]+\.)*' . $requestSource . '$/', $originUri )
+            );
+        }
     }
 
     /**
@@ -537,81 +554,43 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * Loads the CORS whitelist from the session. If not there, it's loaded and stuffed in there.
      *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return $this
      */
     protected function _loadCorsConfig()
     {
-        $_list = $this->_corsWhitelist;
+        static $_whitelist = null;
 
-        if ( false !== $_list && ( !is_array( $_list ) || null === ( $_list = \Kisma::get( static::CORS_WHITELIST_KEY ) ) ) )
+        if ( null === $_whitelist && null === ( $_whitelist = \Kisma::get( 'cors.whitelist' ) ) )
         {
             //	Get CORS data from config file
-            $_config = Pii::getParam( 'storage_base_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
+            $_config = Platform::getStorageBasePath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
+
+            if ( !file_exists( $_config ) )
+            {
+                //  In old location?
+                $_config = Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
+            }
 
             if ( file_exists( $_config ) )
             {
-                $_list = @json_decode( file_get_contents( $_config ), true );
+                $_whitelist = array();
 
-                if ( empty( $_list ) )
+                if ( false !== ( $_content = @file_get_contents( $_config ) ) && !empty( $_content ) )
                 {
-                    \Kisma::set( static::CORS_WHITELIST_KEY, false );
-                    Log::error( 'Found CORS configuration, but contents invalid: ' . print_r( $_list, true ) );
+                    $_whitelist = json_decode( $_content, true );
 
-                    return $this;
+                    if ( JSON_ERROR_NONE != json_last_error() )
+                    {
+                        throw new InternalServerErrorException( 'The CORS configuration file is corrupt. Cannot continue.' );
+                    }
                 }
             }
-            else
-            {
-                //	Check the old location
-                $_oldConfig = Pii::getParam( 'private_path' ) . static::CORS_DEFAULT_CONFIG_FILE;
 
-                //	Nada? Bail...
-                if ( !file_exists( $_oldConfig ) )
-                {
-                    \Kisma::set( static::CORS_WHITELIST_KEY, false );
-
-                    return $this;
-                }
-
-                if ( false === ( $_json = @json_decode( @file_get_contents( $_oldConfig ), true ) ) )
-                {
-                    \Kisma::set( static::CORS_WHITELIST_KEY, false );
-                    Log::error( 'Found CORS configuration in old location, but contents invalid: ' . print_r( $_json, true ) );
-
-                    return $this;
-                }
-
-                if ( false === @file_put_contents( $_config, json_encode( $_json ) ) )
-                {
-                    \Kisma::set( static::CORS_WHITELIST_KEY, false );
-                    Log::error( 'Error moving CORS configuration file to new location.' );
-
-                    return $this;
-                }
-
-                //	Final step, remove old configuration file...
-                if ( false === @unlink( $_oldConfig ) )
-                {
-                    \Kisma::set( static::CORS_WHITELIST_KEY, false );
-                    Log::error( 'File system error removing CORS configuration file from old location. Ignoring' );
-
-                    return $this;
-                }
-
-                //	Migration complete...
-                Log::info( 'CORS configuration file migrated from old location.' );
-                $_list = $_json;
-            }
+            \Kisma::set( 'cors.whitelist', $_whitelist );
         }
 
-        if ( $_list )
-        {
-            $this->setCorsWhitelist( $_list );
-        }
-
-        \Kisma::set( static::CORS_WHITELIST_KEY, $_list );
-
-        return $this;
+        return $this->setCorsWhitelist( $_whitelist );
     }
 
     //*************************************************************************
@@ -635,7 +614,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         $this->_requestObject = Request::createFromGlobals();
-        $_response = Response::create()->prepare( $this->_requestObject );
+        $this->setResponseObject( Response::create()->prepare( $this->_requestObject ) );
 
         //	Load any plug-ins
         $this->_loadPlugins();
@@ -644,8 +623,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         {
             //	OPTIONS goooooooooood!!!!!
             case HttpMethod::OPTIONS:
-                $this->addCorsHeaders();
-                $_response->setStatusCode( HttpResponse::NoContent )->send();
+                $this->_responseObject->setStatusCode( HttpResponse::NoContent )->send();
 
                 return Pii::end( HttpResponse::NoContent );
 
@@ -662,8 +640,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 throw new BadRequestException();
         }
 
-        //	Save to object and add headers
-        $this->setResponseObject( $_response );
+        //	Auto-add the CORS headers...
+        if ( $this->_autoAddHeaders )
+        {
+            $this->addCorsHeaders();
+        }
     }
 
     /**

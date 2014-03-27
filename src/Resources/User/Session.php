@@ -267,12 +267,6 @@ class Session extends BasePlatformRestResource
      */
     public static function userLogout()
     {
-        //	Delete any cached configs...
-        if ( null !== ( $_sessionKey = Pii::getParam( 'session.key' ) ) )
-        {
-            DataCache::load( $_sessionKey, null, true );
-        }
-
         // helper for non-browser-managed sessions
         $_sessionId = FilterInput::server( 'HTTP_X_DREAMFACTORY_SESSION_TOKEN' );
 
@@ -291,8 +285,15 @@ class Session extends BasePlatformRestResource
             }
         }
 
-        // otherwise logout browser session
+        // And logout browser session
         Pii::user()->logout();
+
+        //	Now, if we have a DFCC session key...
+        if ( null !== ( $_sessionKey = \Kisma::get( Pii::DFCC_SESSION_KEY ) ) )
+        {
+            //  Blow away the currently cached configuration
+            DataCache::load( $_sessionKey, null, true );
+        }
     }
 
     /**

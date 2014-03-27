@@ -178,7 +178,8 @@ class UserManager extends BaseSystemRestService
     {
         try
         {
-            Pii::app()->trigger( 'session.validate' );
+            Pii::trigger( 'session.validate', null );
+
             $userId = Session::validateSession();
         }
         catch ( \Exception $ex )
