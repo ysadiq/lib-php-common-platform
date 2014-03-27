@@ -252,6 +252,69 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     }
 
     //*************************************************************************
+    //	Event Handlers
+    //*************************************************************************
+
+    /**
+     * Handles an OPTIONS request to the server to allow CORS and optionally sends the CORS headers
+     *
+     * @param \CEvent $event
+     *
+     * @return bool
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     */
+    protected function _onBeginRequest( \CEvent $event )
+    {
+        //	Start the request-only profile
+        if ( static::$_enableProfiler )
+        {
+            Profiler::start( 'app.request' );
+        }
+
+        $this->_requestObject = Request::createFromGlobals();
+        $this->setResponseObject( Response::create(), false );
+
+        //	Load any plug-ins
+        $this->_loadPlugins();
+
+        switch ( $this->_requestObject->getMethod() )
+        {
+            //	OPTIONS goooooooooood!!!!!
+            case HttpMethod::OPTIONS:
+                $this->addCorsHeaders();
+                $this->_responseObject->setStatusCode( HttpResponse::NoContent )->send();
+
+                return Pii::end( HttpResponse::NoContent );
+
+            //	TRACE baaaaaadddddddddd!!!!!
+            case HttpMethod::TRACE:
+                Log::error(
+                    'HTTP TRACE received!',
+                    array(
+                        'server'  => $this->_requestObject->server->all(),
+                        'request' => $this->_requestObject->request->all()
+                    )
+                );
+
+                throw new BadRequestException();
+        }
+
+        //	Auto-add the CORS headers...
+        if ( $this->_autoAddHeaders )
+        {
+            $this->addCorsHeaders();
+        }
+    }
+
+    /**
+     * @param \CEvent $event
+     */
+    protected function _onEndRequest( \CEvent $event )
+    {
+        $this->stopProfiler( 'app.request' );
+    }
+
+    //*************************************************************************
     //  Server-Side Event Support
     //*************************************************************************
 
@@ -328,12 +391,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         //	Was an origin header passed? If not, don't do CORS.
         if ( empty( $_origin ) )
         {
-            Log::debug( 'No "Origin" sent with request. No CORS headers added.' );
-
             return $returnHeaders ? array() : true;
         }
 
-        Log::debug( 'Adding CORS headers' );
+        Log::debug( 'CORS: Setting for origin "' . $_origin . '"' );
 
         $_originUri = null;
         $_requestSource = $this->_requestObject->server->get( 'SERVER_NAME', \Kisma::get( 'platform.host_name', gethostname() ) );
@@ -594,68 +655,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     }
 
     //*************************************************************************
-    //	Event Handlers
-    //*************************************************************************
-
-    /**
-     * Handles an OPTIONS request to the server to allow CORS and optionally sends the CORS headers
-     *
-     * @param \CEvent $event
-     *
-     * @return bool
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     */
-    protected function _onBeginRequest( \CEvent $event )
-    {
-        //	Start the request-only profile
-        if ( static::$_enableProfiler )
-        {
-            Profiler::start( 'app.request' );
-        }
-
-        $this->_requestObject = Request::createFromGlobals();
-        $this->setResponseObject( Response::create()->prepare( $this->_requestObject ) );
-
-        //	Load any plug-ins
-        $this->_loadPlugins();
-
-        switch ( $this->_requestObject->getMethod() )
-        {
-            //	OPTIONS goooooooooood!!!!!
-            case HttpMethod::OPTIONS:
-                $this->_responseObject->setStatusCode( HttpResponse::NoContent )->send();
-
-                return Pii::end( HttpResponse::NoContent );
-
-            //	TRACE baaaaaadddddddddd!!!!!
-            case HttpMethod::TRACE:
-                Log::error(
-                    'HTTP TRACE received!',
-                    array(
-                        'server'  => $this->_requestObject->server->all(),
-                        'request' => $this->_requestObject->request->all()
-                    )
-                );
-
-                throw new BadRequestException();
-        }
-
-        //	Auto-add the CORS headers...
-        if ( $this->_autoAddHeaders )
-        {
-            $this->addCorsHeaders();
-        }
-    }
-
-    /**
-     * @param \CEvent $event
-     */
-    protected function _onEndRequest( \CEvent $event )
-    {
-        $this->stopProfiler( 'app.request' );
-    }
-
-    //*************************************************************************
     //	Accessors
     //*************************************************************************
 
@@ -731,13 +730,15 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     }
 
     /**
+     * @param bool $addCorsHeaders
+     *
      * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function getResponseObject()
+    public function getResponseObject( $addCorsHeaders = true )
     {
         if ( null === $this->_responseObject )
         {
-            $this->setResponseObject( Response::create() );
+            $this->setResponseObject( Response::create(), $addCorsHeaders );
         }
 
         return $this->_responseObject;
@@ -745,15 +746,16 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
     /**
      * @param \Symfony\Component\HttpFoundation\Response $responseObject
+     * @param bool                                       $addCorsHeaders
      *
      * @return PlatformWebApplication
      */
-    public function setResponseObject( Response $responseObject )
+    public function setResponseObject( Response $responseObject, $addCorsHeaders = true )
     {
         $this->_responseObject = $responseObject;
 
         //	Auto-add the CORS headers...
-        if ( $this->_autoAddHeaders )
+        if ( $addCorsHeaders && $this->_autoAddHeaders )
         {
             $this->addCorsHeaders();
         }

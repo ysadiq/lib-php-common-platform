@@ -182,11 +182,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
         $this->_preProcess();
 
-        if ( $this instanceOf BasePlatformRestResource )
-        {
-            $this->trigger( ResourceServiceEvents::PRE_PROCESS );
-        }
-
         //	Inherent failure?
         if ( false === ( $this->_response = $this->_handleResource() ) )
         {
@@ -202,11 +197,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         }
 
         $this->_postProcess();
-
-        if ( $this instanceOf BasePlatformRestResource )
-        {
-            $this->trigger( ResourceServiceEvents::POST_PROCESS );
-        }
 
         return $this->_respond();
     }
@@ -379,6 +369,13 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _respond()
     {
+        static $_responded = false;
+
+        if ( $_responded )
+        {
+            return;
+        }
+
         //	Native and PHP response types return, not emit...
         if ( in_array( $this->_outputFormat, array( false, DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE ) ) )
         {
@@ -416,10 +413,12 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         if ( !empty( $this->_outputFormat ) )
         {
             //	No return from here...
-            RestResponse::sendResults( $_result, $this->_responseCode, $this->_outputFormat, $this->_outputAsFile );
+            $_response = RestResponse::sendResults( $_result, $this->_responseCode, $this->_outputFormat, $this->_outputAsFile, false );
         }
 
         //	Native arrays must stay local, just return
+        $_responded = true;
+
         return $_result;
     }
 
@@ -430,7 +429,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _detectAppName()
     {
-        $_request = Pii::app()->getRequestObject();
+        $_request = Pii::requestObject();
 
         // 	Determine application if any
         $_appName = $_request->get(

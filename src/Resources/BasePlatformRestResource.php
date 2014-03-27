@@ -20,6 +20,8 @@
 namespace DreamFactory\Platform\Resources;
 
 use DreamFactory\Platform\Enums\ResponseFormats;
+use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
+use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Interfaces\RestResourceLike;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Services\BasePlatformRestService;
@@ -31,168 +33,218 @@ use Kisma\Core\Utility\Option;
  */
 abstract class BasePlatformRestResource extends BasePlatformRestService implements RestResourceLike
 {
-	//*************************************************************************
-	//* Constants
-	//*************************************************************************
+    //*************************************************************************
+    //* Constants
+    //*************************************************************************
 
-	/**
-	 * @var string
-	 */
-	const DEFAULT_PASSTHRU_CLASS = 'DreamFactory\\Platform\\Utility\\ResourceStore';
-	/**
-	 * @var string Our event namespace
-	 */
-	const EVENT_NAMESPACE = '{resource}.';
+    /**
+     * @var string
+     */
+    const DEFAULT_PASSTHRU_CLASS = 'DreamFactory\\Platform\\Utility\\ResourceStore';
+    /**
+     * @var string Our event namespace
+     */
+    const EVENT_NAMESPACE = '{resource}.';
 
-	//*************************************************************************
-	//* Members
-	//*************************************************************************
+    //*************************************************************************
+    //* Members
+    //*************************************************************************
 
-	/**
-	 * @var RestServiceLike
-	 */
-	protected $_consumer;
-	/**
-	 * @var string The name of this service
-	 */
-	protected $_serviceName;
-	/**
-	 * @var int The way to format the response data, not the envelope.
-	 */
-	protected $_responseFormat = ResponseFormats::RAW;
-	/**
-	 * @var string The class to pass to from __callStatic()
-	 */
-	protected static $_passthruClass = self::DEFAULT_PASSTHRU_CLASS;
+    /**
+     * @var RestServiceLike
+     */
+    protected $_consumer;
+    /**
+     * @var string The name of this service
+     */
+    protected $_serviceName;
+    /**
+     * @var int The way to format the response data, not the envelope.
+     */
+    protected $_responseFormat = ResponseFormats::RAW;
+    /**
+     * @var string The class to pass to from __callStatic()
+     */
+    protected static $_passthruClass = self::DEFAULT_PASSTHRU_CLASS;
 
-	//*************************************************************************
-	//* Methods
-	//*************************************************************************
+    //*************************************************************************
+    //* Methods
+    //*************************************************************************
 
-	/**
-	 * Create a new service
-	 *
-	 * @param RestServiceLike $consumer
-	 * @param array           $settings configuration array
-	 *
-	 * @throws \InvalidArgumentException
-	 */
-	public function __construct( $consumer, $settings = array() )
-	{
-		$this->_consumer = $consumer;
-		$this->_serviceName = $this->_serviceName ? : Option::get( $settings, 'service_name', null, true );
+    /**
+     * Create a new service
+     *
+     * @param RestServiceLike $consumer
+     * @param array           $settings configuration array
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function __construct( $consumer, $settings = array() )
+    {
+        $this->_consumer = $consumer;
+        $this->_serviceName = $this->_serviceName ? : Option::get( $settings, 'service_name', null, true );
 
-		if ( empty( $this->_serviceName ) )
-		{
-			throw new \InvalidArgumentException( 'You must supply a value for "service_name".' );
-		}
+        if ( empty( $this->_serviceName ) )
+        {
+            throw new \InvalidArgumentException( 'You must supply a value for "service_name".' );
+        }
 
-		parent::__construct( $settings );
-	}
+        parent::__construct( $settings );
+    }
 
-	/**
-	 * A chance to format the response
-	 */
-	protected function _postProcess()
-	{
-		$this->_formatResponse();
+    /**
+     * @param string     $resource
+     * @param string     $action
+     * @param string|int $output_format
+     *
+     * @throws BadRequestException
+     * @return mixed
+     */
+    public function processRequest( $resource = null, $action = self::GET, $output_format = null )
+    {
+        $this->_setAction( $action );
 
-		parent::_postProcess();
-	}
+        //	Require app name for security check
+        $this->_detectAppName();
+        $this->_detectResourceMembers( $resource );
+        $this->_detectResponseMembers( $output_format );
 
-	/**
-	 * Format the response if necessary
-	 */
-	protected function _formatResponse()
-	{
-		//	Default implementation does nothing. Like the goggles.
-	}
+        $this->_preProcess();
 
-	/**
-	 * @param string $name
-	 * @param array  $arguments
-	 *
-	 * @return mixed
-	 */
-	public static function __callStatic( $name, $arguments )
-	{
-		//	Passthru to store
-		return call_user_func_array( array( static::$_passthruClass, $name ), $arguments );
-	}
+        //	Inherent failure?
+        if ( false === ( $this->_response = $this->_handleResource() ) )
+        {
+            $_message =
+                $this->_action .
+                ' requests' .
+                ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
+                ' are not currently supported by the "' .
+                $this->_apiName .
+                '" service.';
 
-	/**
-	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
-	 *
-	 * @return BasePlatformRestResource
-	 */
-	public function setConsumer( $consumer )
-	{
-		$this->_consumer = $consumer;
+            throw new BadRequestException( $_message );
+        }
 
-		return $this;
-	}
+        $this->_postProcess();
 
-	/**
-	 * @return \DreamFactory\Platform\Services\BasePlatformService
-	 */
-	public function getConsumer()
-	{
-		return $this->_consumer;
-	}
+        return $this->_response;
+    }
 
-	/**
-	 * @param mixed $serviceName
-	 *
-	 * @return BasePlatformRestResource
-	 */
-	public function setServiceName( $serviceName )
-	{
-		$this->_serviceName = $serviceName;
+    /**
+     * @return mixed
+     */
+    protected function _preProcess()
+    {
+        $this->trigger( ResourceServiceEvents::PRE_PROCESS );
 
-		return $this;
-	}
+        parent::_preProcess();
+    }
 
-	/**
-	 * @return mixed
-	 */
-	public function getServiceName()
-	{
-		return $this->_serviceName;
-	}
+    /**
+     * A chance to format the response
+     */
+    protected function _postProcess()
+    {
+        $this->_formatResponse();
 
-	/**
-	 * @param string $passthruClass
-	 */
-	public static function setPassthruClass( $passthruClass )
-	{
-		self::$_passthruClass = $passthruClass;
-	}
+        parent::_postProcess();
 
-	/**
-	 * @return string
-	 */
-	public static function getPassthruClass()
-	{
-		return self::$_passthruClass;
-	}
+        $this->trigger( ResourceServiceEvents::POST_PROCESS );
+    }
 
-	/**
-	 * @param int $responseFormat
-	 *
-	 * @return BasePlatformRestResource
-	 */
-	public function setResponseFormat( $responseFormat )
-	{
-		$this->_responseFormat = $responseFormat;
+    /**
+     * Format the response if necessary
+     */
+    protected function _formatResponse()
+    {
+        //	Default implementation does nothing. Like the goggles.
+    }
 
-		return $this;
-	}
+    /**
+     * @param string $name
+     * @param array  $arguments
+     *
+     * @return mixed
+     */
+    public static function __callStatic( $name, $arguments )
+    {
+        //	Passthru to store
+        return call_user_func_array( array( static::$_passthruClass, $name ), $arguments );
+    }
 
-	/**
-	 * @return int
-	 */
-	public function getResponseFormat()
-	{
-		return $this->_responseFormat;
-	}
+    /**
+     * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+     *
+     * @return BasePlatformRestResource
+     */
+    public function setConsumer( $consumer )
+    {
+        $this->_consumer = $consumer;
+
+        return $this;
+    }
+
+    /**
+     * @return \DreamFactory\Platform\Services\BasePlatformService
+     */
+    public function getConsumer()
+    {
+        return $this->_consumer;
+    }
+
+    /**
+     * @param mixed $serviceName
+     *
+     * @return BasePlatformRestResource
+     */
+    public function setServiceName( $serviceName )
+    {
+        $this->_serviceName = $serviceName;
+
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getServiceName()
+    {
+        return $this->_serviceName;
+    }
+
+    /**
+     * @param string $passthruClass
+     */
+    public static function setPassthruClass( $passthruClass )
+    {
+        self::$_passthruClass = $passthruClass;
+    }
+
+    /**
+     * @return string
+     */
+    public static function getPassthruClass()
+    {
+        return self::$_passthruClass;
+    }
+
+    /**
+     * @param int $responseFormat
+     *
+     * @return BasePlatformRestResource
+     */
+    public function setResponseFormat( $responseFormat )
+    {
+        $this->_responseFormat = $responseFormat;
+
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getResponseFormat()
+    {
+        return $this->_responseFormat;
+    }
 }
