@@ -46,7 +46,7 @@ class Chunnel extends Seed
             throw new \InvalidArgumentException( 'You must give this process an ID. $id cannot be blank.' );
         }
 
-        $_response = clone ( $_response = Pii::app()->getResponseObject() );
+        $_response = clone ( $_response = Pii::responseObject() );
         $_response->headers->add( EventSourceHeaders::all() );
 
         $_stream = new EventStream( new static() );

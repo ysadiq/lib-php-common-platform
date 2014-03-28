@@ -109,6 +109,9 @@ class EventDispatcher implements EventDispatcherInterface
      */
     public function __construct()
     {
+        static::$_logEvents = Pii::getParam( 'dsp.log_events', static::$_logEvents );
+        static::$_logAllEvents = Pii::getParam( 'dsp.log_all_events', static::$_logAllEvents );
+        
         static::$_enableRestEvents = Pii::getParam( 'dsp.enable_rest_events', static::$_enableRestEvents );
         static::$_enablePlatformEvents = Pii::getParam( 'dsp.enable_rest_events', static::$_enablePlatformEvents );
         static::$_enableEventScripts = Pii::getParam( 'dsp.enable_event_scripts', static::$_enableEventScripts );
@@ -548,7 +551,8 @@ class EventDispatcher implements EventDispatcherInterface
             {
                 $this->addListener( $_eventName, array( $subscriber, $_params ) );
             }
-            elseif ( is_string( $_params[0] ) )            {
+            elseif ( is_string( $_params[0] ) )
+            {
                 $this->addListener( $_eventName, array( $subscriber, $_params[0] ), isset( $_params[1] ) ? $_params[1] : 0 );
             }
             else

@@ -63,7 +63,7 @@ class EventStream extends Seed
      */
     protected $_lastEventId;
     /**
-     * @var Response The response object
+     * @var Response|StreamedResponse The response object
      */
     protected $_response;
     /**
@@ -200,15 +200,16 @@ class EventStream extends Seed
         //  Get the last event ID if available
         $_contentType = null;
         $_response = new StreamedResponse();
+        $_request = Pii::requestObject();
 
         //  Add in the CORS headers from the main thread, if any
-        $_response->headers->add( Pii::app()->getResponseObject()->headers->allPreserveCase() );
+        $_response->headers->add( Pii::responseObject()->headers->allPreserveCase() );
 
         //  Pull out the last event ID from the request
-        $this->_lastEventId = (double)Pii::app()->getRequestObject()->get( 'last-event-id', 0 );
+        $this->_lastEventId = (double)$_request->get( 'last-event-id', 0 );
 
         //  Check the accept headers
-        foreach ( Pii::app()->getRequestObject()->getAcceptableContentTypes() as $_contentType )
+        foreach ( $_request->getAcceptableContentTypes() as $_contentType )
         {
             if ( false !== stripos( static::EVENT_STREAM_CONTENT_TYPE, $_contentType ) )
             {
@@ -224,13 +225,15 @@ class EventStream extends Seed
 
         //  Set our content type and cache settings.
         $_response->headers->set( 'Content-Type', static::EVENT_STREAM_CONTENT_TYPE );
-        $_response->headers->set( 'Cache-Control', 'no-cache' );
 
         /** @noinspection PhpUnusedLocalVariableInspection */
         $_eventStream = $this;
 
+        //  Set up our response object
+        $this->_response = $_response;
+
         //  Streamed responses require a callback...
-        $_response->setCallback(
+        $this->_response->setCallback(
             function ( $_eventStream )
             {
                 ob_start();
@@ -245,9 +248,6 @@ class EventStream extends Seed
                 $_eventStream->getResponse()->setContent( null );
             }
         );
-
-        //  Set up our response object
-        $this->_response = $_response;
 
         return $this->_resetStream();
     }

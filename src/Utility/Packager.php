@@ -228,10 +228,10 @@ class Packager
 			if ( $_fd )
 			{
 				$_pathParts = pathinfo( $_zipFileName );
-				header( "Content-type: application/zip" );
+				header( "Content-Type: application/zip" );
 				header( "Content-Disposition: filename=\"" . $_pathParts["basename"] . "\"" );
-				header( "Content-length: " . filesize( $_zipFileName ) );
-				header( "Cache-control: private" ); //use this to open files directly
+				header( "Content-Length: " . filesize( $_zipFileName ) );
+				header( "Cache-Control: private" ); //use this to open files directly
 				while ( !feof( $_fd ) )
 				{
 					$_buffer = fread( $_fd, 2048 );

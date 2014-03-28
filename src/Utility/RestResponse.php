@@ -24,6 +24,7 @@ use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Oasys\Exceptions\RedirectRequiredException;
 use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\ResponseFormats;
+use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
@@ -226,16 +227,138 @@ class RestResponse extends HttpResponse
      * @param string $as_file
      * @param bool   $exitAfterSend
      *
-     * @return Response|bool
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return bool|\Symfony\Component\HttpFoundation\JsonResponse|\Symfony\Component\HttpFoundation\Response
      */
     public static function sendResults( $result, $code = RestResponse::Ok, $format = 'json', $as_file = null, $exitAfterSend = true )
     {
-        $_response = Pii::responseObject();
-        $_response->setStatusCode( $code );
-        $_response->headers->set( 'P3P', 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"' );
+        if ( Pii::app()->getUseResponseObject() )
+        {
+            return static::_sendResponseObjectResults( $result, $code, $format, $as_file, $exitAfterSend );
+        }
 
-        $_contentType = 'application/json';
+        //	Some REST services may handle the response, they just return null
+        if ( is_null( $result ) )
+        {
+            Pii::end();
+
+            return;
+        }
+
+        switch ( $format )
+        {
+            case OutputFormats::JSON:
+            case 'json':
+                $_contentType = 'application/json; charset=utf-8';
+
+                if ( !is_string( $result ) )
+                {
+                    $result = DataFormat::arrayToJson( $result );
+                }
+             
+                // JSON if no callback
+                if ( isset( $_GET['callback'] ) )
+                {
+                    // JSONP if valid callback
+                    if ( !static::is_valid_callback( $_GET['callback'] ) )
+                    {
+                        // Otherwise, bad request
+                        throw new BadRequestException();
+                    }
+
+                    $result = "{$_GET['callback']}($result);";
+                }
+                break;
+
+            case OutputFormats::XML:
+            case 'xml':
+                $_contentType = 'application/xml';
+                $result = '<?xml version="1.0" ?>' . "<dfapi>$result</dfapi>";
+                break;
+
+            case 'csv':
+                $_contentType = 'text/csv';
+                break;
+
+            default:
+                $_contentType = 'application/octet-stream';
+                break;
+        }
+
+        /* gzip handling output if necessary */
+        ob_start();
+        ob_implicit_flush( 0 );
+
+        if ( !headers_sent() )
+        {
+            // headers
+            $code = static::getHttpStatusCode( $code );
+            $_title = static::getHttpStatusCodeTitle( $code );
+            header( "HTTP/1.1 $code $_title" );
+            header( "Content-Type: $_contentType", true );
+            //	IE 9 requires hoop for session cookies in iframes
+            header( 'P3P:CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"', true );
+
+            if ( !empty( $as_file ) )
+            {
+                header( "Content-Disposition: attachment; filename=\"$as_file\";", true );
+            }
+
+            //	Add additional headers for CORS support
+            Pii::app()->addCorsHeaders();
+        }
+
+        // send it out
+        echo $result;
+
+        // flush output and destroy buffer
+        ob_end_flush();
+
+        if ( $exitAfterSend )
+        {
+            Pii::end();
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param mixed  $result
+     * @param int    $code
+     * @param string $format
+     * @param string $as_file
+     * @param bool   $exitAfterSend
+     *
+     * @return bool|JsonResponse|Response
+     */
+    protected static function _sendResponseObjectResults( $result, $code = RestResponse::Ok, $format = 'json', $as_file = null, $exitAfterSend = true )
+    {
+        //  Get the sent headers
+        $_sentHeaders = headers_list();
+
+        if ( !empty( $_sentHeaders ) )
+        {
+            foreach ( $_sentHeaders as $_index => $_header )
+            {
+                $_parts = explode( ': ', $_header, 1 );
+                unset( $_sentHeaders[$_index] );
+                $_sentHeaders[$_parts[0]] = Option::get( $_parts, 1, '' );
+            }
+        }
+
+        $_response = Response::create( '', $code );
+
+        $_response->headers->replace(
+            array_merge(
+                $_sentHeaders,
+                array(
+                    'P3P' => 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'
+                )
+            )
+        );
+
         $_content = null;
+        $_contentType = 'application/json';
 
         //	Some REST services may handle the response, they just return null
         if ( is_null( $result ) )
@@ -251,13 +374,8 @@ class RestResponse extends HttpResponse
                 {
                     /** @var JsonResponse $_response */
                     $_response = new JsonResponse( $result, $code );
+                    $_response->headers->add( Pii::app()->addCorsHeaders( array(), true, false ) );
                     $_response->setCallback( Option::get( $_GET, 'callback' ) );
-
-                    if ( 'cli' !== PHP_SAPI )
-                    {
-                        Pii::responseObject( $_response );
-                    }
-
                     $_content = false;
                 }
                 break;
@@ -287,7 +405,7 @@ class RestResponse extends HttpResponse
 
         if ( !empty( $_contentType ) )
         {
-            $_response->headers->set( 'Content-Type', $_contentType );
+            $_response->headers->set( 'Content-Type', $_contentType, true );
         }
 
         if ( !empty( $as_file ) )
@@ -295,7 +413,7 @@ class RestResponse extends HttpResponse
             $_response->headers->makeDisposition( ResponseHeaderBag::DISPOSITION_ATTACHMENT, $as_file );
         }
 
-        if ( ( !$_response instanceof JsonResponse ) )
+        if ( !( $_response instanceof JsonResponse ) )
         {
             $_response->setContent( $_content ? : $result );
         }
@@ -327,4 +445,63 @@ class RestResponse extends HttpResponse
         return static::$_charset;
     }
 
+    /**
+     * @param $subject
+     *
+     * @return bool
+     */
+    public static function is_valid_callback( $subject )
+    {
+        $identifier_syntax = '/^[$_\p{L}][$_\p{L}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]*+$/u';
+
+        $reserved_words = array(
+            'break',
+            'do',
+            'instanceof',
+            'typeof',
+            'case',
+            'else',
+            'new',
+            'var',
+            'catch',
+            'finally',
+            'return',
+            'void',
+            'continue',
+            'for',
+            'switch',
+            'while',
+            'debugger',
+            'function',
+            'this',
+            'with',
+            'default',
+            'if',
+            'throw',
+            'delete',
+            'in',
+            'try',
+            'class',
+            'enum',
+            'extends',
+            'super',
+            'const',
+            'export',
+            'import',
+            'implements',
+            'let',
+            'private',
+            'public',
+            'yield',
+            'interface',
+            'package',
+            'protected',
+            'static',
+            'null',
+            'true',
+            'false'
+        );
+
+        return preg_match( $identifier_syntax, $subject ) && !in_array( mb_strtolower( $subject, 'UTF-8' ), $reserved_words );
+    }
 }

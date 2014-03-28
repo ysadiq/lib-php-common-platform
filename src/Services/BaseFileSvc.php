@@ -148,10 +148,10 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                         $fd = fopen( $zipFileName, "r" );
                         if ( $fd )
                         {
-                            header( 'Content-type: application/zip' );
+                            header( 'Content-Type: application/zip' );
                             header( 'Content-Disposition: filename=" ' . basename( $zipFileName ) . '"' );
-                            header( 'Content-length: ' . filesize( $zipFileName ) );
-                            header( 'Cache-control: private' ); //use this to open files directly
+                            header( 'Content-Length: ' . filesize( $zipFileName ) );
+                            header( 'Cache-Control: private' ); //use this to open files directly
                             while ( !feof( $fd ) )
                             {
                                 $buffer = fread( $fd, 2048 );
@@ -183,10 +183,10 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                         $fd = fopen( $zipFileName, "r" );
                         if ( $fd )
                         {
-                            header( 'Content-type: application/zip' );
+                            header( 'Content-Type: application/zip' );
                             header( 'Content-Disposition: filename=" ' . basename( $zipFileName ) . '"' );
-                            header( 'Content-length: ' . filesize( $zipFileName ) );
-                            header( 'Cache-control: private' ); //use this to open files directly
+                            header( 'Content-Length: ' . filesize( $zipFileName ) );
+                            header( 'Cache-Control: private' ); //use this to open files directly
                             while ( !feof( $fd ) )
                             {
                                 $buffer = fread( $fd, 2048 );
