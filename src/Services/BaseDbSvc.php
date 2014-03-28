@@ -111,13 +111,13 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $_extras = array();
 
         // Most requests contain 'returned fields' parameter
-        $_fields = FilterInput::request( 'fields', static::getFromPostedData( $post_data, 'fields' ) );
+        $_fields = static::getFromPostedData( $post_data, 'fields', FilterInput::request( 'fields' ) );
         $_fieldsDefault = ( static::GET == $this->_action ) ? '*' : null;
         $_extras['fields'] = ( empty( $_fields ) ) ? $_fieldsDefault : $_fields;
 
-        // means to override the default identifier field for a table
+        // means to override the default identifier fields for a table
         // or supply one when there is no default designated
-        $_idField = FilterInput::request( 'id_field', static::getFromPostedData( $post_data, 'id_field' ) );
+        $_idField = static::getFromPostedData( $post_data, 'id_field', FilterInput::request( 'id_field' ) );
         $_extras['id_field'] = ( empty( $_idField ) ) ? static::DEFAULT_ID_FIELD : $_idField;
 
         if ( null != $_ssFilters = Session::getServiceFilters( $this->_apiName, $this->_resource ) )
@@ -235,7 +235,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         switch ( $this->_action )
         {
             case static::GET:
-                $_ids = FilterInput::request( 'names', static::getFromPostedData( $this->_requestData, 'names' ) );
+                $_ids = static::getFromPostedData( $this->_requestData, 'names', FilterInput::request( 'names' ) );
                 if ( empty( $_ids ) )
                 {
                     return $this->_listResources();
@@ -276,7 +276,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                 break;
 
             case static::DELETE:
-                $_ids = FilterInput::request( 'names', static::getFromPostedData( $this->_requestData, 'names' ) );
+                $_ids = static::getFromPostedData( $this->_requestData, 'names', FilterInput::request( 'names' ) );
                 if ( !empty( $_ids ) )
                 {
                     $_result = $this->deleteTables( $_ids );
@@ -311,7 +311,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         if ( empty( $this->_resourceId ) )
         {
-            $_ids = FilterInput::request( 'ids', static::getFromPostedData( $this->_requestData, 'ids' ) );
+            $_ids = static::getFromPostedData( $this->_requestData, 'ids', FilterInput::request( 'ids' ) );
             if ( !empty( $_ids ) )
             {
                 $_result = $this->retrieveRecordsByIds( $this->_resource, $_ids, $_extras );
@@ -329,7 +329,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                 }
                 else
                 {
-                    $_filter = FilterInput::request( 'filter', Option::get( $this->_requestData, 'filter' ) );
+                    $_filter = Option::get( $this->_requestData, 'filter', FilterInput::request( 'filter' ) );
                     if ( empty( $_filter ) && !empty( $this->_requestData ) )
                     {
                         // query by record map
@@ -403,27 +403,28 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
         if ( empty( $this->_resourceId ) )
         {
-            $_ids = FilterInput::request( 'ids', static::getFromPostedData( $this->_requestData, 'ids' ) );
+            $_records = static::getFromPostedData( $this->_requestData, 'record' );
+
+            $_ids = static::getFromPostedData( $this->_requestData, 'ids', FilterInput::request( 'ids' ) );
             if ( !empty( $_ids ) )
             {
-                $_result = $this->updateRecordsByIds( $this->_resource, $this->_requestData, $_ids, $_extras );
+                $_result = $this->updateRecordsByIds( $this->_resource, $_records, $_ids, $_extras );
                 $_result = array( 'record' => $_result );
             }
             else
             {
-                $_records = static::getFromPostedData( $this->_requestData, 'record' );
-                if ( !empty( $_records ) )
+                $_filter = Option::get( $this->_requestData, 'filter', FilterInput::request( 'filter' ) );
+                if ( !empty( $_filter ) )
                 {
-                    $_result = $this->updateRecords( $this->_resource, $_records, $_extras );
+                    $_params = Option::get( $this->_requestData, 'params', array() );
+                    $_result = $this->updateRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $_extras );
                     $_result = array( 'record' => $_result );
                 }
                 else
                 {
-                    $_filter = FilterInput::request( 'filter', Option::get( $this->_requestData, 'filter' ) );
-                    if ( !empty( $_filter ) )
+                    if ( !empty( $_records ) )
                     {
-                        $_params = Option::get( $this->_requestData, 'params', array() );
-                        $_result = $this->updateRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $_extras );
+                        $_result = $this->updateRecords( $this->_resource, $_records, $_extras );
                         $_result = array( 'record' => $_result );
                     }
                     else
@@ -455,27 +456,28 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
         if ( empty( $this->_resourceId ) )
         {
-            $_ids = FilterInput::request( 'ids', static::getFromPostedData( $this->_requestData, 'ids' ) );
+            $_records = static::getFromPostedData( $this->_requestData, 'record' );
+
+            $_ids = static::getFromPostedData( $this->_requestData, 'ids', FilterInput::request( 'ids' ) );
             if ( !empty( $_ids ) )
             {
-                $_result = $this->mergeRecordsByIds( $this->_resource, $this->_requestData, $_ids, $_extras );
+                $_result = $this->mergeRecordsByIds( $this->_resource, $_records, $_ids, $_extras );
                 $_result = array( 'record' => $_result );
             }
             else
             {
-                $_records = static::getFromPostedData( $this->_requestData, 'record' );
-                if ( !empty( $_records ) )
+                $_filter = Option::get( $this->_requestData, 'filter', FilterInput::request( 'filter' ) );
+                if ( !empty( $_filter ) )
                 {
-                    $_result = $this->mergeRecords( $this->_resource, $_records, $_extras );
+                    $_params = Option::get( $this->_requestData, 'params', array() );
+                    $_result = $this->mergeRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $_extras );
                     $_result = array( 'record' => $_result );
                 }
                 else
                 {
-                    $_filter = FilterInput::request( 'filter', Option::get( $this->_requestData, 'filter' ) );
-                    if ( !empty( $_filter ) )
+                    if ( !empty( $_records ) )
                     {
-                        $_params = Option::get( $this->_requestData, 'params', array() );
-                        $_result = $this->mergeRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $_extras );
+                        $_result = $this->mergeRecords( $this->_resource, $_records, $_extras );
                         $_result = array( 'record' => $_result );
                     }
                     else
@@ -502,7 +504,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
         if ( empty( $this->_resourceId ) )
         {
-            $_ids = FilterInput::request( 'ids', static::getFromPostedData( $this->_requestData, 'ids' ) );
+            $_ids = static::getFromPostedData( $this->_requestData, 'ids', FilterInput::request( 'ids' ) );
             if ( !empty( $_ids ) )
             {
                 $_result = $this->deleteRecordsByIds( $this->_resource, $_ids, $_extras );
@@ -518,7 +520,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                 }
                 else
                 {
-                    $_filter = FilterInput::request( 'filter', Option::get( $this->_requestData, 'filter' ) );
+                    $_filter = Option::get( $this->_requestData, 'filter', FilterInput::request( 'filter' ) );
                     if ( !empty( $_filter ) )
                     {
                         $_params = Option::get( $this->_requestData, 'params', array() );
@@ -534,7 +536,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                                 throw new BadRequestException( 'No filter or records given for delete request.' );
                             }
 
-                            $_result = $this->truncateTable( $this->_resource );
+                            $_result = $this->truncateTable( $this->_resource, $_extras );
                         }
                         else
                         {
@@ -696,11 +698,12 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * Delete all table entries but keep the table
      *
      * @param string $table
+     * @param array  $extras
      *
      * @throws \Exception
      * @return array
      */
-    abstract public function truncateTable( $table );
+    abstract public function truncateTable( $table, $extras = array() );
 
     // Handle table record operations
 
@@ -1265,14 +1268,9 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     protected static function _requireMoreFields( $fields, $id_field = null )
     {
-        if ( empty( $fields ) )
+        if ( false === $fields = static::checkIncomingData( $fields, ',' ) )
         {
             return false;
-        }
-
-        if ( !is_array( $fields ) )
-        {
-            $fields = array_map( 'trim', explode( ',', trim( $fields, ',' ) ) );
         }
 
         $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
@@ -1394,7 +1392,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public static function checkIncomingData( $data, $str_delimiter = null, $check_single = false, $on_fail = null )
     {
-        if ( !is_array( $data ) && ( is_string( $str_delimiter ) && !empty( $str_delimiter ) ) )
+        if ( !empty( $data ) && !is_array( $data ) && ( is_string( $str_delimiter ) && !empty( $str_delimiter ) ) )
         {
             $data = array_map( 'trim', explode( $str_delimiter, trim( $data, $str_delimiter ) ) );
         }
@@ -1421,7 +1419,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         return $data;
     }
 
-    public static function getFromPostedData( $data, $marker )
+    public static function getFromPostedData( $data, $marker, $default = null )
     {
         $_found = Option::get( $data, $marker );
         if ( empty( $_found ) )
@@ -1430,7 +1428,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
             $_found = Option::getDeep( $data, Inflector::pluralize( $marker ), $marker );
         }
 
-        return $_found;
+        return ( empty( $_found ) ) ? $default : $_found;
     }
 
     public static function startsWith( $haystack, $needle )
@@ -1440,7 +1438,6 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
     public static function endsWith( $haystack, $needle )
     {
-
         return ( substr( $haystack, -strlen( $needle ) ) === $needle );
     }
 }

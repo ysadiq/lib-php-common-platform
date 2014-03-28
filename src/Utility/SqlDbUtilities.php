@@ -19,8 +19,10 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Common\Exceptions\RestException;
 use DreamFactory\Platform\Enums\PlatformStorageDrivers;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\InvalidJsonException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Interfaces\SqlDbDriverTypes;
@@ -156,7 +158,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
         }
         catch ( \Exception $ex )
         {
-            throw new \Exception( "Failed to list database tables.\n{$ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to list database tables.\n{$ex->getMessage()}" );
         }
     }
 
@@ -231,7 +233,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
         }
         catch ( \Exception $ex )
         {
-            throw new \Exception( "Failed to query database schema.\n{$ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to query database schema.\n{$ex->getMessage()}" );
         }
     }
 
@@ -245,20 +247,13 @@ class SqlDbUtilities implements SqlDbDriverTypes
      */
     public static function describeTables( $db, $names = null, $remove_prefix = '' )
     {
-        try
+        $out = array();
+        foreach ( $names as $table )
         {
-            $out = array();
-            foreach ( $names as $table )
-            {
-                $out[] = static::describeTable( $db, $table, $remove_prefix );
-            }
+            $out[] = static::describeTable( $db, $table, $remove_prefix );
+        }
 
-            return $out;
-        }
-        catch ( \Exception $ex )
-        {
-            throw new \Exception( "Failed to query database schema.\n{$ex->getMessage()}" );
-        }
+        return $out;
     }
 
     /**
@@ -316,9 +311,13 @@ class SqlDbUtilities implements SqlDbDriverTypes
                 'related'     => static::describeTableRelated( $db, $name )
             );
         }
+        catch ( RestException $ex )
+        {
+            throw $ex;
+        }
         catch ( \Exception $ex )
         {
-            throw new \Exception( "Failed to query database schema.\n{$ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to query database schema.\n{$ex->getMessage()}" );
         }
     }
 
@@ -338,6 +337,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
         {
             throw new NotFoundException( "Table '$name' does not exist in the database." );
         }
+
         try
         {
             if ( empty( $labels ) )
@@ -359,7 +359,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
         }
         catch ( \Exception $ex )
         {
-            throw new \Exception( "Failed to query table schema.\n{$ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to query table schema.\n{$ex->getMessage()}" );
         }
     }
 
@@ -379,6 +379,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
         {
             throw new NotFoundException( "Table '$table_name' does not exist in the database." );
         }
+
         $field = array();
         try
         {
@@ -398,7 +399,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
         }
         catch ( \Exception $ex )
         {
-            throw new \Exception( "Failed to query table schema.\n{$ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to query table field schema.\n{$ex->getMessage()}" );
         }
 
         if ( empty( $field ) )
@@ -444,7 +445,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
         }
         catch ( \Exception $ex )
         {
-            throw new \Exception( "Failed to query table schema.\n{$ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to query table field schema.\n{$ex->getMessage()}" );
         }
 
         if ( empty( $field ) )
@@ -465,47 +466,40 @@ class SqlDbUtilities implements SqlDbDriverTypes
      */
     public static function describeFieldInternal( $column, $foreign_keys, $label_info )
     {
-        try
+        $label = Option::get( $label_info, 'label', Inflector::camelize( $column->name ) );
+        $validation = Option::get( $label_info, 'validation' );
+        $picklist = Option::get( $label_info, 'picklist' );
+        $picklist = ( !empty( $picklist ) ) ? explode( "/n", $picklist ) : array();
+        $refTable = '';
+        $refFields = '';
+        if ( 1 == $column->isForeignKey )
         {
-            $label = Option::get( $label_info, 'label', Inflector::camelize( $column->name ) );
-            $validation = Option::get( $label_info, 'validation' );
-            $picklist = Option::get( $label_info, 'picklist' );
-            $picklist = ( !empty( $picklist ) ) ? explode( "/n", $picklist ) : array();
-            $refTable = '';
-            $refFields = '';
-            if ( 1 == $column->isForeignKey )
-            {
-                $referenceTo = Option::get( $foreign_keys, $column->name );
-                $refTable = Option::get( $referenceTo, 0 );
-                $refFields = Option::get( $referenceTo, 1 );
-            }
+            $referenceTo = Option::get( $foreign_keys, $column->name );
+            $refTable = Option::get( $referenceTo, 0 );
+            $refFields = Option::get( $referenceTo, 1 );
+        }
 
-            return array(
-                'name'               => $column->name,
-                'label'              => $label,
-                'type'               => static::_determineDfType( $column, $label_info ),
-                'db_type'            => $column->dbType,
-                'length'             => intval( $column->size ),
-                'precision'          => intval( $column->precision ),
-                'scale'              => intval( $column->scale ),
-                'default'            => $column->defaultValue,
-                'required'           => static::determineRequired( $column ),
-                'allow_null'         => $column->allowNull,
-                'fixed_length'       => static::determineIfFixedLength( $column->dbType ),
-                'supports_multibyte' => static::determineMultiByteSupport( $column->dbType ),
-                'auto_increment'     => $column->autoIncrement,
-                'is_primary_key'     => $column->isPrimaryKey,
-                'is_foreign_key'     => $column->isForeignKey,
-                'ref_table'          => $refTable,
-                'ref_fields'         => $refFields,
-                'validation'         => $validation,
-                'values'             => $picklist
-            );
-        }
-        catch ( \Exception $ex )
-        {
-            throw new \Exception( "Failed to query table schema.\n{$ex->getMessage()}" );
-        }
+        return array(
+            'name'               => $column->name,
+            'label'              => $label,
+            'type'               => static::_determineDfType( $column, $label_info ),
+            'db_type'            => $column->dbType,
+            'length'             => intval( $column->size ),
+            'precision'          => intval( $column->precision ),
+            'scale'              => intval( $column->scale ),
+            'default'            => $column->defaultValue,
+            'required'           => static::determineRequired( $column ),
+            'allow_null'         => $column->allowNull,
+            'fixed_length'       => static::determineIfFixedLength( $column->dbType ),
+            'supports_multibyte' => static::determineMultiByteSupport( $column->dbType ),
+            'auto_increment'     => $column->autoIncrement,
+            'is_primary_key'     => $column->isPrimaryKey,
+            'is_foreign_key'     => $column->isForeignKey,
+            'ref_table'          => $refTable,
+            'ref_fields'         => $refFields,
+            'validation'         => $validation,
+            'values'             => $picklist
+        );
     }
 
     /**
