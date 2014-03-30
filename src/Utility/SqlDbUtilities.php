@@ -19,12 +19,12 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Common\Exceptions\RestException;
 use DreamFactory\Platform\Enums\PlatformStorageDrivers;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\InvalidJsonException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Interfaces\SqlDbDriverTypes;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Exceptions\StorageException;
@@ -687,18 +687,14 @@ class SqlDbUtilities implements SqlDbDriverTypes
     /**
      * @param $avail_fields
      *
-     * @return string
+     * @return array
      */
     public static function listAllFieldsFromDescribe( $avail_fields )
     {
-        $out = '';
+        $out = array();
         foreach ( $avail_fields as $field_info )
         {
-            if ( !empty( $out ) )
-            {
-                $out .= ',';
-            }
-            $out .= $field_info['name'];
+            $out[] = $field_info['name'];
         }
 
         return $out;

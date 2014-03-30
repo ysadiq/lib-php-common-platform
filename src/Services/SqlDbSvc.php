@@ -19,11 +19,11 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Common\Exceptions\RestException;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Yii\Utility\Pii;
@@ -647,7 +647,12 @@ class SqlDbSvc extends BaseDbSvc
             $_fieldInfo = $this->describeTableFields( $table );
             $_relatedInfo = $this->describeTableRelated( $table );
             $_idFieldsInfo = static::_getIdFieldsInfo( $_idField, $_fieldInfo );
+            if ( empty( $_idFieldsInfo ) )
+            {
+                throw new BadRequestException( 'Updating by ids requires at least one identifying field.' );
+            }
 
+            $_idFieldNames = array();
             $_where = array();
             $_params = array();
             if ( !empty( $_idFieldsInfo ) )
@@ -655,6 +660,7 @@ class SqlDbSvc extends BaseDbSvc
                 foreach ( $_idFieldsInfo as $_info )
                 {
                     $_idName = Option::get( $_info, 'name' );
+                    $_idFieldNames[] = $_idName;
                     $_where[] = "$_idName = :$_idName";
                 }
             }
@@ -675,9 +681,8 @@ class SqlDbSvc extends BaseDbSvc
                 $_where = $_where[0];
             }
 
-            /** @var \CDbCommand $command */
-            $command = $this->_dbConn->createCommand();
-            $_ids = array();
+            /** @var \CDbCommand $_command */
+            $_command = $this->_dbConn->createCommand();
             $_errors = array();
             $_transaction = null;
 
@@ -686,6 +691,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_transaction = $this->_dbConn->beginTransaction();
             }
 
+            $_ids = array();
             foreach ( $records as $_key => $_record )
             {
                 try
@@ -712,8 +718,8 @@ class SqlDbSvc extends BaseDbSvc
                     if ( !empty( $_parsed ) )
                     {
                         // simple update request
-                        $command->reset();
-                        $rows = $command->update( $table, $_parsed, $_where, $_params );
+                        $_command->reset();
+                        $rows = $_command->update( $table, $_parsed, $_where, $_params );
                         if ( 0 >= $rows )
                         {
                             throw new NotFoundException( "Record with identifier '" . print_r( $_id, true ) . "' not found in table '$table'." );
@@ -771,7 +777,7 @@ class SqlDbSvc extends BaseDbSvc
                 throw new BadRequestException( 'Batch Error: Not all records could be updated.', null, null, $_msg );
             }
 
-            if ( static::_requireMoreFields( $_fields, $_idField ) || !empty( $_related ) )
+            if ( static::_requireMoreFields( $_fields, $_idFieldNames ) || !empty( $_related ) )
             {
                 // ids array are now more like records
                 return $this->retrieveRecords( $table, $_ids, $extras );
@@ -800,31 +806,57 @@ class SqlDbSvc extends BaseDbSvc
         $table = $this->correctTableName( $table );
 
         $_fields = Option::get( $extras, 'fields' );
+        $_related = Option::get( $extras, 'related' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
         try
         {
-            $fieldInfo = $this->describeTableFields( $table );
-//			$relatedInfo = $this->describeTableRelated( $table );
-            // simple update request
-            $parsed = $this->parseRecord( $record, $fieldInfo, $_ssFilters, true );
-            if ( empty( $parsed ) )
+            $_fieldInfo = $this->describeTableFields( $table );
+            $_relatedInfo = $this->describeTableRelated( $table );
+            $_idFieldNames = SqlDbUtilities::getPrimaryKeys( $_fieldInfo, true );
+            $_fields = ( empty( $_fields ) ) ? $_idFieldNames : $_fields;
+            $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldInfo );
+            $_bindings = Option::get( $_result, 'bindings' );
+            $_fields = Option::get( $_result, 'fields' );
+            $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+
+            $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
+
+            // build filter string if necessary, add server-side filters if necessary
+            $_ssFilters = Option::get( $extras, 'ss_filters' );
+            if ( is_array( $filter ) )
             {
-                throw new BadRequestException( "No valid field values were passed in the request." );
+                $_criteria = $this->_convertFilterArrayToNative( $filter, $params, $_ssFilters );
             }
+            else
+            {
+                $_criteria = $this->_convertFilterStringToNative( $filter, $params, $_ssFilters );
+            }
+
+            $_where = Option::get( $_criteria, 'where' );
+            $_params = Option::get( $_criteria, 'params', array() );
 
             /** @var \CDbCommand $command */
             $command = $this->_dbConn->createCommand();
-            $command->update( $table, $parsed, $filter );
-            // todo how to update relations here?
-
-            $results = array();
-            if ( !empty( $_fields ) )
+            if ( !empty( $_parsed ) )
             {
-                $results = $this->retrieveRecordsByFilter( $table, $filter, $params );
+                $command->update( $table, $_parsed, $_where, $_params );
             }
 
-            return $results;
+            $_results = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
+
+            // update related info
+            if ( !empty( $_relatedInfo ) )
+            {
+
+                // get latest with related changes if requested
+                if ( !empty( $_related ) )
+                {
+                    $_results = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
+                }
+            }
+
+            return $_results;
         }
         catch ( RestException $_ex )
         {
@@ -845,6 +877,7 @@ class SqlDbSvc extends BaseDbSvc
         $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the update request." );
         $table = $this->correctTableName( $table );
 
+        $_isSingle = ( 1 == count( $ids ) );
         $_rollback = Option::getBool( $extras, 'rollback', false );
         $_continue = Option::getBool( $extras, 'continue', false );
         $_idField = Option::get( $extras, 'id_field' );
@@ -853,7 +886,6 @@ class SqlDbSvc extends BaseDbSvc
         $_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
-        $_isSingle = ( 1 == count( $ids ) );
         try
         {
             $_fieldInfo = $this->describeTableFields( $table );
@@ -911,6 +943,15 @@ class SqlDbSvc extends BaseDbSvc
                 $_where = $_where[0];
             }
 
+            $_requireMore = ( static::_requireMoreFields( $_fields, $_idFieldNames ) || !empty( $_related ) );
+            $_fields = ( empty( $_fields ) ) ? $_idFieldNames : $_fields;
+            $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldInfo );
+            $_bindings = Option::get( $_result, 'bindings' );
+            $_fields = Option::get( $_result, 'fields' );
+            $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+
+            $_outResults = array();
+
             /** @var \CDbCommand $_command */
             $_command = $this->_dbConn->createCommand();
             $_errors = array();
@@ -927,6 +968,10 @@ class SqlDbSvc extends BaseDbSvc
                 $_rows = $_command->update( $table, $_parsed, $_where, $_params );
                 if ( $_rows != count( $ids ) )
                 {
+                    if ( 0 === $_rows )
+                    {
+                        throw new NotFoundException( 'Records requested were not found.' );
+                    }
                     throw new BadRequestException( 'Records changed and ids requested don\'t match' );
                 }
             }
@@ -982,6 +1027,11 @@ class SqlDbSvc extends BaseDbSvc
                         $this->updateRelations( $table, $record, $_id, $_relatedInfo, $_allowRelatedDelete );
                     }
 
+                    if ( !$_needToIterate && $_requireMore )
+                    {
+                        $_outResults[] = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
+                    }
+
                     $_ids[$_key] = $_id;
                 }
                 catch ( \Exception $_ex )
@@ -1028,21 +1078,14 @@ class SqlDbSvc extends BaseDbSvc
                 throw new BadRequestException( 'Batch Error: Not all records could be updated.', null, null, $_msg );
             }
 
-            if ( static::_requireMoreFields( $_fields, $_idFieldNames ) || !empty( $_related ) )
+            if ( $_needToIterate && $_requireMore )
             {
-                $_fields = ( empty( $_fields ) ) ? $_idFieldNames : $_fields;
+                $_outResults = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
+            }
 
-                if ( !$_needToIterate )
-                {
-                    $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldInfo );
-                    $_bindings = Option::get( $_result, 'bindings' );
-                    $_fields = Option::get( $_result, 'fields' );
-                    $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
-
-                    return $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
-                }
-
-                return $this->retrieveRecords( $table, $_ids, $extras );
+            if ( !empty( $_outResults ) )
+            {
+                return $_outResults;
             }
             else
             {
@@ -1133,24 +1176,52 @@ class SqlDbSvc extends BaseDbSvc
         $_isSingle = ( 1 == count( $records ) );
         $_rollback = Option::getBool( $extras, 'rollback', false );
         $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
         $_idField = Option::get( $extras, 'id_field' );
+        $_fields = Option::get( $extras, 'fields' );
+        $_related = Option::get( $extras, 'related' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
         try
         {
             $_fieldInfo = $this->describeTableFields( $table );
             $_idFieldsInfo = static::_getIdFieldsInfo( $_idField, $_fieldInfo );
+            if ( empty( $_idFieldsInfo ) )
+            {
+                throw new BadRequestException( 'Deleting by ids requires at least one identifying field.' );
+            }
 
+            $_needToIterate = ( 1 < count( $_idFieldsInfo ) );
+
+            $_idFieldNames = array();
             $_where = array();
             $_params = array();
-            if ( !empty( $_idFieldsInfo ) )
+            if ( $_needToIterate )
             {
                 foreach ( $_idFieldsInfo as $_info )
                 {
                     $_idName = Option::get( $_info, 'name' );
+                    $_idFieldNames[] = $_idName;
                     $_where[] = "$_idName = :$_idName";
                 }
+            }
+            else
+            {
+                // single id field, let's use the quicker 'in' clause
+                $_idName = Option::get( $_idFieldsInfo[0], 'name' );
+                $_idFieldNames[] = $_idName;
+                $_ids = array();
+                foreach ( $records as $_key => $_record )
+                {
+                    $_id = Option::get( $_record, $_idName );
+                    if ( empty( $_id ) )
+                    {
+                        throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_key] request." );
+                    }
+
+                    $_ids[] = $_id;
+                }
+
+                $_where[] = array( 'in', $_idName, $_ids );
             }
 
             $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
@@ -1169,16 +1240,17 @@ class SqlDbSvc extends BaseDbSvc
                 $_where = $_where[0];
             }
 
-            // get the returnable fields first, then issue delete
-            $_outResults = array();
-            if ( static::_requireMoreFields( $_fields, $_idField ) || !empty( $_related ) )
-            {
-                $_outResults = $this->retrieveRecords( $table, $records, $extras );
-            }
+            $_requireMore = ( static::_requireMoreFields( $_fields, $_idFieldNames ) || !empty( $_related ) );
+            $_fields = ( empty( $_fields ) ) ? $_idFieldNames : $_fields;
+            $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldInfo );
+            $_bindings = Option::get( $_result, 'bindings' );
+            $_fields = Option::get( $_result, 'fields' );
+            $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-            /** @var \CDbCommand $command */
-            $command = $this->_dbConn->createCommand();
-            $_ids = array();
+            $_outResults = array();
+
+            /** @var \CDbCommand $_command */
+            $_command = $this->_dbConn->createCommand();
             $_errors = array();
             $_transaction = null;
 
@@ -1187,6 +1259,27 @@ class SqlDbSvc extends BaseDbSvc
                 $_transaction = $this->_dbConn->beginTransaction();
             }
 
+            if ( !$_needToIterate )
+            {
+                if ( $_requireMore )
+                {
+                    // get the returnable fields first, then issue delete
+                    $_outResults = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
+                }
+
+                // simple delete request
+                $_rows = $_command->delete( $table, $_where, $_params );
+                if ( $_rows != count( $records ) )
+                {
+                    if ( 0 === $_rows )
+                    {
+                        throw new NotFoundException( 'Records requested were not found.' );
+                    }
+                    throw new BadRequestException( 'Records deleted and ids requested don\'t match' );
+                }
+            }
+
+            $_ids = array();
             foreach ( $records as $_key => $_record )
             {
                 try
@@ -1209,13 +1302,21 @@ class SqlDbSvc extends BaseDbSvc
                         }
                     }
 
-                    // simple update request
-                    $command->reset();
-                    $rows = $command->delete( $table, $_where, $_params );
-                    if ( 0 >= $rows )
+                    if ( $_needToIterate )
                     {
-                        throw new NotFoundException( "Record with identifier '" . print_r( $_id, true ) . "' not found in table '$table'." );
+                        if ( $_requireMore )
+                        {
+                            $_outResults[] = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
+                        }
+                        // simple update request
+                        $_command->reset();
+                        $rows = $_command->delete( $table, $_where, $_params );
+                        if ( 0 >= $rows )
+                        {
+                            throw new NotFoundException( "Record with identifier '" . print_r( $_id, true ) . "' not found in table '$table'." );
+                        }
                     }
+
                     $_ids[$_key] = $_id;
                 }
                 catch ( \Exception $_ex )
@@ -1295,7 +1396,7 @@ class SqlDbSvc extends BaseDbSvc
         try
         {
             // get the returnable fields first, then issue delete
-            $results = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
+            $_results = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
 
             // build filter string if necessary, add server-side filters if necessary
             $_ssFilters = Option::get( $extras, 'ss_filters' );
@@ -1311,11 +1412,11 @@ class SqlDbSvc extends BaseDbSvc
             $_where = Option::get( $_criteria, 'where' );
             $_params = Option::get( $_criteria, 'params', array() );
 
-            /** @var \CDbCommand $command */
-            $command = $this->_dbConn->createCommand();
-            $command->delete( $table, $_where, $_params );
+            /** @var \CDbCommand $_command */
+            $_command = $this->_dbConn->createCommand();
+            $_command->delete( $table, $_where, $_params );
 
-            return $results;
+            return $_results;
         }
         catch ( RestException $_ex )
         {
@@ -1335,6 +1436,7 @@ class SqlDbSvc extends BaseDbSvc
         $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the update request." );
         $table = $this->correctTableName( $table );
 
+        $_isSingle = ( 1 == count( $ids ) );
         $_rollback = Option::getBool( $extras, 'rollback', false );
         $_continue = Option::getBool( $extras, 'continue', false );
         $_idField = Option::get( $extras, 'id_field' );
@@ -1342,7 +1444,6 @@ class SqlDbSvc extends BaseDbSvc
         $_related = Option::get( $extras, 'related' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
-        $_isSingle = ( 1 == count( $ids ) );
         try
         {
             $_fieldInfo = $this->describeTableFields( $table );
@@ -1397,26 +1498,14 @@ class SqlDbSvc extends BaseDbSvc
                 $_where = $_where[0];
             }
 
-            // get the returnable fields first, then issue delete
+            $_requireMore = ( static::_requireMoreFields( $_fields, $_idFieldNames ) || !empty( $_related ) );
+            $_fields = ( empty( $_fields ) ) ? $_idFieldNames : $_fields;
+            $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldInfo );
+            $_bindings = Option::get( $_result, 'bindings' );
+            $_fields = Option::get( $_result, 'fields' );
+            $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+
             $_outResults = array();
-            if ( static::_requireMoreFields( $_fields, $_idFieldNames ) || !empty( $_related ) )
-            {
-                $_fields = ( empty( $_fields ) ) ? $_idFieldNames : $_fields;
-
-                if ( !$_needToIterate )
-                {
-                    $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldInfo );
-                    $_bindings = Option::get( $_result, 'bindings' );
-                    $_fields = Option::get( $_result, 'fields' );
-                    $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
-
-                    $_outResults = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
-                }
-                else
-                {
-                    $_outResults = $this->retrieveRecordsByIds( $table, $ids, $extras );
-                }
-            }
 
             /** @var \CDbCommand $_command */
             $_command = $this->_dbConn->createCommand();
@@ -1430,11 +1519,21 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !$_needToIterate )
             {
+                if ( $_requireMore )
+                {
+                    // get the returnable fields first, then issue delete
+                    $_outResults = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
+                }
+
                 // simple delete request
                 $_rows = $_command->delete( $table, $_where, $_params );
                 if ( $_rows != count( $ids ) )
                 {
-                    throw new BadRequestException( 'Records changed and ids requested don\'t match' );
+                    if ( 0 === $_rows )
+                    {
+                        throw new NotFoundException( 'Records requested were not found.' );
+                    }
+                    throw new BadRequestException( 'Records deleted and ids requested don\'t match' );
                 }
             }
 
@@ -1475,6 +1574,10 @@ class SqlDbSvc extends BaseDbSvc
 
                     if ( $_needToIterate )
                     {
+                        if ( $_requireMore )
+                        {
+                            $_outResults[] = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
+                        }
                         // simple update request
                         $_command->reset();
                         $rows = $_command->delete( $table, $_where, $_params );
@@ -2398,8 +2501,9 @@ class SqlDbSvc extends BaseDbSvc
         {
             $fields = SqlDbUtilities::listAllFieldsFromDescribe( $avail_fields );
         }
-        $field_arr = array_map( 'trim', explode( ',', $fields ) );
-        $as_arr = array_map( 'trim', explode( ',', $fields_as ) );
+
+        $field_arr = ( !is_array( $fields ) ) ? array_map( 'trim', explode( ',', $fields ) ) : $fields;
+        $as_arr = ( !is_array( $fields_as ) ) ? array_map( 'trim', explode( ',', $fields_as ) ) : $fields_as;
         if ( !$as_quoted_string )
         {
             // yii will not quote anything if any of the fields are expressions

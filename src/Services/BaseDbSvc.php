@@ -1029,6 +1029,12 @@ abstract class BaseDbSvc extends BasePlatformRestService
             $_compareValue = $_foundInRecord ? $_recordValue : ( $for_update ? $_oldValue : null );
 
             $_reason = null;
+            if ( $for_update && !$_compareFound )
+            {
+                // not being set, filter on update will check old record
+                continue;
+            }
+
             if ( !static::compareByOperator( $_operator, $_compareFound, $_compareValue, $_filterValue ) )
             {
                 $_reason = "Denied access to some of the requested fields.";
