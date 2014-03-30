@@ -629,7 +629,11 @@ class SqlDbSvc extends BaseDbSvc
         {
             $_fieldInfo = $this->describeTableFields( $table );
             $_relatedInfo = $this->describeTableRelated( $table );
+<<<<<<< HEAD
             $_idFieldsInfo = static::_getIdFieldsInfo( $_idFields, $_fieldInfo );
+=======
+            $_idFieldsInfo = static::_getIdFieldsInfo( $_idField, $_fieldInfo );
+>>>>>>> latest round of changes
             if ( empty( $_idFieldsInfo ) )
             {
                 throw new BadRequestException( 'Updating by ids requires at least one identifying field.' );
@@ -666,13 +670,22 @@ class SqlDbSvc extends BaseDbSvc
 
             /** @var \CDbCommand $_command */
             $_command = $this->_dbConn->createCommand();
+<<<<<<< HEAD
+=======
+            $_errors = array();
+>>>>>>> latest round of changes
             $_transaction = null;
             if ( $_rollback && !$_isSingle )
             {
                 $_transaction = $this->_dbConn->beginTransaction();
             }
 
+<<<<<<< HEAD
             foreach ( $records as $_index => $_record )
+=======
+            $_ids = array();
+            foreach ( $records as $_key => $_record )
+>>>>>>> latest round of changes
             {
                 try
                 {
@@ -824,7 +837,21 @@ class SqlDbSvc extends BaseDbSvc
 
             // build filter string if necessary, add server-side filters if necessary
             $_ssFilters = Option::get( $extras, 'ss_filters' );
+<<<<<<< HEAD
             $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters );
+            $_where = Option::get( $_criteria, 'where' );
+            $_params = Option::get( $_criteria, 'params', array() );
+=======
+            if ( is_array( $filter ) )
+            {
+                $_criteria = $this->_convertFilterArrayToNative( $filter, $params, $_ssFilters );
+            }
+            else
+            {
+                $_criteria = $this->_convertFilterStringToNative( $filter, $params, $_ssFilters );
+            }
+>>>>>>> latest round of changes
+
             $_where = Option::get( $_criteria, 'where' );
             $_params = Option::get( $_criteria, 'params', array() );
 
@@ -834,9 +861,15 @@ class SqlDbSvc extends BaseDbSvc
             {
                 $command->update( $table, $_parsed, $_where, $_params );
             }
+<<<<<<< HEAD
 
             $_results = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
 
+=======
+
+            $_results = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
+
+>>>>>>> latest round of changes
             // update related info
             if ( !empty( $_relatedInfo ) )
             {
@@ -878,8 +911,11 @@ class SqlDbSvc extends BaseDbSvc
         $_related = Option::get( $extras, 'related' );
         $_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
 
+<<<<<<< HEAD
         $_out = array();
         $_errors = array();
+=======
+>>>>>>> latest round of changes
         try
         {
             $_fieldInfo = $this->describeTableFields( $table );
@@ -1023,7 +1059,11 @@ class SqlDbSvc extends BaseDbSvc
                         $_outResults[] = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
                     }
 
+<<<<<<< HEAD
                     $_out[$_index] = $_id;
+=======
+                    $_ids[$_key] = $_id;
+>>>>>>> latest round of changes
                 }
                 catch ( \Exception $_ex )
                 {
@@ -1079,6 +1119,14 @@ class SqlDbSvc extends BaseDbSvc
             if ( $_needToIterate && $_requireMore )
             {
                 $_outResults = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
+<<<<<<< HEAD
+=======
+            }
+
+            if ( !empty( $_outResults ) )
+            {
+                return $_outResults;
+>>>>>>> latest round of changes
             }
 
             if ( !empty( $_outResults ) )
@@ -1187,8 +1235,14 @@ class SqlDbSvc extends BaseDbSvc
         $_isSingle = ( 1 == count( $records ) );
         $_rollback = Option::getBool( $extras, 'rollback', false );
         $_continue = Option::getBool( $extras, 'continue', false );
+<<<<<<< HEAD
         $_idFields = Option::get( $extras, 'id_field' );
         $_fields = Option::get( $extras, 'fields' );
+=======
+        $_idField = Option::get( $extras, 'id_field' );
+        $_fields = Option::get( $extras, 'fields' );
+        $_related = Option::get( $extras, 'related' );
+>>>>>>> latest round of changes
         $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_related = Option::get( $extras, 'related' );
 
@@ -1197,14 +1251,24 @@ class SqlDbSvc extends BaseDbSvc
         try
         {
             $_fieldInfo = $this->describeTableFields( $table );
+<<<<<<< HEAD
             $_idFieldsInfo = static::_getIdFieldsInfo( $_idFields, $_fieldInfo );
+=======
+            $_idFieldsInfo = static::_getIdFieldsInfo( $_idField, $_fieldInfo );
+>>>>>>> latest round of changes
             if ( empty( $_idFieldsInfo ) )
             {
                 throw new BadRequestException( 'Deleting by ids requires at least one identifying field.' );
             }
+<<<<<<< HEAD
 
             $_needToIterate = ( 1 < count( $_idFieldsInfo ) );
 
+=======
+
+            $_needToIterate = ( 1 < count( $_idFieldsInfo ) );
+
+>>>>>>> latest round of changes
             $_idFieldNames = array();
             $_where = array();
             $_params = array();
@@ -1223,12 +1287,20 @@ class SqlDbSvc extends BaseDbSvc
                 $_idName = Option::get( $_idFieldsInfo[0], 'name' );
                 $_idFieldNames[] = $_idName;
                 $_ids = array();
+<<<<<<< HEAD
                 foreach ( $records as $_index => $_record )
+=======
+                foreach ( $records as $_key => $_record )
+>>>>>>> latest round of changes
                 {
                     $_id = Option::get( $_record, $_idName );
                     if ( empty( $_id ) )
                     {
+<<<<<<< HEAD
                         throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_index] request." );
+=======
+                        throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_key] request." );
+>>>>>>> latest round of changes
                     }
 
                     $_ids[] = $_id;
@@ -1264,6 +1336,10 @@ class SqlDbSvc extends BaseDbSvc
 
             /** @var \CDbCommand $_command */
             $_command = $this->_dbConn->createCommand();
+<<<<<<< HEAD
+=======
+            $_errors = array();
+>>>>>>> latest round of changes
             $_transaction = null;
             if ( $_rollback && !$_isSingle )
             {
@@ -1290,7 +1366,12 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
+<<<<<<< HEAD
             foreach ( $records as $_index => $_record )
+=======
+            $_ids = array();
+            foreach ( $records as $_key => $_record )
+>>>>>>> latest round of changes
             {
                 try
                 {
@@ -1323,11 +1404,19 @@ class SqlDbSvc extends BaseDbSvc
                         $rows = $_command->delete( $table, $_where, $_params );
                         if ( 0 >= $rows )
                         {
+<<<<<<< HEAD
                             throw new NotFoundException( "Record with id '" . print_r( $_id, true ) . "' not found in table '$table'." );
                         }
                     }
 
                     $_out[$_index] = $_id;
+=======
+                            throw new NotFoundException( "Record with identifier '" . print_r( $_id, true ) . "' not found in table '$table'." );
+                        }
+                    }
+
+                    $_ids[$_key] = $_id;
+>>>>>>> latest round of changes
                 }
                 catch ( \Exception $_ex )
                 {
@@ -1466,8 +1555,11 @@ class SqlDbSvc extends BaseDbSvc
         $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_related = Option::get( $extras, 'related' );
 
+<<<<<<< HEAD
         $_out = array();
         $_errors = array();
+=======
+>>>>>>> latest round of changes
         try
         {
             $_fieldInfo = $this->describeTableFields( $table );
