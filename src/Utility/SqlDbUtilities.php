@@ -1969,8 +1969,13 @@ SQL;
                     $_sql,
                     0,
                     array(
+<<<<<<< HEAD
                         ':table_value' => Option::get( $_label, 'table' ),
                         ':field_value' => Option::get( $_label, 'field' ),
+=======
+                        ':table_value'  => Option::get( $_label, 'table' ),
+                        ':field_value'  => Option::get( $_label, 'field' ),
+>>>>>>> fix picklist setting and retrieving for schema
                     )
                 );
 
