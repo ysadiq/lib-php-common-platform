@@ -469,7 +469,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
         $label = Option::get( $label_info, 'label', Inflector::camelize( $column->name ) );
         $validation = Option::get( $label_info, 'validation' );
         $picklist = Option::get( $label_info, 'picklist' );
-        $picklist = ( !empty( $picklist ) ) ? explode( "/n", $picklist ) : array();
+        $picklist = ( !empty( $picklist ) ) ? explode( "\r", $picklist ) : array();
         $refTable = '';
         $refFields = '';
         if ( 1 == $column->isForeignKey )
@@ -1946,20 +1946,20 @@ class SqlDbUtilities implements SqlDbDriverTypes
         {
             // todo batch this for speed
             //@TODO Batched it a bit... still probably slow...
+            $_tableColumn = $_db->quoteColumnName( 'table' );
+            $_fieldColumn = $_db->quoteColumnName( 'field' );
+
             $_sql = <<<SQL
 SELECT
 	id
 FROM
 	df_sys_schema_extras
 WHERE
-	:table_column = :table_value AND
-	:field_column = :field_value
+	$_tableColumn = :table_value AND
+	$_fieldColumn = :field_value
 SQL;
 
             $_inserts = $_updates = array();
-
-            $_tableColumn = $_db->quoteColumnName( 'table' );
-            $_fieldColumn = $_db->quoteColumnName( 'field' );
 
             Sql::setConnection( Pii::pdo() );
 
@@ -1969,9 +1969,7 @@ SQL;
                     $_sql,
                     0,
                     array(
-                        ':table_column' => $_tableColumn,
                         ':table_value'  => Option::get( $_label, 'table' ),
-                        ':field_column' => $_fieldColumn,
                         ':field_value'  => Option::get( $_label, 'field' ),
                     )
                 );
