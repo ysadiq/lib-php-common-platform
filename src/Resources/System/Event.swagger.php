@@ -41,6 +41,14 @@ $_event['apis'] = array(
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
+                    array(
+                        'name'          => 'as_cached',
+                        'description'   => 'If set to true, the returned structure is identical the stored structure. If false, a simpler form is returned for client consumption.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
                 ),
                 'responseMessages' => array(
                     array(
