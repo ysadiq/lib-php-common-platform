@@ -187,18 +187,18 @@ class MongoDbSvc extends NoSqlDbSvc
             $_result = $this->_dbConn->getCollectionNames();
             foreach ( $_result as $_table )
             {
-                try
+                $_access = $this->getPermissions( $_table );
+                if ( !empty( $_access ) )
                 {
-                    $this->validateTableAccess( $_table );
-                    $_resources[] = array( 'name' => $_table );
-                }
-                catch ( \Exception $_ex )
-                {
-                    // do not include in listing
+                    $_resources[] = array( 'name' => $_table, 'access' => $_access );
                 }
             }
 
             return array( 'resource' => $_resources );
+        }
+        catch ( RestException $_ex )
+        {
+            throw $_ex;
         }
         catch ( \Exception $_ex )
         {
@@ -213,6 +213,13 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function getTable( $table )
     {
+        static $_existing = null;
+
+        if ( !$_existing )
+        {
+            $_existing = $this->_dbConn->getCollectionNames();
+        }
+
         $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
         if ( empty( $_name ) )
         {
@@ -221,9 +228,15 @@ class MongoDbSvc extends NoSqlDbSvc
 
         try
         {
+            if ( false === array_search( $_name, $_existing ) )
+            {
+                throw new NotFoundException( "Table '$_name' not found." );
+            }
+
             $_coll = $this->selectTable( $_name );
             $_out = array( 'name' => $_coll->getName() );
             $_out['indexes'] = $_coll->getIndexInfo();
+            $_out['access'] = $this->getPermissions( $_name );
 
             return $_out;
         }
@@ -327,7 +340,13 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         try
         {
-            $_coll->batchInsert( $records, array( 'continueOnError' => !$_rollback ) );
+            $_result = $_coll->batchInsert( $records, array( 'continueOnError' => !$_rollback ) );
+            if ((false === $_result) || isset($_result, $_result['err']))
+            {
+                $_msg = (isset($_result, $_result['err']) ) ? $_result['err']: "Unknown";
+                throw new InternalServerErrorException( 'MongoDb error:' . $_msg);
+            }
+
             $_out = static::cleanRecords( $records, $_fields );
 
             return $_out;
@@ -801,7 +820,7 @@ class MongoDbSvc extends NoSqlDbSvc
             }
             else
             {
-            	$result = $_coll->remove( array() );
+                $result = $_coll->remove( array() );
             }
 
             return array( 'success' => $result );
