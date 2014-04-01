@@ -234,6 +234,11 @@ class MongoDbSvc extends NoSqlDbSvc
 
         try
         {
+            if ( false === array_search( $_name, $_existing ) )
+            {
+                throw new NotFoundException( "Table '$_name' not found." );
+            }
+
             $_coll = $this->selectTable( $_name );
             $_out = array( 'name' => $_coll->getName() );
             $_out['indexes'] = $_coll->getIndexInfo();
@@ -428,6 +433,20 @@ class MongoDbSvc extends NoSqlDbSvc
 
                 $_out = static::cleanRecords( $_batched, $_fields );
             }
+<<<<<<< HEAD
+=======
+        }
+        try
+        {
+            $_result = $_coll->batchInsert( $records, array( 'continueOnError' => !$_rollback ) );
+            if ((false === $_result) || isset($_result, $_result['err']))
+            {
+                $_msg = (isset($_result, $_result['err']) ) ? $_result['err']: "Unknown";
+                throw new InternalServerErrorException( 'MongoDb error:' . $_msg);
+            }
+
+            $_out = static::cleanRecords( $records, $_fields );
+>>>>>>> adding access info to get on sql and nosql
 
             return $_out;
         }
@@ -1499,7 +1518,7 @@ class MongoDbSvc extends NoSqlDbSvc
             }
             else
             {
-            	$result = $_coll->remove( array() );
+                $result = $_coll->remove( array() );
             }
 
             return array( 'success' => $result );

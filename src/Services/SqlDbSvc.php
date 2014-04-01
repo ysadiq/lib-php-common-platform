@@ -408,10 +408,17 @@ class SqlDbSvc extends BaseDbSvc
 
         try
         {
+<<<<<<< HEAD
             $_out = SqlDbUtilities::describeTable( $this->_dbConn, $_name );
             $_out['access'] = $this->getPermissions( $_name );
 
             return $_out;
+=======
+            $_result = SqlDbUtilities::describeTable( $this->_dbConn, $_name );
+            $_result['access'] = $this->getPermissions( $_name );
+
+            return $_result;
+>>>>>>> adding access info to get on sql and nosql
         }
         catch ( RestException $_ex )
         {
@@ -2362,11 +2369,14 @@ class SqlDbSvc extends BaseDbSvc
                 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
                 /** validations **/
                 $validations = array_map( 'trim', explode( ',', Option::get( $field_info, 'validation', '' ) ) );
 
 >>>>>>> more work on ss filters and validations
+=======
+>>>>>>> adding access info to get on sql and nosql
                 // overwrite some undercover fields
                 if ( Option::getBool( $_fieldInfo, 'auto_increment', false ) )
                 {
@@ -2375,13 +2385,21 @@ class SqlDbSvc extends BaseDbSvc
                     continue; // should I error this?
                 }
 <<<<<<< HEAD
+<<<<<<< HEAD
                 if ( is_null( $_fieldVal ) && !Option::getBool( $_fieldInfo, 'allow_null' ) )
 =======
+=======
+
+                /** validations **/
+                $validations = array_map( 'trim', explode( ',', Option::get( $field_info, 'validation', '' ) ) );
+
+>>>>>>> adding access info to get on sql and nosql
                 if ( false !== $valPos = array_search( 'api_read_only', $validations, true ) )
 >>>>>>> more work on ss filters and validations
                 {
                     throw new BadRequestException( "Field '$_name' can not be NULL." );
                 }
+<<<<<<< HEAD
 <<<<<<< HEAD
 
                 /** validations **/
@@ -2400,6 +2418,14 @@ class SqlDbSvc extends BaseDbSvc
                     unset( $_values[$_pos] );
                     continue;
 =======
+=======
+                if ( false !== $valPos = array_search( 'create_only', $validations, true ) )
+                {
+                    unset( $keys[$pos] );
+                    unset( $values[$pos] );
+                    continue; // should I error this?
+                }
+>>>>>>> adding access info to get on sql and nosql
                 if ( is_null( $fieldVal ) )
                 {
                     if ( !Option::getBool( $field_info, 'allow_null' ) )
@@ -2470,8 +2496,7 @@ class SqlDbSvc extends BaseDbSvc
                             }
                             if ( false !== $valPos = array_search( 'url', $validations, true ) )
                             {
-
-                                $_filter = $validations[$valPos];
+                                $_filter = trim( stristr( $validations[$valPos], '(' ), '()' );
                                 $_options = null;
 //                                    FILTER_FLAG_HOST_REQUIRED
                                 if ( !filter_var( $fieldVal, FILTER_VALIDATE_URL, $_options ) )
@@ -2481,9 +2506,10 @@ class SqlDbSvc extends BaseDbSvc
                             }
                             if ( false !== $valPos = array_search( 'match', $validations, true ) )
                             {
-
-                                $_filter = $validations[$valPos];
-                                $_options = null;
+                                $b =
+                                    "^(([^<>()[].,;:s@\"]+(.[^<>()[].,;:s@\"]+)*)|(\".+\"))@(([[0-9]{1,3}.[0-9]{1,3}‌​.[0-9]{1,3}.[0-9]{1,3}])|(([a-zA-Z-0-9]+.)+[a-zA-Z]{2,}))$";
+                                $_filter = base64_decode( trim( stristr( $validations[$valPos], '(' ), '()' ) );
+                                $_options = array( 'regexp' => $_filter );
 //                                regexp
                                 if ( !filter_var( $fieldVal, FILTER_VALIDATE_REGEXP, $_options ) )
                                 {
@@ -2494,8 +2520,7 @@ class SqlDbSvc extends BaseDbSvc
                         case 'integer':
                             if ( false !== $valPos = array_search( 'range', $validations, true ) )
                             {
-
-                                $_filter = $validations[$valPos];
+                                $_filter = trim( stristr( $validations[$valPos], '(' ), '()' );
                                 $_options = null;
 //                                min_range, max_range
                                 if ( !filter_var( $fieldVal, FILTER_VALIDATE_INT, $_options ) )
