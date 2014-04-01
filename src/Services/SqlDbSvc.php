@@ -621,7 +621,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Error creating records for table '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to create records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
     }
 
@@ -793,7 +793,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Error updating records for table '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to update records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
     }
 
@@ -864,7 +864,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Error updating records for table '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to update records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
     }
 
@@ -1098,7 +1098,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Error updating records for table '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to update records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
     }
 
@@ -1161,7 +1161,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Error truncating table '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
     }
 
@@ -1378,7 +1378,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Error deleting records from table '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
     }
 
@@ -1424,7 +1424,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Error deleting records from table '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
     }
 
@@ -1648,7 +1648,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Error deleting records from table '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
     }
 
@@ -1690,7 +1690,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Error retrieving records for table '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to retrieve records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
     }
 
@@ -1934,7 +1934,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Error retrieving records for table '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to retrieve records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
     }
 
@@ -2210,6 +2210,10 @@ class SqlDbSvc extends BaseDbSvc
                 {
                     $fieldVal = null;
                 }
+
+                /** validations **/
+                $validations = array_map( 'trim', explode( ',', Option::get( $field_info, 'validation', '' ) ) );
+
                 // overwrite some undercover fields
                 if ( Option::getBool( $field_info, 'auto_increment', false ) )
                 {
@@ -2217,67 +2221,118 @@ class SqlDbSvc extends BaseDbSvc
                     unset( $values[$pos] );
                     continue; // should I error this?
                 }
-                if ( DataFormat::isInList( Option::get( $field_info, 'validation', '' ), 'api_read_only', ',' ) )
+                if ( false !== $valPos = array_search( 'api_read_only', $validations, true ) )
                 {
                     unset( $keys[$pos] );
                     unset( $values[$pos] );
                     continue; // should I error this?
                 }
-                if ( is_null( $fieldVal ) && !Option::getBool( $field_info, 'allow_null' ) )
+                if ( is_null( $fieldVal ) )
                 {
-                    if ( $for_update )
+                    if ( !Option::getBool( $field_info, 'allow_null' ) )
                     {
-                        continue;
+                        throw new BadRequestException( "Field '$name' can not be NULL." );
                     }
-
-                    // todo throw away nulls for now
-                    throw new BadRequestException( "Field '$name' can not be NULL." );
+                    if ( false !== $valPos = array_search( 'not_empty', $validations, true ) && empty( $fieldVal ) )
+                    {
+                        throw new BadRequestException( "Field '$name' can not be empty." );
+                    }
                 }
                 else
                 {
-                    if ( !is_null( $fieldVal ) )
+                    if ( false !== $valPos = array_search( 'not_empty', $validations, true ) && empty( $fieldVal ) )
                     {
-                        switch ( $this->_driverType )
-                        {
-                            case SqlDbUtilities::DRV_DBLIB:
-                            case SqlDbUtilities::DRV_SQLSRV:
-                                switch ( $dbType )
+                        throw new BadRequestException( "Field '$name' can not be empty." );
+                    }
+
+                    switch ( $type )
+                    {
+                        case 'string':
+                            if ( false !== $valPos = array_search( 'email', $validations, true ) && !filter_var( $fieldVal, FILTER_VALIDATE_EMAIL ) )
+                            {
+                                throw new BadRequestException( "Field '$name' must be a valid email." );
+                            }
+                            if ( false !== $valPos = array_search( 'url', $validations, true ) )
+                            {
+
+                                $_filter = $validations[$valPos];
+                                $_options = null;
+//                                    FILTER_FLAG_HOST_REQUIRED
+                                if ( !filter_var( $fieldVal, FILTER_VALIDATE_URL, $_options ) )
                                 {
-                                    case 'bit':
-                                        $fieldVal = ( Scalar::boolval( $fieldVal ) ? 1 : 0 );
-                                        break;
+                                    throw new BadRequestException( "Field '$name' must be a valid url." );
                                 }
-                                break;
-                            case SqlDbUtilities::DRV_MYSQL:
-                                switch ( $dbType )
+                            }
+                            if ( false !== $valPos = array_search( 'match', $validations, true ) )
+                            {
+
+                                $_filter = $validations[$valPos];
+                                $_options = null;
+//                                regexp
+                                if ( !filter_var( $fieldVal, FILTER_VALIDATE_REGEXP, $_options ) )
                                 {
-                                    case 'tinyint(1)':
-                                        $fieldVal = ( Scalar::boolval( $fieldVal ) ? 1 : 0 );
-                                        break;
+                                    throw new BadRequestException( "Field '$name' must be a valid url." );
                                 }
-                                break;
-                        }
-                        switch ( SqlDbUtilities::determinePhpConversionType( $type, $dbType ) )
-                        {
-                            case 'int':
-                                if ( !is_int( $fieldVal ) )
+                            }
+                            break;
+                        case 'integer':
+                            if ( false !== $valPos = array_search( 'range', $validations, true ) )
+                            {
+
+                                $_filter = $validations[$valPos];
+                                $_options = null;
+//                                min_range, max_range
+                                if ( !filter_var( $fieldVal, FILTER_VALIDATE_INT, $_options ) )
                                 {
-                                    if ( ( '' === $fieldVal ) && Option::getBool( $field_info, 'allow_null' ) )
-                                    {
-                                        $fieldVal = null;
-                                    }
-                                    elseif ( !( ctype_digit( $fieldVal ) ) )
-                                    {
-                                        throw new BadRequestException( "Field '$name' must be a valid integer." );
-                                    }
-                                    else
-                                    {
-                                        $fieldVal = intval( $fieldVal );
-                                    }
+                                    throw new BadRequestException( "Field '$name' must be a valid url." );
                                 }
-                                break;
-                            default:
-                        }
+                            }
+                            break;
+                        case 'decimal':
+                        case 'float':
+                            break;
+                    }
+
+                    switch ( $this->_driverType )
+                    {
+                        case SqlDbUtilities::DRV_DBLIB:
+                        case SqlDbUtilities::DRV_SQLSRV:
+                            switch ( $dbType )
+                            {
+                                case 'bit':
+                                    $fieldVal = ( Scalar::boolval( $fieldVal ) ? 1 : 0 );
+                                    break;
+                            }
+                            break;
+                        case SqlDbUtilities::DRV_MYSQL:
+                            switch ( $dbType )
+                            {
+                                case 'tinyint(1)':
+                                    $fieldVal = ( Scalar::boolval( $fieldVal ) ? 1 : 0 );
+                                    break;
+                            }
+                            break;
+                    }
+                    switch ( SqlDbUtilities::determinePhpConversionType( $type, $dbType ) )
+                    {
+                        case 'int':
+                            if ( !is_int( $fieldVal ) )
+                            {
+                                if ( ( '' === $fieldVal ) && Option::getBool( $field_info, 'allow_null' ) )
+                                {
+                                    $fieldVal = null;
+                                }
+                                elseif ( !( ctype_digit( $fieldVal ) ) )
+                                {
+                                    throw new BadRequestException( "Field '$name' must be a valid integer." );
+                                }
+                                else
+                                {
+                                    $fieldVal = intval( $fieldVal );
+                                }
+                            }
+                            break;
+                        default:
                     }
                 }
                 $parsed[$name] = $fieldVal;
@@ -2853,7 +2908,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new BadRequestException( "Error updating many to one assignment.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new BadRequestException( "Failed to update many to one assignment.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
     }
 
@@ -2974,7 +3029,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Error updating many to one map assignment.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to update many to one map assignment.\n{$_ex->getMessage()}", $_ex->getCode() );
         }
     }
 

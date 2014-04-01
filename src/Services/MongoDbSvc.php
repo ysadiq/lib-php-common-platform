@@ -315,8 +315,9 @@ class MongoDbSvc extends NoSqlDbSvc
 
         $_rollback = Option::get( $extras, 'rollback', false );
         $_fields = Option::get( $extras, 'fields' );
-        $records = static::idsToMongoIds( $records );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
+
+        $records = static::idsToMongoIds( $records );
         if ( !empty( $_ssFilters ) )
         {
             foreach ( $records as $_record )
@@ -333,7 +334,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to create items in '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to create records in '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -345,9 +346,10 @@ class MongoDbSvc extends NoSqlDbSvc
         $record = static::checkIncomingData( $record, null, false, 'There are no record fields in the request.' );
         $_coll = $this->selectTable( $table );
 
-        $record = static::idToMongoId( $record );
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
+
+        $record = static::idToMongoId( $record );
         if ( !empty( $_ssFilters ) )
         {
             $this->validateRecord( $record, $_ssFilters );
@@ -361,7 +363,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to create item in '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to create a record in '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -375,6 +377,7 @@ class MongoDbSvc extends NoSqlDbSvc
 
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
+
         $_out = array();
         foreach ( $records as $_record )
         {
@@ -390,7 +393,7 @@ class MongoDbSvc extends NoSqlDbSvc
             }
             catch ( \Exception $_ex )
             {
-                throw new InternalServerErrorException( "Failed to update items in '$table'.\n" . $_ex->getMessage() );
+                throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
             }
         }
 
@@ -405,9 +408,10 @@ class MongoDbSvc extends NoSqlDbSvc
         $record = static::checkIncomingData( $record, null, false, 'There are no record fields in the request.' );
         $_coll = $this->selectTable( $table );
 
-        $record = static::idToMongoId( $record );
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
+
+        $record = static::idToMongoId( $record );
         if ( !empty( $_ssFilters ) )
         {
             $this->validateRecord( $record, $_ssFilters );
@@ -420,7 +424,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update item in '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to update a record in '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -432,17 +436,19 @@ class MongoDbSvc extends NoSqlDbSvc
         $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
         $_coll = $this->selectTable( $table );
 
-        unset( $record[static::DEFAULT_ID_FIELD] ); // make sure the record has no identifier
         $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+
+        unset( $record[static::DEFAULT_ID_FIELD] ); // make sure the record has no identifier
         $_fieldArray = static::buildFieldArray( $_fields );
         // build criteria from filter parameters
         $_criteria = static::buildFilterArray( $filter );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
         if ( !empty( $_serverCriteria ) )
         {
             $_criteria = ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
         }
+
         try
         {
             $_coll->update( $_criteria, $record, array( 'multiple' => true ) );
@@ -454,7 +460,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update item in '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -464,16 +470,13 @@ class MongoDbSvc extends NoSqlDbSvc
     public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
     {
         $record = static::checkIncomingData( $record, null, false, 'No record fields were passed in the request.' );
-
-        if ( empty( $ids ) )
-        {
-            throw new BadRequestException( "Identifying values for '_id' can not be empty for update request." );
-        }
-
+        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the update request." );
         $_coll = $this->selectTable( $table );
-        $ids = static::idsToMongoIds( $ids );
+
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
+
+        $ids = static::idsToMongoIds( $ids );
         if ( !empty( $_ssFilters ) )
         {
             $this->validateRecord( $record, $_ssFilters );
@@ -481,6 +484,7 @@ class MongoDbSvc extends NoSqlDbSvc
         // build criteria from filter parameters
         $_criteria = array( static::DEFAULT_ID_FIELD => array( '$in' => $ids ) );
         unset( $record[static::DEFAULT_ID_FIELD] ); // make sure the record has no identifier
+
         try
         {
             $_coll->update( $_criteria, $record, array( 'multiple' => true ) );
@@ -495,7 +499,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update item in '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -519,6 +523,7 @@ class MongoDbSvc extends NoSqlDbSvc
             $this->validateRecord( $record, $_ssFilters );
         }
         $record[static::DEFAULT_ID_FIELD] = static::idToMongoId( $id );
+
         try
         {
             $_coll->save( $record );
@@ -527,7 +532,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update item in '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to update a record in '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -540,8 +545,9 @@ class MongoDbSvc extends NoSqlDbSvc
         $_coll = $this->selectTable( $table );
 
         $_fields = Option::get( $extras, 'fields' );
-        $_fieldArray = static::buildFieldArray( $_fields );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
+
+        $_fieldArray = static::buildFieldArray( $_fields );
         $_out = array();
         foreach ( $records as $_record )
         {
@@ -557,6 +563,7 @@ class MongoDbSvc extends NoSqlDbSvc
             {
                 $_criteria = ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
             }
+
             try
             {
                 if ( !static::doesRecordContainModifier( $_record ) )
@@ -574,7 +581,7 @@ class MongoDbSvc extends NoSqlDbSvc
             }
             catch ( \Exception $_ex )
             {
-                throw new InternalServerErrorException( "Failed to update items in '$table'.\n" . $_ex->getMessage() );
+                throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
             }
         }
 
@@ -587,6 +594,10 @@ class MongoDbSvc extends NoSqlDbSvc
     public function mergeRecord( $table, $record, $extras = array() )
     {
         $record = static::checkIncomingData( $record, null, false, 'There are no record fields in the request.' );
+        $_coll = $this->selectTable( $table );
+
+        $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
 
         $_id = Option::get( $record, static::DEFAULT_ID_FIELD, null, true );
         if ( empty( $_id ) )
@@ -594,11 +605,8 @@ class MongoDbSvc extends NoSqlDbSvc
             throw new BadRequestException( "Identifying field '_id' can not be empty for merge record request." );
         }
 
-        $_coll = $this->selectTable( $table );
         $_criteria = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-        $_fields = Option::get( $extras, 'fields' );
         $_fieldArray = static::buildFieldArray( $_fields );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
         if ( !empty( $_ssFilters ) )
         {
             $this->validateRecord( $record, $_ssFilters );
@@ -612,6 +620,7 @@ class MongoDbSvc extends NoSqlDbSvc
         {
             $record = array( '$set' => $record );
         }
+
         try
         {
             $result = $_coll->findAndModify(
@@ -625,7 +634,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update item in '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to update a record in '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -637,12 +646,13 @@ class MongoDbSvc extends NoSqlDbSvc
         $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
         $_coll = $this->selectTable( $table );
 
+        $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+
         unset( $record[static::DEFAULT_ID_FIELD] );
+        $_fieldArray = static::buildFieldArray( $_fields );
         // build criteria from filter parameters
         $_criteria = static::buildFilterArray( $filter );
-        $_fields = Option::get( $extras, 'fields' );
-        $_fieldArray = static::buildFieldArray( $_fields );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
         if ( !empty( $_ssFilters ) )
         {
             $this->validateRecord( $record, $_ssFilters );
@@ -656,6 +666,7 @@ class MongoDbSvc extends NoSqlDbSvc
         {
             $record = array( '$set' => $record );
         }
+
         try
         {
             $_coll->update( $_criteria, $record, array( 'multiple' => true ) );
@@ -667,7 +678,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update item in '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -677,18 +688,15 @@ class MongoDbSvc extends NoSqlDbSvc
     public function mergeRecordsByIds( $table, $record, $ids, $extras = array() )
     {
         $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
-
-        if ( empty( $ids ) )
-        {
-            throw new BadRequestException( "Identifying values for '_id' can not be empty for update request." );
-        }
-
+        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the update request." );
         $_coll = $this->selectTable( $table );
+
+        $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+
         $ids = static::idsToMongoIds( $ids );
         $_criteria = array( static::DEFAULT_ID_FIELD => array( '$in' => $ids ) );
-        $_fields = Option::get( $extras, 'fields' );
         $_fieldArray = static::buildFieldArray( $_fields );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
         if ( !empty( $_ssFilters ) )
         {
             $this->validateRecord( $record, $_ssFilters );
@@ -704,6 +712,7 @@ class MongoDbSvc extends NoSqlDbSvc
         {
             $record = array( '$set' => $record );
         }
+
         try
         {
             $_coll->update( $_criteria, $record, array( 'multiple' => true ) );
@@ -722,7 +731,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update item in '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to update record in '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -757,6 +766,7 @@ class MongoDbSvc extends NoSqlDbSvc
         {
             $record = array( '$set' => $record );
         }
+
         try
         {
             $result = $_coll->findAndModify(
@@ -770,25 +780,35 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update item in '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to update record in '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function truncateTable( $table )
+    public function truncateTable( $table, $extras = array() )
     {
         $_coll = $this->selectTable( $table );
         try
         {
-            $result = $_coll->remove( array() );
+            // build filter string if necessary, add server-side filters if necessary
+            $_ssFilters = Option::get( $extras, 'ss_filters' );
+            $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
+            if ( !empty( $_serverCriteria ) )
+            {
+                $result = $_coll->remove( $_serverCriteria );
+            }
+            else
+            {
+            	$result = $_coll->remove( array() );
+            }
 
             return array( 'success' => $result );
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to delete all items from '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -800,16 +820,18 @@ class MongoDbSvc extends NoSqlDbSvc
         $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
         $_coll = $this->selectTable( $table );
 
+        $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+
         $_ids = static::recordsAsIds( $records );
         $_criteria = array( static::DEFAULT_ID_FIELD => array( '$in' => static::idsToMongoIds( $_ids ) ) );
-        $_fields = Option::get( $extras, 'fields' );
         $_fieldArray = static::buildFieldArray( $_fields );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
         if ( !empty( $_serverCriteria ) )
         {
             $_criteria = ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
         }
+
         try
         {
             if ( static::_requireMoreFields( $_fields ) )
@@ -829,7 +851,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to delete items from '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -841,15 +863,17 @@ class MongoDbSvc extends NoSqlDbSvc
         $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
         $_coll = $this->selectTable( $table );
 
-        $_criteria = static::idToMongoId( $record );
         $_fields = Option::get( $extras, 'fields' );
-        $_fieldArray = static::buildFieldArray( $_fields );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
+
+        $_criteria = static::idToMongoId( $record );
+        $_fieldArray = static::buildFieldArray( $_fields );
         $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
         if ( !empty( $_serverCriteria ) )
         {
             $_criteria = ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
         }
+
         try
         {
             $result = $_coll->findAndModify( $_criteria, null, $_fieldArray, array( 'remove' => true ) );
@@ -858,7 +882,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to delete item from '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to delete record from '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -873,11 +897,12 @@ class MongoDbSvc extends NoSqlDbSvc
         }
 
         $_coll = $this->selectTable( $table );
+        $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+
         // build criteria from filter parameters
         $_criteria = static::buildFilterArray( $filter );
-        $_fields = Option::get( $extras, 'fields' );
         $_fieldArray = static::buildFieldArray( $_fields );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
         if ( !empty( $_serverCriteria ) )
         {
@@ -894,7 +919,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update item in '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to delete record in '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -903,17 +928,15 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function deleteRecordsByIds( $table, $ids, $extras = array() )
     {
-        if ( empty( $ids ) )
-        {
-            throw new BadRequestException( "Identifying values for '_id' can not be empty for update request." );
-        }
-
+        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the update request." );
         $_coll = $this->selectTable( $table );
+
+        $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+
         $ids = static::idsToMongoIds( $ids );
         $_criteria = array( static::DEFAULT_ID_FIELD => array( '$in' => $ids ) );
-        $_fields = Option::get( $extras, 'fields' );
         $_fieldArray = static::buildFieldArray( $_fields );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
         if ( !empty( $_serverCriteria ) )
         {
@@ -938,7 +961,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to delete items from '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -971,7 +994,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to delete item from '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to delete item from '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -981,12 +1004,13 @@ class MongoDbSvc extends NoSqlDbSvc
     public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
     {
         $_coll = $this->selectTable( $table );
-        $_fields = Option::get( $extras, 'fields' );
-        $_fieldArray = static::buildFieldArray( $_fields );
 
+        $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+
+        $_fieldArray = static::buildFieldArray( $_fields );
         $_criteria = static::buildFilterArray( $filter );
         // build filter string if necessary, add server-side filters if necessary
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
         if ( !empty( $_serverCriteria ) )
         {
@@ -1034,7 +1058,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to filter items from '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to filter records from '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -1046,12 +1070,13 @@ class MongoDbSvc extends NoSqlDbSvc
         $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
         $_coll = $this->selectTable( $table );
 
-        $_ids = static::idsToMongoIds( static::recordsAsIds( $records ) );
         $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+
+        $_ids = static::idsToMongoIds( static::recordsAsIds( $records ) );
         $_fieldArray = static::buildFieldArray( $_fields );
         $_criteria = array( '$in' => $_ids );
         // build filter string if necessary, add server-side filters if necessary
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
         if ( !empty( $_serverCriteria ) )
         {
@@ -1068,7 +1093,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get items from '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to get records from '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -1087,10 +1112,11 @@ class MongoDbSvc extends NoSqlDbSvc
         }
 
         $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+
         $_fieldArray = static::buildFieldArray( $_fields );
         $_criteria = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
         // build filter string if necessary, add server-side filters if necessary
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
         if ( !empty( $_serverCriteria ) )
         {
@@ -1105,7 +1131,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get item '$table/$_id'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to get record '$table/$_id'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -1114,18 +1140,16 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function retrieveRecordsByIds( $table, $ids, $extras = array() )
     {
-        if ( empty( $ids ) )
-        {
-            return array();
-        }
-
+        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the update request." );
         $_coll = $this->selectTable( $table );
-        $ids = static::idsToMongoIds( $ids );
+
         $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+
+        $ids = static::idsToMongoIds( $ids );
         $_fieldArray = static::buildFieldArray( $_fields );
         $_criteria = array( static::DEFAULT_ID_FIELD => array( '$in' => $ids ) );
         // build filter string if necessary, add server-side filters if necessary
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
         if ( !empty( $_serverCriteria ) )
         {
@@ -1142,7 +1166,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get items from '$table'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to get records from '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -1157,11 +1181,13 @@ class MongoDbSvc extends NoSqlDbSvc
         }
 
         $_coll = $this->selectTable( $table );
+
         $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+
         $_fieldArray = static::buildFieldArray( $_fields );
         $_criteria = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $id ) );
         // build filter string if necessary, add server-side filters if necessary
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
         if ( !empty( $_serverCriteria ) )
         {
@@ -1180,7 +1206,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get item '$table/$id'.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to get item '$table/$id'.\n{$_ex->getMessage()}" );
         }
 
         if ( empty( $result ) )
