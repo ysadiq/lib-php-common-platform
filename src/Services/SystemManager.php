@@ -24,10 +24,14 @@ use DreamFactory\Platform\Enums\InstallationTypes;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\PlatformServiceException;
 use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Drupal;
 use DreamFactory\Platform\Utility\Fabric;
+use DreamFactory\Platform\Utility\FileUtilities;
+use DreamFactory\Platform\Utility\Packager;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
@@ -524,6 +528,14 @@ SQL;
             'service',
             Option::get( $_jsonSchema, static::SYSTEM_TABLE_PREFIX . 'service' ),
             'DreamFactory\\Platform\\Yii\\Models\\Service',
+            'api_name'
+        );
+
+        //	Create apps
+        static::_createSystemData(
+            'app',
+            Option::get( $_jsonSchema, static::SYSTEM_TABLE_PREFIX . 'app' ),
+            'DreamFactory\\Platform\\Yii\\Models\\App',
             'api_name'
         );
 
@@ -1200,22 +1212,49 @@ SQL
 
             if ( empty( $_count ) )
             {
-                try
+                if ( null !== ( $_fileUrl = Option::get( $_row, 'url' ) ) )
                 {
-                    /** @var BasePlatformModel $_model */
-                    $_model = new $modelClassName();
-                    $_model->setAttributes( $_row );
-                    $_model->save();
+                    if ( 0 === strcasecmp( 'dfpkg', FileUtilities::getFileExtension( $_fileUrl ) ) )
+                    {
+                        Log::debug( 'Importing package: ' . $_fileUrl );
+                        $_filename = null;
+                        try
+                        {
+                            $_filename = FileUtilities::importUrlFileToTemp( $_fileUrl );
+                            Packager::importAppFromPackage( $_filename, $_fileUrl );
 
-                    $_added++;
+                            $_added++;
+                        }
+                        catch ( \Exception $ex )
+                        {
+                            Log::error( "Failed to import package $_fileUrl.\n{$ex->getMessage()}" );
+                        }
+
+                        if ( !empty( $_filename ) && false === @unlink( $_filename ) )
+                        {
+                            Log::error( 'Unable to remove package file "' . $_filename . '"' );
+                        }
+                    }
                 }
-                catch ( \Exception $_ex )
+                else
                 {
-                    throw new InternalServerErrorException( 'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(), array(
-                                                                                                                                           'data'          => $data,
-                                                                                                                                           'bogus_row'     => $_row,
-                                                                                                                                           'unique_column' => $uniqueColumn
-                                                                                                                                       ) );
+                    try
+                    {
+                        /** @var BasePlatformModel $_model */
+                        $_model = new $modelClassName();
+                        $_model->setAttributes( $_row );
+                        $_model->save();
+
+                        $_added++;
+                    }
+                    catch ( \Exception $_ex )
+                    {
+                        throw new InternalServerErrorException( 'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(), array(
+                            'data'          => $data,
+                            'bogus_row'     => $_row,
+                            'unique_column' => $uniqueColumn
+                        ) );
+                    }
                 }
             }
         }
