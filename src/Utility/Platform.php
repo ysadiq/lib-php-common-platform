@@ -19,7 +19,9 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
+use DreamFactory\Platform\Interfaces\PersistentStoreLike;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Exceptions\FileSystemException;
@@ -41,6 +43,10 @@ class Platform extends SeedUtility
      * @var string The name of the storage container that stores applications
      */
     const APP_STORAGE_CONTAINER = 'applications';
+    /**
+     * @var PersistentStoreLike The persistent store to use for local storage
+     */
+    protected static $_persistentStore;
 
     //*************************************************************************
     //	Methods
@@ -299,4 +305,32 @@ class Platform extends SeedUtility
 
         return false;
     }
+
+    /**
+     * Retrieves the store instance for the platform. If it has not yet been created,
+     * a new instance is created and seeded with $data
+     *
+     * @param string $storeId If not provided, one will be created
+     * @param array  $data    An array of key value pairs with which to seed the store
+     *
+     * @return PersistentStoreLike
+     */
+    public static function getStore( $storeId = null, array $data = array() )
+    {
+        if ( null === static::$_persistentStore )
+        {
+            static::$_persistentStore = new PlatformStore( $storeId, $data );
+        }
+
+        return static::$_persistentStore;
+    }
+
+    /**
+     * @param PersistentStoreLike $persistentStore
+     */
+    public static function setPersistentStore( PersistentStoreLike $persistentStore )
+    {
+        static::$_persistentStore = $persistentStore;
+    }
+
 }

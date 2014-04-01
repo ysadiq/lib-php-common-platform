@@ -23,6 +23,7 @@ use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Components\JTablesFormatter;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Interfaces\RestResourceLike;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\ResourceStore;
@@ -86,9 +87,9 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     /**
      * Create a new service
      *
-     * @param RestServiceLike $consumer
-     * @param array           $settings      configuration array
-     * @param array           $resourceArray Or you can pass in through $settings['resource_array'] = array(...)
+     * @param RestServiceLike|RestResourceLike $consumer
+     * @param array                            $settings      configuration array
+     * @param array                            $resourceArray Or you can pass in through $settings['resource_array'] = array(...)
      *
      * @throws \InvalidArgumentException
      */
