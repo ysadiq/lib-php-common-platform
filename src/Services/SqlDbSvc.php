@@ -583,6 +583,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
             $_msg = $_ex->getMessage();
 
             $_context = null;
@@ -603,6 +604,9 @@ class SqlDbSvc extends BaseDbSvc
             }
 
             throw new InternalServerErrorException( "Failed to create records in '$table'.\n$_msg", null, null, $_context );
+=======
+            throw new InternalServerErrorException( "Failed to create records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+>>>>>>> more work on ss filters and validations
         }
     }
 
@@ -787,6 +791,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
             $_msg = $_ex->getMessage();
 
             $_context = null;
@@ -807,6 +812,9 @@ class SqlDbSvc extends BaseDbSvc
             }
 
             throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
+=======
+            throw new InternalServerErrorException( "Failed to update records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+>>>>>>> more work on ss filters and validations
         }
     }
 
@@ -889,7 +897,11 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
             throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
+=======
+            throw new InternalServerErrorException( "Failed to update records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+>>>>>>> more work on ss filters and validations
         }
     }
 
@@ -1138,6 +1150,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
             $_msg = $_ex->getMessage();
 
             $_context = null;
@@ -1158,6 +1171,9 @@ class SqlDbSvc extends BaseDbSvc
             }
 
             throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
+=======
+            throw new InternalServerErrorException( "Failed to update records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+>>>>>>> more work on ss filters and validations
         }
     }
 
@@ -1220,7 +1236,11 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
             throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
+=======
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+>>>>>>> more work on ss filters and validations
         }
     }
 
@@ -1478,6 +1498,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
             $_msg = $_ex->getMessage();
 
             $_context = null;
@@ -1498,6 +1519,9 @@ class SqlDbSvc extends BaseDbSvc
             }
 
             throw new InternalServerErrorException( "Failed to delete records from '$table'.\n$_msg", null, null, $_context );
+=======
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+>>>>>>> more work on ss filters and validations
         }
     }
 
@@ -1535,7 +1559,11 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
             throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
+=======
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+>>>>>>> more work on ss filters and validations
         }
     }
 
@@ -1762,6 +1790,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
             $_msg = $_ex->getMessage();
 
             $_context = null;
@@ -1782,6 +1811,9 @@ class SqlDbSvc extends BaseDbSvc
             }
 
             throw new InternalServerErrorException( "Failed to delete records from '$table'.\n$_msg", null, null, $_context );
+=======
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+>>>>>>> more work on ss filters and validations
         }
     }
 
@@ -1815,7 +1847,11 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
             throw new InternalServerErrorException( "Failed to retrieve records from '$table'.\n{$_ex->getMessage()}" );
+=======
+            throw new InternalServerErrorException( "Failed to retrieve records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+>>>>>>> more work on ss filters and validations
         }
     }
 
@@ -2059,7 +2095,11 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
             throw new InternalServerErrorException( "Failed to retrieve records from '$table'.\n{$_ex->getMessage()}" );
+=======
+            throw new InternalServerErrorException( "Failed to retrieve records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+>>>>>>> more work on ss filters and validations
         }
     }
 
@@ -2321,6 +2361,12 @@ class SqlDbSvc extends BaseDbSvc
                     $_fieldVal = null;
                 }
 
+<<<<<<< HEAD
+=======
+                /** validations **/
+                $validations = array_map( 'trim', explode( ',', Option::get( $field_info, 'validation', '' ) ) );
+
+>>>>>>> more work on ss filters and validations
                 // overwrite some undercover fields
                 if ( Option::getBool( $_fieldInfo, 'auto_increment', false ) )
                 {
@@ -2328,10 +2374,15 @@ class SqlDbSvc extends BaseDbSvc
                     unset( $_values[$_pos] );
                     continue; // should I error this?
                 }
+<<<<<<< HEAD
                 if ( is_null( $_fieldVal ) && !Option::getBool( $_fieldInfo, 'allow_null' ) )
+=======
+                if ( false !== $valPos = array_search( 'api_read_only', $validations, true ) )
+>>>>>>> more work on ss filters and validations
                 {
                     throw new BadRequestException( "Field '$_name' can not be NULL." );
                 }
+<<<<<<< HEAD
 
                 /** validations **/
 
@@ -2348,10 +2399,23 @@ class SqlDbSvc extends BaseDbSvc
                     unset( $_keys[$_pos] );
                     unset( $_values[$_pos] );
                     continue;
+=======
+                if ( is_null( $fieldVal ) )
+                {
+                    if ( !Option::getBool( $field_info, 'allow_null' ) )
+                    {
+                        throw new BadRequestException( "Field '$name' can not be NULL." );
+                    }
+                    if ( false !== $valPos = array_search( 'not_empty', $validations, true ) && empty( $fieldVal ) )
+                    {
+                        throw new BadRequestException( "Field '$name' can not be empty." );
+                    }
+>>>>>>> more work on ss filters and validations
                 }
 
                 if ( !is_null( $_fieldVal ) )
                 {
+<<<<<<< HEAD
                     switch ( $this->_driverType )
                     {
                         case SqlDbUtilities::DRV_DBLIB:
@@ -2391,6 +2455,100 @@ class SqlDbSvc extends BaseDbSvc
                                 }
                             }
                             break;
+=======
+                    if ( false !== $valPos = array_search( 'not_empty', $validations, true ) && empty( $fieldVal ) )
+                    {
+                        throw new BadRequestException( "Field '$name' can not be empty." );
+                    }
+
+                    switch ( $type )
+                    {
+                        case 'string':
+                            if ( false !== $valPos = array_search( 'email', $validations, true ) && !filter_var( $fieldVal, FILTER_VALIDATE_EMAIL ) )
+                            {
+                                throw new BadRequestException( "Field '$name' must be a valid email." );
+                            }
+                            if ( false !== $valPos = array_search( 'url', $validations, true ) )
+                            {
+
+                                $_filter = $validations[$valPos];
+                                $_options = null;
+//                                    FILTER_FLAG_HOST_REQUIRED
+                                if ( !filter_var( $fieldVal, FILTER_VALIDATE_URL, $_options ) )
+                                {
+                                    throw new BadRequestException( "Field '$name' must be a valid url." );
+                                }
+                            }
+                            if ( false !== $valPos = array_search( 'match', $validations, true ) )
+                            {
+
+                                $_filter = $validations[$valPos];
+                                $_options = null;
+//                                regexp
+                                if ( !filter_var( $fieldVal, FILTER_VALIDATE_REGEXP, $_options ) )
+                                {
+                                    throw new BadRequestException( "Field '$name' must be a valid url." );
+                                }
+                            }
+                            break;
+                        case 'integer':
+                            if ( false !== $valPos = array_search( 'range', $validations, true ) )
+                            {
+
+                                $_filter = $validations[$valPos];
+                                $_options = null;
+//                                min_range, max_range
+                                if ( !filter_var( $fieldVal, FILTER_VALIDATE_INT, $_options ) )
+                                {
+                                    throw new BadRequestException( "Field '$name' must be a valid url." );
+                                }
+                            }
+                            break;
+                        case 'decimal':
+                        case 'float':
+                            break;
+                    }
+
+                    switch ( $this->_driverType )
+                    {
+                        case SqlDbUtilities::DRV_DBLIB:
+                        case SqlDbUtilities::DRV_SQLSRV:
+                            switch ( $dbType )
+                            {
+                                case 'bit':
+                                    $fieldVal = ( Scalar::boolval( $fieldVal ) ? 1 : 0 );
+                                    break;
+                            }
+                            break;
+                        case SqlDbUtilities::DRV_MYSQL:
+                            switch ( $dbType )
+                            {
+                                case 'tinyint(1)':
+                                    $fieldVal = ( Scalar::boolval( $fieldVal ) ? 1 : 0 );
+                                    break;
+                            }
+                            break;
+                    }
+                    switch ( SqlDbUtilities::determinePhpConversionType( $type, $dbType ) )
+                    {
+                        case 'int':
+                            if ( !is_int( $fieldVal ) )
+                            {
+                                if ( ( '' === $fieldVal ) && Option::getBool( $field_info, 'allow_null' ) )
+                                {
+                                    $fieldVal = null;
+                                }
+                                elseif ( !( ctype_digit( $fieldVal ) ) )
+                                {
+                                    throw new BadRequestException( "Field '$name' must be a valid integer." );
+                                }
+                                else
+                                {
+                                    $fieldVal = intval( $fieldVal );
+                                }
+                            }
+                            break;
+>>>>>>> more work on ss filters and validations
                         default:
                     }
                 }
@@ -2967,7 +3125,11 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
             throw new BadRequestException( "Failed to update many to one assignment.\n{$_ex->getMessage()}" );
+=======
+            throw new BadRequestException( "Failed to update many to one assignment.\n{$_ex->getMessage()}", $_ex->getCode() );
+>>>>>>> more work on ss filters and validations
         }
     }
 
@@ -3088,7 +3250,11 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
             throw new InternalServerErrorException( "Failed to update many to one map assignment.\n{$_ex->getMessage()}" );
+=======
+            throw new InternalServerErrorException( "Failed to update many to one map assignment.\n{$_ex->getMessage()}", $_ex->getCode() );
+>>>>>>> more work on ss filters and validations
         }
     }
 
