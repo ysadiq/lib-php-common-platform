@@ -937,7 +937,20 @@ class ResourceStore implements UtilityLike
 		return true;
 	}
 
-	/**
+    /**
+     * Generic permission getter
+     *
+     * @param string $service
+     * @param string $resource
+     *
+     * @return string
+     */
+    public static function getPermissions( $service = null, $resource = null )
+    {
+        return Session::getServicePermissions( $service ? : static::$_service, $resource );
+    }
+
+    /**
 	 * @param array $records
 	 *
 	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException

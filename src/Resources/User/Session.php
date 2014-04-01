@@ -599,6 +599,7 @@ class Session extends BasePlatformRestResource
         {
             $_tempService = Option::get( $_svcInfo, 'service', '' );
             $_tempAccess = Option::get( $_svcInfo, 'access', '' );
+            $_allowedVerbs = static::convertAccessToVerbs( $_tempAccess );
 
             if ( 0 == strcasecmp( $service, $_tempService ) )
             {
@@ -607,7 +608,7 @@ class Session extends BasePlatformRestResource
                 {
                     if ( 0 == strcasecmp( $component, $_tempComponent ) )
                     {
-                        if ( !static::isAllowed( $action, $_tempAccess ) )
+                        if ( !static::isAllowed( $action, $_allowedVerbs ) )
                         {
                             $msg = ucfirst( $action ) . " access to component '$component' of service '$service' ";
                             $msg .= "is not allowed by this user's role.";
@@ -618,7 +619,7 @@ class Session extends BasePlatformRestResource
                     }
                     elseif ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
                     {
-                        $_serviceAllowed = static::isAllowed( $action, $_tempAccess );
+                        $_serviceAllowed = static::isAllowed( $action, $_allowedVerbs );
                         $_serviceFound = true;
                     }
                 }
@@ -626,7 +627,7 @@ class Session extends BasePlatformRestResource
                 {
                     if ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
                     {
-                        if ( !static::isAllowed( $action, $_tempAccess ) )
+                        if ( !static::isAllowed( $action, $_allowedVerbs ) )
                         {
                             $msg = ucfirst( $action ) . " access to service '$service' ";
                             $msg .= "is not allowed by this user's role.";
@@ -639,7 +640,7 @@ class Session extends BasePlatformRestResource
             }
             elseif ( empty( $_tempService ) || ( '*' == $_tempService ) )
             {
-                $_allAllowed = static::isAllowed( $action, $_tempAccess );
+                $_allAllowed = static::isAllowed( $action, $_allowedVerbs );
                 $_allFound = true;
             }
         }
@@ -753,71 +754,71 @@ class Session extends BasePlatformRestResource
     }
 
     /**
-     * @param string       $action - requested REST action
-     * @param string|array $access - array of allowed
+     * @param string $action        - requested REST action
+     * @param array  $allowed_verbs - array of allowed REST verbs
      *
      * @return bool
      */
-    protected static function isAllowed( $action, $access )
+    protected static function isAllowed( $action, $allowed_verbs )
     {
-        switch ( $action )
+        // check for non-conformists
+        switch ( strtoupper( $action ) )
         {
             case static::GET:
-            case 'read':
-                switch ( $access )
-                {
-                    case 'Read Only':
-                    case 'Read and Write':
-                    case 'Full Access':
-                    case PermissionTypes::READ_ONLY:
-                    case PermissionTypes::READ_WRITE:
-                    case PermissionTypes::FULL_ACCESS:
-                        return true;
-                }
+            case 'READ':
+                $action = static::GET;
                 break;
 
             case static::POST:
-            case 'create':
-                switch ( $access )
-                {
-                    case 'Write Only':
-                    case 'Read and Write':
-                    case 'Full Access':
-                    case PermissionTypes::WRITE_ONLY:
-                    case PermissionTypes::READ_WRITE:
-                    case PermissionTypes::FULL_ACCESS:
-                        return true;
-                }
+            case 'CREATE':
+                $action = static::POST;
                 break;
 
             case static::PUT:
+            case 'UPDATE':
+                $action = static::PUT;
+                break;
+
             case static::PATCH:
             case static::MERGE:
-            case 'update':
-                switch ( $access )
-                {
-                    case 'Write Only':
-                    case 'Read and Write':
-                    case 'Full Access':
-                    case PermissionTypes::WRITE_ONLY:
-                    case PermissionTypes::READ_WRITE:
-                    case PermissionTypes::FULL_ACCESS:
-                        return true;
-                }
+                $action = static::PATCH;
                 break;
 
             case static::DELETE:
-            case 'delete':
-                switch ( $access )
-                {
-                    case 'Full Access':
-                    case PermissionTypes::FULL_ACCESS:
-                        return true;
-                }
+                $action = static::DELETE;
                 break;
+
+            default:
+                return false;
         }
 
-        return false;
+        return ( false !== array_search( $action, $allowed_verbs ) );
+    }
+
+    /**
+     * @param string|int $access - UI permission string or enumeration
+     *
+     * @return array
+     */
+    public static function convertAccessToVerbs( $access )
+    {
+        switch ( $access )
+        {
+            case PermissionTypes::READ_ONLY:
+            case 'Read Only':
+                return array( static::GET );
+            case PermissionTypes::WRITE_ONLY:
+            case 'Write Only':
+                return array( static::POST );
+            case PermissionTypes::READ_WRITE:
+            case 'Read and Write':
+                return array( static::GET, static::POST, static::PUT, static::PATCH );
+            case PermissionTypes::FULL_ACCESS:
+            case 'Full Access':
+                return array( static::GET, static::POST, static::PUT, static::PATCH, static::DELETE );
+        }
+
+        return array();
     }
 
     /**
@@ -842,6 +843,17 @@ class Session extends BasePlatformRestResource
         }
 
         return array( 'filters' => $_filters, 'filter_op' => $_operator );
+    }
+
+    public static function getServicePermissions( $service, $component = null )
+    {
+        $_access = static::getServiceAccess( $service, $component );
+        if ( true === $_access )
+        {
+            return array( static::GET, static::POST, static::PUT, static::PATCH, static::DELETE );
+        }
+
+        return static::convertAccessToVerbs( Option::get( $_access, 'access' ) );
     }
 
     /**

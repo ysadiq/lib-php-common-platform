@@ -584,6 +584,16 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     }
 
     /**
+     * @param string $resource
+     *
+     * @return string
+     */
+    public function getPermissions( $resource = null )
+    {
+        return ResourceStore::getPermissions( $this->_apiName, $resource );
+    }
+
+    /**
      * {@InheritDoc}
      */
     public function trigger( $eventName, $event = null, $priority = 0 )
