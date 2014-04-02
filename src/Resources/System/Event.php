@@ -110,46 +110,40 @@ class Event extends BaseSystemRestResource
             return array();
         }
 
-        // Rebuild the cached structure into a more consumable client version
-
-        /**
-         * {
-         *      "user": {
-         *        "path": "/user",
-         *          "verbs": [{
-         *              "type": "get",
-         *            "event": "user.resources.list",
-         *              "scripts": []
-         *          }]
-         *      }
-         * }
-         */
-
-        $_rebuild = array();
-
-        foreach ( $_json as $_domain => $_routes )
+        //  Original version?
+        if ( 'true' == $as_cached )
         {
-            $_rebuild[$_domain] = array();
+            $_rebuild = $_json;
+        }
+        else
+        {
+            /**
+             * Rebuild the cached structure into a more consumable client version
+             */
+            $_rebuild = array();
 
-            foreach ( $_routes as $_route => $_verbs )
+            foreach ( $_json as $_domain => $_routes )
             {
-                $_service = array( 'path' => $_route );
-
-                foreach ( $_verbs as $_verb => $_event )
+                foreach ( $_routes as $_route => $_verbs )
                 {
-                    $_service['verbs'][] = array(
-                        'type'    => $_verb,
-                        'event'   => Option::get( $_event, 'event' ),
-                        'scripts' => Option::get( $_event, 'scripts', array() ),
-                    );
-                }
+                    $_service = array( 'path' => $_route, 'name' => $_domain, 'verbs' => array() );
 
-                $_rebuild[$_domain][] = $_service;
-                unset( $_service );
+                    foreach ( $_verbs as $_verb => $_event )
+                    {
+                        $_service['verbs'][] = array(
+                            'type'    => $_verb,
+                            'event'   => Option::get( $_event, 'event' ),
+                            'scripts' => Option::get( $_event, 'scripts', array() ),
+                        );
+                    }
+
+                    $_rebuild[] = $_service;
+                    unset( $_service );
+                }
             }
         }
 
-        return $_rebuild;
+        return array( 'record' => $_rebuild );
     }
 
     /**
@@ -159,8 +153,7 @@ class Event extends BaseSystemRestResource
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return array|bool
      */
-    protected
-    function _handlePost()
+    protected function _handlePost()
     {
         parent::_handlePost();
 
@@ -226,8 +219,7 @@ class Event extends BaseSystemRestResource
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      */
-    protected
-    function _handleDelete()
+    protected function _handleDelete()
     {
         $_request = Pii::app()->getRequestObject();
 
