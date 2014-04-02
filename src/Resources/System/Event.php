@@ -111,6 +111,7 @@ class Event extends BaseSystemRestResource
         }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         //  Original version?
         if ( 'true' == $as_cached )
         {
@@ -174,21 +175,39 @@ class Event extends BaseSystemRestResource
         $_rebuild = array();
 
         foreach ( $_json as $_domain => $_routes )
+=======
+        //  Original version?
+        if ( 'true' == $as_cached )
+>>>>>>> Updated output of all events in Event resource. Fixed issue with the $as_cached parameter not actually returning a proper boolean.
         {
-            $_rebuild[$_domain] = array();
+            $_rebuild = $_json;
+        }
+        else
+        {
+            /**
+             * Rebuild the cached structure into a more consumable client version
+             */
+            $_rebuild = array();
 
-            foreach ( $_routes as $_route => $_verbs )
+            foreach ( $_json as $_domain => $_routes )
             {
-                $_service = array( 'path' => $_route );
-
-                foreach ( $_verbs as $_verb => $_event )
+                foreach ( $_routes as $_route => $_verbs )
                 {
-                    $_service['verbs'][] = array(
-                        'type'    => $_verb,
-                        'event'   => Option::get( $_event, 'event' ),
-                        'scripts' => Option::get( $_event, 'scripts', array() ),
-                    );
+                    $_service = array( 'path' => $_route, 'name' => $_domain, 'verbs' => array() );
+
+                    foreach ( $_verbs as $_verb => $_event )
+                    {
+                        $_service['verbs'][] = array(
+                            'type'    => $_verb,
+                            'event'   => Option::get( $_event, 'event' ),
+                            'scripts' => Option::get( $_event, 'scripts', array() ),
+                        );
+                    }
+
+                    $_rebuild[] = $_service;
+                    unset( $_service );
                 }
+<<<<<<< HEAD
 
                 $_rebuild[$_domain][] = $_service;
 >>>>>>> Reformat output of all events by default. Added flag "$as_cached" to return data as cached. Also updated swagger documentation with new parameter.
@@ -201,6 +220,12 @@ class Event extends BaseSystemRestResource
 =======
         return $_rebuild;
 >>>>>>> Reformat output of all events by default. Added flag "$as_cached" to return data as cached. Also updated swagger documentation with new parameter.
+=======
+            }
+        }
+
+        return array( 'record' => $_rebuild );
+>>>>>>> Updated output of all events in Event resource. Fixed issue with the $as_cached parameter not actually returning a proper boolean.
     }
 
     /**
@@ -211,11 +236,15 @@ class Event extends BaseSystemRestResource
      * @return array|bool
      */
 <<<<<<< HEAD
+<<<<<<< HEAD
     protected function _handlePost()
 =======
     protected
     function _handlePost()
 >>>>>>> Reformat output of all events by default. Added flag "$as_cached" to return data as cached. Also updated swagger documentation with new parameter.
+=======
+    protected function _handlePost()
+>>>>>>> Updated output of all events in Event resource. Fixed issue with the $as_cached parameter not actually returning a proper boolean.
     {
         parent::_handlePost();
 
@@ -282,11 +311,15 @@ class Event extends BaseSystemRestResource
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      */
 <<<<<<< HEAD
+<<<<<<< HEAD
     protected function _handleDelete()
 =======
     protected
     function _handleDelete()
 >>>>>>> Reformat output of all events by default. Added flag "$as_cached" to return data as cached. Also updated swagger documentation with new parameter.
+=======
+    protected function _handleDelete()
+>>>>>>> Updated output of all events in Event resource. Fixed issue with the $as_cached parameter not actually returning a proper boolean.
     {
         $_request = Pii::app()->getRequestObject();
 
