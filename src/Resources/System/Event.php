@@ -125,12 +125,16 @@ class Event extends BaseSystemRestResource
             $_template = array(
                 'name'  => '{domain}',
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> Swagger updates. Event container tweak
                 'paths' => array(),
             );
 
             $_pathTemplate = array(
                 'path'  => '{route}',
                 'verbs' => array(),
+<<<<<<< HEAD
             );
 
             $_rebuild = array();
@@ -193,6 +197,8 @@ class Event extends BaseSystemRestResource
                     'path'  => '{route}',
                     'verbs' => array(),
                 )
+=======
+>>>>>>> Swagger updates. Event container tweak
             );
 
 >>>>>>> Reformat output of event output on resource list call
@@ -200,26 +206,33 @@ class Event extends BaseSystemRestResource
 
             foreach ( $_json as $_domain => $_routes )
             {
+                $_service = $this->_fromTemplate( $_template, get_defined_vars() );
+
                 foreach ( $_routes as $_route => $_verbs )
                 {
-                    $_service = $this->_fromTemplate( $_template, get_defined_vars() );
+                    $_path = $this->_fromTemplate( $_pathTemplate, get_defined_vars() );
 
                     foreach ( $_verbs as $_verb => $_event )
                     {
-                        $_service['paths']['verbs'][] = array(
+                        $_path['verbs'][] = array(
                             'type'    => $_verb,
                             'event'   => Option::get( $_event, 'event' ),
                             'scripts' => Option::get( $_event, 'scripts', array() ),
                         );
                     }
 
-                    $_rebuild[] = $_service;
-                    unset( $_service );
+                    $_service['paths'][] = $_path;
+                    unset( $_path );
                 }
+<<<<<<< HEAD
 <<<<<<< HEAD
 
                 $_rebuild[$_domain][] = $_service;
 >>>>>>> Reformat output of all events by default. Added flag "$as_cached" to return data as cached. Also updated swagger documentation with new parameter.
+=======
+                
+                $_rebuild[] = $_service;
+>>>>>>> Swagger updates. Event container tweak
                 unset( $_service );
             }
         }
