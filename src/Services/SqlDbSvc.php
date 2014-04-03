@@ -433,7 +433,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -507,16 +507,15 @@ class SqlDbSvc extends BaseDbSvc
 
         try
         {
+            $_out = array();
+            $_errors = array();
             $_fieldInfo = $this->describeTableFields( $table );
             $_relatedInfo = $this->describeTableRelated( $table );
             $_idFieldsInfo = static::_getIdFieldsInfo( $_idFields, $_fieldInfo );
 
             /** @var \CDbCommand $command */
             $command = $this->_dbConn->createCommand();
-            $_ids = array();
-            $_errors = array();
             $_transaction = null;
-
             if ( $_rollback && !$_isSingle )
             {
                 $_transaction = $this->_dbConn->beginTransaction();
@@ -563,7 +562,7 @@ class SqlDbSvc extends BaseDbSvc
                         }
                     }
 
-                    $_ids[$_key] = $_id;
+                    $_out[$_key] = $_id;
                 }
                 catch ( \Exception $_ex )
                 {
@@ -580,7 +579,7 @@ class SqlDbSvc extends BaseDbSvc
 
                     if ( !$_continue )
                     {
-                        if ( empty( $_errors ) )
+                        if ( 0 === $_key )
                         {
                             // first error, don't worry about batch just throw it
                             throw $_ex;
@@ -588,13 +587,13 @@ class SqlDbSvc extends BaseDbSvc
 
                         // mark last error and index for batch results
                         $_errors[] = $_key;
-                        $_ids[$_key] = $_ex->getMessage();
+                        $_out[$_key] = $_ex->getMessage();
                         break;
                     }
 
                     // mark error and index for batch results
                     $_errors[] = $_key;
-                    $_ids[$_key] = $_ex->getMessage();
+                    $_out[$_key] = $_ex->getMessage();
                 }
             }
 
@@ -605,27 +604,26 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !empty( $_errors ) )
             {
-                $_msg = array( 'errors' => $_errors, 'ids' => $_ids );
+                $_msg = array( 'error' => $_errors, 'record' => $_out );
                 throw new BadRequestException( 'Batch Error: Not all records could be created.', null, null, $_msg );
             }
 
             if ( static::_requireMoreFields( $_fields, $_idFields ) || !empty( $_related ) )
             {
                 // ids array are now more like records
-                return $this->retrieveRecords( $table, $_ids, $extras );
+                return $this->retrieveRecords( $table, $_out, $extras );
             }
-            else
-            {
-                return $_ids;
-            }
-        }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
+
+            return $_out;
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to create records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            if ( $_ex instanceof RestException )
+            {
+                throw $_ex;
+            }
+
+            throw new InternalServerErrorException( "Failed to create records in '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -695,7 +693,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_transaction = $this->_dbConn->beginTransaction();
             }
 
-            $_ids = array();
+            $_out = array();
             foreach ( $records as $_key => $_record )
             {
                 try
@@ -726,7 +724,7 @@ class SqlDbSvc extends BaseDbSvc
                         $rows = $_command->update( $table, $_parsed, $_where, $_params );
                         if ( 0 >= $rows )
                         {
-                            throw new NotFoundException( "Record with identifier '" . print_r( $_id, true ) . "' not found in table '$table'." );
+                            throw new NotFoundException( "Record with id '" . print_r( $_id, true ) . "' not found in table '$table'." );
                         }
                     }
 
@@ -735,7 +733,7 @@ class SqlDbSvc extends BaseDbSvc
                         $this->updateRelations( $table, $_record, $_id, $_relatedInfo, $_allowRelatedDelete );
                     }
 
-                    $_ids[$_key] = $_id;
+                    $_out[$_key] = $_id;
                 }
                 catch ( \Exception $_ex )
                 {
@@ -752,7 +750,7 @@ class SqlDbSvc extends BaseDbSvc
 
                     if ( !$_continue )
                     {
-                        if ( empty( $_errors ) )
+                        if ( 0 === $_key )
                         {
                             // first error, don't worry about batch just throw it
                             throw $_ex;
@@ -760,13 +758,13 @@ class SqlDbSvc extends BaseDbSvc
 
                         // mark last error and index for batch results
                         $_errors[] = $_key;
-                        $_ids[$_key] = $_ex->getMessage();
+                        $_out[$_key] = $_ex->getMessage();
                         break;
                     }
 
                     // mark error and index for batch results
                     $_errors[] = $_key;
-                    $_ids[$_key] = $_ex->getMessage();
+                    $_out[$_key] = $_ex->getMessage();
                 }
             }
 
@@ -777,27 +775,26 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !empty( $_errors ) )
             {
-                $_msg = array( 'errors' => $_errors, 'ids' => $_ids );
+                $_msg = array( 'error' => $_errors, 'record' => $_out );
                 throw new BadRequestException( 'Batch Error: Not all records could be updated.', null, null, $_msg );
             }
 
             if ( static::_requireMoreFields( $_fields, $_idFieldNames ) || !empty( $_related ) )
             {
                 // ids array are now more like records
-                return $this->retrieveRecords( $table, $_ids, $extras );
+                return $this->retrieveRecords( $table, $_out, $extras );
             }
-            else
-            {
-                return $_ids;
-            }
-        }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
+
+            return $_out;
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            if ( $_ex instanceof RestException )
+            {
+                throw $_ex;
+            }
+
+            throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -828,15 +825,7 @@ class SqlDbSvc extends BaseDbSvc
 
             // build filter string if necessary, add server-side filters if necessary
             $_ssFilters = Option::get( $extras, 'ss_filters' );
-            if ( is_array( $filter ) )
-            {
-                $_criteria = $this->_convertFilterArrayToNative( $filter, $params, $_ssFilters );
-            }
-            else
-            {
-                $_criteria = $this->_convertFilterStringToNative( $filter, $params, $_ssFilters );
-            }
-
+            $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters );
             $_where = Option::get( $_criteria, 'where' );
             $_params = Option::get( $_criteria, 'params', array() );
 
@@ -868,7 +857,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -980,7 +969,7 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
-            $_ids = array();
+            $_out = array();
             foreach ( $ids as $_key => $_value )
             {
                 try
@@ -1022,7 +1011,7 @@ class SqlDbSvc extends BaseDbSvc
                         $rows = $_command->update( $table, $_parsed, $_where, $_params );
                         if ( 0 >= $rows )
                         {
-                            throw new NotFoundException( "Record with identifier '" . print_r( $_id, true ) . "' not found in table '$table'." );
+                            throw new NotFoundException( "Record with id '" . print_r( $_id, true ) . "' not found in table '$table'." );
                         }
                     }
 
@@ -1036,7 +1025,7 @@ class SqlDbSvc extends BaseDbSvc
                         $_outResults[] = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
                     }
 
-                    $_ids[$_key] = $_id;
+                    $_out[$_key] = $_id;
                 }
                 catch ( \Exception $_ex )
                 {
@@ -1053,7 +1042,7 @@ class SqlDbSvc extends BaseDbSvc
 
                     if ( !$_continue )
                     {
-                        if ( empty( $_errors ) )
+                        if ( 0 === $_key )
                         {
                             // first error, don't worry about batch just throw it
                             throw $_ex;
@@ -1061,13 +1050,13 @@ class SqlDbSvc extends BaseDbSvc
 
                         // mark last error and index for batch results
                         $_errors[] = $_key;
-                        $_ids[$_key] = $_ex->getMessage();
+                        $_out[$_key] = $_ex->getMessage();
                         break;
                     }
 
                     // mark error and index for batch results
                     $_errors[] = $_key;
-                    $_ids[$_key] = $_ex->getMessage();
+                    $_out[$_key] = $_ex->getMessage();
                 }
             }
 
@@ -1078,7 +1067,7 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !empty( $_errors ) )
             {
-                $_msg = array( 'errors' => $_errors, 'ids' => $_ids );
+                $_msg = array( 'error' => $_errors, 'record' => $_out );
                 throw new BadRequestException( 'Batch Error: Not all records could be updated.', null, null, $_msg );
             }
 
@@ -1091,18 +1080,17 @@ class SqlDbSvc extends BaseDbSvc
             {
                 return $_outResults;
             }
-            else
-            {
-                return $_ids;
-            }
-        }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
+
+            return $_out;
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            if ( $_ex instanceof RestException )
+            {
+                throw $_ex;
+            }
+
+            throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -1165,7 +1153,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -1213,7 +1201,7 @@ class SqlDbSvc extends BaseDbSvc
                 // single id field, let's use the quicker 'in' clause
                 $_idName = Option::get( $_idFieldsInfo[0], 'name' );
                 $_idFieldNames[] = $_idName;
-                $_ids = array();
+                $_out = array();
                 foreach ( $records as $_key => $_record )
                 {
                     $_id = Option::get( $_record, $_idName );
@@ -1222,10 +1210,10 @@ class SqlDbSvc extends BaseDbSvc
                         throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_key] request." );
                     }
 
-                    $_ids[] = $_id;
+                    $_out[] = $_id;
                 }
 
-                $_where[] = array( 'in', $_idName, $_ids );
+                $_where[] = array( 'in', $_idName, $_out );
             }
 
             $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
@@ -1283,7 +1271,7 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
-            $_ids = array();
+            $_out = array();
             foreach ( $records as $_key => $_record )
             {
                 try
@@ -1317,11 +1305,11 @@ class SqlDbSvc extends BaseDbSvc
                         $rows = $_command->delete( $table, $_where, $_params );
                         if ( 0 >= $rows )
                         {
-                            throw new NotFoundException( "Record with identifier '" . print_r( $_id, true ) . "' not found in table '$table'." );
+                            throw new NotFoundException( "Record with id '" . print_r( $_id, true ) . "' not found in table '$table'." );
                         }
                     }
 
-                    $_ids[$_key] = $_id;
+                    $_out[$_key] = $_id;
                 }
                 catch ( \Exception $_ex )
                 {
@@ -1338,7 +1326,7 @@ class SqlDbSvc extends BaseDbSvc
 
                     if ( !$_continue )
                     {
-                        if ( empty( $_errors ) )
+                        if ( 0 == $_key )
                         {
                             // first error, don't worry about batch just throw it
                             throw $_ex;
@@ -1346,13 +1334,13 @@ class SqlDbSvc extends BaseDbSvc
 
                         // mark last error and index for batch results
                         $_errors[] = $_key;
-                        $_ids[$_key] = $_ex->getMessage();
+                        $_out[$_key] = $_ex->getMessage();
                         break;
                     }
 
                     // mark error and index for batch results
                     $_errors[] = $_key;
-                    $_ids[$_key] = $_ex->getMessage();
+                    $_out[$_key] = $_ex->getMessage();
                 }
             }
 
@@ -1363,7 +1351,7 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !empty( $_errors ) )
             {
-                $_msg = array( 'errors' => $_errors, 'ids' => $_ids );
+                $_msg = array( 'error' => $_errors, 'record' => $_out );
                 throw new BadRequestException( 'Batch Error: Not all records could be deleted.', null, null, $_msg );
             }
 
@@ -1371,18 +1359,17 @@ class SqlDbSvc extends BaseDbSvc
             {
                 return $_outResults;
             }
-            else
-            {
-                return $_ids;
-            }
-        }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
+
+            return $_out;
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            if ( $_ex instanceof RestException )
+            {
+                throw $_ex;
+            }
+
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -1404,15 +1391,7 @@ class SqlDbSvc extends BaseDbSvc
 
             // build filter string if necessary, add server-side filters if necessary
             $_ssFilters = Option::get( $extras, 'ss_filters' );
-            if ( is_array( $filter ) )
-            {
-                $_criteria = $this->_convertFilterArrayToNative( $filter, $params, $_ssFilters );
-            }
-            else
-            {
-                $_criteria = $this->_convertFilterStringToNative( $filter, $params, $_ssFilters );
-            }
-
+            $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters );
             $_where = Option::get( $_criteria, 'where' );
             $_params = Option::get( $_criteria, 'params', array() );
 
@@ -1428,7 +1407,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -1437,7 +1416,7 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function deleteRecordsByIds( $table, $ids, $extras = array() )
     {
-        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the update request." );
+        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the request." );
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $ids ) );
@@ -1541,7 +1520,7 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
-            $_ids = array();
+            $_out = array();
             foreach ( $ids as $_key => $_value )
             {
                 try
@@ -1591,7 +1570,7 @@ class SqlDbSvc extends BaseDbSvc
                         }
                     }
 
-                    $_ids[$_key] = $_id;
+                    $_out[$_key] = $_id;
                 }
                 catch ( \Exception $_ex )
                 {
@@ -1616,13 +1595,13 @@ class SqlDbSvc extends BaseDbSvc
 
                         // mark last error and index for batch results
                         $_errors[] = $_key;
-                        $_ids[$_key] = $_ex->getMessage();
+                        $_out[$_key] = $_ex->getMessage();
                         break;
                     }
 
                     // mark error and index for batch results
                     $_errors[] = $_key;
-                    $_ids[$_key] = $_ex->getMessage();
+                    $_out[$_key] = $_ex->getMessage();
                 }
             }
 
@@ -1633,7 +1612,7 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !empty( $_errors ) )
             {
-                $_msg = array( 'errors' => $_errors, 'ids' => $_ids );
+                $_msg = array( 'error' => $_errors, 'record' => $_out );
                 throw new BadRequestException( 'Batch Error: Not all records could be deleted.', null, null, $_msg );
             }
 
@@ -1641,18 +1620,17 @@ class SqlDbSvc extends BaseDbSvc
             {
                 return $_outResults;
             }
-            else
-            {
-                return $_ids;
-            }
-        }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
+
+            return $_out;
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            if ( $_ex instanceof RestException )
+            {
+                throw $_ex;
+            }
+
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -1674,15 +1652,7 @@ class SqlDbSvc extends BaseDbSvc
 
             // build filter string if necessary, add server-side filters if necessary
             $_ssFilters = Option::get( $extras, 'ss_filters' );
-            if ( is_array( $filter ) )
-            {
-                $_criteria = $this->_convertFilterArrayToNative( $filter, $params, $_ssFilters );
-            }
-            else
-            {
-                $_criteria = $this->_convertFilterStringToNative( $filter, $params, $_ssFilters );
-            }
-
+            $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters );
             $_where = Option::get( $_criteria, 'where' );
             $_params = Option::get( $_criteria, 'params', array() );
 
@@ -1694,7 +1664,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to retrieve records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to retrieve records from '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -1735,7 +1705,7 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function retrieveRecordsByIds( $table, $ids, $extras = array() )
     {
-        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the update request." );
+        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the request." );
         $table = $this->correctTableName( $table );
 
         $_continue = Option::getBool( $extras, 'continue', false );
@@ -1757,7 +1727,7 @@ class SqlDbSvc extends BaseDbSvc
             $_arrayIdsGiven = ( is_array( $ids[0] ) );
             if ( $_multipleIdsRequired && !$_arrayIdsGiven )
             {
-                throw new BadRequestException( 'Deleting by ids requires multiple identifying fields.' );
+                throw new BadRequestException( 'Retrieving by ids requires multiple identifying fields.' );
             }
 
             $_needToIterate = ( $_multipleIdsRequired || $_arrayIdsGiven );
@@ -1813,7 +1783,7 @@ class SqlDbSvc extends BaseDbSvc
             $_data = array();
             $_results = array();
             $_errors = array();
-            $_ids = array();
+            $_out = array();
             if ( !$_needToIterate )
             {
                 // retrieve by id list
@@ -1890,7 +1860,7 @@ class SqlDbSvc extends BaseDbSvc
                         }
                     }
 
-                    $_ids[$_key] = $_id;
+                    $_out[$_key] = $_id;
                 }
                 catch ( \Exception $_ex )
                 {
@@ -1909,19 +1879,19 @@ class SqlDbSvc extends BaseDbSvc
 
                         // mark last error and index for batch results
                         $_errors[] = $_key;
-                        $_ids[$_key] = $_ex->getMessage();
+                        $_out[$_key] = $_ex->getMessage();
                         break;
                     }
 
                     // mark error and index for batch results
                     $_errors[] = $_key;
-                    $_ids[$_key] = $_ex->getMessage();
+                    $_out[$_key] = $_ex->getMessage();
                 }
             }
 
             if ( !empty( $_errors ) )
             {
-                $_msg = array( 'errors' => $_errors, 'ids' => $_ids );
+                $_msg = array( 'error' => $_errors, 'record' => $_out );
                 throw new BadRequestException( 'Batch Error: Not all records could be retrieved.', null, null, $_msg );
             }
 
@@ -1938,7 +1908,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to retrieve records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to retrieve records from '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -2115,72 +2085,84 @@ class SqlDbSvc extends BaseDbSvc
     }
 
     /**
-     * {@inheritdoc}
+     * Take in a ANSI SQL filter string (WHERE clause)
+     * or our generic NoSQL filter array or partial record
+     * and parse it to the service's native filter criteria.
+     * The filter string can have substitution parameters such as '?',
+     * in which case a numeric array is expected in $params, or
+     * ':name', in which case an associative array is expected,
+     * for value substitution. The two types can not be mixed.
+     *
+     * @param string | array $filter     SQL WHERE clause filter string
+     * @param array          $params     Array of substitution values
+     * @param array          $ss_filters Server-side filters to apply
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return mixed
      */
-    protected function _convertFilterStringToNative( $filter, $params = array(), $ss_filters = array() )
+    protected function _convertFilterToNative( $filter, $params = array(), $ss_filters = array() )
     {
-        // todo parse client filter?
-        $_filterString = $filter;
-        // search filter for index substitution
-        $_indexSub = ( false != strpos( $filter, '?' ) );
-        $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true, $_indexSub );
-        if ( !empty( $_serverFilter ) )
+        if ( !is_array( $filter ) )
         {
-            if ( empty( $filter ) )
+            // todo parse client filter?
+            $_filterString = $filter;
+            // search filter for index substitution
+            $_indexSub = ( false != strpos( $filter, '?' ) );
+            $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true, $_indexSub );
+            if ( !empty( $_serverFilter ) )
             {
-                $_filterString = $_serverFilter['filter'];
+                if ( empty( $filter ) )
+                {
+                    $_filterString = $_serverFilter['filter'];
+                }
+                else
+                {
+                    $_filterString = '(' . $_filterString . ') AND (' . $_serverFilter['filter'] . ')';
+                }
+                $params = array_merge( $params, $_serverFilter['params'] );
             }
-            else
-            {
-                $_filterString = '(' . $_filterString . ') AND (' . $_serverFilter['filter'] . ')';
-            }
-            $params = array_merge( $params, $_serverFilter['params'] );
+
+            return array( 'where' => $_filterString, 'params' => $params );
         }
-
-        return array( 'where' => $_filterString, 'params' => $params );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    protected function _convertFilterArrayToNative( $filter, $params = array(), $ss_filters = array() )
-    {
-        // todo parse client filter?
-        $_filterArray = $filter;
-        // implode filter into string and search for index substitution
-        $_indexSub = ( false != strpos(
-                implode(
-                    array_map(
-                        function ( $a )
-                        {
-                            if ( is_array( $a ) )
+        else
+        {
+            // todo parse client filter?
+            $_filterArray = $filter;
+            // implode filter into string and search for index substitution
+            $_indexSub = ( false != strpos(
+                    implode(
+                        array_map(
+                            function ( $a )
                             {
-                                return implode( $a, ' ' );
-                            }
+                                if ( is_array( $a ) )
+                                {
+                                    return implode( $a, ' ' );
+                                }
 
-                            return $a;
-                        },
-                        $filter
+                                return $a;
+                            },
+                            $filter
+                        ),
+                        ' '
                     ),
-                    ' '
-                ),
-                '?'
-            ) );
-        $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true, $_indexSub );
-        if ( !empty( $_serverFilter ) )
-        {
-            if ( empty( $filter ) )
+                    '?'
+                ) );
+            $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true, $_indexSub );
+            if ( !empty( $_serverFilter ) )
             {
-                $_filterArray = $_serverFilter['filter'];
+                if ( empty( $filter ) )
+                {
+                    $_filterArray = $_serverFilter['filter'];
+                }
+                else
+                {
+                    $_filterArray = array( 'AND', $_filterArray, $_serverFilter['filter'] );
+                }
+                $params = array_merge( $params, $_serverFilter['params'] );
             }
-            else
-            {
-                $_filterArray = array( 'AND', $_filterArray, $_serverFilter['filter'] );
-            }
-            $params = array_merge( $params, $_serverFilter['params'] );
-        }
 
-        return array( 'where' => $_filterArray, 'params' => $params );
+            return array( 'where' => $_filterArray, 'params' => $params );
+        }
     }
 
     /**
@@ -2918,7 +2900,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new BadRequestException( "Failed to update many to one assignment.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new BadRequestException( "Failed to update many to one assignment.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -3039,7 +3021,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update many to one map assignment.\n{$_ex->getMessage()}", $_ex->getCode() );
+            throw new InternalServerErrorException( "Failed to update many to one map assignment.\n{$_ex->getMessage()}" );
         }
     }
 
