@@ -758,7 +758,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         $_results = $this->updateRecords( $table, $_records, $extras );
 
-        return $_results[0];
+        return Option::get( $_results, 0, array() );
     }
 
     /**
@@ -798,7 +798,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         $_results = $this->updateRecordsByIds( $table, $record, $id, $extras );
 
-        return $_results[0];
+        return Option::get( $_results, 0, array() );
     }
 
     /**
@@ -825,7 +825,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         $_results = $this->mergeRecords( $table, $_records, $extras );
 
-        return $_results[0];
+        return Option::get( $_results, 0, array() );
     }
 
     /**
@@ -866,7 +866,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         $_results = $this->mergeRecordsByIds( $table, $record, $id, $extras );
 
-        return $_results[0];
+        return Option::get( $_results, 0, array() );
     }
 
     /**
@@ -893,7 +893,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         $_results = $this->deleteRecords( $table, array( $record ), $extras );
 
-        return $_results[0];
+        return Option::get( $_results, 0, array() );
     }
 
     /**
@@ -929,7 +929,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
     {
         $_results = $this->deleteRecordsByIds( $table, $id, $extras );
 
-        return $_results[0];
+        return Option::get( $_results, 0, array() );
     }
 
     /**
@@ -967,7 +967,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         $_results = $this->retrieveRecords( $table, array( $record ), $extras );
 
-        return $_results[0];
+        return Option::get( $_results, 0, array() );
     }
 
     /**
@@ -992,7 +992,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
     {
         $_results = $this->retrieveRecordsByIds( $table, $id, $extras );
 
-        return $_results[0];
+        return Option::get( $_results, 0, array() );
     }
 
     // Helper function for record usage
@@ -1103,42 +1103,6 @@ abstract class BaseDbSvc extends BasePlatformRestService
     }
 
     /**
-     * Take in a ANSI SQL filter string (WHERE clause)
-     * and parse it to the service's native filter criteria.
-     * The filter string can have substitution parameters such as '?',
-     * in which case a numeric array is expected in $params, or
-     * ':name', in which case an associative array is expected,
-     * for value substitution. The two types can not be mixed.
-     *
-     * @param string $filter     SQL WHERE clause filter string
-     * @param array  $params     Array of substitution values
-     * @param array  $ss_filters Server-side filters to apply
-     *
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return mixed
-     */
-    protected function _convertFilterStringToNative( $filter, $params = array(), $ss_filters = array() )
-    {
-        throw new BadRequestException( 'Filter string conversion is not supported on this service.' );
-    }
-
-    /**
-     * Take in our filter array or partial record and parse it to the
-     * service's native filter criteria.
-     *
-     * @param array $filter     Our generic NoSQL filter format or a partial record
-     * @param array $params     Array of substitution values
-     * @param array $ss_filters Server-side filters to apply
-     *
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return mixed
-     */
-    protected function _convertFilterArrayToNative( $filter, $params = array(), $ss_filters = array() )
-    {
-        throw new BadRequestException( 'Filter array conversion is not supported on this service.' );
-    }
-
-    /**
      * @return int
      */
     protected static function getMaxRecordsReturnedLimit()
@@ -1169,6 +1133,10 @@ abstract class BaseDbSvc extends BasePlatformRestService
             if ( !is_array( $include ) )
             {
                 $include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
+            }
+            if ( false === array_search( $id_field, $include ) )
+            {
+                $include[] = $id_field;
             }
             foreach ( $include as $_key )
             {
@@ -1217,6 +1185,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
             {
                 throw new BadRequestException( "Identifying field '$id_field' can not be empty for record index '$_key' request." );
             }
+
             $_ids[] = $_id;
         }
 
@@ -1239,6 +1208,20 @@ abstract class BaseDbSvc extends BasePlatformRestService
         }
 
         return $_out;
+    }
+
+    protected static function removeIds( &$record, $id_field = null )
+    {
+        if ( empty( $id_field ) )
+        {
+            $id_field = static::DEFAULT_ID_FIELD;
+        }
+
+        $id_field = Option::clean( $id_field );
+        foreach ( $id_field as $_field )
+        {
+            unset( $record[$_field] );
+        }
     }
 
     /**
