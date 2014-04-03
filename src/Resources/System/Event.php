@@ -120,17 +120,25 @@ class Event extends BaseSystemRestResource
             /**
              * Rebuild the cached structure into a more consumable client version
              */
+            $_template = array(
+                'name'  => '{domain}',
+                'paths' => array(
+                    'path'  => '{route}',
+                    'verbs' => array(),
+                )
+            );
+
             $_rebuild = array();
 
             foreach ( $_json as $_domain => $_routes )
             {
                 foreach ( $_routes as $_route => $_verbs )
                 {
-                    $_service = array( 'path' => $_route, 'name' => $_domain, 'verbs' => array() );
+                    $_service = $this->_fromTemplate( $_template, get_defined_vars() );
 
                     foreach ( $_verbs as $_verb => $_event )
                     {
-                        $_service['verbs'][] = array(
+                        $_service['paths']['verbs'][] = array(
                             'type'    => $_verb,
                             'event'   => Option::get( $_event, 'event' ),
                             'scripts' => Option::get( $_event, 'scripts', array() ),
@@ -287,4 +295,44 @@ class Event extends BaseSystemRestResource
         return array( 'record' => $_model->getAttributes() );
     }
 
+    /**
+     * @param string $template
+     * @param array  $variables
+     *
+     * @return mixed|string
+     */
+    protected function _fromTemplate( $template, array $variables = array() )
+    {
+        $_wasArray = false;
+        $_template = $template;
+
+        if ( is_array( $_template ) )
+        {
+            $_template = json_encode( $_template, true );
+
+            if ( JSON_ERROR_NONE != json_last_error() )
+            {
+                return $template;
+            }
+
+            $_wasArray = true;
+        }
+
+        foreach ( $variables as $_key => $_value )
+        {
+            $_tag = '{' . ltrim( $_key, '_' ) . '}';
+
+            if ( false !== stripos( $_template, $_tag, 0 ) )
+            {
+                $_template = str_ireplace( $_tag, $_value, $_template );
+            }
+        }
+
+        if ( $_wasArray )
+        {
+            $_template = json_decode( $_template, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+        }
+
+        return $_template;
+    }
 }
