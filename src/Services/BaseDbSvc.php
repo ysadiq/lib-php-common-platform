@@ -1110,6 +1110,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         }
     }
 
+<<<<<<< HEAD
     protected function validateFieldValue( $name, $value, $validations, $for_update = false, $field_info = null )
     {
         if ( is_array( $validations ) )
@@ -1351,6 +1352,8 @@ abstract class BaseDbSvc extends BasePlatformRestService
         return true;
     }
 
+=======
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
     /**
      * @return int
      */
@@ -1385,6 +1388,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
             {
                 $include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
             }
+<<<<<<< HEAD
 
             // make sure we always include identifier fields
             foreach ( $id_field as $id )
@@ -1396,6 +1400,12 @@ abstract class BaseDbSvc extends BasePlatformRestService
             }
 
             // glean desired fields from record
+=======
+            if ( false === array_search( $id_field, $include ) )
+            {
+                $include[] = $id_field;
+            }
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             foreach ( $include as $_key )
             {
                 $_out[$_key] = Option::get( $record, $_key );
@@ -1470,6 +1480,11 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
                 $_out[] = ( $include_field ) ? array( $_field => $_id ) : $_id;
             }
+<<<<<<< HEAD
+=======
+
+            $_ids[] = $_id;
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
 
         return $_out;
@@ -1516,10 +1531,16 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
     protected static function removeIds( &$record, $id_field = null )
     {
+<<<<<<< HEAD
         $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
         if ( !is_array( $id_field ) )
         {
             $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
+=======
+        if ( empty( $id_field ) )
+        {
+            $id_field = static::DEFAULT_ID_FIELD;
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
 
         $id_field = Option::clean( $id_field );

@@ -478,15 +478,27 @@ class SqlDbSvc extends BaseDbSvc
         $_errors = array();
         try
         {
+            $_out = array();
+            $_errors = array();
             $_fieldInfo = $this->describeTableFields( $table );
             $_relatedInfo = $this->describeTableRelated( $table );
             $_idFieldsInfo = static::_getIdFieldsInfo( $_idFields, $_fieldInfo );
 
             /** @var \CDbCommand $command */
             $command = $this->_dbConn->createCommand();
+<<<<<<< HEAD
             $_transaction = ( $_rollback && !$_isSingle ) ? $this->_dbConn->beginTransaction() : null;
 
             foreach ( $records as $_index => $_record )
+=======
+            $_transaction = null;
+            if ( $_rollback && !$_isSingle )
+            {
+                $_transaction = $this->_dbConn->beginTransaction();
+            }
+
+            foreach ( $records as $_key => $_record )
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             {
                 try
                 {
@@ -527,7 +539,11 @@ class SqlDbSvc extends BaseDbSvc
                         }
                     }
 
+<<<<<<< HEAD
                     $_out[$_index] = $_id;
+=======
+                    $_out[$_key] = $_id;
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 }
                 catch ( \Exception $_ex )
                 {
@@ -553,7 +569,11 @@ class SqlDbSvc extends BaseDbSvc
 
                     if ( !$_continue )
                     {
+<<<<<<< HEAD
                         if ( 0 !== $_index )
+=======
+                        if ( 0 === $_key )
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                         {
                             // first error, don't worry about batch just throw it
                             // mark last error and index for batch results
@@ -561,12 +581,24 @@ class SqlDbSvc extends BaseDbSvc
                             $_out[$_index] = $_ex->getMessage();
                         }
 
+<<<<<<< HEAD
                         throw $_ex;
                     }
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
                     $_out[$_index] = $_ex->getMessage();
+=======
+                        // mark last error and index for batch results
+                        $_errors[] = $_key;
+                        $_out[$_key] = $_ex->getMessage();
+                        break;
+                    }
+
+                    // mark error and index for batch results
+                    $_errors[] = $_key;
+                    $_out[$_key] = $_ex->getMessage();
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 }
             }
 
@@ -577,7 +609,12 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !empty( $_errors ) )
             {
+<<<<<<< HEAD
                 throw new BadRequestException();
+=======
+                $_msg = array( 'error' => $_errors, 'record' => $_out );
+                throw new BadRequestException( 'Batch Error: Not all records could be created.', null, null, $_msg );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             }
 
             if ( static::_requireMoreFields( $_fields, $_idFields ) || !empty( $_related ) )
@@ -590,6 +627,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
 <<<<<<< HEAD
             $_msg = $_ex->getMessage();
 
@@ -614,6 +652,14 @@ class SqlDbSvc extends BaseDbSvc
 =======
             throw new InternalServerErrorException( "Failed to create records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
 >>>>>>> more work on ss filters and validations
+=======
+            if ( $_ex instanceof RestException )
+            {
+                throw $_ex;
+            }
+
+            throw new InternalServerErrorException( "Failed to create records in '$table'.\n{$_ex->getMessage()}" );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -692,9 +738,13 @@ class SqlDbSvc extends BaseDbSvc
             }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             foreach ( $records as $_index => $_record )
 =======
             $_ids = array();
+=======
+            $_out = array();
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             foreach ( $records as $_key => $_record )
 >>>>>>> latest round of changes
             {
@@ -735,7 +785,11 @@ class SqlDbSvc extends BaseDbSvc
                         $this->updateRelations( $table, $_record, $_id, $_relatedInfo, $_allowRelatedDelete );
                     }
 
+<<<<<<< HEAD
                     $_out[$_index] = $_id;
+=======
+                    $_out[$_key] = $_id;
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 }
                 catch ( \Exception $_ex )
                 {
@@ -761,7 +815,11 @@ class SqlDbSvc extends BaseDbSvc
 
                     if ( !$_continue )
                     {
+<<<<<<< HEAD
                         if ( 0 !== $_index )
+=======
+                        if ( 0 === $_key )
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                         {
                             // first error, don't worry about batch just throw it
                         	// mark last error and index for batch results
@@ -769,12 +827,24 @@ class SqlDbSvc extends BaseDbSvc
                         	$_out[$_index] = $_ex->getMessage();
                     	}
 
+<<<<<<< HEAD
                         throw $_ex;
                     }
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
                     $_out[$_index] = $_ex->getMessage();
+=======
+                        // mark last error and index for batch results
+                        $_errors[] = $_key;
+                        $_out[$_key] = $_ex->getMessage();
+                        break;
+                    }
+
+                    // mark error and index for batch results
+                    $_errors[] = $_key;
+                    $_out[$_key] = $_ex->getMessage();
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 }
             }
 
@@ -785,7 +855,12 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !empty( $_errors ) )
             {
+<<<<<<< HEAD
                 throw new BadRequestException();
+=======
+                $_msg = array( 'error' => $_errors, 'record' => $_out );
+                throw new BadRequestException( 'Batch Error: Not all records could be updated.', null, null, $_msg );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             }
 
             if ( static::_requireMoreFields( $_fields, $_idFieldNames ) || !empty( $_related ) )
@@ -798,6 +873,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
 <<<<<<< HEAD
             $_msg = $_ex->getMessage();
 
@@ -822,6 +898,14 @@ class SqlDbSvc extends BaseDbSvc
 =======
             throw new InternalServerErrorException( "Failed to update records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
 >>>>>>> more work on ss filters and validations
+=======
+            if ( $_ex instanceof RestException )
+            {
+                throw $_ex;
+            }
+
+            throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -853,6 +937,7 @@ class SqlDbSvc extends BaseDbSvc
             // build filter string if necessary, add server-side filters if necessary
             $_ssFilters = Option::get( $extras, 'ss_filters' );
 <<<<<<< HEAD
+<<<<<<< HEAD
             $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters );
             $_where = Option::get( $_criteria, 'where' );
             $_params = Option::get( $_criteria, 'params', array() );
@@ -867,6 +952,9 @@ class SqlDbSvc extends BaseDbSvc
             }
 >>>>>>> latest round of changes
 
+=======
+            $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             $_where = Option::get( $_criteria, 'where' );
             $_params = Option::get( $_criteria, 'params', array() );
 
@@ -905,10 +993,14 @@ class SqlDbSvc extends BaseDbSvc
         catch ( \Exception $_ex )
         {
 <<<<<<< HEAD
+<<<<<<< HEAD
             throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
 =======
             throw new InternalServerErrorException( "Failed to update records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
 >>>>>>> more work on ss filters and validations
+=======
+            throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -1023,7 +1115,12 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
+<<<<<<< HEAD
             foreach ( $ids as $_index => $_value )
+=======
+            $_out = array();
+            foreach ( $ids as $_key => $_value )
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             {
                 try
                 {
@@ -1079,10 +1176,14 @@ class SqlDbSvc extends BaseDbSvc
                     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
                     $_out[$_index] = $_id;
 =======
                     $_ids[$_key] = $_id;
 >>>>>>> latest round of changes
+=======
+                    $_out[$_key] = $_id;
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 }
                 catch ( \Exception $_ex )
                 {
@@ -1108,10 +1209,15 @@ class SqlDbSvc extends BaseDbSvc
 
                     if ( !$_continue )
                     {
+<<<<<<< HEAD
                         if ( 0 !== $_index )
+=======
+                        if ( 0 === $_key )
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                         {
                             // first error, don't worry about batch just throw it
                         // mark last error and index for batch results
+<<<<<<< HEAD
                         $_errors[] = $_index;
                         $_out[$_index] = $_ex->getMessage();
                     }
@@ -1122,6 +1228,16 @@ class SqlDbSvc extends BaseDbSvc
                     // mark error and index for batch results
                     $_errors[] = $_index;
                     $_out[$_index] = $_ex->getMessage();
+=======
+                        $_errors[] = $_key;
+                        $_out[$_key] = $_ex->getMessage();
+                        break;
+                    }
+
+                    // mark error and index for batch results
+                    $_errors[] = $_key;
+                    $_out[$_key] = $_ex->getMessage();
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 }
             }
 
@@ -1132,7 +1248,12 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !empty( $_errors ) )
             {
+<<<<<<< HEAD
                 throw new BadRequestException();
+=======
+                $_msg = array( 'error' => $_errors, 'record' => $_out );
+                throw new BadRequestException( 'Batch Error: Not all records could be updated.', null, null, $_msg );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             }
 
             if ( $_needToIterate && $_requireMore )
@@ -1148,15 +1269,19 @@ class SqlDbSvc extends BaseDbSvc
 >>>>>>> latest round of changes
             }
 
+<<<<<<< HEAD
             if ( !empty( $_outResults ) )
             {
                 return $_outResults;
             }
 
+=======
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             return $_out;
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
 <<<<<<< HEAD
             $_msg = $_ex->getMessage();
 
@@ -1181,6 +1306,14 @@ class SqlDbSvc extends BaseDbSvc
 =======
             throw new InternalServerErrorException( "Failed to update records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
 >>>>>>> more work on ss filters and validations
+=======
+            if ( $_ex instanceof RestException )
+            {
+                throw $_ex;
+            }
+
+            throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -1244,10 +1377,14 @@ class SqlDbSvc extends BaseDbSvc
         catch ( \Exception $_ex )
         {
 <<<<<<< HEAD
+<<<<<<< HEAD
             throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
 =======
             throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
 >>>>>>> more work on ss filters and validations
+=======
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -1313,10 +1450,14 @@ class SqlDbSvc extends BaseDbSvc
                 // single id field, let's use the quicker 'in' clause
                 $_idName = Option::get( $_idFieldsInfo[0], 'name' );
                 $_idFieldNames[] = $_idName;
+<<<<<<< HEAD
                 $_ids = array();
 <<<<<<< HEAD
                 foreach ( $records as $_index => $_record )
 =======
+=======
+                $_out = array();
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 foreach ( $records as $_key => $_record )
 >>>>>>> latest round of changes
                 {
@@ -1330,10 +1471,10 @@ class SqlDbSvc extends BaseDbSvc
 >>>>>>> latest round of changes
                     }
 
-                    $_ids[] = $_id;
+                    $_out[] = $_id;
                 }
 
-                $_where[] = array( 'in', $_idName, $_ids );
+                $_where[] = array( 'in', $_idName, $_out );
             }
 
             $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
@@ -1394,9 +1535,13 @@ class SqlDbSvc extends BaseDbSvc
             }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             foreach ( $records as $_index => $_record )
 =======
             $_ids = array();
+=======
+            $_out = array();
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             foreach ( $records as $_key => $_record )
 >>>>>>> latest round of changes
             {
@@ -1432,6 +1577,7 @@ class SqlDbSvc extends BaseDbSvc
                         if ( 0 >= $rows )
                         {
 <<<<<<< HEAD
+<<<<<<< HEAD
                             throw new NotFoundException( "Record with id '" . print_r( $_id, true ) . "' not found in table '$table'." );
                         }
                     }
@@ -1444,6 +1590,13 @@ class SqlDbSvc extends BaseDbSvc
 
                     $_ids[$_key] = $_id;
 >>>>>>> latest round of changes
+=======
+                            throw new NotFoundException( "Record with id '" . print_r( $_id, true ) . "' not found in table '$table'." );
+                        }
+                    }
+
+                    $_out[$_key] = $_id;
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 }
                 catch ( \Exception $_ex )
                 {
@@ -1469,10 +1622,15 @@ class SqlDbSvc extends BaseDbSvc
 
                     if ( !$_continue )
                     {
+<<<<<<< HEAD
                         if ( 0 !== $_index )
+=======
+                        if ( 0 == $_key )
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                         {
                             // first error, don't worry about batch just throw it
                         // mark last error and index for batch results
+<<<<<<< HEAD
                         $_errors[] = $_index;
                         $_out[$_index] = $_ex->getMessage();
                     }
@@ -1483,6 +1641,16 @@ class SqlDbSvc extends BaseDbSvc
                     // mark error and index for batch results
                     $_errors[] = $_index;
                     $_out[$_index] = $_ex->getMessage();
+=======
+                        $_errors[] = $_key;
+                        $_out[$_key] = $_ex->getMessage();
+                        break;
+                    }
+
+                    // mark error and index for batch results
+                    $_errors[] = $_key;
+                    $_out[$_key] = $_ex->getMessage();
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 }
             }
 
@@ -1493,7 +1661,12 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !empty( $_errors ) )
             {
+<<<<<<< HEAD
                 throw new BadRequestException();
+=======
+                $_msg = array( 'error' => $_errors, 'record' => $_out );
+                throw new BadRequestException( 'Batch Error: Not all records could be deleted.', null, null, $_msg );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             }
 
             if ( !empty( $_outResults ) )
@@ -1505,6 +1678,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
 <<<<<<< HEAD
             $_msg = $_ex->getMessage();
 
@@ -1529,6 +1703,14 @@ class SqlDbSvc extends BaseDbSvc
 =======
             throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
 >>>>>>> more work on ss filters and validations
+=======
+            if ( $_ex instanceof RestException )
+            {
+                throw $_ex;
+            }
+
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -1567,10 +1749,14 @@ class SqlDbSvc extends BaseDbSvc
         catch ( \Exception $_ex )
         {
 <<<<<<< HEAD
+<<<<<<< HEAD
             throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
 =======
             throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
 >>>>>>> more work on ss filters and validations
+=======
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -1579,7 +1765,11 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function deleteRecordsByIds( $table, $ids, $extras = array() )
     {
+<<<<<<< HEAD
         $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
+=======
+        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the request." );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $ids ) );
@@ -1686,7 +1876,12 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
+<<<<<<< HEAD
             foreach ( $ids as $_index => $_value )
+=======
+            $_out = array();
+            foreach ( $ids as $_key => $_value )
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             {
                 try
                 {
@@ -1735,7 +1930,11 @@ class SqlDbSvc extends BaseDbSvc
                         }
                     }
 
+<<<<<<< HEAD
                     $_out[$_index] = $_id;
+=======
+                    $_out[$_key] = $_id;
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 }
                 catch ( \Exception $_ex )
                 {
@@ -1765,6 +1964,7 @@ class SqlDbSvc extends BaseDbSvc
                         {
                             // first error, don't worry about batch just throw it
                         // mark last error and index for batch results
+<<<<<<< HEAD
                         $_errors[] = $_index;
                         $_out[$_index] = $_ex->getMessage();
                     }
@@ -1775,6 +1975,16 @@ class SqlDbSvc extends BaseDbSvc
                     // mark error and index for batch results
                     $_errors[] = $_index;
                     $_out[$_index] = $_ex->getMessage();
+=======
+                        $_errors[] = $_key;
+                        $_out[$_key] = $_ex->getMessage();
+                        break;
+                    }
+
+                    // mark error and index for batch results
+                    $_errors[] = $_key;
+                    $_out[$_key] = $_ex->getMessage();
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 }
             }
 
@@ -1785,7 +1995,12 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !empty( $_errors ) )
             {
+<<<<<<< HEAD
                 throw new BadRequestException();
+=======
+                $_msg = array( 'error' => $_errors, 'record' => $_out );
+                throw new BadRequestException( 'Batch Error: Not all records could be deleted.', null, null, $_msg );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             }
 
             if ( !empty( $_outResults ) )
@@ -1797,6 +2012,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
+<<<<<<< HEAD
 <<<<<<< HEAD
             $_msg = $_ex->getMessage();
 
@@ -1821,6 +2037,14 @@ class SqlDbSvc extends BaseDbSvc
 =======
             throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
 >>>>>>> more work on ss filters and validations
+=======
+            if ( $_ex instanceof RestException )
+            {
+                throw $_ex;
+            }
+
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -1855,10 +2079,14 @@ class SqlDbSvc extends BaseDbSvc
         catch ( \Exception $_ex )
         {
 <<<<<<< HEAD
+<<<<<<< HEAD
             throw new InternalServerErrorException( "Failed to retrieve records from '$table'.\n{$_ex->getMessage()}" );
 =======
             throw new InternalServerErrorException( "Failed to retrieve records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
 >>>>>>> more work on ss filters and validations
+=======
+            throw new InternalServerErrorException( "Failed to retrieve records from '$table'.\n{$_ex->getMessage()}" );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -1899,7 +2127,11 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function retrieveRecordsByIds( $table, $ids, $extras = array() )
     {
+<<<<<<< HEAD
         $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
+=======
+        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the request." );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         $table = $this->correctTableName( $table );
 
         $_continue = Option::getBool( $extras, 'continue', false );
@@ -2054,7 +2286,11 @@ class SqlDbSvc extends BaseDbSvc
                         }
                     }
 
+<<<<<<< HEAD
                     $_out[$_index] = $_id;
+=======
+                    $_out[$_key] = $_id;
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 }
                 catch ( \Exception $_ex )
                 {
@@ -2072,14 +2308,24 @@ class SqlDbSvc extends BaseDbSvc
                         }
 
                         // mark last error and index for batch results
+<<<<<<< HEAD
                         $_errors[] = $_index;
                         $_out[$_index] = $_ex->getMessage();
+=======
+                        $_errors[] = $_key;
+                        $_out[$_key] = $_ex->getMessage();
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                         break;
                     }
 
                     // mark error and index for batch results
+<<<<<<< HEAD
                     $_errors[] = $_index;
                     $_out[$_index] = $_ex->getMessage();
+=======
+                    $_errors[] = $_key;
+                    $_out[$_key] = $_ex->getMessage();
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 }
             }
 
@@ -2103,10 +2349,14 @@ class SqlDbSvc extends BaseDbSvc
         catch ( \Exception $_ex )
         {
 <<<<<<< HEAD
+<<<<<<< HEAD
             throw new InternalServerErrorException( "Failed to retrieve records from '$table'.\n{$_ex->getMessage()}" );
 =======
             throw new InternalServerErrorException( "Failed to retrieve records for '$table'.\n{$_ex->getMessage()}", $_ex->getCode() );
 >>>>>>> more work on ss filters and validations
+=======
+            throw new InternalServerErrorException( "Failed to retrieve records from '$table'.\n{$_ex->getMessage()}" );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -2281,9 +2531,16 @@ class SqlDbSvc extends BaseDbSvc
      * Take in a ANSI SQL filter string (WHERE clause)
      * or our generic NoSQL filter array or partial record
      * and parse it to the service's native filter criteria.
+<<<<<<< HEAD
      * The filter string can have substitution parameters such as
      * ':name', in which case an associative array is expected,
      * for value substitution.
+=======
+     * The filter string can have substitution parameters such as '?',
+     * in which case a numeric array is expected in $params, or
+     * ':name', in which case an associative array is expected,
+     * for value substitution. The two types can not be mixed.
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
      *
      * @param string | array $filter     SQL WHERE clause filter string
      * @param array          $params     Array of substitution values
@@ -2298,7 +2555,13 @@ class SqlDbSvc extends BaseDbSvc
         {
             // todo parse client filter?
             $_filterString = $filter;
+<<<<<<< HEAD
             $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true );
+=======
+            // search filter for index substitution
+            $_indexSub = ( false != strpos( $filter, '?' ) );
+            $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true, $_indexSub );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             if ( !empty( $_serverFilter ) )
             {
                 if ( empty( $filter ) )
@@ -2311,6 +2574,7 @@ class SqlDbSvc extends BaseDbSvc
                 }
                 $params = array_merge( $params, $_serverFilter['params'] );
             }
+<<<<<<< HEAD
 
             return array( 'where' => $_filterString, 'params' => $params );
         }
@@ -2319,6 +2583,35 @@ class SqlDbSvc extends BaseDbSvc
             // todo parse client filter?
             $_filterArray = $filter;
             $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true );
+=======
+
+            return array( 'where' => $_filterString, 'params' => $params );
+        }
+        else
+        {
+            // todo parse client filter?
+            $_filterArray = $filter;
+            // implode filter into string and search for index substitution
+            $_indexSub = ( false != strpos(
+                    implode(
+                        array_map(
+                            function ( $a )
+                            {
+                                if ( is_array( $a ) )
+                                {
+                                    return implode( $a, ' ' );
+                                }
+
+                                return $a;
+                            },
+                            $filter
+                        ),
+                        ' '
+                    ),
+                    '?'
+                ) );
+            $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true, $_indexSub );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             if ( !empty( $_serverFilter ) )
             {
                 if ( empty( $filter ) )
@@ -3151,10 +3444,14 @@ class SqlDbSvc extends BaseDbSvc
         catch ( \Exception $_ex )
         {
 <<<<<<< HEAD
+<<<<<<< HEAD
             throw new BadRequestException( "Failed to update many to one assignment.\n{$_ex->getMessage()}" );
 =======
             throw new BadRequestException( "Failed to update many to one assignment.\n{$_ex->getMessage()}", $_ex->getCode() );
 >>>>>>> more work on ss filters and validations
+=======
+            throw new BadRequestException( "Failed to update many to one assignment.\n{$_ex->getMessage()}" );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -3276,10 +3573,14 @@ class SqlDbSvc extends BaseDbSvc
         catch ( \Exception $_ex )
         {
 <<<<<<< HEAD
+<<<<<<< HEAD
             throw new InternalServerErrorException( "Failed to update many to one map assignment.\n{$_ex->getMessage()}" );
 =======
             throw new InternalServerErrorException( "Failed to update many to one map assignment.\n{$_ex->getMessage()}", $_ex->getCode() );
 >>>>>>> more work on ss filters and validations
+=======
+            throw new InternalServerErrorException( "Failed to update many to one map assignment.\n{$_ex->getMessage()}" );
+>>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
