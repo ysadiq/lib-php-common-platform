@@ -29,36 +29,28 @@ use DreamFactory\Platform\Resources\BaseSystemRestResource;
  */
 class ProviderUser extends BaseSystemRestResource
 {
-	/**
-	 * Constructor
-	 *
-	 * @param RestServiceLike $consumer
-	 * @param array           $resourceArray
-	 *
-	 * @return \DreamFactory\Platform\Resources\System\ProviderUser
-	 */
-	public function __construct( $consumer = null, $resourceArray = array() )
-	{
-		parent::__construct(
-			$consumer,
-			array(
-				'api_name'       => 'provider_user',
-				'is_active'      => true,
-				'name'           => 'Provider User',
-				'type'           => 'System',
-				'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
-				'resource_array' => $resourceArray,
-			)
-		);
-	}
-
-	/**
-	 * @return bool
-	 */
-	protected function _handleGet()
-	{
-		return parent::_handleGet();
-	}
+    /**
+     * Constructor
+     *
+     * @param RestServiceLike $consumer
+     * @param array           $resourceArray
+     *
+     * @return \DreamFactory\Platform\Resources\System\ProviderUser
+     */
+    public function __construct( $consumer = null, $resourceArray = array() )
+    {
+        parent::__construct(
+            $consumer,
+            array(
+                'api_name'       => 'provider_user',
+                'is_active'      => true,
+                'name'           => 'Provider User',
+                'type'           => 'System',
+                'type_id'        => PlatformServiceTypes::SYSTEM_SERVICE,
+                'resource_array' => $resourceArray,
+            )
+        );
+    }
 }
 
 
