@@ -124,6 +124,7 @@ class Event extends BaseSystemRestResource
              */
             $_template = array(
                 'name'  => '{domain}',
+<<<<<<< HEAD
                 'paths' => array(),
             );
 
@@ -187,17 +188,25 @@ class Event extends BaseSystemRestResource
             /**
              * Rebuild the cached structure into a more consumable client version
              */
+=======
+                'paths' => array(
+                    'path'  => '{route}',
+                    'verbs' => array(),
+                )
+            );
+
+>>>>>>> Reformat output of event output on resource list call
             $_rebuild = array();
 
             foreach ( $_json as $_domain => $_routes )
             {
                 foreach ( $_routes as $_route => $_verbs )
                 {
-                    $_service = array( 'path' => $_route, 'name' => $_domain, 'verbs' => array() );
+                    $_service = $this->_fromTemplate( $_template, get_defined_vars() );
 
                     foreach ( $_verbs as $_verb => $_event )
                     {
-                        $_service['verbs'][] = array(
+                        $_service['paths']['verbs'][] = array(
                             'type'    => $_verb,
                             'event'   => Option::get( $_event, 'event' ),
                             'scripts' => Option::get( $_event, 'scripts', array() ),
@@ -388,6 +397,9 @@ class Event extends BaseSystemRestResource
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> Reformat output of event output on resource list call
     /**
      * @param string $template
      * @param array  $variables
@@ -428,6 +440,9 @@ class Event extends BaseSystemRestResource
 
         return $_template;
     }
+<<<<<<< HEAD
 =======
 >>>>>>> Reformat output of all events by default. Added flag "$as_cached" to return data as cached. Also updated swagger documentation with new parameter.
+=======
+>>>>>>> Reformat output of event output on resource list call
 }
