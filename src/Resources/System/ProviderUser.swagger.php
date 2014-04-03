@@ -26,10 +26,10 @@ $_providerProviderUser['apis'] = array(
         'operations'  => array(
             array(
                 'method'           => 'GET',
-                'summary'          => 'getProviderUsers() - Retrieve one or more users.',
+                'summary'          => 'getProviderUsers() - Retrieve one or more provider provider users.',
                 'nickname'         => 'getProviderUsers',
                 'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'users.list',
+                'event_name'       => 'provider_users.list',
                 'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'parameters'       => array(
@@ -140,10 +140,10 @@ $_providerProviderUser['apis'] = array(
             ),
             array(
                 'method'           => 'POST',
-                'summary'          => 'createProviderUsers() - Create one or more users.',
+                'summary'          => 'createProviderUsers() - Create one or more provider users.',
                 'nickname'         => 'createProviderUsers',
                 'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'users.create',
+                'event_name'       => 'provider_users.create',
                 'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'parameters'       => array(
@@ -202,10 +202,10 @@ $_providerProviderUser['apis'] = array(
             ),
             array(
                 'method'           => 'PATCH',
-                'summary'          => 'updateProviderUsers() - Update one or more users.',
+                'summary'          => 'updateProviderUsers() - Update one or more provider provider users.',
                 'nickname'         => 'updateProviderUsers',
                 'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'users.update',
+                'event_name'       => 'provider_users.update',
                 'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'parameters'       => array(
@@ -255,10 +255,10 @@ $_providerProviderUser['apis'] = array(
             ),
             array(
                 'method'           => 'DELETE',
-                'summary'          => 'deleteProviderUsers() - Delete one or more users.',
+                'summary'          => 'deleteProviderUsers() - Delete one or more provider users.',
                 'nickname'         => 'deleteProviderUsers',
                 'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'users.delete',
+                'event_name'       => 'provider_users.delete',
                 'parameters'       => array(
                     array(
                         'name'          => 'ids',
@@ -315,17 +315,17 @@ $_providerProviderUser['apis'] = array(
                     'use the POST request with X-HTTP-METHOD = DELETE header and post records or ids.',
             ),
         ),
-        'description' => 'Operations for user administration.',
+        'description' => 'Operations for provider user administration.',
     ),
     array(
         'path'        => '/{api_name}/user/{id}',
         'operations'  => array(
             array(
                 'method'           => 'GET',
-                'summary'          => 'getProviderUser() - Retrieve one user.',
+                'summary'          => 'getProviderUser() - Retrieve one provider user.',
                 'nickname'         => 'getProviderUser',
                 'type'             => 'ProviderUserResponse',
-                'event_name'       => 'user.read',
+                'event_name'       => 'provider_user.read',
                 'parameters'       => array(
                     array(
                         'name'          => 'id',
@@ -370,10 +370,10 @@ $_providerProviderUser['apis'] = array(
             ),
             array(
                 'method'           => 'PATCH',
-                'summary'          => 'updateProviderUser() - Update one user.',
+                'summary'          => 'updateProviderUser() - Update one provider user.',
                 'nickname'         => 'updateProviderUser',
                 'type'             => 'ProviderUserResponse',
-                'event_name'       => 'user.update',
+                'event_name'       => 'provider_user.update',
                 'parameters'       => array(
                     array(
                         'name'          => 'id',
@@ -428,10 +428,10 @@ $_providerProviderUser['apis'] = array(
             ),
             array(
                 'method'           => 'DELETE',
-                'summary'          => 'deleteProviderUser() - Delete one user.',
+                'summary'          => 'deleteProviderUser() - Delete one provider user.',
                 'nickname'         => 'deleteProviderUser',
                 'type'             => 'ProviderUserResponse',
-                'event_name'       => 'user.delete',
+                'event_name'       => 'provider_user.delete',
                 'parameters'       => array(
                     array(
                         'name'          => 'id',
@@ -475,7 +475,7 @@ $_providerProviderUser['apis'] = array(
                 'notes'            => 'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return deleted properties.',
             ),
         ),
-        'description' => 'Operations for individual user administration.',
+        'description' => 'Operations for individual provider user administration.',
     ),
 );
 
@@ -483,11 +483,11 @@ $_commonProperties = array(
     'id'             => array(
         'type'        => 'integer',
         'format'      => 'int32',
-        'description' => 'Identifier of this user.',
+        'description' => 'Identifier of this provider user.',
     ),
     'email'          => array(
         'type'        => 'string',
-        'description' => 'The email address required for this user.',
+        'description' => 'The email address required for this provider user.',
     ),
     'password'       => array(
         'type'        => 'string',
@@ -495,35 +495,35 @@ $_commonProperties = array(
     ),
     'first_name'     => array(
         'type'        => 'string',
-        'description' => 'The first name for this user.',
+        'description' => 'The first name for this provider user.',
     ),
     'last_name'      => array(
         'type'        => 'string',
-        'description' => 'The last name for this user.',
+        'description' => 'The last name for this provider user.',
     ),
     'display_name'   => array(
         'type'        => 'string',
-        'description' => 'Displayable name of this user.',
+        'description' => 'Displayable name of this provider user.',
     ),
     'phone'          => array(
         'type'        => 'string',
-        'description' => 'Phone number for this user.',
+        'description' => 'Phone number for this provider user.',
     ),
     'is_active'      => array(
         'type'        => 'boolean',
-        'description' => 'True if this user is active for use.',
+        'description' => 'True if this provider user is active for use.',
     ),
     'is_sys_admin'   => array(
         'type'        => 'boolean',
-        'description' => 'True if this user is a system admin.',
+        'description' => 'True if this provider user is a system admin.',
     ),
     'default_app_id' => array(
         'type'        => 'string',
-        'description' => 'The default launched app for this user.',
+        'description' => 'The default launched app for this provider user.',
     ),
     'role_id'        => array(
         'type'        => 'string',
-        'description' => 'The role to which this user is assigned.',
+        'description' => 'The role to which this provider user is assigned.',
     ),
 );
 
@@ -541,21 +541,21 @@ $_relatedProperties = array(
 $_stampProperties = array(
     'created_date'        => array(
         'type'        => 'string',
-        'description' => 'Date this user was created.',
+        'description' => 'Date this provider user was created.',
     ),
     'created_by_id'       => array(
         'type'        => 'integer',
         'format'      => 'int32',
-        'description' => 'ProviderUser Id of who created this user.',
+        'description' => 'ProviderUser Id of who created this provider user.',
     ),
     'last_modified_date'  => array(
         'type'        => 'string',
-        'description' => 'Date this user was last modified.',
+        'description' => 'Date this provider user was last modified.',
     ),
     'last_modified_by_id' => array(
         'type'        => 'integer',
         'format'      => 'int32',
-        'description' => 'ProviderUser Id of who last modified this user.',
+        'description' => 'ProviderUser Id of who last modified this provider user.',
     ),
 );
 
@@ -572,7 +572,7 @@ $_providerProviderUser['models'] = array(
         'properties' => array(
             'record' => array(
                 'type'        => 'array',
-                'description' => 'Array of system user records.',
+                'description' => 'Array of system provider user records.',
                 'items'       => array(
                     '$ref' => 'ProviderUserRequest',
                 ),
@@ -606,7 +606,7 @@ $_providerProviderUser['models'] = array(
         'properties' => array(
             'record' => array(
                 'type'        => 'array',
-                'description' => 'Array of system user records.',
+                'description' => 'Array of system provider user records.',
                 'items'       => array(
                     '$ref' => 'ProviderUserResponse',
                 ),
@@ -629,7 +629,7 @@ $_providerProviderUser['models'] = array(
         'properties' => array(
             'record' => array(
                 'type'        => 'array',
-                'description' => 'Array of system user records.',
+                'description' => 'Array of system provider provider user records.',
                 'items'       => array(
                     '$ref' => 'RelatedProviderUser',
                 ),
