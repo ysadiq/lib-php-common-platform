@@ -94,7 +94,7 @@ class Script extends BaseSystemRestResource
 
         $this->_scriptPath = Platform::getPrivatePath( static::DEFAULT_SCRIPT_PATH );
 
-        if ( empty( $this->_scriptPath ) || !extension_loaded( 'v8js' ) )
+        if ( empty( $this->_scriptPath ) || !is_dir( $this->_scriptPath ) || !is_writable( $this->_scriptPath ) )
         {
             throw new RestException( HttpResponse::ServiceUnavailable, 'This service is not available. Storage path and/or required libraries not available.' );
         }
@@ -195,6 +195,7 @@ class Script extends BaseSystemRestResource
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
      * @return array
      */
     protected function _handlePost()
@@ -202,6 +203,11 @@ class Script extends BaseSystemRestResource
         if ( empty( $this->_resourceId ) )
         {
             throw new BadRequestException();
+        }
+
+        if ( !extension_loaded( 'v8js' ) )
+        {
+            throw new RestException( HttpResponse::ServiceUnavailable, 'This DSP cannot run server-side javascript scripts. The "v8js" is not available.' );
         }
 
         return static::runScript( $this->_getScriptPath() );
