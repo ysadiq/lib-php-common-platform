@@ -18,6 +18,22 @@
  * limitations under the License.
  */
 
+//  The common responses
+$_commonResponses = array(
+    array(
+        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+        'code'    => 400,
+    ),
+    array(
+        'message' => 'Unauthorized Access - No currently valid session available.',
+        'code'    => 401,
+    ),
+    array(
+        'message' => 'System Error - Specific reason is included in the error message.',
+        'code'    => 500,
+    ),
+);
+
 /**
  * This file returns an array of common properties that can be merged
  * with a model's unique properties, to complete a full model
