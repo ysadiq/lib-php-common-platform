@@ -1111,6 +1111,9 @@ abstract class BaseDbSvc extends BasePlatformRestService
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> validations first stab, existing tests passed
     protected function validateFieldValue( $name, $value, $validations, $for_update = false, $field_info = null )
     {
         if ( is_array( $validations ) )
@@ -1295,7 +1298,11 @@ abstract class BaseDbSvc extends BasePlatformRestService
                             throw new InternalServerErrorException( "Invalid validation configuration: Field '$name' has no 'value' in schema settings." );
                         }
 
+<<<<<<< HEAD
                         if ( !empty( $value ) && ( false === array_search( $value, $_values ) ) )
+=======
+                        if ( !empty( $value ) && (false === array_search( $value, $_values ) ) )
+>>>>>>> validations first stab, existing tests passed
                         {
                             if ( $_throw )
                             {
@@ -1315,6 +1322,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
                         if ( !empty( $value ) )
                         {
+<<<<<<< HEAD
                             $_delimiter = Option::get( $_config, 'delimiter', ',' );
                             $_min = Option::get( $_config, 'min', 1 );
                             $_max = Option::get( $_config, 'max' );
@@ -1333,6 +1341,15 @@ abstract class BaseDbSvc extends BasePlatformRestService
                             foreach ( $value as $_item )
                             {
                                 if ( false === array_search( $_item, $_values ) )
+=======
+                            $_delimiter = Option::get( $_config, 'delimiter', ',');
+                            $_min = Option::get( $_config, 'min', 1);
+                            $_max = Option::get( $_config, 'delimiter', ',');
+                            $value = static::checkIncomingData($value, $_delimiter, true);
+                            foreach( $value as $_item )
+                            {
+                                if  (false === array_search( $_item, $_values ) )
+>>>>>>> validations first stab, existing tests passed
                                 {
                                     if ( $_throw )
                                     {
@@ -1352,8 +1369,11 @@ abstract class BaseDbSvc extends BasePlatformRestService
         return true;
     }
 
+<<<<<<< HEAD
 =======
 >>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
+=======
+>>>>>>> validations first stab, existing tests passed
     /**
      * @return int
      */

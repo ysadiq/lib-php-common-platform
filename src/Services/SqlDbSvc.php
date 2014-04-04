@@ -2585,6 +2585,12 @@ class SqlDbSvc extends BaseDbSvc
             $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true );
 =======
 
+            if ( isset( $params[0] ) )
+            {
+                // using PDO ? prepare statements, requires Bd array...yeah crazy, I know!
+                $params = static::one_index_array( $params );
+            }
+
             return array( 'where' => $_filterString, 'params' => $params );
         }
         else
@@ -2623,6 +2629,12 @@ class SqlDbSvc extends BaseDbSvc
                     $_filterArray = array( 'AND', $_filterArray, $_serverFilter['filter'] );
                 }
                 $params = array_merge( $params, $_serverFilter['params'] );
+            }
+
+            if ( isset( $params[0] ) )
+            {
+                // using PDO ? prepare statements, requires Bd array...yeah crazy, I know!
+                $params = static::one_index_array( $params );
             }
 
             return array( 'where' => $_filterArray, 'params' => $params );
@@ -2679,13 +2691,20 @@ class SqlDbSvc extends BaseDbSvc
                 }
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 if ( is_null( $_fieldVal ) && !Option::getBool( $_fieldInfo, 'allow_null' ) )
 =======
 =======
+=======
+                if ( is_null( $_fieldVal ) && !Option::getBool( $_fieldInfo, 'allow_null' ) )
+                {
+                    throw new BadRequestException( "Field '$_name' can not be NULL." );
+                }
+>>>>>>> validations first stab, existing tests passed
 
                 /** validations **/
-                $validations = array_map( 'trim', explode( ',', Option::get( $field_info, 'validation', '' ) ) );
 
+<<<<<<< HEAD
 >>>>>>> adding access info to get on sql and nosql
                 if ( false !== $valPos = array_search( 'api_read_only', $validations, true ) )
 >>>>>>> more work on ss filters and validations
@@ -2713,11 +2732,16 @@ class SqlDbSvc extends BaseDbSvc
 =======
 =======
                 if ( false !== $valPos = array_search( 'create_only', $validations, true ) )
+=======
+                $_validations = Option::get( $_fieldInfo, 'validation' );
+                if ( !is_array( $_validations ) )
+>>>>>>> validations first stab, existing tests passed
                 {
-                    unset( $keys[$pos] );
-                    unset( $values[$pos] );
-                    continue; // should I error this?
+                    // backwards compatible with old strings
+                    $_validations = array_map( 'trim', explode( ',', $_validations ) );
+                    $_validations = array_flip( $_validations );
                 }
+<<<<<<< HEAD
 >>>>>>> adding access info to get on sql and nosql
                 if ( is_null( $fieldVal ) )
                 {
@@ -2826,43 +2850,54 @@ class SqlDbSvc extends BaseDbSvc
                         case 'float':
                             break;
                     }
+=======
 
+                if ( !static::validateFieldValue( $_name, $_fieldVal, $_validations, $for_update, $_fieldInfo ) )
+                {
+                    unset( $_keys[$_pos] );
+                    unset( $_values[$_pos] );
+                    continue;
+                }
+>>>>>>> validations first stab, existing tests passed
+
+                if ( !is_null( $_fieldVal ) )
+                {
                     switch ( $this->_driverType )
                     {
                         case SqlDbUtilities::DRV_DBLIB:
                         case SqlDbUtilities::DRV_SQLSRV:
-                            switch ( $dbType )
+                            switch ( $_dbType )
                             {
                                 case 'bit':
-                                    $fieldVal = ( Scalar::boolval( $fieldVal ) ? 1 : 0 );
+                                    $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
                                     break;
                             }
                             break;
                         case SqlDbUtilities::DRV_MYSQL:
-                            switch ( $dbType )
+                            switch ( $_dbType )
                             {
                                 case 'tinyint(1)':
-                                    $fieldVal = ( Scalar::boolval( $fieldVal ) ? 1 : 0 );
+                                    $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
                                     break;
                             }
                             break;
                     }
-                    switch ( SqlDbUtilities::determinePhpConversionType( $type, $dbType ) )
+                    switch ( SqlDbUtilities::determinePhpConversionType( $_type, $_dbType ) )
                     {
                         case 'int':
-                            if ( !is_int( $fieldVal ) )
+                            if ( !is_int( $_fieldVal ) )
                             {
-                                if ( ( '' === $fieldVal ) && Option::getBool( $field_info, 'allow_null' ) )
+                                if ( ( '' === $_fieldVal ) && Option::getBool( $_fieldInfo, 'allow_null' ) )
                                 {
-                                    $fieldVal = null;
+                                    $_fieldVal = null;
                                 }
-                                elseif ( !( ctype_digit( $fieldVal ) ) )
+                                elseif ( !( ctype_digit( $_fieldVal ) ) )
                                 {
-                                    throw new BadRequestException( "Field '$name' must be a valid integer." );
+                                    throw new BadRequestException( "Field '$_name' must be a valid integer." );
                                 }
                                 else
                                 {
-                                    $fieldVal = intval( $fieldVal );
+                                    $_fieldVal = intval( $_fieldVal );
                                 }
                             }
                             break;
