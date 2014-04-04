@@ -404,7 +404,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 
         if ( empty( $field ) )
         {
-            throw new NotFoundException( "No fields not found in table '$table_name'." );
+            throw new NotFoundException( "Fields not found in table '$table_name'." );
         }
 
         return $field;
@@ -467,7 +467,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
     public static function describeFieldInternal( $column, $foreign_keys, $label_info )
     {
         $label = Option::get( $label_info, 'label', Inflector::camelize( $column->name ) );
-        $validation = Option::get( $label_info, 'validation' );
+        $validation = json_decode( Option::get( $label_info, 'validation' ), true );
         $picklist = Option::get( $label_info, 'picklist' );
         $picklist = ( !empty( $picklist ) ) ? explode( "\r", $picklist ) : array();
         $refTable = '';
@@ -1372,10 +1372,10 @@ class SqlDbUtilities implements SqlDbDriverTypes
                     $temp['label'] = $label;
                 }
 
-                $validation = Utilities::getArrayValue( 'validation', $field, '' );
+                $validation = Utilities::getArrayValue( 'validation', $field );
                 if ( !empty( $validation ) )
                 {
-                    $temp['validation'] = $validation;
+                    $temp['validation'] = json_encode( $validation );
                 }
 
                 if ( !empty( $temp ) )
@@ -1969,8 +1969,8 @@ SQL;
                     $_sql,
                     0,
                     array(
-                        ':table_value'  => Option::get( $_label, 'table' ),
-                        ':field_value'  => Option::get( $_label, 'field' ),
+                        ':table_value' => Option::get( $_label, 'table' ),
+                        ':field_value' => Option::get( $_label, 'field' ),
                     )
                 );
 

@@ -110,24 +110,40 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
 					"allow_null": true,
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
 					"allow_null": true,
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -144,7 +160,10 @@
 					"length":     255,
 					"allow_null": false,
 					"is_unique":  true,
-					"validation": "not_empty,email"
+					"validation": {
+						"not_empty": {},
+						"email":     {}
+					}
 				},
 				{
 					"name":               "password",
@@ -253,30 +272,51 @@
 					"default":    0
 				},
 				{
-					"name": "last_login_date",
-					"type": "datetime"
+					"name":       "last_login_date",
+					"type":       "datetime",
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
 					"allow_null": true,
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
 					"allow_null": true,
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -319,22 +359,38 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -351,7 +407,9 @@
 					"length":     64,
 					"allow_null": false,
 					"is_unique":  true,
-					"validation": "not_empty"
+					"validation": {
+						"not_empty": {}
+					}
 				},
 				{
 					"name":               "name",
@@ -437,22 +495,38 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -469,7 +543,9 @@
 					"length":     64,
 					"allow_null": false,
 					"is_unique":  true,
-					"validation": "not_empty"
+					"validation": {
+						"not_empty": {}
+					}
 				},
 				{
 					"name":               "name",
@@ -507,7 +583,9 @@
 					"name":       "import_url",
 					"type":       "text",
 					"allow_null": true,
-					"validation": "url"
+					"validation": {
+						"url": {}
+					}
 				},
 				{
 					"name":          "storage_service_id",
@@ -552,22 +630,38 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -594,22 +688,38 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -737,7 +847,9 @@
 					"value":      ["No Access", "Read Only", "Write Only", "Read and Write", "Full Access"],
 					"default":    "No Access",
 					"allow_null": false,
-					"validation": "picklist"
+					"validation": {
+						"picklist": {}
+					}
 				},
 				{
 					"name":       "verbs",
@@ -746,7 +858,9 @@
 					"value":      ["GET", "POST", "PUT", "MERGE", "DELETE"],
 					"default":    "",
 					"allow_null": false,
-					"validation": "multi_picklist"
+					"validation": {
+						"multi_picklist": {}
+					}
 				},
 				{
 					"name":       "filters",
@@ -760,7 +874,9 @@
 					"value":      ["and", "or"],
 					"default":    "and",
 					"allow_null": false,
-					"validation": "picklist"
+					"validation": {
+						"picklist": {}
+					}
 				}
 			]
 		},
@@ -793,7 +909,9 @@
 					"value":      ["No Access", "Read Only", "Write Only", "Read and Write", "Full Access"],
 					"default":    "No Access",
 					"allow_null": false,
-					"validation": "picklist"
+					"validation": {
+						"picklist": {}
+					}
 				},
 				{
 					"name":       "verbs",
@@ -802,7 +920,9 @@
 					"value":      ["GET", "POST", "PUT", "MERGE", "DELETE"],
 					"default":    "",
 					"allow_null": false,
-					"validation": "multi_picklist"
+					"validation": {
+						"multi_picklist": {}
+					}
 				},
 				{
 					"name":       "filters",
@@ -816,7 +936,9 @@
 					"value":      ["and", "or"],
 					"default":    "and",
 					"allow_null": false,
-					"validation": "picklist"
+					"validation": {
+						"picklist": {}
+					}
 				}
 			]
 		},
@@ -935,8 +1057,7 @@
 				},
 				{
 					"name":       "validation",
-					"type":       "string",
-					"length":     255,
+					"type":       "text",
 					"allow_null": true
 				},
 				{
@@ -1043,22 +1164,38 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -1074,7 +1211,9 @@
 					"type":       "int",
 					"length":     11,
 					"allow_null": false,
-					"validation": "not_empty"
+					"validation": {
+						"not_empty": {}
+					}
 				},
 				{
 					"name":       "user_id",
@@ -1103,12 +1242,20 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -1170,22 +1317,38 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -1234,17 +1397,29 @@
 				{
 					"name":       "last_use_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -1296,12 +1471,20 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -1328,22 +1511,38 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		}
