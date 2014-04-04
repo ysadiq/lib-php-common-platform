@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Services;
+namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
@@ -25,6 +25,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
+use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\RestData;
 use Kisma\Core\Enums\GlobFlags;
@@ -36,7 +37,7 @@ use Kisma\Core\Utility\Log;
  * Script.php
  * Script service
  */
-class Script extends BasePlatformRestService
+class Script extends BaseSystemRestResource
 {
     //*************************************************************************
     //	Constants
@@ -66,6 +67,8 @@ class Script extends BasePlatformRestService
 
     /**
      * @param array $settings
+     *
+     * @throws \DreamFactory\Platform\Exceptions\RestException
      */
     public function __construct( $settings = array() )
     {
@@ -73,8 +76,9 @@ class Script extends BasePlatformRestService
         $_settings = array_merge(
             array(
                 'name'          => 'Script',
-                'description'   => 'A sandboxed script management service.',
+                'description'   => 'A sandboxed script manager endpoint',
                 'api_name'      => 'script',
+                'service_name'  => 'system',
                 'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
                 'is_active'     => true,
                 'native_format' => DataFormats::NATIVE,
@@ -214,7 +218,7 @@ class Script extends BasePlatformRestService
             ob_start();
 
             /** @noinspection PhpUndefinedMethodInspection */
-            $_lastVariable = $_runner->executeString( $_script, $scriptId, \V8Js::FLAG_NONE );//, static::$_scriptTimeout );
+            $_lastVariable = $_runner->executeString( $_script, $scriptId, \V8Js::FLAG_NONE ); //, static::$_scriptTimeout );
 
             /** @noinspection PhpUndefinedFieldInspection */
             $data = $_runner->event;
@@ -227,15 +231,23 @@ class Script extends BasePlatformRestService
         {
             ob_end_clean();
 
-            if ( $_ex instanceof \V8JsTimeLimitException )
+            /**
+             * @note     V8JsTimeLimitException was released in a later version of the libv8
+             * library than is supported by the current PECL v8js extension. Hence the check below.
+             * @noteDate 2014-04-03
+             */
+            if ( class_exists( '\\V8JsTimeLimitException', false ) && $_ex instanceof \V8JsTimeLimitException )
             {
+                /** @var \Exception $_ex */
                 Log::error( 'Timeout while running script "' . $scriptId . '": ' . $_ex->getMessage() );
             }
             else
             {
                 Log::error( 'Exception executing javascript: ' . $_ex->getMessage() );
             }
+
             throw new InternalServerErrorException( $_ex->getMessage() );
+
         }
 
     }

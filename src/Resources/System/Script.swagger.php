@@ -17,16 +17,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+$_script = require( __DIR__ . '/BaseResourceProperties.swagger.php' );
 
-$_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
+$_script['produces'] = array( 'application/json' );
+$_script['consumes'] = array( 'application/javascript', 'text/javascript', 'text/plain' );
 
-$_base['produces'] = array( 'application/json' );
-$_base['consumes'] = array( 'application/javascript', 'text/javascript', 'text/plain' );
-
-$_base['apis'] = array(
+$_script['apis'] = array(
     array(
-        'path'        => '/{api_name}',
-        'description' => 'Operations available for Script Service.',
+        'path'        => '/{api_name}/script',
+        'description' => 'Operations available for the system script resource',
         'operations'  => array(
             array(
                 'method'           => 'GET',
@@ -53,7 +52,7 @@ $_base['apis'] = array(
         ),
     ),
     array(
-        'path'        => '/{api_name}/{script_id}',
+        'path'        => '/{api_name}/script/{script_id}',
         'description' => 'Operations on scripts.',
         'operations'  => array(
             array(
@@ -65,7 +64,7 @@ $_base['apis'] = array(
                 'parameters'       => array(
                     array(
                         'name'          => 'script_id',
-                        'description'   => 'The ID of the script which you want to retrieve.',
+                        'description'   => 'The ID of the record to retrieve',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'path',
@@ -172,22 +171,25 @@ $_base['apis'] = array(
     ),
 );
 
-$_commonScript = array(
-    'script_id'   => array(
-        'type'        => 'string',
-        'description' => 'The script ID',
-    ),
-    'script_body' => array(
-        'type'        => 'string',
-        'description' => 'The body of the script',
-    ),
-    'metadata'    => array(
-        'type'        => 'Array',
-        'description' => 'An array of name-value pairs.',
-        'items'       => array(
-            'type' => 'string',
+$_model = array_merge(
+    $_script,
+    array(
+        'script_id'   => array(
+            'type'        => 'string',
+            'description' => 'The script ID',
         ),
-    ),
+        'script_body' => array(
+            'type'        => 'string',
+            'description' => 'The body of the script',
+        ),
+        'metadata'    => array(
+            'type'        => 'Array',
+            'description' => 'An array of name-value pairs.',
+            'items'       => array(
+                'type' => 'string',
+            ),
+        )
+    )
 );
 
 $_models = array(
@@ -237,6 +239,6 @@ $_models = array(
     ),
 );
 
-$_base['models'] = array_merge( $_base['models'], $_models );
+$_script['models'] = array_merge( $_script['models'], $_models );
 
-return $_base;
+return $_script;

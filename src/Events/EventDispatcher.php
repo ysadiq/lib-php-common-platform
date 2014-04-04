@@ -19,8 +19,8 @@
  */
 namespace DreamFactory\Platform\Events;
 
+use DreamFactory\Platform\Resources\System\Script;
 use DreamFactory\Platform\Services\BasePlatformRestService;
-use DreamFactory\Platform\Services\Script;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
@@ -111,7 +111,7 @@ class EventDispatcher implements EventDispatcherInterface
     {
         static::$_logEvents = Pii::getParam( 'dsp.log_events', static::$_logEvents );
         static::$_logAllEvents = Pii::getParam( 'dsp.log_all_events', static::$_logAllEvents );
-        
+
         static::$_enableRestEvents = Pii::getParam( 'dsp.enable_rest_events', static::$_enableRestEvents );
         static::$_enablePlatformEvents = Pii::getParam( 'dsp.enable_rest_events', static::$_enablePlatformEvents );
         static::$_enableEventScripts = Pii::getParam( 'dsp.enable_event_scripts', static::$_enableEventScripts );
