@@ -26,13 +26,13 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
+use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\RestData;
 use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Interfaces\HttpResponse;
 use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
 
 /**
  * Script.php
@@ -67,27 +67,30 @@ class Script extends BaseSystemRestResource
     //*************************************************************************
 
     /**
-     * @param array $settings
+     * @param \DreamFactory\Platform\Interfaces\RestResourceLike|\DreamFactory\Platform\Interfaces\RestServiceLike $consumer
+     * @param array                                                                                                $resources
      *
+     * @throws \Kisma\Core\Exceptions\FileSystemException
+     * @throws \InvalidArgumentException
      * @throws \DreamFactory\Platform\Exceptions\RestException
+     * @internal param array $settings
+     *
      */
-    public function __construct( $settings = array() )
+    public function __construct( $consumer, $resources = array() )
     {
         //	Pull out our settings before calling daddy
-        $_settings = array_merge(
-            array(
-                'name'          => 'Script',
-                'description'   => 'A sandboxed script manager endpoint',
-                'api_name'      => 'script',
-                'service_name'  => 'system',
-                'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
-                'is_active'     => true,
-                'native_format' => DataFormats::NATIVE,
-            ),
-            Option::clean( $settings )
+        $_config = array(
+            'name'          => 'Script',
+            'description'   => 'A sandboxed script manager endpoint',
+            'api_name'      => 'script',
+            'service_name'  => 'system',
+            'type'          => 'System',
+            'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
+            'is_active'     => true,
+            'native_format' => DataFormats::NATIVE,
         );
 
-        parent::__construct( $_settings );
+        parent::__construct( $consumer, $_config, $resources );
 
         $this->_scriptPath = Platform::getPrivatePath( static::DEFAULT_SCRIPT_PATH );
 
