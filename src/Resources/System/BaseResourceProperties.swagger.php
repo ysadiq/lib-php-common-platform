@@ -30,7 +30,11 @@ return array(
     ),
     'created_by_id'       => array(
         'type'        => 'integer',
+<<<<<<< HEAD
         'format'      => 'int64',
+=======
+        'format'      => 'int32',
+>>>>>>> WIP
         'description' => 'The ID of the user that created this record',
         'readOnly'    => true,
     ),
@@ -41,7 +45,11 @@ return array(
     ),
     'last_modified_by_id' => array(
         'type'        => 'integer',
+<<<<<<< HEAD
         'format'      => 'int64',
+=======
+        'format'      => 'int32',
+>>>>>>> WIP
         'description' => 'The ID of the user that last modified this record',
         'readOnly'    => true,
     ),
