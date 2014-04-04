@@ -18,6 +18,8 @@
  * limitations under the License.
  */
 
+use DreamFactory\Platform\Services\SwaggerManager;
+
 $_description = '<p>
 	This is <a href="http://swagger.wordnik.com">Swagger</a>-built documentation detailing the DreamFactory DSP REST API.<br>
 	More info can be found <a href="http://www.dreamfactory.com/developers/documentation">here</a>.<br>
@@ -43,15 +45,15 @@ $_description = '<p>
 	</p>';
 
 return array(
-	'swaggerVersion' => '1.2',
-	'apiVersion'     => API_VERSION,
-	'authorizations' => array( "apiKey" => array( "type" => "apiKey", "passAs" => "header" ) ),
-	'info'           => array(
-		"title"       => "DreamFactory Live API Documentation",
-		"description" => $_description,
-		//		"termsOfServiceUrl" => "http://www.dreamfactory.com/terms/",
-		"contact"     => "support@dreamfactory.com",
-		"license"     => "Apache 2.0",
-		"licenseUrl"  => "http://www.apache.org/licenses/LICENSE-2.0.html"
-	)
+    'swaggerVersion' => SwaggerManager::SWAGGER_VERSION,
+    'apiVersion'     => API_VERSION,
+    'authorizations' => array( 'apiKey' => array( 'type' => 'apiKey', 'passAs' => 'header' ) ),
+    'info'           => array(
+        'title'       => 'DreamFactory Live API Documentation',
+        'description' => $_description,
+        //'termsOfServiceUrl' => 'http://www.dreamfactory.com/terms/',
+        'contact'     => 'support@dreamfactory.com',
+        'license'     => 'Apache 2.0',
+        'licenseUrl'  => 'http://www.apache.org/licenses/LICENSE-2.0.html'
+    )
 );
