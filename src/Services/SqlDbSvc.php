@@ -1934,11 +1934,6 @@ class SqlDbSvc extends BaseDbSvc
         }
         if ( !empty( $bind_values ) )
         {
-            if ( isset( $bind_values[0] ) )
-            {
-                // using PDO ? prepare statements, requires 1-based array...yeah crazy, I know!
-                $bind_values = static::one_index_array( $bind_values );
-            }
             $_command->bindValues( $bind_values );
         }
 
@@ -2122,6 +2117,12 @@ class SqlDbSvc extends BaseDbSvc
                 $params = array_merge( $params, $_serverFilter['params'] );
             }
 
+            if ( isset( $params[0] ) )
+            {
+                // using PDO ? prepare statements, requires Bd array...yeah crazy, I know!
+                $params = static::one_index_array( $params );
+            }
+
             return array( 'where' => $_filterString, 'params' => $params );
         }
         else
@@ -2161,6 +2162,12 @@ class SqlDbSvc extends BaseDbSvc
                 $params = array_merge( $params, $_serverFilter['params'] );
             }
 
+            if ( isset( $params[0] ) )
+            {
+                // using PDO ? prepare statements, requires Bd array...yeah crazy, I know!
+                $params = static::one_index_array( $params );
+            }
+
             return array( 'where' => $_filterArray, 'params' => $params );
         }
     }
@@ -2177,164 +2184,107 @@ class SqlDbSvc extends BaseDbSvc
      */
     protected function parseRecord( $record, $avail_fields, $filter_info = null, $for_update = false, $old_record = null )
     {
-        $parsed = array();
+        $_parsed = array();
 //        $record = DataFormat::arrayKeyLower( $record );
-        $keys = array_keys( $record );
-        $values = array_values( $record );
-        foreach ( $avail_fields as $field_info )
+        $_keys = array_keys( $record );
+        $_values = array_values( $record );
+        foreach ( $avail_fields as $_fieldInfo )
         {
 //            $name = strtolower( Option::get( $field_info, 'name', '' ) );
-            $name = Option::get( $field_info, 'name', '' );
-            $type = Option::get( $field_info, 'type' );
-            $dbType = Option::get( $field_info, 'db_type' );
-            $pos = array_search( $name, $keys );
-            if ( false !== $pos )
+            $_name = Option::get( $_fieldInfo, 'name', '' );
+            $_type = Option::get( $_fieldInfo, 'type' );
+            $_dbType = Option::get( $_fieldInfo, 'db_type' );
+            $_pos = array_search( $_name, $_keys );
+            if ( false !== $_pos )
             {
-                $fieldVal = Option::get( $values, $pos );
+                $_fieldVal = Option::get( $_values, $_pos );
                 // due to conversion from XML to array, null or empty xml elements have the array value of an empty array
-                if ( is_array( $fieldVal ) && empty( $fieldVal ) )
+                if ( is_array( $_fieldVal ) && empty( $_fieldVal ) )
                 {
-                    $fieldVal = null;
+                    $_fieldVal = null;
                 }
 
                 // overwrite some undercover fields
-                if ( Option::getBool( $field_info, 'auto_increment', false ) )
+                if ( Option::getBool( $_fieldInfo, 'auto_increment', false ) )
                 {
-                    unset( $keys[$pos] );
-                    unset( $values[$pos] );
+                    unset( $_keys[$_pos] );
+                    unset( $_values[$_pos] );
                     continue; // should I error this?
+                }
+                if ( is_null( $_fieldVal ) && !Option::getBool( $_fieldInfo, 'allow_null' ) )
+                {
+                    throw new BadRequestException( "Field '$_name' can not be NULL." );
                 }
 
                 /** validations **/
-                $validations = array_map( 'trim', explode( ',', Option::get( $field_info, 'validation', '' ) ) );
 
-                if ( false !== $valPos = array_search( 'api_read_only', $validations, true ) )
+                $_validations = Option::get( $_fieldInfo, 'validation' );
+                if ( !is_array( $_validations ) )
                 {
-                    unset( $keys[$pos] );
-                    unset( $values[$pos] );
-                    continue; // should I error this?
+                    // backwards compatible with old strings
+                    $_validations = array_map( 'trim', explode( ',', $_validations ) );
+                    $_validations = array_flip( $_validations );
                 }
-                if ( false !== $valPos = array_search( 'create_only', $validations, true ) )
-                {
-                    unset( $keys[$pos] );
-                    unset( $values[$pos] );
-                    continue; // should I error this?
-                }
-                if ( is_null( $fieldVal ) )
-                {
-                    if ( !Option::getBool( $field_info, 'allow_null' ) )
-                    {
-                        throw new BadRequestException( "Field '$name' can not be NULL." );
-                    }
-                    if ( false !== $valPos = array_search( 'not_empty', $validations, true ) && empty( $fieldVal ) )
-                    {
-                        throw new BadRequestException( "Field '$name' can not be empty." );
-                    }
-                }
-                else
-                {
-                    if ( false !== $valPos = array_search( 'not_empty', $validations, true ) && empty( $fieldVal ) )
-                    {
-                        throw new BadRequestException( "Field '$name' can not be empty." );
-                    }
 
-                    switch ( $type )
-                    {
-                        case 'string':
-                            if ( false !== $valPos = array_search( 'email', $validations, true ) && !filter_var( $fieldVal, FILTER_VALIDATE_EMAIL ) )
-                            {
-                                throw new BadRequestException( "Field '$name' must be a valid email." );
-                            }
-                            if ( false !== $valPos = array_search( 'url', $validations, true ) )
-                            {
-                                $_filter = trim( stristr( $validations[$valPos], '(' ), '()' );
-                                $_options = null;
-//                                    FILTER_FLAG_HOST_REQUIRED
-                                if ( !filter_var( $fieldVal, FILTER_VALIDATE_URL, $_options ) )
-                                {
-                                    throw new BadRequestException( "Field '$name' must be a valid url." );
-                                }
-                            }
-                            if ( false !== $valPos = array_search( 'match', $validations, true ) )
-                            {
-                                $b =
-                                    "^(([^<>()[].,;:s@\"]+(.[^<>()[].,;:s@\"]+)*)|(\".+\"))@(([[0-9]{1,3}.[0-9]{1,3}‌​.[0-9]{1,3}.[0-9]{1,3}])|(([a-zA-Z-0-9]+.)+[a-zA-Z]{2,}))$";
-                                $_filter = base64_decode( trim( stristr( $validations[$valPos], '(' ), '()' ) );
-                                $_options = array( 'regexp' => $_filter );
-//                                regexp
-                                if ( !filter_var( $fieldVal, FILTER_VALIDATE_REGEXP, $_options ) )
-                                {
-                                    throw new BadRequestException( "Field '$name' must be a valid url." );
-                                }
-                            }
-                            break;
-                        case 'integer':
-                            if ( false !== $valPos = array_search( 'range', $validations, true ) )
-                            {
-                                $_filter = trim( stristr( $validations[$valPos], '(' ), '()' );
-                                $_options = null;
-//                                min_range, max_range
-                                if ( !filter_var( $fieldVal, FILTER_VALIDATE_INT, $_options ) )
-                                {
-                                    throw new BadRequestException( "Field '$name' must be a valid url." );
-                                }
-                            }
-                            break;
-                        case 'decimal':
-                        case 'float':
-                            break;
-                    }
+                if ( !static::validateFieldValue( $_name, $_fieldVal, $_validations, $for_update, $_fieldInfo ) )
+                {
+                    unset( $_keys[$_pos] );
+                    unset( $_values[$_pos] );
+                    continue;
+                }
 
+                if ( !is_null( $_fieldVal ) )
+                {
                     switch ( $this->_driverType )
                     {
                         case SqlDbUtilities::DRV_DBLIB:
                         case SqlDbUtilities::DRV_SQLSRV:
-                            switch ( $dbType )
+                            switch ( $_dbType )
                             {
                                 case 'bit':
-                                    $fieldVal = ( Scalar::boolval( $fieldVal ) ? 1 : 0 );
+                                    $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
                                     break;
                             }
                             break;
                         case SqlDbUtilities::DRV_MYSQL:
-                            switch ( $dbType )
+                            switch ( $_dbType )
                             {
                                 case 'tinyint(1)':
-                                    $fieldVal = ( Scalar::boolval( $fieldVal ) ? 1 : 0 );
+                                    $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
                                     break;
                             }
                             break;
                     }
-                    switch ( SqlDbUtilities::determinePhpConversionType( $type, $dbType ) )
+                    switch ( SqlDbUtilities::determinePhpConversionType( $_type, $_dbType ) )
                     {
                         case 'int':
-                            if ( !is_int( $fieldVal ) )
+                            if ( !is_int( $_fieldVal ) )
                             {
-                                if ( ( '' === $fieldVal ) && Option::getBool( $field_info, 'allow_null' ) )
+                                if ( ( '' === $_fieldVal ) && Option::getBool( $_fieldInfo, 'allow_null' ) )
                                 {
-                                    $fieldVal = null;
+                                    $_fieldVal = null;
                                 }
-                                elseif ( !( ctype_digit( $fieldVal ) ) )
+                                elseif ( !( ctype_digit( $_fieldVal ) ) )
                                 {
-                                    throw new BadRequestException( "Field '$name' must be a valid integer." );
+                                    throw new BadRequestException( "Field '$_name' must be a valid integer." );
                                 }
                                 else
                                 {
-                                    $fieldVal = intval( $fieldVal );
+                                    $_fieldVal = intval( $_fieldVal );
                                 }
                             }
                             break;
                         default:
                     }
                 }
-                $parsed[$name] = $fieldVal;
-                unset( $keys[$pos] );
-                unset( $values[$pos] );
+                $_parsed[$_name] = $_fieldVal;
+                unset( $_keys[$_pos] );
+                unset( $_values[$_pos] );
             }
             else
             {
                 // check specific fields
-                switch ( $type )
+                switch ( $_type )
                 {
                     case 'timestamp_on_create':
                     case 'timestamp_on_update':
@@ -2343,15 +2293,15 @@ class SqlDbSvc extends BaseDbSvc
                         break;
                     default:
                         // if field is required, kick back error
-                        if ( Option::getBool( $field_info, 'required' ) && !$for_update )
+                        if ( Option::getBool( $_fieldInfo, 'required' ) && !$for_update )
                         {
-                            throw new BadRequestException( "Required field '$name' can not be NULL." );
+                            throw new BadRequestException( "Required field '$_name' can not be NULL." );
                         }
                         break;
                 }
             }
             // add or override for specific fields
-            switch ( $type )
+            switch ( $_type )
             {
                 case 'timestamp_on_create':
                     if ( !$for_update )
@@ -2360,10 +2310,10 @@ class SqlDbSvc extends BaseDbSvc
                         {
                             case SqlDbUtilities::DRV_DBLIB:
                             case SqlDbUtilities::DRV_SQLSRV:
-                                $parsed[$name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
+                                $_parsed[$_name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
                                 break;
                             case SqlDbUtilities::DRV_MYSQL:
-                                $parsed[$name] = new \CDbExpression( '(NOW())' );
+                                $_parsed[$_name] = new \CDbExpression( '(NOW())' );
                                 break;
                         }
                     }
@@ -2373,10 +2323,10 @@ class SqlDbSvc extends BaseDbSvc
                     {
                         case SqlDbUtilities::DRV_DBLIB:
                         case SqlDbUtilities::DRV_SQLSRV:
-                            $parsed[$name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
+                            $_parsed[$_name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
                             break;
                         case SqlDbUtilities::DRV_MYSQL:
-                            $parsed[$name] = new \CDbExpression( '(NOW())' );
+                            $_parsed[$_name] = new \CDbExpression( '(NOW())' );
                             break;
                     }
                     break;
@@ -2386,7 +2336,7 @@ class SqlDbSvc extends BaseDbSvc
                         $userId = Session::getCurrentUserId();
                         if ( isset( $userId ) )
                         {
-                            $parsed[$name] = $userId;
+                            $_parsed[$_name] = $userId;
                         }
                     }
                     break;
@@ -2394,7 +2344,7 @@ class SqlDbSvc extends BaseDbSvc
                     $userId = Session::getCurrentUserId();
                     if ( isset( $userId ) )
                     {
-                        $parsed[$name] = $userId;
+                        $_parsed[$_name] = $userId;
                     }
                     break;
             }
@@ -2405,7 +2355,7 @@ class SqlDbSvc extends BaseDbSvc
             $this->validateRecord( $record, $filter_info, $for_update, $old_record );
         }
 
-        return $parsed;
+        return $_parsed;
     }
 
     /**

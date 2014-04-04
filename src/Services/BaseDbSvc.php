@@ -1102,6 +1102,236 @@ abstract class BaseDbSvc extends BasePlatformRestService
         }
     }
 
+    protected function validateFieldValue( $name, $value, $validations, $for_update = false, $field_info = null )
+    {
+        if ( is_array( $validations ) )
+        {
+            foreach ( $validations as $_key => $_config )
+            {
+                $_onFail = Option::get( $_config, 'on_fail' );
+                $_throw = true;
+                $_msg = null;
+                if ( !empty( $_onFail ) )
+                {
+                    if ( 0 == strcasecmp( $_onFail, 'ignore_field' ) )
+                    {
+                        $_throw = false;
+                    }
+                    else
+                    {
+                        $_msg = $_onFail;
+                    }
+                }
+
+                switch ( $_key )
+                {
+                    case 'api_read_only':
+                        if ( $_throw )
+                        {
+                            $_msg = ( !empty( $_msg ) ) ? : "Field '$name' is read only.";
+                            throw new BadRequestException( $_msg );
+                        }
+
+                        return false;
+                        break;
+                    case 'create_only':
+                        if ( $for_update )
+                        {
+                            if ( $_throw )
+                            {
+                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' can only be set during record creation.";
+                                throw new BadRequestException( $_msg );
+                            }
+
+                            return false;
+                        }
+                        break;
+                    case 'not_null':
+                        if ( is_null( $value ) )
+                        {
+                            if ( $_throw )
+                            {
+                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value can not be null.";
+                                throw new BadRequestException( $_msg );
+                            }
+
+                            return false;
+                        }
+                        break;
+                    case 'not_empty':
+                        if ( !is_null( $value ) && empty( $value ) )
+                        {
+                            if ( $_throw )
+                            {
+                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value can not be empty.";
+                                throw new BadRequestException( $_msg );
+                            }
+
+                            return false;
+                        }
+                        break;
+                    case 'not_zero':
+                        if ( !is_null( $value ) && empty( $value ) )
+                        {
+                            if ( $_throw )
+                            {
+                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value can not be empty.";
+                                throw new BadRequestException( $_msg );
+                            }
+
+                            return false;
+                        }
+                        break;
+                    case 'email':
+                        if ( !empty( $value ) && !filter_var( $value, FILTER_VALIDATE_EMAIL ) )
+                        {
+                            if ( $_throw )
+                            {
+                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value must be a valid email address.";
+                                throw new BadRequestException( $_msg );
+                            }
+
+                            return false;
+                        }
+                        break;
+                    case 'url':
+                        $_sections = Option::clean( Option::get( $_config, 'sections' ) );
+                        $_flags = 0;
+                        foreach ( $_sections as $_format )
+                        {
+                            switch ( strtolower( $_format ) )
+                            {
+                                case 'path':
+                                    $_flags &= FILTER_FLAG_PATH_REQUIRED;
+                                    break;
+                                case 'query':
+                                    $_flags &= FILTER_FLAG_QUERY_REQUIRED;
+                                    break;
+                            }
+                        }
+                        if ( !empty( $value ) && !filter_var( $value, FILTER_VALIDATE_URL, $_flags ) )
+                        {
+                            if ( $_throw )
+                            {
+                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value must be a valid URL.";
+                                throw new BadRequestException( $_msg );
+                            }
+
+                            return false;
+                        }
+                        break;
+                    case 'int':
+                        $_min = Option::getDeep( $_config, 'range', 'min' );
+                        $_max = Option::getDeep( $_config, 'range', 'max' );
+                        $_formats = Option::clean( Option::get( $_config, 'formats' ) );
+
+                        $_options = array();
+                        if ( is_int( $_min ) )
+                        {
+                            $_options['min_range'] = $_min;
+                        }
+                        if ( is_int( $_max ) )
+                        {
+                            $_options['max_range'] = $_max;
+                        }
+                        $_flags = 0;
+                        foreach ( $_formats as $_format )
+                        {
+                            switch ( strtolower( $_format ) )
+                            {
+                                case 'hex':
+                                    $_flags &= FILTER_FLAG_ALLOW_HEX;
+                                    break;
+                                case 'octal':
+                                    $_flags &= FILTER_FLAG_ALLOW_OCTAL;
+                                    break;
+                            }
+                        }
+                        $_options = array( 'options' => $_options, 'flags' => $_flags );
+                        if ( !is_null( $value ) && !filter_var( $value, FILTER_VALIDATE_REGEXP, $_options ) )
+                        {
+                            if ( $_throw )
+                            {
+                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value is not in the valid range.";
+                                throw new BadRequestException( $_msg );
+                            }
+
+                            return false;
+                        }
+                        break;
+                    case 'match':
+                        $_regex = Option::get( $_config, 'regexp' );
+                        if ( empty( $_regex ) )
+                        {
+                            throw new InternalServerErrorException( "Invalid validation configuration: Field '$name' has no 'regexp'." );
+                        }
+
+                        $_regex = base64_decode( $_regex );
+                        $_options = array( 'regexp' => $_regex );
+                        if ( !empty( $value ) && !filter_var( $value, FILTER_VALIDATE_REGEXP, $_options ) )
+                        {
+                            if ( $_throw )
+                            {
+                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value is invalid.";
+                                throw new BadRequestException( $_msg );
+                            }
+
+                            return false;
+                        }
+                        break;
+                    case 'picklist':
+                        $_values = Option::get( $field_info, 'value' );
+                        if ( empty( $_values ) )
+                        {
+                            throw new InternalServerErrorException( "Invalid validation configuration: Field '$name' has no 'value' in schema settings." );
+                        }
+
+                        if ( !empty( $value ) && (false === array_search( $value, $_values ) ) )
+                        {
+                            if ( $_throw )
+                            {
+                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value is invalid.";
+                                throw new BadRequestException( $_msg );
+                            }
+
+                            return false;
+                        }
+                        break;
+                    case 'multi_picklist':
+                        $_values = Option::get( $field_info, 'value' );
+                        if ( empty( $_values ) )
+                        {
+                            throw new InternalServerErrorException( "Invalid validation configuration: Field '$name' has no 'value' in schema settings." );
+                        }
+
+                        if ( !empty( $value ) )
+                        {
+                            $_delimiter = Option::get( $_config, 'delimiter', ',');
+                            $_min = Option::get( $_config, 'min', 1);
+                            $_max = Option::get( $_config, 'delimiter', ',');
+                            $value = static::checkIncomingData($value, $_delimiter, true);
+                            foreach( $value as $_item )
+                            {
+                                if  (false === array_search( $_item, $_values ) )
+                                {
+                                    if ( $_throw )
+                                    {
+                                        $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value is invalid.";
+                                        throw new BadRequestException( $_msg );
+                                    }
+
+                                    return false;
+                                }
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+
+        return true;
+    }
+
     /**
      * @return int
      */
