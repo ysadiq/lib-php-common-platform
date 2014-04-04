@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Resources\System\Script;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
@@ -332,10 +333,10 @@ SQL;
 
                     $_events[$_method] = array(
                         'event'   => $_eventName = str_ireplace(
-                                array( '{api_name}', '{action}', '{request.method}' ),
-                                array( $apiName, $_method, $_method ),
-                                $_eventName
-                            ),
+                            array( '{api_name}', '{action}', '{request.method}' ),
+                            array( $apiName, $_method, $_method ),
+                            $_eventName
+                        ),
                         'scripts' => static::_findScripts( $_path, $_method ),
                     );
                 }

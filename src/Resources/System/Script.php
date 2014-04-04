@@ -32,6 +32,7 @@ use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Interfaces\HttpResponse;
 use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 
 /**
  * Script.php
@@ -83,7 +84,7 @@ class Script extends BaseSystemRestResource
                 'is_active'     => true,
                 'native_format' => DataFormats::NATIVE,
             ),
-            $settings
+            Option::clean( $settings )
         );
 
         parent::__construct( $_settings );
@@ -104,7 +105,24 @@ class Script extends BaseSystemRestResource
      */
     protected function _listResources()
     {
-        return FileSystem::glob( $this->_scriptPath . static::DEFAULT_SCRIPT_PATTERN, GlobFlags::GLOB_NODOTS );
+        $_scripts = FileSystem::glob( $this->_scriptPath . static::DEFAULT_SCRIPT_PATTERN, GlobFlags::GLOB_NODOTS );
+        $_response = array();
+
+        if ( !empty( $_scripts ) )
+        {
+            foreach ( $_scripts as $_script )
+            {
+                $_resource = array(
+                    'event_name' => str_ireplace( '.js', null, $_script ),
+                    'script'     => $_script,
+                );
+
+                $_response[] = $_resource;
+                unset( $_resource );
+            }
+        }
+
+        return array( 'record' => $_response );
     }
 
     /**
@@ -116,21 +134,21 @@ class Script extends BaseSystemRestResource
      */
     protected function _handleGet()
     {
-        if ( empty( $this->_resource ) )
+        if ( empty( $this->_resourceId ) )
         {
             return $this->_listResources();
         }
 
-        $_path = $this->_scriptPath . '/' . trim( $this->_resource, '/ ' ) . '.js';
+        $_path = $this->_getScriptPath();
 
         if ( !file_exists( $_path ) )
         {
-            throw new NotFoundException( 'A script with ID "' . $this->_resource . '" was not found.' );
+            throw new NotFoundException( 'A script with ID "' . $this->_resourceId . '" was not found.' );
         }
 
         $_body = @file_get_contents( $_path );
 
-        return array( 'script_id' => $this->_resource, 'script_body' => $_body );
+        return array( 'script_id' => $this->_resourceId, 'script_body' => $_body );
     }
 
     /**
@@ -138,16 +156,19 @@ class Script extends BaseSystemRestResource
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \LogicException
+     * @throws \InvalidArgumentException
+     * @throws \Exception
      * @return array|bool
      */
     protected function _handlePut()
     {
-        if ( empty( $this->_resource ) )
+        if ( empty( $this->_resourceId ) )
         {
-            return $this->_listResources();
+            throw new BadRequestException( 'No resource id specified.' );
         }
 
-        $_path = $this->_scriptPath . '/' . trim( $this->_resource, '/ ' ) . '.js';
+        $_path = $this->_scriptPath . '/' . trim( $this->_resourceId, '/ ' ) . '.js';
         $_scriptBody = RestData::getPostedData();
 
         if ( empty( $_scriptBody ) )
@@ -163,7 +184,7 @@ class Script extends BaseSystemRestResource
         //  Clear the swagger cache...
         SwaggerManager::clearCache();
 
-        return array( 'script_id' => $this->_resource, 'script_body' => $_scriptBody, 'bytes_written' => $_bytes );
+        return array( 'script_id' => $this->_resourceId, 'script_body' => $_scriptBody, 'bytes_written' => $_bytes );
     }
 
     /**
@@ -175,7 +196,7 @@ class Script extends BaseSystemRestResource
      */
     protected function _handlePost()
     {
-        if ( empty( $this->_resource ) )
+        if ( empty( $this->_resourceId ) )
         {
             throw new BadRequestException();
         }
@@ -189,6 +210,7 @@ class Script extends BaseSystemRestResource
      * @param array  $data Bi-directional data to/from function
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \InvalidArgumentException
      * @return array
      */
     public static function runScript( $scriptName, $scriptId = null, array &$data = array() )
@@ -255,13 +277,13 @@ class Script extends BaseSystemRestResource
     /**
      * Constructs the full path to a server-side script
      *
-     * @param string $scriptName The script name or null if $this->_resource is to be used
+     * @param string $scriptName The script name or null if $this->_resourceId is to be used
      *
      * @return string
      */
     protected function _getScriptPath( $scriptName = null )
     {
-        return $this->_scriptPath . '/' . trim( $scriptName ? : $this->_resource, '/ ' ) . '.js';
+        return $this->_scriptPath . '/' . trim( $scriptName ? : $this->_resourceId, '/ ' ) . '.js';
     }
 
     /**

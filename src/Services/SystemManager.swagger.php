@@ -75,8 +75,8 @@ foreach ( $_namespaces as $_namespace )
 
         /** @noinspection PhpIncludeInspection */
         $_load[$_key] = require( $_resourcePath . '/' . $_file );
-        $_base['apis'] = array_merge( $_base['apis'], Option::get( $_load[$_key], 'apis' ) );
-        $_base['models'] = array_merge( $_base['models'], Option::get( $_load[$_key], 'models' ) );
+        $_base['apis'] = array_merge( $_base['apis'], Option::get( $_load[$_key], 'apis', array() ) );
+        $_base['models'] = array_merge( $_base['models'], Option::get( $_load[$_key], 'models', array() ) );
 
         Log::debug( '    * Found ' . $_file );
         unset( $_load );

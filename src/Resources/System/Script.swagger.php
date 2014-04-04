@@ -17,162 +17,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-$_script = require( __DIR__ . '/BaseResourceProperties.swagger.php' );
-
-$_script['produces'] = array( 'application/json' );
-$_script['consumes'] = array( 'application/javascript', 'text/javascript', 'text/plain' );
-
-$_script['apis'] = array(
-    array(
-        'path'        => '/{api_name}/script',
-        'description' => 'Operations available for the system script resource',
-        'operations'  => array(
-            array(
-                'method'           => 'GET',
-                'summary'          => 'getScripts() - List all scripts.',
-                'nickname'         => 'getScripts',
-                'type'             => 'Scripts',
-                'event_name'       => 'scripts.list',
-                'notes'            => 'List the available scripts.',
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
-            ),
-        ),
-    ),
-    array(
-        'path'        => '/{api_name}/script/{script_id}',
-        'description' => 'Operations on scripts.',
-        'operations'  => array(
-            array(
-                'method'           => 'GET',
-                'summary'          => 'getScript() - Get the script with ID provided.',
-                'nickname'         => 'getScript',
-                'type'             => 'ScriptResponse',
-                'event_name'       => 'script.read',
-                'parameters'       => array(
-                    array(
-                        'name'          => 'script_id',
-                        'description'   => 'The ID of the record to retrieve',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'Not Found - Requested container does not exist.',
-                        'code'    => 404,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
-                'notes'            => '',
-            ),
-            array(
-                'method'           => 'POST',
-                'summary'          => 'runScript() - Runs the specified script.',
-                'nickname'         => 'runScript',
-                'type'             => 'ScriptResponse',
-                'event_name'       => 'script.run',
-                'parameters'       => array(
-                    array(
-                        'name'          => 'script_id',
-                        'description'   => 'The ID of the script which you want to retrieve.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'Not Found - Requested container does not exist.',
-                        'code'    => 404,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
-                'notes'            => 'Post data as an array of folders and/or files.',
-            ),
-            array(
-                'method'           => 'PUT',
-                'summary'          => 'writeScript() - Writes the specified script to the file system.',
-                'notes'            => 'Post data as a string.',
-                'nickname'         => 'writeScript',
-                'type'             => 'ScriptResponse',
-                'event_name'       => 'script.write',
-                'parameters'       => array(
-                    array(
-                        'name'          => 'script_id',
-                        'description'   => 'The ID of the script which you want to retrieve.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                    array(
-                        'name'          => 'script_body',
-                        'description'   => 'The body of the script to write.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'body',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
-            ),
-        ),
-    ),
-);
-
-$_model = array_merge(
-    $_script,
+//  The script record model properties
+$_properties = array_merge(
     array(
         'script_id'   => array(
             'type'        => 'string',
@@ -189,36 +35,182 @@ $_model = array_merge(
                 'type' => 'string',
             ),
         )
+    ),
+    require( __DIR__ . '/BaseResourceProperties.swagger.php' )
+);
+
+$_script = array(
+    'produces' => array( 'application/json' ),
+    'consumes' => array( 'application/javascript', 'text/javascript', 'text/plain' ),
+    'apis'     => array(
+        array(
+            'path'        => '/{api_name}/script',
+            'description' => 'Operations available for the system script resource',
+            'operations'  => array(
+                array(
+                    'method'           => 'GET',
+                    'summary'          => 'getScripts() - List all scripts.',
+                    'nickname'         => 'getScripts',
+                    'type'             => 'Scripts',
+                    'event_name'       => 'scripts.list',
+                    'notes'            => 'List the available scripts.',
+                    'responseMessages' => array(
+                        array(
+                            'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+                            'code'    => 400,
+                        ),
+                        array(
+                            'message' => 'Unauthorized Access - No currently valid session available.',
+                            'code'    => 401,
+                        ),
+                        array(
+                            'message' => 'System Error - Specific reason is included in the error message.',
+                            'code'    => 500,
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        array(
+            'path'        => '/{api_name}/script/{script_id}',
+            'description' => 'Operations on scripts.',
+            'operations'  => array(
+                array(
+                    'method'           => 'GET',
+                    'summary'          => 'getScript() - Get the script with ID provided.',
+                    'nickname'         => 'getScript',
+                    'type'             => 'ScriptResponse',
+                    'event_name'       => 'script.read',
+                    'parameters'       => array(
+                        array(
+                            'name'          => 'script_id',
+                            'description'   => 'The ID of the record to retrieve',
+                            'allowMultiple' => false,
+                            'type'          => 'string',
+                            'paramType'     => 'path',
+                            'required'      => true,
+                        ),
+                    ),
+                    'responseMessages' => array(
+                        array(
+                            'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+                            'code'    => 400,
+                        ),
+                        array(
+                            'message' => 'Unauthorized Access - No currently valid session available.',
+                            'code'    => 401,
+                        ),
+                        array(
+                            'message' => 'Not Found - Requested container does not exist.',
+                            'code'    => 404,
+                        ),
+                        array(
+                            'message' => 'System Error - Specific reason is included in the error message.',
+                            'code'    => 500,
+                        ),
+                    ),
+                    'notes'            => '',
+                ),
+                array(
+                    'method'           => 'POST',
+                    'summary'          => 'runScript() - Runs the specified script.',
+                    'nickname'         => 'runScript',
+                    'type'             => 'ScriptResponse',
+                    'event_name'       => 'script.run',
+                    'parameters'       => array(
+                        array(
+                            'name'          => 'script_id',
+                            'description'   => 'The ID of the script which you want to retrieve.',
+                            'allowMultiple' => false,
+                            'type'          => 'string',
+                            'paramType'     => 'path',
+                            'required'      => true,
+                        ),
+                    ),
+                    'responseMessages' => array(
+                        array(
+                            'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+                            'code'    => 400,
+                        ),
+                        array(
+                            'message' => 'Unauthorized Access - No currently valid session available.',
+                            'code'    => 401,
+                        ),
+                        array(
+                            'message' => 'Not Found - Requested container does not exist.',
+                            'code'    => 404,
+                        ),
+                        array(
+                            'message' => 'System Error - Specific reason is included in the error message.',
+                            'code'    => 500,
+                        ),
+                    ),
+                    'notes'            => 'Post data as an array of folders and/or files.',
+                ),
+                array(
+                    'method'           => 'PUT',
+                    'summary'          => 'writeScript() - Writes the specified script to the file system.',
+                    'notes'            => 'Post data as a string.',
+                    'nickname'         => 'writeScript',
+                    'type'             => 'ScriptResponse',
+                    'event_name'       => 'script.write',
+                    'parameters'       => array(
+                        array(
+                            'name'          => 'script_id',
+                            'description'   => 'The ID of the script which you want to retrieve.',
+                            'allowMultiple' => false,
+                            'type'          => 'string',
+                            'paramType'     => 'path',
+                            'required'      => true,
+                        ),
+                        array(
+                            'name'          => 'script_body',
+                            'description'   => 'The body of the script to write.',
+                            'allowMultiple' => false,
+                            'type'          => 'string',
+                            'paramType'     => 'body',
+                            'required'      => true,
+                        ),
+                    ),
+                    'responseMessages' => array(
+                        array(
+                            'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+                            'code'    => 400,
+                        ),
+                        array(
+                            'message' => 'Unauthorized Access - No currently valid session available.',
+                            'code'    => 401,
+                        ),
+                        array(
+                            'message' => 'System Error - Specific reason is included in the error message.',
+                            'code'    => 500,
+                        ),
+                    ),
+                ),
+            ),
+        ),
     )
 );
 
-$_models = array(
+$_script['models'] = array(
+    'Script'          => array(
+        'id'         => 'Script',
+        'properties' => $_properties,
+    ),
     'ScriptRequest'   => array(
         'id'         => 'ScriptRequest',
-        'properties' => $_commonScript,
+        'properties' => $_properties,
     ),
     'ScriptResponse'  => array(
         'id'         => 'ScriptResponse',
-        'properties' => array_merge(
-            $_commonScript,
-            array(
-                'last_modified' => array(
-                    'type'        => 'string',
-                    'description' => 'A GMT date timestamp of when the script was last modified.',
-                ),
-            )
-        ),
-    ),
-    'Script'          => array(
-        'id'         => 'Script',
-        'properties' => $_commonScript,
+        'properties' => $_properties,
     ),
     'ScriptsRequest'  => array(
         'id'         => 'ScriptsRequest',
         'properties' => array(
             'container' => array(
                 'type'        => 'Array',
-                'description' => 'An array of scripts to modify.',
+                'description' => 'An array of script resources',
                 'items'       => array(
                     '$ref' => 'Script',
                 ),
@@ -230,7 +222,7 @@ $_models = array(
         'properties' => array(
             'script' => array(
                 'type'        => 'Array',
-                'description' => 'An array of scripts.',
+                'description' => 'An array of script resources',
                 'items'       => array(
                     '$ref' => 'Script',
                 ),
@@ -238,7 +230,5 @@ $_models = array(
         ),
     ),
 );
-
-$_script['models'] = array_merge( $_script['models'], $_models );
 
 return $_script;
