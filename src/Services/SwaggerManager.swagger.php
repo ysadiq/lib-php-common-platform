@@ -18,7 +18,10 @@
  * limitations under the License.
  */
 
+<<<<<<< HEAD
 use DreamFactory\Platform\Events\Enums\SwaggerEvents;
+=======
+>>>>>>> Move script from service to resource
 use DreamFactory\Platform\Services\SwaggerManager;
 
 $_description = '<p>
@@ -56,6 +59,7 @@ return array(
         'contact'     => 'support@dreamfactory.com',
         'license'     => 'Apache 2.0',
         'licenseUrl'  => 'http://www.apache.org/licenses/LICENSE-2.0.html'
+<<<<<<< HEAD
     ),
     /**
      * The events thrown that are relevant to Swagger
@@ -64,4 +68,7 @@ return array(
 //        SwaggerEvents::CACHE_CLEARED,
 //        SwaggerEvents::CACHE_REBUILT,
     ),
+=======
+    )
+>>>>>>> Move script from service to resource
 );
