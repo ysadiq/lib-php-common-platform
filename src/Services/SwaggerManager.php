@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Events\Enums\SwaggerEvents;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\System\Script;
 use DreamFactory\Platform\Utility\Platform;
@@ -249,6 +250,7 @@ SQL;
             if ( false === file_put_contents( $_filePath, $_content ) )
             {
                 Log::error( '  * File system error creating swagger cache file: ' . $_filePath );
+                continue;
             }
 
             // build main services list
@@ -301,6 +303,7 @@ SQL;
         }
 
         Log::info( 'Swagger cache build process complete' );
+        Pii::app()->trigger( SwaggerEvents::CACHE_REBUILT );
 
         return $_out;
     }
@@ -606,6 +609,56 @@ SQL;
                 @unlink( $_swaggerPath . '/' . $file );
             }
         }
+
+        //  Trigger a swagger.cache_cleared event
+        return Pii::app()->trigger( SwaggerEvents::CACHE_CLEARED );
+    }
+
+    /**
+     * Returns an array of common responses for merging into Swagger files.
+     *
+     * @param array $codes Array of response codes to return only. If empty, all are returned.
+     *
+     * @return array
+     */
+    public static function getCommonResponses( array $codes = array() )
+    {
+        static $_commonResponses = array(
+            array(
+                'code'    => 400,
+                'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
+            ),
+            array(
+                'code'    => 401,
+                'message' => 'Unauthorized Access - No currently valid session available.',
+            ),
+            array(
+                'code'    => 404,
+                'message' => 'Not Found - Resource not found',
+            ),
+            array(
+                'code'    => 500,
+                'message' => 'System Error - Specific reason is included in the error message',
+            ),
+        );
+
+        $_response = $_commonResponses;
+
+        if ( !empty( $codes ) )
+        {
+            foreach ( $codes as $_code )
+            {
+                foreach ( $_commonResponses as $_commonResponse )
+                {
+                    if ( !isset( $_commonResponse['code'] ) || $_code != $_commonResponse['code'] )
+                    {
+                        unset( $_response[$_commonResponse['code']] );
+                    }
+                }
+            }
+        }
+
+        return $_response;
     }
 
 }
