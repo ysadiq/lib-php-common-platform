@@ -34,9 +34,15 @@
 		"pear/mail_mime-decode":           "*",
 		"pear/mail_mime":                  "*",
 <<<<<<< HEAD
+<<<<<<< HEAD
 		"dreamfactory/azure-sdk-for-php":  "~0.4.0@stable"
 =======
+=======
+>>>>>>> Added igorw/eventsource
 		"dreamfactory/azure-sdk-for-php":  "~0.4@stable",
+=======
+		"dreamfactory/azure-sdk-for-php":  "~0.4.0@stable",
+>>>>>>> Added igorw/eventsource
 		"igorw/event-source":              "1.0.*"
 >>>>>>> Composer update
 	},
