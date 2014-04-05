@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+use DreamFactory\Platform\Events\Enums\SwaggerEvents;
 use DreamFactory\Platform\Services\SwaggerManager;
 
 $_description = '<p>
@@ -55,5 +56,12 @@ return array(
         'contact'     => 'support@dreamfactory.com',
         'license'     => 'Apache 2.0',
         'licenseUrl'  => 'http://www.apache.org/licenses/LICENSE-2.0.html'
-    )
+    ),
+    /**
+     * The events thrown that are relevant to Swagger
+     */
+    'events'         => array(
+        SwaggerEvents::CACHE_CLEARED,
+        SwaggerEvents::CACHE_REBUILT,
+    ),
 );
