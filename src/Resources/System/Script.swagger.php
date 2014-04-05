@@ -17,6 +17,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+use DreamFactory\Platform\Services\SwaggerManager;
+
+//  Get common responses
+$_commonResponses = SwaggerManager::getCommonResponses();
+
 //  The script record model properties
 $_properties = array_merge(
     array(
@@ -91,25 +96,7 @@ $_script = array(
                             'required'      => true,
                         ),
                     ),
-                    'responseMessages' => array(
-                        array(
-                            'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                            'code'    => 400,
-                        ),
-                        array(
-                            'message' => 'Unauthorized Access - No currently valid session available.',
-                            'code'    => 401,
-                        ),
-                        array(
-                            'message' => 'Not Found - Requested container does not exist.',
-                            'code'    => 404,
-                        ),
-                        array(
-                            'message' => 'System Error - Specific reason is included in the error message.',
-                            'code'    => 500,
-                        ),
-                    ),
-                    'notes'            => '',
+                    'responseMessages' => $_commonResponses,
                 ),
                 array(
                     'method'           => 'POST',
@@ -127,6 +114,7 @@ $_script = array(
                             'required'      => true,
                         ),
                     ),
+<<<<<<< HEAD
                     'responseMessages' => array(
                         array(
                             'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
@@ -146,6 +134,10 @@ $_script = array(
                         ),
                     ),
                     'notes'            => 'Post data as an array of folders and/or files.',
+=======
+                    'responseMessages' => $_commonResponses,
+                    'notes'            => 'Loads and executes the specified script',
+>>>>>>> Swagger updates for script service. Added method to SwaggerManager to return a set of common responses to Swagger definitions. Added SwaggerEvents constants for new Swagger events: swagger.cache_cleared and swagger.cache_rebuilt
                 ),
                 array(
                     'method'           => 'PUT',

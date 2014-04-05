@@ -31,10 +31,14 @@ return array(
     'created_by_id'       => array(
         'type'        => 'integer',
 <<<<<<< HEAD
+<<<<<<< HEAD
         'format'      => 'int64',
 =======
         'format'      => 'int32',
 >>>>>>> WIP
+=======
+        'format'      => 'int64',
+>>>>>>> Swagger updates for script service. Added method to SwaggerManager to return a set of common responses to Swagger definitions. Added SwaggerEvents constants for new Swagger events: swagger.cache_cleared and swagger.cache_rebuilt
         'description' => 'The ID of the user that created this record',
         'readOnly'    => true,
     ),
@@ -46,10 +50,14 @@ return array(
     'last_modified_by_id' => array(
         'type'        => 'integer',
 <<<<<<< HEAD
+<<<<<<< HEAD
         'format'      => 'int64',
 =======
         'format'      => 'int32',
 >>>>>>> WIP
+=======
+        'format'      => 'int64',
+>>>>>>> Swagger updates for script service. Added method to SwaggerManager to return a set of common responses to Swagger definitions. Added SwaggerEvents constants for new Swagger events: swagger.cache_cleared and swagger.cache_rebuilt
         'description' => 'The ID of the user that last modified this record',
         'readOnly'    => true,
     ),
