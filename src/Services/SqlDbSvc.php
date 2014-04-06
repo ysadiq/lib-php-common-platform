@@ -462,7 +462,11 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function createRecords( $table, $records, $extras = array() )
     {
+<<<<<<< HEAD
         $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
+=======
+        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
+>>>>>>> passing all tests on mongo
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $records ) );
@@ -668,7 +672,11 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function updateRecords( $table, $records, $extras = array() )
     {
+<<<<<<< HEAD
         $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
+=======
+        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
+>>>>>>> passing all tests on mongo
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $records ) );
@@ -1010,7 +1018,11 @@ class SqlDbSvc extends BaseDbSvc
     public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
     {
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+<<<<<<< HEAD
         $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
+=======
+        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the update request." );
+>>>>>>> passing all tests on mongo
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $ids ) );
@@ -1393,7 +1405,11 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function deleteRecords( $table, $records, $extras = array() )
     {
+<<<<<<< HEAD
         $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
+=======
+        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
+>>>>>>> passing all tests on mongo
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $records ) );
@@ -1766,10 +1782,14 @@ class SqlDbSvc extends BaseDbSvc
     public function deleteRecordsByIds( $table, $ids, $extras = array() )
     {
 <<<<<<< HEAD
+<<<<<<< HEAD
         $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
 =======
         $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the request." );
 >>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
+=======
+        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the request." );
+>>>>>>> passing all tests on mongo
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $ids ) );
@@ -2095,7 +2115,11 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function retrieveRecords( $table, $records, $extras = array() )
     {
+<<<<<<< HEAD
         $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
+=======
+        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
+>>>>>>> passing all tests on mongo
         $table = $this->correctTableName( $table );
 
         $_idField = Option::get( $extras, 'id_field' );
@@ -2128,10 +2152,14 @@ class SqlDbSvc extends BaseDbSvc
     public function retrieveRecordsByIds( $table, $ids, $extras = array() )
     {
 <<<<<<< HEAD
+<<<<<<< HEAD
         $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
 =======
         $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the request." );
 >>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
+=======
+        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the request." );
+>>>>>>> passing all tests on mongo
         $table = $this->correctTableName( $table );
 
         $_continue = Option::getBool( $extras, 'continue', false );
@@ -2532,6 +2560,7 @@ class SqlDbSvc extends BaseDbSvc
      * or our generic NoSQL filter array or partial record
      * and parse it to the service's native filter criteria.
 <<<<<<< HEAD
+<<<<<<< HEAD
      * The filter string can have substitution parameters such as
      * ':name', in which case an associative array is expected,
      * for value substitution.
@@ -2541,6 +2570,11 @@ class SqlDbSvc extends BaseDbSvc
      * ':name', in which case an associative array is expected,
      * for value substitution. The two types can not be mixed.
 >>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
+=======
+     * The filter string can have substitution parameters such as
+     * ':name', in which case an associative array is expected,
+     * for value substitution.
+>>>>>>> passing all tests on mongo
      *
      * @param string | array $filter     SQL WHERE clause filter string
      * @param array          $params     Array of substitution values
@@ -2556,12 +2590,16 @@ class SqlDbSvc extends BaseDbSvc
             // todo parse client filter?
             $_filterString = $filter;
 <<<<<<< HEAD
+<<<<<<< HEAD
             $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true );
 =======
             // search filter for index substitution
             $_indexSub = ( false != strpos( $filter, '?' ) );
             $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true, $_indexSub );
 >>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
+=======
+            $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true );
+>>>>>>> passing all tests on mongo
             if ( !empty( $_serverFilter ) )
             {
                 if ( empty( $filter ) )
@@ -2585,18 +2623,13 @@ class SqlDbSvc extends BaseDbSvc
             $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true );
 =======
 
-            if ( isset( $params[0] ) )
-            {
-                // using PDO ? prepare statements, requires Bd array...yeah crazy, I know!
-                $params = static::one_index_array( $params );
-            }
-
             return array( 'where' => $_filterString, 'params' => $params );
         }
         else
         {
             // todo parse client filter?
             $_filterArray = $filter;
+<<<<<<< HEAD
             // implode filter into string and search for index substitution
             $_indexSub = ( false != strpos(
                     implode(
@@ -2618,6 +2651,9 @@ class SqlDbSvc extends BaseDbSvc
                 ) );
             $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true, $_indexSub );
 >>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
+=======
+            $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true );
+>>>>>>> passing all tests on mongo
             if ( !empty( $_serverFilter ) )
             {
                 if ( empty( $filter ) )
@@ -2629,12 +2665,6 @@ class SqlDbSvc extends BaseDbSvc
                     $_filterArray = array( 'AND', $_filterArray, $_serverFilter['filter'] );
                 }
                 $params = array_merge( $params, $_serverFilter['params'] );
-            }
-
-            if ( isset( $params[0] ) )
-            {
-                // using PDO ? prepare statements, requires Bd array...yeah crazy, I know!
-                $params = static::one_index_array( $params );
             }
 
             return array( 'where' => $_filterArray, 'params' => $params );
@@ -3649,7 +3679,11 @@ class SqlDbSvc extends BaseDbSvc
             $_value = static::interpretFilterValue( $_value );
             if ( $use_params )
             {
+<<<<<<< HEAD
                 $_paramName = ':ssf_' . $_name . '_' . $_key;
+=======
+                $_paramName = ':ssf_' . $_name;
+>>>>>>> passing all tests on mongo
                 $_params[$_paramName] = $_value;
                 $_value = $_paramName;
             }
