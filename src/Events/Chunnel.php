@@ -20,17 +20,27 @@
 namespace DreamFactory\Platform\Events;
 
 use DreamFactory\Platform\Events\Enums\EventSourceHeaders;
+use DreamFactory\Platform\Events\Interfaces\StreamDispatcherLike;
 use DreamFactory\Yii\Utility\Pii;
 use Igorw\EventSource\Stream;
 use Kisma\Core\Seed;
-use Kisma\Core\Utility\Option;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Chunnel
  * An event channel/tunnel for clients
  */
-class Chunnel extends Seed
+class Chunnel extends Seed implements StreamDispatcherLike
 {
+    //*************************************************************************
+    //	Constants
+    //*************************************************************************
+
+    /**
+     * @type string The name of the encapsulating event sent down the chute
+     */
+    const CHUNNEL_EVENT_NAME = 'dsp.event';
+
     //*************************************************************************
     //	Members
     //*************************************************************************
@@ -45,34 +55,53 @@ class Chunnel extends Seed
     //*************************************************************************
 
     /**
-     * @param string          $streamId
      * @param string          $eventName
-     * @param array           $data
+     * @param array           $eventData
      * @param EventDispatcher $dispatcher
+     *
+     * @return int The number of streams to which the event was dispatched
+     */
+    public static function dispatchEventToStream( $eventName, array $eventData = array(), $dispatcher = null )
+    {
+        $_dispatched = 0;
+
+        foreach ( static::$_streams as $_streamId => $_stream )
+        {
+            static::send( $_streamId, $eventName, $eventData );
+            $_dispatched += 1;
+        }
+
+        return $_dispatched;
+    }
+
+    /**
+     * @param string $streamId
+     * @param string $eventName
+     * @param array  $data
      *
      * @return bool
      */
-    public static function send( $streamId, $eventName, array $data = array(), $dispatcher = null )
+    public static function send( $streamId, $eventName, array $data = array() )
     {
         if ( !static::isValidStreamId( $streamId ) )
         {
             return false;
         }
 
-        $_data = json_encode(
+        $_data = static::_formatMessageForOutput(
+            $streamId,
+            true,
             array_merge(
-                Option::clean( $data ),
-                static::_streamStamp( $streamId, false ),
-                array( 'type' => $eventName )
-            ),
-            JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES
+                array(
+                    'type' => $eventName
+                ),
+                $data
+            )
         );
-
-        /** @noinspection PhpUndefinedMethodInspection */
 
         return static::$_streams[$streamId]
             ->event()
-            ->setEvent( 'dsp.event' )
+            ->setEvent( static::CHUNNEL_EVENT_NAME )
             ->setData( $_data )
             ->end()
             ->flush();
@@ -81,20 +110,22 @@ class Chunnel extends Seed
     /**
      * Create and return a stream
      *
-     * @param string $id
+     * @param string $streamId
      *
+     * @throws \CException
      * @throws \InvalidArgumentException
      * @return Stream
      */
-    public static function create( $id )
+    public static function create( $streamId )
     {
-        if ( empty( $id ) )
+        if ( empty( $streamId ) )
         {
-            throw new \InvalidArgumentException( 'You must give this process an ID. $id cannot be blank.' );
+            throw new \InvalidArgumentException( 'You must give this process an ID. $streamId cannot be blank.' );
         }
 
         //  Send the EventSource headers
-        $_response = clone ( $_response = Pii::responseObject() );
+        /** @var Response $_response */
+        $_response = clone ( $_response = Pii::response() );
         $_response->headers->add( EventSourceHeaders::all() );
         $_response->sendHeaders();
 
@@ -102,10 +133,12 @@ class Chunnel extends Seed
         set_time_limit( 0 );
 
         //  We all scream NEW STREAM!
-        return
-            static::isValidStreamId( $id )
-                ? static::$_streams[$id]
-                : static::$_streams[$id] = new Stream();
+        $_stream =
+            static::isValidStreamId( $streamId )
+                ? static::$_streams[$streamId]
+                : static::$_streams[$streamId] = new Stream();
+
+        return $_stream;
     }
 
     /**
@@ -127,32 +160,47 @@ class Chunnel extends Seed
     }
 
     /**
-     * Handles the output stream to the client
-     *
-     * @param string $streamData
-     *
-     * @throws \InvalidArgumentException
-     */
-    protected static function _streamHandler( $streamData )
-    {
-        echo $streamData;
-        ob_flush();
-        flush();
-    }
-
-    /**
      * Creates a common stamp for all streamed events
      *
-     * @param string $id
+     * @param string $streamId
+     * @param bool   $success
      * @param bool   $asJson
      * @param int    $jsonOptions
      *
      * @return array|string
      */
-    protected static function _streamStamp( $id, $asJson = true, $jsonOptions = 0 )
+    protected static function _streamStamp( $streamId, $success = true, $asJson = true, $jsonOptions = 0 )
     {
-        $_stamp = array( 'stream_id' => $id, 'timestamp' => microtime( true ) );
+        $_request = array(
+            'stream_id' => $streamId,
+            'timestamp' => $_time = date( 'c', time() ),
+            'signature' => base64_encode( hash_hmac( 'sha256', $streamId, $_time, true ) ),
+        );
+
+        $_stamp = array( 'request' => $_request );
 
         return $asJson ? json_encode( $_stamp, $jsonOptions | ( JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES ) ) : $_stamp;
     }
+
+    /**
+     * @param string $streamId
+     * @param bool   $success
+     * @param array  $data Additional detail data to send to client
+     * @param int    $jsonOptions
+     *
+     * @return string
+     */
+    protected static function _formatMessageForOutput( $streamId, $success = true, array $data = array(), $jsonOptions = 0 )
+    {
+        $_response = static::_streamStamp( $streamId, $success, false );
+        $_response['success'] = $success;
+
+        if ( !empty( $data ) )
+        {
+            $_response['details'] = $data;
+        }
+
+        return json_encode( $_response, $jsonOptions | ( JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES ) );
+    }
+
 }

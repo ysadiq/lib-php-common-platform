@@ -24,7 +24,6 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Events\Chunnel;
 use DreamFactory\Platform\Events\Enums\StreamEvents;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
-use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
@@ -69,24 +68,26 @@ class EventStream extends BaseSystemRestResource
      * GET starts the event stream
      *
      * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \CDbException
      * @throws \InvalidArgumentException
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return bool
      */
     protected function _handleGet()
     {
         $_status = 'reopened';
 
-        if ( null === ( $_id = Pii::request( false )->query->get( 'id' ) ) )
-        {
-            $_id = Hasher::hash( microtime( true ), 'sha256' );
-            $_status = 'created';
-        }
-        else
+        if ( null !== ( $_id = Pii::request( false )->query->get( 'id' ) ) )
         {
             if ( !Chunnel::isValidStreamId( $_id ) )
             {
-                throw new NotFoundException();
+                $_id = null;
             }
+        }
+        if ( empty( $_id ) )
+        {
+            $_id = Hasher::hash( microtime( true ), 'sha256' );
+            $_status = 'created';
         }
 
         $_stream = Chunnel::create( $_id );
@@ -114,29 +115,59 @@ class EventStream extends BaseSystemRestResource
 
         }
 
-        Log::info( 'Event stream "' . $_id . '" ' . $_status );
+        $_startTime = microtime( true );
+        Log::info( 'Event stream "' . $_id . '" ' . $_status . ' at ' . $_startTime );
 
         //  Notify the client that the stream's about to flow
         Chunnel::send( $_id, StreamEvents::STREAM_STARTED );
 
-        try
-        {
-            //  Starts a 5 second ping
-            while ( true )
-            {
-                Chunnel::send( $_id, StreamEvents::PING );
-                sleep( 5 );
-            }
-        }
-        catch ( \Exception $_ex )
-        {
-            Log::error( 'Exception during streaming events: ' . $_ex->getMessage() );
-        }
+        //  Register with the main dispatcher
+//        Pii::app()->getDispatcher()->registerStream( $_id, $_stream );
 
-        //  He's dead Jim.
-        Chunnel::send( $_id, StreamEvents::STREAM_STOPPED );
+        $_success = true;
 
-        return array( 'stream_id' => $_id, 'timestamp' => microtime( true ), 'state' => $_status );
+//        //  Start up the ping service
+//        try
+//        {
+//            //  Starts a 5 second ping
+//            while ( true )
+//            {
+//                sleep( 5 );
+//                Chunnel::send( $_id, StreamEvents::PING );
+//            }
+//        }
+//        catch ( \Exception $_ex )
+//        {
+//            Log::error( '  * Exception during streaming events: ' . $_ex->getMessage() );
+//            $_success = false;
+//        }
+//
+//        try
+//        {
+//            //  He's dead Jim.
+//            Chunnel::send( $_id, StreamEvents::STREAM_STOPPED );
+//        }
+//        catch ( \Exception $_ex )
+//        {
+//            //  Meh...
+//            $_success = false;
+//            Log::error( '  * Failed to send stream stopped event to client' );
+//        }
+//
+//
+//        //  Make sure we're off the list
+//        Pii::app()->getDispatcher()->unregisterStream( $_id );
+
+        $_endTime = microtime( true );
+
+        return array(
+            'success' => $_success,
+            'details' => array(
+                'stream_id' => $_id,
+                'elapsed'   => $_startTime - $_endTime,
+                'timestamp' => microtime( true ),
+                'state'     => $_status,
+            )
+        );
     }
-
 }
