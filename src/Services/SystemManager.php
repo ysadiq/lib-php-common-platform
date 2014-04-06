@@ -37,6 +37,7 @@ use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
 use DreamFactory\Platform\Yii\Models\App;
 use DreamFactory\Platform\Yii\Models\BasePlatformModel;
+use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Platform\Yii\Models\Service;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
@@ -105,8 +106,7 @@ class SystemManager extends BaseSystemRestService
     //*************************************************************************
 
     /**
-     * Creates a new SystemManager instance
-     *
+     * {@InheritDoc}
      */
     public function __construct( $settings = array() )
     {
@@ -941,9 +941,9 @@ SQL;
     }
 
     /**
-     * @param $resource
+     * @param string $resource
      *
-     * @throws BadRequestException
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return BasePlatformSystemModel
      */
     public static function getResourceModel( $resource )
@@ -1013,6 +1013,11 @@ SQL;
     {
         $_tableName = static::SYSTEM_TABLE_PREFIX . 'user';
 
+        if ( null !== ( $_state = Pii::getState( 'dsp.admin_count' ) ) )
+        {
+            return $_state;
+        }
+
         try
         {
             $_admins = Sql::scalar(
@@ -1027,12 +1032,16 @@ WHERE
 SQL
             );
 
-            return ( 0 == $_admins ? false : ( $_admins > 1 ? $_admins : true ) );
+            $_state = ( 0 == $_admins ? false : ( $_admins > 1 ? $_admins : true ) );
         }
         catch ( \Exception $_ex )
         {
-            return false;
+            $_state = false;
         }
+
+        Pii::setState( 'dsp.admin_count', false === $_state ? null : $_state );
+
+        return $_state;
     }
 
     /**
@@ -1249,11 +1258,13 @@ SQL
                     }
                     catch ( \Exception $_ex )
                     {
-                        throw new InternalServerErrorException( 'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(), array(
-                            'data'          => $data,
-                            'bogus_row'     => $_row,
-                            'unique_column' => $uniqueColumn
-                        ) );
+                        throw new InternalServerErrorException(
+                            'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(), array(
+                                'data'          => $data,
+                                'bogus_row'     => $_row,
+                                'unique_column' => $uniqueColumn
+                            )
+                        );
                     }
                 }
             }
