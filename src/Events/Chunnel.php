@@ -47,22 +47,33 @@ use Symfony\Component\HttpFoundation\Response;
 namespace DreamFactory\Platform\Events;
 
 use DreamFactory\Platform\Events\Enums\EventSourceHeaders;
+use DreamFactory\Platform\Events\Interfaces\StreamDispatcherLike;
 use DreamFactory\Yii\Utility\Pii;
 use Igorw\EventSource\Stream;
 use Kisma\Core\Seed;
+<<<<<<< HEAD
 use Kisma\Core\Utility\Option;
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+<<<<<<< HEAD
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+=======
+=======
+use Symfony\Component\HttpFoundation\Response;
+>>>>>>> Eventstream testing
+>>>>>>> Eventstream testing
 
 /**
  * Chunnel
  * An event channel/tunnel for clients
  */
 <<<<<<< HEAD
+<<<<<<< HEAD
 class Chunnel extends Seed
 {
     //*************************************************************************
 =======
+=======
+>>>>>>> Eventstream testing
 <<<<<<< HEAD
 class Chunnel extends Seed implements StreamDispatcherLike
 {
@@ -81,7 +92,24 @@ class Chunnel extends Seed
 {
     //*************************************************************************
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+<<<<<<< HEAD
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+=======
+=======
+class Chunnel extends Seed implements StreamDispatcherLike
+{
+    //*************************************************************************
+    //	Constants
+    //*************************************************************************
+
+    /**
+     * @type string The name of the encapsulating event sent down the chute
+     */
+    const CHUNNEL_EVENT_NAME = 'dsp.event';
+
+    //*************************************************************************
+>>>>>>> Eventstream testing
+>>>>>>> Eventstream testing
     //	Members
     //*************************************************************************
 
@@ -100,10 +128,14 @@ class Chunnel extends Seed
 
     /**
 <<<<<<< HEAD
+<<<<<<< HEAD
      * @param string          $streamId
 =======
 <<<<<<< HEAD
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+=======
+<<<<<<< HEAD
+>>>>>>> Eventstream testing
      * @param string          $eventName
      * @param array           $data
      * @param EventDispatcher $dispatcher
@@ -116,15 +148,44 @@ class Chunnel extends Seed
     public static function send( $streamId, $eventName, array $data = array() )
 =======
      * @param string          $streamId
+=======
+>>>>>>> Eventstream testing
      * @param string          $eventName
-     * @param array           $data
+     * @param array           $eventData
      * @param EventDispatcher $dispatcher
+     *
+     * @return int The number of streams to which the event was dispatched
+     */
+    public static function dispatchEventToStream( $eventName, array $eventData = array(), $dispatcher = null )
+    {
+        $_dispatched = 0;
+
+        foreach ( static::$_streams as $_streamId => $_stream )
+        {
+            static::send( $_streamId, $eventName, $eventData );
+            $_dispatched += 1;
+        }
+
+        return $_dispatched;
+    }
+
+    /**
+     * @param string $streamId
+     * @param string $eventName
+     * @param array  $data
      *
      * @return bool
      */
+<<<<<<< HEAD
     public static function send( $streamId, $eventName, array $data = array(), $dispatcher = null )
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+<<<<<<< HEAD
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+=======
+=======
+    public static function send( $streamId, $eventName, array $data = array() )
+>>>>>>> Eventstream testing
+>>>>>>> Eventstream testing
     {
         if ( !static::isValidStreamId( $streamId ) )
         {
@@ -132,8 +193,11 @@ class Chunnel extends Seed
         }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         $_data = json_encode(
 =======
+=======
+>>>>>>> Eventstream testing
 <<<<<<< HEAD
         $_data = static::_formatMessageForOutput(
             $streamId,
@@ -156,18 +220,22 @@ class Chunnel extends Seed
             ->setEvent( static::CHUNNEL_EVENT_NAME )
 =======
         $_data = json_encode(
+=======
+        $_data = static::_formatMessageForOutput(
+            $streamId,
+            true,
+>>>>>>> Eventstream testing
             array_merge(
-                Option::clean( $data ),
-                static::_streamStamp( $streamId, false ),
-                array( 'type' => $eventName )
-            ),
-            JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES
+                array(
+                    'type' => $eventName
+                ),
+                $data
+            )
         );
-
-        /** @noinspection PhpUndefinedMethodInspection */
 
         return static::$_streams[$streamId]
             ->event()
+<<<<<<< HEAD
 <<<<<<< HEAD
             ->setEvent( $eventName )
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
@@ -177,7 +245,13 @@ class Chunnel extends Seed
 =======
             ->setEvent( 'dsp.event' )
 >>>>>>> event stream testing
+<<<<<<< HEAD
 >>>>>>> event stream testing
+=======
+=======
+            ->setEvent( static::CHUNNEL_EVENT_NAME )
+>>>>>>> Eventstream testing
+>>>>>>> Eventstream testing
             ->setData( $_data )
             ->end()
             ->flush();
@@ -187,8 +261,11 @@ class Chunnel extends Seed
      * Create and return a stream
      *
 <<<<<<< HEAD
+<<<<<<< HEAD
      * @param string $id
 =======
+=======
+>>>>>>> Eventstream testing
 <<<<<<< HEAD
      * @param string $streamId
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
@@ -213,19 +290,24 @@ class Chunnel extends Seed
         $_response->headers->add( Stream::getHeaders() );
 =======
      * @param string $id
+=======
+     * @param string $streamId
+>>>>>>> Eventstream testing
      *
+     * @throws \CException
      * @throws \InvalidArgumentException
      * @return Stream
      */
-    public static function create( $id )
+    public static function create( $streamId )
     {
-        if ( empty( $id ) )
+        if ( empty( $streamId ) )
         {
-            throw new \InvalidArgumentException( 'You must give this process an ID. $id cannot be blank.' );
+            throw new \InvalidArgumentException( 'You must give this process an ID. $streamId cannot be blank.' );
         }
 
         //  Send the EventSource headers
-        $_response = clone ( $_response = Pii::responseObject() );
+        /** @var Response $_response */
+        $_response = clone ( $_response = Pii::response() );
         $_response->headers->add( EventSourceHeaders::all() );
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
@@ -236,14 +318,21 @@ class Chunnel extends Seed
 
         //  We all scream NEW STREAM!
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 <<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> Eventstream testing
+>>>>>>> Eventstream testing
         $_stream =
             static::isValidStreamId( $streamId )
                 ? static::$_streams[$streamId]
                 : static::$_streams[$streamId] = new Stream();
 
         return $_stream;
+<<<<<<< HEAD
 =======
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
         return
@@ -254,6 +343,8 @@ class Chunnel extends Seed
 =======
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+=======
+>>>>>>> Eventstream testing
     }
 
     /**
@@ -276,8 +367,11 @@ class Chunnel extends Seed
 
     /**
 <<<<<<< HEAD
+<<<<<<< HEAD
      * Handles the output stream to the client
 =======
+=======
+>>>>>>> Eventstream testing
 <<<<<<< HEAD
      * Creates a common stamp for all streamed events
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
@@ -313,33 +407,57 @@ class Chunnel extends Seed
 
 =======
      * Handles the output stream to the client
-     *
-     * @param string $streamData
-     *
-     * @throws \InvalidArgumentException
-     */
-    protected static function _streamHandler( $streamData )
-    {
-        echo $streamData;
-        ob_flush();
-        flush();
-    }
-
-    /**
+=======
      * Creates a common stamp for all streamed events
+>>>>>>> Eventstream testing
      *
-     * @param string $id
+     * @param string $streamId
+     * @param bool   $success
      * @param bool   $asJson
      * @param int    $jsonOptions
      *
      * @return array|string
      */
-    protected static function _streamStamp( $id, $asJson = true, $jsonOptions = 0 )
+    protected static function _streamStamp( $streamId, $success = true, $asJson = true, $jsonOptions = 0 )
     {
-        $_stamp = array( 'stream_id' => $id, 'timestamp' => microtime( true ) );
+        $_request = array(
+            'stream_id' => $streamId,
+            'timestamp' => $_time = date( 'c', time() ),
+            'signature' => base64_encode( hash_hmac( 'sha256', $streamId, $_time, true ) ),
+        );
+
+        $_stamp = array( 'request' => $_request );
 
         return $asJson ? json_encode( $_stamp, $jsonOptions | ( JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES ) ) : $_stamp;
     }
+
+    /**
+     * @param string $streamId
+     * @param bool   $success
+     * @param array  $data Additional detail data to send to client
+     * @param int    $jsonOptions
+     *
+     * @return string
+     */
+    protected static function _formatMessageForOutput( $streamId, $success = true, array $data = array(), $jsonOptions = 0 )
+    {
+        $_response = static::_streamStamp( $streamId, $success, false );
+        $_response['success'] = $success;
+
+        if ( !empty( $data ) )
+        {
+            $_response['details'] = $data;
+        }
+
+        return json_encode( $_response, $jsonOptions | ( JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES ) );
+    }
+<<<<<<< HEAD
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+<<<<<<< HEAD
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+=======
+=======
+
+>>>>>>> Eventstream testing
+>>>>>>> Eventstream testing
 }

@@ -25,13 +25,21 @@ use DreamFactory\Platform\Events\Chunnel;
 use DreamFactory\Platform\Events\Enums\StreamEvents;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 <<<<<<< HEAD
+<<<<<<< HEAD
 use DreamFactory\Platform\Exceptions\NotFoundException;
 =======
+=======
+>>>>>>> Eventstream testing
 <<<<<<< HEAD
 =======
 use DreamFactory\Platform\Exceptions\NotFoundException;
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+<<<<<<< HEAD
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+=======
+=======
+>>>>>>> Eventstream testing
+>>>>>>> Eventstream testing
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
@@ -88,9 +96,17 @@ class EventStream extends BaseSystemRestResource
      * GET starts the event stream
      *
      * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+<<<<<<< HEAD
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+<<<<<<< HEAD
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+=======
+=======
+     * @throws \CDbException
+>>>>>>> Eventstream testing
+>>>>>>> Eventstream testing
      * @throws \InvalidArgumentException
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return bool
      */
     protected function _handleGet()
@@ -99,10 +115,13 @@ class EventStream extends BaseSystemRestResource
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         //  Get the ID to use, or make a new one...
 >>>>>>> Composer update and eventstream junk
 =======
+=======
+>>>>>>> Eventstream testing
         //  Get the ID to use, or make a new one...
 =======
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
@@ -148,11 +167,19 @@ class EventStream extends BaseSystemRestResource
         {
 =======
         else
+=======
+        if ( null !== ( $_id = Pii::request( false )->query->get( 'id' ) ) )
+>>>>>>> Eventstream testing
         {
             if ( !Chunnel::isValidStreamId( $_id ) )
             {
-                throw new NotFoundException();
+                $_id = null;
             }
+        }
+        if ( empty( $_id ) )
+        {
+            $_id = Hasher::hash( microtime( true ), 'sha256' );
+            $_status = 'created';
         }
 
         $_stream = Chunnel::create( $_id );
@@ -180,11 +207,13 @@ class EventStream extends BaseSystemRestResource
 
         }
 
-        Log::info( 'Event stream "' . $_id . '" ' . $_status );
+        $_startTime = microtime( true );
+        Log::info( 'Event stream "' . $_id . '" ' . $_status . ' at ' . $_startTime );
 
         //  Notify the client that the stream's about to flow
         Chunnel::send( $_id, StreamEvents::STREAM_STARTED );
 
+<<<<<<< HEAD
         try
         {
             //  Starts a 5 second ping
@@ -247,5 +276,59 @@ class EventStream extends BaseSystemRestResource
     }
 
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+<<<<<<< HEAD
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+=======
+=======
+        //  Register with the main dispatcher
+//        Pii::app()->getDispatcher()->registerStream( $_id, $_stream );
+
+        $_success = true;
+
+//        //  Start up the ping service
+//        try
+//        {
+//            //  Starts a 5 second ping
+//            while ( true )
+//            {
+//                sleep( 5 );
+//                Chunnel::send( $_id, StreamEvents::PING );
+//            }
+//        }
+//        catch ( \Exception $_ex )
+//        {
+//            Log::error( '  * Exception during streaming events: ' . $_ex->getMessage() );
+//            $_success = false;
+//        }
+//
+//        try
+//        {
+//            //  He's dead Jim.
+//            Chunnel::send( $_id, StreamEvents::STREAM_STOPPED );
+//        }
+//        catch ( \Exception $_ex )
+//        {
+//            //  Meh...
+//            $_success = false;
+//            Log::error( '  * Failed to send stream stopped event to client' );
+//        }
+//
+//
+//        //  Make sure we're off the list
+//        Pii::app()->getDispatcher()->unregisterStream( $_id );
+
+        $_endTime = microtime( true );
+
+        return array(
+            'success' => $_success,
+            'details' => array(
+                'stream_id' => $_id,
+                'elapsed'   => $_startTime - $_endTime,
+                'timestamp' => microtime( true ),
+                'state'     => $_status,
+            )
+        );
+    }
+>>>>>>> Eventstream testing
+>>>>>>> Eventstream testing
 }
