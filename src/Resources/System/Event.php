@@ -44,8 +44,7 @@ class Event extends BaseSystemRestResource
     //*************************************************************************
 
     /**
-     * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
-     * @param array                                               $resources
+     * {@InheritDoc}
      */
     public function __construct( $consumer, $resources = array() )
     {
@@ -63,8 +62,9 @@ class Event extends BaseSystemRestResource
     }
 
     /**
-     * Default GET implementation
-     *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \InvalidArgumentException
+     * @throws \Exception
      * @return bool
      */
     protected function _handleGet()
@@ -82,6 +82,8 @@ class Event extends BaseSystemRestResource
      *
      * @param bool $as_cached If true, the event cache will be returned as stored on disk. Otherwise in a more consumable format for clients.
      *
+     * @throws \InvalidArgumentException
+     * @throws \Kisma\Core\Exceptions\FileSystemException
      * @return array
      */
     protected function _getAllEvents( $as_cached = false )
@@ -159,7 +161,7 @@ class Event extends BaseSystemRestResource
                     $_service['paths'][] = $_path;
                     unset( $_path );
                 }
-                
+
                 $_rebuild[] = $_service;
 =======
         // Rebuild the cached structure into a more consumable client version
@@ -253,8 +255,13 @@ class Event extends BaseSystemRestResource
     /**
      * Post/create event handler
      *
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \Exception
+     * @throws \CException
+     * @throws \LogicException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
+     * @throws \Exception
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return array|bool
      */
 <<<<<<< HEAD
@@ -279,7 +286,7 @@ class Event extends BaseSystemRestResource
         {
             $_eventName = Option::get( $_body, 'event_name' );
             $_listeners = Option::get( $_body, 'listeners' );
-            $_apiKey = Option::get( $_body, 'api_key', 'unknown' );
+//            $_apiKey = Option::get( $_body, 'api_key', 'unknown' );
             $_priority = Option::get( $_body, 'priority', 0 );
         }
 
@@ -327,10 +334,12 @@ class Event extends BaseSystemRestResource
     }
 
     /**
-     * @return array
      * @throws \DreamFactory\Platform\Exceptions\NotFoundException
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \CException
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \LogicException
+     * @return array
      */
 <<<<<<< HEAD
 <<<<<<< HEAD

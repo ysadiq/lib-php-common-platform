@@ -24,6 +24,7 @@ namespace DreamFactory\Platform\Interfaces;
  */
 interface TransformerLike
 {
+<<<<<<< HEAD:src/Interfaces/TransformerLike.php
 	//*************************************************************************
 	//* Methods
 	//*************************************************************************
@@ -45,4 +46,22 @@ interface TransformerLike
 	 * @return array|\CDbCriteria
 	 */
 	public static function buildCriteria( $columns, $criteria = null );
+=======
+    //*************************************************************************
+    //	Constants
+    //*************************************************************************
+
+    /**
+     * @var string Called before the resource request is dispatched
+     */
+    const PRE_PROCESS = '{api_name}.{action}.pre_process';
+    /**
+     * @var string Called after the resource handler has processed the request
+     */
+    const POST_PROCESS = '{api_name}.{action}.post_process';
+    /**
+     * @var string Called after data has been formatted for caller but before send
+     */
+    const AFTER_DATA_FORMAT = '{api_name}.{action}.after_data_format';
+>>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.:src/Events/Enums/ResourceServiceEvents.php
 }

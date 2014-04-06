@@ -615,6 +615,61 @@ SQL;
     }
 
     /**
+     * Returns an array of resource properties for inclusion in a Swagger file.
+     * Exclude specific properties by sending array of the names to exclude.
+     *
+     * @param array $excludes The properties, if any, to exclude from the returned properties
+     *
+     * @return array
+     */
+    public static function getCommonProperties( array $excludes = array() )
+    {
+        static $_properties = array(
+            'created_date'        => array(
+                'type'        => 'string',
+                'description' => 'Date this event was created.',
+                'readOnly'    => true,
+            ),
+            'created_by_id'       => array(
+                'type'        => 'integer',
+                'format'      => 'int32',
+                'description' => 'User Id of who created this event.',
+                'readOnly'    => true,
+            ),
+            'last_modified_date'  => array(
+                'type'        => 'string',
+                'description' => 'Date this event was last modified.',
+                'readOnly'    => true,
+            ),
+            'last_modified_by_id' => array(
+                'type'        => 'integer',
+                'format'      => 'int32',
+                'description' => 'User Id of who last modified this event.',
+                'readOnly'    => true,
+            ),
+        );
+
+        if ( empty( $excludes ) )
+        {
+            return $_properties;
+        }
+
+        $_result = array();
+
+        foreach ( $_properties as $_property => $_schema )
+        {
+            if ( in_array( $_property, $excludes ) )
+            {
+                continue;
+            }
+
+            $_result[$_property] = $_schema;
+        }
+
+        return $_result;
+    }
+
+    /**
      * Returns an array of common responses for merging into Swagger files.
      *
      * @param array $codes Array of response codes to return only. If empty, all are returned.
