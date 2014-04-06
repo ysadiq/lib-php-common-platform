@@ -228,11 +228,15 @@ class Event extends BaseSystemRestResource
                 }
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
                 $_rebuild[$_domain][] = $_service;
 >>>>>>> Reformat output of all events by default. Added flag "$as_cached" to return data as cached. Also updated swagger documentation with new parameter.
 =======
                 
+=======
+
+>>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
                 $_rebuild[] = $_service;
 >>>>>>> Swagger updates. Event container tweak
                 unset( $_service );

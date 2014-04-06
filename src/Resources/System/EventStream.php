@@ -24,7 +24,14 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Events\Chunnel;
 use DreamFactory\Platform\Events\Enums\StreamEvents;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
+<<<<<<< HEAD
 use DreamFactory\Platform\Exceptions\NotFoundException;
+=======
+<<<<<<< HEAD
+=======
+use DreamFactory\Platform\Exceptions\NotFoundException;
+>>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+>>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
@@ -66,6 +73,7 @@ class EventStream extends BaseSystemRestResource
     }
 
     /**
+<<<<<<< HEAD
      * GET any messages in the event stream
      * This method does not return to the caller, it is self-killing
      *
@@ -73,7 +81,15 @@ class EventStream extends BaseSystemRestResource
      * @throws \DreamFactory\Platform\Exceptions\NotFoundException
 =======
      * @throws \CException
+<<<<<<< HEAD
 >>>>>>> Composer update and eventstream junk
+=======
+=======
+     * GET starts the event stream
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+>>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+>>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
      * @throws \InvalidArgumentException
      * @return bool
      */
@@ -82,14 +98,21 @@ class EventStream extends BaseSystemRestResource
         $_status = 'reopened';
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         //  Get the ID to use, or make a new one...
 >>>>>>> Composer update and eventstream junk
+=======
+        //  Get the ID to use, or make a new one...
+=======
+>>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+>>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
         if ( null === ( $_id = Pii::request( false )->query->get( 'id' ) ) )
         {
             $_id = Hasher::hash( microtime( true ), 'sha256' );
             $_status = 'created';
         }
+<<<<<<< HEAD
 <<<<<<< HEAD
         else
         {
@@ -100,6 +123,8 @@ class EventStream extends BaseSystemRestResource
         }
 =======
 >>>>>>> Composer update and eventstream junk
+=======
+>>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
 
         $_pid = null;
         $_stream = Chunnel::create( $_id );
@@ -121,12 +146,56 @@ class EventStream extends BaseSystemRestResource
 
         try
         {
+=======
+        else
+        {
+            if ( !Chunnel::isValidStreamId( $_id ) )
+            {
+                throw new NotFoundException();
+            }
+        }
+
+        $_stream = Chunnel::create( $_id );
+        $_pid = null;
+
+        if ( function_exists( 'pcntl_fork' ) )
+        {
+            Log::debug( 'Process control available. Forking stream runner.' );
+
+            switch ( $_pid = pcntl_fork() )
+            {
+                case -1:
+                    Log::error( '  * Forking failed. Running synchronously' );
+                    break;
+
+                case 0:
+                    Log::debug( '  * Child fork running (#' . getmypid() . ')' );
+                    break;
+
+                case 1:
+                    Log::info( '  * Forking successful. Running asynchronously.' );
+
+                    return array( 'stream_id' => $_id, 'timestamp' => microtime( true ), 'state' => $_status );
+            }
+
+        }
+
+        Log::info( 'Event stream "' . $_id . '" ' . $_status );
+
+        //  Notify the client that the stream's about to flow
+        Chunnel::send( $_id, StreamEvents::STREAM_STARTED );
+
+        try
+        {
+            //  Starts a 5 second ping
+>>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
             while ( true )
             {
                 Chunnel::send( $_id, StreamEvents::PING );
                 sleep( 5 );
             }
         }
+<<<<<<< HEAD
         catch ( Exception $_ex )
         {
             Log::error( 'Exception during event stream loop: ' . $_ex->getMessage() );
@@ -162,5 +231,21 @@ class EventStream extends BaseSystemRestResource
         Pii::end();
 >>>>>>> Composer update and eventstream junk
     }
+<<<<<<< HEAD
 
+=======
+=======
+        catch ( \Exception $_ex )
+        {
+            Log::error( 'Exception during streaming events: ' . $_ex->getMessage() );
+        }
+
+        //  He's dead Jim.
+        Chunnel::send( $_id, StreamEvents::STREAM_STOPPED );
+
+        return array( 'stream_id' => $_id, 'timestamp' => microtime( true ), 'state' => $_status );
+    }
+
+>>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+>>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
 }
