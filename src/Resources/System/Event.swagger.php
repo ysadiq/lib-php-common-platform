@@ -18,6 +18,8 @@
  * limitations under the License.
  */
 
+use DreamFactory\Platform\Services\SwaggerManager;
+
 $_event = array();
 
 $_event['apis'] = array(
@@ -422,31 +424,6 @@ $_commonProperties = array(
     ),
 );
 
-$_stampProperties = array(
-    'created_date'        => array(
-        'type'        => 'string',
-        'description' => 'Date this event was created.',
-        'readOnly'    => true,
-    ),
-    'created_by_id'       => array(
-        'type'        => 'integer',
-        'format'      => 'int32',
-        'description' => 'User Id of who created this event.',
-        'readOnly'    => true,
-    ),
-    'last_modified_date'  => array(
-        'type'        => 'string',
-        'description' => 'Date this event was last modified.',
-        'readOnly'    => true,
-    ),
-    'last_modified_by_id' => array(
-        'type'        => 'integer',
-        'format'      => 'int32',
-        'description' => 'User Id of who last modified this event.',
-        'readOnly'    => true,
-    ),
-);
-
 $_event['models'] = array(
     'EventRequest'   => array(
         'id'         => 'EventRequest',
@@ -479,7 +456,7 @@ $_event['models'] = array(
         'id'         => 'EventResponse',
         'properties' => array_merge(
             $_commonProperties,
-            $_stampProperties
+            SwaggerManager::getCommonProperties()
         ),
     ),
     'EventsResponse' => array(
