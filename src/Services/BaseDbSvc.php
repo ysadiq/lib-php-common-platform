@@ -566,7 +566,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function getTables( $tables = array() )
     {
-        $_tables = static::checkIncomingData(
+        $_tables = static::validateAsArray(
             $tables,
             ',',
             true,
@@ -665,7 +665,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function deleteTables( $tables = array(), $check_empty = false )
     {
-        $_tables = static::checkIncomingData(
+        $_tables = static::validateAsArray(
             $tables,
             ',',
             true,
@@ -727,7 +727,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function createRecord( $table, $record, $extras = array() )
     {
-        $_records = static::checkIncomingData( $record, null, true, 'There are no fields in the record.' );
+        $_records = static::validateAsArray( $record, null, true, 'There are no fields in the record.' );
 
         $_results = $this->createRecords( $table, $_records, $extras );
 
@@ -754,7 +754,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function updateRecord( $table, $record, $extras = array() )
     {
-        $_records = static::checkIncomingData( $record, null, true, 'There are no fields in the record.' );
+        $_records = static::validateAsArray( $record, null, true, 'There are no fields in the record.' );
 
         $_results = $this->updateRecords( $table, $_records, $extras );
 
@@ -794,7 +794,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function updateRecordById( $table, $record, $id, $extras = array() )
     {
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
         $_results = $this->updateRecordsByIds( $table, $record, $id, $extras );
 
@@ -821,7 +821,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function mergeRecord( $table, $record, $extras = array() )
     {
-        $_records = static::checkIncomingData( $record, null, true, 'There are no fields in the record.' );
+        $_records = static::validateAsArray( $record, null, true, 'There are no fields in the record.' );
 
         $_results = $this->mergeRecords( $table, $_records, $extras );
 
@@ -862,7 +862,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function mergeRecordById( $table, $record, $id, $extras = array() )
     {
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
         $_results = $this->mergeRecordsByIds( $table, $record, $id, $extras );
 
@@ -889,7 +889,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function deleteRecord( $table, $record, $extras = array() )
     {
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
         $_results = $this->deleteRecords( $table, array( $record ), $extras );
 
@@ -963,7 +963,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function retrieveRecord( $table, $record, $extras = array() )
     {
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
         $_results = $this->retrieveRecords( $table, array( $record ), $extras );
 
@@ -1286,7 +1286,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                             throw new InternalServerErrorException( "Invalid validation configuration: Field '$name' has no 'value' in schema settings." );
                         }
 
-                        if ( !empty( $value ) && (false === array_search( $value, $_values ) ) )
+                        if ( !empty( $value ) && ( false === array_search( $value, $_values ) ) )
                         {
                             if ( $_throw )
                             {
@@ -1306,13 +1306,24 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
                         if ( !empty( $value ) )
                         {
-                            $_delimiter = Option::get( $_config, 'delimiter', ',');
-                            $_min = Option::get( $_config, 'min', 1);
-                            $_max = Option::get( $_config, 'delimiter', ',');
-                            $value = static::checkIncomingData($value, $_delimiter, true);
-                            foreach( $value as $_item )
+                            $_delimiter = Option::get( $_config, 'delimiter', ',' );
+                            $_min = Option::get( $_config, 'min', 1 );
+                            $_max = Option::get( $_config, 'max' );
+                            $value = static::validateAsArray( $value, $_delimiter, true );
+                            $_count = count($value);
+                            if ($_count < $_min)
                             {
-                                if  (false === array_search( $_item, $_values ) )
+                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value does not contain enough selections.";
+                                throw new BadRequestException( $_msg );
+                            }
+                            if (!empty($_max) && ($_count > $_max))
+                            {
+                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value contains too many selections.";
+                                throw new BadRequestException( $_msg );
+                            }
+                            foreach ( $value as $_item )
+                            {
+                                if ( false === array_search( $_item, $_values ) )
                                 {
                                     if ( $_throw )
                                     {
@@ -1487,7 +1498,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     protected static function _requireMoreFields( $fields, $id_field = null )
     {
-        if ( false === $fields = static::checkIncomingData( $fields, ',' ) )
+        if ( false === $fields = static::validateAsArray( $fields, ',' ) )
         {
             return false;
         }
@@ -1582,24 +1593,6 @@ abstract class BaseDbSvc extends BasePlatformRestService
     }
 
     /**
-     * @param array $array
-     *
-     * @return array
-     */
-    public static function one_index_array( $array )
-    {
-        if ( !is_array( $array ) || empty( $array ) )
-        {
-            return array();
-        }
-
-        array_unshift( $array, '' );
-        unset( $array[0] );
-
-        return $array;
-    }
-
-    /**
      * @param array | string $data          Array to check or comma-delimited string to convert
      * @param string | null  $str_delimiter Delimiter to check for string to array mapping, no op if null
      * @param boolean        $check_single  Check if single (associative) needs to be made multiple (numeric)
@@ -1609,7 +1602,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @return array | boolean If requirements not met then throws exception if
      * $on_fail string given, or returns false. Otherwise returns valid array
      */
-    public static function checkIncomingData( $data, $str_delimiter = null, $check_single = false, $on_fail = null )
+    public static function validateAsArray( $data, $str_delimiter = null, $check_single = false, $on_fail = null )
     {
         if ( !empty( $data ) && !is_array( $data ) && ( is_string( $str_delimiter ) && !empty( $str_delimiter ) ) )
         {

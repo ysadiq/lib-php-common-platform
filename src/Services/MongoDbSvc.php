@@ -320,7 +320,7 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function createRecords( $table, $records, $extras = array() )
     {
-        $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
+        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
         $_coll = $this->selectTable( $table );
 
         $_isSingle = ( 1 == count( $records ) );
@@ -432,7 +432,7 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function updateRecords( $table, $records, $extras = array() )
     {
-        $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
+        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
         $_coll = $this->selectTable( $table );
 
         $_isSingle = ( 1 == count( $records ) );
@@ -467,7 +467,7 @@ class MongoDbSvc extends NoSqlDbSvc
                     }
 
                     $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-                    $_criteria = $this->buildCriteriaArray( $_filter, $_ssFilters );
+                    $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
 
                     // simple update overwrite existing record
                     $_result = $_coll->findAndModify( $_criteria, $_parsed, $_fieldArray, $_options );
@@ -550,7 +550,7 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
         $_coll = $this->selectTable( $table );
 
         $_fields = Option::get( $extras, 'fields' );
@@ -567,7 +567,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
 
         // build criteria from filter parameters
-        $_criteria = static::buildCriteriaArray( $filter, $_ssFilters );
+        $_criteria = static::buildCriteriaArray( $filter, $params, $_ssFilters );
 
         try
         {
@@ -599,8 +599,8 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
     {
-        $record = static::checkIncomingData( $record, null, false, 'No record fields were passed in the request.' );
-        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the request." );
+        $record = static::validateAsArray( $record, null, false, 'No record fields were passed in the request.' );
+        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the request." );
         $_coll = $this->selectTable( $table );
 
         $_isSingle = ( 1 == count( $ids ) );
@@ -632,7 +632,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => static::idsToMongoIds( $ids ) ) );
                 $_criteria = static::buildCriteriaArray( $_filter, $_ssFilters );
 
-                $_result = $_coll->update( $_criteria, $_parsed, array( 'multiple' => true ) );
+                $_result = $_coll->update( $_criteria, $_parsed, null, array( 'multiple' => true ) );
                 $_rows = static::processResult( $_result );
                 if ( 0 === $_rows )
                 {
@@ -661,7 +661,7 @@ class MongoDbSvc extends NoSqlDbSvc
                         }
 
                         $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-                        $_criteria = $this->buildCriteriaArray( $_filter, $_ssFilters );
+                        $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
 
                         // simple update overwrite existing record
                         $_result = $_coll->findAndModify( $_criteria, $_parsed, $_fieldArray, $_options );
@@ -745,7 +745,7 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function mergeRecords( $table, $records, $extras = array() )
     {
-        $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
+        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
         $_coll = $this->selectTable( $table );
 
         $_isSingle = ( 1 == count( $records ) );
@@ -794,7 +794,7 @@ class MongoDbSvc extends NoSqlDbSvc
                     }
 
                     $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-                    $_criteria = $this->buildCriteriaArray( $_filter, $_ssFilters );
+                    $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
 
                     // simple update merging with existing record
                     $_result = $_coll->findAndModify( $_criteria, $_parsed, $_fieldArray, $_options );
@@ -877,7 +877,7 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
         $_coll = $this->selectTable( $table );
 
         $_fields = Option::get( $extras, 'fields' );
@@ -908,7 +908,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
 
         // build criteria from filter parameters
-        $_criteria = static::buildCriteriaArray( $filter, $_ssFilters );
+        $_criteria = static::buildCriteriaArray( $filter, $params, $_ssFilters );
 
         try
         {
@@ -940,8 +940,8 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function mergeRecordsByIds( $table, $record, $ids, $extras = array() )
     {
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
-        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the request." );
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the request." );
         $_coll = $this->selectTable( $table );
 
         $_isSingle = ( 1 == count( $ids ) );
@@ -984,7 +984,7 @@ class MongoDbSvc extends NoSqlDbSvc
             if ( $_useBatch )
             {
                 $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => static::idsToMongoIds( $ids ) ) );
-                $_criteria = static::buildCriteriaArray( $_filter, $_ssFilters );
+                $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
 
                 $_coll->update( $_criteria, $record, array( 'multiple' => true ) );
                 if ( static::_requireMoreFields( $_fields ) )
@@ -1012,7 +1012,7 @@ class MongoDbSvc extends NoSqlDbSvc
                         }
 
                         $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-                        $_criteria = $this->buildCriteriaArray( $_filter, $_ssFilters );
+                        $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
 
                         // simple update merging with existing record
                         $_result = $_coll->findAndModify( $_criteria, $_parsed, $_fieldArray, $_options );
@@ -1101,7 +1101,7 @@ class MongoDbSvc extends NoSqlDbSvc
         {
             // build filter string if necessary, add server-side filters if necessary
             $_ssFilters = Option::get( $extras, 'ss_filters' );
-            $_criteria = $this->buildCriteriaArray( array(), $_ssFilters );
+            $_criteria = $this->buildCriteriaArray( array(), null, $_ssFilters );
             $_result = $_coll->remove( $_criteria );
 
             return array( 'success' => $_result );
@@ -1121,7 +1121,7 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function deleteRecords( $table, $records, $extras = array() )
     {
-        $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
+        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
         $_ids = static::recordsAsIds( $records );
 
         return $this->deleteRecordsByIds( $table, $_ids, $extras );
@@ -1145,7 +1145,7 @@ class MongoDbSvc extends NoSqlDbSvc
         $_fieldArray = static::buildFieldArray( $_fields );
 
         // build criteria from filter parameters
-        $_criteria = static::buildCriteriaArray( $filter, $_ssFilters );
+        $_criteria = static::buildCriteriaArray( $filter, $params, $_ssFilters );
 
         try
         {
@@ -1171,7 +1171,7 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function deleteRecordsByIds( $table, $ids, $extras = array() )
     {
-        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the request." );
+        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the request." );
         $_coll = $this->selectTable( $table );
 
         $_isSingle = ( 1 == count( $ids ) );
@@ -1192,7 +1192,7 @@ class MongoDbSvc extends NoSqlDbSvc
             if ( $_useBatch )
             {
                 $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => static::idsToMongoIds( $ids ) ) );
-                $_criteria = static::buildCriteriaArray( $_filter, $_ssFilters );
+                $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
 
                 if ( $_rollback || static::_requireMoreFields( $_fields ) )
                 {
@@ -1230,7 +1230,7 @@ class MongoDbSvc extends NoSqlDbSvc
                         }
 
                         $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-                        $_criteria = static::buildCriteriaArray( $_filter, $_ssFilters );
+                        $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
 
                         $_result = $_coll->findAndModify( $_criteria, null, $_fieldArray, $_options );
                         if ( empty( $_result ) )
@@ -1318,7 +1318,7 @@ class MongoDbSvc extends NoSqlDbSvc
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
         $_fieldArray = static::buildFieldArray( $_fields );
-        $_criteria = static::buildCriteriaArray( $filter, $_ssFilters );
+        $_criteria = static::buildCriteriaArray( $filter, $params, $_ssFilters );
 
         $_limit = intval( Option::get( $extras, 'limit', 0 ) );
         $_offset = intval( Option::get( $extras, 'offset', 0 ) );
@@ -1374,7 +1374,7 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function retrieveRecords( $table, $records, $extras = array() )
     {
-        $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
+        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
         $_ids = static::recordsAsIds( $records );
 
         return $this->retrieveRecordsByIds( $table, $_ids, $extras );
@@ -1385,7 +1385,7 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function retrieveRecordsByIds( $table, $ids, $extras = array() )
     {
-        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the request." );
+        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the request." );
         $_coll = $this->selectTable( $table );
 
         $_fields = Option::get( $extras, 'fields' );
@@ -1394,7 +1394,7 @@ class MongoDbSvc extends NoSqlDbSvc
         $_fieldArray = static::buildFieldArray( $_fields );
 
         $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => static::idsToMongoIds( $ids ) ) );
-        $_criteria = $this->buildCriteriaArray( $_filter, $_ssFilters );
+        $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
 
         try
         {
@@ -1500,10 +1500,11 @@ class MongoDbSvc extends NoSqlDbSvc
 
     /**
      * @param string|array $filter Filter for querying records by
+     * @param array        $params Filter replacement parameters
      *
      * @return array
      */
-    protected static function buildFilterArray( $filter )
+    protected static function buildFilterArray( $filter, $params = null )
     {
         if ( empty( $filter ) )
         {
@@ -1526,7 +1527,7 @@ class MongoDbSvc extends NoSqlDbSvc
             $_parts = array();
             foreach ( $_ops as $_op )
             {
-                $_parts[] = static::buildFilterArray( $_op );
+                $_parts[] = static::buildFilterArray( $_op, $params );
             }
 
             return array( '$or' => $_parts );
@@ -1538,7 +1539,7 @@ class MongoDbSvc extends NoSqlDbSvc
             $_parts = array();
             foreach ( $_ops as $_op )
             {
-                $_parts[] = static::buildFilterArray( $_op );
+                $_parts[] = static::buildFilterArray( $_op, $params );
             }
 
             return array( '$nor' => $_parts );
@@ -1550,7 +1551,7 @@ class MongoDbSvc extends NoSqlDbSvc
             $_parts = array();
             foreach ( $_ops as $_op )
             {
-                $_parts[] = static::buildFilterArray( $_op );
+                $_parts[] = static::buildFilterArray( $_op, $params );
             }
 
             return array( '$and' => $_parts );
@@ -1578,7 +1579,7 @@ class MongoDbSvc extends NoSqlDbSvc
             if ( count( $_ops ) > 1 )
             {
                 $_field = $_ops[0];
-                $_val = static::_determineValue( $_ops[1], $_field );
+                $_val = static::_determineValue( $_ops[1], $_field, $params );
                 $_mongoOp = $_mongoOperators[$_key];
                 switch ( $_mongoOp )
                 {
@@ -1594,7 +1595,7 @@ class MongoDbSvc extends NoSqlDbSvc
 //			WHERE name LIKE "%Joe%"	(array("name" => new MongoRegex("/Joe/")));
 //			WHERE name LIKE "Joe%"	(array("name" => new MongoRegex("/^Joe/")));
 //			WHERE name LIKE "%Joe"	(array("name" => new MongoRegex("/Joe$/")));
-                        $_val = static::_determineValue( $_ops[1], $_field );
+                        $_val = static::_determineValue( $_ops[1], $_field, $params );
                         if ( '%' == $_val[strlen( $_val ) - 1] )
                         {
                             if ( '%' == $_val[0] )
@@ -1632,11 +1633,21 @@ class MongoDbSvc extends NoSqlDbSvc
     /**
      * @param string $value
      * @param string $field
+     * @param array  $replacements
      *
      * @return bool|float|int|string|\MongoId
      */
-    private static function _determineValue( $value, $field = null )
+    private static function _determineValue( $value, $field = null, $replacements = null )
     {
+        // process parameter replacements
+        if ( is_string( $value ) && !empty( $value ) && ( ':' == $value[0] ) )
+        {
+            if ( isset( $replacements, $replacements[$value] ) )
+            {
+                $value = $replacements[$value];
+            }
+        }
+
         if ( $field && ( static::DEFAULT_ID_FIELD == $field ) )
         {
             return static::idToMongoId( $value, true );
@@ -1665,10 +1676,10 @@ class MongoDbSvc extends NoSqlDbSvc
         return $value;
     }
 
-    protected static function buildCriteriaArray( $filter, $ss_filters = null )
+    protected static function buildCriteriaArray( $filter, $params = null, $ss_filters = null )
     {
         // build filter array if necessary, add server-side filters if necessary
-        $_criteria = ( !is_array( $filter ) ) ? static::buildFilterArray( $filter ) : $filter;
+        $_criteria = ( !is_array( $filter ) ) ? static::buildFilterArray( $filter, $params ) : $filter;
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
         if ( !empty( $_serverCriteria ) )
         {
@@ -1939,175 +1950,82 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     protected function parseRecord( $record, $avail_fields, $filter_info = null, $for_update = false, $old_record = null )
     {
-        $parsed = array();
 //        $record = DataFormat::arrayKeyLower( $record );
-        $keys = array_keys( $record );
-        $values = array_values( $record );
-        foreach ( $avail_fields as $field_info )
+        $_parsed = ( empty( $avail_fields ) ) ? $record : array();
+        if ( !empty( $avail_fields ) )
         {
+            $_keys = array_keys( $record );
+            $_values = array_values( $record );
+            foreach ( $avail_fields as $_fieldInfo )
+            {
 //            $name = strtolower( Option::get( $field_info, 'name', '' ) );
-            $name = Option::get( $field_info, 'name', '' );
-            $type = Option::get( $field_info, 'type' );
-            $dbType = Option::get( $field_info, 'db_type' );
-            $pos = array_search( $name, $keys );
-            if ( false !== $pos )
-            {
-                $fieldVal = Option::get( $values, $pos );
-                // due to conversion from XML to array, null or empty xml elements have the array value of an empty array
-                if ( is_array( $fieldVal ) && empty( $fieldVal ) )
+                $_name = Option::get( $_fieldInfo, 'name', '' );
+                $_type = Option::get( $_fieldInfo, 'type' );
+                $_pos = array_search( $_name, $_keys );
+                if ( false !== $_pos )
                 {
-                    $fieldVal = null;
-                }
-
-                // overwrite some undercover fields
-                if ( Option::getBool( $field_info, 'auto_increment', false ) )
-                {
-                    unset( $keys[$pos] );
-                    unset( $values[$pos] );
-                    continue; // should I error this?
-                }
-
-                /** validations **/
-                $validations = array_map( 'trim', explode( ',', Option::get( $field_info, 'validation', '' ) ) );
-
-                if ( false !== $valPos = array_search( 'api_read_only', $validations, true ) )
-                {
-                    unset( $keys[$pos] );
-                    unset( $values[$pos] );
-                    continue; // should I error this?
-                }
-                if ( false !== $valPos = array_search( 'create_only', $validations, true ) )
-                {
-                    unset( $keys[$pos] );
-                    unset( $values[$pos] );
-                    continue; // should I error this?
-                }
-                if ( is_null( $fieldVal ) )
-                {
-                    if ( !Option::getBool( $field_info, 'allow_null' ) )
+                    $_fieldVal = Option::get( $_values, $_pos );
+                    // due to conversion from XML to array, null or empty xml elements have the array value of an empty array
+                    if ( is_array( $_fieldVal ) && empty( $_fieldVal ) )
                     {
-                        throw new BadRequestException( "Field '$name' can not be NULL." );
-                    }
-                    if ( false !== $valPos = array_search( 'not_empty', $validations, true ) && empty( $fieldVal ) )
-                    {
-                        throw new BadRequestException( "Field '$name' can not be empty." );
-                    }
-                }
-                else
-                {
-                    if ( false !== $valPos = array_search( 'not_empty', $validations, true ) && empty( $fieldVal ) )
-                    {
-                        throw new BadRequestException( "Field '$name' can not be empty." );
+                        $_fieldVal = null;
                     }
 
-                    switch ( $type )
+                    /** validations **/
+
+                    $_validations = Option::get( $_fieldInfo, 'validation' );
+
+                    if ( !static::validateFieldValue( $_name, $_fieldVal, $_validations, $for_update, $_fieldInfo ) )
                     {
-                        case 'string':
-                            if ( false !== $valPos = array_search( 'email', $validations, true ) && !filter_var( $fieldVal, FILTER_VALIDATE_EMAIL ) )
-                            {
-                                throw new BadRequestException( "Field '$name' must be a valid email." );
-                            }
-                            if ( false !== $valPos = array_search( 'url', $validations, true ) )
-                            {
-                                $_filter = trim( stristr( $validations[$valPos], '(' ), '()' );
-                                $_options = null;
-//                                    FILTER_FLAG_HOST_REQUIRED
-                                if ( !filter_var( $fieldVal, FILTER_VALIDATE_URL, $_options ) )
-                                {
-                                    throw new BadRequestException( "Field '$name' must be a valid url." );
-                                }
-                            }
-                            if ( false !== $valPos = array_search( 'match', $validations, true ) )
-                            {
-                                $b =
-                                    "^(([^<>()[].,;:s@\"]+(.[^<>()[].,;:s@\"]+)*)|(\".+\"))@(([[0-9]{1,3}.[0-9]{1,3}‌​.[0-9]{1,3}.[0-9]{1,3}])|(([a-zA-Z-0-9]+.)+[a-zA-Z]{2,}))$";
-                                $_filter = base64_decode( trim( stristr( $validations[$valPos], '(' ), '()' ) );
-                                $_options = array( 'regexp' => $_filter );
-//                                regexp
-                                if ( !filter_var( $fieldVal, FILTER_VALIDATE_REGEXP, $_options ) )
-                                {
-                                    throw new BadRequestException( "Field '$name' must be a valid url." );
-                                }
-                            }
-                            break;
-                        case 'integer':
-                            if ( false !== $valPos = array_search( 'range', $validations, true ) )
-                            {
-                                $_filter = trim( stristr( $validations[$valPos], '(' ), '()' );
-                                $_options = null;
-//                                min_range, max_range
-                                if ( !filter_var( $fieldVal, FILTER_VALIDATE_INT, $_options ) )
-                                {
-                                    throw new BadRequestException( "Field '$name' must be a valid url." );
-                                }
-                            }
-                            break;
-                        case 'decimal':
-                        case 'float':
-                            break;
+                        unset( $_keys[$_pos] );
+                        unset( $_values[$_pos] );
+                        continue;
                     }
 
+                    $_parsed[$_name] = $_fieldVal;
+                    unset( $_keys[$_pos] );
+                    unset( $_values[$_pos] );
                 }
-                $parsed[$name] = $fieldVal;
-                unset( $keys[$pos] );
-                unset( $values[$pos] );
-            }
-            else
-            {
-                // check specific fields
-                switch ( $type )
+
+                // add or override for specific fields
+                switch ( $_type )
                 {
                     case 'timestamp_on_create':
-                    case 'timestamp_on_update':
-                    case 'user_id_on_create':
-                    case 'user_id_on_update':
-                        break;
-                    default:
-                        // if field is required, kick back error
-                        if ( Option::getBool( $field_info, 'required' ) && !$for_update )
+                        if ( !$for_update )
                         {
-                            throw new BadRequestException( "Required field '$name' can not be NULL." );
+                            $_parsed[$_name] = new \MongoDate();
                         }
                         break;
-                }
-            }
-            // add or override for specific fields
-            switch ( $type )
-            {
-                case 'timestamp_on_create':
-                    if ( !$for_update )
-                    {
-                    }
-                    break;
-                case 'timestamp_on_update':
-                    break;
-                case 'user_id_on_create':
-                    if ( !$for_update )
-                    {
+                    case 'timestamp_on_update':
+                        $_parsed[$_name] = new \MongoDate();
+                        break;
+                    case 'user_id_on_create':
+                        if ( !$for_update )
+                        {
+                            $userId = Session::getCurrentUserId();
+                            if ( isset( $userId ) )
+                            {
+                                $_parsed[$_name] = $userId;
+                            }
+                        }
+                        break;
+                    case 'user_id_on_update':
                         $userId = Session::getCurrentUserId();
                         if ( isset( $userId ) )
                         {
-                            $parsed[$name] = $userId;
+                            $_parsed[$_name] = $userId;
                         }
-                    }
-                    break;
-                case 'user_id_on_update':
-                    $userId = Session::getCurrentUserId();
-                    if ( isset( $userId ) )
-                    {
-                        $parsed[$name] = $userId;
-                    }
-                    break;
+                        break;
+                }
             }
         }
 
         if ( !empty( $filter_info ) )
         {
-            $this->validateRecord( $record, $filter_info, $for_update, $old_record );
+            $this->validateRecord( $_parsed, $filter_info, $for_update, $old_record );
         }
 
-//        return $parsed;
-        return $record;
+        return $_parsed;
     }
 
     /**
