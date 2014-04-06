@@ -1,7 +1,13 @@
 <?php
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 <<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> event stream testing
+>>>>>>> event stream testing
 /**
  * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
@@ -20,7 +26,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+<<<<<<< HEAD
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+=======
+<<<<<<< HEAD
+>>>>>>> event stream testing
 namespace DreamFactory\Platform\Events;
 
 use DreamFactory\Platform\Events\Enums\EventSourceHeaders;
@@ -32,6 +42,8 @@ use Kisma\Core\Utility\Option;
 =======
 use Symfony\Component\HttpFoundation\Response;
 =======
+=======
+>>>>>>> event stream testing
 namespace DreamFactory\Platform\Events;
 
 use DreamFactory\Platform\Events\Enums\EventSourceHeaders;
@@ -146,7 +158,8 @@ class Chunnel extends Seed
         $_data = json_encode(
             array_merge(
                 Option::clean( $data ),
-                static::_streamStamp( $streamId, false )
+                static::_streamStamp( $streamId, false ),
+                array( 'type' => $eventName )
             ),
             JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES
         );
@@ -155,9 +168,16 @@ class Chunnel extends Seed
 
         return static::$_streams[$streamId]
             ->event()
+<<<<<<< HEAD
             ->setEvent( $eventName )
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+<<<<<<< HEAD
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+=======
+=======
+            ->setEvent( 'dsp.event' )
+>>>>>>> event stream testing
+>>>>>>> event stream testing
             ->setData( $_data )
             ->end()
             ->flush();
