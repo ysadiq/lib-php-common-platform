@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Events;
 
+use DreamFactory\Platform\Events\Interfaces\StreamDispatcherLike;
 use DreamFactory\Platform\Resources\System\Script;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\SwaggerManager;
@@ -27,6 +28,7 @@ use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
 use Guzzle\Http\Client;
 use Guzzle\Http\Exception\MultiTransferException;
+use Igorw\EventSource\Stream;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -54,6 +56,10 @@ class EventDispatcher implements EventDispatcherInterface
      * @type string The persistent storage key for subscribed events
      */
     const SUBSCRIBED_EVENTS_KEY = 'platform.events.subscriber_map';
+    /**
+     * @type string The prefix marker used to store registered streams
+     */
+    const STREAM_NAME_TAG = 'stream:';
 
     //*************************************************************************
     //	Members
@@ -99,6 +105,10 @@ class EventDispatcher implements EventDispatcherInterface
      * @var array
      */
     protected $_sorted = array();
+    /**
+     * @var StreamDispatcherLike[]
+     */
+    protected $_streams = array();
 
     //*************************************************************************
     //	Methods
@@ -131,7 +141,15 @@ class EventDispatcher implements EventDispatcherInterface
                     {
                         foreach ( $_events as $_event )
                         {
-                            $this->_listeners[$_event->event_name] = $_event->listeners;
+                            if ( false !== strpos( $_event->event_name, static::STREAM_NAME_TAG, 0 ) )
+                            {
+                                $this->_streams[str_replace( static::STREAM_NAME_TAG, null, $_event->event_name )] = Pii::unserialize( $_event->listeners );
+                            }
+                            else
+                            {
+                                $this->_listeners[$_event->event_name] = $_event->listeners;
+                            }
+
                             unset( $_event );
                         }
 
@@ -180,6 +198,7 @@ class EventDispatcher implements EventDispatcherInterface
         //	Store any events
         if ( !Pii::guest() )
         {
+            //  First the listeners
             foreach ( array_keys( $this->_listeners ) as $_eventName )
             {
                 /** @var \DreamFactory\Platform\Yii\Models\Event $_model */
@@ -204,13 +223,80 @@ class EventDispatcher implements EventDispatcherInterface
                     Log::error( 'Exception saving event configuration: ' . $_ex->getMessage() );
                 }
             }
+
+            //	Save any streams
+            if ( !empty( $this->_streams ) )
+            {
+                /** @var Stream $_stream */
+                foreach ( $this->_streams as $_streamId => $_stream )
+                {
+                    $_streamEventName = static::STREAM_NAME_TAG . $_streamId;
+
+                    /** @var \DreamFactory\Platform\Yii\Models\Event $_model */
+                    /** @noinspection PhpUndefinedMethodInspection */
+                    $_model = ResourceStore::model( 'event' )->byEventName( $_streamEventName )->find();
+
+                    if ( null === $_model )
+                    {
+                        $_model = ResourceStore::model( 'event' );
+                        $_model->setIsNewRecord( true );
+                        $_model->event_name = $_streamEventName;
+                    }
+
+                    $_model->listeners = Pii::serialize( $_stream );
+
+                    try
+                    {
+                        $_model->save();
+                    }
+                    catch ( \Exception $_ex )
+                    {
+                        Log::error( 'Exception saving event configuration: ' . $_ex->getMessage() );
+                    }
+                }
+            }
         }
+    }
+
+    /**
+     * @param string $streamId
+     * @param Stream $stream
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function registerStream( $streamId, $stream )
+    {
+        $this->_streams[$streamId] = $stream;
+        Log::debug( 'Registered stream "' . $streamId . '"' );
+    }
+
+    /**
+     * @param string $streamId
+     *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \CDbException
+     * @return int The number of streams unregistered
+     */
+    public function unregisterStream( $streamId )
+    {
+        Log::debug( 'Unregistered stream "' . $streamId . '"' );
+
+        Option::remove( $this->_streams, $streamId );
+
+        return ResourceStore::model( 'event' )->deleteAll(
+            'event_name = :event_name',
+            array(
+                ':event_name' => static::STREAM_NAME_TAG . $streamId,
+            )
+        );
     }
 
     /**
      * @param string $eventName
      * @param Event  $event
      *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \Exception
      * @return \Symfony\Component\EventDispatcher\Event|void
      */
     public function dispatch( $eventName, Event $event = null )
@@ -227,6 +313,8 @@ class EventDispatcher implements EventDispatcherInterface
      * @param string                                         $eventName
      * @param \DreamFactory\Platform\Events\RestServiceEvent $event
      *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \Exception
      * @return \DreamFactory\Platform\Events\RestServiceEvent
      */
     public function dispatchRestServiceEvent( $service, $eventName, RestServiceEvent $event = null )
@@ -242,6 +330,8 @@ class EventDispatcher implements EventDispatcherInterface
      * @param string                                 $eventName
      * @param \DreamFactory\Platform\Events\DspEvent $event
      *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \Exception
      * @return \DreamFactory\Platform\Events\DspEvent
      */
     public function dispatchDspEvent( $eventName, DspEvent $event = null )
@@ -254,9 +344,9 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param \DreamFactory\Platform\Events\RestServiceEvent $event
-     * @param string                                         $eventName
-     * @param EventDispatcher                                $dispatcher
+     * @param \DreamFactory\Platform\Events\RestServiceEvent|PlatformEvent $event
+     * @param string                                                       $eventName
+     * @param EventDispatcher                                              $dispatcher
      *
      * @throws EventException
      * @throws \InvalidArgumentException
@@ -411,6 +501,8 @@ class EventDispatcher implements EventDispatcherInterface
                 }
             }
 
+            $this->_streamEvent( $eventName, $this->_envelope( $_event ) );
+
             if ( $_dispatched && static::$_logEvents && !static::$_logAllEvents )
             {
                 Log::debug(
@@ -429,6 +521,32 @@ class EventDispatcher implements EventDispatcherInterface
         }
 
         return $_dispatched;
+    }
+
+    /**
+     * Sends an event to any stream listeners
+     *
+     * @param string $eventName
+     * @param array  $eventData
+     *
+     * @return int
+     * @throws \InvalidArgumentException
+     */
+    protected function _streamEvent( $eventName, $eventData )
+    {
+        if ( empty( $this->_streams ) )
+        {
+            return 0;
+        }
+
+        $_count = Chunnel::dispatchEventToStream( $eventName, $eventData, $this );
+
+        if ( $_count )
+        {
+            Log::debug( '  * Dispatched event "' . $eventName . '" to ' . $_count . ' stream(s)' );
+        }
+
+        return $_count;
     }
 
     /**
@@ -612,6 +730,7 @@ class EventDispatcher implements EventDispatcherInterface
      * @param integer $errorCode
      * @param array   $additionalInfo
      *
+     * @throws \InvalidArgumentException
      * @return string JSON encoded array
      */
     protected function _envelope( $resultList = null, $isError = false, $errorMessage = 'failure', $errorCode = 0, $additionalInfo = array() )
@@ -641,6 +760,8 @@ class EventDispatcher implements EventDispatcherInterface
      * @param mixed $details   Additional details/data/payload
      * @param array $extraInfo Additional data to add to the _info object
      *
+     * @throws \CException
+     * @throws \InvalidArgumentException
      * @return array
      */
     protected function _buildContainer( $success = true, $details = null, $extraInfo = null )
@@ -711,6 +832,8 @@ class EventDispatcher implements EventDispatcherInterface
      *                              If none specified, the $_REQUEST variables will be used.
      *                              The current class's variables are also available for replacement.
      *
+     * @throws \CException
+     * @throws \InvalidArgumentException
      * @return string
      */
     protected function _normalizeEventName( PlatformEvent $event, &$eventName, $values = null )
