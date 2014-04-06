@@ -493,7 +493,7 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function createRecords( $table, $records, $extras = array() )
     {
-        $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
+        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $records ) );
@@ -632,7 +632,7 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function updateRecords( $table, $records, $extras = array() )
     {
-        $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
+        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $records ) );
@@ -803,7 +803,7 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
         $table = $this->correctTableName( $table );
 
         $_fields = Option::get( $extras, 'fields' );
@@ -866,8 +866,8 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
     {
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
-        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the update request." );
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the update request." );
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $ids ) );
@@ -1162,7 +1162,7 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function deleteRecords( $table, $records, $extras = array() )
     {
-        $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
+        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $records ) );
@@ -1416,7 +1416,7 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function deleteRecordsByIds( $table, $ids, $extras = array() )
     {
-        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the request." );
+        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the request." );
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $ids ) );
@@ -1673,7 +1673,7 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function retrieveRecords( $table, $records, $extras = array() )
     {
-        $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
+        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
         $table = $this->correctTableName( $table );
 
         $_idField = Option::get( $extras, 'id_field' );
@@ -1705,7 +1705,7 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function retrieveRecordsByIds( $table, $ids, $extras = array() )
     {
-        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the request." );
+        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the request." );
         $table = $this->correctTableName( $table );
 
         $_continue = Option::getBool( $extras, 'continue', false );
@@ -2083,10 +2083,9 @@ class SqlDbSvc extends BaseDbSvc
      * Take in a ANSI SQL filter string (WHERE clause)
      * or our generic NoSQL filter array or partial record
      * and parse it to the service's native filter criteria.
-     * The filter string can have substitution parameters such as '?',
-     * in which case a numeric array is expected in $params, or
+     * The filter string can have substitution parameters such as
      * ':name', in which case an associative array is expected,
-     * for value substitution. The two types can not be mixed.
+     * for value substitution.
      *
      * @param string | array $filter     SQL WHERE clause filter string
      * @param array          $params     Array of substitution values
@@ -2101,9 +2100,7 @@ class SqlDbSvc extends BaseDbSvc
         {
             // todo parse client filter?
             $_filterString = $filter;
-            // search filter for index substitution
-            $_indexSub = ( false != strpos( $filter, '?' ) );
-            $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true, $_indexSub );
+            $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true );
             if ( !empty( $_serverFilter ) )
             {
                 if ( empty( $filter ) )
@@ -2117,38 +2114,13 @@ class SqlDbSvc extends BaseDbSvc
                 $params = array_merge( $params, $_serverFilter['params'] );
             }
 
-            if ( isset( $params[0] ) )
-            {
-                // using PDO ? prepare statements, requires Bd array...yeah crazy, I know!
-                $params = static::one_index_array( $params );
-            }
-
             return array( 'where' => $_filterString, 'params' => $params );
         }
         else
         {
             // todo parse client filter?
             $_filterArray = $filter;
-            // implode filter into string and search for index substitution
-            $_indexSub = ( false != strpos(
-                    implode(
-                        array_map(
-                            function ( $a )
-                            {
-                                if ( is_array( $a ) )
-                                {
-                                    return implode( $a, ' ' );
-                                }
-
-                                return $a;
-                            },
-                            $filter
-                        ),
-                        ' '
-                    ),
-                    '?'
-                ) );
-            $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true, $_indexSub );
+            $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true );
             if ( !empty( $_serverFilter ) )
             {
                 if ( empty( $filter ) )
@@ -2160,12 +2132,6 @@ class SqlDbSvc extends BaseDbSvc
                     $_filterArray = array( 'AND', $_filterArray, $_serverFilter['filter'] );
                 }
                 $params = array_merge( $params, $_serverFilter['params'] );
-            }
-
-            if ( isset( $params[0] ) )
-            {
-                // using PDO ? prepare statements, requires Bd array...yeah crazy, I know!
-                $params = static::one_index_array( $params );
             }
 
             return array( 'where' => $_filterArray, 'params' => $params );
@@ -2975,7 +2941,7 @@ class SqlDbSvc extends BaseDbSvc
         }
     }
 
-    protected function buildQueryStringFromData( $filter_info, $use_params = true, $index_substitution = false )
+    protected function buildQueryStringFromData( $filter_info, $use_params = true )
     {
         $_filters = Option::get( $filter_info, 'filters' );
         if ( empty( $_filters ) )
@@ -3005,7 +2971,7 @@ class SqlDbSvc extends BaseDbSvc
             $_value = static::interpretFilterValue( $_value );
             if ( $use_params )
             {
-                $_paramName = ( $index_substitution ) ? '?' : ':ssf_' . $_name;
+                $_paramName = ':ssf_' . $_name;
                 $_params[$_paramName] = $_value;
                 $_value = $_paramName;
             }
@@ -3173,7 +3139,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         else
         {
-            if ( false !== $fields = static::checkIncomingData( $fields, ',' ) )
+            if ( false !== $fields = static::validateAsArray( $fields, ',' ) )
             {
                 foreach ( $fields as $_field )
                 {
