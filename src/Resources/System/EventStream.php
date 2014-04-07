@@ -66,9 +66,14 @@ class EventStream extends BaseSystemRestResource
     }
 
     /**
-     * GET starts the event stream
+     * GET any messages in the event stream
+     * This method does not return to the caller, it is self-killing
      *
+<<<<<<< HEAD
      * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+=======
+     * @throws \CException
+>>>>>>> Composer update and eventstream junk
      * @throws \InvalidArgumentException
      * @return bool
      */
@@ -76,11 +81,16 @@ class EventStream extends BaseSystemRestResource
     {
         $_status = 'reopened';
 
+<<<<<<< HEAD
+=======
+        //  Get the ID to use, or make a new one...
+>>>>>>> Composer update and eventstream junk
         if ( null === ( $_id = Pii::request( false )->query->get( 'id' ) ) )
         {
             $_id = Hasher::hash( microtime( true ), 'sha256' );
             $_status = 'created';
         }
+<<<<<<< HEAD
         else
         {
             if ( !Chunnel::isValidStreamId( $_id ) )
@@ -88,32 +98,41 @@ class EventStream extends BaseSystemRestResource
                 throw new NotFoundException();
             }
         }
+=======
+>>>>>>> Composer update and eventstream junk
 
-        $_stream = Chunnel::create( $_id );
         $_pid = null;
+        $_stream = Chunnel::create( $_id );
 
-        if ( function_exists( 'pcntl_fork' ) )
+        //  Notify the client that the stream's about to flow
+        $_startTime = microtime( true );
+
+        if ( 'created' == $_status )
         {
-            Log::debug( 'Process control available. Forking stream runner.' );
-
-            switch ( $_pid = pcntl_fork() )
-            {
-                case -1:
-                    Log::error( '  * Forking failed. Running synchronously' );
-                    break;
-
-                case 0:
-                    Log::debug( '  * Child fork running (#' . getmypid() . ')' );
-                    break;
-
-                case 1:
-                    Log::info( '  * Forking successful. Running asynchronously.' );
-
-                    return array( 'stream_id' => $_id, 'timestamp' => microtime( true ), 'state' => $_status );
-            }
-
+            Chunnel::send( $_id, StreamEvents::STREAM_CREATED );
         }
 
+        //  Register with the main dispatcher
+        Pii::app()->getDispatcher()->registerStream( $_id, $_stream );
+
+        $_success = true;
+
+        Log::info( 'Event stream "' . $_id . '" ' . $_status . ' at ' . $_startTime );
+
+        try
+        {
+            while ( true )
+            {
+                Chunnel::send( $_id, StreamEvents::PING );
+                sleep( 5 );
+            }
+        }
+        catch ( Exception $_ex )
+        {
+            Log::error( 'Exception during event stream loop: ' . $_ex->getMessage() );
+        }
+
+<<<<<<< HEAD
         Log::info( 'Event stream "' . $_id . '" ' . $_status );
 
         //  Notify the client that the stream's about to flow
@@ -137,6 +156,11 @@ class EventStream extends BaseSystemRestResource
         Chunnel::send( $_id, StreamEvents::STREAM_STOPPED );
 
         return array( 'stream_id' => $_id, 'timestamp' => microtime( true ), 'state' => $_status );
+=======
+        Chunnel::send( $_id, StreamEvents::STREAM_CLOSING );
+
+        Pii::end();
+>>>>>>> Composer update and eventstream junk
     }
 
 }
