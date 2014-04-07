@@ -48,6 +48,7 @@
 		"dreamfactory/azure-sdk-for-php":  "~0.4.0@stable",
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> Added igorw/eventsource
 		"igorw/event-source":              "1.0.*"
 <<<<<<< HEAD
@@ -67,7 +68,13 @@
 =======
 		"dreamfactory/azure-sdk-for-php":  "~0.4.0@stable"
 >>>>>>> Composer update
+<<<<<<< HEAD
 >>>>>>> Composer update
+=======
+=======
+		"cboden/ratchet":                  "0.3.*"
+>>>>>>> Composer update and eventstream junk
+>>>>>>> Composer update and eventstream junk
 	},
 	"require-dev":       {
 		"phpunit/phpunit":          "~3.7@stable",

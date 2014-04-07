@@ -82,6 +82,7 @@ class EventStream extends BaseSystemRestResource
 
     /**
 <<<<<<< HEAD
+<<<<<<< HEAD
      * GET any messages in the event stream
      * This method does not return to the caller, it is self-killing
      *
@@ -104,9 +105,17 @@ class EventStream extends BaseSystemRestResource
 =======
      * @throws \CDbException
 >>>>>>> Eventstream testing
+<<<<<<< HEAD
 >>>>>>> Eventstream testing
+=======
+=======
+     * GET any messages in the event stream
+     * This method does not return to the caller, it is self-killing
+     *
+     * @throws \CException
+>>>>>>> Composer update and eventstream junk
+>>>>>>> Composer update and eventstream junk
      * @throws \InvalidArgumentException
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return bool
      */
     protected function _handleGet()
@@ -116,12 +125,15 @@ class EventStream extends BaseSystemRestResource
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         //  Get the ID to use, or make a new one...
 >>>>>>> Composer update and eventstream junk
 =======
 =======
 >>>>>>> Eventstream testing
+=======
+>>>>>>> Composer update and eventstream junk
         //  Get the ID to use, or make a new one...
 =======
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
@@ -177,36 +189,47 @@ class EventStream extends BaseSystemRestResource
             }
         }
         if ( empty( $_id ) )
+=======
+        //  Get the ID to use, or make a new one...
+        if ( null === ( $_id = Pii::request( false )->query->get( 'id' ) ) )
+>>>>>>> Composer update and eventstream junk
         {
             $_id = Hasher::hash( microtime( true ), 'sha256' );
             $_status = 'created';
         }
 
-        $_stream = Chunnel::create( $_id );
         $_pid = null;
+        $_stream = Chunnel::create( $_id );
 
-        if ( function_exists( 'pcntl_fork' ) )
+        //  Notify the client that the stream's about to flow
+        $_startTime = microtime( true );
+
+        if ( 'created' == $_status )
         {
-            Log::debug( 'Process control available. Forking stream runner.' );
-
-            switch ( $_pid = pcntl_fork() )
-            {
-                case -1:
-                    Log::error( '  * Forking failed. Running synchronously' );
-                    break;
-
-                case 0:
-                    Log::debug( '  * Child fork running (#' . getmypid() . ')' );
-                    break;
-
-                case 1:
-                    Log::info( '  * Forking successful. Running asynchronously.' );
-
-                    return array( 'stream_id' => $_id, 'timestamp' => microtime( true ), 'state' => $_status );
-            }
-
+            Chunnel::send( $_id, StreamEvents::STREAM_CREATED );
         }
 
+        //  Register with the main dispatcher
+        Pii::app()->getDispatcher()->registerStream( $_id, $_stream );
+
+        $_success = true;
+
+        Log::info( 'Event stream "' . $_id . '" ' . $_status . ' at ' . $_startTime );
+
+        try
+        {
+            while ( true )
+            {
+                Chunnel::send( $_id, StreamEvents::PING );
+                sleep( 5 );
+            }
+        }
+        catch ( Exception $_ex )
+        {
+            Log::error( 'Exception during event stream loop: ' . $_ex->getMessage() );
+        }
+
+<<<<<<< HEAD
         $_startTime = microtime( true );
         Log::info( 'Event stream "' . $_id . '" ' . $_status . ' at ' . $_startTime );
 
@@ -284,50 +307,11 @@ class EventStream extends BaseSystemRestResource
 //        Pii::app()->getDispatcher()->registerStream( $_id, $_stream );
 
         $_success = true;
+=======
+        Chunnel::send( $_id, StreamEvents::STREAM_CLOSING );
+>>>>>>> Composer update and eventstream junk
 
-//        //  Start up the ping service
-//        try
-//        {
-//            //  Starts a 5 second ping
-//            while ( true )
-//            {
-//                sleep( 5 );
-//                Chunnel::send( $_id, StreamEvents::PING );
-//            }
-//        }
-//        catch ( \Exception $_ex )
-//        {
-//            Log::error( '  * Exception during streaming events: ' . $_ex->getMessage() );
-//            $_success = false;
-//        }
-//
-//        try
-//        {
-//            //  He's dead Jim.
-//            Chunnel::send( $_id, StreamEvents::STREAM_STOPPED );
-//        }
-//        catch ( \Exception $_ex )
-//        {
-//            //  Meh...
-//            $_success = false;
-//            Log::error( '  * Failed to send stream stopped event to client' );
-//        }
-//
-//
-//        //  Make sure we're off the list
-//        Pii::app()->getDispatcher()->unregisterStream( $_id );
-
-        $_endTime = microtime( true );
-
-        return array(
-            'success' => $_success,
-            'details' => array(
-                'stream_id' => $_id,
-                'elapsed'   => $_startTime - $_endTime,
-                'timestamp' => microtime( true ),
-                'state'     => $_status,
-            )
-        );
+        Pii::end();
     }
 >>>>>>> Eventstream testing
 >>>>>>> Eventstream testing

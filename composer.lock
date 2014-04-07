@@ -9,6 +9,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     "hash": "391a059d259453269fccc2cff75b2389",
 =======
     "hash": "5029a89656ef8dbdad47a3695a2b2bd7",
@@ -22,6 +23,8 @@
 >>>>>>> Composer update
 =======
 >>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
+=======
+>>>>>>> Composer update and eventstream junk
     "hash": "5029a89656ef8dbdad47a3695a2b2bd7",
 =======
     "hash": "ecd342f54b41f600915f43417bdf65b1",
@@ -49,7 +52,13 @@
 =======
     "hash": "d491cbcb469901982a516ba9ede42d80",
 >>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
+<<<<<<< HEAD
 >>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
+=======
+=======
+    "hash": "38c67bad91b282365069381233b5cae4",
+>>>>>>> Composer update and eventstream junk
+>>>>>>> Composer update and eventstream junk
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -648,6 +657,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "url": "https://github.com/guzzle/guzzle3.git",
                 "reference": "840683b88b637a5310aefceac3722c6fd6b4c043"
             },
@@ -682,6 +692,15 @@
                 "url": "https://api.github.com/repos/guzzle/guzzle/zipball/b170b028c6bb5799640e46c8803015b0f9a45ed9",
                 "reference": "b170b028c6bb5799640e46c8803015b0f9a45ed9",
 >>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
+=======
+                "url": "https://github.com/guzzle/guzzle.git",
+                "reference": "b170b028c6bb5799640e46c8803015b0f9a45ed9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/b170b028c6bb5799640e46c8803015b0f9a45ed9",
+                "reference": "b170b028c6bb5799640e46c8803015b0f9a45ed9",
+>>>>>>> Composer update and eventstream junk
                 "shasum": ""
             },
             "require": {
@@ -763,9 +782,16 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             "time": "2014-04-09 22:38:44"
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+=======
+            "time": "2013-10-02 20:47:00"
+>>>>>>> Composer update and eventstream junk
+>>>>>>> Composer update and eventstream junk
         },
         {
             "name": "igorw/event-source",
@@ -2268,8 +2294,11 @@
             "time": "2014-03-26 11:51:10"
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
+=======
+>>>>>>> Composer update and eventstream junk
         },
         {
             "name": "symfony/routing",
@@ -2339,11 +2368,14 @@
             ],
             "time": "2014-04-03 05:23:50"
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> Composer update and eventstream junk
 =======
 >>>>>>> Composer update
 =======
 >>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
+=======
+>>>>>>> Composer update and eventstream junk
         }
     ],
     "packages-dev": [
