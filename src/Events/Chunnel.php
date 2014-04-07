@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Events;
 
-use DreamFactory\Platform\Events\Enums\EventSourceHeaders;
 use DreamFactory\Platform\Events\Interfaces\StreamDispatcherLike;
 use DreamFactory\Yii\Utility\Pii;
 use Igorw\EventSource\Stream;
@@ -126,7 +125,7 @@ class Chunnel extends Seed implements StreamDispatcherLike
         //  Send the EventSource headers
         /** @var Response $_response */
         $_response = clone ( $_response = Pii::response() );
-        $_response->headers->add( EventSourceHeaders::all() );
+        $_response->headers->add( Stream::getHeaders() );
         $_response->sendHeaders();
 
         //  Keep PHP happy, never time out
