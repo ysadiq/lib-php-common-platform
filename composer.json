@@ -34,7 +34,7 @@
 		"pear/mail_mime-decode":           "*",
 		"pear/mail_mime":                  "*",
 		"dreamfactory/azure-sdk-for-php":  "~0.4.0@stable",
-		"igorw/event-source":              "1.0.*"
+		"cboden/ratchet":                  "0.3.*"
 	},
 	"require-dev":       {
 		"phpunit/phpunit":          "~3.7@stable",

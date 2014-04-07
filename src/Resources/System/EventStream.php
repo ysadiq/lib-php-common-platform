@@ -65,109 +65,57 @@ class EventStream extends BaseSystemRestResource
     }
 
     /**
-     * GET starts the event stream
+     * GET any messages in the event stream
+     * This method does not return to the caller, it is self-killing
      *
-     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-     * @throws \CDbException
+     * @throws \CException
      * @throws \InvalidArgumentException
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return bool
      */
     protected function _handleGet()
     {
         $_status = 'reopened';
 
-        if ( null !== ( $_id = Pii::request( false )->query->get( 'id' ) ) )
-        {
-            if ( !Chunnel::isValidStreamId( $_id ) )
-            {
-                $_id = null;
-            }
-        }
-        if ( empty( $_id ) )
+        //  Get the ID to use, or make a new one...
+        if ( null === ( $_id = Pii::request( false )->query->get( 'id' ) ) )
         {
             $_id = Hasher::hash( microtime( true ), 'sha256' );
             $_status = 'created';
         }
 
-        $_stream = Chunnel::create( $_id );
         $_pid = null;
-
-        if ( function_exists( 'pcntl_fork' ) )
-        {
-            Log::debug( 'Process control available. Forking stream runner.' );
-
-            switch ( $_pid = pcntl_fork() )
-            {
-                case -1:
-                    Log::error( '  * Forking failed. Running synchronously' );
-                    break;
-
-                case 0:
-                    Log::debug( '  * Child fork running (#' . getmypid() . ')' );
-                    break;
-
-                case 1:
-                    Log::info( '  * Forking successful. Running asynchronously.' );
-
-                    return array( 'stream_id' => $_id, 'timestamp' => microtime( true ), 'state' => $_status );
-            }
-
-        }
-
-        $_startTime = microtime( true );
-        Log::info( 'Event stream "' . $_id . '" ' . $_status . ' at ' . $_startTime );
+        $_stream = Chunnel::create( $_id );
 
         //  Notify the client that the stream's about to flow
-        Chunnel::send( $_id, StreamEvents::STREAM_STARTED );
+        $_startTime = microtime( true );
+
+        if ( 'created' == $_status )
+        {
+            Chunnel::send( $_id, StreamEvents::STREAM_CREATED );
+        }
 
         //  Register with the main dispatcher
-//        Pii::app()->getDispatcher()->registerStream( $_id, $_stream );
+        Pii::app()->getDispatcher()->registerStream( $_id, $_stream );
 
         $_success = true;
 
-//        //  Start up the ping service
-//        try
-//        {
-//            //  Starts a 5 second ping
-//            while ( true )
-//            {
-//                sleep( 5 );
-//                Chunnel::send( $_id, StreamEvents::PING );
-//            }
-//        }
-//        catch ( \Exception $_ex )
-//        {
-//            Log::error( '  * Exception during streaming events: ' . $_ex->getMessage() );
-//            $_success = false;
-//        }
-//
-//        try
-//        {
-//            //  He's dead Jim.
-//            Chunnel::send( $_id, StreamEvents::STREAM_STOPPED );
-//        }
-//        catch ( \Exception $_ex )
-//        {
-//            //  Meh...
-//            $_success = false;
-//            Log::error( '  * Failed to send stream stopped event to client' );
-//        }
-//
-//
-//        //  Make sure we're off the list
-//        Pii::app()->getDispatcher()->unregisterStream( $_id );
+        Log::info( 'Event stream "' . $_id . '" ' . $_status . ' at ' . $_startTime );
 
-        $_endTime = microtime( true );
+        try
+        {
+            while ( true )
+            {
+                Chunnel::send( $_id, StreamEvents::PING );
+                sleep( 5 );
+            }
+        }
+        catch ( Exception $_ex )
+        {
+            Log::error( 'Exception during event stream loop: ' . $_ex->getMessage() );
+        }
 
-        return array(
-            'success' => $_success,
-            'details' => array(
-                'stream_id' => $_id,
-                'elapsed'   => $_startTime - $_endTime,
-                'timestamp' => microtime( true ),
-                'state'     => $_status,
-            )
-        );
+        Chunnel::send( $_id, StreamEvents::STREAM_CLOSING );
+
+        Pii::end();
     }
 }

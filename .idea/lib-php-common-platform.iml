@@ -48,14 +48,16 @@
         <CLASSES>
           <root url="phar:///usr/share/php/data/phpDocumentor/vendor/symfony/dependency-injection/Symfony/Component/DependencyInjection/Tests/Fixtures/includes/ProjectWithXsdExtensionInPhar.phar" />
           <root url="phar:///usr/share/php/data/phpDocumentor/box.phar" />
-          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/phpdocumentor/fileset/tests/data/test.phar" />
           <root url="phar:///usr/share/php/phpDocumentor/tests/data/test.phar" />
+          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/phpdocumentor/fileset/tests/data/test.phar" />
+          <root url="phar:///usr/local/bin/composer.phar" />
         </CLASSES>
         <SOURCES>
           <root url="phar:///usr/share/php/data/phpDocumentor/vendor/symfony/dependency-injection/Symfony/Component/DependencyInjection/Tests/Fixtures/includes/ProjectWithXsdExtensionInPhar.phar" />
           <root url="phar:///usr/share/php/data/phpDocumentor/box.phar" />
-          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/phpdocumentor/fileset/tests/data/test.phar" />
           <root url="phar:///usr/share/php/phpDocumentor/tests/data/test.phar" />
+          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/phpdocumentor/fileset/tests/data/test.phar" />
+          <root url="phar:///usr/local/bin/composer.phar" />
         </SOURCES>
       </library>
     </orderEntry>
