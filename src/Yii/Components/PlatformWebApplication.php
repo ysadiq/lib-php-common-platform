@@ -275,14 +275,23 @@ class PlatformWebApplication extends \CWebApplication
                     header( 'content-length: 0' );
                     header( 'content-type: text/plain' );
 
+<<<<<<< HEAD
                     $this->addCorsHeaders();
+=======
+                    $this->_useResponseObject = false;
+                    CorsManager::autoSendHeaders();
+>>>>>>> Composer update
                 }
 
                 return Pii::end();
         }
 
         //	Auto-add the CORS headers...
+<<<<<<< HEAD
         $this->addCorsHeaders();
+=======
+        CorsManager::autoSendHeaders();
+>>>>>>> Composer update
 
         //	Load any plug-ins
         $this->_loadPlugins();
@@ -296,6 +305,56 @@ class PlatformWebApplication extends \CWebApplication
         $this->stopProfiler( 'app.request' );
     }
 
+<<<<<<< HEAD
+=======
+    //*************************************************************************
+    //  Server-Side Event Support
+    //*************************************************************************
+
+    /**
+     * Triggers a DSP-level event
+     *
+     * @param string        $eventName
+     * @param PlatformEvent $event
+     *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \Exception
+     * @return DspEvent
+     */
+    public function trigger( $eventName, $event = null )
+    {
+        return static::getDispatcher()->dispatch( $eventName, $event );
+    }
+
+    /**
+     * Adds an event listener that listens on the specified events.
+     *
+     * @param string   $eventName            The event to listen on
+     * @param callable $listener             The listener
+     * @param integer  $priority             The higher this value, the earlier an event
+     *                                       listener will be triggered in the chain (defaults to 0)
+     *
+     * @return void
+     */
+    public function on( $eventName, $listener, $priority = 0 )
+    {
+        static::getDispatcher()->addListener( $eventName, $listener, $priority );
+    }
+
+    /**
+     * Turn off/unbind/remove $listener from an event
+     *
+     * @param string   $eventName
+     * @param callable $listener
+     *
+     * @return void
+     */
+    public function off( $eventName, $listener )
+    {
+        static::getDispatcher()->removeListener( $eventName, $listener );
+    }
+
+>>>>>>> Composer update
     /**
      * @param array $corsWhitelist
      *
@@ -359,16 +418,21 @@ class PlatformWebApplication extends \CWebApplication
 
     /**
      * @param bool $createIfNull If true, the default, the response object will be created if it hasn't already
-     * @param bool $sendHeaders
      *
      * @throws \DreamFactory\Platform\Utility\RestException
      * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function getResponseObject( $createIfNull = true, $sendHeaders = true )
+    public function getResponseObject( $createIfNull = true )
     {
         if ( null === $this->_responseObject && $createIfNull )
         {
+<<<<<<< HEAD
             $this->setResponseObject( Response::create() );
+=======
+            $this->_responseObject = Response::create();
+
+            CorsManager::autoSendHeaders();
+>>>>>>> Composer update
         }
 
         return $this->_responseObject;

@@ -18,7 +18,7 @@ class Chunnel extends Seed
     //*************************************************************************
 
     /**
-     * @var Stream[]
+     * @var BrainSocketServer[]
      */
     protected static $_streams = array();
 
