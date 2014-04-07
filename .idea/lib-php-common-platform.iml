@@ -35,15 +35,18 @@
       <library name="PHP">
         <CLASSES>
           <root url="file:///usr/share/php" />
+          <root url="file:///usr/local/bin/composer.phar" />
         </CLASSES>
         <SOURCES>
           <root url="file:///usr/share/php" />
+          <root url="file:///usr/local/bin/composer.phar" />
         </SOURCES>
       </library>
     </orderEntry>
     <orderEntry type="module-library">
       <library name="PHARS">
         <CLASSES>
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
           <root url="phar:///usr/share/php/composer.phar" />
@@ -70,6 +73,18 @@
         <SOURCES>
           <root url="phar:///usr/share/php/composer.phar" />
 >>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
+=======
+          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/symfony/dependency-injection/Symfony/Component/DependencyInjection/Tests/Fixtures/includes/ProjectWithXsdExtensionInPhar.phar" />
+          <root url="phar:///usr/share/php/data/phpDocumentor/box.phar" />
+          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/phpdocumentor/fileset/tests/data/test.phar" />
+          <root url="phar:///usr/share/php/phpDocumentor/tests/data/test.phar" />
+        </CLASSES>
+        <SOURCES>
+          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/symfony/dependency-injection/Symfony/Component/DependencyInjection/Tests/Fixtures/includes/ProjectWithXsdExtensionInPhar.phar" />
+          <root url="phar:///usr/share/php/data/phpDocumentor/box.phar" />
+          <root url="phar:///usr/share/php/data/phpDocumentor/vendor/phpdocumentor/fileset/tests/data/test.phar" />
+          <root url="phar:///usr/share/php/phpDocumentor/tests/data/test.phar" />
+>>>>>>> Merge
         </SOURCES>
       </library>
     </orderEntry>
