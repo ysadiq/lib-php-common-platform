@@ -49,6 +49,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> Added igorw/eventsource
 		"igorw/event-source":              "1.0.*"
 <<<<<<< HEAD
@@ -74,7 +75,13 @@
 =======
 		"cboden/ratchet":                  "0.3.*"
 >>>>>>> Composer update and eventstream junk
+<<<<<<< HEAD
 >>>>>>> Composer update and eventstream junk
+=======
+=======
+		"brainboxlabs/brain-socket":       "v1.0.0"
+>>>>>>> Composer update
+>>>>>>> Composer update
 	},
 	"require-dev":       {
 		"phpunit/phpunit":          "~3.7@stable",

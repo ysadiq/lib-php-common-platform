@@ -114,10 +114,14 @@ class Chunnel extends Seed implements StreamDispatcherLike
 
     /**
 <<<<<<< HEAD
+<<<<<<< HEAD
      * @var BrainSocketServer[]
 =======
      * @var Stream[]
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+=======
+     * @var BrainSocketServer[]
+>>>>>>> Composer update
      */
     protected static $_streams = array();
 

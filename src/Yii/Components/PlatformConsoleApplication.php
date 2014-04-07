@@ -147,17 +147,25 @@ class PlatformConsoleApplication extends \CConsoleApplication
     protected $_responseObject;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
+=======
+>>>>>>> Composer update
     /**
      * @var bool If true, headers will be added to the response object instance of this run
      */
     protected $_useResponseObject = false;
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> Composer update
 =======
 >>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
+=======
+=======
+>>>>>>> Composer update
+>>>>>>> Composer update
 
     //*************************************************************************
     //	Methods
@@ -181,17 +189,26 @@ class PlatformConsoleApplication extends \CConsoleApplication
         //	Setup the request handler and events
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         /** @noinspection PhpUndefinedFieldInspection */
         $this->onBeginRequest = array( $this, '_onBeginRequest' );
+=======
+>>>>>>> Composer update
         /** @noinspection PhpUndefinedFieldInspection */
 =======
         $this->onBeginRequest = array( $this, '_onBeginRequest' );
 >>>>>>> Composer update
 =======
         /** @noinspection PhpUndefinedFieldInspection */
+<<<<<<< HEAD
         $this->onBeginRequest = array( $this, '_onBeginRequest' );
         /** @noinspection PhpUndefinedFieldInspection */
 >>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
+=======
+=======
+        $this->onBeginRequest = array( $this, '_onBeginRequest' );
+>>>>>>> Composer update
+>>>>>>> Composer update
         $this->onEndRequest = array( $this, '_onEndRequest' );
     }
 
@@ -308,12 +325,21 @@ class PlatformConsoleApplication extends \CConsoleApplication
         //	Start the request-only profile
         $this->startProfiler( 'app.request' );
 <<<<<<< HEAD
+<<<<<<< HEAD
         $this->_requestObject = Request::createFromGlobals();
 
 =======
 
         $this->_requestObject = Request::createFromGlobals();
 
+=======
+        $this->_requestObject = Request::createFromGlobals();
+
+=======
+
+        $this->_requestObject = Request::createFromGlobals();
+
+>>>>>>> Composer update
         //  Call getter to get CORS headers auto-added
         $_response = $this->_useResponseObject ? $this->getResponseObject() : null;
 
@@ -416,6 +442,11 @@ class PlatformConsoleApplication extends \CConsoleApplication
     {
         static::getDispatcher()->removeListener( $eventName, $listener );
     }
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> Composer update
     //*************************************************************************
     //	CORS Support
     //*************************************************************************
@@ -712,6 +743,133 @@ class PlatformConsoleApplication extends \CConsoleApplication
 
         return $normalize ? $this->_normalizeUri( $_uri ) : $_uri;
     }
+<<<<<<< HEAD
+=======
+
+    /**
+     * @param array $parts Return from \parse_url
+     *
+     * @return string
+     */
+    protected function _normalizeUri( $parts )
+    {
+        return is_array( $parts ) ?
+            ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
+            : $parts;
+    }
+
+    /**
+     * Loads the CORS whitelist from the session. If not there, it's loaded and stuffed in there.
+     *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws RestException
+     * @return $this
+     */
+    protected function _loadCorsConfig()
+    {
+        static $_whitelist = null;
+
+        if ( null === $_whitelist && null === ( $_whitelist = \Kisma::get( 'cors.whitelist' ) ) )
+        {
+            //	Get CORS data from config file
+            $_config = Platform::getStorageBasePath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
+
+            if ( !file_exists( $_config ) )
+            {
+                //  In old location?
+                $_config = Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
+            }
+
+            $_whitelist = array();
+
+            if ( file_exists( $_config ) )
+            {
+                if ( false !== ( $_content = @file_get_contents( $_config ) ) && !empty( $_content ) )
+                {
+                    $_whitelist = json_decode( $_content, true );
+
+                    if ( JSON_ERROR_NONE != json_last_error() )
+                    {
+                        throw new InternalServerErrorException( 'The CORS configuration file is corrupt. Cannot continue.' );
+                    }
+                }
+            }
+
+            \Kisma::set( 'cors.whitelist', $_whitelist );
+        }
+
+        return $this->setCorsWhitelist( $_whitelist );
+    }
+
+    //*************************************************************************
+    //	Accessors
+    //*************************************************************************
+
+    /**
+     * @param array $corsWhitelist
+     *
+     * @throws RestException
+     * @return PlatformWebApplication
+     */
+    public function setCorsWhitelist( $corsWhitelist )
+    {
+        $this->_corsWhitelist = $corsWhitelist;
+
+        //	Reset the header cache
+        $this->_buildCorsHeaders( false );
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getCorsWhitelist()
+    {
+        return $this->_corsWhitelist;
+    }
+
+    /**
+     * @param boolean $autoAddHeaders
+     *
+     * @return PlatformWebApplication
+     */
+    public function setAutoAddHeaders( $autoAddHeaders = true )
+    {
+        $this->_autoAddHeaders = $autoAddHeaders;
+
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getAutoAddHeaders()
+    {
+        return $this->_autoAddHeaders;
+    }
+
+    /**
+     * @param boolean $extendedHeaders
+     *
+     * @return PlatformWebApplication
+     */
+    public function setExtendedHeaders( $extendedHeaders = true )
+    {
+        $this->_extendedHeaders = $extendedHeaders;
+
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getExtendedHeaders()
+    {
+        return $this->_extendedHeaders;
+    }
+>>>>>>> Composer update
+>>>>>>> Composer update
 
     /**
      * @param array $parts Return from \parse_url
@@ -857,6 +1015,12 @@ class PlatformConsoleApplication extends \CConsoleApplication
             $this->setResponseObject( Response::create() );
 =======
             $this->_responseObject = Response::create();
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+            CorsManager::autoSendHeaders();
+=======
+>>>>>>> Composer update
 
             if ( $this->_autoAddHeaders )
             {
@@ -1131,6 +1295,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
     }
 
     /**
+<<<<<<< HEAD
      * @param array $corsWhitelist
      *
      * @throws \DreamFactory\Platform\Utility\RestException
@@ -1192,6 +1357,8 @@ class PlatformConsoleApplication extends \CConsoleApplication
     }
 
     /**
+=======
+>>>>>>> Composer update
      * @return boolean
      */
     public function getUseResponseObject()
