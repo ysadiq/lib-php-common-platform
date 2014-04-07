@@ -46,7 +46,6 @@ use Symfony\Component\HttpFoundation\Response;
 >>>>>>> event stream testing
 namespace DreamFactory\Platform\Events;
 
-use DreamFactory\Platform\Events\Enums\EventSourceHeaders;
 use DreamFactory\Platform\Events\Interfaces\StreamDispatcherLike;
 use DreamFactory\Yii\Utility\Pii;
 use Igorw\EventSource\Stream;
@@ -308,9 +307,16 @@ class Chunnel extends Seed implements StreamDispatcherLike
         //  Send the EventSource headers
         /** @var Response $_response */
         $_response = clone ( $_response = Pii::response() );
+<<<<<<< HEAD
         $_response->headers->add( EventSourceHeaders::all() );
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+<<<<<<< HEAD
 >>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
+=======
+=======
+        $_response->headers->add( Stream::getHeaders() );
+>>>>>>> Merge junk
+>>>>>>> Merge junk
         $_response->sendHeaders();
 
         //  Keep PHP happy, never time out
