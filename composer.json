@@ -35,10 +35,13 @@
 		"pear/mail_mime":                  "*",
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 		"dreamfactory/azure-sdk-for-php":  "~0.4.0@stable"
 =======
 =======
 >>>>>>> Added igorw/eventsource
+=======
+>>>>>>> Composer update
 		"dreamfactory/azure-sdk-for-php":  "~0.4@stable",
 =======
 		"dreamfactory/azure-sdk-for-php":  "~0.4.0@stable",
@@ -57,6 +60,11 @@
 =======
 =======
 		"brainboxlabs/brain-socket":       "v1.0.0"
+>>>>>>> Composer update
+<<<<<<< HEAD
+=======
+=======
+		"dreamfactory/azure-sdk-for-php":  "~0.4.0@stable"
 >>>>>>> Composer update
 >>>>>>> Composer update
 	},
