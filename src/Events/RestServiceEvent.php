@@ -24,51 +24,53 @@ namespace DreamFactory\Platform\Events;
  */
 class RestServiceEvent extends PlatformEvent
 {
-	//**************************************************************************
-	//* Members
-	//**************************************************************************
+    //**************************************************************************
+    //* Members
+    //**************************************************************************
 
-	/**
-	 * @var string The service called
-	 */
-	protected $_apiName = null;
-	/**
-	 * @var string The requested resource
-	 */
-	protected $_resource = false;
+    /**
+     * @var string The service called
+     */
+    protected $_apiName = null;
+    /**
+     * @var string The requested resource
+     */
+    protected $_resource = false;
 
-	//**************************************************************************
-	//* Methods
-	//**************************************************************************
+    //**************************************************************************
+    //* Methods
+    //**************************************************************************
 
-	/**
-	 * @param string                                    $apiName
-	 * @param string                                    $resource
-	 * @param \Symfony\Component\HttpFoundation\Request $request
-	 * @param string                                    $response
-	 */
-	public function __construct( $apiName, $resource, $data = null )
-	{
-		$this->_apiName = $apiName;
-		$this->_resource = $resource;
+    /**
+     * @param string $apiName
+     * @param string $resource
+     * @param array  $data
+     *
+     * @internal param \Symfony\Component\HttpFoundation\Request $request
+     * @internal param string $response
+     */
+    public function __construct( $apiName, $resource, $data = null )
+    {
+        $this->_apiName = $apiName;
+        $this->_resource = $resource;
 
-		parent::__construct( $data );
-	}
+        parent::__construct( $data );
+    }
 
-	/**
-	 * @return string
-	 */
-	public function getApiName()
-	{
-		return $this->_apiName;
-	}
+    /**
+     * @return string
+     */
+    public function getApiName()
+    {
+        return $this->_apiName;
+    }
 
-	/**
-	 * @return string
-	 */
-	public function getResource()
-	{
-		return $this->_resource;
-	}
+    /**
+     * @return string
+     */
+    public function getResource()
+    {
+        return $this->_resource;
+    }
 
 }
