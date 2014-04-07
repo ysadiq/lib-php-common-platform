@@ -45,7 +45,7 @@ class Chunnel extends Seed implements StreamDispatcherLike
     //*************************************************************************
 
     /**
-     * @var Stream[]
+     * @var BrainSocketServer[]
      */
     protected static $_streams = array();
 
