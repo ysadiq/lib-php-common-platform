@@ -330,7 +330,23 @@ class SchemaSvc extends BasePlatformRestService
 
         try
         {
-            return SqlDbUtilities::describeDatabase( $this->_sqlConn, null, $_exclude );
+            $_result = SqlDbUtilities::describeDatabase( $this->_sqlConn, null, $_exclude );
+
+            $_resources = array();
+            foreach ( $_result as $_table )
+            {
+                if ( null != $_name = Option::get( $_table, 'name' ) )
+                {
+                    $_access = $this->getPermissions( $_name );
+                    if ( !empty( $_access ) )
+                    {
+                        $_table['access'] = $_access;
+                        $_resources[] = $_table;
+                    }
+                }
+            }
+
+            return array( 'resource' => $_resources );
         }
         catch ( RestException $ex )
         {
@@ -350,7 +366,7 @@ class SchemaSvc extends BasePlatformRestService
      */
     public function describeTables( $table_list )
     {
-        $_tables = array_map( 'trim', explode( ',', trim( $table_list, ',' ) ) );
+        $_tables = BaseDbSvc::validateAsArray( $table_list, ',', true );
 
         //	Check for system tables and deny
         $_sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
@@ -369,7 +385,22 @@ class SchemaSvc extends BasePlatformRestService
 
         try
         {
-            return SqlDbUtilities::describeTables( $this->_sqlConn, $_tables );
+            $_result = SqlDbUtilities::describeTables( $this->_sqlConn, $_tables );
+            $_resources = array();
+            foreach ( $_result as $_table )
+            {
+                if ( null != $_name = Option::get( $_table, 'name' ) )
+                {
+                    $_access = $this->getPermissions( $_name );
+                    if ( !empty( $_access ) )
+                    {
+                        $_table['access'] = $_access;
+                        $_resources[] = $_table;
+                    }
+                }
+            }
+
+            return array( 'resource' => $_resources );
         }
         catch ( RestException $ex )
         {
@@ -405,7 +436,10 @@ class SchemaSvc extends BasePlatformRestService
 
         try
         {
-            return SqlDbUtilities::describeTable( $this->_sqlConn, $table );
+            $_result = SqlDbUtilities::describeTable( $this->_sqlConn, $table );
+            $_result['access'] = $this->getPermissions( $table );
+
+            return $_result;
         }
         catch ( RestException $ex )
         {
