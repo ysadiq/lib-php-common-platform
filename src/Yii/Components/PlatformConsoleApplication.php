@@ -40,6 +40,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
 
     /**
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
      * @var string The HTTP Option method
      */
@@ -66,6 +67,8 @@ class PlatformConsoleApplication extends \CConsoleApplication
     const CORS_WHITELIST_KEY = 'cors.config';
     /**
 >>>>>>> Composer update
+=======
+>>>>>>> Removed CORS stuff from console app
      * @var string The default DSP resource namespace
      */
     const DEFAULT_SERVICE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Services';
@@ -115,6 +118,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
     protected static $_namespaceMap = array( self::NS_MODELS => array(), self::NS_SERVICES => array(), self::NS_RESOURCES => array() );
     /**
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
      * @var array An indexed array of white-listed hosts (ajax.example.com or foo.bar.com or just bar.com)
      */
@@ -130,6 +134,8 @@ class PlatformConsoleApplication extends \CConsoleApplication
     protected $_extendedHeaders = true;
     /**
 >>>>>>> Composer update
+=======
+>>>>>>> Removed CORS stuff from console app
      * @var array The namespaces that contain resources. Used by the routing engine
      */
     protected $_resourceNamespaces = array();
@@ -179,10 +185,13 @@ class PlatformConsoleApplication extends \CConsoleApplication
         parent::init();
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         $this->_loadCorsConfig();
 
 >>>>>>> Composer update
+=======
+>>>>>>> Removed CORS stuff from console app
         //	Debug options
         static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
 
@@ -326,6 +335,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
         $this->startProfiler( 'app.request' );
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         $this->_requestObject = Request::createFromGlobals();
 
 =======
@@ -333,6 +343,8 @@ class PlatformConsoleApplication extends \CConsoleApplication
         $this->_requestObject = Request::createFromGlobals();
 
 =======
+=======
+>>>>>>> Removed CORS stuff from console app
         $this->_requestObject = Request::createFromGlobals();
 
 =======
@@ -382,6 +394,10 @@ class PlatformConsoleApplication extends \CConsoleApplication
         }
 
 >>>>>>> Composer update
+=======
+        $this->_requestObject = Request::createFromGlobals();
+
+>>>>>>> Removed CORS stuff from console app
         //	Load any plug-ins
         $this->_loadPlugins();
     }
@@ -442,6 +458,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
     {
         static::getDispatcher()->removeListener( $eventName, $listener );
     }
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
@@ -869,6 +886,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
         return $this->_extendedHeaders;
     }
 >>>>>>> Composer update
+<<<<<<< HEAD
 >>>>>>> Composer update
 
     /**
@@ -965,6 +983,10 @@ class PlatformConsoleApplication extends \CConsoleApplication
 
         return $this;
     }
+=======
+=======
+>>>>>>> Removed CORS stuff from console app
+>>>>>>> Removed CORS stuff from console app
 
     /**
      * @return boolean
@@ -1000,11 +1022,15 @@ class PlatformConsoleApplication extends \CConsoleApplication
      * @param bool $sendHeaders
      *
 <<<<<<< HEAD
+<<<<<<< HEAD
      * @throws \DreamFactory\Platform\Utility\RestException
 =======
      * @throws \InvalidArgumentException
      * @throws RestException
 >>>>>>> Composer update
+=======
+     * @throws \DreamFactory\Platform\Utility\RestException
+>>>>>>> Removed CORS stuff from console app
      * @return \Symfony\Component\HttpFoundation\Response
      */
     public function getResponseObject( $createIfNull = true, $sendHeaders = true )
@@ -1016,7 +1042,10 @@ class PlatformConsoleApplication extends \CConsoleApplication
 =======
             $this->_responseObject = Response::create();
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> Removed CORS stuff from console app
 <<<<<<< HEAD
             CorsManager::autoSendHeaders();
 =======
@@ -1027,6 +1056,9 @@ class PlatformConsoleApplication extends \CConsoleApplication
                 $this->addCorsHeaders( array(), false, $sendHeaders );
             }
 >>>>>>> Composer update
+=======
+            CorsManager::autoSendHeaders();
+>>>>>>> Removed CORS stuff from console app
         }
 
         return $this->_responseObject;
