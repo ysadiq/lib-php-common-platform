@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "07da3b8c5d4ad33336b52c735998690f",
+    "hash": "391a059d259453269fccc2cff75b2389",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -72,106 +72,6 @@
                 "sdk"
             ],
             "time": "2013-12-12 19:35:51"
-        },
-        {
-            "name": "brainboxlabs/brain-socket",
-            "version": "v1.0.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/BrainBoxLabs/brain-socket.git",
-                "reference": "27347db38c0010c95f7a5ffb9e23e9fdf3b5433d"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/BrainBoxLabs/brain-socket/zipball/27347db38c0010c95f7a5ffb9e23e9fdf3b5433d",
-                "reference": "27347db38c0010c95f7a5ffb9e23e9fdf3b5433d",
-                "shasum": ""
-            },
-            "require": {
-                "cboden/ratchet": "0.3.*",
-                "php": ">=5.3.0"
-            },
-            "require-dev": {
-                "mockery/mockery": "0.8.0",
-                "phpunit/phpunit": "3.7.28"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-0": {
-                    "BrainSocket": "src"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Brain Box Labs",
-                    "email": "andrew@brainboxmedia.ca",
-                    "homepage": "http://www.brainboxmedia.ca/",
-                    "role": "Developer"
-                }
-            ],
-            "description": "Websockets for event-driven Laravel apps.",
-            "homepage": "https://github.com/BrainBoxLabs/brain-socket",
-            "keywords": [
-                "Ratchet",
-                "WebSockets",
-                "artisan",
-                "events",
-                "laravel"
-            ],
-            "time": "2013-10-31 19:36:37"
-        },
-        {
-            "name": "cboden/ratchet",
-            "version": "v0.3.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/cboden/Ratchet.git",
-                "reference": "d756e0b507a5f3cdbf8c59dbb7baf68574dc7d58"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/cboden/Ratchet/zipball/d756e0b507a5f3cdbf8c59dbb7baf68574dc7d58",
-                "reference": "d756e0b507a5f3cdbf8c59dbb7baf68574dc7d58",
-                "shasum": ""
-            },
-            "require": {
-                "guzzle/http": ">=3.6.0,<3.8.0-dev",
-                "php": ">=5.3.9",
-                "react/socket": "0.3.*",
-                "symfony/http-foundation": "~2.2",
-                "symfony/routing": "~2.2"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-0": {
-                    "Ratchet": "src"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Chris Boden",
-                    "email": "cboden@gmail.com",
-                    "homepage": "http://res.im",
-                    "role": "Developer"
-                }
-            ],
-            "description": "PHP WebSocket library",
-            "homepage": "http://socketo.me",
-            "keywords": [
-                "Ratchet",
-                "WebSockets",
-                "server",
-                "sockets"
-            ],
-            "time": "2013-10-14 14:38:12"
         },
         {
             "name": "dready92/php-on-couch",
@@ -343,12 +243,12 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Black Ops"
+                    "role": "Lead Developer, server-side/client-side"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Engineer, server-side"
+                    "role": "Lead Developer, server-side/client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Common Components for PHP",
@@ -365,12 +265,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "5b5012d1c939eb38f3928810f9cd4808d998cfe8"
+                "reference": "79b500cf9a3d55630b5642a287962bef413a00f9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/5b5012d1c939eb38f3928810f9cd4808d998cfe8",
-                "reference": "5b5012d1c939eb38f3928810f9cd4808d998cfe8",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/79b500cf9a3d55630b5642a287962bef413a00f9",
+                "reference": "79b500cf9a3d55630b5642a287962bef413a00f9",
                 "shasum": ""
             },
             "require": {
@@ -404,22 +304,22 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Black Ops"
+                    "role": "Lead Developer, server-side/client-side"
                 },
                 {
                     "name": "Jason Sykes",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Engineer, client-side"
+                    "role": "Lead Developer, client-side"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Engineer, server-side"
+                    "role": "Lead Developer, server-side/client-side"
                 },
                 {
                     "name": "Todd Appleton",
                     "email": "toddappleton@dreamfactory.com",
-                    "role": "Lead Engineer, client-side; UX/QA"
+                    "role": "Lead Developer and QA, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Yii Components Library",
@@ -428,7 +328,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-03-28 06:16:31"
+            "time": "2014-04-07 21:51:25"
         },
         {
             "name": "dreamfactory/oasys",
@@ -561,68 +461,23 @@
             "time": "2014-02-24 17:33:55"
         },
         {
-            "name": "evenement/evenement",
-            "version": "1.0.x-dev",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/igorw/evenement.git",
-                "reference": "8b0918f8374327dfed4408fe467980ab41d556dd"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/igorw/evenement/zipball/8b0918f8374327dfed4408fe467980ab41d556dd",
-                "reference": "8b0918f8374327dfed4408fe467980ab41d556dd",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.0"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "2.0-dev"
-                }
-            },
-            "autoload": {
-                "psr-0": {
-                    "Evenement": "src"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Igor Wiedler",
-                    "email": "igor@wiedler.ch",
-                    "homepage": "http://wiedler.ch/igor/"
-                }
-            ],
-            "description": "Événement is a very simple event dispatching library for PHP 5.3",
-            "keywords": [
-                "event-dispatcher"
-            ],
-            "time": "2012-12-29 17:04:52"
-        },
-        {
             "name": "guzzle/guzzle",
-            "version": "v3.7.4",
+            "version": "dev-master",
             "source": {
                 "type": "git",
-                "url": "https://github.com/guzzle/guzzle.git",
-                "reference": "b170b028c6bb5799640e46c8803015b0f9a45ed9"
+                "url": "https://github.com/guzzle/guzzle3.git",
+                "reference": "f5ff2107333dff8ce984946d506929d9172c3573"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/b170b028c6bb5799640e46c8803015b0f9a45ed9",
-                "reference": "b170b028c6bb5799640e46c8803015b0f9a45ed9",
+                "url": "https://api.github.com/repos/guzzle/guzzle3/zipball/f5ff2107333dff8ce984946d506929d9172c3573",
+                "reference": "f5ff2107333dff8ce984946d506929d9172c3573",
                 "shasum": ""
             },
             "require": {
                 "ext-curl": "*",
                 "php": ">=5.3.3",
-                "symfony/event-dispatcher": ">=2.1"
+                "symfony/event-dispatcher": "~2.1"
             },
             "replace": {
                 "guzzle/batch": "self.version",
@@ -649,24 +504,24 @@
                 "guzzle/stream": "self.version"
             },
             "require-dev": {
-                "doctrine/cache": "*",
-                "monolog/monolog": "1.*",
+                "doctrine/cache": "~1.3",
+                "monolog/monolog": "~1.0",
                 "phpunit/phpunit": "3.7.*",
-                "psr/log": "1.0.*",
-                "symfony/class-loader": "*",
-                "zendframework/zend-cache": "2.0.*",
-                "zendframework/zend-log": "2.0.*"
+                "psr/log": "~1.0",
+                "symfony/class-loader": "~2.1",
+                "zendframework/zend-cache": "2.*,<2.3",
+                "zendframework/zend-log": "2.*,<2.3"
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "3.7-dev"
+                    "dev-master": "3.8-dev"
                 }
             },
             "autoload": {
                 "psr-0": {
-                    "Guzzle\\Tests": "tests/",
-                    "Guzzle": "src/"
+                    "Guzzle": "src/",
+                    "Guzzle\\Tests": "tests/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -695,7 +550,7 @@
                 "rest",
                 "web service"
             ],
-            "time": "2013-10-02 20:47:00"
+            "time": "2014-03-26 17:17:05"
         },
         {
             "name": "kisma/kisma",
@@ -1520,136 +1375,6 @@
             "time": "2013-08-01 16:12:19"
         },
         {
-            "name": "react/event-loop",
-            "version": "v0.3.3",
-            "target-dir": "React/EventLoop",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/reactphp/event-loop.git",
-                "reference": "49208fa3a15c9eae4adf8351ee9caa4064fe550d"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/event-loop/zipball/49208fa3a15c9eae4adf8351ee9caa4064fe550d",
-                "reference": "49208fa3a15c9eae4adf8351ee9caa4064fe550d",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.3"
-            },
-            "suggest": {
-                "ext-libev": "*",
-                "ext-libevent": ">=0.0.5"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "0.3-dev"
-                }
-            },
-            "autoload": {
-                "psr-0": {
-                    "React\\EventLoop": ""
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "description": "Event loop abstraction layer that libraries can use for evented I/O.",
-            "keywords": [
-                "event-loop"
-            ],
-            "time": "2013-07-08 22:38:22"
-        },
-        {
-            "name": "react/socket",
-            "version": "v0.3.2",
-            "target-dir": "React/Socket",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/reactphp/socket.git",
-                "reference": "9cc32838d25a934ce950d2662cce2ff1b9e9f8aa"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/socket/zipball/9cc32838d25a934ce950d2662cce2ff1b9e9f8aa",
-                "reference": "9cc32838d25a934ce950d2662cce2ff1b9e9f8aa",
-                "shasum": ""
-            },
-            "require": {
-                "evenement/evenement": "1.0.*",
-                "php": ">=5.3.3",
-                "react/event-loop": "0.3.*",
-                "react/stream": "0.3.*"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "0.3-dev"
-                }
-            },
-            "autoload": {
-                "psr-0": {
-                    "React\\Socket": ""
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "description": "Library for building an evented socket server.",
-            "keywords": [
-                "Socket"
-            ],
-            "time": "2013-04-26 20:23:10"
-        },
-        {
-            "name": "react/stream",
-            "version": "v0.3.3",
-            "target-dir": "React/Stream",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/reactphp/stream.git",
-                "reference": "b72900ab00513b591fb101faecad38f9c8eab8da"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/stream/zipball/b72900ab00513b591fb101faecad38f9c8eab8da",
-                "reference": "b72900ab00513b591fb101faecad38f9c8eab8da",
-                "shasum": ""
-            },
-            "require": {
-                "evenement/evenement": "1.0.*",
-                "php": ">=5.3.3"
-            },
-            "suggest": {
-                "react/event-loop": "0.3.*",
-                "react/promise": "~1.0"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "0.3-dev"
-                }
-            },
-            "autoload": {
-                "psr-0": {
-                    "React\\Stream": ""
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "description": "Basic readable and writable stream interfaces that support piping.",
-            "keywords": [
-                "pipe",
-                "stream"
-            ],
-            "time": "2013-07-09 00:44:12"
-        },
-        {
             "name": "swiftmailer/swiftmailer",
             "version": "v4.3.1",
             "source": {
@@ -1812,74 +1537,6 @@
             "description": "Symfony HttpFoundation Component",
             "homepage": "http://symfony.com",
             "time": "2014-03-26 11:51:10"
-        },
-        {
-            "name": "symfony/routing",
-            "version": "dev-master",
-            "target-dir": "Symfony/Component/Routing",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/symfony/Routing.git",
-                "reference": "dd45a1af38d20ebe9b6d4015885d861a4577bc29"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Routing/zipball/dd45a1af38d20ebe9b6d4015885d861a4577bc29",
-                "reference": "dd45a1af38d20ebe9b6d4015885d861a4577bc29",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.3"
-            },
-            "require-dev": {
-                "doctrine/annotations": "~1.0",
-                "psr/log": "~1.0",
-                "symfony/config": "~2.2",
-                "symfony/expression-language": "~2.4",
-                "symfony/yaml": "~2.0"
-            },
-            "suggest": {
-                "doctrine/annotations": "For using the annotation loader",
-                "symfony/config": "For using the all-in-one router or any loader",
-                "symfony/expression-language": "For using expression matching",
-                "symfony/yaml": "For using the YAML loader"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "2.5-dev"
-                }
-            },
-            "autoload": {
-                "psr-0": {
-                    "Symfony\\Component\\Routing\\": ""
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Fabien Potencier",
-                    "email": "fabien@symfony.com",
-                    "homepage": "http://fabien.potencier.org",
-                    "role": "Lead Developer"
-                },
-                {
-                    "name": "Symfony Community",
-                    "homepage": "http://symfony.com/contributors"
-                }
-            ],
-            "description": "Symfony Routing Component",
-            "homepage": "http://symfony.com",
-            "keywords": [
-                "router",
-                "routing",
-                "uri",
-                "url"
-            ],
-            "time": "2014-04-03 05:23:50"
         }
     ],
     "packages-dev": [
