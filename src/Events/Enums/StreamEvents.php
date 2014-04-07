@@ -29,13 +29,13 @@ class StreamEvents
     //*************************************************************************
 
     /**
-     * @var string Triggered when an event stream is started
+     * @var string Triggered when an event stream is created
      */
-    const STREAM_STARTED = 'event_stream.start';
+    const STREAM_CREATED = 'event_stream.created';
     /**
-     * @var string Triggered when an event stream is stopped
+     * @var string Triggered when an event stream is closing
      */
-    const STREAM_STOPPED = 'event_stream.stopped';
+    const STREAM_CLOSING = 'event_stream.closing';
     /**
      * @var string Used by heartbeat service
      */
