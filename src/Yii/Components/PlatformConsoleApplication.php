@@ -21,16 +21,10 @@ namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
 use DreamFactory\Platform\Components\Profiler;
-use DreamFactory\Platform\Events\DspEvent;
-use DreamFactory\Platform\Events\Enums\DspEvents;
-use DreamFactory\Platform\Events\EventDispatcher;
-use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Utility\CorsManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
-use Kisma\Core\Interfaces\PublisherLike;
-use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Utility\Log;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -38,7 +32,7 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * PlatformConsoleApplication
  */
-class PlatformConsoleApplication extends \CConsoleApplication implements PublisherLike, SubscriberLike
+class PlatformConsoleApplication extends \CConsoleApplication
 {
     //*************************************************************************
     //	Constants
@@ -77,10 +71,6 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
     //	Members
     //*************************************************************************
 
-    /**
-     * @var EventDispatcher
-     */
-    protected static $_dispatcher;
     /**
      * @var bool If true, profiling information is output to the log
      */
@@ -211,8 +201,6 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
             return false;
         }
 
-        $this->trigger( DspEvents::PLUGINS_LOADED );
-
         return true;
     }
 
@@ -250,53 +238,6 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
         $this->stopProfiler( 'app.request' );
     }
 
-    //*************************************************************************
-    //  Server-Side Event Support
-    //*************************************************************************
-
-    /**
-     * Triggers a DSP-level event
-     *
-     * @param string        $eventName
-     * @param PlatformEvent $event
-     *
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-     * @throws \Exception
-     * @return DspEvent
-     */
-    public function trigger( $eventName, $event = null )
-    {
-        return static::getDispatcher()->dispatch( $eventName, $event );
-    }
-
-    /**
-     * Adds an event listener that listens on the specified events.
-     *
-     * @param string   $eventName            The event to listen on
-     * @param callable $listener             The listener
-     * @param integer  $priority             The higher this value, the earlier an event
-     *                                       listener will be triggered in the chain (defaults to 0)
-     *
-     * @return void
-     */
-    public function on( $eventName, $listener, $priority = 0 )
-    {
-        static::getDispatcher()->addListener( $eventName, $listener, $priority );
-    }
-
-    /**
-     * Turn off/unbind/remove $listener from an event
-     *
-     * @param string   $eventName
-     * @param callable $listener
-     *
-     * @return void
-     */
-    public function off( $eventName, $listener )
-    {
-        static::getDispatcher()->removeListener( $eventName, $listener );
-    }
-
     /**
      * @param bool $createIfNull If true, the default, the response object will be created if it hasn't already
      * @param bool $sendHeaders
@@ -308,8 +249,7 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
     {
         if ( null === $this->_responseObject && $createIfNull )
         {
-            $this->_responseObject = Response::create();
-            CorsManager::autoSendHeaders();
+            $this->setResponseObject( Response::create() );
         }
 
         return $this->_responseObject;
@@ -318,11 +258,13 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
     /**
      * @param \Symfony\Component\HttpFoundation\Response $responseObject
      *
+     * @throws \DreamFactory\Platform\Utility\RestException
      * @return PlatformWebApplication
      */
     public function setResponseObject( $responseObject )
     {
-        $this->_responseObject = $responseObject;
+        CorsManager::setResponseObject( $this->_responseObject = $responseObject );
+        CorsManager::autoSendHeaders();
 
         return $this;
     }
@@ -484,27 +426,6 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
         {
             static::$_namespaceMap[$which][$namespace] = $path;
         }
-    }
-
-    /**
-     * @param EventDispatcher $dispatcher
-     */
-    public static function setDispatcher( $dispatcher )
-    {
-        static::$_dispatcher = $dispatcher;
-    }
-
-    /**
-     * @return EventDispatcher
-     */
-    public static function getDispatcher()
-    {
-        if ( empty( static::$_dispatcher ) )
-        {
-            static::$_dispatcher = new EventDispatcher();
-        }
-
-        return static::$_dispatcher;
     }
 
     /**

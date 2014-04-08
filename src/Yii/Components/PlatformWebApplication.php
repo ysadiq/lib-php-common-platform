@@ -84,10 +84,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     //*************************************************************************
 
     /**
-     * @var EventDispatcher
-     */
-    protected static $_dispatcher;
-    /**
      * @var bool If true, profiling information is output to the log
      */
     protected static $_enableProfiler = false;
@@ -231,8 +227,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             return false;
         }
 
-        $this->trigger( DspEvents::PLUGINS_LOADED );
-
         return true;
     }
 
@@ -309,53 +303,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->stopProfiler( 'app.request' );
     }
 
-    //*************************************************************************
-    //  Server-Side Event Support
-    //*************************************************************************
-
-    /**
-     * Triggers a DSP-level event
-     *
-     * @param string        $eventName
-     * @param PlatformEvent $event
-     *
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-     * @throws \Exception
-     * @return DspEvent
-     */
-    public function trigger( $eventName, $event = null )
-    {
-        return static::getDispatcher()->dispatch( $eventName, $event );
-    }
-
-    /**
-     * Adds an event listener that listens on the specified events.
-     *
-     * @param string   $eventName            The event to listen on
-     * @param callable $listener             The listener
-     * @param integer  $priority             The higher this value, the earlier an event
-     *                                       listener will be triggered in the chain (defaults to 0)
-     *
-     * @return void
-     */
-    public function on( $eventName, $listener, $priority = 0 )
-    {
-        static::getDispatcher()->addListener( $eventName, $listener, $priority );
-    }
-
-    /**
-     * Turn off/unbind/remove $listener from an event
-     *
-     * @param string   $eventName
-     * @param callable $listener
-     *
-     * @return void
-     */
-    public function off( $eventName, $listener )
-    {
-        static::getDispatcher()->removeListener( $eventName, $listener );
-    }
-
     /**
      * @param array $corsWhitelist
      *
@@ -419,17 +366,16 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
     /**
      * @param bool $createIfNull If true, the default, the response object will be created if it hasn't already
+     * @param bool $sendHeaders
      *
      * @throws \DreamFactory\Platform\Utility\RestException
      * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function getResponseObject( $createIfNull = true )
+    public function getResponseObject( $createIfNull = true, $sendHeaders = true )
     {
         if ( null === $this->_responseObject && $createIfNull )
         {
-            $this->_responseObject = Response::create();
-
-            CorsManager::autoSendHeaders();
+            $this->setResponseObject( Response::create() );
         }
 
         return $this->_responseObject;
@@ -438,11 +384,13 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @param \Symfony\Component\HttpFoundation\Response $responseObject
      *
+     * @throws \DreamFactory\Platform\Utility\RestException
      * @return PlatformWebApplication
      */
     public function setResponseObject( $responseObject )
     {
-        $this->_responseObject = $responseObject;
+        CorsManager::setResponseObject( $this->_responseObject = $responseObject );
+        CorsManager::autoSendHeaders();
 
         return $this;
     }
