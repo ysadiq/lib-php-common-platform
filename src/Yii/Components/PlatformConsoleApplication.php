@@ -105,6 +105,10 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
      * @var  Response
      */
     protected $_responseObject;
+    /**
+     * @var bool If true, headers will be added to the response object instance of this run
+     */
+    protected $_useResponseObject = false;
 
     //*************************************************************************
     //	Methods
@@ -121,7 +125,9 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
         static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
 
         //	Setup the request handler and events
+        /** @noinspection PhpUndefinedFieldInspection */
         $this->onBeginRequest = array( $this, '_onBeginRequest' );
+        /** @noinspection PhpUndefinedFieldInspection */
         $this->onEndRequest = array( $this, '_onEndRequest' );
     }
 
@@ -499,6 +505,67 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
         }
 
         return static::$_dispatcher;
+    }
+
+    /**
+     * @param array $corsWhitelist
+     *
+     * @throws \DreamFactory\Platform\Utility\RestException
+     * @return PlatformWebApplication
+     */
+    public function setCorsWhitelist( $corsWhitelist )
+    {
+        CorsManager::setCorsWhitelist( $corsWhitelist );
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getCorsWhitelist()
+    {
+        return CorsManager::getCorsWhitelist();
+    }
+
+    /**
+     * @param boolean $autoAddHeaders
+     *
+     * @return PlatformWebApplication
+     */
+    public function setAutoAddHeaders( $autoAddHeaders = true )
+    {
+        CorsManager::setAutoAddHeaders( $autoAddHeaders );
+
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getAutoAddHeaders()
+    {
+        return CorsManager::getAutoAddHeaders();
+    }
+
+    /**
+     * @param boolean $extendedHeaders
+     *
+     * @return PlatformWebApplication
+     */
+    public function setExtendedHeaders( $extendedHeaders = true )
+    {
+        CorsManager::setExtendedHeaders( $extendedHeaders );
+
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getExtendedHeaders()
+    {
+        return CorsManager::getExtendedHeaders();
     }
 
     /**
