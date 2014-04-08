@@ -187,6 +187,7 @@ class Config extends BaseSystemRestResource
                 'dsp_version'       => $_currentVersion = SystemManager::getCurrentVersion(),
                 'latest_version'    => $_latestVersion = ( $_fabricHosted ? $_currentVersion : SystemManager::getLatestVersion() ),
                 'upgrade_available' => version_compare( $_currentVersion, $_latestVersion, '<' ),
+		'is_hosted' 	    => $_fabricHosted,
             );
 
             \Kisma::set( 'platform.version_info', $_versionInfo );
