@@ -146,12 +146,18 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     protected $_responseObject;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
     /**
      * @var bool If true, headers will be added to the response object instance of this run
      */
     protected $_useResponseObject = false;
+<<<<<<< HEAD
 =======
 >>>>>>> Composer update
+=======
+>>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
 
     //*************************************************************************
     //	Methods
@@ -174,12 +180,18 @@ class PlatformConsoleApplication extends \CConsoleApplication
 
         //	Setup the request handler and events
 <<<<<<< HEAD
+<<<<<<< HEAD
         /** @noinspection PhpUndefinedFieldInspection */
         $this->onBeginRequest = array( $this, '_onBeginRequest' );
         /** @noinspection PhpUndefinedFieldInspection */
 =======
         $this->onBeginRequest = array( $this, '_onBeginRequest' );
 >>>>>>> Composer update
+=======
+        /** @noinspection PhpUndefinedFieldInspection */
+        $this->onBeginRequest = array( $this, '_onBeginRequest' );
+        /** @noinspection PhpUndefinedFieldInspection */
+>>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
         $this->onEndRequest = array( $this, '_onEndRequest' );
     }
 
@@ -1116,6 +1128,67 @@ class PlatformConsoleApplication extends \CConsoleApplication
 
         return static::$_dispatcher;
 >>>>>>> Composer update
+    }
+
+    /**
+     * @param array $corsWhitelist
+     *
+     * @throws \DreamFactory\Platform\Utility\RestException
+     * @return PlatformWebApplication
+     */
+    public function setCorsWhitelist( $corsWhitelist )
+    {
+        CorsManager::setCorsWhitelist( $corsWhitelist );
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getCorsWhitelist()
+    {
+        return CorsManager::getCorsWhitelist();
+    }
+
+    /**
+     * @param boolean $autoAddHeaders
+     *
+     * @return PlatformWebApplication
+     */
+    public function setAutoAddHeaders( $autoAddHeaders = true )
+    {
+        CorsManager::setAutoAddHeaders( $autoAddHeaders );
+
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getAutoAddHeaders()
+    {
+        return CorsManager::getAutoAddHeaders();
+    }
+
+    /**
+     * @param boolean $extendedHeaders
+     *
+     * @return PlatformWebApplication
+     */
+    public function setExtendedHeaders( $extendedHeaders = true )
+    {
+        CorsManager::setExtendedHeaders( $extendedHeaders );
+
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getExtendedHeaders()
+    {
+        return CorsManager::getExtendedHeaders();
     }
 
     /**

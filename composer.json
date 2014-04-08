@@ -29,6 +29,7 @@
 		"rackspace/php-opencloud":         "~1.5.0@stable",
 		"dready92/php-on-couch":           "dev-master",
 		"phpforce/soap-client":            "dev-master",
+		"cboden/Ratchet":                  "0.3.*",
 		"pear/net_url2":                   "*",
 		"pear/http_request2":              "*",
 		"pear/mail_mime-decode":           "*",

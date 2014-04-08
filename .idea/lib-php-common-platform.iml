@@ -45,6 +45,7 @@
       <library name="PHARS">
         <CLASSES>
 <<<<<<< HEAD
+<<<<<<< HEAD
           <root url="phar:///usr/share/php/composer.phar" />
         </CLASSES>
         <SOURCES>
@@ -63,6 +64,12 @@
           <root url="phar:///usr/share/php/data/phpDocumentor/vendor/phpdocumentor/fileset/tests/data/test.phar" />
           <root url="phar:///usr/local/bin/composer.phar" />
 >>>>>>> Composer update and eventstream junk
+=======
+          <root url="phar:///usr/share/php/composer.phar" />
+        </CLASSES>
+        <SOURCES>
+          <root url="phar:///usr/share/php/composer.phar" />
+>>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
         </SOURCES>
       </library>
     </orderEntry>
