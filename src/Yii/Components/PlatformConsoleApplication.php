@@ -154,24 +154,34 @@ class PlatformConsoleApplication extends \CConsoleApplication
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
 =======
 >>>>>>> Composer update
+=======
+=======
+>>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
+>>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
     /**
      * @var bool If true, headers will be added to the response object instance of this run
      */
     protected $_useResponseObject = false;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> Composer update
+=======
+>>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
 =======
 >>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
 =======
 =======
 >>>>>>> Composer update
 >>>>>>> Composer update
+=======
+>>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
 
     //*************************************************************************
     //	Methods
@@ -199,6 +209,9 @@ class PlatformConsoleApplication extends \CConsoleApplication
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
         /** @noinspection PhpUndefinedFieldInspection */
         $this->onBeginRequest = array( $this, '_onBeginRequest' );
 =======
@@ -210,6 +223,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
 =======
         /** @noinspection PhpUndefinedFieldInspection */
 <<<<<<< HEAD
+<<<<<<< HEAD
         $this->onBeginRequest = array( $this, '_onBeginRequest' );
         /** @noinspection PhpUndefinedFieldInspection */
 >>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
@@ -218,6 +232,11 @@ class PlatformConsoleApplication extends \CConsoleApplication
         $this->onBeginRequest = array( $this, '_onBeginRequest' );
 >>>>>>> Composer update
 >>>>>>> Composer update
+=======
+        $this->onBeginRequest = array( $this, '_onBeginRequest' );
+        /** @noinspection PhpUndefinedFieldInspection */
+>>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
+>>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
         $this->onEndRequest = array( $this, '_onEndRequest' );
     }
 
@@ -1328,6 +1347,9 @@ class PlatformConsoleApplication extends \CConsoleApplication
 
     /**
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
      * @param array $corsWhitelist
      *
      * @throws \DreamFactory\Platform\Utility\RestException
@@ -1389,8 +1411,11 @@ class PlatformConsoleApplication extends \CConsoleApplication
     }
 
     /**
+<<<<<<< HEAD
 =======
 >>>>>>> Composer update
+=======
+>>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
      * @return boolean
      */
     public function getUseResponseObject()
