@@ -303,7 +303,6 @@ SQL;
         }
 
         Log::info( 'Swagger cache build process complete' );
-        Pii::app()->trigger( SwaggerEvents::CACHE_REBUILT );
 
         return $_out;
     }
@@ -610,8 +609,7 @@ SQL;
             }
         }
 
-        //  Trigger a swagger.cache_cleared event
-        return Pii::app()->trigger( SwaggerEvents::CACHE_CLEARED );
+        return;
     }
 
     /**

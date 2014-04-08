@@ -196,7 +196,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
         /** @noinspection PhpIncludeInspection */
         if ( false === @require( $_autoloadPath ) )
         {
-            Log::error( 'Error reading plug-in autoload.php file. Some plug-ins may not function properly.' );
+            Log::error( 'Error reading plug-in configuration file. Some plug-ins may not function properly.' );
 
             return false;
         }

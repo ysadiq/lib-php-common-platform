@@ -21,10 +21,6 @@ namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
 use DreamFactory\Platform\Components\Profiler;
-use DreamFactory\Platform\Events\DspEvent;
-use DreamFactory\Platform\Events\Enums\DspEvents;
-use DreamFactory\Platform\Events\EventDispatcher;
-use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Utility\CorsManager;
@@ -32,8 +28,6 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\Interfaces\PublisherLike;
-use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Utility\Log;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -44,7 +38,7 @@ use Symfony\Component\HttpFoundation\Response;
  * @property callable onEndRequest
  * @property callable onBeginRequest
  */
-class PlatformWebApplication extends \CWebApplication implements PublisherLike, SubscriberLike
+class PlatformWebApplication extends \CWebApplication
 {
     //*************************************************************************
     //	Constants
@@ -281,15 +275,14 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                     header( 'content-length: 0' );
                     header( 'content-type: text/plain' );
 
-                    $this->_useResponseObject = false;
-                    CorsManager::autoSendHeaders();
+                    $this->addCorsHeaders();
                 }
 
                 return Pii::end();
         }
 
         //	Auto-add the CORS headers...
-        CorsManager::autoSendHeaders();
+        $this->addCorsHeaders();
 
         //	Load any plug-ins
         $this->_loadPlugins();

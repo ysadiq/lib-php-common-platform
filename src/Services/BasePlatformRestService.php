@@ -24,15 +24,12 @@ use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\ResponseFormats;
-use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
-use DreamFactory\Platform\Events\RestServiceEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Interfaces\TransformerLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
-use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
@@ -312,7 +309,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         if ( $_methodToCall )
         {
             $_result = call_user_func( $_methodToCall );
-            $this->_triggerActionEvent( $_result );
 
             return $_result;
         }
@@ -407,8 +403,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         {
             $_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
         }
-
-        $this->_triggerActionEvent( $_result, ResourceServiceEvents::AFTER_DATA_FORMAT );
 
         if ( !empty( $this->_outputFormat ) )
         {
@@ -591,42 +585,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     public function getPermissions( $resource = null )
     {
         return ResourceStore::getPermissions( $this->_apiName, $resource );
-    }
-
-    /**
-     * {@InheritDoc}
-     */
-    public function trigger( $eventName, $event = null, $priority = 0 )
-    {
-        return parent::trigger(
-            str_ireplace( array( '{api_name}', '{action}' ), array( $this->_apiName, strtolower( $this->_action ) ), $eventName ),
-            $event ? : new RestServiceEvent( $this->_apiName, $this->_resource ),
-            $priority
-        );
-    }
-
-    /**
-     * Triggers the appropriate event for the action /api_name/resource/resourceId
-     *
-     * @param mixed            $result    The result of the call
-     * @param string           $eventName The event to trigger. If not supplied, one will looked up based on the context
-     * @param RestServiceEvent $event
-     *
-     * @return bool
-     */
-    protected function _triggerActionEvent( $result, $eventName = null, $event = null )
-    {
-        $_eventName = $eventName ? : SwaggerManager::findEvent( $this, $this->_action );
-
-        if ( empty( $_eventName ) )
-        {
-            return false;
-        }
-
-        return $this->trigger(
-            $_eventName,
-            $event ? : new RestServiceEvent( $this instanceOf BaseSystemRestResource ? 'system' : $this->_apiName, $this->_resource, $result )
-        );
     }
 
     /**

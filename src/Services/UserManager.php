@@ -21,7 +21,6 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Oasys\Enums\Flows;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
-use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Resources\User\CustomSettings;
 use DreamFactory\Platform\Resources\User\Device;
 use DreamFactory\Platform\Resources\User\Password;
@@ -67,25 +66,27 @@ class UserManager extends BaseSystemRestService
      */
     protected function _listResources()
     {
-        $resources = array(
-            array( 'name' => 'custom' ),
-            array( 'name' => 'device' ),
-            array( 'name' => 'password' ),
-            array( 'name' => 'profile' ),
-            array( 'name' => 'register' ),
-            array( 'name' => 'session' ),
-            array( 'name' => 'ticket' )
+        static $_resources = array(
+            'resource' => array(
+                array( 'name' => 'custom' ),
+                array( 'name' => 'device' ),
+                array( 'name' => 'password' ),
+                array( 'name' => 'profile' ),
+                array( 'name' => 'register' ),
+                array( 'name' => 'session' ),
+                array( 'name' => 'ticket' )
+            )
         );
 
-        $_response = array( 'resource' => $resources );
-
-        $this->_triggerActionEvent( $_response );
+        return $_resources;
     }
 
     /**
-     *
+     * @throws \InvalidArgumentException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \DreamFactory\Platform\Exceptions\MisconfigurationException
+     * @throws \Exception
      * @return array|bool
-     * @throws BadRequestException
      */
     protected function _handleResource()
     {
@@ -161,8 +162,6 @@ class UserManager extends BaseSystemRestService
         }
 
         //  Send out an event
-        $this->_triggerActionEvent( $result );
-
         return $result;
     }
 
@@ -178,8 +177,6 @@ class UserManager extends BaseSystemRestService
     {
         try
         {
-            Pii::trigger( 'session.validate', null );
-
             $userId = Session::validateSession();
         }
         catch ( \Exception $ex )
@@ -190,7 +187,7 @@ class UserManager extends BaseSystemRestService
 
         // regenerate new timed ticket
         $timestamp = time();
-        $ticket = Utilities::encryptCreds( "$userId,$timestamp", "gorilla" );
+        $ticket = Utilities::encryptCreds( $userId . ',' . $timestamp, 'gorilla' );
 
         return array( 'ticket' => $ticket, 'ticket_expiry' => time() + ( 5 * 60 ) );
     }
