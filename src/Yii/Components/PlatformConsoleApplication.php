@@ -103,12 +103,15 @@ class PlatformConsoleApplication extends \CConsoleApplication
 
     /**
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
      * @var EventDispatcher
      */
     protected static $_dispatcher;
     /**
 >>>>>>> Composer update
+=======
+>>>>>>> Event removal from this branch
      * @var bool If true, profiling information is output to the log
      */
     protected static $_enableProfiler = false;
@@ -325,10 +328,13 @@ class PlatformConsoleApplication extends \CConsoleApplication
         }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         $this->trigger( DspEvents::PLUGINS_LOADED );
 
 >>>>>>> Composer update
+=======
+>>>>>>> Event removal from this branch
         return true;
     }
 
@@ -430,7 +436,10 @@ class PlatformConsoleApplication extends \CConsoleApplication
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> Event removal from this branch
     //*************************************************************************
     //  Server-Side Event Support
     //*************************************************************************
@@ -1007,6 +1016,8 @@ class PlatformConsoleApplication extends \CConsoleApplication
 >>>>>>> Removed CORS stuff from console app
 >>>>>>> Removed CORS stuff from console app
 
+=======
+>>>>>>> Event removal from this branch
     /**
      * @return boolean
      */
@@ -1057,8 +1068,11 @@ class PlatformConsoleApplication extends \CConsoleApplication
         if ( null === $this->_responseObject && $createIfNull )
         {
 <<<<<<< HEAD
+<<<<<<< HEAD
             $this->setResponseObject( Response::create() );
 =======
+=======
+>>>>>>> Event removal from this branch
             $this->_responseObject = Response::create();
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1078,6 +1092,9 @@ class PlatformConsoleApplication extends \CConsoleApplication
 =======
             CorsManager::autoSendHeaders();
 >>>>>>> Removed CORS stuff from console app
+=======
+            $this->setResponseObject( Response::create() );
+>>>>>>> Event removal from this branch
         }
 
         return $this->_responseObject;
@@ -1087,19 +1104,28 @@ class PlatformConsoleApplication extends \CConsoleApplication
      * @param \Symfony\Component\HttpFoundation\Response $responseObject
      *
 <<<<<<< HEAD
+<<<<<<< HEAD
      * @throws \DreamFactory\Platform\Utility\RestException
 =======
 >>>>>>> Composer update
+=======
+     * @throws \DreamFactory\Platform\Utility\RestException
+>>>>>>> Event removal from this branch
      * @return PlatformWebApplication
      */
     public function setResponseObject( $responseObject )
     {
+<<<<<<< HEAD
 <<<<<<< HEAD
         CorsManager::setResponseObject( $this->_responseObject = $responseObject );
         CorsManager::autoSendHeaders();
 =======
         $this->_responseObject = $responseObject;
 >>>>>>> Composer update
+=======
+        CorsManager::setResponseObject( $this->_responseObject = $responseObject );
+        CorsManager::autoSendHeaders();
+>>>>>>> Event removal from this branch
 
         return $this;
     }
@@ -1265,6 +1291,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
 
     /**
 <<<<<<< HEAD
+<<<<<<< HEAD
      * @param array $corsWhitelist
      *
      * @throws \DreamFactory\Platform\Utility\RestException
@@ -1324,6 +1351,8 @@ class PlatformConsoleApplication extends \CConsoleApplication
     {
         return CorsManager::getExtendedHeaders();
 =======
+=======
+>>>>>>> Event removal from this branch
      * @param EventDispatcher $dispatcher
      */
     public static function setDispatcher( $dispatcher )
@@ -1350,6 +1379,8 @@ class PlatformConsoleApplication extends \CConsoleApplication
 <<<<<<< HEAD
 =======
 >>>>>>> New exceptions for event streaming. Command line commands added to start the server/stream.
+=======
+>>>>>>> Event removal from this branch
      * @param array $corsWhitelist
      *
      * @throws \DreamFactory\Platform\Utility\RestException

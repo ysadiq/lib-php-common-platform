@@ -306,6 +306,7 @@ class PlatformWebApplication extends \CWebApplication
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     //*************************************************************************
     //  Server-Side Event Support
@@ -355,6 +356,8 @@ class PlatformWebApplication extends \CWebApplication
     }
 
 >>>>>>> Composer update
+=======
+>>>>>>> Event removal from this branch
     /**
      * @param array $corsWhitelist
      *
@@ -418,14 +421,16 @@ class PlatformWebApplication extends \CWebApplication
 
     /**
      * @param bool $createIfNull If true, the default, the response object will be created if it hasn't already
+     * @param bool $sendHeaders
      *
      * @throws \DreamFactory\Platform\Utility\RestException
      * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function getResponseObject( $createIfNull = true )
+    public function getResponseObject( $createIfNull = true, $sendHeaders = true )
     {
         if ( null === $this->_responseObject && $createIfNull )
         {
+<<<<<<< HEAD
 <<<<<<< HEAD
             $this->setResponseObject( Response::create() );
 =======
@@ -433,6 +438,9 @@ class PlatformWebApplication extends \CWebApplication
 
             CorsManager::autoSendHeaders();
 >>>>>>> Composer update
+=======
+            $this->setResponseObject( Response::create() );
+>>>>>>> Event removal from this branch
         }
 
         return $this->_responseObject;
