@@ -199,6 +199,7 @@ class Config extends BaseSystemRestResource
          * Remote login support
          */
         $this->_response['is_guest'] = Pii::guest();
+	$this->_response['is_hosted'] = $_fabricHosted;
         $this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
         $this->_response['allow_remote_logins'] =
             ( Pii::getParam( 'dsp.allow_remote_logins', false ) && Option::getBool( $this->_response, 'allow_open_registration' ) );
