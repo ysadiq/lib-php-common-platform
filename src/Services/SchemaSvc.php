@@ -346,7 +346,7 @@ class SchemaSvc extends BasePlatformRestService
                 }
             }
 
-            return array( 'resource' => $_resources );
+            return $_resources;
         }
         catch ( RestException $ex )
         {
