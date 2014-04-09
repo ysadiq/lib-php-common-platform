@@ -339,20 +339,6 @@ class SqlDbSvc extends BaseDbSvc
             FILTER_VALIDATE_BOOLEAN
         );
 
-        // rollback all db changes in a transaction, if applicable
-        $_extras['rollback'] = FilterInput::request(
-            'rollback',
-            Option::getBool( $post_data, 'rollback' ),
-            FILTER_VALIDATE_BOOLEAN
-        );
-
-        // continue batch processing if an error occurs, if applicable
-        $_extras['continue'] = FilterInput::request(
-            'continue',
-            Option::getBool( $post_data, 'continue' ),
-            FILTER_VALIDATE_BOOLEAN
-        );
-
         // allow deleting related records in update requests, if applicable
         $_extras['allow_related_delete'] = FilterInput::request(
             'allow_related_delete',
@@ -422,10 +408,10 @@ class SqlDbSvc extends BaseDbSvc
 
         try
         {
-            $_result = SqlDbUtilities::describeTable( $this->_dbConn, $_name );
-            $_result['access'] = $this->getPermissions( $_name );
+            $_out = SqlDbUtilities::describeTable( $this->_dbConn, $_name );
+            $_out['access'] = $this->getPermissions( $_name );
 
-            return $_result;
+            return $_out;
         }
         catch ( RestException $_ex )
         {
@@ -440,23 +426,7 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function createTables( $tables = array() )
-    {
-        throw new BadRequestException( 'Editing table properties is only allowed through a SQL DB Schema service.' );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function createTable( $properties = array() )
-    {
-        throw new BadRequestException( 'Editing table properties is only allowed through a SQL DB Schema service.' );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function updateTables( $tables = array() )
     {
         throw new BadRequestException( 'Editing table properties is only allowed through a SQL DB Schema service.' );
     }
@@ -467,14 +437,6 @@ class SqlDbSvc extends BaseDbSvc
     public function updateTable( $properties = array() )
     {
         throw new BadRequestException( 'Creating table properties is only allowed through a SQL DB Schema service.' );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteTables( $tables = array(), $check_empty = false )
-    {
-        throw new BadRequestException( 'Editing table properties is only allowed through a SQL DB Schema service.' );
     }
 
     /**
@@ -493,7 +455,7 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function createRecords( $table, $records, $extras = array() )
     {
-        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
+        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $records ) );
@@ -501,34 +463,30 @@ class SqlDbSvc extends BaseDbSvc
         $_continue = Option::getBool( $extras, 'continue', false );
         $_idFields = Option::get( $extras, 'id_field' );
         $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_related = Option::get( $extras, 'related' );
         $_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
 
+        $_out = array();
+        $_errors = array();
         try
         {
-            $_out = array();
-            $_errors = array();
             $_fieldInfo = $this->describeTableFields( $table );
             $_relatedInfo = $this->describeTableRelated( $table );
             $_idFieldsInfo = static::_getIdFieldsInfo( $_idFields, $_fieldInfo );
 
             /** @var \CDbCommand $command */
             $command = $this->_dbConn->createCommand();
-            $_transaction = null;
-            if ( $_rollback && !$_isSingle )
-            {
-                $_transaction = $this->_dbConn->beginTransaction();
-            }
+            $_transaction = ( $_rollback && !$_isSingle ) ? $this->_dbConn->beginTransaction() : null;
 
-            foreach ( $records as $_key => $_record )
+            foreach ( $records as $_index => $_record )
             {
                 try
                 {
                     $_parsed = $this->parseRecord( $_record, $_fieldInfo, $_ssFilters );
-                    if ( 0 >= count( $_parsed ) )
+                    if ( empty( $_parsed ) )
                     {
-                        throw new BadRequestException( 'No valid fields found in request: ' . print_r( $_record, true ) );
+                        throw new BadRequestException( "No valid fields found in record $_index: " . print_r( $_record, true ) );
                     }
 
                     // simple insert request
@@ -536,7 +494,7 @@ class SqlDbSvc extends BaseDbSvc
                     $rows = $command->insert( $table, $_parsed );
                     if ( 0 >= $rows )
                     {
-                        throw new InternalServerErrorException( "Record [$_key] insert failed for table '$table'." );
+                        throw new InternalServerErrorException( "Record [$_index] insert failed for table '$table'." );
                     }
 
                     $_id = array();
@@ -562,7 +520,7 @@ class SqlDbSvc extends BaseDbSvc
                         }
                     }
 
-                    $_out[$_key] = $_id;
+                    $_out[$_index] = $_id;
                 }
                 catch ( \Exception $_ex )
                 {
@@ -573,27 +531,35 @@ class SqlDbSvc extends BaseDbSvc
 
                     if ( $_rollback && $_transaction )
                     {
+                        if ( 0 !== $_index )
+                        {
+                            // first error, don't worry about batch just throw it
+                            // mark last error and index for batch results
+                            $_errors[] = $_index;
+                            $_out[$_index] = $_ex->getMessage();
+                        }
+
                         $_transaction->rollBack();
+
                         throw $_ex;
                     }
 
                     if ( !$_continue )
                     {
-                        if ( 0 === $_key )
+                        if ( 0 !== $_index )
                         {
                             // first error, don't worry about batch just throw it
-                            throw $_ex;
+                            // mark last error and index for batch results
+                            $_errors[] = $_index;
+                            $_out[$_index] = $_ex->getMessage();
                         }
 
-                        // mark last error and index for batch results
-                        $_errors[] = $_key;
-                        $_out[$_key] = $_ex->getMessage();
-                        break;
+                        throw $_ex;
                     }
 
                     // mark error and index for batch results
-                    $_errors[] = $_key;
-                    $_out[$_key] = $_ex->getMessage();
+                    $_errors[] = $_index;
+                    $_out[$_index] = $_ex->getMessage();
                 }
             }
 
@@ -604,8 +570,7 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !empty( $_errors ) )
             {
-                $_msg = array( 'error' => $_errors, 'record' => $_out );
-                throw new BadRequestException( 'Batch Error: Not all records could be created.', null, null, $_msg );
+                throw new BadRequestException();
             }
 
             if ( static::_requireMoreFields( $_fields, $_idFields ) || !empty( $_related ) )
@@ -618,12 +583,26 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            if ( $_ex instanceof RestException )
+            $_msg = $_ex->getMessage();
+
+            $_context = null;
+            if ( !empty( $_errors ) )
             {
-                throw $_ex;
+                $_context = array( 'error' => $_errors, 'record' => $_out );
+                $_msg = 'Batch Error: Not all records could be created.';
             }
 
-            throw new InternalServerErrorException( "Failed to create records in '$table'.\n{$_ex->getMessage()}" );
+            if ( $_rollback )
+            {
+                $_msg .= " All changes rolled back.";
+            }
+
+            if ( $_ex instanceof RestException )
+            {
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+            }
+
+            throw new InternalServerErrorException( "Failed to create records in '$table'.\n$_msg", null, null, $_context );
         }
     }
 
@@ -632,23 +611,25 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function updateRecords( $table, $records, $extras = array() )
     {
-        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
+        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $records ) );
         $_rollback = Option::getBool( $extras, 'rollback', false );
         $_continue = Option::getBool( $extras, 'continue', false );
-        $_idField = Option::get( $extras, 'id_field' );
+        $_idFields = Option::get( $extras, 'id_field' );
         $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_related = Option::get( $extras, 'related' );
         $_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
 
+        $_out = array();
+        $_errors = array();
         try
         {
             $_fieldInfo = $this->describeTableFields( $table );
             $_relatedInfo = $this->describeTableRelated( $table );
-            $_idFieldsInfo = static::_getIdFieldsInfo( $_idField, $_fieldInfo );
+            $_idFieldsInfo = static::_getIdFieldsInfo( $_idFields, $_fieldInfo );
             if ( empty( $_idFieldsInfo ) )
             {
                 throw new BadRequestException( 'Updating by ids requires at least one identifying field.' );
@@ -685,16 +666,13 @@ class SqlDbSvc extends BaseDbSvc
 
             /** @var \CDbCommand $_command */
             $_command = $this->_dbConn->createCommand();
-            $_errors = array();
             $_transaction = null;
-
             if ( $_rollback && !$_isSingle )
             {
                 $_transaction = $this->_dbConn->beginTransaction();
             }
 
-            $_out = array();
-            foreach ( $records as $_key => $_record )
+            foreach ( $records as $_index => $_record )
             {
                 try
                 {
@@ -708,7 +686,7 @@ class SqlDbSvc extends BaseDbSvc
                             $_temp = Option::get( $_record, $_idName, null, true );
                             if ( empty( $_temp ) )
                             {
-                                throw new BadRequestException( "Identifying field '$_idName' can not be empty for update record [$_key] request." );
+                                throw new BadRequestException( "Identifying field '$_idName' can not be empty for update record [$_index] request." );
                             }
 
                             $_id[$_idName] = $_temp;
@@ -733,7 +711,7 @@ class SqlDbSvc extends BaseDbSvc
                         $this->updateRelations( $table, $_record, $_id, $_relatedInfo, $_allowRelatedDelete );
                     }
 
-                    $_out[$_key] = $_id;
+                    $_out[$_index] = $_id;
                 }
                 catch ( \Exception $_ex )
                 {
@@ -744,27 +722,35 @@ class SqlDbSvc extends BaseDbSvc
 
                     if ( $_rollback && $_transaction )
                     {
+                        if ( 0 !== $_index )
+                        {
+                            // first error, don't worry about batch just throw it
+                            // mark last error and index for batch results
+                            $_errors[] = $_index;
+                            $_out[$_index] = $_ex->getMessage();
+                        }
+
                         $_transaction->rollBack();
+
                         throw $_ex;
                     }
 
                     if ( !$_continue )
                     {
-                        if ( 0 === $_key )
+                        if ( 0 !== $_index )
                         {
                             // first error, don't worry about batch just throw it
-                            throw $_ex;
-                        }
+                        	// mark last error and index for batch results
+                        	$_errors[] = $_index;
+                        	$_out[$_index] = $_ex->getMessage();
+                    	}
 
-                        // mark last error and index for batch results
-                        $_errors[] = $_key;
-                        $_out[$_key] = $_ex->getMessage();
-                        break;
+                        throw $_ex;
                     }
 
                     // mark error and index for batch results
-                    $_errors[] = $_key;
-                    $_out[$_key] = $_ex->getMessage();
+                    $_errors[] = $_index;
+                    $_out[$_index] = $_ex->getMessage();
                 }
             }
 
@@ -775,8 +761,7 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !empty( $_errors ) )
             {
-                $_msg = array( 'error' => $_errors, 'record' => $_out );
-                throw new BadRequestException( 'Batch Error: Not all records could be updated.', null, null, $_msg );
+                throw new BadRequestException();
             }
 
             if ( static::_requireMoreFields( $_fields, $_idFieldNames ) || !empty( $_related ) )
@@ -789,12 +774,26 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            if ( $_ex instanceof RestException )
+            $_msg = $_ex->getMessage();
+
+            $_context = null;
+            if ( !empty( $_errors ) )
             {
-                throw $_ex;
+                $_context = array( 'error' => $_errors, 'record' => $_out );
+                $_msg = 'Batch Error: Not all records could be updated.';
             }
 
-            throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
+            if ( $_rollback )
+            {
+                $_msg .= " All changes rolled back.";
+            }
+
+            if ( $_ex instanceof RestException )
+            {
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+            }
+
+            throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
         }
     }
 
@@ -867,23 +866,25 @@ class SqlDbSvc extends BaseDbSvc
     public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
     {
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the update request." );
+        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $ids ) );
         $_rollback = Option::getBool( $extras, 'rollback', false );
         $_continue = Option::getBool( $extras, 'continue', false );
-        $_idField = Option::get( $extras, 'id_field' );
+        $_idFields = Option::get( $extras, 'id_field' );
         $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_related = Option::get( $extras, 'related' );
         $_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
 
+        $_out = array();
+        $_errors = array();
         try
         {
             $_fieldInfo = $this->describeTableFields( $table );
             $_relatedInfo = $this->describeTableRelated( $table );
-            $_idFieldsInfo = static::_getIdFieldsInfo( $_idField, $_fieldInfo );
+            $_idFieldsInfo = static::_getIdFieldsInfo( $_idFields, $_fieldInfo );
             if ( empty( $_idFieldsInfo ) )
             {
                 throw new BadRequestException( 'Updating by ids requires at least one identifying field.' );
@@ -947,9 +948,7 @@ class SqlDbSvc extends BaseDbSvc
 
             /** @var \CDbCommand $_command */
             $_command = $this->_dbConn->createCommand();
-            $_errors = array();
             $_transaction = null;
-
             if ( $_rollback && !$_isSingle )
             {
                 $_transaction = $this->_dbConn->beginTransaction();
@@ -969,8 +968,7 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
-            $_out = array();
-            foreach ( $ids as $_key => $_value )
+            foreach ( $ids as $_index => $_value )
             {
                 try
                 {
@@ -984,7 +982,7 @@ class SqlDbSvc extends BaseDbSvc
                             $_temp = Option::get( $_value, $_idName, null, true );
                             if ( empty( $_temp ) )
                             {
-                                throw new BadRequestException( "Identifying field '$_idName' can not be empty for update record [$_key] request." );
+                                throw new BadRequestException( "Identifying field '$_idName' can not be empty for update record [$_index] request." );
                             }
 
                             $_id[$_idName] = $_temp;
@@ -997,7 +995,7 @@ class SqlDbSvc extends BaseDbSvc
                         $_idName = Option::get( $_info, 'name' );
                         if ( empty( $_value ) )
                         {
-                            throw new BadRequestException( "Identifying field '$_idName' can not be empty for update record [$_key] request." );
+                            throw new BadRequestException( "Identifying field '$_idName' can not be empty for update record [$_index] request." );
                         }
 
                         $_id[$_idName] = $_value;
@@ -1025,7 +1023,7 @@ class SqlDbSvc extends BaseDbSvc
                         $_outResults[] = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
                     }
 
-                    $_out[$_key] = $_id;
+                    $_out[$_index] = $_id;
                 }
                 catch ( \Exception $_ex )
                 {
@@ -1036,27 +1034,35 @@ class SqlDbSvc extends BaseDbSvc
 
                     if ( $_rollback && $_transaction )
                     {
+                        if ( 0 !== $_index )
+                        {
+                            // first error, don't worry about batch just throw it
+                            // mark last error and index for batch results
+                            $_errors[] = $_index;
+                            $_out[$_index] = $_ex->getMessage();
+                        }
+
                         $_transaction->rollBack();
+
                         throw $_ex;
                     }
 
                     if ( !$_continue )
                     {
-                        if ( 0 === $_key )
+                        if ( 0 !== $_index )
                         {
                             // first error, don't worry about batch just throw it
-                            throw $_ex;
-                        }
-
                         // mark last error and index for batch results
-                        $_errors[] = $_key;
-                        $_out[$_key] = $_ex->getMessage();
-                        break;
+                        $_errors[] = $_index;
+                        $_out[$_index] = $_ex->getMessage();
+                    }
+
+                        throw $_ex;
                     }
 
                     // mark error and index for batch results
-                    $_errors[] = $_key;
-                    $_out[$_key] = $_ex->getMessage();
+                    $_errors[] = $_index;
+                    $_out[$_index] = $_ex->getMessage();
                 }
             }
 
@@ -1067,8 +1073,7 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !empty( $_errors ) )
             {
-                $_msg = array( 'error' => $_errors, 'record' => $_out );
-                throw new BadRequestException( 'Batch Error: Not all records could be updated.', null, null, $_msg );
+                throw new BadRequestException();
             }
 
             if ( $_needToIterate && $_requireMore )
@@ -1085,12 +1090,26 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            if ( $_ex instanceof RestException )
+            $_msg = $_ex->getMessage();
+
+            $_context = null;
+            if ( !empty( $_errors ) )
             {
-                throw $_ex;
+                $_context = array( 'error' => $_errors, 'record' => $_out );
+                $_msg = 'Batch Error: Not all records could be updated.';
             }
 
-            throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
+            if ( $_rollback )
+            {
+                $_msg .= " All changes rolled back.";
+            }
+
+            if ( $_ex instanceof RestException )
+            {
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+            }
+
+            throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
         }
     }
 
@@ -1162,21 +1181,23 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function deleteRecords( $table, $records, $extras = array() )
     {
-        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
+        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $records ) );
         $_rollback = Option::getBool( $extras, 'rollback', false );
         $_continue = Option::getBool( $extras, 'continue', false );
-        $_idField = Option::get( $extras, 'id_field' );
+        $_idFields = Option::get( $extras, 'id_field' );
         $_fields = Option::get( $extras, 'fields' );
-        $_related = Option::get( $extras, 'related' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
+        $_related = Option::get( $extras, 'related' );
 
+        $_out = array();
+        $_errors = array();
         try
         {
             $_fieldInfo = $this->describeTableFields( $table );
-            $_idFieldsInfo = static::_getIdFieldsInfo( $_idField, $_fieldInfo );
+            $_idFieldsInfo = static::_getIdFieldsInfo( $_idFields, $_fieldInfo );
             if ( empty( $_idFieldsInfo ) )
             {
                 throw new BadRequestException( 'Deleting by ids requires at least one identifying field.' );
@@ -1201,19 +1222,19 @@ class SqlDbSvc extends BaseDbSvc
                 // single id field, let's use the quicker 'in' clause
                 $_idName = Option::get( $_idFieldsInfo[0], 'name' );
                 $_idFieldNames[] = $_idName;
-                $_out = array();
-                foreach ( $records as $_key => $_record )
+                $_ids = array();
+                foreach ( $records as $_index => $_record )
                 {
                     $_id = Option::get( $_record, $_idName );
                     if ( empty( $_id ) )
                     {
-                        throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_key] request." );
+                        throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_index] request." );
                     }
 
-                    $_out[] = $_id;
+                    $_ids[] = $_id;
                 }
 
-                $_where[] = array( 'in', $_idName, $_out );
+                $_where[] = array( 'in', $_idName, $_ids );
             }
 
             $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
@@ -1243,9 +1264,7 @@ class SqlDbSvc extends BaseDbSvc
 
             /** @var \CDbCommand $_command */
             $_command = $this->_dbConn->createCommand();
-            $_errors = array();
             $_transaction = null;
-
             if ( $_rollback && !$_isSingle )
             {
                 $_transaction = $this->_dbConn->beginTransaction();
@@ -1271,8 +1290,7 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
-            $_out = array();
-            foreach ( $records as $_key => $_record )
+            foreach ( $records as $_index => $_record )
             {
                 try
                 {
@@ -1286,7 +1304,7 @@ class SqlDbSvc extends BaseDbSvc
                             $_temp = Option::get( $_record, $_idName, null, true );
                             if ( empty( $_temp ) )
                             {
-                                throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_key] request." );
+                                throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_index] request." );
                             }
 
                             $_id[$_idName] = $_temp;
@@ -1309,7 +1327,7 @@ class SqlDbSvc extends BaseDbSvc
                         }
                     }
 
-                    $_out[$_key] = $_id;
+                    $_out[$_index] = $_id;
                 }
                 catch ( \Exception $_ex )
                 {
@@ -1320,27 +1338,35 @@ class SqlDbSvc extends BaseDbSvc
 
                     if ( $_rollback && $_transaction )
                     {
+                        if ( 0 !== $_index )
+                        {
+                            // first error, don't worry about batch just throw it
+                            // mark last error and index for batch results
+                            $_errors[] = $_index;
+                            $_out[$_index] = $_ex->getMessage();
+                        }
+
                         $_transaction->rollBack();
+
                         throw $_ex;
                     }
 
                     if ( !$_continue )
                     {
-                        if ( 0 == $_key )
+                        if ( 0 !== $_index )
                         {
                             // first error, don't worry about batch just throw it
-                            throw $_ex;
-                        }
-
                         // mark last error and index for batch results
-                        $_errors[] = $_key;
-                        $_out[$_key] = $_ex->getMessage();
-                        break;
+                        $_errors[] = $_index;
+                        $_out[$_index] = $_ex->getMessage();
+                    }
+
+                        throw $_ex;
                     }
 
                     // mark error and index for batch results
-                    $_errors[] = $_key;
-                    $_out[$_key] = $_ex->getMessage();
+                    $_errors[] = $_index;
+                    $_out[$_index] = $_ex->getMessage();
                 }
             }
 
@@ -1351,8 +1377,7 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !empty( $_errors ) )
             {
-                $_msg = array( 'error' => $_errors, 'record' => $_out );
-                throw new BadRequestException( 'Batch Error: Not all records could be deleted.', null, null, $_msg );
+                throw new BadRequestException();
             }
 
             if ( !empty( $_outResults ) )
@@ -1364,12 +1389,26 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            if ( $_ex instanceof RestException )
+            $_msg = $_ex->getMessage();
+
+            $_context = null;
+            if ( !empty( $_errors ) )
             {
-                throw $_ex;
+                $_context = array( 'error' => $_errors, 'record' => $_out );
+                $_msg = 'Batch Error: Not all records could be deleted.';
             }
 
-            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
+            if ( $_rollback )
+            {
+                $_msg .= " All changes rolled back.";
+            }
+
+            if ( $_ex instanceof RestException )
+            {
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+            }
+
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n$_msg", null, null, $_context );
         }
     }
 
@@ -1416,7 +1455,7 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function deleteRecordsByIds( $table, $ids, $extras = array() )
     {
-        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the request." );
+        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
         $table = $this->correctTableName( $table );
 
         $_isSingle = ( 1 == count( $ids ) );
@@ -1424,9 +1463,11 @@ class SqlDbSvc extends BaseDbSvc
         $_continue = Option::getBool( $extras, 'continue', false );
         $_idField = Option::get( $extras, 'id_field' );
         $_fields = Option::get( $extras, 'fields' );
-        $_related = Option::get( $extras, 'related' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
+        $_related = Option::get( $extras, 'related' );
 
+        $_out = array();
+        $_errors = array();
         try
         {
             $_fieldInfo = $this->describeTableFields( $table );
@@ -1492,9 +1533,7 @@ class SqlDbSvc extends BaseDbSvc
 
             /** @var \CDbCommand $_command */
             $_command = $this->_dbConn->createCommand();
-            $_errors = array();
             $_transaction = null;
-
             if ( $_rollback && !$_isSingle )
             {
                 $_transaction = $this->_dbConn->beginTransaction();
@@ -1520,8 +1559,7 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
-            $_out = array();
-            foreach ( $ids as $_key => $_value )
+            foreach ( $ids as $_index => $_value )
             {
                 try
                 {
@@ -1535,7 +1573,7 @@ class SqlDbSvc extends BaseDbSvc
                             $_temp = Option::get( $_value, $_idName, null, true );
                             if ( empty( $_temp ) )
                             {
-                                throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_key] request." );
+                                throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_index] request." );
                             }
 
                             $_id[$_idName] = $_temp;
@@ -1548,7 +1586,7 @@ class SqlDbSvc extends BaseDbSvc
                         $_idName = Option::get( $_info, 'name' );
                         if ( empty( $_value ) )
                         {
-                            throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_key] request." );
+                            throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_index] request." );
                         }
 
                         $_id[$_idName] = $_value;
@@ -1570,7 +1608,7 @@ class SqlDbSvc extends BaseDbSvc
                         }
                     }
 
-                    $_out[$_key] = $_id;
+                    $_out[$_index] = $_id;
                 }
                 catch ( \Exception $_ex )
                 {
@@ -1581,27 +1619,35 @@ class SqlDbSvc extends BaseDbSvc
 
                     if ( $_rollback && $_transaction )
                     {
+                        if ( 0 !== $_index )
+                        {
+                            // first error, don't worry about batch just throw it
+                            // mark last error and index for batch results
+                            $_errors[] = $_index;
+                            $_out[$_index] = $_ex->getMessage();
+                        }
+
                         $_transaction->rollBack();
+
                         throw $_ex;
                     }
 
                     if ( !$_continue )
                     {
-                        if ( empty( $_errors ) )
+                        if ( 0 !== $_index )
                         {
                             // first error, don't worry about batch just throw it
-                            throw $_ex;
-                        }
-
                         // mark last error and index for batch results
-                        $_errors[] = $_key;
-                        $_out[$_key] = $_ex->getMessage();
-                        break;
+                        $_errors[] = $_index;
+                        $_out[$_index] = $_ex->getMessage();
+                    }
+
+                        throw $_ex;
                     }
 
                     // mark error and index for batch results
-                    $_errors[] = $_key;
-                    $_out[$_key] = $_ex->getMessage();
+                    $_errors[] = $_index;
+                    $_out[$_index] = $_ex->getMessage();
                 }
             }
 
@@ -1612,8 +1658,7 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( !empty( $_errors ) )
             {
-                $_msg = array( 'error' => $_errors, 'record' => $_out );
-                throw new BadRequestException( 'Batch Error: Not all records could be deleted.', null, null, $_msg );
+                throw new BadRequestException();
             }
 
             if ( !empty( $_outResults ) )
@@ -1625,12 +1670,26 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            if ( $_ex instanceof RestException )
+            $_msg = $_ex->getMessage();
+
+            $_context = null;
+            if ( !empty( $_errors ) )
             {
-                throw $_ex;
+                $_context = array( 'error' => $_errors, 'record' => $_out );
+                $_msg = 'Batch Error: Not all records could be deleted.';
             }
 
-            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
+            if ( $_rollback )
+            {
+                $_msg .= " All changes rolled back.";
+            }
+
+            if ( $_ex instanceof RestException )
+            {
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+            }
+
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n$_msg", null, null, $_context );
         }
     }
 
@@ -1673,7 +1732,7 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function retrieveRecords( $table, $records, $extras = array() )
     {
-        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
+        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
         $table = $this->correctTableName( $table );
 
         $_idField = Option::get( $extras, 'id_field' );
@@ -1705,7 +1764,7 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function retrieveRecordsByIds( $table, $ids, $extras = array() )
     {
-        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the request." );
+        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
         $table = $this->correctTableName( $table );
 
         $_continue = Option::getBool( $extras, 'continue', false );
@@ -1791,7 +1850,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_meta = Option::get( $_data, 'meta', null, true );
             }
 
-            foreach ( $ids as $_key => $_value )
+            foreach ( $ids as $_index => $_value )
             {
                 try
                 {
@@ -1805,7 +1864,7 @@ class SqlDbSvc extends BaseDbSvc
                             $_temp = Option::get( $_value, $_idName, null, true );
                             if ( empty( $_temp ) )
                             {
-                                throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_key] request." );
+                                throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_index] request." );
                             }
 
                             $_id[$_idName] = $_temp;
@@ -1818,7 +1877,7 @@ class SqlDbSvc extends BaseDbSvc
                         $_idName = Option::get( $_info, 'name' );
                         if ( empty( $_value ) )
                         {
-                            throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_key] request." );
+                            throw new BadRequestException( "Identifying field '$_idName' can not be empty for delete record [$_index] request." );
                         }
 
                         $_id[$_idName] = $_value;
@@ -1860,7 +1919,7 @@ class SqlDbSvc extends BaseDbSvc
                         }
                     }
 
-                    $_out[$_key] = $_id;
+                    $_out[$_index] = $_id;
                 }
                 catch ( \Exception $_ex )
                 {
@@ -1878,14 +1937,14 @@ class SqlDbSvc extends BaseDbSvc
                         }
 
                         // mark last error and index for batch results
-                        $_errors[] = $_key;
-                        $_out[$_key] = $_ex->getMessage();
+                        $_errors[] = $_index;
+                        $_out[$_index] = $_ex->getMessage();
                         break;
                     }
 
                     // mark error and index for batch results
-                    $_errors[] = $_key;
-                    $_out[$_key] = $_ex->getMessage();
+                    $_errors[] = $_index;
+                    $_out[$_index] = $_ex->getMessage();
                 }
             }
 
@@ -2952,7 +3011,7 @@ class SqlDbSvc extends BaseDbSvc
         $_sql = '';
         $_params = array();
         $_combiner = Option::get( $filter_info, 'filter_op', 'and' );
-        foreach ( $_filters as $_filter )
+        foreach ( $_filters as $_key => $_filter )
         {
             if ( !empty( $_sql ) )
             {
@@ -2971,7 +3030,7 @@ class SqlDbSvc extends BaseDbSvc
             $_value = static::interpretFilterValue( $_value );
             if ( $use_params )
             {
-                $_paramName = ':ssf_' . $_name;
+                $_paramName = ':ssf_' . $_name . '_' . $_key;
                 $_params[$_paramName] = $_value;
                 $_value = $_paramName;
             }

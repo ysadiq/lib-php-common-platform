@@ -19,6 +19,9 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Option;
+
 /**
  * NoSqlDbSvc.php
  * A service to handle NoSQL (schema-less) database services accessed through the REST API.
@@ -26,31 +29,60 @@ namespace DreamFactory\Platform\Services;
  */
 abstract class NoSqlDbSvc extends BaseDbSvc
 {
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * General method for creating a pseudo-random identifier
-	 *
-	 * @param string $table Name of the table where the item will be stored
-	 *
-	 * @return string
-	 */
-	protected static function createItemId( $table )
-	{
-		$_randomTime = abs( time() );
+    /**
+     * @param null|array $post_data
+     *
+     * @return array
+     */
+    protected function _gatherExtrasFromRequest( $post_data = null )
+    {
+        $_extras = parent::_gatherExtrasFromRequest( $post_data );
 
-		if ( $_randomTime == 0 )
-		{
-			$_randomTime = 1;
-		}
+        if ( static::POST == $this->_action )
+        {
+            // allow system to create psuedo-random identifiers, applicable
+            $_extras['create_id'] = FilterInput::request(
+                'create_id',
+                Option::getBool( $post_data, 'create_id' ),
+                FILTER_VALIDATE_BOOLEAN
+            );
+        }
 
-		$_random1 = rand( 1, $_randomTime );
-		$_random2 = rand( 1, 2000000000 );
-		$_generateId = strtolower( md5( $_random1 . $table . $_randomTime . $_random2 ) );
-		$_randSmall = rand( 10, 99 );
+        // allow batching of record requests, if applicable
+        $_extras['batch'] = FilterInput::request(
+            'batch',
+            Option::getBool( $post_data, 'batch' ),
+            FILTER_VALIDATE_BOOLEAN
+        );
 
-		return $_generateId . $_randSmall;
-	}
+        return $_extras;
+    }
+
+    /**
+     * General method for creating a pseudo-random identifier
+     *
+     * @param string $table Name of the table where the item will be stored
+     *
+     * @return string
+     */
+    protected static function _createRecordId( $table )
+    {
+        $_randomTime = abs( time() );
+
+        if ( $_randomTime == 0 )
+        {
+            $_randomTime = 1;
+        }
+
+        $_random1 = rand( 1, $_randomTime );
+        $_random2 = rand( 1, 2000000000 );
+        $_generateId = strtolower( md5( $_random1 . $table . $_randomTime . $_random2 ) );
+        $_randSmall = rand( 10, 99 );
+
+        return $_generateId . $_randSmall;
+    }
 }
