@@ -125,6 +125,20 @@ abstract class BaseDbSvc extends BasePlatformRestService
             $_extras['ss_filters'] = $_ssFilters;
         }
 
+        // rollback all db changes in a transaction, if applicable
+        $_extras['rollback'] = FilterInput::request(
+            'rollback',
+            Option::getBool( $post_data, 'rollback' ),
+            FILTER_VALIDATE_BOOLEAN
+        );
+
+        // continue batch processing if an error occurs, if applicable
+        $_extras['continue'] = FilterInput::request(
+            'continue',
+            Option::getBool( $post_data, 'continue' ),
+            FILTER_VALIDATE_BOOLEAN
+        );
+
         // look for limit, accept top as well as limit
         $_limit = FilterInput::request(
             'limit',
@@ -566,15 +580,10 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function getTables( $tables = array() )
     {
-        $_tables = static::validateAsArray(
-            $tables,
-            ',',
-            true,
-            'Request requires a table name, or a list or array of tables names or properties.'
-        );
+        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
 
         $_out = array();
-        foreach ( $_tables as $_table )
+        foreach ( $tables as $_table )
         {
             $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
             $this->validateTableAccess( $_name );
@@ -605,6 +614,8 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function createTables( $tables = array() )
     {
+        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+
         $_out = array();
         foreach ( $tables as $_table )
         {
@@ -633,6 +644,8 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function updateTables( $tables = array() )
     {
+        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+
         $_out = array();
         foreach ( $tables as $_table )
         {
@@ -665,15 +678,10 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function deleteTables( $tables = array(), $check_empty = false )
     {
-        $_tables = static::validateAsArray(
-            $tables,
-            ',',
-            true,
-            'Request requires a table name, or a list or array of tables names or properties.'
-        );
+        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
 
         $_out = array();
-        foreach ( $_tables as $_table )
+        foreach ( $tables as $_table )
         {
             $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
             $this->validateTableAccess( $_name );
@@ -727,7 +735,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function createRecord( $table, $record, $extras = array() )
     {
-        $_records = static::validateAsArray( $record, null, true, 'There are no fields in the record.' );
+        $_records = static::validateAsArray( $record, null, true, 'The request contains no valid record fields.' );
 
         $_results = $this->createRecords( $table, $_records, $extras );
 
@@ -754,7 +762,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function updateRecord( $table, $record, $extras = array() )
     {
-        $_records = static::validateAsArray( $record, null, true, 'There are no fields in the record.' );
+        $_records = static::validateAsArray( $record, null, true, 'The request contains no valid record fields.' );
 
         $_results = $this->updateRecords( $table, $_records, $extras );
 
@@ -794,7 +802,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function updateRecordById( $table, $record, $id, $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $record = static::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
 
         $_results = $this->updateRecordsByIds( $table, $record, $id, $extras );
 
@@ -821,7 +829,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function mergeRecord( $table, $record, $extras = array() )
     {
-        $_records = static::validateAsArray( $record, null, true, 'There are no fields in the record.' );
+        $_records = static::validateAsArray( $record, null, true, 'The request contains no valid record fields.' );
 
         $_results = $this->mergeRecords( $table, $_records, $extras );
 
@@ -862,7 +870,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function mergeRecordById( $table, $record, $id, $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $record = static::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
 
         $_results = $this->mergeRecordsByIds( $table, $record, $id, $extras );
 
@@ -889,7 +897,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function deleteRecord( $table, $record, $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $record = static::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
 
         $_results = $this->deleteRecords( $table, array( $record ), $extras );
 
@@ -963,7 +971,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function retrieveRecord( $table, $record, $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $record = static::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
 
         $_results = $this->retrieveRecords( $table, array( $record ), $extras );
 
@@ -1310,13 +1318,13 @@ abstract class BaseDbSvc extends BasePlatformRestService
                             $_min = Option::get( $_config, 'min', 1 );
                             $_max = Option::get( $_config, 'max' );
                             $value = static::validateAsArray( $value, $_delimiter, true );
-                            $_count = count($value);
-                            if ($_count < $_min)
+                            $_count = count( $value );
+                            if ( $_count < $_min )
                             {
                                 $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value does not contain enough selections.";
                                 throw new BadRequestException( $_msg );
                             }
-                            if (!empty($_max) && ($_count > $_max))
+                            if ( !empty( $_max ) && ( $_count > $_max ) )
                             {
                                 $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value contains too many selections.";
                                 throw new BadRequestException( $_msg );
@@ -1353,19 +1361,21 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
     /**
      * @param array        $record
-     * @param string|array $include List of keys to include in the output record
-     * @param string       $id_field
+     * @param string|array $include  List of keys to include in the output record
+     * @param string|array $id_field Single or list of identifier fields
      *
      * @return array
      */
     protected static function cleanRecord( $record, $include = '*', $id_field = null )
     {
-        if ( empty( $id_field ) )
-        {
-            $id_field = static::DEFAULT_ID_FIELD;
-        }
         if ( '*' !== $include )
         {
+            $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
+            if ( !is_array( $id_field ) )
+            {
+                $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
+            }
+
             $_out = array();
             if ( empty( $include ) )
             {
@@ -1375,10 +1385,17 @@ abstract class BaseDbSvc extends BasePlatformRestService
             {
                 $include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
             }
-            if ( false === array_search( $id_field, $include ) )
+
+            // make sure we always include identifier fields
+            foreach ( $id_field as $id )
             {
-                $include[] = $id_field;
+                if ( false === array_search( $id, $include ) )
+                {
+                    $include[] = $id;
+                }
             }
+
+            // glean desired fields from record
             foreach ( $include as $_key )
             {
                 $_out[$_key] = Option::get( $record, $_key );
@@ -1411,41 +1428,87 @@ abstract class BaseDbSvc extends BasePlatformRestService
     /**
      * @param array  $records
      * @param string $id_field
+     * @param bool   $include_field
      *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return array
-     * @throws BadRequestException
      */
-    protected static function recordsAsIds( $records, $id_field = null )
+    protected static function recordsAsIds( $records, $id_field = null, $include_field = false )
     {
         $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
-        $_ids = array();
-        foreach ( $records as $_key => $_record )
+        if ( !is_array( $id_field ) )
         {
-            $_id = Option::get( $_record, $id_field );
-            if ( empty( $_id ) )
-            {
-                throw new BadRequestException( "Identifying field '$id_field' can not be empty for record index '$_key' request." );
-            }
-
-            $_ids[] = $_id;
+            $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
         }
 
-        return $_ids;
+        $_out = array();
+        foreach ( $records as $_index => $_record )
+        {
+            if ( count( $id_field ) > 1 )
+            {
+                $_ids = array();
+                foreach ( $id_field as $_field )
+                {
+                    $_id = Option::get( $_record, $_field );
+                    if ( empty( $_id ) )
+                    {
+                        throw new BadRequestException( "Identifying field '$_field' can not be empty for record index '$_index' request." );
+                    }
+                    $_ids[] = ( $include_field ) ? array( $_field => $_id ) : $_id;
+                }
+
+                $_out[] = $_ids;
+            }
+            else
+            {
+                $_field = $id_field[0];
+                $_id = Option::get( $_record, $_field );
+                if ( empty( $_id ) )
+                {
+                    throw new BadRequestException( "Identifying field '$_field' can not be empty for record index '$_index' request." );
+                }
+
+                $_out[] = ( $include_field ) ? array( $_field => $_id ) : $_id;
+            }
+        }
+
+        return $_out;
     }
 
     /**
      * @param        $ids
      * @param string $id_field
+     * @param bool   $field_included
      *
      * @return array
      */
-    protected static function idsAsRecords( $ids, $id_field = null )
+    protected static function idsAsRecords( $ids, $id_field = null, $field_included = false )
     {
         $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
+        if ( !is_array( $id_field ) )
+        {
+            $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
+        }
+
         $_out = array();
         foreach ( $ids as $_id )
         {
-            $_out[] = array( $id_field => $_id );
+            $_ids = array();
+            if ( ( count( $id_field ) > 1 ) && ( count( $_id ) > 1 ) )
+            {
+                foreach ( $id_field as $_index => $_field )
+                {
+                    $_search = ( $field_included ) ? $_field : $_index;
+                    $_ids[$_field] = Option::get( $_id, $_search );
+                }
+            }
+            else
+            {
+                $_field = $id_field[0];
+                $_ids[$_field] = $_id;
+            }
+
+            $_out[] = $_ids;
         }
 
         return $_out;
@@ -1453,9 +1516,10 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
     protected static function removeIds( &$record, $id_field = null )
     {
-        if ( empty( $id_field ) )
+        $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
+        if ( !is_array( $id_field ) )
         {
-            $id_field = static::DEFAULT_ID_FIELD;
+            $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
         }
 
         $id_field = Option::clean( $id_field );
@@ -1478,9 +1542,10 @@ abstract class BaseDbSvc extends BasePlatformRestService
         {
             $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
         }
-        foreach ( $id_field as $_name )
+
+        foreach ( $id_field as $_field )
         {
-            $_temp = Option::get( $record, $_name );
+            $_temp = Option::get( $record, $_field );
             if ( empty( $_temp ) )
             {
                 return false;
@@ -1508,6 +1573,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         {
             $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
         }
+
         foreach ( $id_field as $_key => $_name )
         {
             if ( false !== array_search( $_name, $fields ) )
