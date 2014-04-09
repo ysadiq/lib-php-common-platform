@@ -161,9 +161,10 @@ class Config extends BaseSystemRestResource
      */
     protected function _postProcess()
     {
-        static $_fabricHosted;
+        static $_fabricHosted, $_fabricPrivate;
 
         $_fabricHosted = $_fabricHosted ? : \Kisma::get( 'platform.fabric_hosted', Fabric::fabricHosted() );
+        $_fabricPrivate = $_fabricPrivate ? : Fabric::hostedPrivatePlatform();
 
         //	Only return a single row, not in an array
         if ( is_array( $this->_response ) && !Pii::isEmpty( $_record = Option::get( $this->_response, 'record' ) ) && count( $_record ) >= 1 )
@@ -192,6 +193,8 @@ class Config extends BaseSystemRestResource
          * Remote login support
          */
         $this->_response['is_guest'] = Pii::guest();
+        $this->_response['is_hosted'] = $_fabricHosted;
+        $this->_response['is_private'] = $_fabricPrivate;
         $this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
         $this->_response['allow_remote_logins'] =
             ( Pii::getParam( 'dsp.allow_remote_logins', false ) && Option::getBool( $this->_response, 'allow_open_registration' ) );
