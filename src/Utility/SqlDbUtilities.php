@@ -498,7 +498,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
             'ref_table'          => $refTable,
             'ref_fields'         => $refFields,
             'validation'         => $validation,
-            'values'             => $picklist
+            'value'              => $picklist
         );
     }
 

@@ -532,9 +532,9 @@ $_models = array(
                     'type' => 'string',
                 ),
             ),
-            'values'             => array(
+            'value'              => array(
                 'type'        => 'Array',
-                'description' => 'Selectable string values for picklist validation.',
+                'description' => 'Selectable string values for client menus and picklist validation.',
                 'items'       => array(
                     'type' => 'string',
                 ),
