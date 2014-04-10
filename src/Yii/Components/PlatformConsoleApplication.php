@@ -1452,10 +1452,14 @@ class PlatformConsoleApplication extends \CConsoleApplication
     public function getUseResponseObject()
     {
 <<<<<<< HEAD
+<<<<<<< HEAD
         return false;
 =======
         return $this->_useResponseObject;
 >>>>>>> Composer update
+=======
+        return false;
+>>>>>>> WIP
     }
 
     /**
@@ -1466,15 +1470,65 @@ class PlatformConsoleApplication extends \CConsoleApplication
     public function setUseResponseObject( $useResponseObject )
     {
 <<<<<<< HEAD
+<<<<<<< HEAD
         return $this;
     }
 
 
 =======
         $this->_useResponseObject = $useResponseObject;
+=======
+        return $this;
+    }
+
+    /**
+     * @param array $whitelist
+     *
+     * @return $this
+     * @throws \DreamFactory\Platform\Utility\RestException
+     */
+    public function setCorsWhiteList( $whitelist = array() )
+    {
+        CorsManager::setCorsWhitelist( $whitelist );
 
         return $this;
     }
 
+    /**
+     * @param $autoAddHeaders
+     *
+     * @return $this
+     */
+    public function setAutoAddHeaders( $autoAddHeaders )
+    {
+        CorsManager::setAutoAddHeaders( $autoAddHeaders );
+
+        return $this;
+    }
+
+    /**
+     * @param boolean $extendedHeaders
+     *
+     * @return PlatformWebApplication
+     */
+    public function setExtendedHeaders( $extendedHeaders = true )
+    {
+        CorsManager::setExtendedHeaders( $extendedHeaders );
+>>>>>>> WIP
+
+        return $this;
+    }
+
+<<<<<<< HEAD
 >>>>>>> Composer update
+=======
+    /**
+     * @return boolean
+     */
+    public function getExtendedHeaders()
+    {
+        return CorsManager::getExtendedHeaders();
+    }
+
+>>>>>>> WIP
 }
