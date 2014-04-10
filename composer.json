@@ -33,7 +33,7 @@
 		"pear/http_request2":              "*",
 		"pear/mail_mime-decode":           "*",
 		"pear/mail_mime":                  "*",
-		"dreamfactory/azure-sdk-for-php":  "~0.4.0@stable",
+		"dreamfactory/azure-sdk-for-php":  "~0.4@stable",
 		"igorw/event-source":              "1.0.*"
 	},
 	"require-dev":       {
