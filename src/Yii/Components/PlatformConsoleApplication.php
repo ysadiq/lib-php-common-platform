@@ -506,7 +506,7 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
      */
     public function getUseResponseObject()
     {
-        return $this->_useResponseObject;
+        return false;
     }
 
     /**
@@ -516,9 +516,52 @@ class PlatformConsoleApplication extends \CConsoleApplication implements Publish
      */
     public function setUseResponseObject( $useResponseObject )
     {
-        $this->_useResponseObject = $useResponseObject;
+        return $this;
+    }
+
+    /**
+     * @param array $whitelist
+     *
+     * @return $this
+     * @throws \DreamFactory\Platform\Utility\RestException
+     */
+    public function setCorsWhiteList( $whitelist = array() )
+    {
+        CorsManager::setCorsWhitelist( $whitelist );
 
         return $this;
+    }
+
+    /**
+     * @param $autoAddHeaders
+     *
+     * @return $this
+     */
+    public function setAutoAddHeaders( $autoAddHeaders )
+    {
+        CorsManager::setAutoAddHeaders( $autoAddHeaders );
+
+        return $this;
+    }
+
+    /**
+     * @param boolean $extendedHeaders
+     *
+     * @return PlatformWebApplication
+     */
+    public function setExtendedHeaders( $extendedHeaders = true )
+    {
+        CorsManager::setExtendedHeaders( $extendedHeaders );
+
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getExtendedHeaders()
+    {
+        return CorsManager::getExtendedHeaders();
     }
 
 }
