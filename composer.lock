@@ -3,7 +3,11 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
+<<<<<<< HEAD
     "hash": "391a059d259453269fccc2cff75b2389",
+=======
+    "hash": "5029a89656ef8dbdad47a3695a2b2bd7",
+>>>>>>> Composer update
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -122,28 +126,37 @@
         },
         {
             "name": "dreamfactory/azure-sdk-for-php",
-            "version": "0.4.0.3",
+            "version": "0.4.0.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/azure-sdk-for-php.git",
-                "reference": "bbecccae3343e99e47846ba85f53cf26fe4f2506"
+                "reference": "081c86e02057efa531078233ab98f6c813742dc1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/azure-sdk-for-php/zipball/bbecccae3343e99e47846ba85f53cf26fe4f2506",
-                "reference": "bbecccae3343e99e47846ba85f53cf26fe4f2506",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/azure-sdk-for-php/zipball/081c86e02057efa531078233ab98f6c813742dc1",
+                "reference": "081c86e02057efa531078233ab98f6c813742dc1",
                 "shasum": ""
             },
             "require": {
-                "pear-pear.php.net/http_request2": "*",
-                "pear-pear.php.net/mail_mime": "*",
-                "pear-pear.php.net/mail_mimedecode": "*",
-                "pear-pear.php.net/net_url2": "*"
+                "pear/http_request2": "*",
+                "pear/mail_mime": "*",
+                "pear/mail_mime-decode": "*",
+                "pear/net_url2": "*"
+            },
+            "require-dev": {
+                "mikey179/vfsstream": "~1.2@stable",
+                "phpunit/phpunit": "~3.7@stable"
             },
             "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-develop": "0.4.x-dev"
+                }
+            },
             "autoload": {
-                "psr-0": {
-                    "WindowsAzure\\": ""
+                "psr-4": {
+                    "WindowsAzure\\": "src/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -154,6 +167,11 @@
                 {
                     "name": "Azure PHP SDK",
                     "email": "azurephpsdk@microsoft.com"
+                },
+                {
+                    "name": "Jerry Ablan",
+                    "email": "jerryablan@dreamfactory.com",
+                    "role": "DreamFactory Package Maintainer"
                 }
             ],
             "description": "This project provides a set of PHP client libraries that make it easy to access Windows Azure tables, blobs, queues, service runtime and service management APIs.",
@@ -162,7 +180,7 @@
                 "php",
                 "sdk"
             ],
-            "time": "2014-02-24 21:48:37"
+            "time": "2014-04-10 17:55:31"
         },
         {
             "name": "dreamfactory/javascript-sdk",
@@ -243,12 +261,12 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Black Ops"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Lead Engineer, server-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Common Components for PHP",
@@ -551,6 +569,56 @@
                 "web service"
             ],
             "time": "2014-04-09 22:38:44"
+<<<<<<< HEAD
+=======
+        },
+        {
+            "name": "igorw/event-source",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/igorw/EventSource.git",
+                "reference": "427f0fda029c9a282d2ffde6fe4aac0ed0987770"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/igorw/EventSource/zipball/427f0fda029c9a282d2ffde6fe4aac0ed0987770",
+                "reference": "427f0fda029c9a282d2ffde6fe4aac0ed0987770",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Igorw\\EventSource": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Igor Wiedler",
+                    "email": "igor@wiedler.ch",
+                    "homepage": "http://wiedler.ch/igor/"
+                }
+            ],
+            "description": "A PHP 5.3 library for creating an EventSource stream.",
+            "keywords": [
+                "event-source",
+                "real-time",
+                "server-sent-events"
+            ],
+            "time": "2012-11-10 11:16:15"
+>>>>>>> Composer update
         },
         {
             "name": "kisma/kisma",
@@ -615,12 +683,21 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
+<<<<<<< HEAD
                 "reference": "607f20d4f9757e28e762f71d4a89d49f6900c564"
             },
             "dist": {
                 "type": "zip",
                 "url": "https://api.github.com/repos/Seldaek/monolog/zipball/607f20d4f9757e28e762f71d4a89d49f6900c564",
                 "reference": "607f20d4f9757e28e762f71d4a89d49f6900c564",
+=======
+                "reference": "03000a7fcd4072bd7e1f99c8ce4328621c5773b9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/03000a7fcd4072bd7e1f99c8ce4328621c5773b9",
+                "reference": "03000a7fcd4072bd7e1f99c8ce4328621c5773b9",
+>>>>>>> Composer update
                 "shasum": ""
             },
             "require": {
@@ -675,6 +752,7 @@
                 "logging",
                 "psr-3"
             ],
+<<<<<<< HEAD
             "time": "2014-04-08 08:59:38"
         },
         {
@@ -924,6 +1002,9 @@
                 "/"
             ],
             "description": "Selection of methods that are often needed when working with XML documents.  Functionality includes creating of attribute lists from arrays, creation of tags, validation of XML names and more."
+=======
+            "time": "2014-04-10 15:52:42"
+>>>>>>> Composer update
         },
         {
             "name": "pear/http_request2",
@@ -1490,12 +1571,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/HttpFoundation.git",
-                "reference": "a62e173e81a067eae72b1c40ffd9d007b6568da9"
+                "reference": "e31616394438f57e698ecbad4cd53b9d270935c8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/a62e173e81a067eae72b1c40ffd9d007b6568da9",
-                "reference": "a62e173e81a067eae72b1c40ffd9d007b6568da9",
+                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/e31616394438f57e698ecbad4cd53b9d270935c8",
+                "reference": "e31616394438f57e698ecbad4cd53b9d270935c8",
                 "shasum": ""
             },
             "require": {
@@ -1536,7 +1617,7 @@
             ],
             "description": "Symfony HttpFoundation Component",
             "homepage": "http://symfony.com",
-            "time": "2014-03-26 11:51:10"
+            "time": "2014-04-10 13:01:02"
         }
     ],
     "packages-dev": [
