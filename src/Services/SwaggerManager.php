@@ -571,6 +571,7 @@ SQL;
      * @return array
      */
     public static function getCommonProperties(array $excludes = array())
+<<<<<<< HEAD
     {
         static $_properties = array(
             'created_date' => array(
@@ -623,43 +624,42 @@ SQL;
      * @return array
      */
     public static function getCommonProperties( array $excludes = array() )
+=======
+>>>>>>> Removed last of event stuff I think
     {
         static $_properties = array(
-            'created_date'        => array(
-                'type'        => 'string',
+            'created_date' => array(
+                'type' => 'string',
                 'description' => 'Date this event was created.',
-                'readOnly'    => true,
+                'readOnly' => true,
             ),
-            'created_by_id'       => array(
-                'type'        => 'integer',
-                'format'      => 'int32',
+            'created_by_id' => array(
+                'type' => 'integer',
+                'format' => 'int32',
                 'description' => 'User Id of who created this event.',
-                'readOnly'    => true,
+                'readOnly' => true,
             ),
-            'last_modified_date'  => array(
-                'type'        => 'string',
+            'last_modified_date' => array(
+                'type' => 'string',
                 'description' => 'Date this event was last modified.',
-                'readOnly'    => true,
+                'readOnly' => true,
             ),
             'last_modified_by_id' => array(
-                'type'        => 'integer',
-                'format'      => 'int32',
+                'type' => 'integer',
+                'format' => 'int32',
                 'description' => 'User Id of who last modified this event.',
-                'readOnly'    => true,
+                'readOnly' => true,
             ),
         );
 
-        if ( empty( $excludes ) )
-        {
+        if (empty($excludes)) {
             return $_properties;
         }
 
         $_result = array();
 
-        foreach ( $_properties as $_property => $_schema )
-        {
-            if ( in_array( $_property, $excludes ) )
-            {
+        foreach ($_properties as $_property => $_schema) {
+            if (in_array($_property, $excludes)) {
                 continue;
             }
 
