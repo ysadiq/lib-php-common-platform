@@ -61,7 +61,7 @@ return array(
      * The events thrown that are relevant to Swagger
      */
     'events'         => array(
-        SwaggerEvents::CACHE_CLEARED,
-        SwaggerEvents::CACHE_REBUILT,
+//        SwaggerEvents::CACHE_CLEARED,
+//        SwaggerEvents::CACHE_REBUILT,
     ),
 );
