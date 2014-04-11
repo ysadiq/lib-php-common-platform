@@ -23,11 +23,12 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\UnauthorizedException;
+use DreamFactory\Platform\Interfaces\RestResourceLike;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Resources\User\Session;
-use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\Fabric;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Yii\Models\LookupKey;
 use DreamFactory\Platform\Yii\Models\Provider;
@@ -49,9 +50,10 @@ class Config extends BaseSystemRestResource
     /**
      * Constructor
      *
-     * @param BasePlatformService $consumer
-     * @param array               $resourceArray
+     * @param RestServiceLike|RestResourceLike $consumer
+     * @param array                            $resourceArray
      *
+     * @throws \InvalidArgumentException
      * @return Config
      */
     public function __construct( $consumer = null, $resourceArray = array() )
@@ -80,30 +82,39 @@ class Config extends BaseSystemRestResource
      */
     public static function getOpenRegistration()
     {
-        /** @var $_config \DreamFactory\Platform\Yii\Models\Config */
-        $_fields = 'allow_open_registration, open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id';
-
-        $_config = ResourceStore::model( 'config' )->find( array( 'select' => $_fields ) );
-
-        if ( null === $_config )
+        if ( null === ( $_openRegistrationConfig = Platform::getStore()->get( 'config.open_registration' ) ) )
         {
-            throw new InternalServerErrorException( 'Unable to load system configuration.' );
+            /** @var $_config \DreamFactory\Platform\Yii\Models\Config */
+            $_fields = 'allow_open_registration, open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id';
+
+            //  Pull the first configuration record, should there be more than one
+            $_config = ResourceStore::model( 'config' )->find( array( 'select' => $_fields, 'order' => 'id' ) );
+
+            if ( null === $_config )
+            {
+                throw new InternalServerErrorException( 'Unable to load system configuration.' );
+            }
+
+            if ( !$_config->allow_open_registration )
+            {
+                return false;
+            }
+
+            Platform::getStore()->set( 'config.open_registration', $_openRegistrationConfig = $_config->getAttributes( null ) );
         }
 
-        if ( !$_config->allow_open_registration )
-        {
-            return false;
-        }
-
-        return $_config->getAttributes( null );
+        return $_openRegistrationConfig;
     }
 
     /**
      * Override for GET of public info
      *
      * @param string $operation
-     * @param null   $resource
+     * @param mixed  $resource
      *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
+     * @throws \Exception
      * @return bool
      */
     public function checkPermission( $operation, $resource = null )
@@ -129,7 +140,6 @@ class Config extends BaseSystemRestResource
             //	Check for CORS changes...
             if ( null !== ( $_hostList = Option::get( $_payload, 'allowed_hosts', null, true ) ) )
             {
-//			Log::debug( 'Allowed hosts given: ' . print_r( $_hostList, true ) );
                 SystemManager::setAllowedHosts( $_hostList );
             }
 
@@ -243,6 +253,7 @@ class Config extends BaseSystemRestResource
     }
 
     /**
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return array|mixed
      */
     protected function _getLookupKeys()
@@ -263,6 +274,9 @@ class Config extends BaseSystemRestResource
     }
 
     /**
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \InvalidArgumentException
+     * @throws \Exception
      * @return array|mixed
      */
     protected function _getRemoteProviders()
@@ -324,7 +338,7 @@ class Config extends BaseSystemRestResource
                         {
                             if ( $_priorRow['api_name'] == $_row->api_name )
                             {
-                                unset( $_remoteProviders[$_index] );
+                                unset( $_remoteProviders[ $_index ] );
                                 break;
                             }
                         }

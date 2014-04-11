@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Resources;
 
 use DreamFactory\Platform\Enums\ResponseFormats;
-use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Interfaces\RestResourceLike;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
@@ -74,8 +73,8 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
     /**
      * Create a new service
      *
-     * @param RestServiceLike $consumer
-     * @param array           $settings configuration array
+     * @param RestServiceLike|RestResourceLike $consumer
+     * @param array                            $settings configuration array
      *
      * @throws \InvalidArgumentException
      */
@@ -97,7 +96,9 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
      * @param string     $action
      * @param string|int $output_format
      *
-     * @throws BadRequestException
+     * @throws \InvalidArgumentException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \DreamFactory\Platform\Exceptions\MisconfigurationException
      * @return mixed
      */
     public function processRequest( $resource = null, $action = self::GET, $output_format = null )
@@ -128,28 +129,6 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
         $this->_postProcess();
 
         return $this->_response;
-    }
-
-    /**
-     * @return mixed
-     */
-    protected function _preProcess()
-    {
-        $this->trigger( ResourceServiceEvents::PRE_PROCESS );
-
-        parent::_preProcess();
-    }
-
-    /**
-     * A chance to format the response
-     */
-    protected function _postProcess()
-    {
-        $this->_formatResponse();
-
-        parent::_postProcess();
-
-        $this->trigger( ResourceServiceEvents::POST_PROCESS );
     }
 
     /**

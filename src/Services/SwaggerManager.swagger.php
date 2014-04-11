@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-use DreamFactory\Platform\Events\Enums\SwaggerEvents;
+//use DreamFactory\Platform\Events\Enums\SwaggerEvents;
 use DreamFactory\Platform\Services\SwaggerManager;
 
 $_description = '<p>
@@ -61,7 +61,7 @@ return array(
      * The events thrown that are relevant to Swagger
      */
     'events'         => array(
-        SwaggerEvents::CACHE_CLEARED,
-        SwaggerEvents::CACHE_REBUILT,
+//        SwaggerEvents::CACHE_CLEARED,
+//        SwaggerEvents::CACHE_REBUILT,
     ),
 );

@@ -19,11 +19,11 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Yii\Utility\Pii;

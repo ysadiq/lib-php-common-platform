@@ -116,7 +116,7 @@ class BaseApiController extends \CController implements EventPublisherLike
 	 */
 	protected function afterAction( $action )
 	{
-		Pii::app()->trigger( ApiEvents::AFTER_REQUEST, new PlatformEvent() );
+//		Pii::app()->trigger( ApiEvents::AFTER_REQUEST, new PlatformEvent() );
 
 		parent::afterAction( $action );
 	}
@@ -128,7 +128,7 @@ class BaseApiController extends \CController implements EventPublisherLike
 	 */
 	protected function beforeAction( $action )
 	{
-		Pii::app()->trigger( ApiEvents::BEFORE_REQUEST, new PlatformEvent() );
+//		Pii::app()->trigger( ApiEvents::BEFORE_REQUEST, new PlatformEvent() );
 
 		return parent::beforeAction( $action );
 	}

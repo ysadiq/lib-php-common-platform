@@ -20,7 +20,7 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
-use DreamFactory\Platform\Events\Enums\SwaggerEvents;
+//use DreamFactory\Platform\Events\Enums\SwaggerEvents;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\System\Script;
 use DreamFactory\Platform\Utility\Platform;

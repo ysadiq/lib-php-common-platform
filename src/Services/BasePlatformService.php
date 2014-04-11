@@ -21,7 +21,6 @@ use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\ServiceHandler;
-use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Interfaces\HttpMethod;
 use Kisma\Core\Seed;
@@ -140,30 +139,6 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
         ServiceHandler::cacheService( $this->_apiName, $this );
 
         parent::__destruct();
-    }
-
-    /**
-     * {@InheritDoc}
-     */
-    public function on( $eventName, $listener, $priority = 0 )
-    {
-        Pii::app()->on( $eventName, $listener, $priority, get_object_vars( $this ) );
-    }
-
-    /**
-     * {@InheritDoc}
-     */
-    public function off( $eventName, $callback )
-    {
-        Pii::app()->off( $eventName, $callback, get_object_vars( $this ) );
-    }
-
-    /**
-     * {@InheritDoc}
-     */
-    public function trigger( $eventName, $event = null )
-    {
-        return Pii::app()->trigger( $eventName, $event, get_object_vars( $this ) );
     }
 
     /**

@@ -23,6 +23,7 @@ use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Components\JTablesFormatter;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Interfaces\RestResourceLike;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\ResourceStore;
@@ -86,9 +87,9 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     /**
      * Create a new service
      *
-     * @param RestServiceLike $consumer
-     * @param array           $settings      configuration array
-     * @param array           $resourceArray Or you can pass in through $settings['resource_array'] = array(...)
+     * @param RestServiceLike|RestResourceLike $consumer
+     * @param array                            $settings      configuration array
+     * @param array                            $resourceArray Or you can pass in through $settings['resource_array'] = array(...)
      *
      * @throws \InvalidArgumentException
      */
@@ -115,6 +116,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     /**
      * @param string $resource
      *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return BasePlatformSystemModel
      */
     public static function model( $resource = null )
@@ -130,6 +132,11 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      * @param bool   $includeSchema
      * @param bool   $includeCount
      *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \CDbException
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
+     * @throws \Exception
      * @return array
      */
     public static function select( $ids = null, $fields = null, $extras = array(), $singleRow = false, $includeSchema = false, $includeCount = false )
@@ -161,6 +168,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     }
 
     /**
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
      * @return bool
      */
     protected function _preProcess()
@@ -211,6 +220,9 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      * @param string $operation
      * @param string $resource
      *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
+     * @throws \Exception
      * @return bool
      */
     public function checkPermission( $operation, $resource = null )
@@ -222,6 +234,9 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      * @param array $ids     IDs returned here
      * @param array $records Records returned here
      *
+     * @throws \LogicException
+     * @throws \InvalidArgumentException
+     * @throws \Exception
      * @return array The payload operated upon
      */
     protected function _determineRequestedResource( &$ids = null, &$records = null )
@@ -245,6 +260,11 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     /**
      * Default GET implementation
      *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \LogicException
+     * @throws \InvalidArgumentException
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \Exception
      * @return bool
      */
     protected function _handleGet()
@@ -338,7 +358,14 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     /**
      * Default PUT implementation
      *
+     * @throws \InvalidArgumentException
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \Exception
+     * @throws \CDbException
+     * @throws \LogicException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
+     * @throws \Exception
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return bool
      */
     protected function _handlePut()
@@ -398,14 +425,17 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     /**
      * Default POST implementation
      *
-     * @return array|bool
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \Exception
+     * @throws \InvalidArgumentException
+     * @throws \LogicException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
+     * @throws \Exception
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @return array|bool
      */
     protected function _handlePost()
     {
-        //	Phone home...
-        $this->trigger( $this->_apiName . '.create' );
-
         $_payload = $this->_determineRequestedResource( $_ids, $_records );
 
         if ( !empty( $_records ) )
@@ -427,8 +457,15 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     /**
      * Default DELETE implementation
      *
-     * @return bool|void
+     * @throws \InvalidArgumentException
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \Exception
+     * @throws \CDbException
+     * @throws \LogicException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
+     * @throws \Exception
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @return bool|void
      */
     protected function _handleDelete()
     {
@@ -648,6 +685,11 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     /**
      * @param BasePlatformSystemModel $resource
      *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \CDbException
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
+     * @throws \Exception
      * @return mixed
      */
     public function getSchema( $resource )

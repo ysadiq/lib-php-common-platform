@@ -19,8 +19,6 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
-use DreamFactory\Platform\Events\EventStream;
-
 /**
  * Event.php
  * Model for table dreamfactory.df_sys_event
@@ -126,11 +124,5 @@ class Event extends BasePlatformSystemModel
         );
 
         return $this;
-    }
-
-    public static function startStream( $channel )
-    {
-        $_stream = new EventStream();
-        $_stream->run();
     }
 }

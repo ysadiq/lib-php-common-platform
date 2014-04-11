@@ -112,7 +112,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
             return false;
         }
 
-        return $returnName ? $_tables[$_key] : true;
+        return $returnName ? $_tables[ $_key ] : true;
     }
 
     /**
@@ -1185,7 +1185,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
                         $definition = static::buildColumnType( $field );
                         if ( !empty( $definition ) )
                         {
-                            $alter_columns[$name] = $definition;
+                            $alter_columns[ $name ] = $definition;
                         }
                     }
                     $isAlter = true;
@@ -1196,7 +1196,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
                     $definition = static::buildColumnType( $field );
                     if ( !empty( $definition ) )
                     {
-                        $columns[$name] = $definition;
+                        $columns[ $name ] = $definition;
                     }
                 }
 
@@ -1793,7 +1793,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
                     $_labels = array_merge( $_labels, Option::get( $_results, 'labels', array() ) );
                     $_references = array_merge( $_references, Option::get( $_results, 'references', array() ) );
                     $_indexes = array_merge( $_indexes, Option::get( $_results, 'indexes', array() ) );
-                    $_out[$_count] = array( 'name' => $_tableName );
+                    $_out[ $_count ] = array( 'name' => $_tableName );
                 }
             }
             catch ( \Exception $ex )
@@ -1804,7 +1804,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
                     throw $ex;
                 }
 
-                $_out[$_count] = array(
+                $_out[ $_count ] = array(
                     'error' => array(
                         'message' => $ex->getMessage(),
                         'code'    => $ex->getCode()
@@ -1980,7 +1980,7 @@ SQL;
                 }
                 else
                 {
-                    $_updates[$_id] = $_label;
+                    $_updates[ $_id ] = $_label;
                 }
             }
 
@@ -2061,7 +2061,7 @@ SQL;
 
         foreach ( $original as $_label )
         {
-            $_new[Option::get( $_label, 'field' )] = $_label;
+            $_new[ Option::get( $_label, 'field' ) ] = $_label;
         }
 
         return $_new;
