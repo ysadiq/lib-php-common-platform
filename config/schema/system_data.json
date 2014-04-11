@@ -87,16 +87,16 @@
 	],
 	"df_sys_app":            [
 		{
-			"api_name": "todojquery",
-			"url":      "https://raw.github.com/dreamfactorysoftware/app-todo-jquery/master/todojquery.dfpkg"
+			"url": "https://raw.github.com/dreamfactorysoftware/app-todo-jquery/master/todojquery.dfpkg"
 		},
 		{
-			"api_name": "todoangular",
-			"url":      "https://raw.github.com/dreamfactorysoftware/app-todo-angular/master/todoangular.dfpkg"
+			"url": "https://raw.github.com/dreamfactorysoftware/app-todo-angular/master/todoangular.dfpkg"
 		},
 		{
-			"api_name": "todosencha",
-			"url":      "https://raw.github.com/dreamfactorysoftware/app-todo-sencha/master/todosencha.dfpkg"
+			"url": "https://raw.github.com/dreamfactorysoftware/app-todo-sencha/master/todosencha.dfpkg"
+		},
+		{
+			"url": "https://raw.github.com/dreamfactorysoftware/app-calendar/master/calendar.dfpkg"
 		}
 	]
 }
