@@ -26,24 +26,10 @@ $_providerProviderUser['apis'] = array(
         'operations'  => array(
             array(
                 'method'           => 'GET',
-<<<<<<< HEAD
-<<<<<<< HEAD
                 'summary'          => 'getProviderUsers() - Retrieve one or more provider provider users.',
                 'nickname'         => 'getProviderUsers',
                 'type'             => 'ProviderUsersResponse',
                 'event_name'       => 'provider_users.list',
-=======
-                'summary'          => 'getProviderUsers() - Retrieve one or more users.',
-                'nickname'         => 'getProviderUsers',
-                'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'users.list',
->>>>>>> Swagger updates. Event container tweak
-=======
-                'summary'          => 'getProviderUsers() - Retrieve one or more provider provider users.',
-                'nickname'         => 'getProviderUsers',
-                'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'provider_users.list',
->>>>>>> ProviderUser swagger file
                 'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'parameters'       => array(
@@ -154,24 +140,10 @@ $_providerProviderUser['apis'] = array(
             ),
             array(
                 'method'           => 'POST',
-<<<<<<< HEAD
-<<<<<<< HEAD
                 'summary'          => 'createProviderUsers() - Create one or more provider users.',
                 'nickname'         => 'createProviderUsers',
                 'type'             => 'ProviderUsersResponse',
                 'event_name'       => 'provider_users.create',
-=======
-                'summary'          => 'createProviderUsers() - Create one or more users.',
-                'nickname'         => 'createProviderUsers',
-                'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'users.create',
->>>>>>> Swagger updates. Event container tweak
-=======
-                'summary'          => 'createProviderUsers() - Create one or more provider users.',
-                'nickname'         => 'createProviderUsers',
-                'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'provider_users.create',
->>>>>>> ProviderUser swagger file
                 'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'parameters'       => array(
@@ -230,24 +202,10 @@ $_providerProviderUser['apis'] = array(
             ),
             array(
                 'method'           => 'PATCH',
-<<<<<<< HEAD
-<<<<<<< HEAD
                 'summary'          => 'updateProviderUsers() - Update one or more provider provider users.',
                 'nickname'         => 'updateProviderUsers',
                 'type'             => 'ProviderUsersResponse',
                 'event_name'       => 'provider_users.update',
-=======
-                'summary'          => 'updateProviderUsers() - Update one or more users.',
-                'nickname'         => 'updateProviderUsers',
-                'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'users.update',
->>>>>>> Swagger updates. Event container tweak
-=======
-                'summary'          => 'updateProviderUsers() - Update one or more provider provider users.',
-                'nickname'         => 'updateProviderUsers',
-                'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'provider_users.update',
->>>>>>> ProviderUser swagger file
                 'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'parameters'       => array(
@@ -297,24 +255,10 @@ $_providerProviderUser['apis'] = array(
             ),
             array(
                 'method'           => 'DELETE',
-<<<<<<< HEAD
-<<<<<<< HEAD
                 'summary'          => 'deleteProviderUsers() - Delete one or more provider users.',
                 'nickname'         => 'deleteProviderUsers',
                 'type'             => 'ProviderUsersResponse',
                 'event_name'       => 'provider_users.delete',
-=======
-                'summary'          => 'deleteProviderUsers() - Delete one or more users.',
-                'nickname'         => 'deleteProviderUsers',
-                'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'users.delete',
->>>>>>> Swagger updates. Event container tweak
-=======
-                'summary'          => 'deleteProviderUsers() - Delete one or more provider users.',
-                'nickname'         => 'deleteProviderUsers',
-                'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'provider_users.delete',
->>>>>>> ProviderUser swagger file
                 'parameters'       => array(
                     array(
                         'name'          => 'ids',
@@ -371,39 +315,17 @@ $_providerProviderUser['apis'] = array(
                     'use the POST request with X-HTTP-METHOD = DELETE header and post records or ids.',
             ),
         ),
-<<<<<<< HEAD
-<<<<<<< HEAD
         'description' => 'Operations for provider user administration.',
-=======
-        'description' => 'Operations for user administration.',
->>>>>>> Swagger updates. Event container tweak
-=======
-        'description' => 'Operations for provider user administration.',
->>>>>>> ProviderUser swagger file
     ),
     array(
         'path'        => '/{api_name}/user/{id}',
         'operations'  => array(
             array(
                 'method'           => 'GET',
-<<<<<<< HEAD
-<<<<<<< HEAD
                 'summary'          => 'getProviderUser() - Retrieve one provider user.',
                 'nickname'         => 'getProviderUser',
                 'type'             => 'ProviderUserResponse',
                 'event_name'       => 'provider_user.read',
-=======
-                'summary'          => 'getProviderUser() - Retrieve one user.',
-                'nickname'         => 'getProviderUser',
-                'type'             => 'ProviderUserResponse',
-                'event_name'       => 'user.read',
->>>>>>> Swagger updates. Event container tweak
-=======
-                'summary'          => 'getProviderUser() - Retrieve one provider user.',
-                'nickname'         => 'getProviderUser',
-                'type'             => 'ProviderUserResponse',
-                'event_name'       => 'provider_user.read',
->>>>>>> ProviderUser swagger file
                 'parameters'       => array(
                     array(
                         'name'          => 'id',
@@ -448,24 +370,10 @@ $_providerProviderUser['apis'] = array(
             ),
             array(
                 'method'           => 'PATCH',
-<<<<<<< HEAD
-<<<<<<< HEAD
                 'summary'          => 'updateProviderUser() - Update one provider user.',
                 'nickname'         => 'updateProviderUser',
                 'type'             => 'ProviderUserResponse',
                 'event_name'       => 'provider_user.update',
-=======
-                'summary'          => 'updateProviderUser() - Update one user.',
-                'nickname'         => 'updateProviderUser',
-                'type'             => 'ProviderUserResponse',
-                'event_name'       => 'user.update',
->>>>>>> Swagger updates. Event container tweak
-=======
-                'summary'          => 'updateProviderUser() - Update one provider user.',
-                'nickname'         => 'updateProviderUser',
-                'type'             => 'ProviderUserResponse',
-                'event_name'       => 'provider_user.update',
->>>>>>> ProviderUser swagger file
                 'parameters'       => array(
                     array(
                         'name'          => 'id',
@@ -520,24 +428,10 @@ $_providerProviderUser['apis'] = array(
             ),
             array(
                 'method'           => 'DELETE',
-<<<<<<< HEAD
-<<<<<<< HEAD
                 'summary'          => 'deleteProviderUser() - Delete one provider user.',
                 'nickname'         => 'deleteProviderUser',
                 'type'             => 'ProviderUserResponse',
                 'event_name'       => 'provider_user.delete',
-=======
-                'summary'          => 'deleteProviderUser() - Delete one user.',
-                'nickname'         => 'deleteProviderUser',
-                'type'             => 'ProviderUserResponse',
-                'event_name'       => 'user.delete',
->>>>>>> Swagger updates. Event container tweak
-=======
-                'summary'          => 'deleteProviderUser() - Delete one provider user.',
-                'nickname'         => 'deleteProviderUser',
-                'type'             => 'ProviderUserResponse',
-                'event_name'       => 'provider_user.delete',
->>>>>>> ProviderUser swagger file
                 'parameters'       => array(
                     array(
                         'name'          => 'id',
@@ -581,15 +475,7 @@ $_providerProviderUser['apis'] = array(
                 'notes'            => 'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return deleted properties.',
             ),
         ),
-<<<<<<< HEAD
-<<<<<<< HEAD
         'description' => 'Operations for individual provider user administration.',
-=======
-        'description' => 'Operations for individual user administration.',
->>>>>>> Swagger updates. Event container tweak
-=======
-        'description' => 'Operations for individual provider user administration.',
->>>>>>> ProviderUser swagger file
     ),
 );
 
@@ -597,27 +483,11 @@ $_commonProperties = array(
     'id'             => array(
         'type'        => 'integer',
         'format'      => 'int32',
-<<<<<<< HEAD
-<<<<<<< HEAD
         'description' => 'Identifier of this provider user.',
     ),
     'email'          => array(
         'type'        => 'string',
         'description' => 'The email address required for this provider user.',
-=======
-        'description' => 'Identifier of this user.',
-    ),
-    'email'          => array(
-        'type'        => 'string',
-        'description' => 'The email address required for this user.',
->>>>>>> Swagger updates. Event container tweak
-=======
-        'description' => 'Identifier of this provider user.',
-    ),
-    'email'          => array(
-        'type'        => 'string',
-        'description' => 'The email address required for this provider user.',
->>>>>>> ProviderUser swagger file
     ),
     'password'       => array(
         'type'        => 'string',
@@ -625,8 +495,6 @@ $_commonProperties = array(
     ),
     'first_name'     => array(
         'type'        => 'string',
-<<<<<<< HEAD
-<<<<<<< HEAD
         'description' => 'The first name for this provider user.',
     ),
     'last_name'      => array(
@@ -656,44 +524,6 @@ $_commonProperties = array(
     'role_id'        => array(
         'type'        => 'string',
         'description' => 'The role to which this provider user is assigned.',
-=======
-        'description' => 'The first name for this user.',
-=======
-        'description' => 'The first name for this provider user.',
->>>>>>> ProviderUser swagger file
-    ),
-    'last_name'      => array(
-        'type'        => 'string',
-        'description' => 'The last name for this provider user.',
-    ),
-    'display_name'   => array(
-        'type'        => 'string',
-        'description' => 'Displayable name of this provider user.',
-    ),
-    'phone'          => array(
-        'type'        => 'string',
-        'description' => 'Phone number for this provider user.',
-    ),
-    'is_active'      => array(
-        'type'        => 'boolean',
-        'description' => 'True if this provider user is active for use.',
-    ),
-    'is_sys_admin'   => array(
-        'type'        => 'boolean',
-        'description' => 'True if this provider user is a system admin.',
-    ),
-    'default_app_id' => array(
-        'type'        => 'string',
-        'description' => 'The default launched app for this provider user.',
-    ),
-    'role_id'        => array(
-        'type'        => 'string',
-<<<<<<< HEAD
-        'description' => 'The role to which this user is assigned.',
->>>>>>> Swagger updates. Event container tweak
-=======
-        'description' => 'The role to which this provider user is assigned.',
->>>>>>> ProviderUser swagger file
     ),
 );
 
@@ -711,53 +541,21 @@ $_relatedProperties = array(
 $_stampProperties = array(
     'created_date'        => array(
         'type'        => 'string',
-<<<<<<< HEAD
-<<<<<<< HEAD
         'description' => 'Date this provider user was created.',
-=======
-        'description' => 'Date this user was created.',
->>>>>>> Swagger updates. Event container tweak
-=======
-        'description' => 'Date this provider user was created.',
->>>>>>> ProviderUser swagger file
     ),
     'created_by_id'       => array(
         'type'        => 'integer',
         'format'      => 'int32',
-<<<<<<< HEAD
-<<<<<<< HEAD
         'description' => 'ProviderUser Id of who created this provider user.',
     ),
     'last_modified_date'  => array(
         'type'        => 'string',
         'description' => 'Date this provider user was last modified.',
-=======
-        'description' => 'ProviderUser Id of who created this user.',
-    ),
-    'last_modified_date'  => array(
-        'type'        => 'string',
-        'description' => 'Date this user was last modified.',
->>>>>>> Swagger updates. Event container tweak
-=======
-        'description' => 'ProviderUser Id of who created this provider user.',
-    ),
-    'last_modified_date'  => array(
-        'type'        => 'string',
-        'description' => 'Date this provider user was last modified.',
->>>>>>> ProviderUser swagger file
     ),
     'last_modified_by_id' => array(
         'type'        => 'integer',
         'format'      => 'int32',
-<<<<<<< HEAD
-<<<<<<< HEAD
         'description' => 'ProviderUser Id of who last modified this provider user.',
-=======
-        'description' => 'ProviderUser Id of who last modified this user.',
->>>>>>> Swagger updates. Event container tweak
-=======
-        'description' => 'ProviderUser Id of who last modified this provider user.',
->>>>>>> ProviderUser swagger file
     ),
 );
 
@@ -774,15 +572,7 @@ $_providerProviderUser['models'] = array(
         'properties' => array(
             'record' => array(
                 'type'        => 'array',
-<<<<<<< HEAD
-<<<<<<< HEAD
                 'description' => 'Array of system provider user records.',
-=======
-                'description' => 'Array of system user records.',
->>>>>>> Swagger updates. Event container tweak
-=======
-                'description' => 'Array of system provider user records.',
->>>>>>> ProviderUser swagger file
                 'items'       => array(
                     '$ref' => 'ProviderUserRequest',
                 ),
@@ -816,15 +606,7 @@ $_providerProviderUser['models'] = array(
         'properties' => array(
             'record' => array(
                 'type'        => 'array',
-<<<<<<< HEAD
-<<<<<<< HEAD
                 'description' => 'Array of system provider user records.',
-=======
-                'description' => 'Array of system user records.',
->>>>>>> Swagger updates. Event container tweak
-=======
-                'description' => 'Array of system provider user records.',
->>>>>>> ProviderUser swagger file
                 'items'       => array(
                     '$ref' => 'ProviderUserResponse',
                 ),
@@ -847,15 +629,7 @@ $_providerProviderUser['models'] = array(
         'properties' => array(
             'record' => array(
                 'type'        => 'array',
-<<<<<<< HEAD
-<<<<<<< HEAD
                 'description' => 'Array of system provider provider user records.',
-=======
-                'description' => 'Array of system user records.',
->>>>>>> Swagger updates. Event container tweak
-=======
-                'description' => 'Array of system provider provider user records.',
->>>>>>> ProviderUser swagger file
                 'items'       => array(
                     '$ref' => 'RelatedProviderUser',
                 ),

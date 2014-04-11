@@ -89,21 +89,12 @@
 		{
 			"api_name": "todojquery",
 			"url":      "https://raw.github.com/dreamfactorysoftware/app-todo-jquery/master/todojquery.dfpkg"
-<<<<<<< HEAD
 		},
 		{
 			"api_name": "todoangular",
 			"url":      "https://raw.github.com/dreamfactorysoftware/app-todo-angular/master/todoangular.dfpkg"
 		},
 		{
-=======
-		},
-		{
-			"api_name": "todoangular",
-			"url":      "https://raw.github.com/dreamfactorysoftware/app-todo-angular/master/todoangular.dfpkg"
-		},
-		{
->>>>>>> Adding back default apps on init data
 			"api_name": "todosencha",
 			"url":      "https://raw.github.com/dreamfactorysoftware/app-todo-sencha/master/todosencha.dfpkg"
 		}

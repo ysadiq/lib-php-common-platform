@@ -54,35 +54,22 @@ $_script = array(
             'operations'  => array(
                 array(
                     'method'           => 'GET',
-                    'summary'          => 'getScripts() - List all scripts.',
+                    'summary'          => 'getScripts() - List all scripts',
                     'nickname'         => 'getScripts',
                     'type'             => 'Scripts',
                     'event_name'       => 'scripts.list',
-                    'notes'            => 'List the available scripts.',
-                    'responseMessages' => array(
-                        array(
-                            'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                            'code'    => 400,
-                        ),
-                        array(
-                            'message' => 'Unauthorized Access - No currently valid session available.',
-                            'code'    => 401,
-                        ),
-                        array(
-                            'message' => 'System Error - Specific reason is included in the error message.',
-                            'code'    => 500,
-                        ),
-                    ),
+                    'notes'            => 'List all known scripts',
+                    'responseMessages' => $_commonResponses,
                 ),
             ),
         ),
         array(
             'path'        => '/{api_name}/script/{script_id}',
-            'description' => 'Operations on scripts.',
+            'description' => 'Operations on scripts',
             'operations'  => array(
                 array(
                     'method'           => 'GET',
-                    'summary'          => 'getScript() - Get the script with ID provided.',
+                    'summary'          => 'getScript() - Get the script with ID provided',
                     'nickname'         => 'getScript',
                     'type'             => 'ScriptResponse',
                     'event_name'       => 'script.read',
@@ -102,7 +89,7 @@ $_script = array(
                     'method'           => 'POST',
                     'summary'          => 'runScript() - Runs the specified script.',
                     'nickname'         => 'runScript',
-                    'type'             => 'ScriptResponse',
+                    'type'             => 'ScriptOutput',
                     'event_name'       => 'script.run',
                     'parameters'       => array(
                         array(
@@ -114,30 +101,8 @@ $_script = array(
                             'required'      => true,
                         ),
                     ),
-<<<<<<< HEAD
-                    'responseMessages' => array(
-                        array(
-                            'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                            'code'    => 400,
-                        ),
-                        array(
-                            'message' => 'Unauthorized Access - No currently valid session available.',
-                            'code'    => 401,
-                        ),
-                        array(
-                            'message' => 'Not Found - Requested container does not exist.',
-                            'code'    => 404,
-                        ),
-                        array(
-                            'message' => 'System Error - Specific reason is included in the error message.',
-                            'code'    => 500,
-                        ),
-                    ),
-                    'notes'            => 'Post data as an array of folders and/or files.',
-=======
                     'responseMessages' => $_commonResponses,
                     'notes'            => 'Loads and executes the specified script',
->>>>>>> Swagger updates for script service. Added method to SwaggerManager to return a set of common responses to Swagger definitions. Added SwaggerEvents constants for new Swagger events: swagger.cache_cleared and swagger.cache_rebuilt
                 ),
                 array(
                     'method'           => 'PUT',
@@ -164,24 +129,11 @@ $_script = array(
                             'required'      => true,
                         ),
                     ),
-                    'responseMessages' => array(
-                        array(
-                            'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                            'code'    => 400,
-                        ),
-                        array(
-                            'message' => 'Unauthorized Access - No currently valid session available.',
-                            'code'    => 401,
-                        ),
-                        array(
-                            'message' => 'System Error - Specific reason is included in the error message.',
-                            'code'    => 500,
-                        ),
-                    ),
+                    'responseMessages' => $_commonResponses,
                 ),
             ),
         ),
-    )
+    ),
 );
 
 $_script['models'] = array(
@@ -218,6 +170,19 @@ $_script['models'] = array(
                 'items'       => array(
                     '$ref' => 'Script',
                 ),
+            ),
+        ),
+    ),
+    'ScriptOutput'    => array(
+        'id'         => 'ScriptOutput',
+        'properties' => array(
+            'script_output'        => array(
+                'type'        => 'string',
+                'description' => 'The output of the script, if any.',
+            ),
+            'script_last_variable' => array(
+                'type'        => 'string',
+                'description' => 'The value of the last variable created within the script.',
             ),
         ),
     ),

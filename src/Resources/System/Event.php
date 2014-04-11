@@ -44,7 +44,8 @@ class Event extends BaseSystemRestResource
     //*************************************************************************
 
     /**
-     * {@InheritDoc}
+     * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+     * @param array                                               $resources
      */
     public function __construct( $consumer, $resources = array() )
     {
@@ -62,9 +63,8 @@ class Event extends BaseSystemRestResource
     }
 
     /**
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-     * @throws \InvalidArgumentException
-     * @throws \Exception
+     * Default GET implementation
+     *
      * @return bool
      */
     protected function _handleGet()
@@ -82,8 +82,6 @@ class Event extends BaseSystemRestResource
      *
      * @param bool $as_cached If true, the event cache will be returned as stored on disk. Otherwise in a more consumable format for clients.
      *
-     * @throws \InvalidArgumentException
-     * @throws \Kisma\Core\Exceptions\FileSystemException
      * @return array
      */
     protected function _getAllEvents( $as_cached = false )
@@ -112,8 +110,6 @@ class Event extends BaseSystemRestResource
             return array();
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
         //  Original version?
         if ( 'true' == $as_cached )
         {
@@ -126,17 +122,12 @@ class Event extends BaseSystemRestResource
              */
             $_template = array(
                 'name'  => '{domain}',
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> Swagger updates. Event container tweak
                 'paths' => array(),
             );
 
             $_pathTemplate = array(
                 'path'  => '{route}',
                 'verbs' => array(),
-<<<<<<< HEAD
             );
 
             $_rebuild = array();
@@ -161,123 +152,23 @@ class Event extends BaseSystemRestResource
                     $_service['paths'][] = $_path;
                     unset( $_path );
                 }
-
-                $_rebuild[] = $_service;
-=======
-        // Rebuild the cached structure into a more consumable client version
-
-        /**
-         * {
-         *      "user": {
-         *        "path": "/user",
-         *          "verbs": [{
-         *              "type": "get",
-         *            "event": "user.resources.list",
-         *              "scripts": []
-         *          }]
-         *      }
-         * }
-         */
-
-        $_rebuild = array();
-
-        foreach ( $_json as $_domain => $_routes )
-=======
-        //  Original version?
-        if ( 'true' == $as_cached )
->>>>>>> Updated output of all events in Event resource. Fixed issue with the $as_cached parameter not actually returning a proper boolean.
-        {
-            $_rebuild = $_json;
-        }
-        else
-        {
-            /**
-             * Rebuild the cached structure into a more consumable client version
-             */
-=======
-                'paths' => array(
-                    'path'  => '{route}',
-                    'verbs' => array(),
-                )
-=======
->>>>>>> Swagger updates. Event container tweak
-            );
-
->>>>>>> Reformat output of event output on resource list call
-            $_rebuild = array();
-
-            foreach ( $_json as $_domain => $_routes )
-            {
-                $_service = $this->_fromTemplate( $_template, get_defined_vars() );
-
-                foreach ( $_routes as $_route => $_verbs )
-                {
-                    $_path = $this->_fromTemplate( $_pathTemplate, get_defined_vars() );
-
-                    foreach ( $_verbs as $_verb => $_event )
-                    {
-                        $_path['verbs'][] = array(
-                            'type'    => $_verb,
-                            'event'   => Option::get( $_event, 'event' ),
-                            'scripts' => Option::get( $_event, 'scripts', array() ),
-                        );
-                    }
-
-                    $_service['paths'][] = $_path;
-                    unset( $_path );
-                }
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-                $_rebuild[$_domain][] = $_service;
->>>>>>> Reformat output of all events by default. Added flag "$as_cached" to return data as cached. Also updated swagger documentation with new parameter.
-=======
                 
-=======
-
->>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.
                 $_rebuild[] = $_service;
->>>>>>> Swagger updates. Event container tweak
                 unset( $_service );
             }
         }
 
-<<<<<<< HEAD
         return array( 'record' => $_rebuild );
-=======
-        return $_rebuild;
->>>>>>> Reformat output of all events by default. Added flag "$as_cached" to return data as cached. Also updated swagger documentation with new parameter.
-=======
-            }
-        }
-
-        return array( 'record' => $_rebuild );
->>>>>>> Updated output of all events in Event resource. Fixed issue with the $as_cached parameter not actually returning a proper boolean.
     }
 
     /**
      * Post/create event handler
      *
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @throws \Exception
-     * @throws \CException
-     * @throws \LogicException
-     * @throws \DreamFactory\Platform\Exceptions\RestException
-     * @throws \Exception
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return array|bool
      */
-<<<<<<< HEAD
-<<<<<<< HEAD
     protected function _handlePost()
-=======
-    protected
-    function _handlePost()
->>>>>>> Reformat output of all events by default. Added flag "$as_cached" to return data as cached. Also updated swagger documentation with new parameter.
-=======
-    protected function _handlePost()
->>>>>>> Updated output of all events in Event resource. Fixed issue with the $as_cached parameter not actually returning a proper boolean.
     {
         parent::_handlePost();
 
@@ -290,7 +181,7 @@ class Event extends BaseSystemRestResource
         {
             $_eventName = Option::get( $_body, 'event_name' );
             $_listeners = Option::get( $_body, 'listeners' );
-//            $_apiKey = Option::get( $_body, 'api_key', 'unknown' );
+            $_apiKey = Option::get( $_body, 'api_key', 'unknown' );
             $_priority = Option::get( $_body, 'priority', 0 );
         }
 
@@ -338,23 +229,12 @@ class Event extends BaseSystemRestResource
     }
 
     /**
+     * @return array
      * @throws \DreamFactory\Platform\Exceptions\NotFoundException
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @throws \CException
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-     * @throws \LogicException
-     * @return array
      */
-<<<<<<< HEAD
-<<<<<<< HEAD
     protected function _handleDelete()
-=======
-    protected
-    function _handleDelete()
->>>>>>> Reformat output of all events by default. Added flag "$as_cached" to return data as cached. Also updated swagger documentation with new parameter.
-=======
-    protected function _handleDelete()
->>>>>>> Updated output of all events in Event resource. Fixed issue with the $as_cached parameter not actually returning a proper boolean.
     {
         $_request = Pii::app()->getRequestObject();
 
@@ -422,10 +302,6 @@ class Event extends BaseSystemRestResource
         return array( 'record' => $_model->getAttributes() );
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> Reformat output of event output on resource list call
     /**
      * @param string $template
      * @param array  $variables
@@ -466,9 +342,4 @@ class Event extends BaseSystemRestResource
 
         return $_template;
     }
-<<<<<<< HEAD
-=======
->>>>>>> Reformat output of all events by default. Added flag "$as_cached" to return data as cached. Also updated swagger documentation with new parameter.
-=======
->>>>>>> Reformat output of event output on resource list call
 }

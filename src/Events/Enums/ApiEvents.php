@@ -17,32 +17,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Interfaces;
+namespace DreamFactory\Platform\Events\Enums;
+
+use Kisma\Core\Events\Enums\LifeEvents;
 
 /**
- * Something that acts like a data transformer
+ * The base events raised by API controllers
  */
-interface TransformerLike
+class ApiEvents extends LifeEvents
 {
-	//*************************************************************************
-	//* Methods
-	//*************************************************************************
-
 	/**
-	 * @param mixed $dataToFormat
-	 * @param array $options Any formatter-specific options
-	 *
-	 * @return mixed The formatted data
+	 * @var string Triggered immediately before a request is dispatched to a handler
 	 */
-	public static function format( $dataToFormat, $options = array() );
-
+	const BEFORE_REQUEST = '{api_name}.{action}.before_request';
 	/**
-	 * Adds criteria garnered from the query string from DataTables
-	 *
-	 * @param array|\CDbCriteria $criteria
-	 * @param array              $columns
-	 *
-	 * @return array|\CDbCriteria
+	 * @var string Triggered immediately after the dispatched request handler returns
 	 */
-	public static function buildCriteria( $columns, $criteria = null );
+	const AFTER_REQUEST = '{api_name}.{action}.after_request';
 }

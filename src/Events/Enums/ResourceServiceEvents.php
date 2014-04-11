@@ -17,32 +17,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Interfaces;
+namespace DreamFactory\Platform\Events\Enums;
+
+use Kisma\Core\Events\Enums\LifeEvents;
 
 /**
- * Something that acts like a data transformer
+ * The base events raised by resources and services
  */
-interface TransformerLike
+class ResourceServiceEvents extends LifeEvents
 {
 	//*************************************************************************
-	//* Methods
+	//	Constants
 	//*************************************************************************
 
 	/**
-	 * @param mixed $dataToFormat
-	 * @param array $options Any formatter-specific options
-	 *
-	 * @return mixed The formatted data
+	 * @var string Called before the resource request is dispatched
 	 */
-	public static function format( $dataToFormat, $options = array() );
-
+	const PRE_PROCESS = '{api_name}.{action}.pre_process';
 	/**
-	 * Adds criteria garnered from the query string from DataTables
-	 *
-	 * @param array|\CDbCriteria $criteria
-	 * @param array              $columns
-	 *
-	 * @return array|\CDbCriteria
+	 * @var string Called after the resource handler has processed the request
 	 */
-	public static function buildCriteria( $columns, $criteria = null );
+	const POST_PROCESS = '{api_name}.{action}.post_process';
+	/**
+	 * @var string Called after data has been formatted for caller but before send
+	 */
+	const AFTER_DATA_FORMAT = '{api_name}.{action}.after_data_format';
 }

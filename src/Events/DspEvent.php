@@ -3,7 +3,7 @@
  * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,32 +17,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Interfaces;
+namespace DreamFactory\Platform\Events;
 
 /**
- * Something that acts like a data transformer
+ * Contains additional information about the REST service call being made
  */
-interface TransformerLike
+class DspEvent extends PlatformEvent
 {
 	//*************************************************************************
-	//* Methods
+	//	Constants
 	//*************************************************************************
 
 	/**
-	 * @param mixed $dataToFormat
-	 * @param array $options Any formatter-specific options
-	 *
-	 * @return mixed The formatted data
+	 * @type string The base of our event tree
 	 */
-	public static function format( $dataToFormat, $options = array() );
-
-	/**
-	 * Adds criteria garnered from the query string from DataTables
-	 *
-	 * @param array|\CDbCriteria $criteria
-	 * @param array              $columns
-	 *
-	 * @return array|\CDbCriteria
-	 */
-	public static function buildCriteria( $columns, $criteria = null );
+	const EVENT_NAMESPACE = 'dsp';
 }

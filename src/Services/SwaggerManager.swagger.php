@@ -18,14 +18,7 @@
  * limitations under the License.
  */
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 use DreamFactory\Platform\Events\Enums\SwaggerEvents;
-=======
->>>>>>> Move script from service to resource
-=======
-use DreamFactory\Platform\Events\Enums\SwaggerEvents;
->>>>>>> Swagger updates for script service. Added method to SwaggerManager to return a set of common responses to Swagger definitions. Added SwaggerEvents constants for new Swagger events: swagger.cache_cleared and swagger.cache_rebuilt
 use DreamFactory\Platform\Services\SwaggerManager;
 
 $_description = '<p>
@@ -63,22 +56,12 @@ return array(
         'contact'     => 'support@dreamfactory.com',
         'license'     => 'Apache 2.0',
         'licenseUrl'  => 'http://www.apache.org/licenses/LICENSE-2.0.html'
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> Swagger updates for script service. Added method to SwaggerManager to return a set of common responses to Swagger definitions. Added SwaggerEvents constants for new Swagger events: swagger.cache_cleared and swagger.cache_rebuilt
     ),
     /**
      * The events thrown that are relevant to Swagger
      */
     'events'         => array(
-//        SwaggerEvents::CACHE_CLEARED,
-//        SwaggerEvents::CACHE_REBUILT,
+        SwaggerEvents::CACHE_CLEARED,
+        SwaggerEvents::CACHE_REBUILT,
     ),
-<<<<<<< HEAD
-=======
-    )
->>>>>>> Move script from service to resource
-=======
->>>>>>> Swagger updates for script service. Added method to SwaggerManager to return a set of common responses to Swagger definitions. Added SwaggerEvents constants for new Swagger events: swagger.cache_cleared and swagger.cache_rebuilt
 );

@@ -580,16 +580,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function getTables( $tables = array() )
     {
-<<<<<<< HEAD
         $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
-=======
-        $_tables = static::validateAsArray(
-            $tables,
-            ',',
-            true,
-            'Request requires a table name, or a list or array of tables names or properties.'
-        );
->>>>>>> passing all tests on mongo
 
         $_out = array();
         foreach ( $tables as $_table )
@@ -687,16 +678,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function deleteTables( $tables = array(), $check_empty = false )
     {
-<<<<<<< HEAD
         $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
-=======
-        $_tables = static::validateAsArray(
-            $tables,
-            ',',
-            true,
-            'Request requires a table name, or a list or array of tables names or properties.'
-        );
->>>>>>> passing all tests on mongo
 
         $_out = array();
         foreach ( $tables as $_table )
@@ -753,11 +735,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function createRecord( $table, $record, $extras = array() )
     {
-<<<<<<< HEAD
         $_records = static::validateAsArray( $record, null, true, 'The request contains no valid record fields.' );
-=======
-        $_records = static::validateAsArray( $record, null, true, 'There are no fields in the record.' );
->>>>>>> passing all tests on mongo
 
         $_results = $this->createRecords( $table, $_records, $extras );
 
@@ -784,11 +762,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function updateRecord( $table, $record, $extras = array() )
     {
-<<<<<<< HEAD
         $_records = static::validateAsArray( $record, null, true, 'The request contains no valid record fields.' );
-=======
-        $_records = static::validateAsArray( $record, null, true, 'There are no fields in the record.' );
->>>>>>> passing all tests on mongo
 
         $_results = $this->updateRecords( $table, $_records, $extras );
 
@@ -828,11 +802,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function updateRecordById( $table, $record, $id, $extras = array() )
     {
-<<<<<<< HEAD
         $record = static::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
-=======
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
->>>>>>> passing all tests on mongo
 
         $_results = $this->updateRecordsByIds( $table, $record, $id, $extras );
 
@@ -859,11 +829,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function mergeRecord( $table, $record, $extras = array() )
     {
-<<<<<<< HEAD
         $_records = static::validateAsArray( $record, null, true, 'The request contains no valid record fields.' );
-=======
-        $_records = static::validateAsArray( $record, null, true, 'There are no fields in the record.' );
->>>>>>> passing all tests on mongo
 
         $_results = $this->mergeRecords( $table, $_records, $extras );
 
@@ -904,11 +870,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function mergeRecordById( $table, $record, $id, $extras = array() )
     {
-<<<<<<< HEAD
         $record = static::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
-=======
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
->>>>>>> passing all tests on mongo
 
         $_results = $this->mergeRecordsByIds( $table, $record, $id, $extras );
 
@@ -935,11 +897,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function deleteRecord( $table, $record, $extras = array() )
     {
-<<<<<<< HEAD
         $record = static::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
-=======
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
->>>>>>> passing all tests on mongo
 
         $_results = $this->deleteRecords( $table, array( $record ), $extras );
 
@@ -1013,11 +971,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     public function retrieveRecord( $table, $record, $extras = array() )
     {
-<<<<<<< HEAD
         $record = static::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
-=======
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
->>>>>>> passing all tests on mongo
 
         $_results = $this->retrieveRecords( $table, array( $record ), $extras );
 
@@ -1156,10 +1110,6 @@ abstract class BaseDbSvc extends BasePlatformRestService
         }
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> validations first stab, existing tests passed
     protected function validateFieldValue( $name, $value, $validations, $for_update = false, $field_info = null )
     {
         if ( is_array( $validations ) )
@@ -1344,15 +1294,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                             throw new InternalServerErrorException( "Invalid validation configuration: Field '$name' has no 'value' in schema settings." );
                         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
                         if ( !empty( $value ) && ( false === array_search( $value, $_values ) ) )
-=======
-                        if ( !empty( $value ) && (false === array_search( $value, $_values ) ) )
->>>>>>> validations first stab, existing tests passed
-=======
-                        if ( !empty( $value ) && ( false === array_search( $value, $_values ) ) )
->>>>>>> passing all tests on mongo
                         {
                             if ( $_throw )
                             {
@@ -1372,15 +1314,10 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
                         if ( !empty( $value ) )
                         {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> passing all tests on mongo
                             $_delimiter = Option::get( $_config, 'delimiter', ',' );
                             $_min = Option::get( $_config, 'min', 1 );
                             $_max = Option::get( $_config, 'max' );
                             $value = static::validateAsArray( $value, $_delimiter, true );
-<<<<<<< HEAD
                             $_count = count( $value );
                             if ( $_count < $_min )
                             {
@@ -1395,31 +1332,6 @@ abstract class BaseDbSvc extends BasePlatformRestService
                             foreach ( $value as $_item )
                             {
                                 if ( false === array_search( $_item, $_values ) )
-=======
-                            $_delimiter = Option::get( $_config, 'delimiter', ',');
-                            $_min = Option::get( $_config, 'min', 1);
-                            $_max = Option::get( $_config, 'delimiter', ',');
-                            $value = static::checkIncomingData($value, $_delimiter, true);
-                            foreach( $value as $_item )
-                            {
-                                if  (false === array_search( $_item, $_values ) )
->>>>>>> validations first stab, existing tests passed
-=======
-                            $_count = count($value);
-                            if ($_count < $_min)
-                            {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value does not contain enough selections.";
-                                throw new BadRequestException( $_msg );
-                            }
-                            if (!empty($_max) && ($_count > $_max))
-                            {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value contains too many selections.";
-                                throw new BadRequestException( $_msg );
-                            }
-                            foreach ( $value as $_item )
-                            {
-                                if ( false === array_search( $_item, $_values ) )
->>>>>>> passing all tests on mongo
                                 {
                                     if ( $_throw )
                                     {
@@ -1439,11 +1351,6 @@ abstract class BaseDbSvc extends BasePlatformRestService
         return true;
     }
 
-<<<<<<< HEAD
-=======
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-=======
->>>>>>> validations first stab, existing tests passed
     /**
      * @return int
      */
@@ -1478,7 +1385,6 @@ abstract class BaseDbSvc extends BasePlatformRestService
             {
                 $include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
             }
-<<<<<<< HEAD
 
             // make sure we always include identifier fields
             foreach ( $id_field as $id )
@@ -1490,12 +1396,6 @@ abstract class BaseDbSvc extends BasePlatformRestService
             }
 
             // glean desired fields from record
-=======
-            if ( false === array_search( $id_field, $include ) )
-            {
-                $include[] = $id_field;
-            }
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             foreach ( $include as $_key )
             {
                 $_out[$_key] = Option::get( $record, $_key );
@@ -1570,11 +1470,6 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
                 $_out[] = ( $include_field ) ? array( $_field => $_id ) : $_id;
             }
-<<<<<<< HEAD
-=======
-
-            $_ids[] = $_id;
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
 
         return $_out;
@@ -1621,16 +1516,10 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
     protected static function removeIds( &$record, $id_field = null )
     {
-<<<<<<< HEAD
         $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
         if ( !is_array( $id_field ) )
         {
             $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
-=======
-        if ( empty( $id_field ) )
-        {
-            $id_field = static::DEFAULT_ID_FIELD;
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
 
         $id_field = Option::clean( $id_field );

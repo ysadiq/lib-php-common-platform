@@ -18,13 +18,7 @@
  * limitations under the License.
  */
 
-<<<<<<< HEAD:src/Resources/System/Provider.swagger.php
 $_provider = array();
-=======
-use DreamFactory\Platform\Services\SwaggerManager;
-
-$_event = array();
->>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.:src/Resources/System/Event.swagger.php
 
 $_provider['apis'] = array(
     array(
@@ -481,7 +475,6 @@ $_commonProperties = array(
     ),
 );
 
-<<<<<<< HEAD:src/Resources/System/Provider.swagger.php
 $_stampProperties = array(
     'created_date'        => array(
         'type'        => 'string',
@@ -527,24 +520,6 @@ $_provider['models'] = array_merge(
                     'items'       => array(
                         'type' => 'string',
                     ),
-=======
-$_event['models'] = array(
-    'EventRequest'   => array(
-        'id'         => 'EventRequest',
-        'properties' => array_merge(
-            $_commonProperties,
-            $_relatedProperties
-        )
-    ),
-    'EventsRequest'  => array(
-        'id'         => 'EventsRequest',
-        'properties' => array(
-            'record' => array(
-                'type'        => 'array',
-                'description' => 'Array of system event records.',
-                'items'       => array(
-                    'type' => 'string',
->>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.:src/Resources/System/Event.swagger.php
                 ),
                 'ids'    => array(
                     'type'        => 'array',
@@ -556,21 +531,12 @@ $_event['models'] = array(
                 ),
             ),
         ),
-<<<<<<< HEAD:src/Resources/System/Provider.swagger.php
         'ProviderResponse'  => array(
             'id'         => 'ProviderResponse',
             'properties' => array_merge(
                 $_commonProperties,
                 $_stampProperties
             ),
-=======
-    ),
-    'EventResponse'  => array(
-        'id'         => 'EventResponse',
-        'properties' => array_merge(
-            $_commonProperties,
-            SwaggerManager::getCommonProperties()
->>>>>>> EventStream resource class added. Swagger doc created for event stream. New event stream events. New "Chunnel" class to coordinate stream communications.:src/Resources/System/Event.swagger.php
         ),
         'ProvidersResponse' => array(
             'id'         => 'ProvidersResponse',

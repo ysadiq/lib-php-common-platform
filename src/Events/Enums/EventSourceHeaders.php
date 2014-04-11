@@ -17,32 +17,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Interfaces;
+namespace DreamFactory\Platform\Events\Enums;
 
 /**
- * Something that acts like a data transformer
+ * EventSourceHeaders
+ * EventSource headers for channels
  */
-interface TransformerLike
+class EventSourceHeaders
 {
-	//*************************************************************************
-	//* Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * @param mixed $dataToFormat
-	 * @param array $options Any formatter-specific options
-	 *
-	 * @return mixed The formatted data
-	 */
-	public static function format( $dataToFormat, $options = array() );
-
-	/**
-	 * Adds criteria garnered from the query string from DataTables
-	 *
-	 * @param array|\CDbCriteria $criteria
-	 * @param array              $columns
-	 *
-	 * @return array|\CDbCriteria
-	 */
-	public static function buildCriteria( $columns, $criteria = null );
+    /**
+     * @return array
+     */
+    public static function all()
+    {
+        return array(
+            'Content-Type'      => 'text/event-stream',
+            'Transfer-Encoding' => 'identity',
+            'Cache-Control'     => 'no-cache',
+        );
+    }
 }

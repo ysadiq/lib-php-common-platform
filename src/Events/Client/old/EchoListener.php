@@ -1,9 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
- * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,23 +17,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Events\Enums;
+namespace DreamFactory\Platform\Events;
+
+use DreamFactory\Platform\Events\Client\RemoteEvent;
+use DreamFactory\Platform\Interfaces\StreamListenerLike;
 
 /**
- * The base events raised by swagger operations
+ * EchoListener.php
+ * A dummy listener that echos output
  */
-class SwaggerEvents
+class EchoListener implements StreamListenerLike
 {
     //*************************************************************************
-    //	Constants
+    //	Methods
     //*************************************************************************
 
     /**
-     * @var string Triggered immediately after the swagger cache is cleared
+     * @param RemoteEvent     $event
+     * @param string          $eventName
+     * @param EventDispatcher $dispatcher
+     *
+     * @return mixed|void
      */
-    const CACHE_CLEARED = 'swagger.cache_cleared';
-    /**
-     * @var string Triggered immediately after the swagger cache has been rebuilt
-     */
-    const CACHE_REBUILT = 'swagger.cache_rebuilt';
+    public function processEvent( $event, $eventName = null, $dispatcher = null )
+    {
+        echo $event->dump();
+        ob_flush();
+        flush();
+    }
 }

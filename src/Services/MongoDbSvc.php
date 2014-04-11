@@ -228,14 +228,6 @@ class MongoDbSvc extends NoSqlDbSvc
         }
 
         if ( false === array_search( $_name, $_existing ) )
-<<<<<<< HEAD
-        {
-            throw new NotFoundException( "Table '$_name' not found." );
-        }
-
-        try
-=======
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         {
             throw new NotFoundException( "Table '$_name' not found." );
         }
@@ -328,11 +320,7 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function createRecords( $table, $records, $extras = array() )
     {
-<<<<<<< HEAD
         $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
-=======
-        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
->>>>>>> passing all tests on mongo
         $_coll = $this->selectTable( $table );
 
         $_isSingle = ( 1 == count( $records ) );
@@ -340,8 +328,6 @@ class MongoDbSvc extends NoSqlDbSvc
         $_continue = Option::getBool( $extras, 'continue', false );
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
-<<<<<<< HEAD
-<<<<<<< HEAD
         $_useBatch = Option::getBool( $extras, 'batch', false );
 
         $_out = array();
@@ -349,41 +335,18 @@ class MongoDbSvc extends NoSqlDbSvc
         $_batched = array();
         $_backup = array();
         try
-=======
-
-        $records = static::idsToMongoIds( $records );
-        if ( !empty( $_ssFilters ) )
->>>>>>> more work on ss filters and validations
         {
             $_fieldInfo = array();
 
             foreach ( $records as $_index => $_record )
-=======
-        $_useBatch = Option::getBool( $extras, 'batch' );
-
-        $_out = array();
-        $_batched = array();
-        try
-        {
-            $_errors = array();
-            $_fieldInfo = array();
-
-            foreach ( $records as $_key => $_record )
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             {
                 try
                 {
                     $_record = static::idToMongoId( $_record );
                     $_parsed = $this->parseRecord( $_record, $_fieldInfo, $_ssFilters );
-<<<<<<< HEAD
                     if ( empty( $_parsed ) )
                     {
                         throw new BadRequestException( "No valid fields found in record $_index: " . print_r( $_record, true ) );
-=======
-                    if ( 0 >= count( $_parsed ) )
-                    {
-                        throw new BadRequestException( 'No valid fields found in request: ' . print_r( $_record, true ) );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                     }
 
                     if ( $_useBatch )
@@ -396,7 +359,6 @@ class MongoDbSvc extends NoSqlDbSvc
                     $_result = $_coll->insert( $_parsed );
                     static::processResult( $_result );
 
-<<<<<<< HEAD
                     if ( $_rollback )
                     {
                         $_backup[] = static::idToMongoId( Option::get( $_parsed, static::DEFAULT_ID_FIELD ) );
@@ -407,18 +369,10 @@ class MongoDbSvc extends NoSqlDbSvc
                 catch ( \Exception $_ex )
                 {
                     if ( $_isSingle || $_useBatch )
-=======
-                    $_out[$_key] = static::cleanRecord( $_parsed, $_fields );
-                }
-                catch ( \Exception $_ex )
-                {
-                    if ( $_isSingle || $_rollback || $_useBatch )
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                     {
                         throw $_ex;
                     }
 
-<<<<<<< HEAD
                     if ( $_rollback )
                     {
                         if ( 0 !== $_index )
@@ -468,59 +422,11 @@ class MongoDbSvc extends NoSqlDbSvc
 
                 $_out = static::cleanRecords( $_batched, $_fields );
             }
-<<<<<<< HEAD
-=======
-        }
-        try
-        {
-            $_result = $_coll->batchInsert( $records, array( 'continueOnError' => !$_rollback ) );
-            if ((false === $_result) || isset($_result, $_result['err']))
-=======
-                    if ( !$_continue )
-                    {
-                        if ( 0 === $_key )
-                        {
-                            // first error, don't worry about batch just throw it
-                            throw $_ex;
-                        }
-
-                        // mark last error and index for batch results
-                        $_errors[] = $_key;
-                        $_out[$_key] = $_ex->getMessage();
-                        break;
-                    }
-
-                    // mark error and index for batch results
-                    $_errors[] = $_key;
-                    $_out[$_key] = $_ex->getMessage();
-                }
-            }
-            if ( $_useBatch )
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-            {
-                $_result = $_coll->batchInsert( $_batched, array( 'continueOnError' => !$_continue ) );
-                static::processResult( $_result );
-
-                $_out = static::cleanRecords( $_batched, $_fields );
-            }
-
-<<<<<<< HEAD
-            $_out = static::cleanRecords( $records, $_fields );
->>>>>>> adding access info to get on sql and nosql
-=======
-            if ( !empty( $_errors ) )
-            {
-                $_msg = array( 'error' => $_errors, 'record' => $_out );
-                throw new BadRequestException( 'Batch Error: Not all records could be created.', null, null, $_msg );
-            }
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
 
             return $_out;
         }
         catch ( \Exception $_ex )
         {
-<<<<<<< HEAD
-<<<<<<< HEAD
             $_msg = $_ex->getMessage();
 
             $_context = null;
@@ -544,9 +450,6 @@ class MongoDbSvc extends NoSqlDbSvc
             }
 
             throw new InternalServerErrorException( "Failed to create records in '$table'.\n$_msg", null, null, $_context );
-=======
-            throw new InternalServerErrorException( "Failed to create records in '$table'.\n{$_ex->getMessage()}" );
->>>>>>> more work on ss filters and validations
         }
     }
 
@@ -558,7 +461,6 @@ class MongoDbSvc extends NoSqlDbSvc
         $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
         $_coll = $this->selectTable( $table );
 
-<<<<<<< HEAD
         $_isSingle = ( 1 == count( $records ) );
         $_rollback = Option::getBool( $extras, 'rollback', false );
         $_continue = Option::getBool( $extras, 'continue', false );
@@ -568,16 +470,6 @@ class MongoDbSvc extends NoSqlDbSvc
         $_out = array();
         $_errors = array();
         $_backup = array();
-=======
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-
-        $record = static::idToMongoId( $record );
-        if ( !empty( $_ssFilters ) )
-        {
-            $this->validateRecord( $record, $_ssFilters );
-        }
->>>>>>> more work on ss filters and validations
         try
         {
             $_fieldInfo = array();
@@ -669,59 +561,10 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-<<<<<<< HEAD
             $_msg = $_ex->getMessage();
 
             $_context = null;
             if ( !empty( $_errors ) )
-=======
-            throw new InternalServerErrorException( "Failed to create a record in '$table'.\n{$_ex->getMessage()}" );
-=======
-            $_msg = $_ex->getMessage();
-            // rollback based on $_batched or $_out
-            $_records = ( empty( $_batched ) ) ? $_out : $_batched;
-            foreach ( $_records as $_record )
-            {
-                $_id = static::idToMongoId( Option::get( $_record, static::DEFAULT_ID_FIELD ) );
-                if ( !empty( $_id ) )
-                {
-                    $_coll->remove( array( static::DEFAULT_ID_FIELD => $_id ) );
-                }
-            }
-
-            $_msg .= "\nAll changes rolled back.";
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_ex->getContext() );
-            }
-
-            throw new InternalServerErrorException( "Failed to create records in '$table'.\n{$_ex->getMessage()}" );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function updateRecords( $table, $records, $extras = array() )
-    {
-        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
-        $_coll = $this->selectTable( $table );
-
-        $_isSingle = ( 1 == count( $records ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-
-        $_out = array();
-        $_backup = array();
-        try
-        {
-<<<<<<< HEAD
-            if ( !empty( $_ssFilters ) )
->>>>>>> more work on ss filters and validations
             {
                 $_context = array( 'error' => $_errors, 'record' => $_out );
                 $_msg = 'Batch Error: Not all records could be updated.';
@@ -739,11 +582,7 @@ class MongoDbSvc extends NoSqlDbSvc
 
             if ( $_ex instanceof RestException )
             {
-<<<<<<< HEAD
                 throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
-=======
-                throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
->>>>>>> more work on ss filters and validations
             }
 
             throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
@@ -757,55 +596,16 @@ class MongoDbSvc extends NoSqlDbSvc
     {
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
         $_coll = $this->selectTable( $table );
-=======
-            $_errors = array();
-            $_fieldInfo = array();
-            $_fieldArray = ( $_rollback ) ? null : static::buildFieldArray( $_fields );
-            $_options = array( 'new' => !$_rollback );
 
-            foreach ( $records as $_key => $_record )
-            {
-                try
-                {
-                    $_id = Option::get( $_record, static::DEFAULT_ID_FIELD, null, true );
-                    if ( empty( $_id ) )
-                    {
-                        throw new BadRequestException( "Identifying field '_id' can not be empty for update record request." );
-                    }
+        $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
 
-                    $_parsed = $this->parseRecord( $_record, $_fieldInfo, $_ssFilters, true );
-                    if ( empty( $_parsed ) )
-                    {
-                        throw new BadRequestException( 'No valid fields found in request: ' . print_r( $_record, true ) );
-                    }
-
-                    $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-<<<<<<< HEAD
-                    $_criteria = $this->buildCriteriaArray( $_filter, $_ssFilters );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-=======
-                    $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
->>>>>>> passing all tests on mongo
-
-                    // simple update overwrite existing record
-                    $_result = $_coll->findAndModify( $_criteria, $_parsed, $_fieldArray, $_options );
-                    if ( empty( $_result ) )
-                    {
-                        throw new NotFoundException( "Record with id '$_id' not found." );
-                    }
-
-<<<<<<< HEAD
-<<<<<<< HEAD
         $_fieldInfo = array();
         $_fieldArray = static::buildFieldArray( $_fields );
 
         static::removeIds( $record );
         $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
         if ( empty( $_parsed ) )
-=======
-        $record = static::idToMongoId( $record );
-        if ( !empty( $_ssFilters ) )
->>>>>>> more work on ss filters and validations
         {
             throw new BadRequestException( 'No valid fields found in request: ' . print_r( $record, true ) );
         }
@@ -834,79 +634,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-<<<<<<< HEAD
             throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
-=======
-            throw new InternalServerErrorException( "Failed to update a record in '$table'.\n{$_ex->getMessage()}" );
->>>>>>> more work on ss filters and validations
-=======
-                    if ( $_rollback )
-                    {
-                        $_backup[] = $_result;
-                        $_parsed[static::DEFAULT_ID_FIELD] = $_id;
-                        $_out[$_key] = static::cleanRecord( $_parsed, $_fields );
-                    }
-                    else
-                    {
-                        $_out[$_key] = static::mongoIdToId( $_result );
-                    }
-                }
-                catch ( \Exception $_ex )
-                {
-                    if ( $_isSingle || $_rollback )
-                    {
-                        throw $_ex;
-                    }
-
-                    if ( !$_continue )
-                    {
-                        if ( 0 === $_key )
-                        {
-                            // first error, don't worry about batch just throw it
-                            throw $_ex;
-                        }
-
-                        // mark last error and index for batch results
-                        $_errors[] = $_key;
-                        $_out[$_key] = $_ex->getMessage();
-                        break;
-                    }
-
-                    // mark error and index for batch results
-                    $_errors[] = $_key;
-                    $_out[$_key] = $_ex->getMessage();
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                $_msg = array( 'error' => $_errors, 'record' => $_out );
-                throw new BadRequestException( 'Batch Error: Not all records could be updated.', null, null, $_msg );
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            $_msg = $_ex->getMessage();
-            if ( $_rollback )
-            {
-                // rollback based on $_backup
-                foreach ( $_backup as $_record )
-                {
-                    $_coll->save( $_record );
-                }
-
-                $_msg .= "\nAll changes rolled back.";
-            }
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_ex->getContext() );
-            }
-
-            throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg" );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -916,13 +644,9 @@ class MongoDbSvc extends NoSqlDbSvc
     public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
     {
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-<<<<<<< HEAD
         $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
-=======
->>>>>>> passing all tests on mongo
         $_coll = $this->selectTable( $table );
 
-<<<<<<< HEAD
         $_isSingle = ( 1 == count( $ids ) );
         $_rollback = Option::getBool( $extras, 'rollback', false );
         $_continue = Option::getBool( $extras, 'continue', false );
@@ -934,43 +658,19 @@ class MongoDbSvc extends NoSqlDbSvc
         $_fieldInfo = array();
         $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
         if ( empty( $_parsed ) )
-=======
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-
-        $_fieldInfo = array();
-        $_fieldArray = static::buildFieldArray( $_fields );
-<<<<<<< HEAD
-        // build criteria from filter parameters
-        $_criteria = static::buildFilterArray( $filter );
-        $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
-        if ( !empty( $_serverCriteria ) )
->>>>>>> more work on ss filters and validations
-=======
-
-        static::removeIds( $record );
-        $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
-        if ( empty( $_parsed ) )
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         {
             throw new BadRequestException( 'No valid fields found in request: ' . print_r( $record, true ) );
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
         $_out = array();
         $_errors = array();
         $_batched = array();
         $_backup = array();
-=======
->>>>>>> more work on ss filters and validations
         try
         {
             $_fieldArray = ( $_rollback ) ? null : static::buildFieldArray( $_fields );
             $_options = array( 'new' => !$_rollback );
 
-<<<<<<< HEAD
             foreach ( $ids as $_index => $_id )
             {
                 try
@@ -1052,75 +752,6 @@ class MongoDbSvc extends NoSqlDbSvc
             }
 
             if ( $_useBatch )
-=======
-            return static::cleanRecords( $_out );
-=======
-        // build criteria from filter parameters
-        $_criteria = static::buildCriteriaArray( $filter, $_ssFilters );
-=======
-        // build criteria from filter parameters
-        $_criteria = static::buildCriteriaArray( $filter, $params, $_ssFilters );
->>>>>>> passing all tests on mongo
-
-        try
-        {
-            $_result = $_coll->update( $_criteria, $_parsed, array( 'multiple' => true ) );
-            $_rows = static::processResult( $_result );
-            if ( $_rows > 0 )
-            {
-                /** @var \MongoCursor $_result */
-                $_result = $_coll->find( $_criteria, $_fieldArray );
-                $_out = iterator_to_array( $_result );
-
-                return static::cleanRecords( $_out );
-            }
-
-            return array();
-        }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
-    {
-        $record = static::validateAsArray( $record, null, false, 'No record fields were passed in the request.' );
-        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the request." );
-        $_coll = $this->selectTable( $table );
-
-        $_isSingle = ( 1 == count( $ids ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-        $_useBatch = false;
-
-        $_fieldInfo = array();
-        static::removeIds( $record );
-        $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
-        if ( empty( $_parsed ) )
-        {
-            throw new BadRequestException( 'No valid fields found in request: ' . print_r( $record, true ) );
-        }
-
-        $_out = array();
-        $_backup = array();
-        try
-        {
-<<<<<<< HEAD
-            $_coll->update( $_criteria, $record, array( 'multiple' => true ) );
-            $_out = array();
-            foreach ( $ids as $_id )
->>>>>>> more work on ss filters and validations
             {
                 // build criteria from filter parameters
                 $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $_batched ) );
@@ -1143,98 +774,6 @@ class MongoDbSvc extends NoSqlDbSvc
                 {
                     $_parsed[static::DEFAULT_ID_FIELD] = $_id;
                     $_out[] = $_parsed;
-=======
-            $_errors = array();
-            $_fieldArray = ( $_rollback ) ? null : static::buildFieldArray( $_fields );
-            $_options = array( 'new' => !$_rollback );
-
-            if ( $_useBatch )
-            {
-                // build criteria from filter parameters
-                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => static::idsToMongoIds( $ids ) ) );
-                $_criteria = static::buildCriteriaArray( $_filter, $_ssFilters );
-
-                $_result = $_coll->update( $_criteria, $_parsed, null, array( 'multiple' => true ) );
-                $_rows = static::processResult( $_result );
-                if ( 0 === $_rows )
-                {
-                    throw new NotFoundException( 'No requested records were found to delete.' );
-                }
-                if ( count( $ids ) !== $_rows )
-                {
-                    throw new BadRequestException( 'Batch Error: Not all requested records were found to update.' );
-                }
-
-                foreach ( $ids as $_id )
-                {
-                    $_parsed[static::DEFAULT_ID_FIELD] = $_id;
-                    $_out[] = static::cleanRecords( $_parsed, $_fields );
-                }
-            }
-            else
-            {
-                foreach ( $ids as $_key => $_id )
-                {
-                    try
-                    {
-                        if ( empty( $_id ) )
-                        {
-                            throw new BadRequestException( "Identifying field '_id' can not be empty for update record request." );
-                        }
-
-                        $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-                        $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
-
-                        // simple update overwrite existing record
-                        $_result = $_coll->findAndModify( $_criteria, $_parsed, $_fieldArray, $_options );
-                        if ( empty( $_result ) )
-                        {
-                            throw new NotFoundException( 'Record not found.' );
-                        }
-
-                        if ( $_rollback )
-                        {
-                            $_backup[] = $_result;
-                            $_parsed[static::DEFAULT_ID_FIELD] = $_id;
-                            $_out[$_key] = static::cleanRecord( $_parsed, $_fields );
-                        }
-                        else
-                        {
-                            $_out[$_key] = static::mongoIdToId( $_result );
-                        }
-                    }
-                    catch ( \Exception $_ex )
-                    {
-                        if ( $_isSingle || $_rollback )
-                        {
-                            throw $_ex;
-                        }
-
-                        if ( !$_continue )
-                        {
-                            if ( 0 === $_key )
-                            {
-                                // first error, don't worry about batch just throw it
-                                throw $_ex;
-                            }
-
-                            // mark last error and index for batch results
-                            $_errors[] = $_key;
-                            $_out[$_key] = $_ex->getMessage();
-                            break;
-                        }
-
-                        // mark error and index for batch results
-                        $_errors[] = $_key;
-                        $_out[$_key] = $_ex->getMessage();
-                    }
-                }
-
-                if ( !empty( $_errors ) )
-                {
-                    $_msg = array( 'error' => $_errors, 'record' => $_out );
-                    throw new BadRequestException( 'Batch Error: Not all records could be updated.', null, null, $_msg );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 }
             }
 
@@ -1242,14 +781,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-<<<<<<< HEAD
-<<<<<<< HEAD
             $_msg = $_ex->getMessage();
-=======
-            throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
-        }
-    }
->>>>>>> more work on ss filters and validations
 
             $_context = null;
             if ( !empty( $_errors ) )
@@ -1260,19 +792,11 @@ class MongoDbSvc extends NoSqlDbSvc
 
             if ( $_rollback && !empty( $_backup ) )
             {
-=======
-            $_msg = $_ex->getMessage();
-            if ( $_rollback )
-            {
-                // rollback based on $_backup
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 foreach ( $_backup as $_record )
                 {
                     $_coll->save( $_record );
                 }
-<<<<<<< HEAD
 
-<<<<<<< HEAD
                 $_msg .= " All changes rolled back.";
             }
 
@@ -1282,36 +806,6 @@ class MongoDbSvc extends NoSqlDbSvc
             }
 
             throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
-=======
-        $_coll = $this->selectTable( $table );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-        if ( !empty( $_ssFilters ) )
-        {
-            $this->validateRecord( $record, $_ssFilters );
-        }
-        $record[static::DEFAULT_ID_FIELD] = static::idToMongoId( $id );
-=======
-
-                $_msg .= "\nAll changes rolled back.";
-            }
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_ex->getContext() );
-            }
-
-<<<<<<< HEAD
-            return static::cleanRecord( $record, $_fields );
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to update a record in '$table'.\n{$_ex->getMessage()}" );
->>>>>>> more work on ss filters and validations
-=======
-            throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg" );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -1320,11 +814,7 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function mergeRecords( $table, $records, $extras = array() )
     {
-<<<<<<< HEAD
         $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
-=======
-        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
->>>>>>> passing all tests on mongo
         $_coll = $this->selectTable( $table );
 
         $_isSingle = ( 1 == count( $records ) );
@@ -1333,11 +823,6 @@ class MongoDbSvc extends NoSqlDbSvc
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        $_fieldArray = static::buildFieldArray( $_fields );
->>>>>>> more work on ss filters and validations
         $_out = array();
         $_errors = array();
         $_backup = array();
@@ -1349,115 +834,7 @@ class MongoDbSvc extends NoSqlDbSvc
 
             foreach ( $records as $_index => $_record )
             {
-<<<<<<< HEAD
                 try
-=======
-                $_criteria = ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
-=======
-        $_out = array();
-        $_backup = array();
-        try
-        {
-            $_errors = array();
-            $_fieldInfo = array();
-            $_fieldArray = ( $_rollback ) ? null : static::buildFieldArray( $_fields );
-            $_options = array( 'new' => !$_rollback );
-
-            foreach ( $records as $_key => $_record )
-            {
-                try
-                {
-                    $_id = Option::get( $_record, static::DEFAULT_ID_FIELD, null, true );
-                    if ( empty( $_id ) )
-                    {
-                        throw new BadRequestException( "Identifying field '_id' can not be empty for patch record request." );
-                    }
-
-                    if ( !static::doesRecordContainModifier( $_record ) )
-                    {
-                        $_parsed = $this->parseRecord( $_record, $_fieldInfo, $_ssFilters, true );
-                        if ( empty( $_parsed ) )
-                        {
-                            throw new BadRequestException( 'No valid fields found in request: ' . print_r( $_record, true ) );
-                        }
-
-                        $_parsed = array( '$set' => $_parsed );
-                    }
-                    else
-                    {
-
-                        $_parsed = $_record;
-                        if ( empty( $_parsed ) )
-                        {
-                            throw new BadRequestException( 'No valid fields found in request: ' . print_r( $_record, true ) );
-                        }
-                    }
-
-                    $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-                    $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
-
-                    // simple update merging with existing record
-                    $_result = $_coll->findAndModify( $_criteria, $_parsed, $_fieldArray, $_options );
-                    if ( empty( $_result ) )
-                    {
-                        throw new NotFoundException( "Record with id '$_id' not found." );
-                    }
-
-                    if ( $_rollback )
-                    {
-                        $_backup[] = $_result;
-                        $_parsed[static::DEFAULT_ID_FIELD] = $_id;
-                        $_out[$_key] = static::cleanRecord( $_parsed, $_fields );
-                    }
-                    else
-                    {
-                        $_out[$_key] = static::mongoIdToId( $_result );
-                    }
-                }
-                catch ( \Exception $_ex )
-                {
-                    if ( $_isSingle || $_rollback )
-                    {
-                        throw $_ex;
-                    }
-
-                    if ( !$_continue )
-                    {
-                        if ( 0 === $_key )
-                        {
-                            // first error, don't worry about batch just throw it
-                            throw $_ex;
-                        }
-
-                        // mark last error and index for batch results
-                        $_errors[] = $_key;
-                        $_out[$_key] = $_ex->getMessage();
-                        break;
-                    }
-
-                    // mark error and index for batch results
-                    $_errors[] = $_key;
-                    $_out[$_key] = $_ex->getMessage();
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                $_msg = array( 'error' => $_errors, 'record' => $_out );
-                throw new BadRequestException( 'Batch Error: Not all records could be patched.', null, null, $_msg );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            $_msg = $_ex->getMessage();
-            if ( $_rollback )
-            {
-<<<<<<< HEAD
-                if ( !static::doesRecordContainModifier( $_record ) )
->>>>>>> more work on ss filters and validations
                 {
                     $_id = Option::get( $_record, static::DEFAULT_ID_FIELD, null, true );
                     if ( empty( $_id ) )
@@ -1547,11 +924,7 @@ class MongoDbSvc extends NoSqlDbSvc
 
             if ( !empty( $_errors ) )
             {
-<<<<<<< HEAD
                 throw new BadRequestException();
-=======
-                throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
->>>>>>> more work on ss filters and validations
             }
 
             return $_out;
@@ -1566,34 +939,26 @@ class MongoDbSvc extends NoSqlDbSvc
                 $_context = array( 'error' => $_errors, 'record' => $_out );
                 $_msg = 'Batch Error: Not all records could be patched.';
             }
-=======
-                // rollback based on $_backup
-                foreach ( $_backup as $_record )
-                {
-                    $_coll->save( $_record );
-                }
 
-                $_msg .= "\nAll changes rolled back.";
-            }
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_ex->getContext() );
-            }
-
-            throw new InternalServerErrorException( "Failed to patch records in '$table'.\n$_msg" );
-        }
-    }
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-
-<<<<<<< HEAD
             if ( $_rollback && !empty( $_backup ) )
             {
                 foreach ( $_backup as $_record )
                 {
                     $_coll->save( $_record );
                 }
-=======
+
+                $_msg .= " All changes rolled back.";
+            }
+
+            if ( $_ex instanceof RestException )
+            {
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+            }
+
+            throw new InternalServerErrorException( "Failed to patch records in '$table'.\n$_msg", null, null, $_context );
+        }
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -1604,86 +969,12 @@ class MongoDbSvc extends NoSqlDbSvc
 
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
->>>>>>> more work on ss filters and validations
 
-<<<<<<< HEAD
-                $_msg .= " All changes rolled back.";
-            }
-
-<<<<<<< HEAD
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
-            }
-
-            throw new InternalServerErrorException( "Failed to patch records in '$table'.\n$_msg", null, null, $_context );
-=======
-        $_criteria = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-=======
         $_fieldInfo = array();
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         $_fieldArray = static::buildFieldArray( $_fields );
 
         static::removeIds( $record );
         if ( !static::doesRecordContainModifier( $record ) )
-        {
-            $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
-            if ( empty( $_parsed ) )
-            {
-                throw new BadRequestException( 'No valid fields found in request: ' . print_r( $record, true ) );
-            }
-
-            $_parsed = array( '$set' => $_parsed );
-        }
-        else
-        {
-<<<<<<< HEAD
-            throw new InternalServerErrorException( "Failed to update a record in '$table'.\n{$_ex->getMessage()}" );
->>>>>>> more work on ss filters and validations
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
-    {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-        $_coll = $this->selectTable( $table );
-=======
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-
-            $_parsed = $record;
-            if ( empty( $_parsed ) )
-            {
-                throw new BadRequestException( 'No valid fields found in request: ' . print_r( $record, true ) );
-            }
-        }
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-        $_fieldInfo = array();
-        $_fieldArray = static::buildFieldArray( $_fields );
-=======
-        // build criteria from filter parameters
-        $_criteria = static::buildCriteriaArray( $filter, $params, $_ssFilters );
->>>>>>> passing all tests on mongo
-
-        static::removeIds( $record );
-        if ( !static::doesRecordContainModifier( $record ) )
-=======
-        unset( $record[static::DEFAULT_ID_FIELD] );
-        $_fieldArray = static::buildFieldArray( $_fields );
-        // build criteria from filter parameters
-        $_criteria = static::buildFilterArray( $filter );
-        if ( !empty( $_ssFilters ) )
-        {
-            $this->validateRecord( $record, $_ssFilters );
-        }
-        $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
-        if ( !empty( $_serverCriteria ) )
->>>>>>> more work on ss filters and validations
         {
             $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
             if ( empty( $_parsed ) )
@@ -1702,17 +993,10 @@ class MongoDbSvc extends NoSqlDbSvc
                 throw new BadRequestException( 'No valid fields found in request: ' . print_r( $record, true ) );
             }
         }
-=======
-        // build criteria from filter parameters
-        $_criteria = static::buildCriteriaArray( $filter, $_ssFilters );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
 
-<<<<<<< HEAD
         // build criteria from filter parameters
         $_criteria = static::buildCriteriaArray( $filter, $params, $_ssFilters );
 
-=======
->>>>>>> more work on ss filters and validations
         try
         {
             $_result = $_coll->update( $_criteria, $_parsed, array( 'multiple' => true ) );
@@ -1743,8 +1027,6 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function mergeRecordsByIds( $table, $record, $ids, $extras = array() )
     {
-<<<<<<< HEAD
-<<<<<<< HEAD
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
         $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
         $_coll = $this->selectTable( $table );
@@ -1759,33 +1041,6 @@ class MongoDbSvc extends NoSqlDbSvc
         static::removeIds( $record );
         $_fieldInfo = array();
         if ( !static::doesRecordContainModifier( $record ) )
-=======
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
-        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the request." );
-=======
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the request." );
->>>>>>> passing all tests on mongo
-        $_coll = $this->selectTable( $table );
-
-        $_isSingle = ( 1 == count( $ids ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-        $_useBatch = false;
-
-<<<<<<< HEAD
-        $ids = static::idsToMongoIds( $ids );
-        $_criteria = array( static::DEFAULT_ID_FIELD => array( '$in' => $ids ) );
-        $_fieldArray = static::buildFieldArray( $_fields );
-        if ( !empty( $_ssFilters ) )
->>>>>>> more work on ss filters and validations
-=======
-        $_fieldInfo = array();
-        static::removeIds( $record );
-        if ( !static::doesRecordContainModifier( $record ) )
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         {
             $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
             if ( empty( $_parsed ) )
@@ -1805,14 +1060,10 @@ class MongoDbSvc extends NoSqlDbSvc
             }
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
         $_out = array();
         $_errors = array();
         $_batched = array();
         $_backup = array();
-=======
->>>>>>> more work on ss filters and validations
         try
         {
             $_fieldArray = ( $_rollback ) ? null : static::buildFieldArray( $_fields );
@@ -1896,39 +1147,10 @@ class MongoDbSvc extends NoSqlDbSvc
             if ( !empty( $_errors ) )
             {
                 throw new BadRequestException();
-=======
-        $_out = array();
-        $_backup = array();
-        try
-        {
-            $_errors = array();
-            $_fieldArray = ( $_rollback ) ? null : static::buildFieldArray( $_fields );
-            $_options = array( 'new' => !$_rollback );
-
-            if ( $_useBatch )
-            {
-                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => static::idsToMongoIds( $ids ) ) );
-                $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
-
-                $_coll->update( $_criteria, $record, array( 'multiple' => true ) );
-                if ( static::_requireMoreFields( $_fields ) )
-                {
-                    /** @var \MongoCursor $_result */
-                    $_result = $_coll->find( $_criteria, $_fieldArray );
-                    $_out = iterator_to_array( $_result );
-                }
-                else
-                {
-                    $_out = static::idsAsRecords( $ids );
-                }
-
-                return static::cleanRecords( $_out );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             }
 
             if ( $_useBatch )
             {
-<<<<<<< HEAD
                 $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $_batched ) );
                 $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
 
@@ -1944,84 +1166,13 @@ class MongoDbSvc extends NoSqlDbSvc
                     $_out = static::idsAsRecords( static::mongoIdsToIds( $_batched ) );
                 }
 
-=======
-                foreach ( $ids as $_key => $_id )
-                {
-                    try
-                    {
-                        if ( empty( $_id ) )
-                        {
-                            throw new BadRequestException( "Identifying field '_id' can not be empty for update record request." );
-                        }
-
-                        $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-                        $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
-
-                        // simple update merging with existing record
-                        $_result = $_coll->findAndModify( $_criteria, $_parsed, $_fieldArray, $_options );
-                        if ( empty( $_result ) )
-                        {
-                            throw new NotFoundException( "Record with id '$_id' not found." );
-                        }
-
-                        if ( $_rollback )
-                        {
-                            $_backup[] = $_result;
-                            $_parsed[static::DEFAULT_ID_FIELD] = $_id;
-                            $_out[$_key] = static::cleanRecord( $_parsed, $_fields );
-                        }
-                        else
-                        {
-                            $_out[$_key] = static::mongoIdToId( $_result );
-                        }
-                    }
-                    catch ( \Exception $_ex )
-                    {
-                        if ( $_isSingle || $_rollback )
-                        {
-                            throw $_ex;
-                        }
-
-                        if ( !$_continue )
-                        {
-                            if ( 0 === $_key )
-                            {
-                                // first error, don't worry about batch just throw it
-                                throw $_ex;
-                            }
-
-                            // mark last error and index for batch results
-                            $_errors[] = $_key;
-                            $_out[$_key] = $_ex->getMessage();
-                            break;
-                        }
-
-                        // mark error and index for batch results
-                        $_errors[] = $_key;
-                        $_out[$_key] = $_ex->getMessage();
-                    }
-                }
-
-                if ( !empty( $_errors ) )
-                {
-                    $_msg = array( 'error' => $_errors, 'record' => $_out );
-                    throw new BadRequestException( 'Batch Error: Not all records could be patched.', null, null, $_msg );
-                }
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
             }
 
             return $_out;
         }
         catch ( \Exception $_ex )
         {
-<<<<<<< HEAD
-<<<<<<< HEAD
             $_msg = $_ex->getMessage();
-=======
-            throw new InternalServerErrorException( "Failed to update record in '$table'.\n{$_ex->getMessage()}" );
-        }
-    }
->>>>>>> more work on ss filters and validations
 
             $_context = null;
             if ( !empty( $_errors ) )
@@ -2032,19 +1183,11 @@ class MongoDbSvc extends NoSqlDbSvc
 
             if ( $_rollback && !empty( $_backup ) )
             {
-=======
-            $_msg = $_ex->getMessage();
-            if ( $_rollback )
-            {
-                // rollback based on $_backup
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
                 foreach ( $_backup as $_record )
                 {
                     $_coll->save( $_record );
                 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
                 $_msg .= " All changes rolled back.";
             }
 
@@ -2054,46 +1197,6 @@ class MongoDbSvc extends NoSqlDbSvc
             }
 
             throw new InternalServerErrorException( "Failed to patch records in '$table'.\n$_msg", null, null, $_context );
-=======
-        $_coll = $this->selectTable( $table );
-        $_criteria = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $id ) );
-        $_fields = Option::get( $extras, 'fields' );
-        $_fieldArray = static::buildFieldArray( $_fields );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-        if ( !empty( $_ssFilters ) )
-        {
-            $this->validateRecord( $record, $_ssFilters );
-        }
-        $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
-        if ( !empty( $_serverCriteria ) )
-        {
-            $_criteria = ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
-        }
-        unset( $record[static::DEFAULT_ID_FIELD] );
-        if ( !static::doesRecordContainModifier( $record ) )
-        {
-            $record = array( '$set' => $record );
-        }
-=======
-                $_msg .= "\nAll changes rolled back.";
-            }
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_ex->getContext() );
-            }
-
-<<<<<<< HEAD
-            return static::mongoIdToId( $result );
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to update record in '$table'.\n{$_ex->getMessage()}" );
->>>>>>> more work on ss filters and validations
-=======
-            throw new InternalServerErrorException( "Failed to patch records in '$table'.\n$_msg" );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -2107,32 +1210,8 @@ class MongoDbSvc extends NoSqlDbSvc
         {
             // build filter string if necessary, add server-side filters if necessary
             $_ssFilters = Option::get( $extras, 'ss_filters' );
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
             $_criteria = $this->buildCriteriaArray( array(), null, $_ssFilters );
             $_result = $_coll->remove( $_criteria );
-
-            return array( 'success' => $_result );
-        }
-        catch ( RestException $_ex )
-=======
-            $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
-            if ( !empty( $_serverCriteria ) )
-            {
-                $result = $_coll->remove( $_serverCriteria );
-            }
-            else
-            {
-                $result = $_coll->remove( array() );
-            }
-=======
-            $_criteria = $this->buildCriteriaArray( array(), $_ssFilters );
-=======
-            $_criteria = $this->buildCriteriaArray( array(), null, $_ssFilters );
->>>>>>> passing all tests on mongo
-            $_result = $_coll->remove( $_criteria );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
 
             return array( 'success' => $_result );
         }
@@ -2151,68 +1230,10 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function deleteRecords( $table, $records, $extras = array() )
     {
-        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
-        $_ids = static::recordsAsIds( $records );
-<<<<<<< HEAD
-        $_criteria = array( static::DEFAULT_ID_FIELD => array( '$in' => static::idsToMongoIds( $_ids ) ) );
-        $_fieldArray = static::buildFieldArray( $_fields );
-        $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
-        if ( !empty( $_serverCriteria ) )
-        {
-            $_criteria = ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
-        }
-
-        try
->>>>>>> more work on ss filters and validations
-        {
-            throw $_ex;
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteRecords( $table, $records, $extras = array() )
-    {
-<<<<<<< HEAD
         $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
         $_ids = static::recordsAsIds( $records );
 
         return $this->deleteRecordsByIds( $table, $_ids, $extras );
-=======
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
-        $_coll = $this->selectTable( $table );
-
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-
-        $_criteria = static::idToMongoId( $record );
-        $_fieldArray = static::buildFieldArray( $_fields );
-        $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
-        if ( !empty( $_serverCriteria ) )
-        {
-            $_criteria = ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
-        }
-
-        try
-        {
-            $result = $_coll->findAndModify( $_criteria, null, $_fieldArray, array( 'remove' => true ) );
-
-            return static::mongoIdToId( $result );
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to delete record from '$table'.\n{$_ex->getMessage()}" );
-        }
->>>>>>> more work on ss filters and validations
-=======
-
-        return $this->deleteRecordsByIds( $table, $_ids, $extras );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
     }
 
     /**
@@ -2226,8 +1247,6 @@ class MongoDbSvc extends NoSqlDbSvc
         }
 
         $_coll = $this->selectTable( $table );
-<<<<<<< HEAD
-<<<<<<< HEAD
 
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
@@ -2237,27 +1256,6 @@ class MongoDbSvc extends NoSqlDbSvc
         // build criteria from filter parameters
         $_criteria = static::buildCriteriaArray( $filter, $params, $_ssFilters );
 
-=======
-=======
-
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-
-        $_fieldArray = static::buildFieldArray( $_fields );
-<<<<<<< HEAD
-        $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
-        if ( !empty( $_serverCriteria ) )
-        {
-            $_criteria = ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
-        }
->>>>>>> more work on ss filters and validations
-=======
-
-        // build criteria from filter parameters
-        $_criteria = static::buildCriteriaArray( $filter, $_ssFilters );
-
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         try
         {
             /** @var \MongoCursor $_result */
@@ -2273,15 +1271,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-<<<<<<< HEAD
-<<<<<<< HEAD
             throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
-=======
-            throw new InternalServerErrorException( "Failed to delete record in '$table'.\n{$_ex->getMessage()}" );
->>>>>>> more work on ss filters and validations
-=======
-            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -2290,8 +1280,6 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function deleteRecordsByIds( $table, $ids, $extras = array() )
     {
-<<<<<<< HEAD
-<<<<<<< HEAD
         $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
         $_coll = $this->selectTable( $table );
 
@@ -2306,30 +1294,6 @@ class MongoDbSvc extends NoSqlDbSvc
         $_errors = array();
         $_batched = array();
         $_backup = array();
-=======
-        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the update request." );
-=======
-        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the request." );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-        $_coll = $this->selectTable( $table );
-
-        $_isSingle = ( 1 == count( $ids ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-        $_useBatch = Option::getBool( $extras, 'batch' );
-
-<<<<<<< HEAD
-        $ids = static::idsToMongoIds( $ids );
-        $_criteria = array( static::DEFAULT_ID_FIELD => array( '$in' => $ids ) );
-        $_fieldArray = static::buildFieldArray( $_fields );
-        $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
-        if ( !empty( $_serverCriteria ) )
-        {
-            $_criteria = ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
-        }
->>>>>>> more work on ss filters and validations
         try
         {
             $_fieldArray = ( $_rollback ) ? null : static::buildFieldArray( $_fields );
@@ -2350,18 +1314,8 @@ class MongoDbSvc extends NoSqlDbSvc
                         continue;
                     }
 
-<<<<<<< HEAD
                     $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
                     $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
-=======
-            return static::cleanRecords( $_out );
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
-        }
-    }
->>>>>>> more work on ss filters and validations
 
                     $_result = $_coll->findAndModify( $_criteria, null, $_fieldArray, $_options );
                     if ( empty( $_result ) )
@@ -2423,15 +1377,10 @@ class MongoDbSvc extends NoSqlDbSvc
                 throw new BadRequestException();
             }
 
-<<<<<<< HEAD
             if ( $_useBatch )
             {
                 $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $_batched ) );
                 $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
-=======
-        // build criteria from filter parameters
-        $_criteria = static::buildCriteriaArray( $filter, $params, $_ssFilters );
->>>>>>> passing all tests on mongo
 
                 if ( static::_requireMoreFields( $_fields ) )
                 {
@@ -2460,25 +1409,14 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-<<<<<<< HEAD
             $_msg = $_ex->getMessage();
 
-<<<<<<< HEAD
             $_context = null;
             if ( !empty( $_errors ) )
             {
                 $_context = array( 'error' => $_errors, 'record' => $_out );
                 $_msg = 'Batch Error: Not all records could be deleted.';
             }
-=======
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteRecordsByIds( $table, $ids, $extras = array() )
-    {
-        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the request." );
-        $_coll = $this->selectTable( $table );
->>>>>>> passing all tests on mongo
 
             if ( $_rollback && !empty( $_backup ) )
             {
@@ -2496,134 +1434,6 @@ class MongoDbSvc extends NoSqlDbSvc
             }
 
             throw new InternalServerErrorException( "Failed to delete records from '$table'.\n$_msg", null, null, $_context );
-=======
-            throw new InternalServerErrorException( "Failed to delete item from '$table'.\n{$_ex->getMessage()}" );
->>>>>>> more work on ss filters and validations
-=======
-        $_out = array();
-        $_backup = array();
-        try
-        {
-            $_errors = array();
-            $_fieldArray = ( $_rollback ) ? null : static::buildFieldArray( $_fields );
-            $_options = array( 'remove' => true );
-
-            if ( $_useBatch )
-            {
-                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => static::idsToMongoIds( $ids ) ) );
-                $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
-
-                if ( $_rollback || static::_requireMoreFields( $_fields ) )
-                {
-                    /** @var \MongoCursor $_result */
-                    $_result = $_coll->find( $_criteria, $_fieldArray );
-                    $_out = iterator_to_array( $_result );
-                }
-                else
-                {
-                    $_out = static::idsAsRecords( $ids );
-                }
-
-                $_result = $_coll->remove( $_criteria );
-                $_rows = static::processResult( $_result );
-                if ( 0 === $_rows )
-                {
-                    throw new NotFoundException( 'No requested ids were found to delete.' );
-                }
-                if ( count( $ids ) !== $_rows )
-                {
-                    throw new BadRequestException( 'Batch Error: Not all requested ids were found to delete.' );
-                }
-
-                return static::cleanRecords( $_out, $_fields );
-            }
-            else
-            {
-                foreach ( $ids as $_key => $_id )
-                {
-                    try
-                    {
-                        if ( empty( $_id ) )
-                        {
-                            throw new BadRequestException( "Identifying field '_id' can not be empty for delete record request." );
-                        }
-
-                        $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-                        $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
-
-                        $_result = $_coll->findAndModify( $_criteria, null, $_fieldArray, $_options );
-                        if ( empty( $_result ) )
-                        {
-                            throw new NotFoundException( "Record with id '$_id' not found." );
-                        }
-
-                        if ( $_rollback )
-                        {
-                            $_backup[] = $_result;
-                            $_out[$_key] = static::cleanRecord( $_result, $_fields );
-                        }
-                        else
-                        {
-                            $_out[$_key] = static::mongoIdToId( $_result );
-                        }
-                    }
-                    catch ( \Exception $_ex )
-                    {
-                        if ( $_isSingle || $_rollback )
-                        {
-                            throw $_ex;
-                        }
-
-                        if ( !$_continue )
-                        {
-                            if ( 0 === $_key )
-                            {
-                                // first error, don't worry about batch just throw it
-                                throw $_ex;
-                            }
-
-                            // mark last error and index for batch results
-                            $_errors[] = $_key;
-                            $_out[$_key] = $_ex->getMessage();
-                            break;
-                        }
-
-                        // mark error and index for batch results
-                        $_errors[] = $_key;
-                        $_out[$_key] = $_ex->getMessage();
-                    }
-                }
-
-                if ( !empty( $_errors ) )
-                {
-                    $_msg = array( 'error' => $_errors, 'record' => $_out );
-                    throw new BadRequestException( 'Batch Error: Not all records could be deleted.', null, null, $_msg );
-                }
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            $_msg = $_ex->getMessage();
-            if ( $_rollback )
-            {
-                // rollback based on $_backup
-                foreach ( $_backup as $_record )
-                {
-                    $_coll->save( $_record );
-                }
-
-                $_msg .= "\nAll changes rolled back.";
-            }
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_ex->getContext() );
-            }
-
-            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n$_msg" );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         }
     }
 
@@ -2633,35 +1443,12 @@ class MongoDbSvc extends NoSqlDbSvc
     public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
     {
         $_coll = $this->selectTable( $table );
-<<<<<<< HEAD
 
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
         $_fieldArray = static::buildFieldArray( $_fields );
         $_criteria = static::buildCriteriaArray( $filter, $params, $_ssFilters );
-=======
-
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-
-        $_fieldArray = static::buildFieldArray( $_fields );
-<<<<<<< HEAD
-<<<<<<< HEAD
-        $_criteria = static::buildFilterArray( $filter );
-        // build filter string if necessary, add server-side filters if necessary
-        $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
-        if ( !empty( $_serverCriteria ) )
-        {
-            $_criteria = ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
-        }
->>>>>>> more work on ss filters and validations
-=======
-        $_criteria = static::buildCriteriaArray( $filter, $_ssFilters );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-=======
-        $_criteria = static::buildCriteriaArray( $filter, $params, $_ssFilters );
->>>>>>> passing all tests on mongo
 
         $_limit = intval( Option::get( $extras, 'limit', 0 ) );
         $_offset = intval( Option::get( $extras, 'offset', 0 ) );
@@ -2702,16 +1489,10 @@ class MongoDbSvc extends NoSqlDbSvc
 
             return $_out;
         }
-<<<<<<< HEAD
-<<<<<<< HEAD
-        catch ( RestException $_ex )
-=======
-=======
         catch ( RestException $_ex )
         {
             throw $_ex;
         }
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
         catch ( \Exception $_ex )
         {
             throw new InternalServerErrorException( "Failed to filter records from '$table'.\n{$_ex->getMessage()}" );
@@ -2723,85 +1504,10 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function retrieveRecords( $table, $records, $extras = array() )
     {
-<<<<<<< HEAD
-        $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
-<<<<<<< HEAD
-        $_coll = $this->selectTable( $table );
-
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-
-        $_ids = static::idsToMongoIds( static::recordsAsIds( $records ) );
-        $_fieldArray = static::buildFieldArray( $_fields );
-        $_criteria = array( '$in' => $_ids );
-        // build filter string if necessary, add server-side filters if necessary
-        $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
-        if ( !empty( $_serverCriteria ) )
-        {
-            $_criteria = ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
-        }
-
-        try
->>>>>>> more work on ss filters and validations
-        {
-            throw $_ex;
-        }
-        catch ( \Exception $_ex )
-        {
-<<<<<<< HEAD
-            throw new InternalServerErrorException( "Failed to filter records from '$table'.\n{$_ex->getMessage()}" );
-=======
-            throw new InternalServerErrorException( "Failed to get records from '$table'.\n{$_ex->getMessage()}" );
->>>>>>> more work on ss filters and validations
-        }
-=======
-=======
-        $records = static::validateAsArray( $records, null, true, 'There are no record sets in the request.' );
->>>>>>> passing all tests on mongo
-        $_ids = static::recordsAsIds( $records );
-
-        return $this->retrieveRecordsByIds( $table, $_ids, $extras );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-<<<<<<< HEAD
-    public function retrieveRecords( $table, $records, $extras = array() )
-    {
-<<<<<<< HEAD
         $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
         $_ids = static::recordsAsIds( $records );
 
         return $this->retrieveRecordsByIds( $table, $_ids, $extras );
-=======
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
-=======
-    public function retrieveRecordsByIds( $table, $ids, $extras = array() )
-    {
-<<<<<<< HEAD
-        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the request." );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-=======
-        $ids = static::validateAsArray( $ids, ',', true, "There are no identifiers in the request." );
->>>>>>> passing all tests on mongo
-        $_coll = $this->selectTable( $table );
-
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-
-        $_fieldArray = static::buildFieldArray( $_fields );
-
-        $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => static::idsToMongoIds( $ids ) ) );
-        $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
-
-        try
-        {
-<<<<<<< HEAD
-            throw new InternalServerErrorException( "Failed to get record '$table/$_id'.\n{$_ex->getMessage()}" );
-        }
->>>>>>> more work on ss filters and validations
     }
 
     /**
@@ -2809,96 +1515,16 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function retrieveRecordsByIds( $table, $ids, $extras = array() )
     {
-<<<<<<< HEAD
         $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
-=======
-        $ids = static::checkIncomingData( $ids, ',', true, "There are no identifiers in the update request." );
->>>>>>> more work on ss filters and validations
         $_coll = $this->selectTable( $table );
 
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
-<<<<<<< HEAD
 
         $_fieldArray = static::buildFieldArray( $_fields );
 
         $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => static::idsToMongoIds( $ids ) ) );
         $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
-=======
-=======
-//            $_result = $_coll->findOne( $_criteria, $_fieldArray );
-//            if ( empty( $_result ) && is_numeric( $id ) )
-//            {
-//                // defaults to string ids, could be numeric, try that
-//                $id = ( $id == strval( intval( $id ) ) ) ? intval( $id ) : floatval( $id );
-//                $_result = $_coll->findOne( array( static::DEFAULT_ID_FIELD => $id ), $_fieldArray );
-//            }
-            /** @var \MongoCursor $_result */
-            $_result = $_coll->find( $_criteria, $_fieldArray );
-            $_data = iterator_to_array( $_result );
-
-            $_out = array();
-            foreach ( $ids as $_id )
-            {
-                $_foundRecord = null;
-                foreach ( $_data as $_record )
-                {
-                    if ( isset( $_record[static::DEFAULT_ID_FIELD] ) && ( $_record[static::DEFAULT_ID_FIELD] == $_id ) )
-                    {
-                        $_foundRecord = $_record;
-                        break;
-                    }
-                }
-                if ( isset( $_foundRecord ) )
-                {
-                    $_out[] = $_foundRecord;
-                }
-                else
-                {
-                    throw new NotFoundException( "Record with id '$_id' not found." );
-                }
-            }
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-
-            return static::cleanRecords( $_out );
-        }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to get records from '$table'.\n{$_ex->getMessage()}" );
-        }
-    }
-
-    /**
-     * @param $record
-     *
-     * @return bool
-     */
-<<<<<<< HEAD
-    public function retrieveRecordById( $table, $id, $extras = array() )
-    {
-        if ( empty( $id ) )
-        {
-            return array();
-        }
-
-        $_coll = $this->selectTable( $table );
-
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-
-        $_fieldArray = static::buildFieldArray( $_fields );
-        $_criteria = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $id ) );
-        // build filter string if necessary, add server-side filters if necessary
-        $_serverCriteria = $this->buildSSFilterArray( $_ssFilters );
-        if ( !empty( $_serverCriteria ) )
-        {
-            $_criteria = ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
-        }
->>>>>>> more work on ss filters and validations
 
         try
         {
@@ -2939,11 +1565,7 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( RestException $_ex )
         {
-<<<<<<< HEAD
             throw $_ex;
-=======
-            throw new InternalServerErrorException( "Failed to get item '$table/$id'.\n{$_ex->getMessage()}" );
->>>>>>> more work on ss filters and validations
         }
         catch ( \Exception $_ex )
         {
@@ -2956,8 +1578,6 @@ class MongoDbSvc extends NoSqlDbSvc
      *
      * @return bool
      */
-=======
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
     protected static function doesRecordContainModifier( $record )
     {
         if ( is_array( $record ) )
@@ -3089,15 +1709,7 @@ class MongoDbSvc extends NoSqlDbSvc
             if ( count( $_ops ) > 1 )
             {
                 $_field = $_ops[0];
-<<<<<<< HEAD
-<<<<<<< HEAD
                 $_val = static::_determineValue( $_ops[1], $_field, $params );
-=======
-                $_val = static::_determineValue( $_ops[1], $_field );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-=======
-                $_val = static::_determineValue( $_ops[1], $_field, $params );
->>>>>>> passing all tests on mongo
                 $_mongoOp = $_mongoOperators[$_key];
                 switch ( $_mongoOp )
                 {
@@ -3113,15 +1725,7 @@ class MongoDbSvc extends NoSqlDbSvc
 //			WHERE name LIKE "%Joe%"	(array("name" => new MongoRegex("/Joe/")));
 //			WHERE name LIKE "Joe%"	(array("name" => new MongoRegex("/^Joe/")));
 //			WHERE name LIKE "%Joe"	(array("name" => new MongoRegex("/Joe$/")));
-<<<<<<< HEAD
-<<<<<<< HEAD
                         $_val = static::_determineValue( $_ops[1], $_field, $params );
-=======
-                        $_val = static::_determineValue( $_ops[1], $_field );
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-=======
-                        $_val = static::_determineValue( $_ops[1], $_field, $params );
->>>>>>> passing all tests on mongo
                         if ( '%' == $_val[strlen( $_val ) - 1] )
                         {
                             if ( '%' == $_val[0] )
@@ -3159,8 +1763,6 @@ class MongoDbSvc extends NoSqlDbSvc
     /**
      * @param string $value
      * @param string $field
-<<<<<<< HEAD
-<<<<<<< HEAD
      * @param array  $replacements
      *
      * @return bool|float|int|string|\MongoId
@@ -3176,28 +1778,6 @@ class MongoDbSvc extends NoSqlDbSvc
             }
         }
 
-=======
-=======
-     * @param array  $replacements
->>>>>>> passing all tests on mongo
-     *
-     * @return bool|float|int|string|\MongoId
-     */
-    private static function _determineValue( $value, $field = null, $replacements = null )
-    {
-<<<<<<< HEAD
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-=======
-        // process parameter replacements
-        if ( is_string( $value ) && !empty( $value ) && ( ':' == $value[0] ) )
-        {
-            if ( isset( $replacements, $replacements[$value] ) )
-            {
-                $value = $replacements[$value];
-            }
-        }
-
->>>>>>> passing all tests on mongo
         if ( $field && ( static::DEFAULT_ID_FIELD == $field ) )
         {
             return static::idToMongoId( $value, true );
@@ -3229,15 +1809,7 @@ class MongoDbSvc extends NoSqlDbSvc
     protected static function buildCriteriaArray( $filter, $params = null, $ss_filters = null )
     {
         // build filter array if necessary, add server-side filters if necessary
-<<<<<<< HEAD
-<<<<<<< HEAD
         $_criteria = ( !is_array( $filter ) ) ? static::buildFilterArray( $filter, $params ) : $filter;
-=======
-        $_criteria = ( !is_array( $filter ) ) ? static::buildFilterArray( $filter ) : $filter;
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-=======
-        $_criteria = ( !is_array( $filter ) ) ? static::buildFilterArray( $filter, $params ) : $filter;
->>>>>>> passing all tests on mongo
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
         if ( !empty( $_serverCriteria ) )
         {
@@ -3519,8 +2091,6 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     protected function parseRecord( $record, $avail_fields, $filter_info = null, $for_update = false, $old_record = null )
     {
-<<<<<<< HEAD
-<<<<<<< HEAD
 //        $record = DataFormat::arrayKeyLower( $record );
         $_parsed = ( empty( $avail_fields ) ) ? $record : array();
         if ( !empty( $avail_fields ) )
@@ -3588,114 +2158,15 @@ class MongoDbSvc extends NoSqlDbSvc
                         }
                         break;
                 }
-=======
-        $parsed = array();
-=======
->>>>>>> passing all tests on mongo
-//        $record = DataFormat::arrayKeyLower( $record );
-        $_parsed = ( empty( $avail_fields ) ) ? $record : array();
-        if ( !empty( $avail_fields ) )
-        {
-            $_keys = array_keys( $record );
-            $_values = array_values( $record );
-            foreach ( $avail_fields as $_fieldInfo )
-            {
-//            $name = strtolower( Option::get( $field_info, 'name', '' ) );
-                $_name = Option::get( $_fieldInfo, 'name', '' );
-                $_type = Option::get( $_fieldInfo, 'type' );
-                $_pos = array_search( $_name, $_keys );
-                if ( false !== $_pos )
-                {
-                    $_fieldVal = Option::get( $_values, $_pos );
-                    // due to conversion from XML to array, null or empty xml elements have the array value of an empty array
-                    if ( is_array( $_fieldVal ) && empty( $_fieldVal ) )
-                    {
-                        $_fieldVal = null;
-                    }
-
-                    /** validations **/
-
-                    $_validations = Option::get( $_fieldInfo, 'validation' );
-
-                    if ( !static::validateFieldValue( $_name, $_fieldVal, $_validations, $for_update, $_fieldInfo ) )
-                    {
-                        unset( $_keys[$_pos] );
-                        unset( $_values[$_pos] );
-                        continue;
-                    }
-
-                    $_parsed[$_name] = $_fieldVal;
-                    unset( $_keys[$_pos] );
-                    unset( $_values[$_pos] );
-                }
-
-                // add or override for specific fields
-                switch ( $_type )
-                {
-                    case 'timestamp_on_create':
-                        if ( !$for_update )
-                        {
-                            $_parsed[$_name] = new \MongoDate();
-                        }
-                        break;
-                    case 'timestamp_on_update':
-                        $_parsed[$_name] = new \MongoDate();
-                        break;
-                    case 'user_id_on_create':
-                        if ( !$for_update )
-                        {
-                            $userId = Session::getCurrentUserId();
-                            if ( isset( $userId ) )
-                            {
-                                $_parsed[$_name] = $userId;
-                            }
-                        }
-                        break;
-                    case 'user_id_on_update':
-                        $userId = Session::getCurrentUserId();
-                        if ( isset( $userId ) )
-                        {
-                            $_parsed[$_name] = $userId;
-                        }
-<<<<<<< HEAD
-                    }
-                    break;
-                case 'user_id_on_update':
-                    $userId = Session::getCurrentUserId();
-                    if ( isset( $userId ) )
-                    {
-                        $parsed[$name] = $userId;
-                    }
-                    break;
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-=======
-                        break;
-                }
->>>>>>> passing all tests on mongo
             }
         }
 
         if ( !empty( $filter_info ) )
         {
-<<<<<<< HEAD
-<<<<<<< HEAD
             $this->validateRecord( $_parsed, $filter_info, $for_update, $old_record );
         }
 
         return $_parsed;
-=======
-            $this->validateRecord( $record, $filter_info, $for_update, $old_record );
-        }
-
-//        return $parsed;
-        return $record;
->>>>>>> massive changes to MongoDbSvc, adding support for rollback and continue options, handles batch errors, server-side filtering
-=======
-            $this->validateRecord( $_parsed, $filter_info, $for_update, $old_record );
-        }
-
-        return $_parsed;
->>>>>>> passing all tests on mongo
     }
 
     /**
