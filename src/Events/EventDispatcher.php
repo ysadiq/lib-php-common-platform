@@ -268,7 +268,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected function _doDispatch( &$event, $eventName, $dispatcher )
     {
-        if ( !static::$_enableRestEvents && !static::$_enablePlatformEvents )
+        if ( !static::$_enableRestEvents && !static::$_enablePlatformEvents && !static::$_enableEventScripts )
         {
             return false;
         }
@@ -280,7 +280,7 @@ class EventDispatcher implements EventDispatcherInterface
         //  Anything to do?
         $eventName = $this->_normalizeEventName( $event, $eventName );
 
-        $_pathInfo = str_replace( '/rest', null, Pii::app()->getRequestObject()->getPathInfo() );
+        $_pathInfo = str_replace( '/rest', null, Pii::request( false )->getPathInfo() );
 
         if ( static::$_logAllEvents )
         {
