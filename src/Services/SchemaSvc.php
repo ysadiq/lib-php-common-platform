@@ -230,7 +230,7 @@ class SchemaSvc extends BasePlatformRestService
         {
             if ( empty( $this->_tables ) )
             {
-                return $this->describeDatabase();
+                return array( 'resource' => $this->describeDatabase() );
             }
 
             return array( 'table' => $this->describeTables( $this->_tables ) );

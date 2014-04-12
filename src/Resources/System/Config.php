@@ -23,12 +23,11 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\UnauthorizedException;
-use DreamFactory\Platform\Interfaces\RestResourceLike;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\Fabric;
-use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Yii\Models\LookupKey;
 use DreamFactory\Platform\Yii\Models\Provider;
@@ -50,8 +49,8 @@ class Config extends BaseSystemRestResource
     /**
      * Constructor
      *
-     * @param RestServiceLike|RestResourceLike $consumer
-     * @param array                            $resourceArray
+     * @param BasePlatformService $consumer
+     * @param array               $resourceArray
      *
      * @throws \InvalidArgumentException
      * @return Config
@@ -82,28 +81,22 @@ class Config extends BaseSystemRestResource
      */
     public static function getOpenRegistration()
     {
-        if ( null === ( $_openRegistrationConfig = Platform::getStore()->get( 'config.open_registration' ) ) )
+        /** @var $_config \DreamFactory\Platform\Yii\Models\Config */
+        $_fields = 'allow_open_registration, open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id';
+
+        $_config = ResourceStore::model( 'config' )->find( array( 'select' => $_fields ) );
+
+        if ( null === $_config )
         {
-            /** @var $_config \DreamFactory\Platform\Yii\Models\Config */
-            $_fields = 'allow_open_registration, open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id';
-
-            //  Pull the first configuration record, should there be more than one
-            $_config = ResourceStore::model( 'config' )->find( array( 'select' => $_fields, 'order' => 'id' ) );
-
-            if ( null === $_config )
-            {
-                throw new InternalServerErrorException( 'Unable to load system configuration.' );
-            }
-
-            if ( !$_config->allow_open_registration )
-            {
-                return false;
-            }
-
-            Platform::getStore()->set( 'config.open_registration', $_openRegistrationConfig = $_config->getAttributes( null ) );
+            throw new InternalServerErrorException( 'Unable to load system configuration.' );
         }
 
-        return $_openRegistrationConfig;
+        if ( !$_config->allow_open_registration )
+        {
+            return false;
+        }
+
+        return $_config->getAttributes( null );
     }
 
     /**
@@ -209,9 +202,10 @@ class Config extends BaseSystemRestResource
         $this->_response['allow_remote_logins'] =
             ( Pii::getParam( 'dsp.allow_remote_logins', false ) && Option::getBool( $this->_response, 'allow_open_registration' ) );
 
-        if ( false !== $this->_response['allow_remote_logins'] )
+        if ( $this->_response['allow_remote_logins'] )
         {
             $_remoteProviders = $this->_getRemoteProviders();
+            $this->_response['remote_login_providers'] = array();
 
             if ( empty( $_remoteProviders ) )
             {

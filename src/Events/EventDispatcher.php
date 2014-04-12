@@ -254,13 +254,14 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param \DreamFactory\Platform\Events\RestServiceEvent $event
-     * @param string                                         $eventName
-     * @param EventDispatcher                                $dispatcher
+     * @param PlatformEvent|RestServiceEvent $event
+     * @param string                         $eventName
+     * @param EventDispatcher                $dispatcher
      *
      * @throws EventException
      * @throws \InvalidArgumentException
      * @throws \Exception
+     *
      * @return bool|\DreamFactory\Platform\Events\PlatformEvent Returns the original $event
      * if successfully dispatched to all listeners. Returns false if nothing was dispatched
      * and true if propagation was stopped.
@@ -333,8 +334,7 @@ class EventDispatcher implements EventDispatcherInterface
             if ( !is_string( $_listener ) && is_callable( $_listener ) )
             {
                 call_user_func( $_listener, $event, $eventName, $dispatcher );
-            }
-            //  External PHP script listener
+            } //  External PHP script listener
             elseif ( $this->isPhpScript( $_listener ) )
             {
                 $_className = substr( $_listener, 0, strpos( $_listener, '::' ) );
@@ -361,8 +361,7 @@ class EventDispatcher implements EventDispatcherInterface
                     Log::error( 'Exception running script "' . $_listener . '" handling the event "' . $eventName . '"' );
                     throw $_ex;
                 }
-            }
-            //  HTTP POST event
+            } //  HTTP POST event
             elseif ( is_string( $_listener ) && (bool)@parse_url( $_listener ) )
             {
                 if ( !static::$_client )
