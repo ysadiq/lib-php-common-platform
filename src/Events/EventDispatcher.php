@@ -280,7 +280,7 @@ class EventDispatcher implements EventDispatcherInterface
         //  Anything to do?
         $eventName = $this->_normalizeEventName( $event, $eventName );
 
-        $_pathInfo = str_replace( '/rest', null, Pii::request( false )->getPathInfo() );
+        $_pathInfo = str_replace( '/rest', null, Pii::app()->getRequestObject()->getPathInfo() );
 
         if ( static::$_logAllEvents )
         {

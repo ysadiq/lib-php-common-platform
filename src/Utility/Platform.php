@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
+use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Interfaces\PersistentStoreLike;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
@@ -331,6 +332,49 @@ class Platform extends SeedUtility
     public static function setPersistentStore( PersistentStoreLike $persistentStore )
     {
         static::$_persistentStore = $persistentStore;
+    }
+
+    /**
+     * Triggers a DSP-level event
+     *
+     * @param string        $eventName
+     * @param PlatformEvent $event
+     *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \Exception
+     * @return DspEvent
+     */
+    public static function trigger( $eventName, $event = null )
+    {
+        return Pii::app()->getDispatcher()->dispatch( $eventName, $event );
+    }
+
+    /**
+     * Adds an event listener that listens on the specified events.
+     *
+     * @param string   $eventName            The event to listen on
+     * @param callable $listener             The listener
+     * @param integer  $priority             The higher this value, the earlier an event
+     *                                       listener will be triggered in the chain (defaults to 0)
+     *
+     * @return void
+     */
+    public static function on( $eventName, $listener, $priority = 0 )
+    {
+        Pii::app()->getDispatcher()->addListener( $eventName, $listener, $priority );
+    }
+
+    /**
+     * Turn off/unbind/remove $listener from an event
+     *
+     * @param string   $eventName
+     * @param callable $listener
+     *
+     * @return void
+     */
+    public static function off( $eventName, $listener )
+    {
+        Pii::app()->getDispatcher()->removeListener( $eventName, $listener );
     }
 
 }
