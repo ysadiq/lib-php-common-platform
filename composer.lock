@@ -1256,12 +1256,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/HttpFoundation.git",
-                "reference": "e31616394438f57e698ecbad4cd53b9d270935c8"
+                "reference": "fcf4b3614e8d9610d75b35dc6809cd14f6063ebf"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/e31616394438f57e698ecbad4cd53b9d270935c8",
-                "reference": "e31616394438f57e698ecbad4cd53b9d270935c8",
+                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/fcf4b3614e8d9610d75b35dc6809cd14f6063ebf",
+                "reference": "fcf4b3614e8d9610d75b35dc6809cd14f6063ebf",
                 "shasum": ""
             },
             "require": {
@@ -1302,7 +1302,7 @@
             ],
             "description": "Symfony HttpFoundation Component",
             "homepage": "http://symfony.com",
-            "time": "2014-04-10 13:01:02"
+            "time": "2014-04-11 18:34:16"
         }
     ],
     "packages-dev": [
