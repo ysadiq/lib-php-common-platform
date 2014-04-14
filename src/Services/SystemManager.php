@@ -1096,9 +1096,9 @@ SQL
         {
             $_schema = Storage::defrost( $_schema );
 
-            if ( isset( $_schema, $_schema[$_schemaFilePath] ) )
+            if ( isset( $_schema, $_schema[ $_schemaFilePath ] ) )
             {
-                return $_schema[$_schemaFilePath];
+                return $_schema[ $_schemaFilePath ];
             }
         }
 
@@ -1118,11 +1118,11 @@ SQL
             throw new InternalServerErrorException( static::BOGUS_INSTALL_MESSAGE );
         }
 
-        $_schema[$_schemaFilePath] = DataFormat::jsonToArray( $_jsonSchema );
+        $_schema[ $_schemaFilePath ] = DataFormat::jsonToArray( $_jsonSchema );
 
         if ( false !== $checkTables )
         {
-            $_tables = Option::get( $_schema[$_schemaFilePath], 'table' );
+            $_tables = Option::get( $_schema[ $_schemaFilePath ], 'table' );
 
             if ( empty( $_tables ) )
             {
@@ -1135,7 +1135,7 @@ SQL
             Storage::freeze( $_schema )
         );
 
-        return $_schema[$_schemaFilePath];
+        return $_schema[ $_schemaFilePath ];
     }
 
     /**

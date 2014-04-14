@@ -243,11 +243,11 @@ class Script extends BaseSystemRestResource
             $_runner = new \V8Js();
 
             $_runnerShell = <<<JS
-function processEvent(event){
+var _processEvent = function(event){
     {$_script}
-}
+};
 
-var _result = processEvent(PHP.event);
+_result = _processEvent(PHP.event);
 JS;
 
             /** @noinspection PhpUndefinedFieldInspection */
@@ -264,7 +264,7 @@ JS;
 
             $_result = ob_get_clean();
 
-            return array( 'script_output' => $_result, 'script_last_variable' => $_lastVariable );
+            return array( 'script_output' => $_result, 'script_result' => $_lastVariable );
         }
         catch ( \V8JsException $_ex )
         {
