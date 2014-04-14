@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Common\Utility\DataFormat;
-use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
@@ -46,8 +45,22 @@ class RestData
      */
     public static function getPostedData( $from_file = false, $as_array = false )
     {
-        $_request = Pii::requestObject();
-        $_data = $_request->getContent();
+        if ( 'gzip' === FilterInput::server( 'HTTP_CONTENT_ENCODING' ) )
+        {
+            // Until PHP 6.0 is installed where gzunencode() is supported we must use the temp file support
+            $_data = "";
+            $_gzfp = gzopen( 'php://input', 'r' );
+
+            while ( !gzeof( $_gzfp ) )
+            {
+                $_data .= gzread( $_gzfp, 1024 );
+            }
+            gzclose( $_gzfp );
+        }
+        else
+        {
+            $_data = file_get_contents( 'php://input' );
+        }
 
         if ( empty( $_data ) && $from_file )
         {
