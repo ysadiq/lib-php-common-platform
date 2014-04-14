@@ -18,6 +18,9 @@
  * limitations under the License.
  */
 
+use DreamFactory\Platform\Events\Enums\SwaggerEvents;
+use DreamFactory\Platform\Services\SwaggerManager;
+
 $_description = <<<HTML
 HTML;
 
