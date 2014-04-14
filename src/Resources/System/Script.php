@@ -216,13 +216,13 @@ class Script extends BaseSystemRestResource
     /**
      * @param string $scriptName
      * @param string $scriptId
-     * @param array  $data Bi-directional data to/from function
+     * @param array  $data   Bi-directional data to/from function
+     * @param string $output Any output of the script
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-     * @throws \InvalidArgumentException
      * @return array
      */
-    public static function runScript( $scriptName, $scriptId = null, array &$data = array() )
+    public static function runScript( $scriptName, $scriptId = null, array &$data = array(), &$output = null )
     {
         $scriptId = $scriptId ? : $scriptName;
 
@@ -262,13 +262,13 @@ JS;
             /** @noinspection PhpUndefinedFieldInspection */
             $data = $_runner->event;
 
-            $_result = ob_get_clean();
+            $output = ob_get_clean();
 
-            return array( 'script_output' => $_result, 'script_result' => $_lastVariable );
+            return $_lastVariable;
         }
         catch ( \V8JsException $_ex )
         {
-            ob_end_clean();
+            $output = ob_end_clean();
 
             /**
              * @note     V8JsTimeLimitException was released in a later version of the libv8
@@ -286,9 +286,7 @@ JS;
             }
 
             throw new InternalServerErrorException( $_ex->getMessage() );
-
         }
-
     }
 
     /**

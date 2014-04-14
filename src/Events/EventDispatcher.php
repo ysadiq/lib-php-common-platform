@@ -309,12 +309,12 @@ class EventDispatcher implements EventDispatcherInterface
         {
             //  Run scripts
             $_script = $this->_scripts[ $eventName ];
-            list( $_output, $_result ) = Script::runScript( $_script, $eventName . '.js', $_event );
-            Log::debug( 'Script "' . $eventName . '.js" output: ' . $_output['script_output'] );
+            $_event['script_result'] = $_result = Script::runScript( $_script, $eventName . '.js', $_event, $_output );
+            $_event['script_output'] = $_output;
+
+            Log::debug( 'Script "' . $eventName . '.js" output: ' . $_output );
 
             //  Reconstitute the event object with data from script
-            $event['script_result'] = $_result;
-            $event['script_output'] = $_output;
             $event->fromArray( $_event );
 
             if ( Option::getBool( $_event, 'stop_propagation' ) )
