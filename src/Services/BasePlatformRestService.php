@@ -23,7 +23,6 @@ use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\DataFormats;
-use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
 use DreamFactory\Platform\Events\ResourceEvent;
@@ -243,7 +242,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             //	Does this action have a handler?
             if ( false !== ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) ) )
             {
-                $_handler = $this->_extraActions[$_action];
+                $_handler = $this->_extraActions[ $_action ];
 
                 if ( !is_callable( $_handler ) )
                 {
@@ -352,14 +351,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _preProcess()
     {
-        //	The system service shouldn't trigger events, only the resources...
-        if ( PlatformServiceTypes::SYSTEM_MANAGER_SERVICE == $this->_apiName && !empty( $this->_resource ) )
-        {
-            return;
-        }
-
-        return $this->trigger( ResourceServiceEvents::PRE_PROCESS );
-
         // throw exception here to stop processing
     }
 
@@ -371,14 +362,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _postProcess()
     {
-        //	The system service shouldn't trigger events, only the resources...
-        if ( PlatformServiceTypes::SYSTEM_MANAGER_SERVICE == $this->_apiName && !empty( $this->_resource ) )
-        {
-            return;
-        }
-
-        return $this->trigger( ResourceServiceEvents::POST_PROCESS );
-
         // throw exception here to stop processing
     }
 
@@ -513,9 +496,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _handleGet()
     {
-        $_eventName = $this->_apiName . '.read';
-        $this->trigger( $_eventName );
-
         return false;
     }
 
@@ -524,9 +504,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _handleMerge()
     {
-        $_eventName = $this->_apiName . '.update';
-        $this->trigger( $_eventName );
-
         return false;
     }
 
@@ -535,9 +512,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _handleOptions()
     {
-        $_eventName = $this->_apiName . '.options';
-        $this->trigger( $_eventName );
-
         return false;
     }
 
@@ -546,9 +520,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _handleCopy()
     {
-        $_eventName = $this->_apiName . '.copy';
-        $this->trigger( $_eventName );
-
         return false;
     }
 
@@ -557,9 +528,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _handleConnect()
     {
-        $_eventName = $this->_apiName . '.connect';
-        $this->trigger( $_eventName );
-
         return false;
     }
 
@@ -568,9 +536,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _handlePost()
     {
-        $_eventName = $this->_apiName . '.create';
-        $this->trigger( $_eventName );
-
         return false;
     }
 
@@ -579,9 +544,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _handlePut()
     {
-        $_eventName = $this->_apiName . '.update';
-        $this->trigger( $_eventName );
-
         return false;
     }
 
@@ -590,9 +552,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _handlePatch()
     {
-        $_eventName = $this->_apiName . '.update';
-        $this->trigger( $_eventName );
-
         return false;
     }
 
@@ -601,9 +560,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _handleDelete()
     {
-        $_eventName = $this->_apiName . '.delete';
-        $this->trigger( $_eventName );
-
         return false;
     }
 
@@ -615,9 +571,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _listResources()
     {
-        $_eventName = $this->_apiName . '.list';
-        $this->trigger( $_eventName );
-
         return false;
     }
 
@@ -648,7 +601,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     public function trigger( $eventName, $event = null, $priority = 0 )
     {
         return Platform::trigger(
-            str_ireplace( array( '{api_name}', '{action}' ), array( $this->_apiName, strtolower( $this->_action ) ), $eventName ),
+            str_ireplace(
+                array( '{api_name}', '{action}' ),
+                array( $this->_apiName == 'system' ? $this->_resource : $this->_apiName, strtolower( $this->_action ) ),
+                $eventName
+            ),
             $event ? : new RestServiceEvent( $this->_apiName, $this->_resource, $this->_response ),
             $priority
         );
@@ -857,7 +814,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         }
         else
         {
-            unset( $this->_verbAliases[$verb] );
+            unset( $this->_verbAliases[ $verb ] );
         }
 
         return $this;
@@ -926,7 +883,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $this->_extraActions = array();
         }
 
-        $this->_extraActions[$action] = $handler;
+        $this->_extraActions[ $action ] = $handler;
 
         return $this;
     }
