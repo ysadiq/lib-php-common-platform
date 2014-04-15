@@ -122,16 +122,16 @@
         },
         {
             "name": "dreamfactory/azure-sdk-for-php",
-            "version": "0.4.0.5",
+            "version": "0.4.0.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/azure-sdk-for-php.git",
-                "reference": "081c86e02057efa531078233ab98f6c813742dc1"
+                "reference": "e84115d60e8e836ff99c567ef95e1ab0a0ac986b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/azure-sdk-for-php/zipball/081c86e02057efa531078233ab98f6c813742dc1",
-                "reference": "081c86e02057efa531078233ab98f6c813742dc1",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/azure-sdk-for-php/zipball/e84115d60e8e836ff99c567ef95e1ab0a0ac986b",
+                "reference": "e84115d60e8e836ff99c567ef95e1ab0a0ac986b",
                 "shasum": ""
             },
             "require": {
@@ -167,7 +167,7 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "DreamFactory Package Maintainer"
+                    "role": "Lead Developer, server-side/client-side"
                 }
             ],
             "description": "This project provides a set of PHP client libraries that make it easy to access Windows Azure tables, blobs, queues, service runtime and service management APIs.",
@@ -176,7 +176,7 @@
                 "php",
                 "sdk"
             ],
-            "time": "2014-04-10 17:55:31"
+            "time": "2014-04-15 19:40:26"
         },
         {
             "name": "dreamfactory/javascript-sdk",
@@ -572,12 +572,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "107149091b8693cb2cfa61a6026047b8e029a6bf"
+                "reference": "f6ba98aa22157fac5117eead4fd16b27c36557f9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/107149091b8693cb2cfa61a6026047b8e029a6bf",
-                "reference": "107149091b8693cb2cfa61a6026047b8e029a6bf",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/f6ba98aa22157fac5117eead4fd16b27c36557f9",
+                "reference": "f6ba98aa22157fac5117eead4fd16b27c36557f9",
                 "shasum": ""
             },
             "require": {
@@ -621,7 +621,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-04-08 05:45:52"
+            "time": "2014-04-15 20:06:09"
         },
         {
             "name": "monolog/monolog",
