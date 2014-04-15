@@ -700,6 +700,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
         if ( null === $_whitelist && null === ( $_whitelist = \Kisma::get( 'cors.whitelist' ) ) )
         {
+            //  Empty whitelist...
+            $_whitelist = array();
+
             //	Get CORS data from config file
             $_config = Platform::getStorageBasePath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
 
@@ -711,8 +714,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
             if ( file_exists( $_config ) )
             {
-                $_whitelist = array();
-
                 if ( false !== ( $_content = @file_get_contents( $_config ) ) && !empty( $_content ) )
                 {
                     $_whitelist = json_decode( $_content, true );
