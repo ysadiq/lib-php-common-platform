@@ -191,6 +191,42 @@ class Script extends BaseSystemRestResource
     }
 
     /**
+     * DELETE an existing script
+     * This is a permanent/destructive action.
+     *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \Exception
+     * @return bool|void
+     */
+    protected function _handleDelete()
+    {
+        if ( empty( $this->_resourceId ) )
+        {
+            throw new BadRequestException( 'No script ID specified.' );
+        }
+
+        $_path = $this->_scriptPath . '/' . trim( $this->_resourceId, '/ ' ) . '.js';
+
+        if ( !file_exists( $_path ) )
+        {
+            throw new NotFoundException();
+        }
+
+        $_body = @file_get_contents( $_path );
+
+        if ( false === @unlink( $_path ) )
+        {
+            throw new InternalServerErrorException( 'Unable to delete script ID "' . $this->_resourceId . '"' );
+        }
+
+        //  Clear the swagger cache...
+        SwaggerManager::clearCache();
+
+        return array( 'script_id' => $this->_resourceId, 'script_body' => $_body );
+    }
+
+    /**
      * RUN a script
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
