@@ -329,93 +329,31 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
-    {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-
-        // slow, but workable for now, maybe faster than updating individuals
-        $_retrieveExtras = array( 'fields' => '' );
-        $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $_retrieveExtras );
-        $_idField = Option::get( $extras, 'id_field', static::DEFAULT_ID_FIELD );
-
-        $_ids = static::recordsAsIds( $_records, $_idField );
-
-        return $this->updateRecordsByIds( $table, $record, $_ids, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
-    {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-
-        // slow, but workable for now, maybe faster than merging individuals
-        $_retrieveExtras = array( 'fields' => '' );
-        $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $_retrieveExtras );
-        $_idField = Option::get( $extras, 'id_field', static::DEFAULT_ID_FIELD );
-
-        $_ids = static::recordsAsIds( $_records, $_idField );
-
-        return $this->mergeRecordsByIds( $table, $record, $_ids, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function truncateTable( $table, $extras = array() )
-    {
-        // todo faster way?
-        $_records = $this->retrieveRecordsByFilter( $table, '' );
-
-        return $this->deleteRecords( $table, $_records );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() )
-    {
-        if ( empty( $filter ) )
-        {
-            throw new BadRequestException( "Filter for delete request can not be empty." );
-        }
-
-        $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
-
-        return $this->deleteRecords( $table, $_records, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
     {
         $table = $this->correctTableName( $table );
 
         $_idField = Option::get( $extras, 'id_field', static::DEFAULT_ID_FIELD );
-        if ( empty( $_idField ) )
-        {
-            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-        }
+        $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
 
         $_select = 'select ';
-        if ( empty( $fields ) )
-        {
-            $fields = $_idField;
-        }
-        $_select .= $fields . ' from ' . $table;
+
+        $_fields = static::_buildAttributesToGet( $_fields );
+        $_select .= $_fields . ' from ' . $table;
 
         if ( !empty( $filter ) )
         {
             $filter = static::_parseFilter( $filter );
             $_select .= ' where ' . $filter;
         }
-        $_limit = Option::get( $extras, 'order' );
-        if ( $_limit > 0 )
+
+        $_order = Option::get( $extras, 'order' );
+        if ( $_order > 0 )
         {
-            $_select .= ' order by ' . $_limit;
+            $_select .= ' order by ' . $_order;
         }
+
         $_limit = Option::get( $extras, 'limit' );
         if ( $_limit > 0 )
         {
@@ -425,20 +363,17 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         try
         {
             $_result = $this->_dbConn->select( array( 'SelectExpression' => $_select ) );
-            $_items = $_result['Items'];
+            $_items = Option::clean( $_result['Items'] );
 
             $_out = array();
-            if ( !empty( $_items ) )
+            foreach ( $_items as $_item )
             {
-                foreach ( $_items as $_item )
-                {
-                    $_attributes = Option::get( $_item, 'Attributes' );
-                    $_name = Option::get( $_item, $_idField );
-                    $_out[] = array_merge(
-                        static::_unformatAttributes( $_attributes ),
-                        array( $_idField => $_name )
-                    );
-                }
+                $_attributes = Option::get( $_item, 'Attributes' );
+                $_name = Option::get( $_item, $_idField );
+                $_out[] = array_merge(
+                    static::_unformatAttributes( $_attributes ),
+                    array( $_idField => $_name )
+                );
             }
 
             return $_out;
@@ -836,9 +771,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param mixed|null $handle
-     *
-     * @return bool
+     * {@inheritdoc}
      */
     protected function initTransaction( $handle = null )
     {
@@ -846,56 +779,29 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param mixed      $record
-     * @param mixed      $id
-     * @param null|array $extras Additional items needed to complete the transaction
-     * @param bool       $save_old
-     * @param bool       $batch  Request for batch, if applicable
-     *
-     * @throws \DreamFactory\Platform\Exceptions\NotImplementedException
-     * @return null|array Array of output fields
+     * {@inheritdoc}
      */
-    protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false, $batch = false )
+    protected function addToTransaction( $record = null, $id = null, $extras = null, $rollback = false, $continue = false, $single = false )
     {
         $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_fields = Option::get( $extras, 'fields' );
-        $_idField = Option::get( $extras, 'id_field', 'Name' );
-
-        if ( empty( $id ) )
-        {
-            $id = Option::get( $record, $_idField );
-        }
-        $_native = ( empty( $record ) ) ? null : $this->_formatAttributes( $record );
+        $_fieldsInfo = Option::get( $extras, 'fields_info' );
+        $_idsInfo = Option::get( $extras, 'ids_info' );
+        $_idFields = Option::get( $extras, 'id_fields' );
         $_updates = Option::get( $extras, 'updates' );
-
-        if ( $batch )
-        {
-            // WARNING: no validation that id doesn't exist is done via batching!
-            // Add operation to list of batch operations.
-            $_batched[] = array(
-                'Name'       => $id,
-                'Attributes' => $_native
-            );
-
-            switch ( $this->getAction() )
-            {
-                case static::PUT:
-                    // only update by full records can use batching
-                    if ( !empty( $_updates ) )
-                    {
-                        return parent::addToTransaction( $_native, $id, $extras, $save_old, $batch );
-                    }
-                    break;
-                default:
-                    return parent::addToTransaction( $_native, $id, $extras, $save_old, $batch );
-            }
-        }
 
         $_out = array();
         switch ( $this->getAction() )
         {
             case static::POST:
-                $_native = $this->_formatAttributes( $record );
+                $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters );
+                if ( empty( $_parsed ) )
+                {
+                    throw new BadRequestException( 'No valid fields were found in record.' );
+                }
+
+                $_native = $this->_formatAttributes( $_parsed );
+                $_batched = array( 'Name' => $id, 'Attributes' => $_native );
 
                 /*$_result = */
                 $this->_dbConn->putAttributes(
@@ -903,25 +809,39 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                         static::TABLE_INDICATOR => $this->_transactionTable,
                         'ItemName'              => $id,
                         'Attributes'            => $_native,
-                        'Expected'              => array( $_idField => array( 'Exists' => false ) )
+                        'Expected'              => array( $_idFields[0] => array( 'Exists' => false ) )
                     )
                 );
 
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $this->addToRollback( $id );
                 }
 
-                $_out = static::cleanRecord( $record, $_fields, $_idField );
+                $_out = static::cleanRecord( $record, $_fields, $_idFields );
                 break;
             case static::PUT:
                 if ( !empty( $_updates ) )
                 {
-                    $_updates[$_idField] = $id;
+                    // only update by full records can use batching
+                    $_updates[$_idFields[0]] = $id;
                     $record = $_updates;
                 }
 
-                $_native = $this->_formatAttributes( $record, true );
+                $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
+                if ( empty( $_parsed ) )
+                {
+                    throw new BadRequestException( 'No valid fields were found in record.' );
+                }
+
+                $_native = $this->_formatAttributes( $_parsed, true );
+                $_batched = array( 'Name' => $id, 'Attributes' => $_native );
+
+                if ( !$continue && !$rollback )
+                {
+                    $_batched = array( 'Name' => $id, 'Attributes' => $_native );
+                    return parent::addToTransaction( $_batched, $id );
+                }
 
                 $_result = $this->_dbConn->putAttributes(
                     array(
@@ -931,24 +851,31 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                     )
                 );
 
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $_old = Option::get( $_result, 'Attributes', array() );
                     $this->addToRollback( $_old );
                 }
 
-                $_out = static::cleanRecord( $record, $_fields, $_idField );
+                $_out = static::cleanRecord( $record, $_fields, $_idFields );
                 break;
 
             case static::MERGE:
             case static::PATCH:
                 if ( !empty( $_updates ) )
                 {
-                    $_updates[$_idField] = $id;
+                    $_updates[$_idFields[0]] = $id;
                     $record = $_updates;
                 }
 
-                $_native = $this->_formatAttributes( $record, true );
+                $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
+                if ( empty( $_parsed ) )
+                {
+                    throw new BadRequestException( 'No valid fields were found in record.' );
+                }
+
+                $_native = $this->_formatAttributes( $_parsed, true );
+            $_batched = array( 'Name' => $id, 'Attributes' => $_native );
 
                 $_result = $this->_dbConn->putAttributes(
                     array(
@@ -958,17 +885,20 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                     )
                 );
 
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $_old = Option::get( $_result, 'Attributes', array() );
                     $this->addToRollback( $_old );
                 }
 
-                $_out = static::cleanRecord( $record, $_fields, $_idField );
+                $_out = static::cleanRecord( $record, $_fields, $_idFields );
                 break;
 
             case static::DELETE:
-                $_record = array( $_idField => $id );
+                if ( !$continue && !$rollback )
+                {
+                    return parent::addToTransaction( null, $id );
+                }
 
                 $_result = $this->_dbConn->deleteAttributes(
                     array(
@@ -979,13 +909,13 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 
                 $_temp = Option::get( $_result, 'Attributes', array() );
 
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $this->addToRollback( $_temp );
                 }
 
                 $_temp = $this->_unformatAttributes( $_temp );
-                $_out = static::cleanRecord( $_temp, $_fields, $_idField );
+                $_out = static::cleanRecord( $_temp, $_fields, $_idFields );
                 break;
 
             case static::GET:
@@ -995,17 +925,17 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                     'ConsistentRead'        => true,
                 );
 
-                $fields = static::_buildAttributesToGet( $_fields, $_idField );
-                if ( !empty( $fields ) )
+                $_fields = static::_buildAttributesToGet( $_fields, $_idFields );
+                if ( !empty( $_fields ) )
                 {
-                    $_scanProperties['AttributeNames'] = $fields;
+                    $_scanProperties['AttributeNames'] = $_fields;
                 }
 
                 $_result = $this->_dbConn->getAttributes( $_scanProperties );
 
                 $_out = array_merge(
                     static::_unformatAttributes( $_result['Attributes'] ),
-                    array( $_idField => $id )
+                    array( $_idFields[0] => $id )
                 );
                 break;
             default:
@@ -1016,11 +946,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param null|array $extras
-     *
-     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return array
+     * {@inheritdoc}
      */
     protected function commitTransaction( $extras = null )
     {
@@ -1029,36 +955,35 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
             return null;
         }
 
-        $_updates = Option::get( $extras, 'updates' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_fields = Option::get( $extras, 'fields' );
-        $_requireMore = Option::get( $extras, 'require_more');
-        $_idField = Option::get( $extras, 'id_field', 'Name' );
+        $_requireMore = Option::get( $extras, 'require_more' );
+        $_idsInfo = Option::get( $extras, 'ids_info' );
+        $_idFields = Option::get( $extras, 'id_fields' );
 
         $_out = array();
         switch ( $this->getAction() )
         {
             case static::POST:
-            case static::PUT:
-                if ( empty( $_updates ) )
-                {
-                    throw new BadRequestException( 'Batch operation not supported for update by ids.' );
-                }
-
-                $_requests = array();
-                foreach ( $this->_batchRecords as $_item )
-                {
-                    $_requests[] = array( 'PutRequest' => array( 'Item' => $_item ) );
-                }
-
                 $_result = $this->_dbConn->batchPutAttributes(
                     array(
                         static::TABLE_INDICATOR => $this->_transactionTable,
-                        'Items'                 => $_requests,
+                        'Items'                 => $this->_batchRecords,
                     )
                 );
 
-                $_out = static::cleanRecords( $this->_batchRecords, $_fields, $_idField );
+                $_out = static::cleanRecords( $this->_batchRecords, $_fields, $_idFields );
+                break;
+
+            case static::PUT:
+                $_result = $this->_dbConn->batchPutAttributes(
+                    array(
+                        static::TABLE_INDICATOR => $this->_transactionTable,
+                        'Items'                 => $this->_batchRecords,
+                    )
+                );
+
+                $_out = static::cleanRecords( $this->_batchRecords, $_fields, $_idFields );
                 break;
 
             case static::MERGE:
@@ -1078,11 +1003,11 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                 if ( $_requireMore )
                 {
                     $_scanProperties = array(
-                        'Items'           => $this->_batchRecords,
+                        'Items'          => $this->_batchRecords,
                         'ConsistentRead' => true,
                     );
 
-                    $_attributes = static::_buildAttributesToGet( $_fields, $_idField );
+                    $_attributes = static::_buildAttributesToGet( $_fields, $_idFields );
                     if ( !empty( $_attributes ) )
                     {
                         $_scanProperties['AttributesToGet'] = $_attributes;
@@ -1101,12 +1026,17 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                     $_items = $_result->getPath( "Responses/{$this->_transactionTable}" );
                     foreach ( $_items as $_item )
                     {
-                        $_out[] = $this->formatRecordFromNative( $_item );
+                        $_out[] = $this->_unformatAttributes( $_item );
                     }
                 }
 
                 /*$_result = */
-                $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $this->_transactionTable => $_requests ) ) );
+                $this->_dbConn->batchDeleteAttributes(
+                    array(
+                        static::TABLE_INDICATOR => $this->_transactionTable,
+                        'Items'                 => $this->_batchRecords
+                    )
+                );
 
                 // todo check $_result['UnprocessedItems'] for 'DeleteRequest'
                 break;
@@ -1150,15 +1080,14 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                 break;
         }
 
+        $this->_batchIds = array();
         $this->_batchRecords = array();
 
         return $_out;
     }
 
     /**
-     * @param mixed $record
-     *
-     * @return bool
+     * {@inheritdoc}
      */
     protected function addToRollback( $record )
     {
@@ -1166,7 +1095,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @return bool
+     * {@inheritdoc}
      */
     protected function rollbackTransaction()
     {

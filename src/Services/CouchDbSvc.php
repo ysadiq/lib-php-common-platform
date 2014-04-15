@@ -318,12 +318,9 @@ class CouchDbSvc extends NoSqlDbSvc
      */
     public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        if ( !is_array( $record ) || empty( $record ) )
-        {
-            throw new BadRequestException( 'There are no fields in the record.' );
-        }
-
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
         $table = $this->selectTable( $table );
+
         $_fields = Option::get( $extras, 'fields' );
         try
         {
@@ -358,17 +355,6 @@ class CouchDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function truncateTable( $table, $extras = array() )
-    {
-        // todo faster way?
-        $_records = $this->retrieveRecordsByFilter( $table );
-
-        return $this->deleteRecords( $table, $_records );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() )
     {
         if ( empty( $filter ) )
@@ -395,7 +381,7 @@ class CouchDbSvc extends NoSqlDbSvc
      */
     public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
     {
-        $table = $this->selectTable( $table );
+        $this->selectTable( $table );
         $_fields = Option::get( $extras, 'fields' );
 
         $_moreFields = static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD );
@@ -418,60 +404,11 @@ class CouchDbSvc extends NoSqlDbSvc
     {
         $requested = array( static::ID_FIELD, static::REV_FIELD ); // can only be this
         $_ids = array(
-            array( 'name' => static::ID_FIELD ),
-            array( 'name' => static::REV_FIELD )
+            array( 'name' => static::ID_FIELD, 'type' => 'string', 'required' => true ),
+            array( 'name' => static::REV_FIELD, 'type' => 'string', 'required' => false )
         );
 
         return $_ids;
-    }
-
-    protected function checkForIds( &$record, $ids_info, $extras = null, $on_create = false, $remove = false )
-    {
-        if ( !empty( $ids_info ) )
-        {
-            $_id = array();
-            foreach ( $ids_info as $_info )
-            {
-                $_name = Option::get( $_info, 'name' );
-                $_value = Option::get( $record, $_name, null, $remove );
-                if ( empty( $_value ) )
-                {
-                    if ( static::REV_FIELD == $_name )
-                    {
-                        // could be passed in as a parameter affecting all records
-                        $_partKey = Option::get( $extras, static::REV_FIELD );
-                        if ( empty( $_partKey ) )
-                        {
-                            return false;
-                        }
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-
-                $_id[] = Option::get( $record, $_name, null, $remove );
-            }
-
-            if ( !empty( $_id ) )
-            {
-                if ( 1 == count( $_id ) )
-                {
-                    return $_id[0];
-                }
-
-                return $_id;
-            }
-
-            if ( $on_create )
-            {
-                // ok
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -539,9 +476,7 @@ class CouchDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param mixed|null $handle
-     *
-     * @return bool
+     * {@inheritdoc}
      */
     protected function initTransaction( $handle = null )
     {
@@ -551,22 +486,14 @@ class CouchDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param mixed      $record
-     * @param mixed      $id
-     * @param null|array $extras Additional items needed to complete the transaction
-     * @param bool       $save_old
-     *
-     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return null|array Array of output fields
+     * {@inheritdoc}
      */
-    protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false )
+    protected function addToTransaction( $record = null, $id = null, $extras = null, $rollback = false, $continue = false, $single = false )
     {
         $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_fields = Option::get( $extras, 'fields' );
         $_fieldsInfo = Option::get( $extras, 'fields_info' );
         $_requireMore = Option::get( $extras, 'require_more' );
-        $_continue = Option::getBool( $extras, 'continue' );
         $_updates = Option::get( $extras, 'updates' );
 
         $_out = array();
@@ -579,7 +506,7 @@ class CouchDbSvc extends NoSqlDbSvc
                     throw new BadRequestException( 'No valid fields were found in record.' );
                 }
 
-                if ( !$_continue && !$save_old )
+                if ( !$continue && !$rollback )
                 {
                     return parent::addToTransaction( $record, $id );
                 }
@@ -593,7 +520,7 @@ class CouchDbSvc extends NoSqlDbSvc
                     $_out = static::recordArrayMerge( $record, $_out );
                 }
 
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $this->addToRollback( static::recordAsId( $_result, static::DEFAULT_ID_FIELD ) );
                 }
@@ -615,7 +542,7 @@ class CouchDbSvc extends NoSqlDbSvc
                 }
 
                 // only update/patch by ids can use batching
-                if ( !$_continue && !$save_old && !empty( $_updates ) )
+                if ( !$continue && !$rollback && !empty( $_updates ) )
                 {
                     return parent::addToTransaction( null, $id );
                 }
@@ -637,7 +564,7 @@ class CouchDbSvc extends NoSqlDbSvc
                 $_update = array_merge( $_result, $record );
                 $_result = $this->_dbConn->asArray()->storeDoc( (object)$_update );
 
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $this->addToRollback( $_result );
                 }
@@ -660,7 +587,7 @@ class CouchDbSvc extends NoSqlDbSvc
                 }
 
                 // only update/patch by ids can use batching
-                if ( !$_continue && !$save_old && !empty( $_updates ) )
+                if ( !$continue && !$rollback && !empty( $_updates ) )
                 {
                     return parent::addToTransaction( null, $id );
                 }
@@ -682,7 +609,7 @@ class CouchDbSvc extends NoSqlDbSvc
                 break;
 
             case static::DELETE:
-                if ( !$_continue && !$save_old )
+                if ( !$continue && !$rollback )
                 {
                     return parent::addToTransaction( null, $id );
                 }
@@ -692,7 +619,7 @@ class CouchDbSvc extends NoSqlDbSvc
                     $_result = $this->_dbConn->asArray()->getDoc( $id );
                     $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
                 }
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $this->addToRollback( $_result );
                     $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
@@ -702,7 +629,7 @@ class CouchDbSvc extends NoSqlDbSvc
                 {
                     $_out = static::cleanRecord( $_result, $_fields, static::DEFAULT_ID_FIELD );
                 }
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $this->addToRollback( $_result );
                     $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
@@ -712,7 +639,7 @@ class CouchDbSvc extends NoSqlDbSvc
             case static::GET:
                 $_result = $this->_dbConn->asArray()->getDoc( $id );
 
-                return static::cleanRecord( $_result, $_fields, static::DEFAULT_ID_FIELD );
+                $_out = static::cleanRecord( $_result, $_fields, static::DEFAULT_ID_FIELD );
 
                 return parent::addToTransaction( null, $id );
 //                $_filter = array( static::DEFAULT_ID_FIELD => $id );
@@ -731,11 +658,7 @@ class CouchDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param null|array $extras
-     *
-     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return array
+     * {@inheritdoc}
      */
     protected function commitTransaction( $extras = null )
     {
@@ -753,7 +676,7 @@ class CouchDbSvc extends NoSqlDbSvc
         switch ( $this->getAction() )
         {
             case static::POST:
-                $result = $this->_dbConn->asArray()->storeDocs( $records, $_rollback );
+                $result = $this->_dbConn->asArray()->storeDocs( $this->_batchRecords, $_rollback );
                 $_out = static::cleanRecords( $result, $_fields );
                 if ( static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD ) )
                 {
@@ -940,9 +863,7 @@ class CouchDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param mixed $record
-     *
-     * @return bool
+     * {@inheritdoc}
      */
     protected function addToRollback( $record )
     {
@@ -950,7 +871,7 @@ class CouchDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @return bool
+     * {@inheritdoc}
      */
     protected function rollbackTransaction()
     {

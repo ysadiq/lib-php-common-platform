@@ -388,7 +388,6 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         else
         {
-
             $_parsed = $record;
             if ( empty( $_parsed ) )
             {
@@ -414,10 +413,6 @@ class MongoDbSvc extends NoSqlDbSvc
 
             return array();
         }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
-        }
         catch ( \Exception $_ex )
         {
             throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
@@ -435,9 +430,9 @@ class MongoDbSvc extends NoSqlDbSvc
             // build filter string if necessary, add server-side filters if necessary
             $_ssFilters = Option::get( $extras, 'ss_filters' );
             $_criteria = $this->buildCriteriaArray( array(), null, $_ssFilters );
-            $_result = $_coll->remove( $_criteria );
+            $_coll->remove( $_criteria );
 
-            return array( 'success' => $_result );
+            return array( 'success' => true );
         }
         catch ( RestException $_ex )
         {
@@ -536,10 +531,6 @@ class MongoDbSvc extends NoSqlDbSvc
 
             return $_out;
         }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
-        }
         catch ( \Exception $_ex )
         {
             throw new InternalServerErrorException( "Failed to filter records from '$table'.\n{$_ex->getMessage()}" );
@@ -550,7 +541,7 @@ class MongoDbSvc extends NoSqlDbSvc
     {
         $requested = static::DEFAULT_ID_FIELD; // can only be this
 
-        return array( array( 'name' => static::DEFAULT_ID_FIELD ) );
+        return array( array( 'name' => static::DEFAULT_ID_FIELD, 'type' => 'string,int', 'required' => false ) );
     }
 
     /**
@@ -1216,9 +1207,7 @@ class MongoDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param mixed|null $handle
-     *
-     * @return bool
+     * {@inheritdoc}
      */
     protected function initTransaction( $handle = null )
     {
@@ -1228,28 +1217,20 @@ class MongoDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param mixed      $record
-     * @param mixed      $id
-     * @param null|array $extras Additional items needed to complete the transaction
-     * @param bool       $save_old
-     *
-     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return null|array Array of output fields
+     * {@inheritdoc}
      */
-    protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false )
+    protected function addToTransaction( $record = null, $id = null, $extras = null, $rollback = false, $continue = false, $single = false )
     {
         $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_fields = Option::get( $extras, 'fields' );
         $_fieldsInfo = Option::get( $extras, 'fields_info' );
         $_requireMore = Option::get( $extras, 'require_more' );
-        $_continue = Option::getBool( $extras, 'continue' );
         $_updates = Option::get( $extras, 'updates' );
 
         // convert to native format
         $id = static::idToMongoId( $id );
 
-        $_fieldArray = ( $save_old ) ? null : static::buildFieldArray( $_fields );
+        $_fieldArray = ( $rollback ) ? null : static::buildFieldArray( $_fields );
 
         $_out = array();
         switch ( $this->getAction() )
@@ -1264,7 +1245,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 // convert to native format
                 $record = static::idToMongoId( $_parsed );
 
-                if ( !$_continue && !$save_old )
+                if ( !$continue && !$rollback )
                 {
                     return parent::addToTransaction( $record, $id );
                 }
@@ -1274,7 +1255,7 @@ class MongoDbSvc extends NoSqlDbSvc
 
                 $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
 
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $this->addToRollback( static::recordAsId( $record, static::DEFAULT_ID_FIELD ) );
                 }
@@ -1298,12 +1279,12 @@ class MongoDbSvc extends NoSqlDbSvc
                 }
 
                 // only update/patch by ids can use batching
-                if ( !$_continue && !$save_old && !empty( $_updates ) )
+                if ( !$continue && !$rollback && !empty( $_updates ) )
                 {
                     return parent::addToTransaction( null, $id );
                 }
 
-                $_options = array( 'new' => !$save_old );
+                $_options = array( 'new' => !$rollback );
                 if ( empty( $_updates ) )
                 {
                     $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
@@ -1326,7 +1307,7 @@ class MongoDbSvc extends NoSqlDbSvc
                     throw new NotFoundException( "Record with id '" . static::mongoIdToId( $id ) . "' not found." );
                 }
 
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $this->addToRollback( $_result );
                 }
@@ -1355,12 +1336,12 @@ class MongoDbSvc extends NoSqlDbSvc
                 }
 
                 // only update/patch by ids can use batching
-                if ( !$_continue && !$save_old && !empty( $_updates ) )
+                if ( !$continue && !$rollback && !empty( $_updates ) )
                 {
                     return parent::addToTransaction( null, $id );
                 }
 
-                $_options = array( 'new' => !$save_old );
+                $_options = array( 'new' => !$rollback );
                 if ( empty( $_updates ) )
                 {
                     static::removeIds( $record, static::DEFAULT_ID_FIELD );
@@ -1378,7 +1359,7 @@ class MongoDbSvc extends NoSqlDbSvc
                     throw new NotFoundException( "Record with id '" . static::mongoIdToId( $id ) . "' not found." );
                 }
 
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $this->addToRollback( $_result );
 
@@ -1401,7 +1382,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 break;
 
             case static::DELETE:
-                if ( !$_continue && !$save_old )
+                if ( !$continue && !$rollback )
                 {
                     return parent::addToTransaction( null, $id );
                 }
@@ -1417,7 +1398,7 @@ class MongoDbSvc extends NoSqlDbSvc
                     throw new NotFoundException( "Record with id '" . static::mongoIdToId( $id ) . "' not found." );
                 }
 
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $this->addToRollback( $_result );
                     $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
@@ -1429,28 +1410,28 @@ class MongoDbSvc extends NoSqlDbSvc
                 break;
 
             case static::GET:
-                return parent::addToTransaction( null, $id );
-//                $_filter = array( static::DEFAULT_ID_FIELD => $id );
-//                $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
-//                $_result = $this->_collection->findOne( $_criteria, $_fieldArray );
-//                if ( empty( $_result ) )
-//                {
-//                    throw new NotFoundException( "Record with id '" . static::mongoIdToId( $id ) . "' not found." );
-//                }
-//
-//                $_out = static::mongoIdToId( $_result );
-//                break;
+                if ( !$continue )
+                {
+                    return parent::addToTransaction( null, $id );
+                }
+
+                $_filter = array( static::DEFAULT_ID_FIELD => $id );
+                $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
+                $_result = $this->_collection->findOne( $_criteria, $_fieldArray );
+                if ( empty( $_result ) )
+                {
+                    throw new NotFoundException( "Record with id '" . static::mongoIdToId( $id ) . "' not found." );
+                }
+
+                $_out = static::mongoIdToId( $_result );
+                break;
         }
 
         return $_out;
     }
 
     /**
-     * @param null|array $extras
-     *
-     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return array
+     * {@inheritdoc}
      */
     protected function commitTransaction( $extras = null )
     {
@@ -1596,9 +1577,7 @@ class MongoDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param mixed $record
-     *
-     * @return bool
+     * {@inheritdoc}
      */
     protected function addToRollback( $record )
     {
@@ -1606,7 +1585,7 @@ class MongoDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @return bool
+     * {@inheritdoc}
      */
     protected function rollbackTransaction()
     {

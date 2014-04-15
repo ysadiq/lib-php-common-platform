@@ -357,82 +357,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
-    {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-
-        // slow, but workable for now, maybe faster than updating individuals
-        $_retrieveExtras = array( 'fields' => '' );
-        $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $_retrieveExtras );
-        $_info = $this->getIdsInfo( $table, $extras );
-        $_idField = $_info['fields'];
-        if ( empty( $_idField ) )
-        {
-            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-        }
-
-        $_ids = static::recordsAsIds( $_records, $_idField );
-
-        return $this->updateRecordsByIds( $table, $record, $_ids, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
-    {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-
-        $_fields = Option::get($extras, 'fields');
-        $_idFields = Option::get($extras, 'id_field');
-
-        // slow, but workable for now, maybe faster than merging individuals
-        $extras['fields'] = '';
-        $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
-        unset($_records['meta']);
-
-        $_fieldsInfo = $this->getFieldsInfo($table);
-        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
-        if ( empty( $_idsInfo ) )
-        {
-            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-        }
-
-        $_ids = static::recordsAsIds( $_records, $_idFields );
-        $extras['fields'] = $_fields;
-
-        return $this->mergeRecordsByIds( $table, $record, $_ids, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function truncateTable( $table, $extras = array() )
-    {
-        // todo faster way?
-        $_records = $this->retrieveRecordsByFilter( $table, '' );
-
-        return $this->deleteRecords( $table, $_records );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() )
-    {
-        if ( empty( $filter ) )
-        {
-            throw new BadRequestException( "Filter for delete request can not be empty." );
-        }
-
-        $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
-
-        return $this->deleteRecords( $table, $_records, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
     {
         $table = $this->correctTableName( $table );
@@ -463,10 +387,12 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         try
         {
             $_result = $this->_dbConn->scan( $_scanProperties );
+            $_items = Option::clean( $_result['Items'] );
+
             $_out = array();
-            foreach ( $_result['Items'] as $_item )
+            foreach ( $_items as $_item )
             {
-                $_out[] = $this->formatRecordFromNative( $_item );
+                $_out[] = $this->_unformatAttributes( $_item );
             }
 
             return $_out;
@@ -573,7 +499,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
      *
      * @return mixed
      */
-    protected function formatRecordToNative( $record, $for_update = false )
+    protected function _formatAttributes( $record, $for_update = false )
     {
         $_format = ( $for_update ) ? Attribute::FORMAT_UPDATE : Attribute::FORMAT_PUT;
 
@@ -581,12 +507,11 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param mixed $native
-     * @param bool  $for_update
+     * @param array $native
      *
      * @return array
      */
-    protected function formatRecordFromNative( $native, $for_update = false )
+    protected function _unformatAttributes( $native )
     {
         $_out = array();
         foreach ( $native as $_key => $_value )
@@ -640,22 +565,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         return $value;
     }
 
-    /**
-     * @param array $record
-     *
-     * @return array
-     */
-    protected static function _unformatAttributes( $record )
-    {
-        $_out = array();
-        foreach ( $record as $_key => $_value )
-        {
-            $_out[$_key] = static::_unformatValue( $_value );
-        }
-
-        return $_out;
-    }
-
     protected static function _buildAttributesToGet( $fields = null, $id_fields = null )
     {
         if ( '*' == $fields )
@@ -705,7 +614,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
             }
 
             $requested[] = $_name;
-            $_fields[] = array( 'name' => $_name, 'key_type' => $_keyType, 'type' => $_type );
+            $_fields[] = array( 'name' => $_name, 'key_type' => $_keyType, 'type' => $_type, 'required' => true );
         }
 
         return $_fields;
@@ -802,6 +711,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
     /**
      * @param string|array $filter Filter for querying records by
+     * @param null|array   $params
      *
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return array
@@ -1068,9 +978,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param mixed|null $handle
-     *
-     * @return bool
+     * {@inheritdoc}
      */
     protected function initTransaction( $handle = null )
     {
@@ -1078,20 +986,13 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param mixed      $record
-     * @param mixed      $id
-     * @param null|array $extras Additional items needed to complete the transaction
-     * @param bool       $save_old
-     *
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return null|array Array of output fields
+     * {@inheritdoc}
      */
-    protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false )
+    protected function addToTransaction( $record = null, $id = null, $extras = null, $rollback = false, $continue = false, $single = false )
     {
         $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_fields = Option::get( $extras, 'fields' );
         $_fieldsInfo = Option::get( $extras, 'fields_info' );
-        $_continue = Option::getBool( $extras, 'continue' );
         $_idsInfo = Option::get( $extras, 'ids_info' );
         $_idFields = Option::get( $extras, 'id_fields' );
         $_updates = Option::get( $extras, 'updates' );
@@ -1106,7 +1007,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                     throw new BadRequestException( 'No valid fields were found in record.' );
                 }
 
-                $_native = $this->formatRecordToNative( $_parsed );
+                $_native = $this->_formatAttributes( $_parsed );
 
                 /*$_result = */
                 $this->_dbConn->putItem(
@@ -1117,7 +1018,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                     )
                 );
 
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $_key = static::_buildKey( $_idsInfo, $record );
                     $this->addToRollback( $_key );
@@ -1139,14 +1040,14 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                     throw new BadRequestException( 'No valid fields were found in record.' );
                 }
 
-                $_native = $this->formatRecordToNative( $_parsed );
+                $_native = $this->_formatAttributes( $_parsed );
 
-                if ( !$_continue && !$save_old )
+                if ( !$continue && !$rollback )
                 {
                     return parent::addToTransaction( $_native, $id );
                 }
 
-                $_options = ( $save_old ) ? ReturnValue::ALL_OLD : ReturnValue::NONE;
+                $_options = ( $rollback ) ? ReturnValue::ALL_OLD : ReturnValue::NONE;
                 $_result = $this->_dbConn->putItem(
                     array(
                         static::TABLE_INDICATOR => $this->_transactionTable,
@@ -1156,7 +1057,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                     )
                 );
 
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $_temp = Option::get( $_result, 'Attributes' );
                     if ( !empty( $_temp ) )
@@ -1182,11 +1083,11 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                     throw new BadRequestException( 'No valid fields were found in record.' );
                 }
 
-                $_key = static::_buildKey( $_idsInfo, $record, true );
-                $_native = $this->formatRecordToNative( $record, true );
+                $_key = static::_buildKey( $_idsInfo, $_parsed, true );
+                $_native = $this->_formatAttributes( $_parsed, true );
 
                 // simple insert request
-                $_options = ( $save_old ) ? ReturnValue::ALL_OLD : ReturnValue::ALL_NEW;
+                $_options = ( $rollback ) ? ReturnValue::ALL_OLD : ReturnValue::ALL_NEW;
 
                 $_result = $this->_dbConn->updateItem(
                     array(
@@ -1198,23 +1099,23 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                 );
 
                 $_temp = Option::get( $_result, 'Attributes', array() );
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $this->addToRollback( $_temp );
 
                     // merge old record with new changes
-                    $_new = array_merge( $this->formatRecordFromNative( $_temp ), $_updates );
+                    $_new = array_merge( $this->_unformatAttributes( $_temp ), $_updates );
                     $_out = static::cleanRecord( $_new, $_fields, $_idFields );
                 }
                 else
                 {
-                    $_temp = $this->formatRecordFromNative( $_temp );
+                    $_temp = $this->_unformatAttributes( $_temp );
                     $_out = static::cleanRecord( $_temp, $_fields, $_idFields );
                 }
                 break;
 
             case static::DELETE:
-                if ( !$_continue && !$save_old )
+                if ( !$continue && !$rollback )
                 {
                     return parent::addToTransaction( null, $id );
                 }
@@ -1232,12 +1133,12 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
                 $_temp = Option::get( $_result, 'Attributes', array() );
 
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $this->addToRollback( $_temp );
                 }
 
-                $_temp = $this->formatRecordFromNative( $_temp );
+                $_temp = $this->_unformatAttributes( $_temp );
                 $_out = static::cleanRecord( $_temp, $_fields, $_idFields );
                 break;
 
@@ -1259,23 +1160,17 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                 $_result = $this->_dbConn->getItem( $_scanProperties );
 
                 // Grab value from the result object like an array
-                $_out = $this->formatRecordFromNative( $_result['Item'] );
+                $_out = $this->_unformatAttributes( $_result['Item'] );
                 break;
             default:
                 break;
         }
 
-        $this->_batchRecords = array();
-
         return $_out;
     }
 
     /**
-     * @param null|array $extras
-     *
-     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return array
+     * {@inheritdoc}
      */
     protected function commitTransaction( $extras = null )
     {
@@ -1284,10 +1179,11 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
             return null;
         }
 
+//        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_fields = Option::get( $extras, 'fields' );
         $_requireMore = Option::get( $extras, 'require_more');
         $_idsInfo = Option::get( $extras, 'ids_info' );
-        $_idFields = static::getIdFieldsFromInfo( $_idsInfo );
+        $_idFields = Option::get( $extras, 'id_fields' );
 
         $_out = array();
         switch ( $this->getAction() )
@@ -1306,7 +1202,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
                 foreach ( $this->_batchRecords as $_item )
                 {
-                    $_out[] = static::cleanRecord( $this->formatRecordFromNative( $_item ), $_fields, $_idFields );
+                    $_out[] = static::cleanRecord( $this->_unformatAttributes( $_item ), $_fields, $_idFields );
                 }
                 break;
 
@@ -1324,7 +1220,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
                 foreach ( $this->_batchRecords as $_item )
                 {
-                    $_out[] = static::cleanRecord( $this->formatRecordFromNative( $_item ), $_fields, $_idFields );
+                    $_out[] = static::cleanRecord( $this->_unformatAttributes( $_item ), $_fields, $_idFields );
                 }
                 break;
 
@@ -1368,7 +1264,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                     $_items = $_result->getPath( "Responses/{$this->_transactionTable}" );
                     foreach ( $_items as $_item )
                     {
-                        $_out[] = $this->formatRecordFromNative( $_item );
+                        $_out[] = $this->_unformatAttributes( $_item );
                     }
                 }
 
@@ -1410,7 +1306,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                 $_items = $_result->getPath( "Responses/{$this->_transactionTable}" );
                 foreach ( $_items as $_item )
                 {
-                    $_out[] = $this->formatRecordFromNative( $_item );
+                    $_out[] = $this->_unformatAttributes( $_item );
                 }
                 break;
             default:
@@ -1424,9 +1320,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param mixed $record
-     *
-     * @return bool
+     * {@inheritdoc}
      */
     protected function addToRollback( $record )
     {
@@ -1434,7 +1328,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @return bool
+     * {@inheritdoc}
      */
     protected function rollbackTransaction()
     {

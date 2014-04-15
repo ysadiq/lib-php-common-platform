@@ -758,17 +758,6 @@ class SalesforceDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function truncateTable( $table, $extras = array() )
-    {
-        // todo faster way?
-        $_records = $this->retrieveRecordsByFilter( $table, '', '' );
-
-        return $this->deleteRecords( $table, $_records );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function deleteRecords( $table, $records, $fields = null, $extras = array() )
     {
         if ( !is_array( $records ) || empty( $records ) )

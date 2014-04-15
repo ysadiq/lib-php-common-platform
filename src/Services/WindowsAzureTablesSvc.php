@@ -370,17 +370,6 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function truncateTable( $table, $extras = array() )
-    {
-        // todo faster way?
-        $_records = $this->retrieveRecordsByFilter( $table );
-
-        return $this->deleteRecords( $table, $_records );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() )
     {
         if ( empty( $filter ) )
@@ -443,60 +432,11 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     {
         $requested = array( static::PARTITION_KEY, static::ROW_KEY ); // can only be this
         $_ids = array(
-            array( 'name' => static::PARTITION_KEY ),
-            array( 'name' => static::ROW_KEY )
+            array( 'name' => static::PARTITION_KEY, 'type' => 'string', 'required' => true ),
+            array( 'name' => static::ROW_KEY, 'type' => 'string', 'required' => true )
         );
 
         return $_ids;
-    }
-
-    protected function checkForIds( &$record, $ids_info, $extras = null, $on_create = false, $remove = false )
-    {
-        if ( !empty( $ids_info ) )
-        {
-            $_id = array();
-            foreach ( $ids_info as $_info )
-            {
-                $_name = Option::get( $_info, 'name' );
-                $_value = Option::get( $record, $_name, null, $remove );
-                if ( empty( $_value ) )
-                {
-                    if ( static::PARTITION_KEY == $_name )
-                    {
-                        // could be passed in as a parameter affecting all records
-                        $_partKey = Option::get( $extras, static::PARTITION_KEY );
-                        if ( empty( $_partKey ) )
-                        {
-                            return false;
-                        }
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-
-                $_id[] = Option::get( $record, $_name, null, $remove );
-            }
-
-            if ( !empty( $_id ) )
-            {
-                if ( 1 == count( $_id ) )
-                {
-                    return $_id[0];
-                }
-
-                return $_id;
-            }
-
-            if ( $on_create )
-            {
-                // ok
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -854,9 +794,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param mixed|null $handle
-     *
-     * @return bool
+     * {@inheritdoc}
      */
     protected function initTransaction( $handle = null )
     {
@@ -867,15 +805,9 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param mixed      $record
-     * @param mixed      $id
-     * @param null|array $extras Additional items needed to complete the transaction
-     * @param bool       $save_old
-     *
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return null|array Array of output fields
+     * {@inheritdoc}
      */
-    protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false )
+    protected function addToTransaction( $record = null, $id = null, $extras = null, $rollback = false, $continue = false, $single = false )
     {
         $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_fields = Option::get( $extras, 'fields' );
@@ -950,7 +882,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         }
 
         // only allow batch if rollback and same partition
-        $_batch = ( $save_old && !empty( $_partitionKey ) );
+        $_batch = ( $rollback && !empty( $_partitionKey ) );
         $_out = array();
         switch ( $this->getAction() )
         {
@@ -970,7 +902,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
                 /** @var InsertEntityResult $_result */
                 $_result = $this->_dbConn->insertEntity( $this->_transactionTable, $_entity );
 
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $this->addToRollback( $_entity );
                 }
@@ -990,7 +922,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
                     return parent::addToTransaction( $record );
                 }
 
-                if ( $save_old )
+                if ( $rollback )
                 {
                     $_old = $this->_dbConn->getEntity( $this->_transactionTable, $_entity->getRowKey(), $_entity->getPartitionKey() );
                     $this->addToRollback( $_old );
@@ -1015,10 +947,10 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
                     return parent::addToTransaction( null, $_rowKey );
                 }
 
-                if ( $save_old || $_requireMore )
+                if ( $rollback || $_requireMore )
                 {
                     $_old = $this->_dbConn->getEntity( $this->_transactionTable, $_rowKey, $_partKey );
-                    if ( $save_old )
+                    if ( $rollback )
                     {
                         $this->addToRollback( $_old );
                     }
@@ -1046,10 +978,10 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
                     return parent::addToTransaction( null, $_rowKey );
                 }
 
-                if ( $save_old || $_requireMore )
+                if ( $rollback || $_requireMore )
                 {
                     $_old = $this->_dbConn->getEntity( $this->_transactionTable, $_partKey, $_rowKey );
-                    if ( $save_old )
+                    if ( $rollback )
                     {
                         $this->addToRollback( $_old );
                     }
@@ -1081,11 +1013,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param null|array $extras
-     *
-     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return array
+     * {@inheritdoc}
      */
     protected function commitTransaction( $extras = null )
     {
@@ -1172,9 +1100,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param mixed $record
-     *
-     * @return bool
+     * {@inheritdoc}
      */
     protected function addToRollback( $record )
     {
@@ -1203,7 +1129,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     }
 
     /**
-     * @return bool
+     * {@inheritdoc}
      */
     protected function rollbackTransaction()
     {

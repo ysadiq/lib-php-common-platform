@@ -722,7 +722,18 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @throws \Exception
      * @return array
      */
-    abstract public function truncateTable( $table, $extras = array() );
+    public function truncateTable( $table, $extras = array() )
+    {
+        // todo faster way?
+        $_records = $this->retrieveRecordsByFilter( $table );
+
+        if ( !empty( $_records ) )
+        {
+            $this->deleteRecords( $table, $_records );
+        }
+
+        return array( 'success' => true );
+    }
 
     // Handle table record operations
 
@@ -775,7 +786,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                         throw new BadRequestException( "Required id field(s) not found in record $_index: " . print_r( $_record, true ) );
                     }
 
-                    $_result = $this->addToTransaction( $_record, $_id, $extras, $_rollback );
+                    $_result = $this->addToTransaction( $_record, $_id, $extras, $_rollback, $_continue, $_isSingle );
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
@@ -910,7 +921,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                         throw new BadRequestException( "Required id field(s) not found in record $_index: " . print_r( $_record, true ) );
                     }
 
-                    $_result = $this->addToTransaction( $_record, $_id, $extras, $_rollback );
+                    $_result = $this->addToTransaction( $_record, $_id, $extras, $_rollback, $_continue, $_isSingle );
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
@@ -1086,7 +1097,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                         throw new BadRequestException( "Identifying field '_id' can not be empty for update record request." );
                     }
 
-                    $_result = $this->addToTransaction( null, $_id, $extras, $_rollback );
+                    $_result = $this->addToTransaction( null, $_id, $extras, $_rollback, $_continue, $_isSingle );
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
@@ -1221,7 +1232,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                         throw new BadRequestException( "Required id field(s) not found in record $_index: " . print_r( $_record, true ) );
                     }
 
-                    $_result = $this->addToTransaction( $_record, $_id, $extras, $_rollback );
+                    $_result = $this->addToTransaction( $_record, $_id, $extras, $_rollback, $_continue, $_isSingle );
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
@@ -1395,7 +1406,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                         throw new BadRequestException( "Identifier can not be empty for update record request." );
                     }
 
-                    $_result = $this->addToTransaction( null, $_id, $extras, $_rollback );
+                    $_result = $this->addToTransaction( null, $_id, $extras, $_rollback, $_continue, $_isSingle );
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
@@ -1494,7 +1505,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
 
         $_fieldsInfo = $this->getFieldsInfo( $table );
-        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
         if ( empty( $_idsInfo ) )
         {
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
@@ -1503,7 +1514,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $_ids = array();
         foreach ( $records as $_record )
         {
-            $_ids[] = $this->checkForIds( $_record, $_idsInfo, $extras );
+            $_ids[] = static::checkForIds( $_record, $_idsInfo, $extras );
         }
 
         return $this->deleteRecordsByIds( $table, $_ids, $extras );
@@ -1607,7 +1618,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                         throw new BadRequestException( "Identifying field '_id' can not be empty for delete record request." );
                     }
 
-                    $_result = $this->addToTransaction( null, $_id, $extras, $_rollback );
+                    $_result = $this->addToTransaction( null, $_id, $extras, $_rollback, $_continue, $_isSingle );
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
@@ -1720,10 +1731,17 @@ abstract class BaseDbSvc extends BasePlatformRestService
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
         }
 
+        $_fieldsInfo = $this->getFieldsInfo( $table );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        if ( empty( $_idsInfo ) )
+        {
+            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+        }
+
         $_ids = array();
         foreach ( $records as $_record )
         {
-            $_ids[] = $this->checkForIds( $_record, $_idsInfo, $extras );
+            $_ids[] = static::checkForIds( $_record, $_idsInfo, $extras );
         }
 
         return $this->retrieveRecordsByIds( $table, $_ids, $extras );
@@ -1772,6 +1790,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
         }
 
+        $extras['single'] = $_isSingle;
         $extras['ids_info'] = $_idsInfo;
         $extras['id_fields'] = $_idFields;
         $extras['fields_info'] = $_fieldsInfo;
@@ -1790,7 +1809,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                         throw new BadRequestException( "Identifying field '_id' can not be empty for retrieve record request." );
                     }
 
-                    $_result = $this->addToTransaction( null, $_id, $extras, false );
+                    $_result = $this->addToTransaction( null, $_id, $extras, false, $_continue, $_isSingle );
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
@@ -1916,39 +1935,42 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
     protected function checkForIds( &$record, $ids_info, $extras = null, $on_create = false, $remove = false )
     {
+        $_id = array();
         if ( !empty( $ids_info ) )
         {
-            $_id = array();
             foreach ( $ids_info as $_info )
             {
                 $_name = Option::get( $_info, 'name' );
                 $_value = Option::get( $record, $_name, null, $remove );
-                if ( empty( $_value ) )
+                if ( !empty( $_value ) )
                 {
-                    if ( !$on_create )
+                    $_id[] = Option::get( $record, $_name, null, $remove );
+                }
+                else
+                {
+                    $_required = Option::getBool( $_info, 'required' );
+                    // could be passed in as a parameter affecting all records
+                    $_param = Option::get( $extras, $_name );
+                    if ( $on_create && $_required && empty( $_param ) )
                     {
                         return false;
                     }
                 }
-
-                $_id[] = Option::get( $record, $_name, null, $remove );
             }
+        }
 
-            if ( !empty( $_id ) )
+        if ( !empty( $_id ) )
+        {
+            if ( 1 == count( $_id ) )
             {
-                if ( 1 == count( $_id ) )
-                {
-                    return $_id[0];
-                }
-
-                return $_id;
+                return $_id[0];
             }
 
-            if ( $on_create )
-            {
-                // ok
-                return true;
-            }
+            return $_id;
+        }
+        elseif ( $on_create )
+        {
+            return array();
         }
 
         return false;
@@ -2437,12 +2459,14 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @param mixed      $record
      * @param mixed      $id
      * @param null|array $extras Additional items needed to complete the transaction
-     * @param bool       $save_old
+     * @param bool       $rollback
+     * @param bool       $continue
+     * @param bool       $single
      *
      * @throws \DreamFactory\Platform\Exceptions\NotImplementedException
      * @return null|array Array of output fields
      */
-    protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false )
+    protected function addToTransaction( $record = null, $id = null, $extras = null, $rollback = false, $continue = false, $single = false )
     {
         if ( !empty( $record ) )
         {
@@ -2484,75 +2508,6 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @return bool
      */
     abstract protected function rollbackTransaction();
-
-    /**
-     * @param array $record
-     * @param bool  $for_update
-     *
-     * @return mixed
-     */
-    protected function formatRecordToNative( $record, $for_update = false )
-    {
-        // base class does nothing so far
-        if ( $for_update )
-        {
-
-        }
-
-        return $record;
-    }
-
-    /**
-     * @param mixed $native
-     * @param bool  $for_update
-     *
-     * @return array
-     */
-    protected function formatRecordFromNative( $native, $for_update = false )
-    {
-        // base class does nothing so far
-        if ( $for_update )
-        {
-
-        }
-
-        return $native;
-    }
-
-    /**
-     * @param array $records
-     * @param bool  $for_update
-     *
-     * @return mixed
-     */
-    protected function formatRecordsToNative( $records, $for_update = false )
-    {
-        // base class does nothing so far
-        $_out = array();
-        foreach ( $records as $_record )
-        {
-            $_out[] = static::formatRecordToNative( $_record, $for_update );
-        }
-
-        return $_out;
-    }
-
-    /**
-     * @param mixed $native
-     * @param bool  $for_update
-     *
-     * @return array
-     */
-    protected function formatRecordsFromNative( $native, $for_update = false )
-    {
-        $_out = array();
-        foreach ( $native as $_record )
-        {
-            $_out[] = static::formatRecordFromNative( $_record, $for_update );
-        }
-
-        return $_out;
-    }
 
     /**
      * @param array        $record

@@ -1849,12 +1849,12 @@ class SqlDbSvc extends BaseDbSvc
 
     protected function getIdsInfo( $table, $fields_info = null, &$requested = null )
     {
-        $_idFieldsInfo = array();
+        $_idsInfo = array();
         if ( empty( $requested ) )
         {
             $requested = array();
-            $_idFieldsInfo = SqlDbUtilities::getPrimaryKeys( $fields_info );
-            foreach ( $_idFieldsInfo as $_info )
+            $_idsInfo = SqlDbUtilities::getPrimaryKeys( $fields_info );
+            foreach ( $_idsInfo as $_info )
             {
                 $requested[] = Option::get( $_info, 'name' );
             }
@@ -1865,14 +1865,17 @@ class SqlDbSvc extends BaseDbSvc
             {
                 foreach ( $requested as $_field )
                 {
-                    $_idFieldsInfo[] = SqlDbUtilities::getFieldFromDescribe( $_field, $fields_info );
+                    $_idsInfo[] = SqlDbUtilities::getFieldFromDescribe( $_field, $fields_info );
                 }
             }
         }
 
-        return $_idFieldsInfo;
+        return $_idsInfo;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     protected function initTransaction( $handle = null )
     {
         $this->_transaction = null;
@@ -1881,19 +1884,11 @@ class SqlDbSvc extends BaseDbSvc
     }
 
     /**
-     * @param mixed      $record
-     * @param mixed      $id
-     * @param null|array $extras Additional items needed to complete the transaction
-     * @param bool       $save_old
-     *
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-     * @return null|array Array of output fields
+     * {@inheritdoc}
      */
-    protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false )
+    protected function addToTransaction( $record = null, $id = null, $extras = null, $rollback = false, $continue = false, $single = false )
     {
-        if ( $save_old )
+        if ( $rollback )
         {
             // sql transaction really only for rollback scenario, not batching
             if ( !isset( $this->_transaction ) )
@@ -1908,8 +1903,7 @@ class SqlDbSvc extends BaseDbSvc
         $_updates = Option::get( $extras, 'updates' );
         $_idsInfo = Option::get( $extras, 'ids_info' );
         $_idFields = Option::get( $extras, 'id_fields' );
-        $_continue = Option::getBool( $extras, 'continue' );
-        $_needToIterate = ( $_continue || ( 1 < count( $_idsInfo ) ) );
+        $_needToIterate = ( $single || $continue || ( 1 < count( $_idsInfo ) ) );
 
         $_related = Option::get( $extras, 'related' );
         $_requireMore = Option::getBool( $extras, 'require_more' ) || !empty( $_related );
@@ -2065,11 +2059,7 @@ class SqlDbSvc extends BaseDbSvc
     }
 
     /**
-     * @param null|array $extras
-     *
-     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return array
+     * {@inheritdoc}
      */
     protected function commitTransaction( $extras = null )
     {
@@ -2103,12 +2093,12 @@ class SqlDbSvc extends BaseDbSvc
             throw new BadRequestException( 'No valid identifier found for this table.' );
         }
 
-        if ( !empty( $this->_batchRecords ) )
+        if ( !empty( $this->_batchIds ) )
         {
             if ( is_array( $this->_batchRecords[0] ) )
             {
                 $_temp = array();
-                foreach ( $this->_batchRecords as $_record )
+                foreach ( $this->_batchIds as $_record )
                 {
                     $_temp[] = Option::get( $_record, $_idName );
                 }
@@ -2264,7 +2254,7 @@ class SqlDbSvc extends BaseDbSvc
     }
 
     /**
-     * @return bool
+     * {@inheritdoc}
      */
     protected function rollbackTransaction()
     {
