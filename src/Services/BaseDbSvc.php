@@ -1923,9 +1923,12 @@ abstract class BaseDbSvc extends BasePlatformRestService
             {
                 $_name = Option::get( $_info, 'name' );
                 $_value = Option::get( $record, $_name, null, $remove );
-                if (empty($_value))
+                if ( empty( $_value ) )
                 {
-                    return false;
+                    if ( !$on_create )
+                    {
+                        return false;
+                    }
                 }
 
                 $_id[] = Option::get( $record, $_name, null, $remove );
