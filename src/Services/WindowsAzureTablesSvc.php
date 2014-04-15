@@ -21,6 +21,8 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Resources\User\Session;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 use WindowsAzure\Common\ServiceException;
@@ -49,610 +51,326 @@ use WindowsAzure\Table\TableRestProxy;
  */
 class WindowsAzureTablesSvc extends NoSqlDbSvc
 {
-	//*************************************************************************
-	//	Constants
-	//*************************************************************************
+    //*************************************************************************
+    //	Constants
+    //*************************************************************************
 
-	/**
-	 * Default record identifier field
-	 */
-	const DEFAULT_ID_FIELD = 'RowKey';
-	/**
-	 * Define identifying field
-	 */
-	const ROW_KEY = 'RowKey';
-	/**
-	 * Define partitioning field
-	 */
-	const PARTITION_KEY = 'PartitionKey';
+    /**
+     * Default record identifier field
+     */
+    const DEFAULT_ID_FIELD = 'RowKey';
+    /**
+     * Define identifying field
+     */
+    const ROW_KEY = 'RowKey';
+    /**
+     * Define partitioning field
+     */
+    const PARTITION_KEY = 'PartitionKey';
 
-	//*************************************************************************
-	//	Members
-	//*************************************************************************
+    //*************************************************************************
+    //	Members
+    //*************************************************************************
 
-	/**
-	 * @var TableRestProxy|null
-	 */
-	protected $_dbConn = null;
-	/**
-	 * @var string
-	 */
-	protected $_defaultPartitionKey = 'df_service';
+    /**
+     * @var TableRestProxy|null
+     */
+    protected $_dbConn = null;
+    /**
+     * @var null | BatchOperations
+     */
+    protected $_batchOps = null;
+    /**
+     * @var null | BatchOperations
+     */
+    protected $_backupOps = null;
 
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * Create a new WindowsAzureTablesSvc
-	 *
-	 * @param array $config
-	 *
-	 * @throws \InvalidArgumentException
-	 * @throws \Exception
-	 */
-	public function __construct( $config )
-	{
-		parent::__construct( $config );
+    /**
+     * Create a new WindowsAzureTablesSvc
+     *
+     * @param array $config
+     *
+     * @throws \InvalidArgumentException
+     * @throws \Exception
+     */
+    public function __construct( $config )
+    {
+        parent::__construct( $config );
 
-		$_credentials = Option::get( $config, 'credentials' );
-		$_name = Option::get( $_credentials, 'account_name' );
-		if ( empty( $_name ) )
-		{
-			throw new \Exception( 'WindowsAzure storage name can not be empty.' );
-		}
-
-		$_key = Option::get( $_credentials, 'account_key' );
-		if ( empty( $_key ) )
-		{
-			throw new \Exception( 'WindowsAzure storage key can not be empty.' );
-		}
-
-		// set up a default partition key
-		$_parameters = Option::get( $config, 'parameters' );
-		$_partitionKey = Option::get( $_parameters, static::PARTITION_KEY );
-		if ( empty( $_partitionKey ) )
-		{
-			// use API name as the default partition key,
-			// it can be overridden by individual get/set methods
-			$_partitionKey = Option::get( $config, 'api_name' );
-		}
-		if ( !empty( $_partitionKey ) )
-		{
-			$this->_defaultPartitionKey = $_partitionKey;
-		}
-
-		try
-		{
-			$_connectionString = "DefaultEndpointsProtocol=https;AccountName=$_name;AccountKey=$_key";
-			$this->_dbConn = ServicesBuilder::getInstance()->createTableService( $_connectionString );
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Unexpected Windows Azure Table Service Exception:\n{$_ex->getMessage()}" );
-		}
-	}
-
-	/**
-	 * Object destructor
-	 */
-	public function __destruct()
-	{
-		try
-		{
-			$this->_dbConn = null;
-		}
-		catch ( \Exception $_ex )
-		{
-			error_log( "Failed to disconnect from database.\n{$_ex->getMessage()}" );
-		}
-	}
-
-	/**
-	 * @throws \Exception
-	 */
-	protected function checkConnection()
-	{
-		if ( !isset( $this->_dbConn ) )
-		{
-            throw new InternalServerErrorException( 'Database connection has not been initialized.' );
-		}
-	}
-
-	/**
-	 * @param $name
-	 *
-	 * @return string
-	 */
-	public function correctTableName( $name )
-	{
-		return $name;
-	}
-
-	/**
-	 * @param null $post_data
-	 *
-	 * @return array
-	 */
-	protected function _gatherExtrasFromRequest( $post_data = null )
-	{
-		$_extras = parent::_gatherExtrasFromRequest( $post_data );
-		$_extras[static::PARTITION_KEY] = FilterInput::request( static::PARTITION_KEY );
-
-		return $_extras;
-	}
-
-	// REST service implementation
-
-	/**
-	 * @throws \Exception
-	 * @return array
-	 */
-	protected function _listResources()
-	{
-		try
-		{
-			/** @var QueryTablesResult $result */
-			$result = $this->_dbConn->queryTables();
-			/** @var GetTableResult[] $tables */
-			$tables = $result->getTables();
-			$out = array();
-			foreach ( $tables as $table )
-			{
-				$out[] = array( 'name' => $table );
-			}
-
-			return array( 'resource' => $out );
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to list tables of Windows Azure Tables service.\n" . $_ex->getMessage() );
-		}
-	}
-
-    // Handle administrative options, table add, delete, etc
-
-	/**
-     * {@inheritdoc}
-	 */
-	public function getTables( $tables = array() )
-	{
-		if ( empty( $tables ) )
-		{
-			try
-			{
-				/** @var QueryTablesResult $_result */
-				$_result = $this->_dbConn->queryTables();
-				/** @var GetTableResult[] $tables */
-				$tables = $_result->getTables();
-			}
-			catch ( ServiceException $_ex )
-			{
-				throw new InternalServerErrorException( "Failed to list tables of Windows Azure Tables service.\n" . $_ex->getMessage() );
-			}
-		}
-
-		return parent::getTables( $tables );
-	}
-
-	/**
-     * {@inheritdoc}
-	 */
-	public function getTable( $table )
-	{
-		return array( 'name' => $table );
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function createTable( $properties = array() )
-	{
-		$_name = Option::get( $properties, 'name' );
-		if ( empty( $_name ) )
-		{
-			throw new BadRequestException( "No 'name' field in data." );
-		}
-
-		try
-		{
-			$this->_dbConn->createTable( $_name );
-
-			return array( 'name' => $_name );
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to create table on Windows Azure Tables service.\n" . $_ex->getMessage() );
-		}
-	}
-
-	/**
-     * {@inheritdoc}
-	 */
-	public function updateTable( $properties = array() )
-	{
-        $_name = Option::get( $properties, 'name' );
-		if ( empty( $_name ) )
-		{
-			throw new BadRequestException( "No 'name' field in data." );
-		}
-
-		throw new InternalServerErrorException( "Failed to update table '$_name' on Windows Azure Tables service." );
-//		return array( 'name' => $table );
-	}
-
-	/**
-     * {@inheritdoc}
-	 */
-	public function deleteTable( $table, $check_empty = false )
-	{
-        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
+        $_credentials = Option::get( $config, 'credentials' );
+        $_name = Option::get( $_credentials, 'account_name' );
         if ( empty( $_name ) )
         {
-            throw new BadRequestException( 'Table name can not be empty.' );
-		}
+            throw new \Exception( 'WindowsAzure storage name can not be empty.' );
+        }
 
-		try
-		{
-			$this->_dbConn->deleteTable( $table );
+        $_key = Option::get( $_credentials, 'account_key' );
+        if ( empty( $_key ) )
+        {
+            throw new \Exception( 'WindowsAzure storage key can not be empty.' );
+        }
 
-			return array( 'name' => $table );
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to delete table '$table'.\n" . $_ex->getMessage() );
-		}
-	}
+        try
+        {
+            $_connectionString = "DefaultEndpointsProtocol=https;AccountName=$_name;AccountKey=$_key";
+            $this->_dbConn = ServicesBuilder::getInstance()->createTableService( $_connectionString );
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Windows Azure Table Service Exception:\n{$_ex->getMessage()}" );
+        }
+    }
 
-	//-------- Table Records Operations ---------------------
-	// records is an array of field arrays
+    /**
+     * Object destructor
+     */
+    public function __destruct()
+    {
+        try
+        {
+            $this->_dbConn = null;
+        }
+        catch ( \Exception $_ex )
+        {
+            error_log( "Failed to disconnect from database.\n{$_ex->getMessage()}" );
+        }
+    }
 
-	/**
-	 * {@inheritdoc}
-	 */
-    public function createRecords( $table, $records, $extras = array() )
-	{
-        $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
-        $table = $this->correctTableName( $table );
+    /**
+     * @throws \Exception
+     */
+    protected function checkConnection()
+    {
+        if ( !isset( $this->_dbConn ) )
+        {
+            throw new InternalServerErrorException( 'Database connection has not been initialized.' );
+        }
+    }
 
-		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
-        $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			// Create list of batch operation.
-			$operations = new BatchOperations();
+    /**
+     * @param null $post_data
+     *
+     * @return array
+     */
+    protected function _gatherExtrasFromRequest( $post_data = null )
+    {
+        $_extras = parent::_gatherExtrasFromRequest( $post_data );
+        $_extras[static::PARTITION_KEY] = FilterInput::request( static::PARTITION_KEY, Option::get( $post_data, static::PARTITION_KEY ) );
 
-			foreach ( $records as $record )
-			{
-				$entity = static::parseRecordToEntity( $record );
-				$_id = $entity->getRowKey();
-				if ( empty( $_id ) )
-				{
-					$_id = static::createItemId( $table );
-					$entity->setRowKey( $_id );
-				}
-				if ( !$entity->getPartitionKey() )
-				{
-					$entity->setPartitionKey( $_partitionKey );
-				}
+        return $_extras;
+    }
 
-				// Add operation to list of batch operations.
-				$operations->addInsertEntity( $table, $entity );
-			}
+    protected function _getTablesAsArray()
+    {
+        /** @var QueryTablesResult $_result */
+        $_result = $this->_dbConn->queryTables();
 
-			/** @var BatchResult $results */
-			$results = $this->_dbConn->batch( $operations );
+        /** @var GetTableResult[] $_out */
+        $_out = $_result->getTables();
 
-			/** @var InsertEntityResult $result */
-			$_entities = $results->getEntries();
-			$_out = static::parseEntitiesToRecords( $_entities, $_fields );
+        return $_out;
+    }
 
-			return $_out;
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to create items in '$table'.\n" . $_ex->getMessage() );
-		}
-	}
+    // REST service implementation
 
-	/**
-	 * {@inheritdoc}
-	 */
-    public function createRecord( $table, $record, $extras = array() )
-	{
-        $record = static::checkIncomingData( $record, null, false, 'There are no record fields in the request.' );
-        $table = $this->correctTableName( $table );
+    /**
+     * @throws \Exception
+     * @return array
+     */
+    protected function _listResources()
+    {
+        try
+        {
+            $_resources = array();
+            $_result = $this->_getTablesAsArray();
+            foreach ( $_result as $_table )
+            {
+                $_access = $this->getPermissions( $_table );
+                if ( !empty( $_access ) )
+                {
+                    $_resources[] = array( 'name' => $_table, 'access' => $_access );
+                }
+            }
 
-		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
-        $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			// simple insert request
-			$entity = static::parseRecordToEntity( $record );
-			$_id = $entity->getRowKey();
-			if ( empty( $_id ) )
-			{
-				$_id = static::createItemId( $table );
-				$entity->setRowKey( $_id );
-			}
-			if ( !$entity->getPartitionKey() )
-			{
-				$entity->setPartitionKey( $_partitionKey );
-			}
+            return array( 'resource' => $_resources );
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+        }
+    }
 
-			/** @var InsertEntityResult $result */
-			$result = $this->_dbConn->insertEntity( $table, $entity );
-
-			return static::parseEntityToRecord( $result->getEntity(), $_fields );
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to create item in '$table'.\n" . $_ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-    public function updateRecords( $table, $records, $extras = array() )
-	{
-        $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
-        $table = $this->correctTableName( $table );
-
-		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
-        $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			// Create list of batch operation.
-			$operations = new BatchOperations();
-
-			$_entities = array();
-			foreach ( $records as $key => $record )
-			{
-				$_id = Option::get( $record, static::ROW_KEY );
-				if ( empty( $_id ) )
-				{
-					throw new BadRequestException( "No identifier 'RowKey' exist in record index '$key'." );
-				}
-				$entity = static::parseRecordToEntity( $record );
-				if ( !$entity->getPartitionKey() )
-				{
-					$entity->setPartitionKey( $_partitionKey );
-				}
-				$_entities[] = $entity;
-
-				// Add operation to list of batch operations.
-				$operations->addUpdateEntity( $table, $entity );
-			}
-
-			/** @var BatchResult $results */
-			$results = $this->_dbConn->batch( $operations );
-
-			/** @var UpdateEntityResult $result */
-			foreach ( $results->getEntries() as $result )
-			{
-				// not much good in here
-			}
-
-			return static::parseEntitiesToRecords( $_entities, $_fields );
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to update items in '$table'.\n" . $_ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function updateRecord( $table, $record, $extras = array() )
-	{
-        $record = static::checkIncomingData( $record, null, false, 'There are no record fields in the request.' );
-        $table = $this->correctTableName( $table );
-
-		$_id = Option::get( $record, static::ROW_KEY );
-		if ( empty( $_id ) )
-		{
-			throw new BadRequestException( 'No identifier exist in record.' );
-		}
-
-		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
-        $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			$entity = static::parseRecordToEntity( $record );
-			if ( !$entity->getPartitionKey() )
-			{
-				$entity->setPartitionKey( $_partitionKey );
-			}
-
-			/** @var UpdateEntityResult $result */
-			$result = $this->_dbConn->updateEntity( $table, $entity );
-
-			return static::parseEntityToRecord( $entity, $_fields );
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on Windows Azure Tables service.\n" . $_ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
-	{
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
-		$table = $this->correctTableName( $table );
-
-        $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			// parse filter
-			$filter = static::parseFilter( $filter );
-			/** @var Entity[] $_entities */
-			$_entities = $this->queryEntities( $table, $filter, $_fields, $extras );
-			foreach ( $_entities as $_entity )
-			{
-				$_entity = static::parseRecordToEntity( $record, $_entity );
-				$this->_dbConn->updateEntity( $table, $_entity );
-			}
-
-			$_out = static::parseEntitiesToRecords( $_entities, $_fields );
-
-			return $_out;
-		}
-		catch ( \Exception $_ex )
-		{
-            throw new InternalServerErrorException( "Failed to update item in '$table'.\n" . $_ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
-	{
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
-        $table = $this->correctTableName( $table );
-
-		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
-        $_fields = Option::get( $extras, 'fields' );
-
-        $ids = static::checkIncomingData(
-            $ids,
-            ',',
-            true,
-            "Identifying values for 'id_field' can not be empty for update request."
-        );
-
-        $_isSingle = ( 1 == count( $ids ) );
-		try
-		{
-			// Create list of batch operation.
-			$operations = new BatchOperations();
-
-			$_entities = array();
-			foreach ( $ids as $key => $_id )
-			{
-				if ( empty( $id ) )
-				{
-					throw new BadRequestException( "No identifier exist in identifier index $key." );
-				}
-
-				$entity = static::parseRecordToEntity( $record );
-				if ( !$entity->getPartitionKey() )
-				{
-					$entity->setPartitionKey( $_partitionKey );
-				}
-				$entity->setRowKey( $id );
-				$_entities[] = $entity;
-
-				// Add operation to list of batch operations.
-				$operations->addUpdateEntity( $table, $entity );
-			}
-
-			/** @var BatchResult $results */
-			$results = $this->_dbConn->batch( $operations );
-
-			/** @var UpdateEntityResult $result */
-			foreach ( $results->getEntries() as $result )
-			{
-				// not much good in here
-			}
-
-			return static::parseEntitiesToRecords( $_entities, $_fields );
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to update items in '$table'.\n" . $_ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function updateRecordById( $table, $record, $id, $extras = array() )
-	{
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
-        $table = $this->correctTableName( $table );
-
-		if ( empty( $id ) )
-		{
-			throw new BadRequestException( "No identifier exist in request." );
-		}
-
-		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
-        $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			$entity = static::parseRecordToEntity( $record );
-			$entity->setRowKey( $id );
-			if ( !$entity->getPartitionKey() )
-			{
-				$entity->setPartitionKey( $_partitionKey );
-			}
-
-			/** @var UpdateEntityResult $result */
-			$result = $this->_dbConn->updateEntity( $table, $entity );
-
-			return static::parseEntityToRecord( $entity, $_fields );
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to update item in '$table'.\n" . $_ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function mergeRecords( $table, $records, $extras = array() )
-	{
-		// currently the same as update here
-		return $this->updateRecords( $table, $records, $extras );
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function mergeRecord( $table, $record, $extras = array() )
-	{
-		// currently the same as update here
-		return $this->updateRecord( $table, $record, $extras );
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function mergeRecordsByFilter( $table, $record, $filter = '', $params = array(), $extras = array() )
-	{
-		// currently the same as update here
-		return $this->updateRecordsByFilter( $table, $record, $filter, $params, $extras );
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function mergeRecordsByIds( $table, $record, $ids, $extras = array() )
-	{
-		// currently the same as update here
-		return $this->updateRecordsByIds( $table, $record, $ids, $extras );
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function mergeRecordById( $table, $record, $id, $extras = array() )
-	{
-		// currently the same as update here
-		return $this->updateRecordById( $table, $record, $id, $extras );
-	}
+    // Handle administrative options, table add, delete, etc
 
     /**
      * {@inheritdoc}
      */
-    public function truncateTable( $table )
+    public function getTable( $table )
+    {
+        static $_existing = null;
+
+        if ( !$_existing )
+        {
+            $_existing = $this->_getTablesAsArray();
+        }
+
+        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
+        if ( empty( $_name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        if ( false === array_search( $_name, $_existing ) )
+        {
+            throw new NotFoundException( "Table '$_name' not found." );
+        }
+
+        try
+        {
+            $_out = array( 'name' => $_name );
+            $_out['access'] = $this->getPermissions( $_name );
+
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function createTable( $properties = array() )
+    {
+        $_name = Option::get( $properties, 'name' );
+        if ( empty( $_name ) )
+        {
+            throw new BadRequestException( "No 'name' field in data." );
+        }
+
+        try
+        {
+            $this->_dbConn->createTable( $_name );
+            $_out = array( 'name' => $_name );
+
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to create table '$_name'.\n{$_ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateTable( $properties = array() )
+    {
+        $_name = Option::get( $properties, 'name' );
+        if ( empty( $_name ) )
+        {
+            throw new BadRequestException( "No 'name' field in data." );
+        }
+
+//        throw new InternalServerErrorException( "Failed to update table '$_name'." );
+        return array( 'name' => $_name );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function deleteTable( $table, $check_empty = false )
+    {
+        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
+        if ( empty( $_name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        try
+        {
+            $this->_dbConn->deleteTable( $_name );
+
+            return array( 'name' => $_name );
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to delete table '$_name'.\n{$_ex->getMessage()}" );
+        }
+    }
+
+    //-------- Table Records Operations ---------------------
+    // records is an array of field arrays
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    {
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+
+        $_fields = Option::get( $extras, 'fields' );
+        try
+        {
+            // parse filter
+            $filter = static::parseFilter( $filter );
+            /** @var Entity[] $_entities */
+            $_entities = $this->queryEntities( $table, $filter, $_fields, $extras );
+            foreach ( $_entities as $_entity )
+            {
+                $_entity = static::parseRecordToEntity( $record, $_entity );
+                $this->_dbConn->updateEntity( $table, $_entity );
+            }
+
+            $_out = static::parseEntitiesToRecords( $_entities, $_fields );
+
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    {
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+
+        $_fields = Option::get( $extras, 'fields' );
+        try
+        {
+            // parse filter
+            $filter = static::parseFilter( $filter );
+            /** @var Entity[] $_entities */
+            $_entities = $this->queryEntities( $table, $filter, $_fields, $extras );
+            foreach ( $_entities as $_entity )
+            {
+                $_entity = static::parseRecordToEntity( $record, $_entity );
+                $this->_dbConn->mergeEntity( $table, $_entity );
+            }
+
+            $_out = static::parseEntitiesToRecords( $_entities, $_fields );
+
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to patch records in '$table'.\n{$_ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function truncateTable( $table, $extras = array() )
     {
         // todo faster way?
         $_records = $this->retrieveRecordsByFilter( $table );
@@ -661,589 +379,426 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     }
 
     /**
-	 * {@inheritdoc}
-	 */
-	public function deleteRecords( $table, $records, $extras = array() )
-	{
-        $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
-        $table = $this->correctTableName( $table );
-
-		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
-		try
-		{
-			// Create list of batch operation.
-			$operations = new BatchOperations();
-
-			$_outMore = array();
-			if ( !empty( $_fields ) )
-			{
-				$_outMore = $this->retrieveRecords( $table, $records, $extras );
-			}
-			$_out = array();
-			foreach ( $records as $key => $record )
-			{
-				$_id = Option::get( $record, static::ROW_KEY );
-				if ( empty( $_id ) )
-				{
-					throw new BadRequestException( "No identifier 'RowKey' exist in record index '$key'." );
-				}
-				$_partitionKey = Option::get( $record, static::PARTITION_KEY, $_partitionKey );
-				$_out[] = array( static::PARTITION_KEY => $_partitionKey, static::ROW_KEY => $_id );
-
-				// Add operation to list of batch operations.
-				$operations->addDeleteEntity( $table, $_partitionKey, $_id );
-			}
-
-			/** @var BatchResult $results */
-			$results = $this->_dbConn->batch( $operations );
-
-			foreach ( $results->getEntries() as $result )
-			{
-				// not much good in here
-			}
-
-			if ( !empty( $_outMore ) )
-			{
-				return $_outMore;
-			}
-
-			return $_out;
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to delete items from '$table' on Windows Azure Tables service.\n" . $_ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-    public function deleteRecord( $table, $record, $extras = array() )
-	{
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
-        $table = $this->correctTableName( $table );
-
-		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
-		$_partitionKey = Option::get( $record, static::PARTITION_KEY, $_partitionKey );
-        $_fields = Option::get( $extras, 'fields' );
-		$_id = Option::get( $record, static::ROW_KEY );
-		if ( empty( $_id ) )
-		{
-			throw new BadRequestException( 'No identifier exist in record.' );
-		}
-
-		$_out = array( static::PARTITION_KEY => $_partitionKey, static::ROW_KEY => $_id );
-		if ( !empty( $_fields ) )
-		{
-			$_result = $this->_dbConn->getEntity( $table, $_partitionKey, $_id );
-			$_entity = $_result->getEntity();
-			$_out = static::parseEntityToRecord( $_entity, $_fields );
-		}
-
-		$this->_dbConn->deleteEntity( $table, $_partitionKey, $_id );
-
-		return $_out;
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
+     * {@inheritdoc}
+     */
     public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() )
-	{
-		if ( empty( $filter ) )
-		{
-			throw new BadRequestException( "Filter for delete request can not be empty." );
-		}
+    {
+        if ( empty( $filter ) )
+        {
+            throw new BadRequestException( "Filter for delete request can not be empty." );
+        }
 
-		$table = $this->correctTableName( $table );
         $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			$filter = static::parseFilter( $filter );
-			/** @var Entity[] $_entities */
-			$_entities = $this->queryEntities( $table, $filter, $_fields, $extras );
-			foreach ( $_entities as $_entity )
-			{
-				$_partitionKey = $_entity->getPartitionKey();
-				$_rowKey = $_entity->getRowKey();
-				$this->_dbConn->deleteEntity( $table, $_partitionKey, $_rowKey );
-			}
+        try
+        {
+            $filter = static::parseFilter( $filter );
+            /** @var Entity[] $_entities */
+            $_entities = $this->queryEntities( $table, $filter, $_fields, $extras );
+            foreach ( $_entities as $_entity )
+            {
+                $_partitionKey = $_entity->getPartitionKey();
+                $_rowKey = $_entity->getRowKey();
+                $this->_dbConn->deleteEntity( $table, $_partitionKey, $_rowKey );
+            }
 
-			$_out = static::parseEntitiesToRecords( $_entities, $_fields );
+            $_out = static::parseEntitiesToRecords( $_entities, $_fields );
 
-			return $_out;
-		}
-		catch ( \Exception $_ex )
-		{
-			throw $_ex;
-		}
-	}
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
+        }
+    }
 
-	/**
-	 * {@inheritdoc}
-	 */
-    public function deleteRecordsByIds( $table, $ids, $extras = array() )
-	{
-		if ( empty( $ids ) )
-		{
-			throw new BadRequestException( "Identifying values for id_field can not be empty for update request." );
-		}
-
-		$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
-		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-
-		// get the returnable fields first, then issue delete
-		$_outMore = array();
-		if ( !empty( $_fields ) )
-		{
-			$_outMore = $this->retrieveRecordsByIds( $table, $ids, $extras );
-		}
-
-		try
-		{
-			// Create list of batch operation.
-			$operations = new BatchOperations();
-
-			$_out = array();
-			foreach ( $ids as $key => $_id )
-			{
-				if ( empty( $_id ) )
-				{
-					throw new BadRequestException( "No identifier exist in identifier number $key." );
-				}
-				$_out[] = array( static::PARTITION_KEY => $_partitionKey, static::ROW_KEY => $_id );
-
-				// Add operation to list of batch operations.
-				$operations->addDeleteEntity( $table, $_partitionKey, $_id );
-			}
-
-			/** @var BatchResult $results */
-			$results = $this->_dbConn->batch( $operations );
-
-			foreach ( $results->getEntries() as $result )
-			{
-				// not much good in here
-			}
-
-			if ( !empty( $_outMore ) )
-			{
-				return $_outMore;
-			}
-
-			return $_out;
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to delete items from '$table'.\n" . $_ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-    public function deleteRecordById( $table, $id, $extras = array() )
-	{
-        $table = $this->correctTableName( $table );
-
-		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
-        $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			$_out = array( static::PARTITION_KEY => $_partitionKey, static::ROW_KEY => $id );
-			if ( !empty( $_fields ) )
-			{
-				$_result = $this->_dbConn->getEntity( $table, $_partitionKey, $id );
-				$_entity = $_result->getEntity();
-				$_out = static::parseEntityToRecord( $_entity, $_fields );
-			}
-
-			$this->_dbConn->deleteEntity( $table, $_partitionKey, $id );
-
-			return $_out;
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to delete item from '$table' on Windows Azure Tables service.\n" . $_ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
+    /**
+     * {@inheritdoc}
+     */
     public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
-	{
-		$table = $this->correctTableName( $table );
-
+    {
+        $this->checkConnection();
         $_fields = Option::get( $extras, 'fields' );
 
-		$this->checkConnection();
+        $_options = new QueryEntitiesOptions();
+        $_options->setSelectFields( array() );
+        if ( !empty( $_fields ) && ( '*' != $_fields ) )
+        {
+            $_fields = array_map( 'trim', explode( ',', trim( $_fields, ',' ) ) );
+            $_options->setSelectFields( $_fields );
+        }
 
-		$_options = new QueryEntitiesOptions();
-		$_options->setSelectFields( array() );
-		if ( !empty( $_fields ) && ( '*' != $_fields ) )
-		{
-			$_fields = array_map( 'trim', explode( ',', trim( $_fields, ',' ) ) );
-			$_options->setSelectFields( $_fields );
-		}
-		$limit = intval( Option::get( $extras, 'limit', 0 ) );
-		if ( $limit > 0 )
-		{
-			$_options->setTop( $limit );
-		}
+        $limit = intval( Option::get( $extras, 'limit', 0 ) );
+        if ( $limit > 0 )
+        {
+            $_options->setTop( $limit );
+        }
 
-		$filter = static::parseFilter( $filter );
-		$_out = $this->queryEntities( $table, $filter, $_fields, $extras, true );
+        $filter = static::parseFilter( $filter );
+        $_out = $this->queryEntities( $table, $filter, $_fields, $extras, true );
 
-		return $_out;
-	}
+        return $_out;
+    }
 
-	/**
-	 * {@inheritdoc}
-	 */
-    public function retrieveRecords( $table, $records, $extras = array() )
-	{
-        $records = static::checkIncomingData( $records, null, true, 'There are no record sets in the request.' );
-        $table = $this->correctTableName( $table );
+    protected function getIdsInfo( $table, $fields_info = null, &$requested = null )
+    {
+        $requested = array( static::PARTITION_KEY, static::ROW_KEY ); // can only be this
+        $_ids = array(
+            array( 'name' => static::PARTITION_KEY ),
+            array( 'name' => static::ROW_KEY )
+        );
 
-		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
-        $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			$_out = array();
-			foreach ( $records as $key => $record )
-			{
-				$_id = Option::get( $record, static::ROW_KEY );
-				if ( empty( $_id ) )
-				{
-					throw new BadRequestException( "Identifying field 'RowKey' can not be empty for retrieve record index '$key' request." );
-				}
-				$_partKey = Option::get( $record, static::PARTITION_KEY );
-				if ( empty( $_partKey ) )
-				{
-					$_partKey = $_partitionKey;
-				}
-				/** @var GetEntityResult $result */
-				$result = $this->_dbConn->getEntity( $table, $_partKey, $_id );
-				$entity = $result->getEntity();
-				$_out[] = static::parseEntityToRecord( $entity, $_fields );
-			}
+        return $_ids;
+    }
 
-			return $_out;
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new \Exception( "Failed to get items from '$table' on Windows Azure Tables service.\n" . $_ex->getMessage() );
-		}
-	}
+    protected function checkForIds( &$record, $ids_info, $extras = null, $on_create = false, $remove = false )
+    {
+        if ( !empty( $ids_info ) )
+        {
+            $_id = array();
+            foreach ( $ids_info as $_info )
+            {
+                $_name = Option::get( $_info, 'name' );
+                $_value = Option::get( $record, $_name, null, $remove );
+                if ( empty( $_value ) )
+                {
+                    if ( static::PARTITION_KEY == $_name )
+                    {
+                        // could be passed in as a parameter affecting all records
+                        $_partKey = Option::get( $extras, static::PARTITION_KEY );
+                        if ( empty( $_partKey ) )
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
 
-	/**
-	 * {@inheritdoc}
-	 */
-    public function retrieveRecord( $table, $record, $extras = array() )
-	{
-        $record = static::checkIncomingData( $record, null, false, 'There are no fields in the record.' );
-        $table = $this->correctTableName( $table );
+                $_id[] = Option::get( $record, $_name, null, $remove );
+            }
 
-		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
-        $_fields = Option::get( $extras, 'fields' );
-		$_id = Option::get( $record, static::ROW_KEY );
-		if ( empty( $_id ) )
-		{
-			throw new BadRequestException( "Identifying field 'RowKey' can not be empty for retrieve record request." );
-		}
+            if ( !empty( $_id ) )
+            {
+                if ( 1 == count( $_id ) )
+                {
+                    return $_id[0];
+                }
 
-		$_partKey = Option::get( $record, static::PARTITION_KEY );
-		if ( empty( $_partKey ) )
-		{
-			$_partKey = $_partitionKey;
-		}
-		try
-		{
-			/** @var GetEntityResult $_result */
-			$_result = $this->_dbConn->getEntity( $table, $_partKey, $_id );
-			$_entity = $_result->getEntity();
-			$_out = static::parseEntityToRecord( $_entity, $_fields );
+                return $_id;
+            }
 
-			return $_out;
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to get item '$table/$_id' on Windows Azure Tables service.\n" . $_ex->getMessage() );
-		}
-	}
+            if ( $on_create )
+            {
+                // ok
+                return true;
+            }
+        }
 
-	/**
-	 * {@inheritdoc}
-	 */
-    public function retrieveRecordsByIds( $table, $ids, $extras = array() )
-	{
-        $ids = static::checkIncomingData( $ids, ',', true, 'There are no ids in the request.' );
-        $table = $this->correctTableName( $table );
+        return false;
+    }
 
-		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
-        $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			$_out = array();
-			foreach ( $ids as $id )
-			{
-				/** @var GetEntityResult $result */
-				$result = $this->_dbConn->getEntity( $table, $_partitionKey, $id );
-				$entity = $result->getEntity();
+    /**
+     * @param        $table
+     * @param string $parsed_filter
+     * @param string $fields
+     * @param array  $extras
+     * @param bool   $parse_results
+     *
+     * @throws \Exception
+     * @return array
+     */
+    protected function queryEntities( $table, $parsed_filter = '', $fields = null, $extras = array(), $parse_results = false )
+    {
+        $this->checkConnection();
 
-				$_out[] = static::parseEntityToRecord( $entity, array(), $_fields );
-			}
+        $_options = new QueryEntitiesOptions();
+        $_options->setSelectFields( array() );
 
-			return $_out;
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to get items from '$table' on Windows Azure Tables service.\n" . $_ex->getMessage() );
-		}
-	}
+        if ( !empty( $fields ) && ( '*' != $fields ) )
+        {
+            if ( !is_array( $fields ) )
+            {
+                $fields = array_map( 'trim', explode( ',', trim( $fields, ',' ) ) );
+            }
+            $_options->setSelectFields( $fields );
+        }
 
-	/**
-	 * {@inheritdoc}
-	 */
-    public function retrieveRecordById( $table, $id, $extras = array() )
-	{
-        $table = $this->correctTableName( $table );
-		if ( empty( $id ) )
-		{
-            throw new BadRequestException( "Identifying field can not be empty for retrieve record request." );
-		}
+        $limit = intval( Option::get( $extras, 'limit', 0 ) );
+        if ( $limit > 0 )
+        {
+            $_options->setTop( $limit );
+        }
 
-		$_partitionKey = Option::get( $extras, static::PARTITION_KEY, $this->_defaultPartitionKey );
-        $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			/** @var GetEntityResult $result */
-			$_result = $this->_dbConn->getEntity( $table, $_partitionKey, $id );
-			$_entity = $_result->getEntity();
-			$_out = static::parseEntityToRecord( $_entity, $_fields );
+        if ( !empty( $parsed_filter ) )
+        {
+            $_query = new QueryStringFilter( $parsed_filter );
+            $_options->setFilter( $_query );
+        }
 
-			return $_out;
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to get item '$table/$id' on Windows Azure Tables service.\n" . $_ex->getMessage() );
-		}
-	}
+        try
+        {
+            /** @var QueryEntitiesResult $_result */
+            $_result = $this->_dbConn->queryEntities( $table, $_options );
 
-	/**
-	 * @param        $table
-	 * @param string $parsed_filter
-	 * @param string $fields
-	 * @param array  $extras
-	 * @param bool   $parse_results
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	protected function queryEntities( $table, $parsed_filter = '', $fields = null, $extras = array(), $parse_results = false )
-	{
-		$table = $this->correctTableName( $table );
+            /** @var Entity[] $entities */
+            $_entities = $_result->getEntities();
 
-		$this->checkConnection();
+            if ( $parse_results )
+            {
+                return static::parseEntitiesToRecords( $_entities );
+            }
 
-		$_options = new QueryEntitiesOptions();
-		$_options->setSelectFields( array() );
+            return $_entities;
+        }
+        catch ( ServiceException $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to filter items from '$table' on Windows Azure Tables service.\n" . $_ex->getMessage() );
+        }
+    }
 
-		if ( !empty( $fields ) && ( '*' != $fields ) )
-		{
-			if ( !is_array( $fields ) )
-			{
-				$fields = array_map( 'trim', explode( ',', trim( $fields, ',' ) ) );
-			}
-			$_options->setSelectFields( $fields );
-		}
+    /**
+     * @param array $record
+     * @param array $avail_fields
+     * @param array $filter_info
+     * @param bool  $for_update
+     * @param array $old_record
+     *
+     * @return array
+     * @throws \Exception
+     */
+    protected function parseRecord( $record, $avail_fields, $filter_info = null, $for_update = false, $old_record = null )
+    {
+//        $record = DataFormat::arrayKeyLower( $record );
+        $_parsed = ( empty( $avail_fields ) ) ? $record : array();
+        if ( !empty( $avail_fields ) )
+        {
+            $_keys = array_keys( $record );
+            $_values = array_values( $record );
+            foreach ( $avail_fields as $_fieldInfo )
+            {
+//            $name = strtolower( Option::get( $field_info, 'name', '' ) );
+                $_name = Option::get( $_fieldInfo, 'name', '' );
+                $_type = Option::get( $_fieldInfo, 'type' );
+                $_pos = array_search( $_name, $_keys );
+                if ( false !== $_pos )
+                {
+                    $_fieldVal = Option::get( $_values, $_pos );
+                    // due to conversion from XML to array, null or empty xml elements have the array value of an empty array
+                    if ( is_array( $_fieldVal ) && empty( $_fieldVal ) )
+                    {
+                        $_fieldVal = null;
+                    }
 
-		$limit = intval( Option::get( $extras, 'limit', 0 ) );
-		if ( $limit > 0 )
-		{
-			$_options->setTop( $limit );
-		}
+                    /** validations **/
 
-		if ( !empty( $parsed_filter ) )
-		{
-			$_query = new QueryStringFilter( $parsed_filter );
-			$_options->setFilter( $_query );
-		}
+                    $_validations = Option::get( $_fieldInfo, 'validation' );
 
-		try
-		{
-			/** @var QueryEntitiesResult $result */
-			$_result = $this->_dbConn->queryEntities( $table, $_options );
+                    if ( !static::validateFieldValue( $_name, $_fieldVal, $_validations, $for_update, $_fieldInfo ) )
+                    {
+                        unset( $_keys[$_pos] );
+                        unset( $_values[$_pos] );
+                        continue;
+                    }
 
-			/** @var Entity[] $entities */
-			$_entities = $_result->getEntities();
+                    $_parsed[$_name] = $_fieldVal;
+                    unset( $_keys[$_pos] );
+                    unset( $_values[$_pos] );
+                }
 
-			if ( $parse_results )
-			{
-				return static::parseEntitiesToRecords( $_entities );
-			}
+                // add or override for specific fields
+                switch ( $_type )
+                {
+                    case 'timestamp_on_create':
+                        if ( !$for_update )
+                        {
+                            $_parsed[$_name] = new \MongoDate();
+                        }
+                        break;
+                    case 'timestamp_on_update':
+                        $_parsed[$_name] = new \MongoDate();
+                        break;
+                    case 'user_id_on_create':
+                        if ( !$for_update )
+                        {
+                            $userId = Session::getCurrentUserId();
+                            if ( isset( $userId ) )
+                            {
+                                $_parsed[$_name] = $userId;
+                            }
+                        }
+                        break;
+                    case 'user_id_on_update':
+                        $userId = Session::getCurrentUserId();
+                        if ( isset( $userId ) )
+                        {
+                            $_parsed[$_name] = $userId;
+                        }
+                        break;
+                }
+            }
+        }
 
-			return $_entities;
-		}
-		catch ( ServiceException $_ex )
-		{
-			throw new InternalServerErrorException( "Failed to filter items from '$table' on Windows Azure Tables service.\n" . $_ex->getMessage() );
-		}
-	}
+        if ( !empty( $filter_info ) )
+        {
+            $this->validateRecord( $_parsed, $filter_info, $for_update, $old_record );
+        }
 
-	/**
-	 * @param array       $record
-	 * @param null|Entity $entity
-	 * @param array       $exclude List of keys to exclude from adding to Entity
-	 *
-	 * @return Entity
-	 */
-	protected static function parseRecordToEntity( $record = array(), $entity = null, $exclude = array() )
-	{
-		if ( empty( $entity ) )
-		{
-			$entity = new Entity();
-		}
-		foreach ( $record as $_key => $_value )
-		{
-			if ( false === array_search( $_key, $exclude ) )
-			{
-				// valid types
+        return $_parsed;
+    }
+
+    /**
+     * @param array       $record
+     * @param null|Entity $entity
+     * @param array       $exclude List of keys to exclude from adding to Entity
+     *
+     * @return Entity
+     */
+    protected static function parseRecordToEntity( $record = array(), $entity = null, $exclude = array() )
+    {
+        if ( empty( $entity ) )
+        {
+            $entity = new Entity();
+        }
+        foreach ( $record as $_key => $_value )
+        {
+            if ( false === array_search( $_key, $exclude ) )
+            {
+                // valid types
 //				const DATETIME = 'Edm.DateTime';
 //				const BINARY   = 'Edm.Binary';
 //				const GUID     = 'Edm.Guid';
-				$_edmType = EdmType::STRING;
-				switch ( gettype( $_value ) )
-				{
-					case 'boolean':
-						$_edmType = EdmType::BOOLEAN;
-						break;
-					case 'double':
-					case 'float':
-						$_edmType = EdmType::DOUBLE;
-						break;
-					case 'integer':
-						$_edmType = ( $_value > 2147483647 ) ? EdmType::INT64 : EdmType::INT32;
-						break;
-				}
-				if ( $entity->getProperty( $_key ) )
-				{
-					$_prop = new Property();
-					$_prop->setEdmType( $_edmType );
-					$_prop->setValue( $_value );
-					$entity->setProperty( $_key, $_prop );
-				}
-				else
-				{
-					$entity->addProperty( $_key, $_edmType, $_value );
-				}
-			}
-		}
+                $_edmType = EdmType::STRING;
+                switch ( gettype( $_value ) )
+                {
+                    case 'boolean':
+                        $_edmType = EdmType::BOOLEAN;
+                        break;
+                    case 'double':
+                    case 'float':
+                        $_edmType = EdmType::DOUBLE;
+                        break;
+                    case 'integer':
+                        $_edmType = ( $_value > 2147483647 ) ? EdmType::INT64 : EdmType::INT32;
+                        break;
+                }
+                if ( $entity->getProperty( $_key ) )
+                {
+                    $_prop = new Property();
+                    $_prop->setEdmType( $_edmType );
+                    $_prop->setValue( $_value );
+                    $entity->setProperty( $_key, $_prop );
+                }
+                else
+                {
+                    $entity->addProperty( $_key, $_edmType, $_value );
+                }
+            }
+        }
 
-		return $entity;
-	}
+        return $entity;
+    }
 
-	/**
-	 * @param null|Entity  $entity
-	 * @param string|array $include List of keys to include in the output record
-	 * @param array        $record
-	 *
-	 * @return array
-	 */
-	protected static function parseEntityToRecord( $entity, $include = '*', $record = array() )
-	{
-		if ( !empty( $entity ) )
-		{
-			if ( empty( $include ) )
-			{
-				$record[static::PARTITION_KEY] = $entity->getPartitionKey();
-				$record[static::ROW_KEY] = $entity->getRowKey();
-			}
-			elseif ( '*' == $include )
-			{
-				// return all properties
-				/** @var Property[] $properties */
-				$properties = $entity->getProperties();
-				foreach ( $properties as $key => $property )
-				{
-					$record[$key] = $property->getValue();
-				}
-			}
-			else
-			{
-				if ( !is_array( $include ) )
-				{
-					$include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
-				}
-				foreach ( $include as $key )
-				{
-					$record[$key] = $entity->getPropertyValue( $key );
-				}
-			}
-		}
+    /**
+     * @param null|Entity  $entity
+     * @param string|array $include List of keys to include in the output record
+     * @param array        $record
+     *
+     * @return array
+     */
+    protected static function parseEntityToRecord( $entity, $include = '*', $record = array() )
+    {
+        if ( !empty( $entity ) )
+        {
+            if ( empty( $include ) )
+            {
+                $record[static::PARTITION_KEY] = $entity->getPartitionKey();
+                $record[static::ROW_KEY] = $entity->getRowKey();
+            }
+            elseif ( '*' == $include )
+            {
+                // return all properties
+                /** @var Property[] $properties */
+                $properties = $entity->getProperties();
+                foreach ( $properties as $key => $property )
+                {
+                    $record[$key] = $property->getValue();
+                }
+            }
+            else
+            {
+                if ( !is_array( $include ) )
+                {
+                    $include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
+                }
+                foreach ( $include as $key )
+                {
+                    $record[$key] = $entity->getPropertyValue( $key );
+                }
+            }
+        }
 
-		return $record;
-	}
+        return $record;
+    }
 
-	protected static function parseEntitiesToRecords( $entities, $include = '*', $records = array() )
-	{
-		if ( !is_array( $records ) )
-		{
-			$records = array();
-		}
-		foreach ( $entities as $_entity )
-		{
-			if ( $_entity instanceof BatchError )
-			{
-				/** @var ServiceException $_error */
-				$_error = $_entity->getError();
-				throw $_error;
-			}
-			if ( $_entity instanceof InsertEntityResult )
-			{
-				/** @var InsertEntityResult $_entity */
-				$_entity = $_entity->getEntity();
-				$records[] = static::parseEntityToRecord( $_entity, $include );
-			}
-			else
-			{
-				$records[] = static::parseEntityToRecord( $_entity, $include );
-			}
-		}
+    protected static function parseEntitiesToRecords( $entities, $include = '*', $records = array() )
+    {
+        if ( !is_array( $records ) )
+        {
+            $records = array();
+        }
+        foreach ( $entities as $_entity )
+        {
+            if ( $_entity instanceof BatchError )
+            {
+                /** @var ServiceException $_error */
+                $_error = $_entity->getError();
+                throw $_error;
+            }
+            if ( $_entity instanceof InsertEntityResult )
+            {
+                /** @var InsertEntityResult $_entity */
+                $_entity = $_entity->getEntity();
+                $records[] = static::parseEntityToRecord( $_entity, $include );
+            }
+            else
+            {
+                $records[] = static::parseEntityToRecord( $_entity, $include );
+            }
+        }
 
-		return $records;
-	}
+        return $records;
+    }
 
-	/**
-	 * @param string|array $filter Filter for querying records by
-	 *
-	 * @return array
-	 */
-	protected static function parseFilter( $filter )
-	{
-		if ( empty( $filter ) )
-		{
-			return '';
-		}
+    /**
+     * @param string|array $filter Filter for querying records by
+     *
+     * @return array
+     */
+    protected static function parseFilter( $filter )
+    {
+        if ( empty( $filter ) )
+        {
+            return '';
+        }
 
-		if ( is_array( $filter ) )
-		{
-			return ''; // todo need to build from array of parts
-		}
+        if ( is_array( $filter ) )
+        {
+            return ''; // todo need to build from array of parts
+        }
 
-		// handle logical operators first
-		// supported logical operators are or, and, not
-		$_search = array( ' || ', ' && ', ' OR ', ' AND ', ' NOR ', ' NOT ' );
-		$_replace = array( ' or ', ' and ', ' or ', ' and ', ' nor ', ' not ' );
-		$filter = trim( str_ireplace( $_search, $_replace, ' ' . $filter ) ); // space added for 'not' case
+        // handle logical operators first
+        // supported logical operators are or, and, not
+        $_search = array( ' || ', ' && ', ' OR ', ' AND ', ' NOR ', ' NOT ' );
+        $_replace = array( ' or ', ' and ', ' or ', ' and ', ' nor ', ' not ' );
+        $filter = trim( str_ireplace( $_search, $_replace, ' ' . $filter ) ); // space added for 'not' case
 
-		// the rest should be comparison operators
-		// supported comparison operators are eq, ne, gt, ge, lt, le
-		$_search = array( '=', '!=', '>=', '<=', '>', '<', ' EQ ', ' NE ', ' LT ', ' LTE ', ' LE ', ' GT ', ' GTE', ' GE ' );
-		$_replace = array( ' eq ', ' ne ', ' ge ', ' le ', ' gt ', ' lt ', ' eq ', ' ne ', ' lt ', ' le ', ' le ', ' gt ', ' ge ', ' ge ' );
-		$filter = trim( str_ireplace( $_search, $_replace, $filter ) );
+        // the rest should be comparison operators
+        // supported comparison operators are eq, ne, gt, ge, lt, le
+        $_search = array( '=', '!=', '>=', '<=', '>', '<', ' EQ ', ' NE ', ' LT ', ' LTE ', ' LE ', ' GT ', ' GTE', ' GE ' );
+        $_replace = array( ' eq ', ' ne ', ' ge ', ' le ', ' gt ', ' lt ', ' eq ', ' ne ', ' lt ', ' le ', ' le ', ' gt ', ' ge ', ' ge ' );
+        $filter = trim( str_ireplace( $_search, $_replace, $filter ) );
 
 //			WHERE name LIKE "%Joe%"	not supported
 //			WHERE name LIKE "%Joe"	not supported
@@ -1253,44 +808,425 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 //			{
 //			}
 
-		return $filter;
-	}
+        return $filter;
+    }
 
-	protected static function buildIdsFilter( $ids, $partition_key )
-	{
-		if ( empty( $ids ) )
-		{
-			return null;
-		}
+    protected static function buildIdsFilter( $ids, $partition_key = null )
+    {
+        if ( empty( $ids ) )
+        {
+            return null;
+        }
 
-		if ( !is_array( $ids ) )
-		{
-			$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
-		}
+        if ( !is_array( $ids ) )
+        {
+            $ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
+        }
 
-		$_filters = array();
-		$_filter = '';
-		$_count = 0;
-		foreach ( $ids as $_id )
-		{
-			if ( !empty( $_filter ) )
-			{
-				$_filter .= ' and ';
-			}
-			$_filter .= static::ROW_KEY . " eq '" . trim( $_id, "'" ) . "'";
-			$_count++;
-			if ( $_count >= 14 ) // max comparisons is 15, leave one for partition key
-			{
-				$_filters[] = $_filter;
-				$_count = 0;
-			}
-		}
+        $_filters = array();
+        $_filter = '';
+        if ( !empty( $partition_key ) )
+        {
+            $_filter = static::PARTITION_KEY . " eq '$partition_key'";
+        }
+        $_count = 0;
+        foreach ( $ids as $_id )
+        {
+            if ( !empty( $_filter ) )
+            {
+                $_filter .= ' and ';
+            }
+            $_filter .= static::ROW_KEY . " eq '$_id'";
+            $_count++;
+            if ( $_count >= 14 ) // max comparisons is 15, leave one for partition key
+            {
+                $_filters[] = $_filter;
+                $_count = 0;
+            }
+        }
 
-		if ( !empty( $_filter ) )
-		{
-			$_filters[] = $_filter;
-		}
+        if ( !empty( $_filter ) )
+        {
+            $_filters[] = $_filter;
+        }
 
-		return $_filters;
-	}
+        return $_filters;
+    }
+
+    /**
+     * @param mixed|null $handle
+     *
+     * @return bool
+     */
+    protected function initTransaction( $handle = null )
+    {
+        $this->_batchOps = null;
+        $this->_backupOps = null;
+
+        return parent::initTransaction( $handle );
+    }
+
+    /**
+     * @param mixed      $record
+     * @param mixed      $id
+     * @param null|array $extras Additional items needed to complete the transaction
+     * @param bool       $save_old
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return null|array Array of output fields
+     */
+    protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false )
+    {
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+        $_fields = Option::get( $extras, 'fields' );
+        $_fieldsInfo = Option::get( $extras, 'fields_info' );
+        $_requireMore = Option::get( $extras, 'require_more' );
+        $_updates = Option::get( $extras, 'updates' );
+        $_partitionKey = Option::get( $extras, static::PARTITION_KEY );
+
+        if ( !is_array( $id ) )
+        {
+            $id = array( static::ROW_KEY => $id, static::PARTITION_KEY => $_partitionKey );
+        }
+        if ( !empty( $_partitionKey ) )
+        {
+            $id[static::PARTITION_KEY] = $_partitionKey;
+        }
+
+        if ( !empty( $_updates ) )
+        {
+            foreach ( $id as $_field => $_value )
+            {
+                if ( !isset( $_updates[$_field] ) )
+                {
+                    $_updates[$_field] = $_value;
+                }
+            }
+            $record = $_updates;
+        }
+        elseif ( !empty( $record ) )
+        {
+            if ( !empty( $_partitionKey ) )
+            {
+                $record[static::PARTITION_KEY] = $_partitionKey;
+            }
+        }
+
+        if ( !empty( $record ) )
+        {
+            $_forUpdate = false;
+            switch ( $this->getAction() )
+            {
+                case static::PUT:
+                case static::MERGE:
+                case static::PATCH:
+                    $_forUpdate = true;
+                    break;
+            }
+
+            $record = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, $_forUpdate );
+            if ( empty( $record ) )
+            {
+                throw new BadRequestException( 'No valid fields were found in record.' );
+            }
+
+            $_entity = static::parseRecordToEntity( $record );
+        }
+        else
+        {
+            $_entity = static::parseRecordToEntity( $id );
+        }
+
+        $_partKey = $_entity->getPartitionKey();
+        if ( empty( $_partKey ) )
+        {
+            throw new BadRequestException( 'No valid partition key found in request.' );
+        }
+
+        $_rowKey = $_entity->getRowKey();
+        if ( empty( $_rowKey ) )
+        {
+            throw new BadRequestException( 'No valid row key found in request.' );
+        }
+
+        // only allow batch if rollback and same partition
+        $_batch = ( $save_old && !empty( $_partitionKey ) );
+        $_out = array();
+        switch ( $this->getAction() )
+        {
+            case static::POST:
+                if ( $_batch )
+                {
+                    if ( !isset( $this->_batchOps ) )
+                    {
+                        $this->_batchOps = new BatchOperations();
+                    }
+                    $this->_batchOps->addInsertEntity( $this->_transactionTable, $_entity );
+
+                    // track record for output
+                    return parent::addToTransaction( $record );
+                }
+
+                /** @var InsertEntityResult $_result */
+                $_result = $this->_dbConn->insertEntity( $this->_transactionTable, $_entity );
+
+                if ( $save_old )
+                {
+                    $this->addToRollback( $_entity );
+                }
+
+                $_out = static::parseEntityToRecord( $_result->getEntity(), $_fields );
+                break;
+            case static::PUT:
+                if ( $_batch )
+                {
+                    if ( !isset( $this->_batchOps ) )
+                    {
+                        $this->_batchOps = new BatchOperations();
+                    }
+                    $this->_batchOps->addUpdateEntity( $this->_transactionTable, $_entity );
+
+                    // track record for output
+                    return parent::addToTransaction( $record );
+                }
+
+                if ( $save_old )
+                {
+                    $_old = $this->_dbConn->getEntity( $this->_transactionTable, $_entity->getRowKey(), $_entity->getPartitionKey() );
+                    $this->addToRollback( $_old );
+                }
+
+                /** @var UpdateEntityResult $_result */
+                $this->_dbConn->updateEntity( $this->_transactionTable, $_entity );
+
+                $_out = static::parseEntityToRecord( $_entity, $_fields );
+                break;
+            case static::MERGE:
+            case static::PATCH:
+                if ( $_batch )
+                {
+                    if ( !isset( $this->_batchOps ) )
+                    {
+                        $this->_batchOps = new BatchOperations();
+                    }
+                    $this->_batchOps->addMergeEntity( $this->_transactionTable, $_entity );
+
+                    // track id for output
+                    return parent::addToTransaction( null, $_rowKey );
+                }
+
+                if ( $save_old || $_requireMore )
+                {
+                    $_old = $this->_dbConn->getEntity( $this->_transactionTable, $_rowKey, $_partKey );
+                    if ( $save_old )
+                    {
+                        $this->addToRollback( $_old );
+                    }
+                    if ( $_requireMore )
+                    {
+                        $_out = array_merge( static::parseEntityToRecord( $_old, $_fields ), static::parseEntityToRecord( $_entity, $_fields ) );
+                    }
+                }
+
+                $_out = ( empty( $_out ) ) ? static::parseEntityToRecord( $_entity, $_fields ) : $_out;
+
+                /** @var UpdateEntityResult $_result */
+                $this->_dbConn->mergeEntity( $this->_transactionTable, $_entity );
+                break;
+            case static::DELETE:
+                if ( $_batch )
+                {
+                    if ( !isset( $this->_batchOps ) )
+                    {
+                        $this->_batchOps = new BatchOperations();
+                    }
+                    $this->_batchOps->addDeleteEntity( $this->_transactionTable, $_partKey, $_rowKey );
+
+                    // track id for output
+                    return parent::addToTransaction( null, $_rowKey );
+                }
+
+                if ( $save_old || $_requireMore )
+                {
+                    $_old = $this->_dbConn->getEntity( $this->_transactionTable, $_partKey, $_rowKey );
+                    if ( $save_old )
+                    {
+                        $this->addToRollback( $_old );
+                    }
+                    if ( $_requireMore )
+                    {
+                        $_out = static::parseEntityToRecord( $_old, $_fields );
+                    }
+                }
+
+                $this->_dbConn->deleteEntity( $this->_transactionTable, $_partKey, $_rowKey );
+
+                $_out = ( empty( $_out ) ) ? static::parseEntityToRecord( $_entity, $_fields ) : $_out;
+                break;
+            case static::GET:
+                if ( !empty( $_partitionKey ) )
+                {
+                    // track id for output
+                    return parent::addToTransaction( null, $_rowKey );
+                }
+
+                /** @var GetEntityResult $_result */
+                $_result = $this->_dbConn->getEntity( $this->_transactionTable, $_partKey, $_rowKey );
+
+                $_out = static::parseEntityToRecord( $_result->getEntity(), $_fields );
+                break;
+        }
+
+        return $_out;
+    }
+
+    /**
+     * @param null|array $extras
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array
+     */
+    protected function commitTransaction( $extras = null )
+    {
+        if ( !isset( $this->_batchOps ) && empty( $this->_batchIds ) && empty( $this->_batchRecords ) )
+        {
+            return null;
+        }
+
+        $_fields = Option::get( $extras, 'fields' );
+        $_partitionKey = Option::get( $extras, static::PARTITION_KEY );
+
+        $_out = array();
+        switch ( $this->getAction() )
+        {
+            case static::POST:
+            case static::PUT:
+                if ( isset( $this->_batchOps ) )
+                {
+                    /** @var BatchResult $_result */
+                    $this->_dbConn->batch( $this->_batchOps );
+                }
+                if ( !empty( $this->_batchRecords ) )
+                {
+                    $_out = static::parseEntitiesToRecords( $this->_batchRecords, $_fields );
+                }
+                break;
+
+            case
+                static::MERGE:
+            case static::PATCH:
+                if ( isset( $this->_batchOps ) )
+                {
+                    /** @var BatchResult $_result */
+                    $this->_dbConn->batch( $this->_batchOps );
+                }
+                if ( !empty( $this->_batchIds ) )
+                {
+                    $_filters = static::buildIdsFilter( $this->_batchIds, $_partitionKey );
+                    foreach ( $_filters as $_filter )
+                    {
+                        $_temp = $this->queryEntities( $this->_transactionTable, $_filter, $_fields, $extras, true );
+                        $_out = array_merge( $_out, $_temp );
+                    }
+                }
+                break;
+
+            case static::DELETE:
+                if ( !empty( $this->_batchIds ) )
+                {
+                    $_filters = static::buildIdsFilter( $this->_batchIds, $_partitionKey );
+                    foreach ( $_filters as $_filter )
+                    {
+                        $_temp = $this->queryEntities( $this->_transactionTable, $_filter, $_fields, $extras, true );
+                        $_out = array_merge( $_out, $_temp );
+                    }
+                }
+                if ( isset( $this->_batchOps ) )
+                {
+                    /** @var BatchResult $_result */
+                    $this->_dbConn->batch( $this->_batchOps );
+                }
+                break;
+
+            case static::GET:
+                if ( !empty( $this->_batchIds ) )
+                {
+                    $_filters = static::buildIdsFilter( $this->_batchIds, $_partitionKey );
+                    foreach ( $_filters as $_filter )
+                    {
+                        $_temp = $this->queryEntities( $this->_transactionTable, $_filter, $_fields, $extras, true );
+                        $_out = array_merge( $_out, $_temp );
+                    }
+                }
+                break;
+
+            default:
+                break;
+        }
+
+        $this->_batchIds = array();
+        $this->_batchRecords = array();
+
+        return $_out;
+    }
+
+    /**
+     * @param mixed $record
+     *
+     * @return bool
+     */
+    protected function addToRollback( $record )
+    {
+        if ( !isset( $this->_backupOps ) )
+        {
+            $this->_backupOps = new BatchOperations();
+        }
+        switch ( $this->getAction() )
+        {
+            case static::POST:
+                $this->_backupOps->addDeleteEntity( $this->_transactionTable, $record->getPartitionKey(), $record->getRowKey() );
+                break;
+
+            case static::PUT:
+            case static::MERGE:
+            case static::PATCH:
+            case static::DELETE:
+                $this->_batchOps->addUpdateEntity( $this->_transactionTable, $record );
+                break;
+
+            default:
+                break;
+        }
+
+        return true;
+    }
+
+    /**
+     * @return bool
+     */
+    protected function rollbackTransaction()
+    {
+        if ( !isset( $this->_backupOps ) )
+        {
+            switch ( $this->getAction() )
+            {
+                case static::POST:
+                case static::PUT:
+                case static::PATCH:
+                case static::MERGE:
+                case static::DELETE:
+                    /** @var BatchResult $_result */
+                    $this->_dbConn->batch( $this->_backupOps );
+                    break;
+
+                default:
+                    break;
+            }
+
+            $this->_backupOps = null;
+        }
+
+        return true;
+    }
 }

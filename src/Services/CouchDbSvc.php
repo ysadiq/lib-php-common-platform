@@ -21,6 +21,8 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Resources\User\Session;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
@@ -32,1009 +34,953 @@ use Kisma\Core\Utility\Option;
  */
 class CouchDbSvc extends NoSqlDbSvc
 {
-	//*************************************************************************
-	//	Constants
-	//*************************************************************************
+    //*************************************************************************
+    //	Constants
+    //*************************************************************************
 
-	/**
-	 * Default record identifier field
-	 */
-	const DEFAULT_ID_FIELD = '_id';
-	/**
-	 * Define record revision field
-	 */
-	const REV_FIELD = '_rev';
+    /**
+     * Default record identifier field
+     */
+    const DEFAULT_ID_FIELD = '_id';
+    /**
+     * Define record id field
+     */
+    const ID_FIELD = '_id';
+    /**
+     * Define record revision field
+     */
+    const REV_FIELD = '_rev';
 
-	//*************************************************************************
-	//	Members
-	//*************************************************************************
+    //*************************************************************************
+    //	Members
+    //*************************************************************************
 
-	/**
-	 * @var \couchClient|null
-	 */
-	protected $_dbConn = null;
+    /**
+     * @var \couchClient|null
+     */
+    protected $_dbConn = null;
 
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * Create a new CouchDbSvc
-	 *
-	 * @param array $config
-	 *
-	 * @throws \InvalidArgumentException
-	 * @throws \Exception
-	 */
-	public function __construct( $config )
-	{
-		parent::__construct( $config );
+    /**
+     * Create a new CouchDbSvc
+     *
+     * @param array $config
+     *
+     * @throws \InvalidArgumentException
+     * @throws \Exception
+     */
+    public function __construct( $config )
+    {
+        parent::__construct( $config );
 
-		$_credentials = Option::get( $config, 'credentials' );
-		$_dsn = Option::get( $_credentials, 'dsn' );
-		if ( empty( $_dsn ) )
-		{
-			$_dsn = 'http://localhost:5984';
-		}
+        $_credentials = Option::get( $config, 'credentials' );
+        $_dsn = Option::get( $_credentials, 'dsn' );
+        if ( empty( $_dsn ) )
+        {
+            $_dsn = 'http://localhost:5984';
+        }
 
-		try
-		{
-			$this->_dbConn = new \couchClient( $_dsn, 'default' );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Unexpected CouchDb Service Exception:\n{$ex->getMessage()}" );
-		}
-	}
+        try
+        {
+            $this->_dbConn = new \couchClient( $_dsn, 'default' );
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "CouchDb Service Exception:\n{$_ex->getMessage()}" );
+        }
+    }
 
-	/**
-	 * Object destructor
-	 */
-	public function __destruct()
-	{
-		try
-		{
-			$this->_dbConn = null;
-		}
-		catch ( \Exception $ex )
-		{
-			error_log( "Failed to disconnect from database.\n{$ex->getMessage()}" );
-		}
-	}
+    /**
+     * Object destructor
+     */
+    public function __destruct()
+    {
+        try
+        {
+            $this->_dbConn = null;
+        }
+        catch ( \Exception $_ex )
+        {
+            error_log( "Failed to disconnect from database.\n{$_ex->getMessage()}" );
+        }
+    }
 
-	/**
-	 * @throws \Exception
-	 */
-	protected function checkConnection()
-	{
-		if ( !isset( $this->_dbConn ) )
-		{
-			throw new InternalServerErrorException( 'Database connection has not been initialized.' );
-		}
-	}
+    /**
+     * @throws \Exception
+     */
+    protected function checkConnection()
+    {
+        if ( !isset( $this->_dbConn ) )
+        {
+            throw new InternalServerErrorException( 'Database connection has not been initialized.' );
+        }
+    }
 
-	/**
-	 * @param $name
-	 *
-	 * @return string
-	 */
-	public function correctTableName( $name )
-	{
-		$this->checkConnection();
-		$this->_dbConn->useDatabase( $name );
+    /**
+     * @param $name
+     *
+     * @return string
+     */
+    public function selectTable( $name )
+    {
+        $this->checkConnection();
+        $this->_dbConn->useDatabase( $name );
 
-		return $name;
-	}
+        return $name;
+    }
 
-	protected function _gatherExtrasFromRequest( $post_data = null )
-	{
-		$_extras = parent::_gatherExtrasFromRequest( $post_data );
-		// rollback all db changes in a transaction, if applicable
-		$_rollback = FilterInput::request( 'rollback', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
-		if ( empty( $_rollback ) && !empty( $post_data ) )
-		{
-			$_rollback = Option::getBool( $post_data, 'rollback' );
-		}
-		$_extras['rollback'] = $_rollback;
+    /**
+     * @param null $post_data
+     *
+     * @return array
+     */
+    protected function _gatherExtrasFromRequest( $post_data = null )
+    {
+        $_extras = parent::_gatherExtrasFromRequest( $post_data );
+        $_extras[static::REV_FIELD] = FilterInput::request( static::REV_FIELD, Option::get( $post_data, static::REV_FIELD ) );
 
-		return $_extras;
-	}
+        return $_extras;
+    }
 
-	// REST service implementation
+    // REST service implementation
 
-	/**
-	 * @throws \Exception
-	 * @return array
-	 */
-	protected function _listResources()
-	{
-		try
-		{
-			$tables = $this->_dbConn->listDatabases();
-			$out = array();
-			foreach ( $tables as $table )
-			{
-				if ( '_' != substr( $table, 0, 1 ) )
-				{
-					$out[] = array( 'name' => $table );
-				}
-			}
+    /**
+     * @throws \Exception
+     * @return array
+     */
+    protected function _listResources()
+    {
+        try
+        {
+            $_resources = array();
+            $_result = $this->_dbConn->listDatabases();
+            foreach ( $_result as $_table )
+            {
+                if ( '_' != substr( $_table, 0, 1 ) )
+                {
+                    $_access = $this->getPermissions( $_table );
+                    if ( !empty( $_access ) )
+                    {
+                        $_resources[] = array( 'name' => $_table, 'access' => $_access );
+                    }
+                }
+            }
 
-			return array( 'resource' => $out );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to list containers of CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
+            return array( 'resource' => $_resources );
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+        }
+    }
 
     // Handle administrative options, table add, delete, etc
 
-	/**
-	 * {@inheritdoc}
-	 */
-	public function getTables( $tables = array() )
-	{
-		if ( empty( $tables ) )
-		{
-			try
-			{
-				$tables = $this->_dbConn->listDatabases();
-			}
-			catch ( \Exception $ex )
-			{
-				throw new InternalServerErrorException( "Failed to list containers of CouchDb service.\n" . $ex->getMessage() );
-			}
+    /**
+     * {@inheritdoc}
+     */
+    public function getTable( $table )
+    {
+        static $_existing = null;
 
-			foreach ( $tables as $_key => $_table )
-			{
-				if ( '_' == substr( $_table, 0, 1 ) )
-				{
-					unset( $tables[$_key] );
-				}
-			}
-			$tables = array_values( $tables );
-		}
+        if ( !$_existing )
+        {
+            $_existing = $this->_dbConn->listDatabases();
+        }
 
-		return parent::getTables( $tables );
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function getTable( $table )
-	{
         $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
         if ( empty( $_name ) )
-		{
+        {
             throw new BadRequestException( 'Table name can not be empty.' );
-		}
+        }
 
-		try
-		{
-			$this->correctTableName( $table );
-			$_result = $this->_dbConn->asArray()->getDatabaseInfos();
-			$_result['name'] = $table;
+        if ( false === array_search( $_name, $_existing ) )
+        {
+            throw new NotFoundException( "Table '$_name' not found." );
+        }
 
-			return $_result;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to list containers of CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
+        try
+        {
+            $this->selectTable( $_name );
+            $_out = $this->_dbConn->asArray()->getDatabaseInfos();
+            $_out['name'] = $_name;
+            $_out['access'] = $this->getPermissions( $_name );
 
-	/**
-	 * {@inheritdoc}
-	 */
-	public function createTable( $properties = array() )
-	{
-		$_name = Option::get( $properties, 'name' );
-		if ( empty( $_name ) )
-		{
-			throw new BadRequestException( "No 'name' field in data." );
-		}
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}" );
+        }
+    }
 
-		try
-		{
-			$this->correctTableName( $_name );
-			$_result = $this->_dbConn->asArray()->createDatabase();
+    /**
+     * {@inheritdoc}
+     */
+    public function createTable( $properties = array() )
+    {
+        $_name = Option::get( $properties, 'name' );
+        if ( empty( $_name ) )
+        {
+            throw new BadRequestException( "No 'name' field in data." );
+        }
 
-			// $_result['ok'] = true
+        try
+        {
+            $this->selectTable( $_name );
+            $_result = $this->_dbConn->asArray()->createDatabase();
 
-			return array( 'name' => $_name );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to create a container on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
+            // $_result['ok'] = true
+            $_out = array( 'name' => $_name );
 
-	/**
-	 * {@inheritdoc}
-	 */
-	public function updateTable( $properties = array() )
-	{
-		$_name = Option::get( $properties, 'name' );
-		if ( empty( $_name ) )
-		{
-			throw new BadRequestException( "No 'name' field in data." );
-		}
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to create table '$_name'.\n{$_ex->getMessage()}" );
+        }
+    }
 
-		$this->correctTableName( $_name );
+    /**
+     * {@inheritdoc}
+     */
+    public function updateTable( $properties = array() )
+    {
+        $_name = Option::get( $properties, 'name' );
+        if ( empty( $_name ) )
+        {
+            throw new BadRequestException( "No 'name' field in data." );
+        }
 
-//		throw new InternalServerErrorException( "Failed to update table '$_name' on CouchDb service." );
-		return array( 'name' => $_name );
-	}
+        $this->selectTable( $_name );
 
-	/**
-	 * {@inheritdoc}
-	 */
-	public function deleteTable( $table, $check_empty = false )
-	{
-		if ( is_array( $table ) )
-		{
-			$table = Option::get( $table, 'name' );
-		}
-		if ( empty( $table ) )
-		{
-			throw new BadRequestException( "No 'name' field in data." );
-		}
+//		throw new InternalServerErrorException( "Failed to update table '$_name'." );
+        return array( 'name' => $_name );
+    }
 
-		try
-		{
-			$this->correctTableName( $table );
-			$_result = $this->_dbConn->asArray()->deleteDatabase();
+    /**
+     * {@inheritdoc}
+     */
+    public function deleteTable( $table, $check_empty = false )
+    {
+        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
+        if ( empty( $_name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
 
-			// $_result['ok'] = true
+        try
+        {
+            $this->selectTable( $_name );
+            $_result = $this->_dbConn->asArray()->deleteDatabase();
 
-			return array( 'name' => $table );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to delete table '$table' from CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
+            // $_result['ok'] = true
 
-	//-------- Table Records Operations ---------------------
-	// records is an array of field arrays
+            return array( 'name' => $_name );
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to delete table '$_name'.\n{$_ex->getMessage()}" );
+        }
+    }
 
-	/**
-	 * {@inheritdoc}
-	 */
-    public function createRecords( $table, $records, $extras = array() )
-	{
-		if ( empty( $records ) || !is_array( $records ) )
-		{
-			throw new BadRequestException( 'There are no record sets in the request.' );
-		}
-		if ( !isset( $records[0] ) )
-		{
-			// single record possibly passed in without wrapper array
-			$records = array( $records );
-		}
+    //-------- Table Records Operations ---------------------
+    // records is an array of field arrays
 
-		$this->correctTableName( $table );
-		$_rollback = Option::getBool( $extras, 'rollback', false );
-        $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			$result = $this->_dbConn->asArray()->storeDocs( $records, $_rollback );
-			$_out = static::cleanRecords( $result, $_fields );
-			if ( static::_requireMoreFields( $_fields ) )
-			{
-				return $this->retrieveRecords( $table, $_out, $extras );
-			}
-
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to create items in '$table' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-    public function createRecord( $table, $record, $extras = array() )
-	{
-		if ( empty( $record ) || !is_array( $record ) )
-		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
-		}
-
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			$result = $this->_dbConn->asArray()->storeDoc( (object)$record );
-			$_out = static::cleanRecord( $result, $_fields );
-			if ( static::_requireMoreFields( $_fields ) )
-			{
-				return $this->retrieveRecord( $table, $_out, $extras );
-			}
-
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to create item in '$table' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-    public function updateRecords( $table, $records, $extras = array() )
-	{
-		if ( empty( $records ) || !is_array( $records ) )
-		{
-			throw new BadRequestException( 'There are no record sets in the request.' );
-		}
-		if ( !isset( $records[0] ) )
-		{
-			// single record possibly passed in without wrapper array
-			$records = array( $records );
-		}
-
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		$_rollback = Option::getBool( $extras, 'rollback', false );
-		try
-		{
-			$result = $this->_dbConn->asArray()->storeDocs( $records, $_rollback );
-			$_out = static::cleanRecords( $result, $_fields );
-			if ( static::_requireMoreFields( $_fields ) )
-			{
-				// merge in rev info
-				$_out = static::recordArrayMerge( $records, $_out );
-			}
-
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to update items in '$table' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-    public function updateRecord( $table, $record, $extras = array() )
-	{
-		if ( empty( $record ) || !is_array( $record ) )
-		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
-		}
-
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			$result = $this->_dbConn->asArray()->storeDoc( (object)$record );
-			$_out = static::cleanRecord( $result, $_fields );
-			if ( static::_requireMoreFields( $_fields ) )
-			{
-				$_out = static::recordArrayMerge( $record, $_out );
-			}
-
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
+    /**
+     * {@inheritdoc}
+     */
     public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
-	{
-		if ( !is_array( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( 'There are no fields in the record.' );
-		}
+    {
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+ 		$this->selectTable( $table );
 
-		$table = $this->correctTableName( $table );
+        // retrieve records to get latest rev and id
+        $_results = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
+        // make sure record doesn't contain identifiers
+        unset( $record[static::DEFAULT_ID_FIELD] );
+        unset( $record[static::REV_FIELD] );
 
-		// retrieve records to get latest rev and id
-		$_results = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
-		// make sure record doesn't contain identifiers
-		unset( $record[static::DEFAULT_ID_FIELD] );
-		unset( $record[static::REV_FIELD] );
+        $_updates = array();
+        foreach ( $_results as $result )
+        {
+            $_updates[] = array_merge( $result, $record );
+        }
 
-		$_updates = array();
-		foreach ( $_results as $result )
-		{
-			$_updates[] = array_merge( $result, $record );
-		}
+        return $this->updateRecords( $table, $_updates, $extras );
+    }
 
-		return $this->updateRecords( $table, $_updates, $extras );
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-    public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
-	{
-		if ( !is_array( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( "No record fields were passed in the request." );
-		}
-
-		$table = $this->correctTableName( $table );
-
-		// retrieve records to get latest rev and id
-		$_results = $this->retrieveRecordsByIds( $table, $ids, $extras );
-		// make sure record doesn't contain identifiers
-		unset( $record[static::DEFAULT_ID_FIELD] );
-		unset( $record[static::REV_FIELD] );
-
-		$_updates = array();
-		foreach ( $_results as $_result )
-		{
-			$_updates[] = array_merge( $_result, $record );
-		}
-
-		return $this->updateRecords( $table, $_updates, $extras );
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-    public function updateRecordById( $table, $record, $id, $extras = array() )
-	{
-		if ( !isset( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( 'There are no fields in the record.' );
-		}
-
-		// retrieve record to get latest rev and id
-		$_result = $this->retrieveRecordById( $table, $id, $extras );
-		// make sure record doesn't contain identifiers
-		unset( $record[static::DEFAULT_ID_FIELD] );
-		unset( $record[static::REV_FIELD] );
-
-		$_update = array_merge( $_result, $record );
-
-		return $this->updateRecord( $table, $_update, $extras );
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-    public function mergeRecords( $table, $records, $extras = array() )
-	{
-		if ( empty( $records ) || !is_array( $records ) )
-		{
-			throw new BadRequestException( 'There are no record sets in the request.' );
-		}
-		if ( !isset( $records[0] ) )
-		{
-			// single record possibly passed in without wrapper array
-			$records = array( $records );
-		}
-
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		$_rollback = Option::getBool( $extras, 'rollback', false );
-		try
-		{
-			// get all fields of each record
-			$_merges = $this->retrieveRecords( $table, $records, '*', $extras );
-			// merge in changes from $records to $_merges
-			$_merges = static::recordArrayMerge( $_merges, $records );
-			// write back the changes
-			$_result = $this->_dbConn->asArray()->storeDocs( $_merges, $_rollback );
-			$_out = static::cleanRecords( $_result, $_fields );
-			if ( static::_requireMoreFields( $_fields ) )
-			{
-				// merge in rev updates
-				$_merges = static::recordArrayMerge( $_merges, $_out );
-				$_out = static::cleanRecords( $_merges, $_fields );
-			}
-
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to update items in '$table' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-    public function mergeRecord( $table, $record, $extras = array() )
-	{
-		if ( empty( $record ) || !is_array( $record ) )
-		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
-		}
-
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			// get all fields of record
-			$_merge = $this->retrieveRecord( $table, $record, '*', $extras );
-			// merge in changes from $record to $_merge
-			$_merge = array_merge( $_merge, $record );
-			// write back the changes
-			$_result = $this->_dbConn->asArray()->storeDoc( (object)$_merge );
-			$_out = static::cleanRecord( $_result, $_fields );
-			if ( static::_requireMoreFields( $_fields ) )
-			{
-				// merge in rev updates
-				$_merge[static::REV_FIELD] = Option::get( $_out, static::REV_FIELD );
-
-				return static::cleanRecord( $_merge, $_fields );
-			}
-
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
+    /**
+     * {@inheritdoc}
+     */
     public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
-	{
-		if ( !is_array( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( 'There are no fields in the record.' );
-		}
+    {
+        if ( !is_array( $record ) || empty( $record ) )
+        {
+            throw new BadRequestException( 'There are no fields in the record.' );
+        }
 
-		$table = $this->correctTableName( $table );
+        $table = $this->selectTable( $table );
         $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			// get all fields of each record
-			$_merges = $this->retrieveRecordsByFilter( $table, $filter, '*', $extras );
-			// merge in changes from $records to $_merges
-			unset( $record[static::DEFAULT_ID_FIELD] );
-			unset( $record[static::REV_FIELD] );
-			foreach ( $_merges as $_key => $_merge )
-			{
-				$_merges[$_key] = array_merge( $_merge, $record );
-			}
-			// write back the changes
-			$result = $this->_dbConn->asArray()->storeDocs( $_merges, true );
-			$_out = static::cleanRecords( $result, $_fields );
-			if ( static::_requireMoreFields( $_fields ) )
-			{
-				// merge in rev updates
-				$_merges = static::recordArrayMerge( $_merges, $_out );
+        try
+        {
+            // get all fields of each record
+            $_merges = $this->retrieveRecordsByFilter( $table, $filter, '*', $extras );
+            // merge in changes from $records to $_merges
+            unset( $record[static::DEFAULT_ID_FIELD] );
+            unset( $record[static::REV_FIELD] );
+            foreach ( $_merges as $_key => $_merge )
+            {
+                $_merges[$_key] = array_merge( $_merge, $record );
+            }
+            // write back the changes
+            $result = $this->_dbConn->asArray()->storeDocs( $_merges, true );
+            $_out = static::cleanRecords( $result, $_fields );
+            if ( static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD ) )
+            {
+                // merge in rev updates
+                $_merges = static::recordArrayMerge( $_merges, $_out );
 
-				return static::cleanRecords( $_merges, $_fields );
-			}
+                return static::cleanRecords( $_merges, $_fields );
+            }
 
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw $ex;
-		}
-	}
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to patch records in '$table'.\n{$_ex->getMessage()}" );
+        }
+    }
 
-	/**
-	 * {@inheritdoc}
-	 */
-    public function mergeRecordsByIds( $table, $record, $ids, $extras = array() )
-	{
-		if ( !is_array( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( "No record fields were passed in the request." );
-		}
-		$table = $this->correctTableName( $table );
-
-		if ( empty( $ids ) )
-		{
-			throw new BadRequestException( "Identifying values for 'id_field' can not be empty for update request." );
-		}
-
-		$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
-		$_updates = array();
-		foreach ( $ids as $_key => $_id )
-		{
-			if ( empty( $_id ) )
-			{
-				throw new BadRequestException( "No identifier exist in identifier index $_key." );
-			}
-
-			$_updates[] = array_merge( $record, array( static::DEFAULT_ID_FIELD => $_id ) );
-		}
-
-		return $this->mergeRecords( $table, $_updates, $extras );
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-    public function mergeRecordById( $table, $record, $id, $extras = array() )
-	{
-		if ( !isset( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( 'There are no fields in the record.' );
-		}
-		if ( empty( $id ) )
-		{
-			throw new BadRequestException( "No identifier exist in record." );
-		}
-
-		$_update = array_merge( $record, array( static::DEFAULT_ID_FIELD => $id ) );
-
-		return $this->mergeRecord( $table, $_update, $extras );
-	}
-
-    public function truncateTable( $table )
+    /**
+     * {@inheritdoc}
+     */
+    public function truncateTable( $table, $extras = array() )
     {
         // todo faster way?
-        $_records = $this->retrieveRecordsByFilter( $table, '', '' );
+        $_records = $this->retrieveRecordsByFilter( $table );
 
         return $this->deleteRecords( $table, $_records );
     }
 
     /**
-	 * {@inheritdoc}
-	 */
-    public function deleteRecords( $table, $records, $extras = array() )
-	{
-		if ( !is_array( $records ) || empty( $records ) )
-		{
-			throw new BadRequestException( 'There are no record sets in the request.' );
-		}
-
-		if ( !isset( $records[0] ) )
-		{
-			// single record
-			$records = array( $records );
-		}
-
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		$_rollback = Option::getBool( $extras, 'rollback', false );
-		try
-		{
-			$_out = array();
-			if ( static::_requireMoreFields( $_fields ) )
-			{
-				$_out = $this->retrieveRecords( $table, $records, $_fields, $extras );
-			}
-
-			$result = $this->_dbConn->asArray()->deleteDocs( $records, $_rollback );
-			if ( empty( $_out ) )
-			{
-				$_out = static::cleanRecords( $result, $_fields );;
-			}
-
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to delete items from '$table' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-    public function deleteRecord( $table, $record, $extras = array() )
-	{
-		if ( !isset( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( 'There are no fields in the record.' );
-		}
-
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		try
-		{
-			$_out = array();
-			if ( static::_requireMoreFields( $_fields ) )
-			{
-				$_out = $this->retrieveRecord( $table, $record, $_fields, $extras );
-			}
-			$result = $this->_dbConn->asArray()->deleteDoc( (object)$record );
-			if ( empty( $_out ) )
-			{
-				$_out = static::cleanRecord( $result, $_fields );
-			}
-
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to delete item from '$table' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
+     * {@inheritdoc}
+     */
     public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() )
-	{
-		if ( empty( $filter ) )
-		{
-			throw new BadRequestException( "Filter for delete request can not be empty." );
-		}
+    {
+        if ( empty( $filter ) )
+        {
+            throw new BadRequestException( "Filter for delete request can not be empty." );
+        }
 
-		$table = $this->correctTableName( $table );
-		try
-		{
-			$_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
-			$results = $this->_dbConn->asArray()->deleteDocs( $_records, true );
+        $table = $this->selectTable( $table );
+        try
+        {
+            $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
+            $results = $this->_dbConn->asArray()->deleteDocs( $_records, true );
 
-			return $_records;
-		}
-		catch ( \Exception $ex )
-		{
-            throw new InternalServerErrorException( "Failed to update item in '$table' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
+            return $_records;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
+        }
+    }
 
-	/**
-	 * {@inheritdoc}
-	 */
-    public function deleteRecordsByIds( $table, $ids, $extras = array() )
-	{
-		if ( empty( $ids ) )
-		{
-			throw new BadRequestException( "Identifying values for 'id_field' can not be empty for update request." );
-		}
-
-		$table = $this->correctTableName( $table );
-		$_rollback = Option::getBool( $extras, 'rollback', false );
-		try
-		{
-			// get the returnable fields first, then issue delete
-			$_records = $this->retrieveRecordsByIds( $table, $ids, $extras );
-			$result = $this->_dbConn->deleteDocs( $_records, $_rollback );
-
-			return $_records;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to delete items from '$table' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-    public function deleteRecordById( $table, $id, $extras = array() )
-	{
-		try
-		{
-			$_record = $this->retrieveRecordById( $table, $id, $extras );
-			$result = $this->_dbConn->asArray()->deleteDoc( (object)$_record );
-
-			return $_record;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Failed to delete item from '$table' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
+    /**
+     * {@inheritdoc}
+     */
     public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
-	{
-		$table = $this->correctTableName( $table );
+    {
+        $table = $this->selectTable( $table );
         $_fields = Option::get( $extras, 'fields' );
 
-		$_moreFields = static::_requireMoreFields( $_fields );
-		try
-		{
-			// todo  how to filter here?
-			$result = $this->_dbConn->asArray()->include_docs( $_moreFields )->getAllDocs();
-			$_rows = Option::get( $result, 'rows' );
-			$_out = static::cleanRecords( $_rows, $_fields, $_moreFields );
+        $_moreFields = static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD );
+        try
+        {
+            // todo  how to filter here?
+            $result = $this->_dbConn->asArray()->include_docs( $_moreFields )->getAllDocs();
+            $_rows = Option::get( $result, 'rows' );
+            $_out = static::cleanRecords( $_rows, $_fields, $_moreFields );
 
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to filter items from '$table' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
+            return $_out;
+        }
+        catch ( \Exception $ex )
+        {
+            throw new InternalServerErrorException( "Failed to filter items from '$table' on CouchDb service.\n" . $ex->getMessage() );
+        }
+    }
 
-	/**
-	 * {@inheritdoc}
-	 */
-    public function retrieveRecords( $table, $records, $extras = array() )
-	{
-		if ( empty( $records ) || !is_array( $records ) )
-		{
-			throw new BadRequestException( 'There are no record sets in the request.' );
-		}
-		if ( !isset( $records[0] ) )
-		{
-			// single record
-			$records = array( $records );
-		}
+    protected function getIdsInfo( $table, $fields_info = null, &$requested = null )
+    {
+        $requested = array( static::ID_FIELD, static::REV_FIELD ); // can only be this
+        $_ids = array(
+            array( 'name' => static::ID_FIELD ),
+            array( 'name' => static::REV_FIELD )
+        );
 
-		$table = $this->correctTableName( $table );
+        return $_ids;
+    }
+
+    protected function checkForIds( &$record, $ids_info, $extras = null, $on_create = false, $remove = false )
+    {
+        if ( !empty( $ids_info ) )
+        {
+            $_id = array();
+            foreach ( $ids_info as $_info )
+            {
+                $_name = Option::get( $_info, 'name' );
+                $_value = Option::get( $record, $_name, null, $remove );
+                if ( empty( $_value ) )
+                {
+                    if ( static::REV_FIELD == $_name )
+                    {
+                        // could be passed in as a parameter affecting all records
+                        $_partKey = Option::get( $extras, static::REV_FIELD );
+                        if ( empty( $_partKey ) )
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+
+                $_id[] = Option::get( $record, $_name, null, $remove );
+            }
+
+            if ( !empty( $_id ) )
+            {
+                if ( 1 == count( $_id ) )
+                {
+                    return $_id[0];
+                }
+
+                return $_id;
+            }
+
+            if ( $on_create )
+            {
+                // ok
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array        $record
+     * @param string|array $include List of keys to include in the output record
+     *
+     * @return array
+     */
+    protected static function cleanRecord( $record = array(), $include = '*' )
+    {
+        if ( '*' !== $include )
+        {
+            $_id = Option::get( $record, static::DEFAULT_ID_FIELD );
+            if ( empty( $_id ) )
+            {
+                $_id = Option::get( $record, 'id' );
+            }
+            $_rev = Option::get( $record, static::REV_FIELD );
+            if ( empty( $_rev ) )
+            {
+                $_rev = Option::get( $record, 'rev' );
+                if ( empty( $_rev ) )
+                {
+                    $_rev = Option::getDeep( $record, 'value', 'rev' );
+                }
+            }
+            $_out = array( static::DEFAULT_ID_FIELD => $_id, static::REV_FIELD => $_rev );
+
+            if ( empty( $include ) )
+            {
+                return $_out;
+            }
+            if ( !is_array( $include ) )
+            {
+                $include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
+            }
+            foreach ( $include as $key )
+            {
+                if ( 0 == strcasecmp( $key, static::DEFAULT_ID_FIELD ) || 0 == strcasecmp( $key, static::REV_FIELD ) )
+                {
+                    continue;
+                }
+                $_out[$key] = Option::get( $record, $key );
+            }
+
+            return $_out;
+        }
+
+        return $record;
+    }
+
+    protected static function cleanRecords( $records, $include, $use_doc = false )
+    {
+        $_out = array();
+        foreach ( $records as $_record )
+        {
+            if ( $use_doc )
+            {
+                $_record = Option::get( $_record, 'doc', $_record );
+            }
+            $_out[] = static::cleanRecord( $_record, $include, static::DEFAULT_ID_FIELD );
+        }
+
+        return $_out;
+    }
+
+    /**
+     * @param mixed|null $handle
+     *
+     * @return bool
+     */
+    protected function initTransaction( $handle = null )
+    {
+        $this->selectTable( $handle );
+
+        return parent::initTransaction( $handle );
+    }
+
+    /**
+     * @param mixed      $record
+     * @param mixed      $id
+     * @param null|array $extras Additional items needed to complete the transaction
+     * @param bool       $save_old
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return null|array Array of output fields
+     */
+    protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false )
+    {
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_fields = Option::get( $extras, 'fields' );
-		$ids = array();
-		foreach ( $records as $key => $record )
-		{
-			$_id = Option::get( $record, static::DEFAULT_ID_FIELD );
-			if ( empty( $_id ) )
-			{
-				throw new BadRequestException( "Identifying field '_id' can not be empty for retrieve record index '$key' request." );
-			}
-			$ids[] = $_id;
-		}
+        $_fieldsInfo = Option::get( $extras, 'fields_info' );
+        $_requireMore = Option::get( $extras, 'require_more' );
+        $_continue = Option::getBool( $extras, 'continue' );
+        $_updates = Option::get( $extras, 'updates' );
 
-		$_moreFields = static::_requireMoreFields( $_fields );
-		try
-		{
-			$result = $this->_dbConn->asArray()->include_docs( $_moreFields )->keys( $ids )->getAllDocs();
-			$_rows = Option::get( $result, 'rows' );
-			$_out = static::cleanRecords( $_rows, $_fields, $_moreFields );
+        $_out = array();
+        switch ( $this->getAction() )
+        {
+            case static::POST:
+                $record = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters );
+                if ( empty( $_parsed ) )
+                {
+                    throw new BadRequestException( 'No valid fields were found in record.' );
+                }
 
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to get items from '$table' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
+                if ( !$_continue && !$save_old )
+                {
+                    return parent::addToTransaction( $record, $id );
+                }
 
-	/**
-	 * {@inheritdoc}
-	 */
-    public function retrieveRecord( $table, $record, $extras = array() )
-	{
-		if ( !is_array( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( 'There are no fields in the record.' );
-		}
+                $_result = $this->_dbConn->asArray()->storeDoc( (object)$record );
 
-		$table = $this->correctTableName( $table );
+                $_out = static::cleanRecord( $_result, $_fields, static::DEFAULT_ID_FIELD );
+                if ( static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD ) )
+                {
+                    // for returning latest _rev
+                    $_out = static::recordArrayMerge( $record, $_out );
+                }
+
+                if ( $save_old )
+                {
+                    $this->addToRollback( static::recordAsId( $_result, static::DEFAULT_ID_FIELD ) );
+                }
+                break;
+
+            case static::PUT:
+                if ( !empty( $_updates ) )
+                {
+                    $_parsed = $this->parseRecord( $_updates, $_fieldsInfo, $_ssFilters, true );
+                    $_updates = $_parsed;
+                }
+                else
+                {
+                    $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
+                }
+                if ( empty( $_parsed ) )
+                {
+                    throw new BadRequestException( 'No valid fields were found in record.' );
+                }
+
+                // only update/patch by ids can use batching
+                if ( !$_continue && !$save_old && !empty( $_updates ) )
+                {
+                    return parent::addToTransaction( null, $id );
+                }
+
+                $_result = $this->_dbConn->asArray()->storeDoc( (object)$record );
+                $_out = static::cleanRecord( $_result, $_fields, static::DEFAULT_ID_FIELD );
+                if ( static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD ) )
+                {
+                    $_out = static::recordArrayMerge( $record, $_out );
+                }
+
+                // by id
+                // retrieve record to get latest rev and id
+                $_result = $this->retrieveRecordById( $this->_transactionTable, $id, $extras );
+                // make sure record doesn't contain identifiers
+                unset( $record[static::DEFAULT_ID_FIELD] );
+                unset( $record[static::REV_FIELD] );
+
+                $_update = array_merge( $_result, $record );
+                $_result = $this->_dbConn->asArray()->storeDoc( (object)$_update );
+
+                if ( $save_old )
+                {
+                    $this->addToRollback( $_result );
+                }
+                break;
+
+            case static::MERGE:
+            case static::PATCH:
+                if ( !empty( $_updates ) )
+                {
+                    $_parsed = $this->parseRecord( $_updates, $_fieldsInfo, $_ssFilters, true );
+                    $_updates = $_parsed;
+                }
+                else
+                {
+                    $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
+                }
+                if ( empty( $_parsed ) )
+                {
+                    throw new BadRequestException( 'No valid fields were found in record.' );
+                }
+
+                // only update/patch by ids can use batching
+                if ( !$_continue && !$save_old && !empty( $_updates ) )
+                {
+                    return parent::addToTransaction( null, $id );
+                }
+
+                // get all fields of record
+                $_merge = $this->_dbConn->asArray()->getDoc( $id );
+                // merge in changes from $record to $_merge
+                $_merge = array_merge( $_merge, $record );
+                // write back the changes
+                $_result = $this->_dbConn->asArray()->storeDoc( (object)$_merge );
+                $_out = static::cleanRecord( $_result, $_fields, static::DEFAULT_ID_FIELD );
+                if ( static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD ) )
+                {
+                    // merge in rev updates
+                    $_merge[static::REV_FIELD] = Option::get( $_out, static::REV_FIELD );
+
+                    return static::cleanRecord( $_merge, $_fields, static::DEFAULT_ID_FIELD );
+                }
+                break;
+
+            case static::DELETE:
+                if ( !$_continue && !$save_old )
+                {
+                    return parent::addToTransaction( null, $id );
+                }
+
+                if ( static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD ) )
+                {
+                    $_result = $this->_dbConn->asArray()->getDoc( $id );
+                    $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
+                }
+                if ( $save_old )
+                {
+                    $this->addToRollback( $_result );
+                    $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
+                }
+                $_result = $this->_dbConn->asArray()->deleteDoc( (object)$record );
+                if ( empty( $_out ) )
+                {
+                    $_out = static::cleanRecord( $_result, $_fields, static::DEFAULT_ID_FIELD );
+                }
+                if ( $save_old )
+                {
+                    $this->addToRollback( $_result );
+                    $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
+                }
+                break;
+
+            case static::GET:
+                $_result = $this->_dbConn->asArray()->getDoc( $id );
+
+                return static::cleanRecord( $_result, $_fields, static::DEFAULT_ID_FIELD );
+
+                return parent::addToTransaction( null, $id );
+//                $_filter = array( static::DEFAULT_ID_FIELD => $id );
+//                $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
+//                $_result = $this->_collection->findOne( $_criteria, $_fieldArray );
+//                if ( empty( $_result ) )
+//                {
+//                    throw new NotFoundException( "Record with id '" . static::mongoIdToId( $id ) . "' not found." );
+//                }
+//
+//                $_out = static::mongoIdToId( $_result );
+//                break;
+        }
+
+        return $_out;
+    }
+
+    /**
+     * @param null|array $extras
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array
+     */
+    protected function commitTransaction( $extras = null )
+    {
+        if ( empty( $this->_batchRecords ) && empty( $this->_batchIds ) )
+        {
+            return null;
+        }
+
+        $_updates = Option::get( $extras, 'updates' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_fields = Option::get( $extras, 'fields' );
-		$_id = Option::get( $record, static::DEFAULT_ID_FIELD );
-		if ( empty( $_id ) )
-		{
-			throw new BadRequestException( "Identifying field '_id' can not be empty for retrieve record request." );
-		}
+        $_requireMore = Option::get( $extras, 'require_more' );
 
-		try
-		{
-			$result = $this->_dbConn->asArray()->getDoc( $_id );
+        $_out = array();
+        switch ( $this->getAction() )
+        {
+            case static::POST:
+                $result = $this->_dbConn->asArray()->storeDocs( $records, $_rollback );
+                $_out = static::cleanRecords( $result, $_fields );
+                if ( static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD ) )
+                {
+                    return $this->retrieveRecords( $table, $_out, $extras );
+                }
+                $_result = $this->_collection->batchInsert( $this->_batchRecords, array( 'continueOnError' => false ) );
+                static::processResult( $_result );
 
-			return static::cleanRecord( $result, $_fields );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to get item '$table/$_id' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
+                $_out = static::cleanRecords( $this->_batchRecords, $_fields );
+                break;
+            case static::PUT:
+                $result = $this->_dbConn->asArray()->storeDocs( $records, $_rollback );
+                $_out = static::cleanRecords( $result, $_fields );
+                if ( static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD ) )
+                {
+                    // merge in rev info
+                    $_out = static::recordArrayMerge( $records, $_out );
+                }
 
-	/**
-	 * {@inheritdoc}
-	 */
-    public function retrieveRecordsByIds( $table, $ids, $extras = array() )
-	{
-		if ( empty( $ids ) )
-		{
-			return array();
-		}
-		$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
+                // by ids
+                // retrieve records to get latest rev and id
+                $_results = $this->retrieveRecordsByIds( $table, $ids, $extras );
+                // make sure record doesn't contain identifiers
+                unset( $record[static::DEFAULT_ID_FIELD] );
+                unset( $record[static::REV_FIELD] );
 
-		$_moreFields = static::_requireMoreFields( $_fields );
-		try
-		{
-			$result = $this->_dbConn->asArray()->include_docs( $_moreFields )->keys( $ids )->getAllDocs();
-			$_rows = Option::get( $result, 'rows' );
-			$_out = static::cleanRecords( $_rows, $_fields, $_moreFields );
+                $_updates = array();
+                foreach ( $_results as $_result )
+                {
+                    $_updates[] = array_merge( $_result, $record );
+                }
 
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to get items from '$table' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
+                return $this->updateRecords( $table, $_updates, $extras );
 
-	/**
-	 * {@inheritdoc}
-	 */
-    public function retrieveRecordById( $table, $id, $extras = array() )
-	{
-		if ( empty( $id ) )
-		{
-			return array();
-		}
+                if ( empty( $_updates ) )
+                {
+                    throw new BadRequestException( 'Batch operation not supported for update by records.' );
+                }
 
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
+                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_batchIds ) );
+                $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
 
-		try
-		{
-			$result = $this->_dbConn->asArray()->getDoc( $id );
+                $_result = $this->_collection->update( $_criteria, $_updates, null, array( 'multiple' => true ) );
+                $_rows = static::processResult( $_result );
+                if ( 0 === $_rows )
+                {
+                    throw new NotFoundException( 'No requested records were found to update.' );
+                }
 
-			return static::cleanRecord( $result, $_fields );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new \Exception( "Failed to get item '$table/$id' on CouchDb service.\n" . $ex->getMessage() );
-		}
-	}
+                if ( count( $this->_batchIds ) !== $_rows )
+                {
+                    throw new BadRequestException( 'Batch Error: Not all requested records were found to update.' );
+                }
 
-	/**
-	 * @param array        $record
-	 * @param string|array $include List of keys to include in the output record
-	 *
-	 * @return array
-	 */
-	protected static function cleanRecord( $record = array(), $include = '*' )
-	{
-		if ( '*' !== $include )
-		{
-			$_id = Option::get( $record, static::DEFAULT_ID_FIELD );
-			if ( empty( $_id ) )
-			{
-				$_id = Option::get( $record, 'id' );
-			}
-			$_rev = Option::get( $record, static::REV_FIELD );
-			if ( empty( $_rev ) )
-			{
-				$_rev = Option::get( $record, 'rev' );
-				if ( empty( $_rev ) )
-				{
-					$_rev = Option::getDeep( $record, 'value', 'rev' );
-				}
-			}
-			$_out = array( static::DEFAULT_ID_FIELD => $_id, static::REV_FIELD => $_rev );
+                if ( $_requireMore )
+                {
+                    $_fieldArray = static::buildFieldArray( $_fields );
+                    /** @var \MongoCursor $_result */
+                    $_result = $this->_collection->find( $_criteria, $_fieldArray );
+                    $_out = static::cleanRecords( iterator_to_array( $_result ) );
+                }
+                else
+                {
+                    $_out = static::idsAsRecords( static::mongoIdsToIds( $this->_batchIds ), static::DEFAULT_ID_FIELD );
+                }
+                break;
 
-			if ( empty( $include ) )
-			{
-				return $_out;
-			}
-			if ( !is_array( $include ) )
-			{
-				$include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
-			}
-			foreach ( $include as $key )
-			{
-				if ( 0 == strcasecmp( $key, static::DEFAULT_ID_FIELD ) || 0 == strcasecmp( $key, static::REV_FIELD ) )
-				{
-					continue;
-				}
-				$_out[$key] = Option::get( $record, $key );
-			}
+            case static::MERGE:
+            case static::PATCH:
+                // get all fields of each record
+                $_merges = $this->retrieveRecords( $table, $records, '*', $extras );
+                // merge in changes from $records to $_merges
+                $_merges = static::recordArrayMerge( $_merges, $records );
+                // write back the changes
+                $_result = $this->_dbConn->asArray()->storeDocs( $_merges, $_rollback );
+                $_out = static::cleanRecords( $_result, $_fields );
+                if ( static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD ) )
+                {
+                    // merge in rev updates
+                    $_merges = static::recordArrayMerge( $_merges, $_out );
+                    $_out = static::cleanRecords( $_merges, $_fields );
+                }
 
-			return $_out;
-		}
+                if ( empty( $_updates ) )
+                {
+                    throw new BadRequestException( 'Batch operation not supported for patch by records.' );
+                }
 
-		return $record;
-	}
+                $_updates = array( '$set' => $_updates );
 
-	protected static function cleanRecords( $records, $include, $use_doc = false )
-	{
-		$_out = array();
-		foreach ( $records as $_record )
-		{
-			if ( $use_doc )
-			{
-				$_record = Option::get( $_record, 'doc', $_record );
-			}
-			$_out[] = static::cleanRecord( $_record, $include );
-		}
+                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_batchIds ) );
+                $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
 
-		return $_out;
-	}
+                $_result = $this->_collection->update( $_criteria, $_updates, array( 'multiple' => true ) );
+                $_rows = static::processResult( $_result );
+                if ( 0 === $_rows )
+                {
+                    throw new NotFoundException( 'No requested records were found to patch.' );
+                }
+
+                if ( count( $this->_batchIds ) !== $_rows )
+                {
+                    throw new BadRequestException( 'Batch Error: Not all requested records were found to patch.' );
+                }
+
+                if ( $_requireMore )
+                {
+                    $_fieldArray = static::buildFieldArray( $_fields );
+                    /** @var \MongoCursor $_result */
+                    $_result = $this->_collection->find( $_criteria, $_fieldArray );
+                    $_out = static::cleanRecords( iterator_to_array( $_result ) );
+                }
+                else
+                {
+                    $_out = static::idsAsRecords( static::mongoIdsToIds( $this->_batchIds ), static::DEFAULT_ID_FIELD );
+                }
+                break;
+
+            case static::DELETE:
+                $_out = array();
+                if ( static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD ) )
+                {
+                    $_out = $this->retrieveRecords( $table, $records, $_fields, $extras );
+                }
+
+                $result = $this->_dbConn->asArray()->deleteDocs( $records, $_rollback );
+                if ( empty( $_out ) )
+                {
+                    $_out = static::cleanRecords( $result, $_fields );;
+                }
+
+                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_batchIds ) );
+                $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
+
+                if ( $_requireMore )
+                {
+                    $_fieldArray = static::buildFieldArray( $_fields );
+                    /** @var \MongoCursor $_result */
+                    $_result = $this->_collection->find( $_criteria, $_fieldArray );
+                    $_out = static::cleanRecords( iterator_to_array( $_result ) );
+                }
+                else
+                {
+                    $_out = static::idsAsRecords( static::mongoIdsToIds( $this->_batchIds ), static::DEFAULT_ID_FIELD );
+                }
+
+                $_result = $this->_collection->remove( $_criteria );
+                $_rows = static::processResult( $_result );
+                if ( 0 === $_rows )
+                {
+                    throw new NotFoundException( 'No requested ids were found to delete.' );
+                }
+                if ( count( $this->_batchIds ) !== $_rows )
+                {
+                    throw new BadRequestException( 'Batch Error: Not all requested ids were found to delete.' );
+                }
+                break;
+
+            case static::GET:
+                $result = $this->_dbConn->asArray()->include_docs( $_moreFields )->keys( $ids )->getAllDocs();
+                $_rows = Option::get( $result, 'rows' );
+                $_out = static::cleanRecords( $_rows, $_fields, $_moreFields );
+
+                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_batchIds ) );
+                $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
+                $_fieldArray = static::buildFieldArray( $_fields );
+                /** @var \MongoCursor $_result */
+                $_result = $this->_collection->find( $_criteria, $_fieldArray );
+                $_out = static::cleanRecords( iterator_to_array( $_result ) );
+                if ( count( $this->_batchIds ) !== count( $_out ) )
+                {
+                    throw new BadRequestException( 'Batch Error: Not all requested ids were found to retrieve.' );
+                }
+                break;
+
+            default:
+                break;
+        }
+
+        $this->_batchIds = array();
+        $this->_batchRecords = array();
+
+        return $_out;
+    }
+
+    /**
+     * @param mixed $record
+     *
+     * @return bool
+     */
+    protected function addToRollback( $record )
+    {
+        return parent::addToRollback( $record );
+    }
+
+    /**
+     * @return bool
+     */
+    protected function rollbackTransaction()
+    {
+        if ( !empty( $this->_rollbackRecords ) )
+        {
+            switch ( $this->getAction() )
+            {
+                case static::POST:
+                    // should be ids here from creation
+                    $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_rollbackRecords ) );
+                    $this->_collection->remove( $_filter );
+                    break;
+
+                case static::PUT:
+                case static::PATCH:
+                case static::MERGE:
+                case static::DELETE:
+                    foreach ( $this->_rollbackRecords as $_record )
+                    {
+                        $this->_collection->save( $_record );
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+
+            $this->_rollbackRecords = array();
+        }
+
+        return true;
+    }
 }

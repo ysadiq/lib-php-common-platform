@@ -51,6 +51,11 @@ class MongoDbSvc extends NoSqlDbSvc
      * @var \MongoDB
      */
     protected $_dbConn = null;
+    /**
+     * @var \MongoCollection
+     */
+    protected $_collection = null;
+
 
     //*************************************************************************
     //	Methods
@@ -197,10 +202,6 @@ class MongoDbSvc extends NoSqlDbSvc
 
             return array( 'resource' => $_resources );
         }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
-        }
         catch ( \Exception $_ex )
         {
             throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
@@ -318,280 +319,6 @@ class MongoDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function createRecords( $table, $records, $extras = array() )
-    {
-        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
-        $_coll = $this->selectTable( $table );
-
-        $_isSingle = ( 1 == count( $records ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-        $_useBatch = Option::getBool( $extras, 'batch', false );
-
-        $_out = array();
-        $_errors = array();
-        $_batched = array();
-        $_backup = array();
-        try
-        {
-            $_fieldInfo = array();
-
-            foreach ( $records as $_index => $_record )
-            {
-                try
-                {
-                    $_record = static::idToMongoId( $_record );
-                    $_parsed = $this->parseRecord( $_record, $_fieldInfo, $_ssFilters );
-                    if ( empty( $_parsed ) )
-                    {
-                        throw new BadRequestException( "No valid fields found in record $_index: " . print_r( $_record, true ) );
-                    }
-
-                    if ( $_useBatch )
-                    {
-                        $_batched[] = $_parsed;
-                        continue;
-                    }
-
-                    // simple insert
-                    $_result = $_coll->insert( $_parsed );
-                    static::processResult( $_result );
-
-                    if ( $_rollback )
-                    {
-                        $_backup[] = static::idToMongoId( Option::get( $_parsed, static::DEFAULT_ID_FIELD ) );
-                    }
-
-                    $_out[$_index] = static::cleanRecord( $_parsed, $_fields );
-                }
-                catch ( \Exception $_ex )
-                {
-                    if ( $_isSingle || $_useBatch )
-                    {
-                        throw $_ex;
-                    }
-
-                    if ( $_rollback )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    if ( !$_continue )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    // mark error and index for batch results
-                    $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                throw new BadRequestException();
-            }
-
-            if ( $_useBatch )
-            {
-                $_result = $_coll->batchInsert( $_batched, array( 'continueOnError' => !$_continue ) );
-                static::processResult( $_result );
-
-                if ( $_rollback )
-                {
-                    $_backup = static::recordsAsIds( $_batched );
-                }
-
-                $_out = static::cleanRecords( $_batched, $_fields );
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            $_msg = $_ex->getMessage();
-
-            $_context = null;
-            if ( !empty( $_errors ) )
-            {
-                $_context = array( 'error' => $_errors, 'record' => $_out );
-                $_msg = 'Batch Error: Not all records could be created.';
-            }
-
-            if ( $_rollback && !empty( $_backup ) )
-            {
-                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $_backup ) );
-                $_coll->remove( $_filter );
-
-                $_msg .= " All changes rolled back.";
-            }
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
-            }
-
-            throw new InternalServerErrorException( "Failed to create records in '$table'.\n$_msg", null, null, $_context );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function updateRecords( $table, $records, $extras = array() )
-    {
-        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
-        $_coll = $this->selectTable( $table );
-
-        $_isSingle = ( 1 == count( $records ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-
-        $_out = array();
-        $_errors = array();
-        $_backup = array();
-        try
-        {
-            $_fieldInfo = array();
-            $_fieldArray = ( $_rollback ) ? null : static::buildFieldArray( $_fields );
-            $_options = array( 'new' => !$_rollback );
-
-            foreach ( $records as $_index => $_record )
-            {
-                try
-                {
-                    $_id = Option::get( $_record, static::DEFAULT_ID_FIELD, null, true );
-                    if ( empty( $_id ) )
-                    {
-                        throw new BadRequestException( "Identifying field '_id' can not be empty for update record request." );
-                    }
-
-                    $_parsed = $this->parseRecord( $_record, $_fieldInfo, $_ssFilters, true );
-                    if ( empty( $_parsed ) )
-                    {
-                        throw new BadRequestException( "No valid fields found in record $_index: " . print_r( $_record, true ) );
-                    }
-
-                    $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-                    $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
-
-                    // simple update overwrite existing record
-                    $_result = $_coll->findAndModify( $_criteria, $_parsed, $_fieldArray, $_options );
-                    if ( empty( $_result ) )
-                    {
-                        throw new NotFoundException( "Record with id '$_id' not found." );
-                    }
-
-                    if ( $_rollback )
-                    {
-                        $_backup[] = $_result;
-                        $_parsed[static::DEFAULT_ID_FIELD] = $_id;
-                        $_out[$_index] = static::cleanRecord( $_parsed, $_fields );
-                    }
-                    else
-                    {
-                        $_out[$_index] = static::mongoIdToId( $_result );
-                    }
-                }
-                catch ( \Exception $_ex )
-                {
-                    if ( $_isSingle )
-                    {
-                        throw $_ex;
-                    }
-
-                    if ( $_rollback )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    if ( !$_continue )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    // mark error and index for batch results
-                    $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                throw new BadRequestException();
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            $_msg = $_ex->getMessage();
-
-            $_context = null;
-            if ( !empty( $_errors ) )
-            {
-                $_context = array( 'error' => $_errors, 'record' => $_out );
-                $_msg = 'Batch Error: Not all records could be updated.';
-            }
-
-            if ( $_rollback && !empty( $_backup ) )
-            {
-                foreach ( $_backup as $_record )
-                {
-                    $_coll->save( $_record );
-                }
-
-                $_msg .= " All changes rolled back.";
-            }
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
-            }
-
-            throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
@@ -600,11 +327,11 @@ class MongoDbSvc extends NoSqlDbSvc
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
-        $_fieldInfo = array();
+        $_fieldsInfo = $this->getFieldsInfo( $table );
         $_fieldArray = static::buildFieldArray( $_fields );
 
-        static::removeIds( $record );
-        $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
+        static::removeIds( $record, static::DEFAULT_ID_FIELD );
+        $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
         if ( empty( $_parsed ) )
         {
             throw new BadRequestException( 'No valid fields found in request: ' . print_r( $record, true ) );
@@ -628,334 +355,9 @@ class MongoDbSvc extends NoSqlDbSvc
 
             return array();
         }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
-        }
         catch ( \Exception $_ex )
         {
             throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
-    {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
-        $_coll = $this->selectTable( $table );
-
-        $_isSingle = ( 1 == count( $ids ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-        $_useBatch = Option::getBool( $extras, 'batch', false );
-
-        static::removeIds( $record );
-        $_fieldInfo = array();
-        $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
-        if ( empty( $_parsed ) )
-        {
-            throw new BadRequestException( 'No valid fields found in request: ' . print_r( $record, true ) );
-        }
-
-        $_out = array();
-        $_errors = array();
-        $_batched = array();
-        $_backup = array();
-        try
-        {
-            $_fieldArray = ( $_rollback ) ? null : static::buildFieldArray( $_fields );
-            $_options = array( 'new' => !$_rollback );
-
-            foreach ( $ids as $_index => $_id )
-            {
-                try
-                {
-                    if ( empty( $_id ) )
-                    {
-                        throw new BadRequestException( "Identifying field '_id' can not be empty for update record request." );
-                    }
-
-                    if ( $_useBatch )
-                    {
-                        $_batched[] = static::idToMongoId( $_id );
-                        continue;
-                    }
-
-                    $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-                    $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
-
-                    // simple update overwrite existing record
-                    $_result = $_coll->findAndModify( $_criteria, $_parsed, $_fieldArray, $_options );
-                    if ( empty( $_result ) )
-                    {
-                        throw new NotFoundException( "Record with id '$_id' not found." );
-                    }
-
-                    if ( $_rollback )
-                    {
-                        $_backup[] = $_result;
-                        $_parsed[static::DEFAULT_ID_FIELD] = $_id;
-                        $_out[$_index] = static::cleanRecord( $_parsed, $_fields );
-                    }
-                    else
-                    {
-                        $_out[$_index] = static::mongoIdToId( $_result );
-                    }
-                }
-                catch ( \Exception $_ex )
-                {
-                    if ( $_isSingle )
-                    {
-                        throw $_ex;
-                    }
-
-                    if ( $_rollback )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    if ( !$_continue )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    // mark error and index for batch results
-                    $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                throw new BadRequestException();
-            }
-
-            if ( $_useBatch )
-            {
-                // build criteria from filter parameters
-                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $_batched ) );
-                $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
-
-                $_result = $_coll->update( $_criteria, $_parsed, null, array( 'multiple' => true ) );
-                $_rows = static::processResult( $_result );
-                if ( 0 === $_rows )
-                {
-                    throw new NotFoundException( 'No requested records were found to delete.' );
-                }
-
-                if ( count( $_batched ) !== $_rows )
-                {
-                    throw new BadRequestException( 'Batch Error: Not all requested records were found to update.' );
-                }
-
-                $_parsed = static::cleanRecord( $_parsed, $_fields );
-                foreach ( $ids as $_id )
-                {
-                    $_parsed[static::DEFAULT_ID_FIELD] = $_id;
-                    $_out[] = $_parsed;
-                }
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            $_msg = $_ex->getMessage();
-
-            $_context = null;
-            if ( !empty( $_errors ) )
-            {
-                $_context = array( 'error' => $_errors, 'record' => $_out );
-                $_msg = 'Batch Error: Not all records could be updated.';
-            }
-
-            if ( $_rollback && !empty( $_backup ) )
-            {
-                foreach ( $_backup as $_record )
-                {
-                    $_coll->save( $_record );
-                }
-
-                $_msg .= " All changes rolled back.";
-            }
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
-            }
-
-            throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function mergeRecords( $table, $records, $extras = array() )
-    {
-        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
-        $_coll = $this->selectTable( $table );
-
-        $_isSingle = ( 1 == count( $records ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-
-        $_out = array();
-        $_errors = array();
-        $_backup = array();
-        try
-        {
-            $_fieldInfo = array();
-            $_fieldArray = ( $_rollback ) ? null : static::buildFieldArray( $_fields );
-            $_options = array( 'new' => !$_rollback );
-
-            foreach ( $records as $_index => $_record )
-            {
-                try
-                {
-                    $_id = Option::get( $_record, static::DEFAULT_ID_FIELD, null, true );
-                    if ( empty( $_id ) )
-                    {
-                        throw new BadRequestException( "Identifying field '_id' can not be empty for patch record request." );
-                    }
-
-                    if ( !static::doesRecordContainModifier( $_record ) )
-                    {
-                        $_parsed = $this->parseRecord( $_record, $_fieldInfo, $_ssFilters, true );
-                        if ( empty( $_parsed ) )
-                        {
-                            throw new BadRequestException( "No valid fields found in record $_index: " . print_r( $_record, true ) );
-                        }
-
-                        $_parsed = array( '$set' => $_parsed );
-                    }
-                    else
-                    {
-
-                        $_parsed = $_record;
-                        if ( empty( $_parsed ) )
-                        {
-                            throw new BadRequestException( "No valid fields found in record $_index: " . print_r( $_record, true ) );
-                        }
-                    }
-
-                    $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-                    $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
-
-                    // simple update merging with existing record
-                    $_result = $_coll->findAndModify( $_criteria, $_parsed, $_fieldArray, $_options );
-                    if ( empty( $_result ) )
-                    {
-                        throw new NotFoundException( "Record with id '$_id' not found." );
-                    }
-
-                    if ( $_rollback )
-                    {
-                        $_backup[] = $_result;
-                        $_parsed[static::DEFAULT_ID_FIELD] = $_id;
-                        $_out[$_index] = static::cleanRecord( $_parsed, $_fields );
-                    }
-                    else
-                    {
-                        $_out[$_index] = static::mongoIdToId( $_result );
-                    }
-                }
-                catch ( \Exception $_ex )
-                {
-                    if ( $_isSingle )
-                    {
-                        throw $_ex;
-                    }
-
-                    if ( $_rollback )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    if ( !$_continue )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    // mark error and index for batch results
-                    $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                throw new BadRequestException();
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            $_msg = $_ex->getMessage();
-
-            $_context = null;
-            if ( !empty( $_errors ) )
-            {
-                $_context = array( 'error' => $_errors, 'record' => $_out );
-                $_msg = 'Batch Error: Not all records could be patched.';
-            }
-
-            if ( $_rollback && !empty( $_backup ) )
-            {
-                foreach ( $_backup as $_record )
-                {
-                    $_coll->save( $_record );
-                }
-
-                $_msg .= " All changes rolled back.";
-            }
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
-            }
-
-            throw new InternalServerErrorException( "Failed to patch records in '$table'.\n$_msg", null, null, $_context );
         }
     }
 
@@ -970,13 +372,13 @@ class MongoDbSvc extends NoSqlDbSvc
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
-        $_fieldInfo = array();
+        $_fieldsInfo = $this->getFieldsInfo( $table );
         $_fieldArray = static::buildFieldArray( $_fields );
 
-        static::removeIds( $record );
+        static::removeIds( $record, static::DEFAULT_ID_FIELD );
         if ( !static::doesRecordContainModifier( $record ) )
         {
-            $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
+            $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
             if ( empty( $_parsed ) )
             {
                 throw new BadRequestException( 'No valid fields found in request: ' . print_r( $record, true ) );
@@ -1019,184 +421,6 @@ class MongoDbSvc extends NoSqlDbSvc
         catch ( \Exception $_ex )
         {
             throw new InternalServerErrorException( "Failed to update records in '$table'.\n{$_ex->getMessage()}" );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function mergeRecordsByIds( $table, $record, $ids, $extras = array() )
-    {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
-        $_coll = $this->selectTable( $table );
-
-        $_isSingle = ( 1 == count( $ids ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-        $_useBatch = Option::getBool( $extras, 'batch', false );
-
-        static::removeIds( $record );
-        $_fieldInfo = array();
-        if ( !static::doesRecordContainModifier( $record ) )
-        {
-            $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
-            if ( empty( $_parsed ) )
-            {
-                throw new BadRequestException( 'No valid fields found in request: ' . print_r( $record, true ) );
-            }
-
-            $_parsed = array( '$set' => $_parsed );
-        }
-        else
-        {
-
-            $_parsed = $record;
-            if ( empty( $_parsed ) )
-            {
-                throw new BadRequestException( 'No valid fields found in request: ' . print_r( $record, true ) );
-            }
-        }
-
-        $_out = array();
-        $_errors = array();
-        $_batched = array();
-        $_backup = array();
-        try
-        {
-            $_fieldArray = ( $_rollback ) ? null : static::buildFieldArray( $_fields );
-            $_options = array( 'new' => !$_rollback );
-
-            foreach ( $ids as $_index => $_id )
-            {
-                try
-                {
-                    if ( empty( $_id ) )
-                    {
-                        throw new BadRequestException( "Identifying field '_id' can not be empty for update record request." );
-                    }
-
-                    if ( $_useBatch )
-                    {
-                        $_batched[] = static::idToMongoId( $_id );
-                        continue;
-                    }
-
-                    $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-                    $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
-
-                    // simple update merging with existing record
-                    $_result = $_coll->findAndModify( $_criteria, $_parsed, $_fieldArray, $_options );
-                    if ( empty( $_result ) )
-                    {
-                        throw new NotFoundException( "Record with id '$_id' not found." );
-                    }
-
-                    if ( $_rollback )
-                    {
-                        $_backup[] = $_result;
-                        $_parsed[static::DEFAULT_ID_FIELD] = $_id;
-                        $_out[$_index] = static::cleanRecord( $_parsed, $_fields );
-                    }
-                    else
-                    {
-                        $_out[$_index] = static::mongoIdToId( $_result );
-                    }
-                }
-                catch ( \Exception $_ex )
-                {
-                    if ( $_isSingle )
-                    {
-                        throw $_ex;
-                    }
-
-                    if ( $_rollback )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    if ( !$_continue )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    // mark error and index for batch results
-                    $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                throw new BadRequestException();
-            }
-
-            if ( $_useBatch )
-            {
-                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $_batched ) );
-                $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
-
-                $_coll->update( $_criteria, $_parsed, array( 'multiple' => true ) );
-                if ( static::_requireMoreFields( $_fields ) )
-                {
-                    /** @var \MongoCursor $_result */
-                    $_result = $_coll->find( $_criteria, $_fieldArray );
-                    $_out = static::mongoIdsToIds( iterator_to_array( $_result ) );
-                }
-                else
-                {
-                    $_out = static::idsAsRecords( static::mongoIdsToIds( $_batched ) );
-                }
-
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            $_msg = $_ex->getMessage();
-
-            $_context = null;
-            if ( !empty( $_errors ) )
-            {
-                $_context = array( 'error' => $_errors, 'record' => $_out );
-                $_msg = 'Batch Error: Not all records could be patched.';
-            }
-
-            if ( $_rollback && !empty( $_backup ) )
-            {
-                foreach ( $_backup as $_record )
-                {
-                    $_coll->save( $_record );
-                }
-
-                $_msg .= " All changes rolled back.";
-            }
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
-            }
-
-            throw new InternalServerErrorException( "Failed to patch records in '$table'.\n$_msg", null, null, $_context );
         }
     }
 
@@ -1228,17 +452,6 @@ class MongoDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function deleteRecords( $table, $records, $extras = array() )
-    {
-        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
-        $_ids = static::recordsAsIds( $records );
-
-        return $this->deleteRecordsByIds( $table, $_ids, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() )
     {
         if ( empty( $filter ) )
@@ -1265,175 +478,9 @@ class MongoDbSvc extends NoSqlDbSvc
 
             return static::cleanRecords( $_out );
         }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
-        }
         catch ( \Exception $_ex )
         {
             throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteRecordsByIds( $table, $ids, $extras = array() )
-    {
-        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
-        $_coll = $this->selectTable( $table );
-
-        $_isSingle = ( 1 == count( $ids ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-        $_useBatch = Option::getBool( $extras, 'batch', false );
-
-        $_out = array();
-        $_errors = array();
-        $_batched = array();
-        $_backup = array();
-        try
-        {
-            $_fieldArray = ( $_rollback ) ? null : static::buildFieldArray( $_fields );
-            $_options = array( 'remove' => true );
-
-            foreach ( $ids as $_index => $_id )
-            {
-                try
-                {
-                    if ( empty( $_id ) )
-                    {
-                        throw new BadRequestException( "Identifying field '_id' can not be empty for delete record request." );
-                    }
-
-                    if ( $_useBatch )
-                    {
-                        $_batched[] = static::idToMongoId( $_id );
-                        continue;
-                    }
-
-                    $_filter = array( static::DEFAULT_ID_FIELD => static::idToMongoId( $_id ) );
-                    $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
-
-                    $_result = $_coll->findAndModify( $_criteria, null, $_fieldArray, $_options );
-                    if ( empty( $_result ) )
-                    {
-                        throw new NotFoundException( "Record with id '$_id' not found." );
-                    }
-
-                    if ( $_rollback )
-                    {
-                        $_backup[] = $_result;
-                        $_out[$_index] = static::cleanRecord( $_result, $_fields );
-                    }
-                    else
-                    {
-                        $_out[$_index] = static::mongoIdToId( $_result );
-                    }
-                }
-                catch ( \Exception $_ex )
-                {
-                    if ( $_isSingle )
-                    {
-                        throw $_ex;
-                    }
-
-                    if ( $_rollback )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    if ( !$_continue )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    // mark error and index for batch results
-                    $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                throw new BadRequestException();
-            }
-
-            if ( $_useBatch )
-            {
-                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $_batched ) );
-                $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
-
-                if ( static::_requireMoreFields( $_fields ) )
-                {
-                    /** @var \MongoCursor $_result */
-                    $_result = $_coll->find( $_criteria, $_fieldArray );
-                    $_out = static::mongoIdsToIds( iterator_to_array( $_result ) );
-                }
-                else
-                {
-                    $_out = static::idsAsRecords( static::mongoIdsToIds( $_batched ) );
-                }
-
-                $_result = $_coll->remove( $_criteria );
-                $_rows = static::processResult( $_result );
-                if ( 0 === $_rows )
-                {
-                    throw new NotFoundException( 'No requested ids were found to delete.' );
-                }
-                if ( count( $ids ) !== $_rows )
-                {
-                    throw new BadRequestException( 'Batch Error: Not all requested ids were found to delete.' );
-                }
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            $_msg = $_ex->getMessage();
-
-            $_context = null;
-            if ( !empty( $_errors ) )
-            {
-                $_context = array( 'error' => $_errors, 'record' => $_out );
-                $_msg = 'Batch Error: Not all records could be deleted.';
-            }
-
-            if ( $_rollback && !empty( $_backup ) )
-            {
-                foreach ( $_backup as $_record )
-                {
-                    $_coll->save( $_record );
-                }
-
-                $_msg .= " All changes rolled back.";
-            }
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
-            }
-
-            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n$_msg", null, null, $_context );
         }
     }
 
@@ -1499,78 +546,11 @@ class MongoDbSvc extends NoSqlDbSvc
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function retrieveRecords( $table, $records, $extras = array() )
+    protected function getIdsInfo( $table, $fields_info = null, &$requested = null )
     {
-        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
-        $_ids = static::recordsAsIds( $records );
+        $requested = static::DEFAULT_ID_FIELD; // can only be this
 
-        return $this->retrieveRecordsByIds( $table, $_ids, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function retrieveRecordsByIds( $table, $ids, $extras = array() )
-    {
-        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
-        $_coll = $this->selectTable( $table );
-
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-
-        $_fieldArray = static::buildFieldArray( $_fields );
-
-        $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => static::idsToMongoIds( $ids ) ) );
-        $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
-
-        try
-        {
-//            $_result = $_coll->findOne( $_criteria, $_fieldArray );
-//            if ( empty( $_result ) && is_numeric( $id ) )
-//            {
-//                // defaults to string ids, could be numeric, try that
-//                $id = ( $id == strval( intval( $id ) ) ) ? intval( $id ) : floatval( $id );
-//                $_result = $_coll->findOne( array( static::DEFAULT_ID_FIELD => $id ), $_fieldArray );
-//            }
-            /** @var \MongoCursor $_result */
-            $_result = $_coll->find( $_criteria, $_fieldArray );
-            $_data = iterator_to_array( $_result );
-
-            $_out = array();
-            foreach ( $ids as $_id )
-            {
-                $_foundRecord = null;
-                foreach ( $_data as $_record )
-                {
-                    if ( isset( $_record[static::DEFAULT_ID_FIELD] ) && ( $_record[static::DEFAULT_ID_FIELD] == $_id ) )
-                    {
-                        $_foundRecord = $_record;
-                        break;
-                    }
-                }
-                if ( isset( $_foundRecord ) )
-                {
-                    $_out[] = $_foundRecord;
-                }
-                else
-                {
-                    throw new NotFoundException( "Record with id '$_id' not found." );
-                }
-            }
-
-            return static::cleanRecords( $_out );
-        }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to get records from '$table'.\n{$_ex->getMessage()}" );
-        }
+        return array( array( 'name' => static::DEFAULT_ID_FIELD ) );
     }
 
     /**
@@ -1923,6 +903,39 @@ class MongoDbSvc extends NoSqlDbSvc
     }
 
     /**
+     * @param array $record
+     * @param bool  $for_update
+     *
+     * @return mixed
+     */
+    protected function formatRecordToNative( $record, $for_update = false )
+    {
+        if ( $for_update )
+        {
+
+        }
+
+        return static::idToMongoId( $record );
+    }
+
+    /**
+     * @param mixed $native
+     * @param bool  $for_update
+     *
+     * @return array
+     */
+    protected function formatRecordFromNative( $native, $for_update = false )
+    {
+        // base class does nothing so far
+        if ( $for_update )
+        {
+
+        }
+
+        return static::mongoIdToId( $native );
+    }
+
+    /**
      * @param array        $record
      * @param string|array $include List of keys to include in the output record
      * @param string|array $id_field
@@ -2091,6 +1104,17 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     protected function parseRecord( $record, $avail_fields, $filter_info = null, $for_update = false, $old_record = null )
     {
+        switch ( $this->getAction() )
+        {
+            case static::MERGE:
+            case static::PATCH:
+                if ( static::doesRecordContainModifier( $record ) )
+                {
+                    return $record;
+                }
+                break;
+        }
+
 //        $record = DataFormat::arrayKeyLower( $record );
         $_parsed = ( empty( $avail_fields ) ) ? $record : array();
         if ( !empty( $avail_fields ) )
@@ -2189,5 +1213,430 @@ class MongoDbSvc extends NoSqlDbSvc
         }
 
         return Option::get( $result, 'n' );
+    }
+
+    /**
+     * @param mixed|null $handle
+     *
+     * @return bool
+     */
+    protected function initTransaction( $handle = null )
+    {
+        $this->_collection = $this->selectTable( $handle );
+
+        return parent::initTransaction( $handle );
+    }
+
+    /**
+     * @param mixed      $record
+     * @param mixed      $id
+     * @param null|array $extras Additional items needed to complete the transaction
+     * @param bool       $save_old
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return null|array Array of output fields
+     */
+    protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false )
+    {
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+        $_fields = Option::get( $extras, 'fields' );
+        $_fieldsInfo = Option::get( $extras, 'fields_info' );
+        $_requireMore = Option::get( $extras, 'require_more' );
+        $_continue = Option::getBool( $extras, 'continue' );
+        $_updates = Option::get( $extras, 'updates' );
+
+        // convert to native format
+        $id = static::idToMongoId( $id );
+
+        $_fieldArray = ( $save_old ) ? null : static::buildFieldArray( $_fields );
+
+        $_out = array();
+        switch ( $this->getAction() )
+        {
+            case static::POST:
+                $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters );
+                if ( empty( $_parsed ) )
+                {
+                    throw new BadRequestException( 'No valid fields were found in record.' );
+                }
+
+                // convert to native format
+                $record = static::idToMongoId( $_parsed );
+
+                if ( !$_continue && !$save_old )
+                {
+                    return parent::addToTransaction( $record, $id );
+                }
+
+                $_result = $this->_collection->insert( $record );
+                static::processResult( $_result );
+
+                $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
+
+                if ( $save_old )
+                {
+                    $this->addToRollback( static::recordAsId( $record, static::DEFAULT_ID_FIELD ) );
+                }
+                break;
+
+            case static::PUT:
+                if ( !empty( $_updates ) )
+                {
+                    $_parsed = $this->parseRecord( $_updates, $_fieldsInfo, $_ssFilters, true );
+                    $_updates = $_parsed;
+                }
+                else
+                {
+                    $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
+                    // convert to native format
+                    $record = static::idToMongoId( $_parsed );
+                }
+                if ( empty( $_parsed ) )
+                {
+                    throw new BadRequestException( 'No valid fields were found in record.' );
+                }
+
+                // only update/patch by ids can use batching
+                if ( !$_continue && !$save_old && !empty( $_updates ) )
+                {
+                    return parent::addToTransaction( null, $id );
+                }
+
+                $_options = array( 'new' => !$save_old );
+                if ( empty( $_updates ) )
+                {
+                    $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
+                    static::removeIds( $record, static::DEFAULT_ID_FIELD );
+                    $_updates = $record;
+                }
+                else
+                {
+                    $record = $_updates;
+                    $record[static::DEFAULT_ID_FIELD] = $id;
+                    $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
+                }
+
+                // simple update overwrite existing record
+                $_filter = array( static::DEFAULT_ID_FIELD => $id );
+                $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
+                $_result = $this->_collection->findAndModify( $_criteria, $_updates, $_fieldArray, $_options );
+                if ( empty( $_result ) )
+                {
+                    throw new NotFoundException( "Record with id '" . static::mongoIdToId( $id ) . "' not found." );
+                }
+
+                if ( $save_old )
+                {
+                    $this->addToRollback( $_result );
+                }
+                else
+                {
+                    $_out = static::mongoIdToId( $_result );
+                }
+                break;
+
+            case static::MERGE:
+            case static::PATCH:
+                if ( !empty( $_updates ) )
+                {
+                    $_parsed = $this->parseRecord( $_updates, $_fieldsInfo, $_ssFilters, true );
+                    $_updates = $_parsed;
+                }
+                else
+                {
+                    $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
+                    // convert to native format
+                    $record = static::idToMongoId( $_parsed );
+                }
+                if ( empty( $_parsed ) )
+                {
+                    throw new BadRequestException( 'No valid fields were found in record.' );
+                }
+
+                // only update/patch by ids can use batching
+                if ( !$_continue && !$save_old && !empty( $_updates ) )
+                {
+                    return parent::addToTransaction( null, $id );
+                }
+
+                $_options = array( 'new' => !$save_old );
+                if ( empty( $_updates ) )
+                {
+                    static::removeIds( $record, static::DEFAULT_ID_FIELD );
+                    $_updates = $record;
+                }
+
+                $_updates = array( '$set' => $_updates );
+
+                // simple merge with existing record
+                $_filter = array( static::DEFAULT_ID_FIELD => $id );
+                $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
+                $_result = $this->_collection->findAndModify( $_criteria, $_updates, $_fieldArray, $_options );
+                if ( empty( $_result ) )
+                {
+                    throw new NotFoundException( "Record with id '" . static::mongoIdToId( $id ) . "' not found." );
+                }
+
+                if ( $save_old )
+                {
+                    $this->addToRollback( $_result );
+
+                    // need to retrieve the full record here
+                    if ( $_requireMore )
+                    {
+                        /** @var \MongoCursor $_result */
+                        $_result = $this->_collection->findOne( $_criteria, $_fieldArray );
+                        $_out = static::mongoIdToId( $_result );
+                    }
+                    else
+                    {
+                        $_out = array( static::DEFAULT_ID_FIELD => static::mongoIdToId( $id ) );
+                    }
+                }
+                else
+                {
+                    $_out = static::mongoIdToId( $_result );
+                }
+                break;
+
+            case static::DELETE:
+                if ( !$_continue && !$save_old )
+                {
+                    return parent::addToTransaction( null, $id );
+                }
+
+                $_options = array( 'remove' => true );
+
+                // simple delete existing record
+                $_filter = array( static::DEFAULT_ID_FIELD => $id );
+                $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
+                $_result = $this->_collection->findAndModify( $_criteria, null, $_fieldArray, $_options );
+                if ( empty( $_result ) )
+                {
+                    throw new NotFoundException( "Record with id '" . static::mongoIdToId( $id ) . "' not found." );
+                }
+
+                if ( $save_old )
+                {
+                    $this->addToRollback( $_result );
+                    $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
+                }
+                else
+                {
+                    $_out = static::mongoIdToId( $_result );
+                }
+                break;
+
+            case static::GET:
+                return parent::addToTransaction( null, $id );
+//                $_filter = array( static::DEFAULT_ID_FIELD => $id );
+//                $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
+//                $_result = $this->_collection->findOne( $_criteria, $_fieldArray );
+//                if ( empty( $_result ) )
+//                {
+//                    throw new NotFoundException( "Record with id '" . static::mongoIdToId( $id ) . "' not found." );
+//                }
+//
+//                $_out = static::mongoIdToId( $_result );
+//                break;
+        }
+
+        return $_out;
+    }
+
+    /**
+     * @param null|array $extras
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array
+     */
+    protected function commitTransaction( $extras = null )
+    {
+        if ( empty( $this->_batchRecords ) && empty( $this->_batchIds ) )
+        {
+            return null;
+        }
+
+        $_updates = Option::get( $extras, 'updates' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+        $_fields = Option::get( $extras, 'fields' );
+        $_requireMore = Option::get( $extras, 'require_more' );
+
+        $_out = array();
+        switch ( $this->getAction() )
+        {
+            case static::POST:
+                $_result = $this->_collection->batchInsert( $this->_batchRecords, array( 'continueOnError' => false ) );
+                static::processResult( $_result );
+
+                $_out = static::cleanRecords( $this->_batchRecords, $_fields );
+                break;
+            case static::PUT:
+                if ( empty( $_updates ) )
+                {
+                    throw new BadRequestException( 'Batch operation not supported for update by records.' );
+                }
+
+                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_batchIds ) );
+                $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
+
+                $_result = $this->_collection->update( $_criteria, $_updates, null, array( 'multiple' => true ) );
+                $_rows = static::processResult( $_result );
+                if ( 0 === $_rows )
+                {
+                    throw new NotFoundException( 'No requested records were found to update.' );
+                }
+
+                if ( count( $this->_batchIds ) !== $_rows )
+                {
+                    throw new BadRequestException( 'Batch Error: Not all requested records were found to update.' );
+                }
+
+                if ( $_requireMore )
+                {
+                    $_fieldArray = static::buildFieldArray( $_fields );
+                    /** @var \MongoCursor $_result */
+                    $_result = $this->_collection->find( $_criteria, $_fieldArray );
+                    $_out = static::cleanRecords( iterator_to_array( $_result ) );
+                }
+                else
+                {
+                    $_out = static::idsAsRecords( static::mongoIdsToIds( $this->_batchIds ), static::DEFAULT_ID_FIELD );
+                }
+                break;
+
+            case static::MERGE:
+            case static::PATCH:
+                if ( empty( $_updates ) )
+                {
+                    throw new BadRequestException( 'Batch operation not supported for patch by records.' );
+                }
+
+                $_updates = array( '$set' => $_updates );
+
+                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_batchIds ) );
+                $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
+
+                $_result = $this->_collection->update( $_criteria, $_updates, array( 'multiple' => true ) );
+                $_rows = static::processResult( $_result );
+                if ( 0 === $_rows )
+                {
+                    throw new NotFoundException( 'No requested records were found to patch.' );
+                }
+
+                if ( count( $this->_batchIds ) !== $_rows )
+                {
+                    throw new BadRequestException( 'Batch Error: Not all requested records were found to patch.' );
+                }
+
+                if ( $_requireMore )
+                {
+                    $_fieldArray = static::buildFieldArray( $_fields );
+                    /** @var \MongoCursor $_result */
+                    $_result = $this->_collection->find( $_criteria, $_fieldArray );
+                    $_out = static::cleanRecords( iterator_to_array( $_result ) );
+                }
+                else
+                {
+                    $_out = static::idsAsRecords( static::mongoIdsToIds( $this->_batchIds ), static::DEFAULT_ID_FIELD );
+                }
+                break;
+
+            case static::DELETE:
+                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_batchIds ) );
+                $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
+
+                if ( $_requireMore )
+                {
+                    $_fieldArray = static::buildFieldArray( $_fields );
+                    /** @var \MongoCursor $_result */
+                    $_result = $this->_collection->find( $_criteria, $_fieldArray );
+                    $_out = static::cleanRecords( iterator_to_array( $_result ) );
+                }
+                else
+                {
+                    $_out = static::idsAsRecords( static::mongoIdsToIds( $this->_batchIds ), static::DEFAULT_ID_FIELD );
+                }
+
+                $_result = $this->_collection->remove( $_criteria );
+                $_rows = static::processResult( $_result );
+                if ( 0 === $_rows )
+                {
+                    throw new NotFoundException( 'No requested ids were found to delete.' );
+                }
+                if ( count( $this->_batchIds ) !== $_rows )
+                {
+                    throw new BadRequestException( 'Batch Error: Not all requested ids were found to delete.' );
+                }
+                break;
+
+            case static::GET:
+                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_batchIds ) );
+                $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
+                $_fieldArray = static::buildFieldArray( $_fields );
+                /** @var \MongoCursor $_result */
+                $_result = $this->_collection->find( $_criteria, $_fieldArray );
+                $_out = static::cleanRecords( iterator_to_array( $_result ) );
+                if ( count( $this->_batchIds ) !== count( $_out ) )
+                {
+                    throw new BadRequestException( 'Batch Error: Not all requested ids were found to retrieve.' );
+                }
+                break;
+
+            default:
+                break;
+        }
+
+        $this->_batchIds = array();
+        $this->_batchRecords = array();
+
+        return $_out;
+    }
+
+    /**
+     * @param mixed $record
+     *
+     * @return bool
+     */
+    protected function addToRollback( $record )
+    {
+        return parent::addToRollback( $record );
+    }
+
+    /**
+     * @return bool
+     */
+    protected function rollbackTransaction()
+    {
+        if ( !empty( $this->_rollbackRecords ) )
+        {
+            switch ( $this->getAction() )
+            {
+                case static::POST:
+                    // should be ids here from creation
+                    $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_rollbackRecords ) );
+                    $this->_collection->remove( $_filter );
+                    break;
+
+                case static::PUT:
+                case static::PATCH:
+                case static::MERGE:
+                case static::DELETE:
+                    foreach ( $this->_rollbackRecords as $_record )
+                    {
+                        $this->_collection->save( $_record );
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+
+            $this->_rollbackRecords = array();
+        }
+
+        return true;
     }
 }

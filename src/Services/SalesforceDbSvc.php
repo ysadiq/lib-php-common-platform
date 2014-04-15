@@ -758,7 +758,7 @@ class SalesforceDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function truncateTable( $table )
+    public function truncateTable( $table, $extras = array() )
     {
         // todo faster way?
         $_records = $this->retrieveRecordsByFilter( $table, '', '' );
@@ -1214,5 +1214,142 @@ class SalesforceDbSvc extends BaseDbSvc
         }
 
         return $fields;
+    }
+
+    /**
+     * @param mixed|null $handle
+     *
+     * @return bool
+     */
+    protected function initTransaction( $handle = null )
+    {
+        $this->_collection = $handle;
+        $this->_batchRecords = array();
+        $this->_rollbackRecords = array();
+
+        return true;
+    }
+
+    /**
+     * @param mixed      $record
+     * @param mixed      $id
+     * @param null|array $extras Additional items needed to complete the transaction
+     * @param bool       $save_old
+     * @param bool       $batch  Request for batch, if applicable
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotImplementedException
+     * @return null|array Array of output fields
+     */
+    protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false, $batch = false )
+    {
+        $_parsed = Option::get( $extras, 'updates' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+        $_fields = Option::get( $extras, 'fields' );
+
+        $_out = array();
+        if ( !empty( $this->_batchRecords ) )
+        {
+            switch ( $this->getAction() )
+            {
+                case static::POST:
+                    break;
+                case static::PUT:
+                    break;
+
+                case static::MERGE:
+                case static::PATCH:
+                    break;
+
+                case static::DELETE:
+                    break;
+
+                default:
+                    break;
+            }
+
+            $this->_batchRecords = array();
+        }
+
+        return $_out;
+    }
+
+    /**
+     * @param null|array $extras
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array
+     */
+    protected function commitTransaction( $extras = null )
+    {
+        $_parsed = Option::get( $extras, 'updates' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+        $_fields = Option::get( $extras, 'fields' );
+
+        $_out = array();
+        if ( !empty( $this->_batchRecords ) )
+        {
+            switch ( $this->getAction() )
+            {
+                case static::POST:
+                    break;
+                case static::PUT:
+                    break;
+
+                case static::MERGE:
+                case static::PATCH:
+                    break;
+
+                case static::DELETE:
+                    break;
+
+                default:
+                    break;
+            }
+
+            $this->_batchRecords = array();
+        }
+
+        return $_out;
+    }
+
+    /**
+     * @param mixed $record
+     *
+     * @return bool
+     */
+    protected function addToRollback( $record )
+    {
+        $this->_rollbackRecords[] = $record;
+
+        return true;
+    }
+
+    /**
+     * @return bool
+     */
+    protected function rollbackTransaction()
+    {
+        if ( !empty( $this->_rollbackRecords ) )
+        {
+            switch ( $this->getAction() )
+            {
+                case static::POST:
+                    break;
+
+                case static::PUT:
+                case static::PATCH:
+                case static::MERGE:
+                case static::DELETE:
+                    break;
+
+                default:
+                    break;
+            }
+
+            $this->_rollbackRecords = array();
+        }
+
+        return true;
     }
 }

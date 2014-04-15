@@ -24,6 +24,9 @@ use Aws\SimpleDb\SimpleDbClient;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Exceptions\RestException;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Utilities;
 use Kisma\Core\Utility\Option;
 
@@ -35,828 +38,332 @@ use Kisma\Core\Utility\Option;
  */
 class AwsSimpleDbSvc extends NoSqlDbSvc
 {
-	//*************************************************************************
-	//	Constants
-	//*************************************************************************
-
-	const DEFAULT_REGION = Region::US_WEST_1;
-	/**
-	 * Default record identifier field
-	 */
-	const DEFAULT_ID_FIELD = 'Name';
-
-	//*************************************************************************
-	//	Members
-	//*************************************************************************
-
-	/**
-	 * @var SimpleDbClient|null
-	 */
-	protected $_dbConn = null;
-
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
-
-	/**
-	 * Create a new AwsSimpleDbSvc
-	 *
-	 * @param array $config
-	 *
-	 * @throws \InvalidArgumentException
-	 * @throws \Exception
-	 */
-	public function __construct( $config )
-	{
-		parent::__construct( $config );
-
-		$_credentials = Option::get( $config, 'credentials' );
-		$_parameters = Option::get( $config, 'parameters' );
-
-		// old way
-		$_accessKey = Option::get( $_credentials, 'access_key' );
-		$_secretKey = Option::get( $_credentials, 'secret_key' );
-		if ( !empty( $_accessKey ) )
-		{
-			// old way, replace with 'key'
-			$_credentials['key'] = $_accessKey;
-		}
-
-		if ( !empty( $_secretKey ) )
-		{
-			// old way, replace with 'key'
-			$_credentials['secret'] = $_secretKey;
-		}
-
-		$_region = Option::get( $_credentials, 'region' );
-		if ( empty( $_region ) )
-		{
-			// use a default region if not present
-			$_credentials['region'] = static::DEFAULT_REGION;
-		}
-
-		// reply in simplified blend format by default
-		if ( null !== ( $_blendFormat = Option::get( $_parameters, 'blend_format' ) ) )
-		{
-			$this->_defaultBlendFormat = DataFormat::boolval( $_blendFormat );
-		}
-
-		try
-		{
-			$this->_dbConn = SimpleDbClient::factory( $_credentials );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Amazon SimpleDb Service Exception:\n{$ex->getMessage()}" );
-		}
-	}
-
-	/**
-	 * Object destructor
-	 */
-	public function __destruct()
-	{
-		try
-		{
-			$this->_dbConn = null;
-		}
-		catch ( \Exception $ex )
-		{
-			error_log( "Failed to disconnect from database.\n{$ex->getMessage()}" );
-		}
-	}
-
-	/**
-	 * @throws \Exception
-	 */
-	protected function checkConnection()
-	{
-		if ( empty( $this->_dbConn ) )
-		{
-			throw new InternalServerErrorException( 'Database connection has not been initialized.' );
-		}
-	}
-
-	/**
-	 * @param $name
-	 *
-	 * @return string
-	 */
-	public function correctTableName( $name )
-	{
-		return $name;
-	}
-
-	// REST service implementation
-
-	protected function _getTablesAsArray()
-	{
-		$_out = array();
-		$_token = null;
-		do
-		{
-			$_result = $this->_dbConn->listDomains(
-				array(
-					'MxNumberOfDomains' => 100, // arbitrary limit
-					'NextToken'         => $_token
-				)
-			);
-			$_domains = $_result['DomainNames'];
-			$_token = $_result['NextToken'];
-
-			if ( !empty( $_domains ) )
-			{
-				$_out = array_merge( $_out, $_domains );
-			}
-		}
-		while ( $_token );
-
-		return $_out;
-	}
-
-	/**
-	 * @throws \Exception
-	 * @return array
-	 */
-	protected function _listResources()
-	{
-		$_result = $this->_getTablesAsArray();
-		$_out = array();
-		foreach ( $_result as $_table )
-		{
-			$_out[] = array( 'name' => $_table, 'DomainName' => $_table );
-		}
-
-		return array( 'resource' => $_out );
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function getTables( $tables = array() )
-	{
-		if ( empty( $tables ) )
-		{
-			$tables = $this->_getTablesAsArray();
-		}
-
-		return parent::getTables( $tables );
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function getTable( $table )
-	{
-		if ( is_array( $table ) )
-		{
-			$table = Option::get( $table, 'name', Option::get( $table, 'DomainName' ) );
-		}
-		if ( empty( $table ) )
-		{
-			throw new BadRequestException( "No 'name' field in data." );
-		}
-
-		try
-		{
-			$_result = $this->_dbConn->domainMetadata(
-				array(
-					'DomainName' => $table
-				)
-			);
-
-			// The result of an operation can be used like an array
-			$_out = array( 'name' => $table, 'DomainName' => $table );
-
-			return array_merge( $_out, $_result->toArray() );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to list tables of SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function createTable( $properties = array() )
-	{
-		// generic, then AWS version
-		$_name = Option::get( $properties, 'name', Option::get( $properties, 'DomainName' ) );
-		if ( empty( $_name ) )
-		{
-			throw new BadRequestException( "No 'name' field in data." );
-		}
-
-		try
-		{
-			$_properties = array_merge(
-				array( 'DomainName' => $_name ),
-				$properties
-			);
-			$_result = $this->_dbConn->createDomain( $_properties );
-			$_out = array( 'name' => $_name, 'DomainName' => $_name );
-
-			return array_merge( $_out, $_result->toArray() );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to create table on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function updateTable( $properties = array() )
-	{
-		$_name = Option::get( $properties, 'name', Option::get( $properties, 'DomainName' ) );
-		if ( empty( $_name ) )
-		{
-			throw new BadRequestException( "No 'name' field in data." );
-		}
-
-		throw new BadRequestException( "Update table operation is not supported on SimpleDb." );
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function deleteTable( $table, $check_empty = false )
-	{
-		if ( is_array( $table ) )
-		{
-			$table = Option::get( $table, 'name', Option::get( $table, 'DomainName' ) );
-		}
-		if ( empty( $table ) )
-		{
-			throw new BadRequestException( "No 'name' field in data." );
-		}
-
-		try
-		{
-			$_result = $this->_dbConn->deleteDomain(
-				array(
-					'DomainName' => $table
-				)
-			);
-			$_out = array( 'name' => $table, 'DomainName' => $table );
-
-			return array_merge( $_out, $_result->toArray() );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to delete table '$table' from SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
-
-	//-------- Table Records Operations ---------------------
-	// records is an array of field arrays
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function createRecords( $table, $records, $extras = array() )
-	{
-		if ( empty( $records ) || !is_array( $records ) )
-		{
-			throw new BadRequestException( 'There are no record sets in the request.' );
-		}
-		if ( !isset( $records[0] ) )
-		{
-			// single record possibly passed in without wrapper array
-			$records = array( $records );
-		}
-
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
-
-		$_items = array();
-		foreach ( $records as $_record )
-		{
-			$_id = Option::get( $_record, $_idField, null, true );
-			if ( empty( $_id ) )
-			{
-				$_id = static::createItemId( $table );
-//				throw new BadRequestException( "Identifying field(s) not found in record." );
-			}
-
-			// Add operation to list of batch operations.
-			$_items[] = array(
-				'Name'       => $_id,
-				'Attributes' => $this->_formatAttributes( $_record )
-			);
-		}
-
-		try
-		{
-			$_result = $this->_dbConn->batchPutAttributes(
-				array(
-					'DomainName' => $table,
-					'Items'      => $_items,
-				)
-			);
-
-			return static::cleanRecords( $records, $_fields, $_idField );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to create items in '$table' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function createRecord( $table, $record, $extras = array() )
-	{
-		if ( empty( $record ) || !is_array( $record ) )
-		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
-		}
-
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
-		$_id = Option::get( $record, $_idField, null, true );
-		if ( empty( $_id ) )
-		{
-			$_id = static::createItemId( $table );
-//			throw new BadRequestException( "Identifying field(s) not found in record." );
-		}
-
-		try
-		{
-			// simple insert request
-			$_result = $this->_dbConn->putAttributes(
-				array(
-					'DomainName' => $table,
-					'ItemName'   => $_id,
-					'Attributes' => $this->_formatAttributes( $record )
-				)
-			);
-			$_out = array_merge( static::cleanRecord( $record, $_fields ), array( $_idField => $_id ) );
-
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to create item in '$table' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function updateRecords( $table, $records, $extras = array() )
-	{
-		if ( empty( $records ) || !is_array( $records ) )
-		{
-			throw new BadRequestException( 'There are no record sets in the request.' );
-		}
-		if ( !isset( $records[0] ) )
-		{
-			// single record possibly passed in without wrapper array
-			$records = array( $records );
-		}
-
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
-
-		$_items = array();
-		foreach ( $records as $_record )
-		{
-			$_id = Option::get( $_record, $_idField, null, true );
-			if ( empty( $_id ) )
-			{
-				throw new BadRequestException( "Identifying field(s) not found in record." );
-			}
-
-			// Add operation to list of batch operations.
-			$_items[] = array(
-				'Name'       => $_id,
-				'Attributes' => $this->_formatAttributes( $_record, true )
-			);
-		}
-
-		try
-		{
-			$_result = $this->_dbConn->batchPutAttributes(
-				array(
-					'DomainName' => $table,
-					"Items"      => $_items,
-				)
-			);
-
-			return static::cleanRecords( $records, $_fields, $_idField );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to update items in '$table' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function updateRecord( $table, $record, $extras = array() )
-	{
-		if ( empty( $record ) || !is_array( $record ) )
-		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
-		}
-
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
-		$_id = Option::get( $record, $_idField, null, true );
-		if ( empty( $_id ) )
-		{
-			throw new BadRequestException( "Identifying field(s) not found in record." );
-		}
-
-		try
-		{
-			// simple insert request
-			$_result = $this->_dbConn->putAttributes(
-				array(
-					'DomainName' => $table,
-					'ItemName'   => $_id,
-					'Attributes' => $this->_formatAttributes( $record, true ),
-				)
-			);
-			$_out = array_merge( static::cleanRecord( $record, $_fields ), array( $_idField => $_id ) );
-
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
-	{
-		if ( empty( $record ) || !is_array( $record ) )
-		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
-		}
-
-		// slow, but workable for now, maybe faster than updating individuals
-		$_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
-		foreach ( $_records as $_ndx => $_record )
-		{
-			$_records[$_ndx] = array_merge( $_record, $record );
-		}
-
-		return $this->updateRecords( $table, $_records, $extras );
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
-	{
-		if ( !is_array( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( "No record fields were passed in the request." );
-		}
-
-		if ( empty( $id_list ) )
-		{
-			throw new BadRequestException( "Identifying values for id_field can not be empty for update request." );
-		}
-
-		if ( !is_array( $id_list ) )
-		{
-			$id_list = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
-		}
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
-
-		unset( $record[$_idField] ); // clear out any identifiers
-		$_out = array();
-		$_items = array();
-		foreach ( $id_list as $_id )
-		{
-			// Add operation to list of batch operations.
-			$_items[] = array(
-				'Name'       => $_id,
-				'Attributes' => $this->_formatAttributes( $record, true )
-			);
-			$_out[] = array_merge( static::cleanRecord( $record, $_fields ), array( $_idField => $_id ) );
-		}
-
-		try
-		{
-			$_result = $this->_dbConn->batchPutAttributes(
-				array(
-					'DomainName' => $table,
-					'Items'      => $_items,
-				)
-			);
-
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to update items from '$table' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function updateRecordById( $table, $record, $id, $extras = array() )
-	{
-		if ( !isset( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( 'There are no fields in the record.' );
-		}
-		if ( empty( $id ) )
-		{
-			throw new BadRequestException( "No identifier exist in record." );
-		}
-
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
-
-		unset( $record[$_idField] );
-		try
-		{
-			// simple insert request
-			$_result = $this->_dbConn->putAttributes(
-				array(
-					'DomainName' => $table,
-					'ItemName'   => $id,
-					'Attributes' => $this->_formatAttributes( $record, true )
-				)
-			);
-			$_out = array_merge( static::cleanRecord( $record, $_fields ), array( $_idField => $id ) );
-
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to update item in '$table' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function mergeRecords( $table, $records, $extras = array() )
-	{
-		if ( empty( $records ) || !is_array( $records ) )
-		{
-			throw new BadRequestException( 'There are no record sets in the request.' );
-		}
-		if ( !isset( $records[0] ) )
-		{
-			// single record possibly passed in without wrapper array
-			$records = array( $records );
-		}
-
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
-
-		$_items = array();
-		foreach ( $records as $_record )
-		{
-			$_id = Option::get( $_record, $_idField, null, true );
-			if ( empty( $_id ) )
-			{
-				throw new BadRequestException( "Identifying field(s) not found in record." );
-			}
-
-			// Add operation to list of batch operations.
-			$_items[] = array(
-				'Name'       => $_id,
-				'Attributes' => $this->_formatAttributes( $_record, true )
-			);
-		}
-
-		try
-		{
-			$_result = $this->_dbConn->batchPutAttributes(
-				array(
-					'DomainName' => $table,
-					"Items"      => $_items,
-				)
-			);
-
-			return static::cleanRecords( $records, $_fields, $_idField );
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to merge items in '$table' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function mergeRecord( $table, $record, $extras = array() )
-	{
-		if ( empty( $record ) || !is_array( $record ) )
-		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
-		}
-
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
-		$_id = Option::get( $record, $_idField, null, true );
-		if ( empty( $_id ) )
-		{
-			throw new BadRequestException( "Identifying field(s) not found in record." );
-		}
-
-		try
-		{
-			// simple insert request
-			$_result = $this->_dbConn->putAttributes(
-				array(
-					'DomainName' => $table,
-					'ItemName'   => $_id,
-					'Attributes' => $this->_formatAttributes( $record, true ),
-				)
-			);
-			$_out = array_merge( static::cleanRecord( $record, $_fields ), array( $_idField => $_id ) );
-
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to merge item in '$table' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
-	{
-		if ( empty( $record ) || !is_array( $record ) )
-		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
-		}
-
-		// slow, but workable for now, maybe faster than merging individuals
-        $_retrieveExtras = array( 'fields' => '*' );
-		$_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $_retrieveExtras );
-		foreach ( $_records as $_ndx => $_record )
-		{
-			$_records[$_ndx] = array_merge( $_record, $record );
-		}
-
-		return $this->updateRecords( $table, $_records, $extras );
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function mergeRecordsByIds( $table, $record, $ids, $extras = array() )
-	{
-		if ( !is_array( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( "No record fields were passed in the request." );
-		}
-
-		if ( empty( $id_list ) )
-		{
-			throw new BadRequestException( "Identifying values for id_field can not be empty for merge request." );
-		}
-
-		if ( !is_array( $id_list ) )
-		{
-			$id_list = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
-		}
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
-
-		unset( $record[$_idField] ); // clear out any identifiers
-		$_out = array();
-		$_items = array();
-		foreach ( $id_list as $_id )
-		{
-			// Add operation to list of batch operations.
-			$_items[] = array(
-				'Name'       => $_id,
-				'Attributes' => $this->_formatAttributes( $record, true )
-			);
-			$_out[] = array_merge( static::cleanRecord( $record, $_fields ), array( $_idField => $_id ) );
-		}
-
-		try
-		{
-			$_result = $this->_dbConn->batchPutAttributes(
-				array(
-					'DomainName' => $table,
-					'Items'      => $_items,
-				)
-			);
-
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to merge items from '$table' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
-	public function mergeRecordById( $table, $record, $id, $extras = array() )
-	{
-		if ( !isset( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( 'There are no fields in the record.' );
-		}
-		if ( empty( $id ) )
-		{
-			throw new BadRequestException( "No identifier exist in record." );
-		}
-
-		$table = $this->correctTableName( $table );
-        $_fields = Option::get( $extras, 'fields' );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
-
-		unset( $record[$_idField] );
-		try
-		{
-			// simple insert request
-			$_result = $this->_dbConn->putAttributes(
-				array(
-					'DomainName' => $table,
-					'ItemName'   => $id,
-					'Attributes' => $this->_formatAttributes( $record, true )
-				)
-			);
-			$_out = array_merge( static::cleanRecord( $record, $_fields ), array( $_idField => $id ) );
-
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to merge item in '$table' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
+    //*************************************************************************
+    //	Constants
+    //*************************************************************************
+
+    const TABLE_INDICATOR = 'DomainName';
+
+    const DEFAULT_REGION = Region::US_WEST_1;
+    /**
+     * Default record identifier field
+     */
+    const DEFAULT_ID_FIELD = 'Name';
+
+    //*************************************************************************
+    //	Members
+    //*************************************************************************
+
+    /**
+     * @var SimpleDbClient|null
+     */
+    protected $_dbConn = null;
+
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
+
+    /**
+     * Create a new AwsSimpleDbSvc
+     *
+     * @param array $config
+     *
+     * @throws \InvalidArgumentException
+     * @throws \Exception
+     */
+    public function __construct( $config )
+    {
+        parent::__construct( $config );
+
+        $_credentials = Option::get( $config, 'credentials' );
+        $_parameters = Option::get( $config, 'parameters' );
+
+        // old way
+        $_accessKey = Option::get( $_credentials, 'access_key' );
+        $_secretKey = Option::get( $_credentials, 'secret_key' );
+        if ( !empty( $_accessKey ) )
+        {
+            // old way, replace with 'key'
+            $_credentials['key'] = $_accessKey;
+        }
+
+        if ( !empty( $_secretKey ) )
+        {
+            // old way, replace with 'key'
+            $_credentials['secret'] = $_secretKey;
+        }
+
+        $_region = Option::get( $_credentials, 'region' );
+        if ( empty( $_region ) )
+        {
+            // use a default region if not present
+            $_credentials['region'] = static::DEFAULT_REGION;
+        }
+
+        // reply in simplified blend format by default
+        if ( null !== ( $_blendFormat = Option::get( $_parameters, 'blend_format' ) ) )
+        {
+            $this->_defaultBlendFormat = DataFormat::boolval( $_blendFormat );
+        }
+
+        try
+        {
+            $this->_dbConn = SimpleDbClient::factory( $_credentials );
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Amazon SimpleDb Service Exception:\n{$_ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * Object destructor
+     */
+    public function __destruct()
+    {
+        try
+        {
+            $this->_dbConn = null;
+        }
+        catch ( \Exception $_ex )
+        {
+            error_log( "Failed to disconnect from database.\n{$_ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * @throws \Exception
+     */
+    protected function checkConnection()
+    {
+        if ( empty( $this->_dbConn ) )
+        {
+            throw new InternalServerErrorException( 'Database connection has not been initialized.' );
+        }
+    }
+
+    /**
+     * @param $name
+     *
+     * @return string
+     */
+    public function correctTableName( $name )
+    {
+        return $name;
+    }
+
+    protected function _getTablesAsArray()
+    {
+        $_out = array();
+        $_token = null;
+        do
+        {
+            $_result = $this->_dbConn->listDomains(
+                array(
+                    'MxNumberOfDomains' => 100, // arbitrary limit
+                    'NextToken'         => $_token
+                )
+            );
+            $_domains = $_result['DomainNames'];
+            $_token = $_result['NextToken'];
+
+            if ( !empty( $_domains ) )
+            {
+                $_out = array_merge( $_out, $_domains );
+            }
+        }
+        while ( $_token );
+
+        return $_out;
+    }
+
+    // REST service implementation
+
+    /**
+     * @throws \Exception
+     * @return array
+     */
+    protected function _listResources()
+    {
+        try
+        {
+            $_resources = array();
+            $_result = $this->_getTablesAsArray();
+            foreach ( $_result as $_table )
+            {
+                $_access = $this->getPermissions( $_table );
+                if ( !empty( $_access ) )
+                {
+                    $_resources[] = array( 'name' => $_table, 'access' => $_access, static::TABLE_INDICATOR => $_table );
+                }
+            }
+
+            return array( 'resource' => $_resources );
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+        }
+    }
+
+    // Handle administrative options, table add, delete, etc
 
     /**
      * {@inheritdoc}
      */
-    public function truncateTable( $table )
+    public function getTable( $table )
+    {
+        static $_existing = null;
+
+        if ( !$_existing )
+        {
+            $_existing = $this->_getTablesAsArray();
+        }
+
+        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name', Option::get( $table, static::TABLE_INDICATOR ) ) : $table;
+        if ( empty( $_name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        if ( false === array_search( $_name, $_existing ) )
+        {
+            throw new NotFoundException( "Table '$_name' not found." );
+        }
+
+        try
+        {
+            $_result = $this->_dbConn->domainMetadata(
+                array(
+                    static::TABLE_INDICATOR => $_name
+                )
+            );
+
+            // The result of an operation can be used like an array
+            $_out = $_result->toArray();
+            $_out['name'] = $_name;
+            $_out[static::TABLE_INDICATOR] = $_name;
+            $_out['access'] = $this->getPermissions( $_name );
+
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function createTable( $properties = array() )
+    {
+        $_name = Option::get( $properties, 'name', Option::get( $properties, static::TABLE_INDICATOR ) );
+        if ( empty( $_name ) )
+        {
+            throw new BadRequestException( "No 'name' field in data." );
+        }
+
+        try
+        {
+            $_properties = array_merge(
+                array( static::TABLE_INDICATOR => $_name ),
+                $properties
+            );
+            $_result = $this->_dbConn->createDomain( $_properties );
+
+            $_out = array_merge( array( 'name' => $_name, static::TABLE_INDICATOR => $_name ), $_result->toArray() );
+
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to create table '$_name'.\n{$_ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateTable( $properties = array() )
+    {
+        $_name = Option::get( $properties, 'name', Option::get( $properties, static::TABLE_INDICATOR ) );
+        if ( empty( $_name ) )
+        {
+            throw new BadRequestException( "No 'name' field in data." );
+        }
+
+        throw new BadRequestException( "Update table operation is not supported for this service." );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function deleteTable( $table, $check_empty = false )
+    {
+        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name', Option::get( $table, static::TABLE_INDICATOR ) ) : $table;
+        if ( empty( $_name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        try
+        {
+            $_result = $this->_dbConn->deleteDomain(
+                array(
+                    static::TABLE_INDICATOR => $_name
+                )
+            );
+
+            return array_merge( array( 'name' => $_name, static::TABLE_INDICATOR => $_name ), $_result->toArray() );
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to delete table '$_name'.\n{$_ex->getMessage()}" );
+        }
+    }
+
+    //-------- Table Records Operations ---------------------
+    // records is an array of field arrays
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    {
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+
+        // slow, but workable for now, maybe faster than updating individuals
+        $_retrieveExtras = array( 'fields' => '' );
+        $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $_retrieveExtras );
+        $_idField = Option::get( $extras, 'id_field', static::DEFAULT_ID_FIELD );
+
+        $_ids = static::recordsAsIds( $_records, $_idField );
+
+        return $this->updateRecordsByIds( $table, $record, $_ids, $extras );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    {
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+
+        // slow, but workable for now, maybe faster than merging individuals
+        $_retrieveExtras = array( 'fields' => '' );
+        $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $_retrieveExtras );
+        $_idField = Option::get( $extras, 'id_field', static::DEFAULT_ID_FIELD );
+
+        $_ids = static::recordsAsIds( $_records, $_idField );
+
+        return $this->mergeRecordsByIds( $table, $record, $_ids, $extras );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function truncateTable( $table, $extras = array() )
     {
         // todo faster way?
         $_records = $this->retrieveRecordsByFilter( $table, '' );
@@ -865,627 +372,841 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     }
 
     /**
-	 * {@inheritdoc}
-	 */
-	public function deleteRecords( $table, $records, $extras = array() )
-	{
-		if ( !is_array( $records ) || empty( $records ) )
-		{
-			throw new BadRequestException( 'There are no record sets in the request.' );
-		}
+     * {@inheritdoc}
+     */
+    public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() )
+    {
+        if ( empty( $filter ) )
+        {
+            throw new BadRequestException( "Filter for delete request can not be empty." );
+        }
 
-		if ( !isset( $records[0] ) )
-		{
-			// single record
-			$records = array( $records );
-		}
+        $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
 
-		$table = $this->correctTableName( $table );
+        return $this->deleteRecords( $table, $_records, $extras );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
+    {
+        $table = $this->correctTableName( $table );
+
+        $_idField = Option::get( $extras, 'id_field', static::DEFAULT_ID_FIELD );
+        if ( empty( $_idField ) )
+        {
+            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+        }
+
+        $_select = 'select ';
+        if ( empty( $fields ) )
+        {
+            $fields = $_idField;
+        }
+        $_select .= $fields . ' from ' . $table;
+
+        if ( !empty( $filter ) )
+        {
+            $filter = static::_parseFilter( $filter );
+            $_select .= ' where ' . $filter;
+        }
+        $_limit = Option::get( $extras, 'order' );
+        if ( $_limit > 0 )
+        {
+            $_select .= ' order by ' . $_limit;
+        }
+        $_limit = Option::get( $extras, 'limit' );
+        if ( $_limit > 0 )
+        {
+            $_select .= ' limit ' . $_limit;
+        }
+
+        try
+        {
+            $_result = $this->_dbConn->select( array( 'SelectExpression' => $_select ) );
+            $_items = $_result['Items'];
+
+            $_out = array();
+            if ( !empty( $_items ) )
+            {
+                foreach ( $_items as $_item )
+                {
+                    $_attributes = Option::get( $_item, 'Attributes' );
+                    $_name = Option::get( $_item, $_idField );
+                    $_out[] = array_merge(
+                        static::_unformatAttributes( $_attributes ),
+                        array( $_idField => $_name )
+                    );
+                }
+            }
+
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to filter records from '$table'.\n{$_ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function retrieveRecord( $table, $record, $extras = array() )
+    {
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $table = $this->correctTableName( $table );
+
         $_fields = Option::get( $extras, 'fields' );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
 
-		$_out = array();
-		if ( static::_requireMoreFields( $_fields, $_idField ) )
-		{
-			$_out = $this->retrieveRecords( $table, $records, $_fields, $extras );
-		}
-		$_items = array();
-		$_outIds = array();
-		foreach ( $records as $_record )
-		{
-			$_id = Option::get( $_record, $_idField, null, true );
-			if ( empty( $_id ) )
-			{
-				throw new BadRequestException( "Identifying field(s) not found in record." );
-			}
+        $_idField = Option::get( $extras, 'id_field', static::DEFAULT_ID_FIELD );
+        if ( empty( $_idField ) )
+        {
+            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+        }
 
-			$_items[] = array(
-				'Name' => $_id,
-			);
-			$_outIds[] = array( $_idField => $_id );
-		}
+        $_id = Option::get( $record, $_idField );
+        $_scanProperties = array(
+            static::TABLE_INDICATOR => $table,
+            'ItemName'              => $_id,
+            'ConsistentRead'        => true,
+        );
+        $fields = static::_buildAttributesToGet( $_fields, $_idField );
+        if ( !empty( $fields ) )
+        {
+            $_scanProperties['AttributeNames'] = $fields;
+        }
 
-		try
-		{
-			$_result = $this->_dbConn->batchDeleteAttributes(
-				array(
-					'DomainName' => $table,
-					'Items'      => $_items
-				)
-			);
+        try
+        {
+            $_result = $this->_dbConn->getAttributes( $_scanProperties );
+            $_out = array_merge(
+                static::_unformatAttributes( $_result['Attributes'] ),
+                array( $_idField => $_id )
+            );
 
-			return ( empty( $_out ) ) ? $_outIds : $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to delete items from '$table' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to get records from '$table.\n{$_ex->getMessage()}" );
+        }
+    }
 
-	/**
-	 * {@inheritdoc}
-	 */
-	public function deleteRecord( $table, $record, $extras = array() )
-	{
-		if ( empty( $record ) || !is_array( $record ) )
-		{
-			throw new BadRequestException( 'There are no record fields in the request.' );
-		}
+    /**
+     * {@inheritdoc}
+     */
+    public function retrieveRecordsByIds( $table, $ids, $extras = array() )
+    {
+        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
 
-		$table = $this->correctTableName( $table );
         $_fields = Option::get( $extras, 'fields' );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
 
-		$_id = Option::get( $record, $_idField, null, true );
-		if ( empty( $_id ) )
-		{
-			throw new BadRequestException( "Identifying field(s) not found in record." );
-		}
+        $_filter = "itemName() in ('" . implode( "','", $ids ) . "')";
 
-		$_out = array();
-		if ( static::_requireMoreFields( $_fields, $_idField ) )
-		{
-			$_out = $this->retrieveRecordById( $table, $_id, $_fields, $extras );
-		}
-		$_scanProperties = array(
-			'DomainName' => $table,
-			'ItemName'   => $_id,
-		);
-		try
-		{
-			$_result = $this->_dbConn->deleteAttributes( $_scanProperties );
+        return $this->retrieveRecordsByFilter( $table, $_filter, $_fields, $extras );
+    }
 
-			// Grab value from the result object like an array
-			return ( empty( $_out ) ) ? array( $_idField => $_id ) : $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to delete item '$table/$_id' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
+    /**
+     * {@inheritdoc}
+     */
+    public function retrieveRecordById( $table, $id, $fields = null, $extras = array() )
+    {
+        if ( empty( $id ) )
+        {
+            throw new BadRequestException( "Identifying field(s) values can not be empty." );
+        }
 
-	/**
-	 * {@inheritdoc}
-	 */
-	public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() )
-	{
-		if ( empty( $filter ) )
-		{
-			throw new BadRequestException( "Filter for delete request can not be empty." );
-		}
+        $table = $this->correctTableName( $table );
+        $_idField = Option::get( $extras, 'id_field' );
+        if ( empty( $_idField ) )
+        {
+            $_idField = static::DEFAULT_ID_FIELD;
+        }
+        $_scanProperties = array(
+            static::TABLE_INDICATOR => $table,
+            'ItemName'              => $id,
+            'ConsistentRead'        => true,
+        );
+        $fields = static::_buildAttributesToGet( $fields, $_idField );
+        if ( !empty( $fields ) )
+        {
+            $_scanProperties['AttributeNames'] = $fields;
+        }
 
-		$_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
+        try
+        {
+            $_result = $this->_dbConn->getAttributes( $_scanProperties );
+            $_out = array_merge(
+                static::_unformatAttributes( $_result['Attributes'] ),
+                array( $_idField => $id )
+            );
 
-		return $this->deleteRecords( $table, $_records, $extras );
-	}
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to get records from '$table'.\n{$_ex->getMessage()}" );
+        }
+    }
 
-	/**
-	 * {@inheritdoc}
-	 */
-	public function deleteRecordsByIds( $table, $ids, $extras = array() )
-	{
-		if ( empty( $ids ) )
-		{
-			throw new BadRequestException( "Identifying values for id_field can not be empty for update request." );
-		}
+    /**
+     * @param array $record
+     * @param array $avail_fields
+     * @param array $filter_info
+     * @param bool  $for_update
+     * @param array $old_record
+     *
+     * @return array
+     * @throws \Exception
+     */
+    protected function parseRecord( $record, $avail_fields, $filter_info = null, $for_update = false, $old_record = null )
+    {
+//        $record = DataFormat::arrayKeyLower( $record );
+        $_parsed = ( empty( $avail_fields ) ) ? $record : array();
+        if ( !empty( $avail_fields ) )
+        {
+            $_keys = array_keys( $record );
+            $_values = array_values( $record );
+            foreach ( $avail_fields as $_fieldInfo )
+            {
+//            $name = strtolower( Option::get( $field_info, 'name', '' ) );
+                $_name = Option::get( $_fieldInfo, 'name', '' );
+                $_type = Option::get( $_fieldInfo, 'type' );
+                $_pos = array_search( $_name, $_keys );
+                if ( false !== $_pos )
+                {
+                    $_fieldVal = Option::get( $_values, $_pos );
+                    // due to conversion from XML to array, null or empty xml elements have the array value of an empty array
+                    if ( is_array( $_fieldVal ) && empty( $_fieldVal ) )
+                    {
+                        $_fieldVal = null;
+                    }
 
-		if ( !is_array( $ids ) )
-		{
-			$ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
-		}
-		$table = $this->correctTableName( $table );
+                    /** validations **/
+
+                    $_validations = Option::get( $_fieldInfo, 'validation' );
+
+                    if ( !static::validateFieldValue( $_name, $_fieldVal, $_validations, $for_update, $_fieldInfo ) )
+                    {
+                        unset( $_keys[$_pos] );
+                        unset( $_values[$_pos] );
+                        continue;
+                    }
+
+                    $_parsed[$_name] = $_fieldVal;
+                    unset( $_keys[$_pos] );
+                    unset( $_values[$_pos] );
+                }
+
+                // add or override for specific fields
+                switch ( $_type )
+                {
+                    case 'timestamp_on_create':
+                        if ( !$for_update )
+                        {
+                            $_parsed[$_name] = new \MongoDate();
+                        }
+                        break;
+                    case 'timestamp_on_update':
+                        $_parsed[$_name] = new \MongoDate();
+                        break;
+                    case 'user_id_on_create':
+                        if ( !$for_update )
+                        {
+                            $userId = Session::getCurrentUserId();
+                            if ( isset( $userId ) )
+                            {
+                                $_parsed[$_name] = $userId;
+                            }
+                        }
+                        break;
+                    case 'user_id_on_update':
+                        $userId = Session::getCurrentUserId();
+                        if ( isset( $userId ) )
+                        {
+                            $_parsed[$_name] = $userId;
+                        }
+                        break;
+                }
+            }
+        }
+
+        if ( !empty( $filter_info ) )
+        {
+            $this->validateRecord( $_parsed, $filter_info, $for_update, $old_record );
+        }
+
+        return $_parsed;
+    }
+
+    protected static function _formatValue( $value )
+    {
+        if ( is_string( $value ) )
+        {
+            return $value;
+        }
+        if ( is_array( $value ) )
+        {
+            return '#DFJ#' . json_encode( $value );
+        }
+        if ( is_bool( $value ) )
+        {
+            return '#DFB#' . strval( $value );
+        }
+        if ( is_float( $value ) )
+        {
+            return '#DFF#' . strval( $value );
+        }
+        if ( is_int( $value ) )
+        {
+            return '#DFI#' . strval( $value );
+        }
+
+        return $value;
+    }
+
+    protected static function _unformatValue( $value )
+    {
+        if ( 0 == substr_compare( $value, '#DFJ#', 0, 5 ) )
+        {
+            return json_decode( substr( $value, 5 ) );
+        }
+        if ( 0 == substr_compare( $value, '#DFB#', 0, 5 ) )
+        {
+            return (bool)substr( $value, 5 );
+        }
+        if ( 0 == substr_compare( $value, '#DFF#', 0, 5 ) )
+        {
+            return floatval( substr( $value, 5 ) );
+        }
+        if ( 0 == substr_compare( $value, '#DFI#', 0, 5 ) )
+        {
+            return intval( substr( $value, 5 ) );
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param array $record
+     * @param bool  $replace
+     *
+     * @return array
+     */
+    protected static function _formatAttributes( $record, $replace = false )
+    {
+        $_out = array();
+        if ( !empty( $record ) )
+        {
+            foreach ( $record as $_name => $_value )
+            {
+                if ( Utilities::isArrayNumeric( $_value ) )
+                {
+                    foreach ( $_value as $_key => $_part )
+                    {
+                        $_part = static::_formatValue( $_part );
+                        if ( 0 == $_key )
+                        {
+                            $_out[] = array( 'Name' => $_name, 'Value' => $_part, 'Replace' => $replace );
+                        }
+                        else
+                        {
+                            $_out[] = array( 'Name' => $_name, 'Value' => $_part );
+                        }
+                    }
+
+                }
+                else
+                {
+                    $_value = static::_formatValue( $_value );
+                    $_out[] = array( 'Name' => $_name, 'Value' => $_value, 'Replace' => $replace );
+                }
+            }
+        }
+
+        return $_out;
+    }
+
+    /**
+     * @param array $record
+     *
+     * @return array
+     */
+    protected static function _unformatAttributes( $record )
+    {
+        $_out = array();
+        if ( !empty( $record ) )
+        {
+            foreach ( $record as $_attribute )
+            {
+                $_name = Option::get( $_attribute, 'Name' );
+                if ( empty( $_name ) )
+                {
+                    continue;
+                }
+
+                $_value = Option::get( $_attribute, 'Value' );
+                if ( isset( $_out[$_name] ) )
+                {
+                    $_temp = $_out[$_name];
+                    if ( is_array( $_temp ) )
+                    {
+                        $_temp[] = static::_unformatValue( $_value );
+                        $_value = $_temp;
+                    }
+                    else
+                    {
+                        $_value = array( $_temp, static::_unformatValue( $_value ) );
+                    }
+                }
+                else
+                {
+                    $_value = static::_unformatValue( $_value );
+                }
+                $_out[$_name] = $_value;
+            }
+        }
+
+        return $_out;
+    }
+
+    protected static function _buildAttributesToGet( $fields = null, $id_fields = null )
+    {
+        if ( '*' == $fields )
+        {
+            return null;
+        }
+        if ( empty( $fields ) )
+        {
+            if ( empty( $id_fields ) )
+            {
+                return null;
+            }
+            if ( !is_array( $id_fields ) )
+            {
+                $id_fields = array_map( 'trim', explode( ',', trim( $id_fields, ',' ) ) );
+            }
+
+            return $id_fields;
+        }
+
+        if ( !is_array( $fields ) )
+        {
+            $fields = array_map( 'trim', explode( ',', trim( $fields, ',' ) ) );
+        }
+
+        return $fields;
+    }
+
+    /**
+     * @param string|array $filter Filter for querying records by
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array
+     */
+    protected static function _parseFilter( $filter )
+    {
+        if ( empty( $filter ) )
+        {
+            return $filter;
+        }
+
+        if ( is_array( $filter ) )
+        {
+            throw new BadRequestException( 'Filtering in array format is not currently supported on SimpleDb.' );
+        }
+
+        // handle logical operators first
+        $_search = array( ' || ', ' && ' );
+        $_replace = array( ' or ', ' and ' );
+        $filter = trim( str_ireplace( $_search, $_replace, $filter ) );
+
+        // the rest should be comparison operators
+        $_search = array( ' eq ', ' ne ', ' gte ', ' lte ', ' gt ', ' lt ' );
+        $_replace = array( ' = ', ' != ', ' >= ', ' <= ', ' > ', ' < ' );
+        $filter = trim( str_ireplace( $_search, $_replace, $filter ) );
+
+        // check for x = null
+        $filter = str_ireplace( ' = null', ' is null', $filter );
+        // check for x != null
+        $filter = str_ireplace( ' != null', ' is not null', $filter );
+
+        return $filter;
+    }
+
+    /**
+     * @param mixed|null $handle
+     *
+     * @return bool
+     */
+    protected function initTransaction( $handle = null )
+    {
+        return parent::initTransaction( $handle );
+    }
+
+    /**
+     * @param mixed      $record
+     * @param mixed      $id
+     * @param null|array $extras Additional items needed to complete the transaction
+     * @param bool       $save_old
+     * @param bool       $batch  Request for batch, if applicable
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotImplementedException
+     * @return null|array Array of output fields
+     */
+    protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false, $batch = false )
+    {
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_fields = Option::get( $extras, 'fields' );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
+        $_idField = Option::get( $extras, 'id_field', 'Name' );
 
-		$_out = array();
-		if ( static::_requireMoreFields( $_fields, $_idField ) )
-		{
-			$_out = $this->retrieveRecordsByIds( $table, $ids, $_fields, $extras );
-		}
-		$_items = array();
-		$_outIds = array();
-		foreach ( $ids as $_id )
-		{
-			// Add operation to list of batch operations.
-			$_items[] = array(
-				'Name' => $_id,
-			);
-			$_outIds[] = array( $_idField => $_id );
-		}
+        if ( empty( $id ) )
+        {
+            $id = Option::get( $record, $_idField );
+        }
+        $_native = ( empty( $record ) ) ? null : $this->_formatAttributes( $record );
+        $_updates = Option::get( $extras, 'updates' );
 
-		try
-		{
-			$_result = $this->_dbConn->batchDeleteAttributes(
-				array(
-					'DomainName' => $table,
-					'Items'      => $_items
-				)
-			);
+        if ( $batch )
+        {
+            // WARNING: no validation that id doesn't exist is done via batching!
+            // Add operation to list of batch operations.
+            $_batched[] = array(
+                'Name'       => $id,
+                'Attributes' => $_native
+            );
 
-			return ( empty( $_out ) ) ? $_outIds : $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to delete items from '$table' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
+            switch ( $this->getAction() )
+            {
+                case static::PUT:
+                    // only update by full records can use batching
+                    if ( !empty( $_updates ) )
+                    {
+                        return parent::addToTransaction( $_native, $id, $extras, $save_old, $batch );
+                    }
+                    break;
+                default:
+                    return parent::addToTransaction( $_native, $id, $extras, $save_old, $batch );
+            }
+        }
 
-	/**
-	 * {@inheritdoc}
-	 */
-	public function deleteRecordById( $table, $id, $extras = array() )
-	{
-		if ( empty( $id ) )
-		{
-			throw new BadRequestException( "Identifying field(s) values can not be empty." );
-		}
+        $_out = array();
+        switch ( $this->getAction() )
+        {
+            case static::POST:
+                $_native = $this->_formatAttributes( $record );
 
-		$table = $this->correctTableName( $table );
+                /*$_result = */
+                $this->_dbConn->putAttributes(
+                    array(
+                        static::TABLE_INDICATOR => $this->_transactionTable,
+                        'ItemName'              => $id,
+                        'Attributes'            => $_native,
+                        'Expected'              => array( $_idField => array( 'Exists' => false ) )
+                    )
+                );
+
+                if ( $save_old )
+                {
+                    $this->addToRollback( $id );
+                }
+
+                $_out = static::cleanRecord( $record, $_fields, $_idField );
+                break;
+            case static::PUT:
+                if ( !empty( $_updates ) )
+                {
+                    $_updates[$_idField] = $id;
+                    $record = $_updates;
+                }
+
+                $_native = $this->_formatAttributes( $record, true );
+
+                $_result = $this->_dbConn->putAttributes(
+                    array(
+                        static::TABLE_INDICATOR => $this->_transactionTable,
+                        'ItemName'              => $id,
+                        'Attributes'            => $_native,
+                    )
+                );
+
+                if ( $save_old )
+                {
+                    $_old = Option::get( $_result, 'Attributes', array() );
+                    $this->addToRollback( $_old );
+                }
+
+                $_out = static::cleanRecord( $record, $_fields, $_idField );
+                break;
+
+            case static::MERGE:
+            case static::PATCH:
+                if ( !empty( $_updates ) )
+                {
+                    $_updates[$_idField] = $id;
+                    $record = $_updates;
+                }
+
+                $_native = $this->_formatAttributes( $record, true );
+
+                $_result = $this->_dbConn->putAttributes(
+                    array(
+                        static::TABLE_INDICATOR => $this->_transactionTable,
+                        'ItemName'              => $id,
+                        'Attributes'            => $_native,
+                    )
+                );
+
+                if ( $save_old )
+                {
+                    $_old = Option::get( $_result, 'Attributes', array() );
+                    $this->addToRollback( $_old );
+                }
+
+                $_out = static::cleanRecord( $record, $_fields, $_idField );
+                break;
+
+            case static::DELETE:
+                $_record = array( $_idField => $id );
+
+                $_result = $this->_dbConn->deleteAttributes(
+                    array(
+                        static::TABLE_INDICATOR => $this->_transactionTable,
+                        'ItemName'              => $id
+                    )
+                );
+
+                $_temp = Option::get( $_result, 'Attributes', array() );
+
+                if ( $save_old )
+                {
+                    $this->addToRollback( $_temp );
+                }
+
+                $_temp = $this->_unformatAttributes( $_temp );
+                $_out = static::cleanRecord( $_temp, $_fields, $_idField );
+                break;
+
+            case static::GET:
+                $_scanProperties = array(
+                    static::TABLE_INDICATOR => $this->_transactionTable,
+                    'ItemName'              => $id,
+                    'ConsistentRead'        => true,
+                );
+
+                $fields = static::_buildAttributesToGet( $_fields, $_idField );
+                if ( !empty( $fields ) )
+                {
+                    $_scanProperties['AttributeNames'] = $fields;
+                }
+
+                $_result = $this->_dbConn->getAttributes( $_scanProperties );
+
+                $_out = array_merge(
+                    static::_unformatAttributes( $_result['Attributes'] ),
+                    array( $_idField => $id )
+                );
+                break;
+            default:
+                break;
+        }
+
+        return $_out;
+    }
+
+    /**
+     * @param null|array $extras
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array
+     */
+    protected function commitTransaction( $extras = null )
+    {
+        if ( empty( $this->_batchRecords ) && empty( $this->_batchIds ) )
+        {
+            return null;
+        }
+
+        $_updates = Option::get( $extras, 'updates' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_fields = Option::get( $extras, 'fields' );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
+        $_requireMore = Option::get( $extras, 'require_more');
+        $_idField = Option::get( $extras, 'id_field', 'Name' );
 
-		$_out = array();
-		if ( static::_requireMoreFields( $_fields, $_idField ) )
-		{
-			$_out = $this->retrieveRecordById( $table, $id, $_fields, $extras );
-		}
-		$_scanProperties = array(
-			'DomainName' => $table,
-			'ItemName'   => $id,
-		);
-		try
-		{
-			$_result = $this->_dbConn->deleteAttributes( $_scanProperties );
+        $_out = array();
+        switch ( $this->getAction() )
+        {
+            case static::POST:
+            case static::PUT:
+                if ( empty( $_updates ) )
+                {
+                    throw new BadRequestException( 'Batch operation not supported for update by ids.' );
+                }
 
-			// Grab value from the result object like an array
-			return ( empty( $_out ) ) ? array( $_idField => $id ) : $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to delete item '$table/$id' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
+                $_requests = array();
+                foreach ( $this->_batchRecords as $_item )
+                {
+                    $_requests[] = array( 'PutRequest' => array( 'Item' => $_item ) );
+                }
 
-	/**
-	 * {@inheritdoc}
-	 */
-	public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
-	{
-		$table = $this->correctTableName( $table );
+                $_result = $this->_dbConn->batchPutAttributes(
+                    array(
+                        static::TABLE_INDICATOR => $this->_transactionTable,
+                        'Items'                 => $_requests,
+                    )
+                );
 
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
+                $_out = static::cleanRecords( $this->_batchRecords, $_fields, $_idField );
+                break;
 
-		$_select = 'select ';
-		if ( empty( $fields ) )
-		{
-			$fields = $_idField;
-		}
-		$_select .= $fields . ' from ' . $table;
+            case static::MERGE:
+            case static::PATCH:
+                throw new BadRequestException( 'Batch operation not supported for patch.' );
+                break;
 
-		if ( !empty( $filter ) )
-		{
-			$filter = static::_parseFilter( $filter );
-			$_select .= ' where ' . $filter;
-		}
-		$_limit = Option::get( $extras, 'order' );
-		if ( $_limit > 0 )
-		{
-			$_select .= ' order by ' . $_limit;
-		}
-		$_limit = Option::get( $extras, 'limit' );
-		if ( $_limit > 0 )
-		{
-			$_select .= ' limit ' . $_limit;
-		}
+            case static::DELETE:
+                $_requests = array();
+                foreach ( $this->_batchIds as $_id )
+                {
+                    $_record = array( $_idFields[0] => $_id );
+                    $_out[] = $_record;
+                    $_key = static::_buildKey( $_idsInfo, $_record );
+                    $_requests[] = array( 'DeleteRequest' => array( 'Key' => $_key ) );
+                }
+                if ( $_requireMore )
+                {
+                    $_scanProperties = array(
+                        'Items'           => $this->_batchRecords,
+                        'ConsistentRead' => true,
+                    );
 
-		try
-		{
-			$_result = $this->_dbConn->select( array( 'SelectExpression' => $_select ) );
-			$_items = $_result['Items'];
+                    $_attributes = static::_buildAttributesToGet( $_fields, $_idField );
+                    if ( !empty( $_attributes ) )
+                    {
+                        $_scanProperties['AttributesToGet'] = $_attributes;
+                    }
 
-			$_out = array();
-			if ( !empty( $_items ) )
-			{
-				foreach ( $_items as $_item )
-				{
-					$_attributes = Option::get( $_item, 'Attributes' );
-					$_name = Option::get( $_item, $_idField );
-					$_out[] = array_merge(
-						static::_unformatAttributes( $_attributes ),
-						array( $_idField => $_name )
-					);
-				}
-			}
+                    // Get multiple items by key in a BatchGetItem request
+                    $_result = $this->_dbConn->batchGetItem(
+                        array(
+                            'RequestItems' => array(
+                                $this->_transactionTable => $_scanProperties
+                            )
+                        )
+                    );
 
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to filter items from '$table' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
+                    $_out = array();
+                    $_items = $_result->getPath( "Responses/{$this->_transactionTable}" );
+                    foreach ( $_items as $_item )
+                    {
+                        $_out[] = $this->formatRecordFromNative( $_item );
+                    }
+                }
 
-	/**
-	 * {@inheritdoc}
-	 */
-	public function retrieveRecords( $table, $records, $extras = array() )
-	{
-		if ( empty( $records ) || !is_array( $records ) )
-		{
-			throw new BadRequestException( 'There are no record sets in the request.' );
-		}
-		if ( !isset( $records[0] ) )
-		{
-			// single record
-			$records = array( $records );
-		}
+                /*$_result = */
+                $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $this->_transactionTable => $_requests ) ) );
 
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
-		$_ids = static::recordsAsIds( $records, $_idField );
-		$_filter = "itemName() in ('" . implode( "','", $_ids ) . "')";
+                // todo check $_result['UnprocessedItems'] for 'DeleteRequest'
+                break;
 
-		return $this->retrieveRecordsByFilter( $table, $_filter, array(), $extras );
-	}
+            case static::GET:
+                $_keys = array();
+                foreach ( $this->_batchIds as $_id )
+                {
+                    $_record = array( $_idFields[0] => $_id );
+                    $_key = static::_buildKey( $_idsInfo, $_record );
+                    $_keys[] = $_key;
+                }
 
-	/**
-	 * @param        $table
-	 * @param        $record
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public function retrieveRecord( $table, $record, $fields = null, $extras = array() )
-	{
-		if ( !isset( $record ) || empty( $record ) )
-		{
-			throw new BadRequestException( 'There are no fields in the record.' );
-		}
+                $_scanProperties = array(
+                    'Keys'           => $_keys,
+                    'ConsistentRead' => true,
+                );
 
-		$table = $this->correctTableName( $table );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
-		$_id = Option::get( $record, $_idField );
-		$_scanProperties = array(
-			'DomainName'     => $table,
-			'ItemName'       => $_id,
-			'ConsistentRead' => true,
-		);
-		$fields = static::_buildAttributesToGet( $fields, $_idField );
-		if ( !empty( $fields ) )
-		{
-			$_scanProperties['AttributeNames'] = $fields;
-		}
+                $_fields = static::_buildAttributesToGet( $_fields, $_idFields );
+                if ( !empty( $_fields ) )
+                {
+                    $_scanProperties['AttributesToGet'] = $_fields;
+                }
 
-		try
-		{
-			$_result = $this->_dbConn->getAttributes( $_scanProperties );
-			$_out = array_merge(
-				static::_unformatAttributes( $_result['Attributes'] ),
-				array( $_idField => $_id )
-			);
+                // Get multiple items by key in a BatchGetItem request
+                $_result = $this->_dbConn->batchGetItem(
+                    array(
+                        'RequestItems' => array(
+                            $this->_transactionTable => $_scanProperties
+                        )
+                    )
+                );
 
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to get item '$table/$_id' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
+                $_items = $_result->getPath( "Responses/{$this->_transactionTable}" );
+                foreach ( $_items as $_item )
+                {
+                    $_out[] = $this->formatRecordFromNative( $_item );
+                }
+                break;
+            default:
+                break;
+        }
 
-	/**
-	 * @param string $table
-	 * @param string $id_list - comma delimited list of ids
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public function retrieveRecordsByIds( $table, $id_list, $fields = null, $extras = array() )
-	{
-		if ( empty( $id_list ) )
-		{
-			return array();
-		}
-		if ( !is_array( $id_list ) )
-		{
-			$id_list = array_map( 'trim', explode( ',', trim( $id_list, ',' ) ) );
-		}
-		$_filter = "itemName() in ('" . implode( "','", $id_list ) . "')";
+        $this->_batchRecords = array();
 
-		return $this->retrieveRecordsByFilter( $table, $_filter, $fields, $extras );
-	}
+        return $_out;
+    }
 
-	/**
-	 * @param        $table
-	 * @param        $id
-	 * @param string $fields
-	 * @param array  $extras
-	 *
-	 * @throws \Exception
-	 * @return array
-	 */
-	public function retrieveRecordById( $table, $id, $fields = null, $extras = array() )
-	{
-		if ( empty( $id ) )
-		{
-			throw new BadRequestException( "Identifying field(s) values can not be empty." );
-		}
+    /**
+     * @param mixed $record
+     *
+     * @return bool
+     */
+    protected function addToRollback( $record )
+    {
+        return parent::addToRollback( $record );
+    }
 
-		$table = $this->correctTableName( $table );
-		$_idField = Option::get( $extras, 'id_field' );
-		if ( empty( $_idField ) )
-		{
-			$_idField = static::DEFAULT_ID_FIELD;
-		}
-		$_scanProperties = array(
-			'DomainName'     => $table,
-			'ItemName'       => $id,
-			'ConsistentRead' => true,
-		);
-		$fields = static::_buildAttributesToGet( $fields, $_idField );
-		if ( !empty( $fields ) )
-		{
-			$_scanProperties['AttributeNames'] = $fields;
-		}
+    /**
+     * @return bool
+     */
+    protected function rollbackTransaction()
+    {
+        if ( !empty( $this->_rollbackRecords ) )
+        {
+            switch ( $this->getAction() )
+            {
+                case static::POST:
+                    /* $_result = */
+                    $this->_dbConn->batchDeleteAttributes(
+                        array(
+                            static::TABLE_INDICATOR => $this->_transactionTable,
+                            'Items'                 => $this->_rollbackRecords
+                        )
+                    );
+                    break;
 
-		try
-		{
-			$_result = $this->_dbConn->getAttributes( $_scanProperties );
-			$_out = array_merge(
-				static::_unformatAttributes( $_result['Attributes'] ),
-				array( $_idField => $id )
-			);
+                case static::PUT:
+                case static::PATCH:
+                case static::MERGE:
+                case static::DELETE:
+                    $_requests = array();
+                    foreach ( $this->_rollbackRecords as $_item )
+                    {
+                        $_requests[] = array( 'PutRequest' => array( 'Item' => $_item ) );
+                    }
 
-			return $_out;
-		}
-		catch ( \Exception $ex )
-		{
-			throw new InternalServerErrorException( "Failed to get item '$table/$id' on SimpleDb Tables service.\n" . $ex->getMessage() );
-		}
-	}
+                    /* $_result = */
+                    $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $this->_transactionTable => $_requests ) ) );
 
-	protected static function _formatValue( $value )
-	{
-		if ( is_string( $value ) )
-		{
-			return $value;
-		}
-		if ( is_array( $value ) )
-		{
-			return '#DFJ#' . json_encode( $value );
-		}
-		if ( is_bool( $value ) )
-		{
-			return '#DFB#' . strval( $value );
-		}
-		if ( is_float( $value ) )
-		{
-			return '#DFF#' . strval( $value );
-		}
-		if ( is_int( $value ) )
-		{
-			return '#DFI#' . strval( $value );
-		}
+                    // todo check $_result['UnprocessedItems'] for 'PutRequest'
+                    break;
 
-		return $value;
-	}
+                default:
+                    break;
+            }
 
-	protected static function _unformatValue( $value )
-	{
-		if ( 0 == substr_compare( $value, '#DFJ#', 0, 5 ) )
-		{
-			return json_decode( substr( $value, 5 ) );
-		}
-		if ( 0 == substr_compare( $value, '#DFB#', 0, 5 ) )
-		{
-			return (bool)substr( $value, 5 );
-		}
-		if ( 0 == substr_compare( $value, '#DFF#', 0, 5 ) )
-		{
-			return floatval( substr( $value, 5 ) );
-		}
-		if ( 0 == substr_compare( $value, '#DFI#', 0, 5 ) )
-		{
-			return intval( substr( $value, 5 ) );
-		}
+            $this->_rollbackRecords = array();
+        }
 
-		return $value;
-	}
-
-	/**
-	 * @param array $record
-	 * @param bool  $replace
-	 *
-	 * @return array
-	 */
-	protected static function _formatAttributes( $record, $replace = false )
-	{
-		$_out = array();
-		if ( !empty( $record ) )
-		{
-			foreach ( $record as $_name => $_value )
-			{
-				if ( Utilities::isArrayNumeric( $_value ) )
-				{
-					foreach ( $_value as $_key => $_part )
-					{
-						$_part = static::_formatValue( $_part );
-						if ( 0 == $_key )
-						{
-							$_out[] = array( 'Name' => $_name, 'Value' => $_part, 'Replace' => $replace );
-						}
-						else
-						{
-							$_out[] = array( 'Name' => $_name, 'Value' => $_part );
-						}
-					}
-
-				}
-				else
-				{
-					$_value = static::_formatValue( $_value );
-					$_out[] = array( 'Name' => $_name, 'Value' => $_value, 'Replace' => $replace );
-				}
-			}
-		}
-
-		return $_out;
-	}
-
-	/**
-	 * @param array $record
-	 *
-	 * @return array
-	 */
-	protected static function _unformatAttributes( $record )
-	{
-		$_out = array();
-		if ( !empty( $record ) )
-		{
-			foreach ( $record as $_attribute )
-			{
-				$_name = Option::get( $_attribute, 'Name' );
-				if ( empty( $_name ) )
-				{
-					continue;
-				}
-
-				$_value = Option::get( $_attribute, 'Value' );
-				if ( isset( $_out[$_name] ) )
-				{
-					$_temp = $_out[$_name];
-					if ( is_array( $_temp ) )
-					{
-						$_temp[] = static::_unformatValue( $_value );
-						$_value = $_temp;
-					}
-					else
-					{
-						$_value = array( $_temp, static::_unformatValue( $_value ) );
-					}
-				}
-				else
-				{
-					$_value = static::_unformatValue( $_value );
-				}
-				$_out[$_name] = $_value;
-			}
-		}
-
-		return $_out;
-	}
-
-	protected static function _buildAttributesToGet( $fields = null, $id_fields = null )
-	{
-		if ( '*' == $fields )
-		{
-			return null;
-		}
-		if ( empty( $fields ) )
-		{
-			if ( empty( $id_fields ) )
-			{
-				return null;
-			}
-			if ( !is_array( $id_fields ) )
-			{
-				$id_fields = array_map( 'trim', explode( ',', trim( $id_fields, ',' ) ) );
-			}
-
-			return $id_fields;
-		}
-
-		if ( !is_array( $fields ) )
-		{
-			$fields = array_map( 'trim', explode( ',', trim( $fields, ',' ) ) );
-		}
-
-		return $fields;
-	}
-
-	/**
-	 * @param string|array $filter Filter for querying records by
-	 *
-	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-	 * @return array
-	 */
-	protected static function _parseFilter( $filter )
-	{
-		if ( empty( $filter ) )
-		{
-			return $filter;
-		}
-
-		if ( is_array( $filter ) )
-		{
-			throw new BadRequestException( 'Filtering in array format is not currently supported on SimpleDb.' );
-		}
-
-		// handle logical operators first
-		$_search = array( ' || ', ' && ' );
-		$_replace = array( ' or ', ' and ' );
-		$filter = trim( str_ireplace( $_search, $_replace, $filter ) );
-
-		// the rest should be comparison operators
-		$_search = array( ' eq ', ' ne ', ' gte ', ' lte ', ' gt ', ' lt ' );
-		$_replace = array( ' = ', ' != ', ' >= ', ' <= ', ' > ', ' < ' );
-		$filter = trim( str_ireplace( $_search, $_replace, $filter ) );
-
-		// check for x = null
-		$filter = str_ireplace( ' = null', ' is null', $filter );
-		// check for x != null
-		$filter = str_ireplace( ' != null', ' is not null', $filter );
-
-		return $filter;
-	}
+        return true;
+    }
 }
