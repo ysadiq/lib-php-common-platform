@@ -262,6 +262,14 @@ JS;
             /** @noinspection PhpUndefinedFieldInspection */
             $data = $_runner->event;
 
+            //  Put the result into the event data
+            if ( !isset( $data['result'] ) )
+            {
+                $data['result'] = array();
+            }
+
+            $data['result'][ $scriptId ] = $_lastVariable;
+
             $output = ob_get_clean();
 
             return $_lastVariable;
