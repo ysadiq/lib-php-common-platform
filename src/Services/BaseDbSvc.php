@@ -23,6 +23,7 @@ use DreamFactory\Platform\Enums\DbFilterOperators;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
@@ -41,11 +42,6 @@ abstract class BaseDbSvc extends BasePlatformRestService
     //*************************************************************************
     //	Constants
     //*************************************************************************
-
-    /**
-     * Default record identifier field
-     */
-    const DEFAULT_ID_FIELD = 'id';
 
     /**
      * Default maximum records returned on filter request
@@ -68,6 +64,22 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @var boolean
      */
     protected $_useBlendFormat = true;
+    /**
+     * @var string
+     */
+    protected $_transactionTable = null;
+    /**
+     * @var array
+     */
+    protected $_batchIds = array();
+    /**
+     * @var array
+     */
+    protected $_batchRecords = array();
+    /**
+     * @var array
+     */
+    protected $_rollbackRecords = array();
 
     //*************************************************************************
     //	Methods
@@ -117,8 +129,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         // means to override the default identifier fields for a table
         // or supply one when there is no default designated
-        $_idField = static::getFromPostedData( $post_data, 'id_field', FilterInput::request( 'id_field' ) );
-        $_extras['id_field'] = ( empty( $_idField ) ) ? static::DEFAULT_ID_FIELD : $_idField;
+        $_extras['id_field'] = static::getFromPostedData( $post_data, 'id_field', FilterInput::request( 'id_field' ) );
 
         if ( null != $_ssFilters = Session::getServiceFilters( $this->_apiName, $this->_resource ) )
         {
@@ -190,7 +201,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
      *
      * @throws BadRequestException
      */
-    protected function validateTableAccess( $table, $action = null )
+    protected function validateTableAccess( &$table, $action = null )
     {
         if ( empty( $table ) )
         {
@@ -723,7 +734,115 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @throws \Exception
      * @return array
      */
-    abstract public function createRecords( $table, $records, $extras = array() );
+    public function createRecords( $table, $records, $extras = array() )
+    {
+        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
+
+        $_isSingle = ( 1 == count( $records ) );
+        $_fields = Option::get( $extras, 'fields' );
+        $_idFields = Option::get( $extras, 'id_field' );
+        $_rollback = ( $_isSingle ) ? false : Option::getBool( $extras, 'rollback', false );
+        $_continue = ( $_isSingle ) ? false : Option::getBool( $extras, 'continue', false );
+        if ( $_rollback && $_continue )
+        {
+            throw new BadRequestException( 'Rollback and continue operations can not be requested at the same time.' );
+        }
+
+        $this->initTransaction( $table );
+
+        $_fieldsInfo = $this->getFieldsInfo( $table );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        if ( empty( $_idsInfo ) )
+        {
+            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+        }
+
+        $extras['ids_info'] = $_idsInfo;
+        $extras['id_fields'] = $_idFields;
+        $extras['fields_info'] = $_fieldsInfo;
+        $extras['require_more'] = static::_requireMoreFields( $_fields, $_idFields );
+
+        $_out = array();
+        $_errors = array();
+        try
+        {
+            foreach ( $records as $_index => $_record )
+            {
+                try
+                {
+                    if ( false === $_id = $this->checkForIds( $_record, $_idsInfo, $extras, true ) )
+                    {
+                        throw new BadRequestException( "Required id field(s) not found in record $_index: " . print_r( $_record, true ) );
+                    }
+
+                    $_result = $this->addToTransaction( $_record, $_id, $extras, $_rollback );
+                    if ( isset( $_result ) )
+                    {
+                        // operation performed, take output
+                        $_out[$_index] = $_result;
+                    }
+                }
+                catch ( \Exception $_ex )
+                {
+                    if ( $_isSingle || $_rollback || !$_continue )
+                    {
+                        if ( 0 !== $_index )
+                        {
+                            // first error, don't worry about batch just throw it
+                            // mark last error and index for batch results
+                            $_errors[] = $_index;
+                            $_out[$_index] = $_ex->getMessage();
+                        }
+
+                        throw $_ex;
+                    }
+
+                    // mark error and index for batch results
+                    $_errors[] = $_index;
+                    $_out[$_index] = $_ex->getMessage();
+                }
+            }
+
+            if ( !empty( $_errors ) )
+            {
+                throw new BadRequestException();
+            }
+
+            $_result = $this->commitTransaction( $extras );
+            if ( isset( $_result ) )
+            {
+                // operation performed, take output, override earlier
+                $_out = $_result;
+            }
+
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            $_msg = $_ex->getMessage();
+
+            $_context = null;
+            if ( !empty( $_errors ) )
+            {
+                $_context = array( 'error' => $_errors, 'record' => $_out );
+                $_msg = 'Batch Error: Not all records could be created.';
+            }
+
+            if ( $_rollback )
+            {
+                $this->rollbackTransaction();
+
+                $_msg .= " All changes rolled back.";
+            }
+
+            if ( $_ex instanceof RestException )
+            {
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+            }
+
+            throw new InternalServerErrorException( "Failed to create records in '$table'.\n$_msg", null, null, $_context );
+        }
+    }
 
     /**
      * @param string $table
@@ -750,7 +869,114 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @throws \Exception
      * @return array
      */
-    abstract public function updateRecords( $table, $records, $extras = array() );
+    public function updateRecords( $table, $records, $extras = array() )
+    {
+        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
+
+        $_fields = Option::get( $extras, 'fields' );
+        $_idFields = Option::get( $extras, 'id_field' );
+        $_isSingle = ( 1 == count( $records ) );
+        $_rollback = ( $_isSingle ) ? false : Option::getBool( $extras, 'rollback', false );
+        $_continue = ( $_isSingle ) ? false : Option::getBool( $extras, 'continue', false );
+        if ( $_rollback && $_continue )
+        {
+            throw new BadRequestException( 'Rollback and continue operations can not be requested at the same time.' );
+        }
+
+        $this->initTransaction( $table );
+
+        $_fieldsInfo = $this->getFieldsInfo( $table );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        if ( empty( $_idsInfo ) )
+        {
+            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+        }
+
+        $extras['ids_info'] = $_idsInfo;
+        $extras['id_fields'] = $_idFields;
+        $extras['fields_info'] = $_fieldsInfo;
+        $extras['require_more'] = static::_requireMoreFields( $_fields, $_idFields );
+
+        $_out = array();
+        $_errors = array();
+        try
+        {
+            foreach ( $records as $_index => $_record )
+            {
+                try
+                {
+                    if ( false === $_id = $this->checkForIds( $_record, $_idsInfo, $extras ) )
+                    {
+                        throw new BadRequestException( "Required id field(s) not found in record $_index: " . print_r( $_record, true ) );
+                    }
+
+                    $_result = $this->addToTransaction( $_record, $_id, $extras, $_rollback );
+                    if ( isset( $_result ) )
+                    {
+                        // operation performed, take output
+                        $_out[$_index] = $_result;
+                    }
+                }
+                catch ( \Exception $_ex )
+                {
+                    if ( $_isSingle || $_rollback || !$_continue )
+                    {
+                        if ( 0 !== $_index )
+                        {
+                            // first error, don't worry about batch just throw it
+                            // mark last error and index for batch results
+                            $_errors[] = $_index;
+                            $_out[$_index] = $_ex->getMessage();
+                        }
+
+                        throw $_ex;
+                    }
+
+                    // mark error and index for batch results
+                    $_errors[] = $_index;
+                    $_out[$_index] = $_ex->getMessage();
+                }
+            }
+
+            if ( !empty( $_errors ) )
+            {
+                throw new BadRequestException();
+            }
+
+            $_result = $this->commitTransaction( $extras );
+            if ( isset( $_result ) )
+            {
+                $_out = $_result;
+            }
+
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            $_msg = $_ex->getMessage();
+
+            $_context = null;
+            if ( !empty( $_errors ) )
+            {
+                $_context = array( 'error' => $_errors, 'record' => $_out );
+                $_msg = 'Batch Error: Not all records could be updated.';
+            }
+
+            if ( $_rollback )
+            {
+                $this->rollbackTransaction();
+
+                $_msg .= " All changes rolled back.";
+            }
+
+            if ( $_ex instanceof RestException )
+            {
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+            }
+
+            throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
+        }
+    }
 
     /**
      * @param string $table
@@ -779,7 +1005,30 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @throws \Exception
      * @return array
      */
-    abstract public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() );
+    public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    {
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+
+        $_fields = Option::get( $extras, 'fields' );
+        $_idFields = Option::get( $extras, 'id_field' );
+
+        // slow, but workable for now, maybe faster than merging individuals
+        $extras['fields'] = '';
+        $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
+        unset( $_records['meta'] );
+
+        $_fieldsInfo = $this->getFieldsInfo( $table );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        if ( empty( $_idsInfo ) )
+        {
+            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+        }
+
+        $_ids = static::recordsAsIds( $_records, $_idFields );
+        $extras['fields'] = $_fields;
+
+        return $this->updateRecordsByIds( $table, $record, $_ids, $extras );
+    }
 
     /**
      * @param string $table
@@ -787,9 +1036,123 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @param mixed  $ids - array or comma-delimited list of record identifiers
      * @param array  $extras
      *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
      * @return array
      */
-    abstract public function updateRecordsByIds( $table, $record, $ids, $extras = array() );
+    public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
+    {
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
+
+        $_fields = Option::get( $extras, 'fields' );
+        $_idFields = Option::get( $extras, 'id_field' );
+        $_isSingle = ( 1 == count( $ids ) );
+        $_rollback = ( $_isSingle ) ? false : Option::getBool( $extras, 'rollback', false );
+        $_continue = ( $_isSingle ) ? false : Option::getBool( $extras, 'continue', false );
+        if ( $_rollback && $_continue )
+        {
+            throw new BadRequestException( 'Rollback and continue operations can not be requested at the same time.' );
+        }
+
+        $this->initTransaction( $table );
+
+        $_fieldsInfo = $this->getFieldsInfo( $table );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        if ( empty( $_idsInfo ) )
+        {
+            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+        }
+
+        $extras['ids_info'] = $_idsInfo;
+        $extras['id_fields'] = $_idFields;
+        $extras['fields_info'] = $_fieldsInfo;
+        $extras['require_more'] = static::_requireMoreFields( $_fields, $_idFields );
+
+        static::removeIds( $record, $_idFields );
+        $extras['updates'] = $record;
+
+        $_out = array();
+        $_errors = array();
+        try
+        {
+            foreach ( $ids as $_index => $_id )
+            {
+                try
+                {
+                    if ( empty( $_id ) )
+                    {
+                        throw new BadRequestException( "Identifying field '_id' can not be empty for update record request." );
+                    }
+
+                    $_result = $this->addToTransaction( null, $_id, $extras, $_rollback );
+                    if ( isset( $_result ) )
+                    {
+                        // operation performed, take output
+                        $_out[$_index] = $_result;
+                    }
+                }
+                catch ( \Exception $_ex )
+                {
+                    if ( $_isSingle || $_rollback || !$_continue )
+                    {
+                        if ( 0 !== $_index )
+                        {
+                            // first error, don't worry about batch just throw it
+                            // mark last error and index for batch results
+                            $_errors[] = $_index;
+                            $_out[$_index] = $_ex->getMessage();
+                        }
+
+                        throw $_ex;
+                    }
+
+                    // mark error and index for batch results
+                    $_errors[] = $_index;
+                    $_out[$_index] = $_ex->getMessage();
+                }
+            }
+
+            if ( !empty( $_errors ) )
+            {
+                throw new BadRequestException();
+            }
+
+            $_result = $this->commitTransaction( $extras );
+            if ( isset( $_result ) )
+            {
+                $_out = $_result;
+            }
+
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            $_msg = $_ex->getMessage();
+
+            $_context = null;
+            if ( !empty( $_errors ) )
+            {
+                $_context = array( 'error' => $_errors, 'record' => $_out );
+                $_msg = 'Batch Error: Not all records could be updated.';
+            }
+
+            if ( $_rollback )
+            {
+                $this->rollbackTransaction();
+
+                $_msg .= " All changes rolled back.";
+            }
+
+            if ( $_ex instanceof RestException )
+            {
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+            }
+
+            throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
+        }
+    }
 
     /**
      * @param string $table
@@ -817,7 +1180,114 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @throws \Exception
      * @return array
      */
-    abstract public function mergeRecords( $table, $records, $extras = array() );
+    public function mergeRecords( $table, $records, $extras = array() )
+    {
+        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
+
+        $_fields = Option::get( $extras, 'fields' );
+        $_idFields = Option::get( $extras, 'id_field' );
+        $_isSingle = ( 1 == count( $records ) );
+        $_rollback = ( $_isSingle ) ? false : Option::getBool( $extras, 'rollback', false );
+        $_continue = ( $_isSingle ) ? false : Option::getBool( $extras, 'continue', false );
+        if ( $_rollback && $_continue )
+        {
+            throw new BadRequestException( 'Rollback and continue operations can not be requested at the same time.' );
+        }
+
+        $this->initTransaction( $table );
+
+        $_fieldsInfo = $this->getFieldsInfo( $table );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        if ( empty( $_idsInfo ) )
+        {
+            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+        }
+
+        $extras['ids_info'] = $_idsInfo;
+        $extras['id_fields'] = $_idFields;
+        $extras['fields_info'] = $_fieldsInfo;
+        $extras['require_more'] = static::_requireMoreFields( $_fields, $_idFields );
+
+        $_out = array();
+        $_errors = array();
+        try
+        {
+            foreach ( $records as $_index => $_record )
+            {
+                try
+                {
+                    if ( false === $_id = $this->checkForIds( $_record, $_idsInfo, $extras ) )
+                    {
+                        throw new BadRequestException( "Required id field(s) not found in record $_index: " . print_r( $_record, true ) );
+                    }
+
+                    $_result = $this->addToTransaction( $_record, $_id, $extras, $_rollback );
+                    if ( isset( $_result ) )
+                    {
+                        // operation performed, take output
+                        $_out[$_index] = $_result;
+                    }
+                }
+                catch ( \Exception $_ex )
+                {
+                    if ( $_isSingle || $_rollback || !$_continue )
+                    {
+                        if ( 0 !== $_index )
+                        {
+                            // first error, don't worry about batch just throw it
+                            // mark last error and index for batch results
+                            $_errors[] = $_index;
+                            $_out[$_index] = $_ex->getMessage();
+                        }
+
+                        throw $_ex;
+                    }
+
+                    // mark error and index for batch results
+                    $_errors[] = $_index;
+                    $_out[$_index] = $_ex->getMessage();
+                }
+            }
+
+            if ( !empty( $_errors ) )
+            {
+                throw new BadRequestException();
+            }
+
+            $_result = $this->commitTransaction( $extras );
+            if ( isset( $_result ) )
+            {
+                $_out = $_result;
+            }
+
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            $_msg = $_ex->getMessage();
+
+            $_context = null;
+            if ( !empty( $_errors ) )
+            {
+                $_context = array( 'error' => $_errors, 'record' => $_out );
+                $_msg = 'Batch Error: Not all records could be patched.';
+            }
+
+            if ( $_rollback )
+            {
+                $this->rollbackTransaction();
+
+                $_msg .= " All changes rolled back.";
+            }
+
+            if ( $_ex instanceof RestException )
+            {
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+            }
+
+            throw new InternalServerErrorException( "Failed to patch records in '$table'.\n$_msg", null, null, $_context );
+        }
+    }
 
     /**
      * @param string $table
@@ -846,7 +1316,30 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @throws \Exception
      * @return array
      */
-    abstract public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() );
+    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    {
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+
+        $_fields = Option::get( $extras, 'fields' );
+        $_idFields = Option::get( $extras, 'id_field' );
+
+        // slow, but workable for now, maybe faster than merging individuals
+        $extras['fields'] = '';
+        $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
+        unset( $_records['meta'] );
+
+        $_fieldsInfo = $this->getFieldsInfo( $table );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        if ( empty( $_idsInfo ) )
+        {
+            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+        }
+
+        $_ids = static::recordsAsIds( $_records, $_idFields );
+        $extras['fields'] = $_fields;
+
+        return $this->mergeRecordsByIds( $table, $record, $_ids, $extras );
+    }
 
     /**
      * @param string $table
@@ -857,7 +1350,118 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @throws \Exception
      * @return array
      */
-    abstract public function mergeRecordsByIds( $table, $record, $ids, $extras = array() );
+    public function mergeRecordsByIds( $table, $record, $ids, $extras = array() )
+    {
+        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
+
+        $_fields = Option::get( $extras, 'fields' );
+        $_idFields = Option::get( $extras, 'id_field' );
+        $_isSingle = ( 1 == count( $ids ) );
+        $_rollback = ( $_isSingle ) ? false : Option::getBool( $extras, 'rollback', false );
+        $_continue = ( $_isSingle ) ? false : Option::getBool( $extras, 'continue', false );
+        if ( $_rollback && $_continue )
+        {
+            throw new BadRequestException( 'Rollback and continue operations can not be requested at the same time.' );
+        }
+
+        $this->initTransaction( $table );
+
+        $_fieldsInfo = $this->getFieldsInfo( $table );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        if ( empty( $_idsInfo ) )
+        {
+            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+        }
+
+        $extras['ids_info'] = $_idsInfo;
+        $extras['id_fields'] = $_idFields;
+        $extras['fields_info'] = $_fieldsInfo;
+        $extras['require_more'] = static::_requireMoreFields( $_fields, $_idFields );
+
+        static::removeIds( $record, $_idFields );
+        $extras['updates'] = $record;
+
+        $_out = array();
+        $_errors = array();
+        try
+        {
+            foreach ( $ids as $_index => $_id )
+            {
+                try
+                {
+                    if ( empty( $_id ) )
+                    {
+                        throw new BadRequestException( "Identifier can not be empty for update record request." );
+                    }
+
+                    $_result = $this->addToTransaction( null, $_id, $extras, $_rollback );
+                    if ( isset( $_result ) )
+                    {
+                        // operation performed, take output
+                        $_out[$_index] = $_result;
+                    }
+                }
+                catch ( \Exception $_ex )
+                {
+                    if ( $_isSingle || $_rollback || !$_continue )
+                    {
+                        if ( 0 !== $_index )
+                        {
+                            // first error, don't worry about batch just throw it
+                            // mark last error and index for batch results
+                            $_errors[] = $_index;
+                            $_out[$_index] = $_ex->getMessage();
+                        }
+
+                        throw $_ex;
+                    }
+
+                    // mark error and index for batch results
+                    $_errors[] = $_index;
+                    $_out[$_index] = $_ex->getMessage();
+                }
+            }
+
+            if ( !empty( $_errors ) )
+            {
+                throw new BadRequestException();
+            }
+
+            $_result = $this->commitTransaction( $extras );
+            if ( isset( $_result ) )
+            {
+                $_out = $_result;
+            }
+
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            $_msg = $_ex->getMessage();
+
+            $_context = null;
+            if ( !empty( $_errors ) )
+            {
+                $_context = array( 'error' => $_errors, 'record' => $_out );
+                $_msg = 'Batch Error: Not all records could be patched.';
+            }
+
+            if ( $_rollback )
+            {
+                $this->rollbackTransaction();
+
+                $_msg .= " All changes rolled back.";
+            }
+
+            if ( $_ex instanceof RestException )
+            {
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+            }
+
+            throw new InternalServerErrorException( "Failed to patch records in '$table'.\n$_msg", null, null, $_context );
+        }
+    }
 
     /**
      * @param string $table
@@ -885,7 +1489,25 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @throws \Exception
      * @return array
      */
-    abstract public function deleteRecords( $table, $records, $extras = array() );
+    public function deleteRecords( $table, $records, $extras = array() )
+    {
+        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
+
+        $_fieldsInfo = $this->getFieldsInfo( $table );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo );
+        if ( empty( $_idsInfo ) )
+        {
+            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+        }
+
+        $_ids = array();
+        foreach ( $records as $_record )
+        {
+            $_ids[] = $this->checkForIds( $_record, $_idsInfo, $extras );
+        }
+
+        return $this->deleteRecordsByIds( $table, $_ids, $extras );
+    }
 
     /**
      * @param string $table
@@ -913,7 +1535,28 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @throws \Exception
      * @return array
      */
-    abstract public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() );
+    public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() )
+    {
+        $_fields = Option::get( $extras, 'fields' );
+        $_idFields = Option::get( $extras, 'id_field' );
+
+        // slow, but workable for now, maybe faster than merging individuals
+        $extras['fields'] = '';
+        $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
+        unset( $_records['meta'] );
+
+        $_fieldsInfo = $this->getFieldsInfo( $table );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        if ( empty( $_idsInfo ) )
+        {
+            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+        }
+
+        $_ids = static::recordsAsIds( $_records, $_idFields );
+        $extras['fields'] = $_fields;
+
+        return $this->deleteRecordsByIds( $table, $_ids, $extras );
+    }
 
     /**
      * @param string $table
@@ -923,7 +1566,114 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @throws \Exception
      * @return array
      */
-    abstract public function deleteRecordsByIds( $table, $ids, $extras = array() );
+    public function deleteRecordsByIds( $table, $ids, $extras = array() )
+    {
+        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
+
+        $_fields = Option::get( $extras, 'fields' );
+        $_idFields = Option::get( $extras, 'id_field' );
+        $_isSingle = ( 1 == count( $ids ) );
+        $_rollback = ( $_isSingle ) ? false : Option::getBool( $extras, 'rollback', false );
+        $_continue = ( $_isSingle ) ? false : Option::getBool( $extras, 'continue', false );
+        if ( $_rollback && $_continue )
+        {
+            throw new BadRequestException( 'Rollback and continue operations can not be requested at the same time.' );
+        }
+
+        $this->initTransaction( $table );
+
+        $_fieldsInfo = $this->getFieldsInfo( $table );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        if ( empty( $_idsInfo ) )
+        {
+            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+        }
+
+        $extras['ids_info'] = $_idsInfo;
+        $extras['id_fields'] = $_idFields;
+        $extras['fields_info'] = $_fieldsInfo;
+        $extras['require_more'] = static::_requireMoreFields( $_fields, $_idFields );
+
+        $_out = array();
+        $_errors = array();
+        try
+        {
+            foreach ( $ids as $_index => $_id )
+            {
+                try
+                {
+                    if ( empty( $_id ) )
+                    {
+                        throw new BadRequestException( "Identifying field '_id' can not be empty for delete record request." );
+                    }
+
+                    $_result = $this->addToTransaction( null, $_id, $extras, $_rollback );
+                    if ( isset( $_result ) )
+                    {
+                        // operation performed, take output
+                        $_out[$_index] = $_result;
+                    }
+                }
+                catch ( \Exception $_ex )
+                {
+                    if ( $_isSingle || $_rollback || !$_continue )
+                    {
+                        if ( 0 !== $_index )
+                        {
+                            // first error, don't worry about batch just throw it
+                            // mark last error and index for batch results
+                            $_errors[] = $_index;
+                            $_out[$_index] = $_ex->getMessage();
+                        }
+
+                        throw $_ex;
+                    }
+
+                    // mark error and index for batch results
+                    $_errors[] = $_index;
+                    $_out[$_index] = $_ex->getMessage();
+                }
+            }
+
+            if ( !empty( $_errors ) )
+            {
+                throw new BadRequestException();
+            }
+
+            $_result = $this->commitTransaction( $extras );
+            if ( isset( $_result ) )
+            {
+                $_out = $_result;
+            }
+
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            $_msg = $_ex->getMessage();
+
+            $_context = null;
+            if ( !empty( $_errors ) )
+            {
+                $_context = array( 'error' => $_errors, 'record' => $_out );
+                $_msg = 'Batch Error: Not all records could be deleted.';
+            }
+
+            if ( $_rollback )
+            {
+                $this->rollbackTransaction();
+
+                $_msg .= " All changes rolled back.";
+            }
+
+            if ( $_ex instanceof RestException )
+            {
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+            }
+
+            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n$_msg", null, null, $_context );
+        }
+    }
 
     /**
      * @param string $table
@@ -959,7 +1709,25 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @throws \Exception
      * @return array
      */
-    abstract public function retrieveRecords( $table, $records, $extras = array() );
+    public function retrieveRecords( $table, $records, $extras = array() )
+    {
+        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
+
+        $_fieldsInfo = $this->getFieldsInfo( $table );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo );
+        if ( empty( $_idsInfo ) )
+        {
+            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+        }
+
+        $_ids = array();
+        foreach ( $records as $_record )
+        {
+            $_ids[] = $this->checkForIds( $_record, $_idsInfo, $extras );
+        }
+
+        return $this->retrieveRecordsByIds( $table, $_ids, $extras );
+    }
 
     /**
      * @param string $table
@@ -986,7 +1754,102 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @throws \Exception
      * @return array
      */
-    abstract public function retrieveRecordsByIds( $table, $ids, $extras = array() );
+    public function retrieveRecordsByIds( $table, $ids, $extras = array() )
+    {
+        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
+
+        $_fields = Option::get( $extras, 'fields' );
+        $_idFields = Option::get( $extras, 'id_field' );
+        $_isSingle = ( 1 == count( $ids ) );
+        $_continue = ( $_isSingle ) ? false : Option::getBool( $extras, 'continue', false );
+
+        $this->initTransaction( $table );
+
+        $_fieldsInfo = $this->getFieldsInfo( $table );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        if ( empty( $_idsInfo ) )
+        {
+            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
+        }
+
+        $extras['ids_info'] = $_idsInfo;
+        $extras['id_fields'] = $_idFields;
+        $extras['fields_info'] = $_fieldsInfo;
+        $extras['require_more'] = static::_requireMoreFields( $_fields, $_idFields );
+
+        $_out = array();
+        $_errors = array();
+        try
+        {
+            foreach ( $ids as $_index => $_id )
+            {
+                try
+                {
+                    if ( empty( $_id ) )
+                    {
+                        throw new BadRequestException( "Identifying field '_id' can not be empty for retrieve record request." );
+                    }
+
+                    $_result = $this->addToTransaction( null, $_id, $extras, false );
+                    if ( isset( $_result ) )
+                    {
+                        // operation performed, take output
+                        $_out[$_index] = $_result;
+                    }
+                }
+                catch ( \Exception $_ex )
+                {
+                    if ( $_isSingle || !$_continue )
+                    {
+                        if ( 0 !== $_index )
+                        {
+                            // first error, don't worry about batch just throw it
+                            // mark last error and index for batch results
+                            $_errors[] = $_index;
+                            $_out[$_index] = $_ex->getMessage();
+                        }
+
+                        throw $_ex;
+                    }
+
+                    // mark error and index for batch results
+                    $_errors[] = $_index;
+                    $_out[$_index] = $_ex->getMessage();
+                }
+            }
+
+            if ( !empty( $_errors ) )
+            {
+                throw new BadRequestException();
+            }
+
+            $_result = $this->commitTransaction( $extras );
+            if ( isset( $_result ) )
+            {
+                $_out = $_result;
+            }
+
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            $_msg = $_ex->getMessage();
+
+            $_context = null;
+            if ( !empty( $_errors ) )
+            {
+                $_context = array( 'error' => $_errors, 'record' => $_out );
+                $_msg = 'Batch Error: Not all records could be retrieved.';
+            }
+
+            if ( $_ex instanceof RestException )
+            {
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+            }
+
+            throw new InternalServerErrorException( "Failed to retrieve records from '$table'.\n$_msg", null, null, $_context );
+        }
+    }
 
     /**
      * @param string $table
@@ -1004,6 +1867,179 @@ abstract class BaseDbSvc extends BasePlatformRestService
     }
 
     // Helper function for record usage
+
+    protected function getFieldsInfo( $table )
+    {
+        return array();
+    }
+
+    abstract protected function getIdsInfo( $table, $fields_info = null, &$requested = null );
+
+    protected function getIdFieldsFromInfo( $id_info )
+    {
+        $_fields = array();
+        foreach ( $id_info as $_info )
+        {
+            $_fields[] = Option::get( $_info, 'name' );
+        }
+
+        return $_fields;
+    }
+
+    protected function checkIds( $id, $ids_info )
+    {
+        if ( !empty( $ids_info ) )
+        {
+            $_count = count( $ids_info );
+            if ( !is_array( $id ) && ( 1 == $_count ) )
+            {
+                return true;
+            }
+
+            if ( $_count == count( Option::clean( $id ) ) )
+            {
+                foreach ( $ids_info as $_info )
+                {
+                    $_name = Option::get( $_info, 'name' );
+                    if ( null === Option::get( $id, $_name ) )
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function checkForIds( &$record, $ids_info, $extras = null, $on_create = false, $remove = false )
+    {
+        if ( !empty( $ids_info ) )
+        {
+            $_id = array();
+            foreach ( $ids_info as $_info )
+            {
+                $_name = Option::get( $_info, 'name' );
+                $_value = Option::get( $record, $_name, null, $remove );
+                if (empty($_value))
+                {
+                    return false;
+                }
+
+                $_id[] = Option::get( $record, $_name, null, $remove );
+            }
+
+            if ( !empty( $_id ) )
+            {
+                if ( 1 == count( $_id ) )
+                {
+                    return $_id[0];
+                }
+
+                return $_id;
+            }
+
+            if ( $on_create )
+            {
+                // ok
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array $record
+     * @param array $avail_fields
+     * @param array $filter_info
+     * @param bool  $for_update
+     * @param array $old_record
+     *
+     * @return array
+     * @throws \Exception
+     */
+    protected function parseRecord( $record, $avail_fields, $filter_info = null, $for_update = false, $old_record = null )
+    {
+//        $record = DataFormat::arrayKeyLower( $record );
+        $_parsed = ( empty( $avail_fields ) ) ? $record : array();
+        if ( !empty( $avail_fields ) )
+        {
+            $_keys = array_keys( $record );
+            $_values = array_values( $record );
+            foreach ( $avail_fields as $_fieldInfo )
+            {
+//            $name = strtolower( Option::get( $field_info, 'name', '' ) );
+                $_name = Option::get( $_fieldInfo, 'name', '' );
+                $_type = Option::get( $_fieldInfo, 'type' );
+                $_pos = array_search( $_name, $_keys );
+                if ( false !== $_pos )
+                {
+                    $_fieldVal = Option::get( $_values, $_pos );
+                    // due to conversion from XML to array, null or empty xml elements have the array value of an empty array
+                    if ( is_array( $_fieldVal ) && empty( $_fieldVal ) )
+                    {
+                        $_fieldVal = null;
+                    }
+
+                    /** validations **/
+
+                    $_validations = Option::get( $_fieldInfo, 'validation' );
+
+                    if ( !static::validateFieldValue( $_name, $_fieldVal, $_validations, $for_update, $_fieldInfo ) )
+                    {
+                        unset( $_keys[$_pos] );
+                        unset( $_values[$_pos] );
+                        continue;
+                    }
+
+                    $_parsed[$_name] = $_fieldVal;
+                    unset( $_keys[$_pos] );
+                    unset( $_values[$_pos] );
+                }
+
+                // add or override for specific fields
+                switch ( $_type )
+                {
+                    case 'timestamp_on_create':
+                        if ( !$for_update )
+                        {
+                            $_parsed[$_name] = time();
+                        }
+                        break;
+                    case 'timestamp_on_update':
+                        $_parsed[$_name] = time();
+                        break;
+                    case 'user_id_on_create':
+                        if ( !$for_update )
+                        {
+                            $userId = Session::getCurrentUserId();
+                            if ( isset( $userId ) )
+                            {
+                                $_parsed[$_name] = $userId;
+                            }
+                        }
+                        break;
+                    case 'user_id_on_update':
+                        $userId = Session::getCurrentUserId();
+                        if ( isset( $userId ) )
+                        {
+                            $_parsed[$_name] = $userId;
+                        }
+                        break;
+                }
+            }
+        }
+
+        if ( !empty( $filter_info ) )
+        {
+            $this->validateRecord( $_parsed, $filter_info, $for_update, $old_record );
+        }
+
+        return $_parsed;
+    }
 
     /**
      * @param array $record
@@ -1071,6 +2107,15 @@ abstract class BaseDbSvc extends BasePlatformRestService
         }
     }
 
+    /**
+     * @param $operator
+     * @param $left_found
+     * @param $left
+     * @param $right
+     *
+     * @return bool
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     */
     public static function compareByOperator( $operator, $left_found, $left, $right )
     {
         switch ( $operator )
@@ -1110,6 +2155,17 @@ abstract class BaseDbSvc extends BasePlatformRestService
         }
     }
 
+    /**
+     * @param      $name
+     * @param      $value
+     * @param      $validations
+     * @param bool $for_update
+     * @param null $field_info
+     *
+     * @return bool
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     */
     protected function validateFieldValue( $name, $value, $validations, $for_update = false, $field_info = null )
     {
         if ( is_array( $validations ) )
@@ -1360,6 +2416,142 @@ abstract class BaseDbSvc extends BasePlatformRestService
     }
 
     /**
+     * @param mixed $handle
+     *
+     * @return bool
+     */
+    protected function initTransaction( $handle = null )
+    {
+        $this->_transactionTable = $handle;
+        $this->_batchRecords = array();
+        $this->_batchIds = array();
+        $this->_rollbackRecords = array();
+
+        return true;
+    }
+
+    /**
+     * @param mixed      $record
+     * @param mixed      $id
+     * @param null|array $extras Additional items needed to complete the transaction
+     * @param bool       $save_old
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotImplementedException
+     * @return null|array Array of output fields
+     */
+    protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false )
+    {
+        if ( !empty( $record ) )
+        {
+            $this->_batchRecords[] = $record;
+        }
+        if ( !empty( $id ) )
+        {
+            $this->_batchIds[] = $id;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param null|array $extras Additional items needed to complete the transaction
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array Array of output records
+     */
+    abstract protected function commitTransaction( $extras = null );
+
+    /**
+     * @param mixed $record
+     *
+     * @return bool
+     */
+    protected function addToRollback( $record )
+    {
+        if ( !empty( $record ) )
+        {
+            $this->_rollbackRecords[] = $record;
+        }
+
+        return true;
+    }
+
+    /**
+     * @return bool
+     */
+    abstract protected function rollbackTransaction();
+
+    /**
+     * @param array $record
+     * @param bool  $for_update
+     *
+     * @return mixed
+     */
+    protected function formatRecordToNative( $record, $for_update = false )
+    {
+        // base class does nothing so far
+        if ( $for_update )
+        {
+
+        }
+
+        return $record;
+    }
+
+    /**
+     * @param mixed $native
+     * @param bool  $for_update
+     *
+     * @return array
+     */
+    protected function formatRecordFromNative( $native, $for_update = false )
+    {
+        // base class does nothing so far
+        if ( $for_update )
+        {
+
+        }
+
+        return $native;
+    }
+
+    /**
+     * @param array $records
+     * @param bool  $for_update
+     *
+     * @return mixed
+     */
+    protected function formatRecordsToNative( $records, $for_update = false )
+    {
+        // base class does nothing so far
+        $_out = array();
+        foreach ( $records as $_record )
+        {
+            $_out[] = static::formatRecordToNative( $_record, $for_update );
+        }
+
+        return $_out;
+    }
+
+    /**
+     * @param mixed $native
+     * @param bool  $for_update
+     *
+     * @return array
+     */
+    protected function formatRecordsFromNative( $native, $for_update = false )
+    {
+        $_out = array();
+        foreach ( $native as $_record )
+        {
+            $_out[] = static::formatRecordFromNative( $_record, $for_update );
+        }
+
+        return $_out;
+    }
+
+    /**
      * @param array        $record
      * @param string|array $include  List of keys to include in the output record
      * @param string|array $id_field Single or list of identifier fields
@@ -1370,21 +2562,17 @@ abstract class BaseDbSvc extends BasePlatformRestService
     {
         if ( '*' !== $include )
         {
-            $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
-            if ( !is_array( $id_field ) )
+            if ( !empty( $id_field ) && !is_array( $id_field ) )
             {
                 $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
             }
+            $id_field = Option::clean( $id_field );
 
-            $_out = array();
-            if ( empty( $include ) )
-            {
-                $include = $id_field;
-            }
-            if ( !is_array( $include ) )
+            if ( !empty( $include ) && !is_array( $include ) )
             {
                 $include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
             }
+            $include = Option::clean( $include );
 
             // make sure we always include identifier fields
             foreach ( $id_field as $id )
@@ -1396,6 +2584,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
             }
 
             // glean desired fields from record
+            $_out = array();
             foreach ( $include as $_key )
             {
                 $_out[$_key] = Option::get( $record, $_key );
@@ -1433,9 +2622,13 @@ abstract class BaseDbSvc extends BasePlatformRestService
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return array
      */
-    protected static function recordsAsIds( $records, $id_field = null, $include_field = false )
+    protected static function recordsAsIds( $records, $id_field, $include_field = false )
     {
-        $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
+        if ( empty( $id_field ) )
+        {
+            return array();
+        }
+
         if ( !is_array( $id_field ) )
         {
             $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
@@ -1454,7 +2647,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                     {
                         throw new BadRequestException( "Identifying field '$_field' can not be empty for record index '$_index' request." );
                     }
-                    $_ids[] = ( $include_field ) ? array( $_field => $_id ) : $_id;
+                    $_ids[$_field] = $_id;
                 }
 
                 $_out[] = $_ids;
@@ -1476,15 +2669,68 @@ abstract class BaseDbSvc extends BasePlatformRestService
     }
 
     /**
+     * @param array  $record
+     * @param string $id_field
+     * @param bool   $include_field
+     * @param bool   $remove
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array
+     */
+    protected static function recordAsId( &$record, $id_field = null, $include_field = false, $remove = false )
+    {
+        if ( empty( $id_field ) )
+        {
+            return array();
+        }
+
+        if ( !is_array( $id_field ) )
+        {
+            $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
+        }
+
+        if ( count( $id_field ) > 1 )
+        {
+            $_ids = array();
+            foreach ( $id_field as $_field )
+            {
+                $_id = Option::get( $record, $_field, null, $remove );
+                if ( empty( $_id ) )
+                {
+                    throw new BadRequestException( "Identifying field '$_field' can not be empty for record." );
+                }
+                $_ids[$_field] = $_id;
+            }
+
+            return $_ids;
+        }
+        else
+        {
+            $_field = $id_field[0];
+            $_id = Option::get( $record, $_field, null, $remove );
+            if ( empty( $_id ) )
+            {
+                throw new BadRequestException( "Identifying field '$_field' can not be empty for record." );
+            }
+
+            return ( $include_field ) ? array( $_field => $_id ) : $_id;
+        }
+    }
+
+    /**
      * @param        $ids
      * @param string $id_field
      * @param bool   $field_included
      *
      * @return array
      */
-    protected static function idsAsRecords( $ids, $id_field = null, $field_included = false )
+    protected static function idsAsRecords( $ids, $id_field, $field_included = false )
     {
-        $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
+        if ( empty( $id_field ) )
+        {
+            return array();
+        }
+
         if ( !is_array( $id_field ) )
         {
             $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
@@ -1514,18 +2760,24 @@ abstract class BaseDbSvc extends BasePlatformRestService
         return $_out;
     }
 
-    protected static function removeIds( &$record, $id_field = null )
+    /**
+     * @param array $record
+     * @param array $id_field
+     */
+    protected static function removeIds( &$record, $id_field )
     {
-        $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
-        if ( !is_array( $id_field ) )
+        if ( !empty( $id_field ) )
         {
-            $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
-        }
 
-        $id_field = Option::clean( $id_field );
-        foreach ( $id_field as $_field )
-        {
-            unset( $record[$_field] );
+            if ( !is_array( $id_field ) )
+            {
+                $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
+            }
+
+            foreach ( $id_field as $_name )
+            {
+                unset( $record[$_name] );
+            }
         }
     }
 
@@ -1537,7 +2789,11 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     protected static function _containsIdFields( $record, $id_field = null )
     {
-        $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
+        if ( empty( $id_field ) )
+        {
+            return false;
+        }
+
         if ( !is_array( $id_field ) )
         {
             $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
@@ -1563,12 +2819,16 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     protected static function _requireMoreFields( $fields, $id_field = null )
     {
+        if ( ( '*' == $fields ) || empty( $id_field ) )
+        {
+            return true;
+        }
+
         if ( false === $fields = static::validateAsArray( $fields, ',' ) )
         {
             return false;
         }
 
-        $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
         if ( !is_array( $id_field ) )
         {
             $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
@@ -1594,7 +2854,11 @@ abstract class BaseDbSvc extends BasePlatformRestService
      */
     protected static function recordArrayMerge( $first_array, $second_array, $id_field = null )
     {
-        $id_field = ( empty( $id_field ) ) ? static::DEFAULT_ID_FIELD : $id_field;
+        if ( empty( $id_field ) )
+        {
+            return array();
+        }
+
         foreach ( $first_array as $_key => $_first )
         {
             $_firstId = Option::get( $_first, $id_field );

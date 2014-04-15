@@ -29,7 +29,6 @@ use Aws\DynamoDb\Model\Attribute;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\User\Session;
 use Kisma\Core\Utility\Option;
 
@@ -120,7 +119,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
             $_credentials['region'] = static::DEFAULT_REGION;
         }
 
-        // set up a default partition key
+        // set up a default table schema
         if ( null !== ( $_table = Option::get( $_parameters, 'default_create_table' ) ) )
         {
             $this->_defaultCreateTable = $_table;
@@ -214,10 +213,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
             return array( 'resource' => $_resources );
         }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
-        }
         catch ( \Exception $_ex )
         {
             throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
@@ -251,15 +246,11 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
         try
         {
-            $_result = $this->_dbConn->describeTable(
-                array(
-                    static::TABLE_INDICATOR => $_name
-                )
-            );
+            $_result = $this->_dbConn->describeTable( array( static::TABLE_INDICATOR => $_name ) );
 
             // The result of an operation can be used like an array
             $_out = $_result['Table'];
-            $_out['name'] = $table;
+            $_out['name'] = $_name;
             $_out['access'] = $this->getPermissions( $_name );
 
             return $_out;
@@ -291,11 +282,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
             $_result = $this->_dbConn->createTable( $_properties );
 
             // Wait until the table is created and active
-            $this->_dbConn->waitUntilTableExists(
-                array(
-                    static::TABLE_INDICATOR => $_name
-                )
-            );
+            $this->_dbConn->waitUntilTableExists( array( static::TABLE_INDICATOR => $_name ) );
 
             $_out = array_merge( array( 'name' => $_name ), $_result['TableDescription'] );
 
@@ -328,11 +315,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
             $_result = $this->_dbConn->updateTable( $_properties );
 
             // Wait until the table is active again after updating
-            $this->_dbConn->waitUntilTableExists(
-                array(
-                    static::TABLE_INDICATOR => $_name
-                )
-            );
+            $this->_dbConn->waitUntilTableExists( array( static::TABLE_INDICATOR => $_name ) );
 
             return array_merge( array( 'name' => $_name ), $_result['TableDescription'] );
         }
@@ -355,17 +338,10 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
         try
         {
-            $_result = $this->_dbConn->deleteTable(
-                array(
-                    static::TABLE_INDICATOR => $_name
-                )
-            );
+            $_result = $this->_dbConn->deleteTable( array( static::TABLE_INDICATOR => $_name ) );
 
-            $this->_dbConn->waitUntilTableNotExists(
-                array(
-                    static::TABLE_INDICATOR => $_name
-                )
-            );
+            // Wait until the table is truly gone
+            $this->_dbConn->waitUntilTableNotExists( array( static::TABLE_INDICATOR => $_name ) );
 
             return array_merge( array( 'name' => $_name ), $_result['TableDescription'] );
         }
@@ -381,681 +357,23 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function createRecords( $table, $records, $extras = array() )
-    {
-        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
-        $table = $this->correctTableName( $table );
-
-        $_isSingle = ( 1 == count( $records ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-        $_useBatch = Option::getBool( $extras, 'batch', false );
-
-        $_info = $this->_getKeyInfo( $table, $extras );
-        $_idField = $_info['fields'];
-        $_idType = $_info['types'];
-        if ( empty( $_idField ) )
-        {
-            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-        }
-
-        $_out = array();
-        $_errors = array();
-        $_batched = array();
-        $_backup = array();
-        try
-        {
-            $_fieldInfo = array();
-
-            foreach ( $records as $_index => $_record )
-            {
-                try
-                {
-                    if ( !$this->_containsIdFields( $_record, $_idField ) )
-                    {
-                        // can we auto create an id here?
-                        throw new BadRequestException( "Identifying field(s) not found in record." );
-                    }
-
-                    $_parsed = $this->parseRecord( $_record, $_fieldInfo, $_ssFilters );
-                    if ( empty( $_parsed ) )
-                    {
-                        throw new BadRequestException( "No valid fields found in record $_index: " . print_r( $_record, true ) );
-                    }
-
-                    $_item = $this->_dbConn->formatAttributes( $_parsed );
-
-                    if ( $_useBatch )
-                    {
-                        // WARNING: no validation that id doesn't exist is done via batching!
-                        // Add operation to list of batch operations.
-                        $_batched[] = array( 'PutRequest' => array( 'Item' => $_item ) );
-                        continue;
-                    }
-
-                    // simple insert request
-                    /*$_result = */
-                    $this->_dbConn->putItem(
-                        array(
-                            static::TABLE_INDICATOR => $table,
-                            'Item'      => $_item,
-                            'Expected'  => array( $_idField[0] => array( 'Exists' => false ) )
-                        )
-                    );
-
-                    if ( $_rollback )
-                    {
-                        $_key = static::_buildKey( $_idField, $_idType, $_record );
-                        $_backup[] = array( 'DeleteRequest' => array( 'Key' => $_key ) );
-                    }
-
-                    $_out[$_index] = static::cleanRecord( $_parsed, $_fields, $_idField );
-                }
-                catch ( \Exception $_ex )
-                {
-                    if ( $_isSingle || $_useBatch )
-                    {
-                        throw $_ex;
-                    }
-
-                    if ( $_rollback )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    if ( !$_continue )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    // mark error and index for batch results
-                    $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                throw new BadRequestException();
-            }
-
-            if ( $_useBatch )
-            {
-                /*$_result = */
-                $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $table => $_batched, ) ) );
-
-                // todo check $_result['UnprocessedItems'] for 'PutRequest'
-
-                $_out = static::cleanRecords( $records, $_fields, $_idField );
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            $_msg = $_ex->getMessage();
-
-            $_context = null;
-            if ( !empty( $_errors ) )
-            {
-                $_context = array( 'error' => $_errors, 'record' => $_out );
-                $_msg = 'Batch Error: Not all records could be created.';
-            }
-
-            if ( $_rollback && !empty( $_backup ) )
-            {
-                try
-                {
-                    /* $_result = */
-                    $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $table => $_backup, ) ) );
-
-                    // todo check $_result['UnprocessedItems'] for 'DeleteRequest'
-                }
-                catch ( \Exception $_rex )
-                {
-                }
-
-                $_msg .= " All changes rolled back.";
-            }
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
-            }
-
-            throw new InternalServerErrorException( "Failed to create records in '$table'.\n$_msg", null, null, $_context );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function updateRecords( $table, $records, $extras = array() )
-    {
-        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
-        $table = $this->correctTableName( $table );
-
-        $_isSingle = ( 1 == count( $records ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-        $_useBatch = Option::getBool( $extras, 'batch', false );
-
-        $_info = $this->_getKeyInfo( $table, $extras );
-        $_idField = $_info['fields'];
-        $_idType = $_info['types'];
-        if ( empty( $_idField ) )
-        {
-            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-        }
-
-        $_out = array();
-        $_errors = array();
-        $_batched = array();
-        $_backup = array();
-        try
-        {
-            $_fieldInfo = array();
-            $_options = ( $_rollback ) ? ReturnValue::ALL_OLD : ReturnValue::NONE;
-
-            foreach ( $records as $_index => $_record )
-            {
-                try
-                {
-                    if ( !$this->_containsIdFields( $_record, $_idField ) )
-                    {
-                        throw new BadRequestException( "Identifying field(s) not found in record $_index." );
-                    }
-
-                    $_parsed = $this->parseRecord( $_record, $_fieldInfo, $_ssFilters, true );
-                    if ( empty( $_parsed ) )
-                    {
-                        throw new BadRequestException( "No valid fields found in record $_index: " . print_r( $_record, true ) );
-                    }
-
-                    $_item = $this->_dbConn->formatAttributes( $_parsed );
-                    $_expected = static::_buildKey( $_idField, $_idType, $_record );
-
-                    if ( $_useBatch )
-                    {
-                        // WARNING: no validation that id doesn't exist is done via batching!
-                        // Add operation to list of batch operations.
-                        $_batched[] = array( 'PutRequest' => array( 'Item' => $_item ) );
-                        continue;
-                    }
-
-                    // simple insert request
-                    $_result = $this->_dbConn->putItem(
-                        array(
-                            static::TABLE_INDICATOR    => $table,
-                            'Item'         => $_item,
-//                            'Expected'     => $_expected,
-                            'ReturnValues' => $_options
-                        )
-                    );
-
-                    if ( $_rollback )
-                    {
-                        $_temp = Option::get( $_result, 'Attributes' );
-                        if ( !empty( $_temp ) )
-                        {
-                            $_backup[] = array( 'PutRequest' => array( 'Item' => $_temp ) );
-                        }
-                    }
-
-                    $_out[$_index] = static::cleanRecord( $_parsed, $_fields, $_idField );
-                }
-                catch ( \Exception $_ex )
-                {
-                    if ( $_isSingle || $_useBatch )
-                    {
-                        throw $_ex;
-                    }
-
-                    if ( $_rollback )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    if ( !$_continue )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    // mark error and index for batch results
-                    $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                throw new BadRequestException();
-            }
-
-            if ( $_useBatch )
-            {
-                /*$_result = */
-                $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $table => $_batched, ) ) );
-
-                // todo check $_result['UnprocessedItems'] for 'PutRequest'
-
-                $_out = static::cleanRecords( $records, $_fields, $_idField );
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            $_msg = $_ex->getMessage();
-
-            $_context = null;
-            if ( !empty( $_errors ) )
-            {
-                $_context = array( 'error' => $_errors, 'record' => $_out );
-                $_msg = 'Batch Error: Not all records could be updated.';
-            }
-
-            if ( $_rollback && !empty( $_backup ) )
-            {
-                try
-                {
-                    /*$_result = */
-                    $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $table => $_backup, ) ) );
-
-                    // todo check $_result['UnprocessedItems'] for 'PutRequest'
-                }
-                catch ( \Exception $_rex )
-                {
-                }
-
-                $_msg .= " All changes rolled back.";
-            }
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
-            }
-
-            throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
         // slow, but workable for now, maybe faster than updating individuals
-        $_retrieveExtras = array( 'fields' => '');
+        $_retrieveExtras = array( 'fields' => '' );
         $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $_retrieveExtras );
-        $_info = $this->_getKeyInfo( $table, $extras );
+        $_info = $this->getIdsInfo( $table, $extras );
         $_idField = $_info['fields'];
         if ( empty( $_idField ) )
         {
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
         }
 
-        $_ids = static::recordsAsIds($_records, $_idField);
+        $_ids = static::recordsAsIds( $_records, $_idField );
 
         return $this->updateRecordsByIds( $table, $record, $_ids, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
-    {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
-        $table = $this->correctTableName( $table );
-
-        $_isSingle = ( 1 == count( $ids ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-        $_useBatch = Option::getBool( $extras, 'batch', false );
-
-        $_info = $this->_getKeyInfo( $table, $extras );
-        $_idField = $_info['fields'];
-//        $_idType = $_info['types'];
-        if ( empty( $_idField ) )
-        {
-            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-        }
-
-        $_fieldInfo = array();
-        $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
-        if ( empty( $_parsed ) )
-        {
-            throw new BadRequestException( 'No valid fields found in request: ' . print_r( $record, true ) );
-        }
-
-        $_out = array();
-        $_errors = array();
-        $_batched = array();
-        $_backup = array();
-        try
-        {
-            $_options = ( $_rollback ) ? ReturnValue::ALL_OLD : ReturnValue::NONE;
-
-            foreach ( $ids as $_index => $_id )
-            {
-                try
-                {
-                    $_parsed[$_idField[0]] = $_id;
-
-                    $_item = $this->_dbConn->formatAttributes( $_parsed );
-
-                    if ( $_useBatch )
-                    {
-                        // WARNING: no validation that id doesn't exist is done via batching!
-                        // Add operation to list of batch operations.
-                        $_batched[] = array( 'PutRequest' => array( 'Item' => $_item ) );
-                        $_out[$_index] = static::cleanRecord( $_parsed, $_fields, $_idField );
-                        continue;
-                    }
-
-                    // simple insert request
-                    $_result = $this->_dbConn->putItem(
-                        array(
-                            static::TABLE_INDICATOR    => $table,
-                            'Item'         => $_item,
-//                            'Expected'     => array( $_idField[0] => array( 'Exists' => true ) ),
-                            'ReturnValues' => $_options
-                        )
-                    );
-
-                    if ( $_rollback )
-                    {
-                        $_temp = Option::get( $_result, 'Attributes' );
-                        if ( !empty( $_temp ) )
-                        {
-                            $_backup[] = array( 'PutRequest' => array( 'Item' => $_temp ) );
-                        }
-                    }
-
-                    $_out[$_index] = static::cleanRecord( $_parsed, $_fields, $_idField );
-                }
-                catch ( \Exception $_ex )
-                {
-                    if ( $_isSingle || $_useBatch )
-                    {
-                        throw $_ex;
-                    }
-
-                    if ( $_rollback )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    if ( !$_continue )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    // mark error and index for batch results
-                    $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                throw new BadRequestException();
-            }
-
-            if ( $_useBatch )
-            {
-                /*$_result = */
-                $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $table => $_batched, ) ) );
-
-                // todo check $_result['UnprocessedItems'] for 'PutRequest'
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            $_msg = $_ex->getMessage();
-
-            $_context = null;
-            if ( !empty( $_errors ) )
-            {
-                $_context = array( 'error' => $_errors, 'record' => $_out );
-                $_msg = 'Batch Error: Not all records could be updated.';
-            }
-
-            if ( $_rollback && !empty( $_backup ) )
-            {
-                try
-                {
-                    /*$_result = */
-                    $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $table => $_backup, ) ) );
-
-                    // todo check $_result['UnprocessedItems'] for 'PutRequest'
-                }
-                catch ( \Exception $_rex )
-                {
-                }
-
-                $_msg .= " All changes rolled back.";
-            }
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
-            }
-
-            throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function mergeRecords( $table, $records, $extras = array() )
-    {
-        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
-        $table = $this->correctTableName( $table );
-
-        $_isSingle = ( 1 == count( $records ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-
-        $_info = $this->_getKeyInfo( $table, $extras );
-        $_idField = $_info['fields'];
-        $_idType = $_info['types'];
-        if ( empty( $_idField ) )
-        {
-            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-        }
-
-        $_out = array();
-        $_errors = array();
-        $_backup = array();
-        try
-        {
-            $_fieldInfo = array();
-            $_options = ( $_rollback ) ? ReturnValue::ALL_OLD : ReturnValue::ALL_NEW;
-
-            foreach ( $records as $_index => $_record )
-            {
-                try
-                {
-                    if ( !$this->_containsIdFields( $_record, $_idField ) )
-                    {
-                        throw new BadRequestException( "Identifying field(s) not found in record $_index." );
-                    }
-
-                    $_parsed = $this->parseRecord( $_record, $_fieldInfo, $_ssFilters, true );
-                    if ( empty( $_parsed ) )
-                    {
-                        throw new BadRequestException( "No valid fields found in record $_index: " . print_r( $_record, true ) );
-                    }
-
-                    $_key = static::_buildKey( $_idField, $_idType, $_parsed, true );
-                    $_updates = $this->_dbConn->formatAttributes( $_parsed, Attribute::FORMAT_UPDATE );
-
-                    // simple insert request
-                    $_result = $this->_dbConn->updateItem(
-                        array(
-                            static::TABLE_INDICATOR        => $table,
-                            'Key'              => $_key,
-                            'AttributeUpdates' => $_updates,
-                            'ReturnValues'     => $_options
-                        )
-                    );
-
-                    $_temp = Option::get( $_result, 'Attributes', array() );
-                    if ( $_rollback )
-                    {
-                        $_backup[] = array( 'PutRequest' => array( 'Item' => $_temp ) );
-                        // todo merge old record with new changes
-                        $_out[$_index] = static::cleanRecord( $_parsed, $_fields, $_idField );
-                    }
-                    else
-                    {
-                        $_temp = static::_unformatAttributes( $_temp );
-                        $_out[$_index] = static::cleanRecord( $_temp, $_fields, $_idField );
-                    }
-                }
-                catch ( \Exception $_ex )
-                {
-                    if ( $_isSingle )
-                    {
-                        throw $_ex;
-                    }
-
-                    if ( $_rollback )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    if ( !$_continue )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    // mark error and index for batch results
-                    $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                throw new BadRequestException();
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            $_msg = $_ex->getMessage();
-
-            $_context = null;
-            if ( !empty( $_errors ) )
-            {
-                $_context = array( 'error' => $_errors, 'record' => $_out );
-                $_msg = 'Batch Error: Not all records could be patched.';
-            }
-
-            if ( $_rollback && !empty( $_backup ) )
-            {
-                try
-                {
-                    /*$_result = */
-                    $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $table => $_backup, ) ) );
-
-                    // todo check $_result['UnprocessedItems'] for 'PutRequest'
-                }
-                catch ( \Exception $_ex )
-                {
-                }
-
-                $_msg .= " All changes rolled back.";
-            }
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
-            }
-
-            throw new InternalServerErrorException( "Failed to patch records in '$table'.\n$_msg", null, null, $_context );
-        }
     }
 
     /**
@@ -1065,170 +383,25 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     {
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
+        $_fields = Option::get($extras, 'fields');
+        $_idFields = Option::get($extras, 'id_field');
+
         // slow, but workable for now, maybe faster than merging individuals
-        $_retrieveExtras = array( 'fields' => '' );
-        $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $_retrieveExtras );
-        $_info = $this->_getKeyInfo( $table, $extras );
-        $_idField = $_info['fields'];
-        if ( empty( $_idField ) )
+        $extras['fields'] = '';
+        $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
+        unset($_records['meta']);
+
+        $_fieldsInfo = $this->getFieldsInfo($table);
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        if ( empty( $_idsInfo ) )
         {
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
         }
 
-        $_ids = static::recordsAsIds($_records, $_idField);
+        $_ids = static::recordsAsIds( $_records, $_idFields );
+        $extras['fields'] = $_fields;
 
         return $this->mergeRecordsByIds( $table, $record, $_ids, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function mergeRecordsByIds( $table, $record, $ids, $extras = array() )
-    {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
-        $table = $this->correctTableName( $table );
-
-        $_isSingle = ( 1 == count( $ids ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-
-        $_info = $this->_getKeyInfo( $table, $extras );
-        $_idField = $_info['fields'];
-        $_idType = $_info['types'];
-        if ( empty( $_idField ) )
-        {
-            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-        }
-
-        $_fieldInfo = array();
-        $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
-        if ( empty( $_parsed ) )
-        {
-            throw new BadRequestException( 'No valid fields found in request: ' . print_r( $record, true ) );
-        }
-
-        static::removeIds( $_parsed, $_idField );
-        $_updates = $this->_dbConn->formatAttributes( $_parsed, Attribute::FORMAT_UPDATE );
-
-        $_out = array();
-        $_errors = array();
-        $_backup = array();
-        try
-        {
-            $_options = ( $_rollback ) ? ReturnValue::ALL_OLD : ReturnValue::ALL_NEW;
-
-            foreach ( $ids as $_index => $_id )
-            {
-                $_temp = array( $_idField[0] => $_id );
-                $_key = static::_buildKey( $_idField, $_idType, $_temp );
-                try
-                {
-                    // simple insert request
-                    $_result = $this->_dbConn->updateItem(
-                        array(
-                            static::TABLE_INDICATOR        => $table,
-                            'Key'              => $_key,
-                            'AttributeUpdates' => $_updates,
-                            'ReturnValues'     => $_options
-                        )
-                    );
-
-                    $_temp = Option::get( $_result, 'Attributes', array() );
-                    if ( $_rollback )
-                    {
-                        $_backup[] = array( 'PutRequest' => array( 'Item' => $_temp ) );
-                        // todo merge old record with new changes
-                        $_out[$_index] = static::cleanRecord( $_parsed, $_fields, $_idField );
-                    }
-                    else
-                    {
-                        $_temp = static::_unformatAttributes( $_temp );
-                        $_out[$_index] = static::cleanRecord( $_temp, $_fields, $_idField );
-                    }
-                }
-                catch ( \Exception $_ex )
-                {
-                    if ( $_isSingle )
-                    {
-                        throw $_ex;
-                    }
-
-                    if ( $_rollback )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    if ( !$_continue )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    // mark error and index for batch results
-                    $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                throw new BadRequestException();
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            $_msg = $_ex->getMessage();
-
-            $_context = null;
-            if ( !empty( $_errors ) )
-            {
-                $_context = array( 'error' => $_errors, 'record' => $_out );
-                $_msg = 'Batch Error: Not all records could be patched.';
-            }
-
-            if ( $_rollback && !empty( $_backup ) )
-            {
-                try
-                {
-                    /*$_result = */
-                    $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $table => $_backup, ) ) );
-
-                    // todo check $_result['UnprocessedItems'] for 'PutRequest'
-                }
-                catch ( \Exception $_ex )
-                {
-                }
-
-                $_msg .= " All changes rolled back.";
-            }
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
-            }
-
-            throw new InternalServerErrorException( "Failed to patch records in '$table'.\n$_msg", null, null, $_context );
-        }
     }
 
     /**
@@ -1245,27 +418,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function deleteRecords( $table, $records, $extras = array() )
-    {
-        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
-        $table = $this->correctTableName( $table );
-
-        $_info = $this->_getKeyInfo( $table, $extras );
-        $_idField = $_info['fields'];
-//        $_idType = $_info['types'];
-        if ( empty( $_idField ) )
-        {
-            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-        }
-
-        $_ids = static::recordsAsIds( $records, $_idField );
-
-        return $this->deleteRecordsByIds( $table, $_ids, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() )
     {
         if ( empty( $filter ) )
@@ -1276,163 +428,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
 
         return $this->deleteRecords( $table, $_records, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteRecordsByIds( $table, $ids, $extras = array() )
-    {
-        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
-        $table = $this->correctTableName( $table );
-
-        $_isSingle = ( 1 == count( $ids ) );
-        $_rollback = Option::getBool( $extras, 'rollback', false );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-        $_useBatch = Option::getBool( $extras, 'batch', false );
-
-        $_info = $this->_getKeyInfo( $table, $extras );
-        $_idField = $_info['fields'];
-        $_idType = $_info['types'];
-        if ( empty( $_idField ) )
-        {
-            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-        }
-
-        $_out = array();
-        $_errors = array();
-        $_batched = array();
-        $_backup = array();
-        try
-        {
-            foreach ( $ids as $_index => $_id )
-            {
-                try
-                {
-                    $_record = array( $_idField[0] => $_id );
-
-                    $_key = static::_buildKey( $_idField, $_idType, $_record );
-
-                    if ( $_useBatch )
-                    {
-                        // WARNING: no validation that id doesn't exist is done via batching!
-                        // Add operation to list of batch operations.
-                        $_batched[] = array( 'DeleteRequest' => array( 'Key' => $_key ) );
-                    }
-
-                    $_result = $this->_dbConn->deleteItem(
-                        array(
-                            static::TABLE_INDICATOR    => $table,
-                            'Key'          => $_key,
-                            'ReturnValues' => ReturnValue::ALL_OLD,
-                        )
-                    );
-
-                    $_temp = Option::get( $_result, 'Attributes', array() );
-
-                    if ( $_rollback )
-                    {
-                        $_backup[] = array( 'PutRequest' => array( 'Item' => $_temp ) );
-                    }
-
-                    $_temp = static::_unformatAttributes( $_temp );
-                    $_out[$_index] = static::cleanRecord( $_temp, $_fields, $_idField );
-                }
-                catch ( \Exception $_ex )
-                {
-                    if ( $_isSingle || $_useBatch )
-                    {
-                        throw $_ex;
-                    }
-
-                    if ( $_rollback )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    if ( !$_continue )
-                    {
-                        if ( 0 !== $_index )
-                        {
-                            // first error, don't worry about batch just throw it
-                            // mark last error and index for batch results
-                            $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
-                        }
-
-                        throw $_ex;
-                    }
-
-                    // mark error and index for batch results
-                    $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                throw new BadRequestException();
-            }
-
-            if ( $_useBatch )
-            {
-                if ( static::_requireMoreFields( $_fields, $_idField ) )
-                {
-                    $_out = $this->retrieveRecordsByIds( $table, $ids, $_fields, $extras );
-                }
-
-                /*$_result = */
-                $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $table => $_batched, ) ) );
-
-                // todo check $_result['UnprocessedItems'] for 'DeleteRequest'
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            $_msg = $_ex->getMessage();
-
-            $_context = null;
-            if ( !empty( $_errors ) )
-            {
-                $_context = array( 'error' => $_errors, 'record' => $_out );
-                $_msg = 'Batch Error: Not all records could be deleted.';
-            }
-
-            if ( $_rollback && !empty( $_backup ) )
-            {
-                try
-                {
-                    /*$_result = */
-                    $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $table => $_backup, ) ) );
-
-                    // todo check $_result['UnprocessedItems'] for 'PutRequest'
-                }
-                catch ( \Exception $_ex )
-                {
-                }
-
-                $_msg .= " All changes rolled back.";
-            }
-
-            if ( $_ex instanceof RestException )
-            {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
-            }
-
-            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n$_msg", null, null, $_context );
-        }
     }
 
     /**
@@ -1471,7 +466,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
             $_out = array();
             foreach ( $_result['Items'] as $_item )
             {
-                $_out[] = static::_unformatAttributes( $_item );
+                $_out[] = $this->formatRecordFromNative( $_item );
             }
 
             return $_out;
@@ -1479,107 +474,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         catch ( \Exception $_ex )
         {
             throw new InternalServerErrorException( "Failed to filter records from '$table'.\n{$_ex->getMessage()}" );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function retrieveRecords( $table, $records, $extras = array() )
-    {
-        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
-        $table = $this->correctTableName( $table );
-
-        $_info = $this->_getKeyInfo( $table, $extras );
-        $_idField = $_info['fields'];
-//        $_idType = $_info['types'];
-        if ( empty( $_idField ) )
-        {
-            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-        }
-
-        $_ids = static::recordsAsIds( $records, $_idField );
-
-        return $this->retrieveRecordsByIds( $table, $_ids, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function retrieveRecordsByIds( $table, $ids, $extras = array() )
-    {
-        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
-        $table = $this->correctTableName( $table );
-
-        $_fields = Option::get( $extras, 'fields' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-
-        $_info = $this->_getKeyInfo( $table, $extras );
-        $_idField = $_info['fields'];
-        $_idType = $_info['types'];
-        if ( empty( $_idField ) )
-        {
-            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-        }
-
-        $_keys = array();
-        foreach ( $ids as $_id )
-        {
-            $_record = array( $_idField[0] => $_id );
-            $_key = static::_buildKey( $_idField, $_idType, $_record );
-            $_keys[] = $_key;
-//            $_scanProperties = array(
-//                static::TABLE_INDICATOR      => $table,
-//                'Key'            => $_keys,
-//                'ConsistentRead' => true,
-//            );
-//
-//            $_fields = static::_buildAttributesToGet( $_fields, $_idField );
-//            if ( !empty( $_fields ) )
-//            {
-//                $_scanProperties['AttributesToGet'] = $_fields;
-//            }
-//
-//            $_result = $this->_dbConn->getItem( $_scanProperties );
-//
-//            // Grab value from the result object like an array
-//            return static::_unformatAttributes( $_result['Item'] );
-        }
-
-        $_scanProperties = array(
-            'Keys'           => $_keys,
-            'ConsistentRead' => true,
-        );
-
-        $_fields = static::_buildAttributesToGet( $_fields, $_idField );
-        if ( !empty( $_fields ) )
-        {
-            $_scanProperties['AttributesToGet'] = $_fields;
-        }
-
-        try
-        {
-            // Get multiple items by key in a BatchGetItem request
-            $_result = $this->_dbConn->batchGetItem(
-                array(
-                    'RequestItems' => array(
-                        $table => $_scanProperties
-                    )
-                )
-            );
-
-            $_items = $_result->getPath( "Responses/{$table}" );
-            $_out = array();
-            foreach ( $_items as $_item )
-            {
-                $_out[] = static::_unformatAttributes( $_item );
-            }
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to get records from '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -1673,6 +567,36 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         return $_parsed;
     }
 
+    /**
+     * @param array $record
+     * @param bool  $for_update
+     *
+     * @return mixed
+     */
+    protected function formatRecordToNative( $record, $for_update = false )
+    {
+        $_format = ( $for_update ) ? Attribute::FORMAT_UPDATE : Attribute::FORMAT_PUT;
+
+        return $this->_dbConn->formatAttributes( $record, $_format );
+    }
+
+    /**
+     * @param mixed $native
+     * @param bool  $for_update
+     *
+     * @return array
+     */
+    protected function formatRecordFromNative( $native, $for_update = false )
+    {
+        $_out = array();
+        foreach ( $native as $_key => $_value )
+        {
+            $_out[$_key] = static::_unformatValue( $_value );
+        }
+
+        return $_out;
+    }
+
     protected static function _unformatValue( $value )
     {
         // represented as arrays, though there is only ever one item present
@@ -1760,64 +684,47 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         return $fields;
     }
 
-    protected function _getKeyInfo( $table, $extras = null )
+    protected function getIdsInfo( $table, $fields_info = null, &$requested = null )
     {
-        $_fields = Option::get( $extras, 'id_field' );
-        if ( !empty( $_fields ) )
+        $requested = array();
+        $_result = $this->getTable( $table );
+        $_keys = Option::get( $_result, 'KeySchema', array() );
+        $_definitions = Option::get( $_result, 'AttributeDefinitions', array() );
+        $_fields = array();
+        foreach ( $_keys as $_key )
         {
-            if ( !is_array( $_fields ) )
+            $_name = Option::get( $_key, 'AttributeName' );
+            $_keyType = Option::get( $_key, 'KeyType' );
+            $_type = null;
+            foreach ( $_definitions as $_type )
             {
-                $_fields = array_map( 'trim', explode( ',', trim( $_fields, ',' ) ) );
-            }
-            $_types = Option::get( $extras, 'id_type', Type::S );
-            if ( !is_array( $_types ) )
-            {
-                $_types = array_map( 'trim', explode( ',', trim( $_types, ',' ) ) );
-            }
-            $_keyTypes = Option::get( $extras, 'id_key_type', KeyType::HASH );
-            if ( !is_array( $_keyTypes ) )
-            {
-                $_keyTypes = array_map( 'trim', explode( ',', trim( $_keyTypes, ',' ) ) );
-            }
-        }
-        else
-        {
-            $_result = $this->getTable( $table );
-            $_keys = Option::get( $_result, 'KeySchema', array() );
-            $_definitions = Option::get( $_result, 'AttributeDefinitions', array() );
-            $_fields = array();
-            $_types = array();
-            $_keyTypes = array();
-            foreach ( $_keys as $_key )
-            {
-                $_name = Option::get( $_key, 'AttributeName' );
-                $_fields[] = $_name;
-                $_keyTypes[] = Option::get( $_key, 'KeyType' );
-                foreach ( $_definitions as $_type )
+                if ( 0 == strcmp( $_name, Option::get( $_type, 'AttributeName' ) ) )
                 {
-                    if ( 0 == strcmp( $_name, Option::get( $_type, 'AttributeName' ) ) )
-                    {
-                        $_types[] = Option::get( $_type, 'AttributeType' );
-                    }
+                    $_type = Option::get( $_type, 'AttributeType' );
                 }
             }
+
+            $requested[] = $_name;
+            $_fields[] = array( 'name' => $_name, 'key_type' => $_keyType, 'type' => $_type );
         }
 
-        return array( 'fields' => $_fields, 'types' => $_types, 'key_type' => $_keyTypes );
+        return $_fields;
     }
 
-    protected static function _buildKey( $fields, $types, &$record, $remove = false )
+    protected static function _buildKey( $ids_info, &$record, $remove = false )
     {
         $_keys = array();
-        foreach ( $fields as $_ndx => $_field )
+        foreach ( $ids_info as $_info )
         {
-            $_value = Option::get( $record, $_field, null, $remove );
+            $_name = Option::get( $_info, 'name' );
+            $_type = Option::get( $_info, 'type' );
+            $_value = Option::get( $record, $_name, null, $remove );
             if ( empty( $_value ) )
             {
                 throw new BadRequestException( "Identifying field(s) not found in record." );
             }
 
-            switch ( $types[$_ndx] )
+            switch ( $_type )
             {
                 case Type::N:
                     $_value = array( Type::N => strval( $_value ) );
@@ -1825,7 +732,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                 default:
                     $_value = array( Type::S => $_value );
             }
-            $_keys[$_field] = $_value;
+            $_keys[$_name] = $_value;
         }
 
         return $_keys;
@@ -2015,7 +922,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
             $_ops = array_map( 'trim', explode( $_sqlOp, $filter ) );
             if ( count( $_ops ) > 1 )
             {
-                $_field = $_ops[0];
+//                $_field = $_ops[0];
                 $_val = static::_determineValue( $_ops[1], $params );
                 $_dynamoOp = $_dynamoOperators[$_key];
                 switch ( $_dynamoOp )
@@ -2158,5 +1065,419 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         }
 
         return $value;
+    }
+
+    /**
+     * @param mixed|null $handle
+     *
+     * @return bool
+     */
+    protected function initTransaction( $handle = null )
+    {
+        return parent::initTransaction( $handle );
+    }
+
+    /**
+     * @param mixed      $record
+     * @param mixed      $id
+     * @param null|array $extras Additional items needed to complete the transaction
+     * @param bool       $save_old
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return null|array Array of output fields
+     */
+    protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false )
+    {
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+        $_fields = Option::get( $extras, 'fields' );
+        $_fieldsInfo = Option::get( $extras, 'fields_info' );
+        $_continue = Option::getBool( $extras, 'continue' );
+        $_idsInfo = Option::get( $extras, 'ids_info' );
+        $_idFields = Option::get( $extras, 'id_fields' );
+        $_updates = Option::get( $extras, 'updates' );
+
+        $_out = array();
+        switch ( $this->getAction() )
+        {
+            case static::POST:
+                $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters );
+                if ( empty( $_parsed ) )
+                {
+                    throw new BadRequestException( 'No valid fields were found in record.' );
+                }
+
+                $_native = $this->formatRecordToNative( $_parsed );
+
+                /*$_result = */
+                $this->_dbConn->putItem(
+                    array(
+                        static::TABLE_INDICATOR => $this->_transactionTable,
+                        'Item'                  => $_native,
+                        'Expected'              => array( $_idFields[0] => array( 'Exists' => false ) )
+                    )
+                );
+
+                if ( $save_old )
+                {
+                    $_key = static::_buildKey( $_idsInfo, $record );
+                    $this->addToRollback( $_key );
+                }
+
+                $_out = static::cleanRecord( $record, $_fields, $_idFields );
+                break;
+            case static::PUT:
+                if ( !empty( $_updates ) )
+                {
+                    // only update by full records can use batching
+                    $_updates[$_idFields[0]] = $id;
+                    $record = $_updates;
+                }
+
+                $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
+                if ( empty( $_parsed ) )
+                {
+                    throw new BadRequestException( 'No valid fields were found in record.' );
+                }
+
+                $_native = $this->formatRecordToNative( $_parsed );
+
+                if ( !$_continue && !$save_old )
+                {
+                    return parent::addToTransaction( $_native, $id );
+                }
+
+                $_options = ( $save_old ) ? ReturnValue::ALL_OLD : ReturnValue::NONE;
+                $_result = $this->_dbConn->putItem(
+                    array(
+                        static::TABLE_INDICATOR => $this->_transactionTable,
+                        'Item'                  => $_native,
+                        //                            'Expected'     => $_expected,
+                        'ReturnValues'          => $_options
+                    )
+                );
+
+                if ( $save_old )
+                {
+                    $_temp = Option::get( $_result, 'Attributes' );
+                    if ( !empty( $_temp ) )
+                    {
+                        $this->addToRollback( $_temp );
+                    }
+                }
+
+                $_out = static::cleanRecord( $record, $_fields, $_idFields );
+                break;
+
+            case static::MERGE:
+            case static::PATCH:
+                if ( !empty( $_updates ) )
+                {
+                    $_updates[$_idFields[0]] = $id;
+                    $record = $_updates;
+                }
+
+                $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
+                if ( empty( $_parsed ) )
+                {
+                    throw new BadRequestException( 'No valid fields were found in record.' );
+                }
+
+                $_key = static::_buildKey( $_idsInfo, $record, true );
+                $_native = $this->formatRecordToNative( $record, true );
+
+                // simple insert request
+                $_options = ( $save_old ) ? ReturnValue::ALL_OLD : ReturnValue::ALL_NEW;
+
+                $_result = $this->_dbConn->updateItem(
+                    array(
+                        static::TABLE_INDICATOR => $this->_transactionTable,
+                        'Key'                   => $_key,
+                        'AttributeUpdates'      => $_native,
+                        'ReturnValues'          => $_options
+                    )
+                );
+
+                $_temp = Option::get( $_result, 'Attributes', array() );
+                if ( $save_old )
+                {
+                    $this->addToRollback( $_temp );
+
+                    // merge old record with new changes
+                    $_new = array_merge( $this->formatRecordFromNative( $_temp ), $_updates );
+                    $_out = static::cleanRecord( $_new, $_fields, $_idFields );
+                }
+                else
+                {
+                    $_temp = $this->formatRecordFromNative( $_temp );
+                    $_out = static::cleanRecord( $_temp, $_fields, $_idFields );
+                }
+                break;
+
+            case static::DELETE:
+                if ( !$_continue && !$save_old )
+                {
+                    return parent::addToTransaction( null, $id );
+                }
+
+                $_record = array( $_idFields[0] => $id );
+                $_key = static::_buildKey( $_idsInfo, $_record );
+
+                $_result = $this->_dbConn->deleteItem(
+                    array(
+                        static::TABLE_INDICATOR => $this->_transactionTable,
+                        'Key'                   => $_key,
+                        'ReturnValues'          => ReturnValue::ALL_OLD,
+                    )
+                );
+
+                $_temp = Option::get( $_result, 'Attributes', array() );
+
+                if ( $save_old )
+                {
+                    $this->addToRollback( $_temp );
+                }
+
+                $_temp = $this->formatRecordFromNative( $_temp );
+                $_out = static::cleanRecord( $_temp, $_fields, $_idFields );
+                break;
+
+            case static::GET:
+                $_record = array( $_idFields[0] => $id );
+                $_key = static::_buildKey( $_idsInfo, $_record );
+                $_scanProperties = array(
+                    static::TABLE_INDICATOR => $this->_transactionTable,
+                    'Key'                   => $_key,
+                    'ConsistentRead'        => true,
+                );
+
+                $_fields = static::_buildAttributesToGet( $_fields, $_idFields );
+                if ( !empty( $_fields ) )
+                {
+                    $_scanProperties['AttributesToGet'] = $_fields;
+                }
+
+                $_result = $this->_dbConn->getItem( $_scanProperties );
+
+                // Grab value from the result object like an array
+                $_out = $this->formatRecordFromNative( $_result['Item'] );
+                break;
+            default:
+                break;
+        }
+
+        $this->_batchRecords = array();
+
+        return $_out;
+    }
+
+    /**
+     * @param null|array $extras
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array
+     */
+    protected function commitTransaction( $extras = null )
+    {
+        if ( empty( $this->_batchRecords ) && empty( $this->_batchIds ) )
+        {
+            return null;
+        }
+
+        $_fields = Option::get( $extras, 'fields' );
+        $_requireMore = Option::get( $extras, 'require_more');
+        $_idsInfo = Option::get( $extras, 'ids_info' );
+        $_idFields = static::getIdFieldsFromInfo( $_idsInfo );
+
+        $_out = array();
+        switch ( $this->getAction() )
+        {
+            case static::POST:
+                $_requests = array();
+                foreach ( $this->_batchRecords as $_item )
+                {
+                    $_requests[] = array( 'PutRequest' => array( 'Item' => $_item ) );
+                }
+
+                /*$_result = */
+                $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $this->_transactionTable => $_requests ) ) );
+
+                // todo check $_result['UnprocessedItems'] for 'PutRequest'
+
+                foreach ( $this->_batchRecords as $_item )
+                {
+                    $_out[] = static::cleanRecord( $this->formatRecordFromNative( $_item ), $_fields, $_idFields );
+                }
+                break;
+
+            case static::PUT:
+                $_requests = array();
+                foreach ( $this->_batchRecords as $_item )
+                {
+                    $_requests[] = array( 'PutRequest' => array( 'Item' => $_item ) );
+                }
+
+                /*$_result = */
+                $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $this->_transactionTable => $_requests ) ) );
+
+                // todo check $_result['UnprocessedItems'] for 'PutRequest'
+
+                foreach ( $this->_batchRecords as $_item )
+                {
+                    $_out[] = static::cleanRecord( $this->formatRecordFromNative( $_item ), $_fields, $_idFields );
+                }
+                break;
+
+            case static::MERGE:
+            case static::PATCH:
+                throw new BadRequestException( 'Batch operation not supported for patch.' );
+                break;
+
+            case static::DELETE:
+                $_requests = array();
+                foreach ( $this->_batchIds as $_id )
+                {
+                    $_record = array( $_idFields[0] => $_id );
+                    $_out[] = $_record;
+                    $_key = static::_buildKey( $_idsInfo, $_record );
+                    $_requests[] = array( 'DeleteRequest' => array( 'Key' => $_key ) );
+                }
+                if ( $_requireMore )
+                {
+                    $_scanProperties = array(
+                        'Keys'           => $this->_batchRecords,
+                        'ConsistentRead' => true,
+                    );
+
+                    $_attributes = static::_buildAttributesToGet( $_fields, $_idFields );
+                    if ( !empty( $_attributes ) )
+                    {
+                        $_scanProperties['AttributesToGet'] = $_attributes;
+                    }
+
+                    // Get multiple items by key in a BatchGetItem request
+                    $_result = $this->_dbConn->batchGetItem(
+                        array(
+                            'RequestItems' => array(
+                                $this->_transactionTable => $_scanProperties
+                            )
+                        )
+                    );
+
+                    $_out = array();
+                    $_items = $_result->getPath( "Responses/{$this->_transactionTable}" );
+                    foreach ( $_items as $_item )
+                    {
+                        $_out[] = $this->formatRecordFromNative( $_item );
+                    }
+                }
+
+                /*$_result = */
+                $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $this->_transactionTable => $_requests ) ) );
+
+                // todo check $_result['UnprocessedItems'] for 'DeleteRequest'
+                break;
+
+            case static::GET:
+                $_keys = array();
+                foreach ( $this->_batchIds as $_id )
+                {
+                    $_record = array( $_idFields[0] => $_id );
+                    $_key = static::_buildKey( $_idsInfo, $_record );
+                    $_keys[] = $_key;
+                }
+
+                $_scanProperties = array(
+                    'Keys'           => $_keys,
+                    'ConsistentRead' => true,
+                );
+
+                $_fields = static::_buildAttributesToGet( $_fields, $_idFields );
+                if ( !empty( $_fields ) )
+                {
+                    $_scanProperties['AttributesToGet'] = $_fields;
+                }
+
+                // Get multiple items by key in a BatchGetItem request
+                $_result = $this->_dbConn->batchGetItem(
+                    array(
+                        'RequestItems' => array(
+                            $this->_transactionTable => $_scanProperties
+                        )
+                    )
+                );
+
+                $_items = $_result->getPath( "Responses/{$this->_transactionTable}" );
+                foreach ( $_items as $_item )
+                {
+                    $_out[] = $this->formatRecordFromNative( $_item );
+                }
+                break;
+            default:
+                break;
+        }
+
+        $this->_batchIds = array();
+        $this->_batchRecords = array();
+
+        return $_out;
+    }
+
+    /**
+     * @param mixed $record
+     *
+     * @return bool
+     */
+    protected function addToRollback( $record )
+    {
+        return parent::addToRollback( $record );
+    }
+
+    /**
+     * @return bool
+     */
+    protected function rollbackTransaction()
+    {
+        if ( !empty( $this->_rollbackRecords ) )
+        {
+            switch ( $this->getAction() )
+            {
+                case static::POST:
+                    $_requests = array();
+                    foreach ( $this->_rollbackRecords as $_item )
+                    {
+                        $_requests[] = array( 'DeleteRequest' => array( 'Key' => $_item ) );
+                    }
+
+                    /* $_result = */
+                    $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $this->_transactionTable => $_requests ) ) );
+
+                    // todo check $_result['UnprocessedItems'] for 'DeleteRequest'
+                    break;
+
+                case static::PUT:
+                case static::PATCH:
+                case static::MERGE:
+                case static::DELETE:
+                    $_requests = array();
+                    foreach ( $this->_rollbackRecords as $_item )
+                    {
+                        $_requests[] = array( 'PutRequest' => array( 'Item' => $_item ) );
+                    }
+
+                    /* $_result = */
+                    $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $this->_transactionTable => $_requests ) ) );
+
+                    // todo check $_result['UnprocessedItems'] for 'PutRequest'
+                    break;
+
+                default:
+                    break;
+            }
+
+            $this->_rollbackRecords = array();
+        }
+
+        return true;
     }
 }

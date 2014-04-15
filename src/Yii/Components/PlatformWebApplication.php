@@ -275,7 +275,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @throws \LogicException
      * @throws \InvalidArgumentException
-     * @throws \DreamFactory\Platform\Utility\RestException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
      * @return bool
      */
     protected function _onBeginRequest( \CEvent $event )
@@ -712,6 +712,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 $_config = Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
             }
 
+            $_whitelist = array();
+
             if ( file_exists( $_config ) )
             {
                 if ( false !== ( $_content = @file_get_contents( $_config ) ) && !empty( $_content ) )
@@ -738,7 +740,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @param array $corsWhitelist
      *
-     * @throws \DreamFactory\Platform\Utility\RestException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
      * @return PlatformWebApplication
      */
     public function setCorsWhitelist( $corsWhitelist )
@@ -803,7 +805,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @param bool $createIfNull If true, the default, the response object will be created if it hasn't already
      * @param bool $sendHeaders
      *
-     * @throws \DreamFactory\Platform\Utility\RestException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
      * @return \Symfony\Component\HttpFoundation\Response
      */
     public function getResponseObject( $createIfNull = true, $sendHeaders = true )
