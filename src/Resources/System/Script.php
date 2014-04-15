@@ -45,7 +45,7 @@ class Script extends BaseSystemRestResource
     //*************************************************************************
 
     /** @type string */
-    const DEFAULT_SCRIPT_PATH = '/config/scripts';
+    const DEFAULT_SCRIPT_PATH = '/scripts';
     /** @type string */
     const DEFAULT_SCRIPT_PATTERN = '/*.js';
 
