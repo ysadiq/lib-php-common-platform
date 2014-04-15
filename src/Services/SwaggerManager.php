@@ -20,7 +20,7 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
-//use DreamFactory\Platform\Events\Enums\SwaggerEvents;
+use DreamFactory\Platform\Events\Enums\SwaggerEvents;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\System\Script;
 use DreamFactory\Platform\Utility\Platform;
@@ -30,6 +30,8 @@ use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
+
+//use DreamFactory\Platform\Events\Enums\SwaggerEvents;
 
 /**
  * SwaggerManager
@@ -259,16 +261,16 @@ SQL;
                 'description' => Option::get( $_service, 'description', 'Service' )
             );
 
-            if ( !isset( static::$_eventMap[$_apiName] ) || !is_array( static::$_eventMap[$_apiName] ) || empty( static::$_eventMap[$_apiName] ) )
+            if ( !isset( static::$_eventMap[ $_apiName ] ) || !is_array( static::$_eventMap[ $_apiName ] ) || empty( static::$_eventMap[ $_apiName ] ) )
             {
-                static::$_eventMap[$_apiName] = array();
+                static::$_eventMap[ $_apiName ] = array();
             }
 
             $_serviceEvents = static::_parseSwaggerEvents( $_apiName, json_decode( $_content, true ) );
 
             //	Parse the events while we get the chance...
-            static::$_eventMap[$_apiName] = array_merge(
-                Option::clean( static::$_eventMap[$_apiName] ),
+            static::$_eventMap[ $_apiName ] = array_merge(
+                Option::clean( static::$_eventMap[ $_apiName ] ),
                 $_serviceEvents
             );
 
@@ -334,7 +336,7 @@ SQL;
                 {
                     $_method = strtolower( Option::get( $_operation, 'method', HttpMethod::GET ) );
 
-                    $_events[$_method] = array(
+                    $_events[ $_method ] = array(
                         'event'   => $_eventName = str_ireplace(
                             array( '{api_name}', '{action}', '{request.method}' ),
                             array( $apiName, $_method, $_method ),
@@ -347,7 +349,7 @@ SQL;
                 unset( $_operation );
             }
 
-            $_eventMap[str_ireplace( '{api_name}', $apiName, $_api['path'] )] = $_events;
+            $_eventMap[ str_ireplace( '{api_name}', $apiName, $_api['path'] ) ] = $_events;
 
             unset( $_scripts, $_events, $_api );
         }
@@ -409,9 +411,9 @@ SQL;
 
         $_hash = sha1( ( $service ? get_class( $service ) : '*' ) . $method );
 
-        if ( isset( $_cache[$_hash] ) )
+        if ( isset( $_cache[ $_hash ] ) )
         {
-            return $_cache[$_hash];
+            return $_cache[ $_hash ];
         }
 
         //  Global search by name
@@ -428,7 +430,7 @@ SQL;
 
                     if ( $eventName == ( $_eventName = Option::get( $_info, 'event' ) ) )
                     {
-                        $_cache[$_hash] = $_eventName;
+                        $_cache[ $_hash ] = $_eventName;
 
                         return true;
                     }
@@ -485,7 +487,7 @@ SQL;
 
             if ( null !== ( $_eventName = Option::get( $_methodInfo, 'event' ) ) )
             {
-                return $_cache[$_hash] = $_eventName;
+                return $_cache[ $_hash ] = $_eventName;
             }
         }
 
@@ -652,7 +654,7 @@ SQL;
                 {
                     if ( !isset( $_commonResponse['code'] ) || $_code != $_commonResponse['code'] )
                     {
-                        unset( $_response[$_commonResponse['code']] );
+                        unset( $_response[ $_commonResponse['code'] ] );
                     }
                 }
             }
