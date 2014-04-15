@@ -712,8 +712,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 $_config = Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
             }
 
-            $_whitelist = array();
-
             if ( file_exists( $_config ) )
             {
                 if ( false !== ( $_content = @file_get_contents( $_config ) ) && !empty( $_content ) )
