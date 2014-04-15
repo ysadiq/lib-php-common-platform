@@ -45,7 +45,7 @@ class Script extends BaseSystemRestResource
     //*************************************************************************
 
     /** @type string */
-    const DEFAULT_SCRIPT_PATH = '/config/scripts';
+    const DEFAULT_SCRIPT_PATH = '/scripts';
     /** @type string */
     const DEFAULT_SCRIPT_PATTERN = '/*.js';
 
@@ -191,6 +191,42 @@ class Script extends BaseSystemRestResource
     }
 
     /**
+     * DELETE an existing script
+     * This is a permanent/destructive action.
+     *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \Exception
+     * @return bool|void
+     */
+    protected function _handleDelete()
+    {
+        if ( empty( $this->_resourceId ) )
+        {
+            throw new BadRequestException( 'No script ID specified.' );
+        }
+
+        $_path = $this->_scriptPath . '/' . trim( $this->_resourceId, '/ ' ) . '.js';
+
+        if ( !file_exists( $_path ) )
+        {
+            throw new NotFoundException();
+        }
+
+        $_body = @file_get_contents( $_path );
+
+        if ( false === @unlink( $_path ) )
+        {
+            throw new InternalServerErrorException( 'Unable to delete script ID "' . $this->_resourceId . '"' );
+        }
+
+        //  Clear the swagger cache...
+        SwaggerManager::clearCache();
+
+        return array( 'script_id' => $this->_resourceId, 'script_body' => $_body );
+    }
+
+    /**
      * RUN a script
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
@@ -242,13 +278,13 @@ class Script extends BaseSystemRestResource
         {
             $_runner = new \V8Js();
 
-            $_runnerShell = <<<JS
-var _processEvent = function(event){
+            $_runnerShell = <<<SCRIPT
+var _process_DSP_Event = function(event){
     {$_script}
 };
 
-_result = _processEvent(PHP.event);
-JS;
+_result = _process_DSP_Event(PHP.event);
+SCRIPT;
 
             /** @noinspection PhpUndefinedFieldInspection */
             $_runner->event = $data;

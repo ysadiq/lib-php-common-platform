@@ -410,7 +410,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
         }
 
-        $this->_triggerActionEvent( $_result, ResourceServiceEvents::AFTER_DATA_FORMAT );
+        if ( $this instanceof BasePlatformRestResource )
+        {
+            $this->_triggerActionEvent( $_result, ResourceServiceEvents::AFTER_DATA_FORMAT );
+        }
 
         if ( !empty( $this->_outputFormat ) )
         {

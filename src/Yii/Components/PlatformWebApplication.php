@@ -31,10 +31,13 @@ use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
+use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
+use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\Interfaces\PublisherLike;
 use Kisma\Core\Interfaces\SubscriberLike;
+use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
@@ -89,6 +92,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @var string The default DSP model namespace
      */
     const DEFAULT_MODEL_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Yii\\Models';
+    /**
+     * @var string The pattern of for local configuration files
+     */
+    const DEFAULT_LOCAL_CONFIG_PATTERN = '/*.config.php';
     /**
      * @var string The default path (sub-path) of installed plug-ins
      */
@@ -325,9 +332,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         {
             $this->addCorsHeaders();
         }
-
-        //	Load any plug-ins
-        $this->_loadPlugins();
     }
 
     /**
@@ -336,6 +340,77 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     protected function _onEndRequest( \CEvent $event )
     {
         $this->stopProfiler( 'app.request' );
+    }
+
+    /**
+     * @param \CController $controller
+     * @param \CAction     $action
+     *
+     * @return bool
+     */
+    public function beforeControllerAction( $controller, $action )
+    {
+        //  Load any user config files...
+        $this->_loadLocalConfig();
+
+        //	Load any plug-ins
+        $this->_loadPlugins();
+
+        return parent::beforeControllerAction( $controller, $action );
+    }
+
+    /**
+     * Loads any local configuration files
+     */
+    protected function _loadLocalConfig()
+    {
+        if ( null === ( $_config = \Kisma::get( 'platform.local_config' ) ) )
+        {
+            $_config = array();
+            $_configPath = Platform::getPrivatePath( '/config' );
+
+            $_files = FileSystem::glob( $_configPath . static::DEFAULT_LOCAL_CONFIG_PATTERN, GlobFlags::GLOB_NODIR | GlobFlags::GLOB_NODOTS );
+
+            if ( empty( $_files ) )
+            {
+                $_files = array();
+            }
+
+            sort( $_files );
+
+            foreach ( $_files as $_file )
+            {
+                try
+                {
+                    if ( false === ( $_data = @include( $_configPath . '/' . $_file ) ) )
+                    {
+                        throw new FileSystemException( 'File system error reading local config file "' . $_file . '"' );
+                    }
+
+                    if ( !is_array( $_data ) )
+                    {
+                        Log::notice( 'Config file "' . $_file . '" did not return an array. Skipping.' );
+                    }
+                    else
+                    {
+                        $_config = array_merge( $_config, $_data );
+                        Log::debug( 'Loaded local config from "' . $_file . '"' );
+                    }
+                }
+                catch ( FileSystemException $_ex )
+                {
+                    Log::error( $_ex->getMessage() );
+                }
+            }
+
+            \Kisma::set( 'platform.local_config', $_config );
+        }
+
+        //  Merge config with our params...
+        if ( !empty( $_config ) )
+        {
+            $this->getParams()->mergeWith( $_config );
+        }
     }
 
     //*************************************************************************
@@ -711,8 +786,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 //  In old location?
                 $_config = Platform::getPrivatePath( static::CORS_DEFAULT_CONFIG_FILE, true, true );
             }
-
-            $_whitelist = array();
 
             if ( file_exists( $_config ) )
             {
