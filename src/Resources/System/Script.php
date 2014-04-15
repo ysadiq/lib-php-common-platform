@@ -242,13 +242,13 @@ class Script extends BaseSystemRestResource
         {
             $_runner = new \V8Js();
 
-            $_runnerShell = <<<JS
-var _processEvent = function(event){
+            $_runnerShell = <<<SCRIPT
+var _process_DSP_Event = function(event){
     {$_script}
 };
 
-_result = _processEvent(PHP.event);
-JS;
+_result = _process_DSP_Event(PHP.event);
+SCRIPT;
 
             /** @noinspection PhpUndefinedFieldInspection */
             $_runner->event = $data;
