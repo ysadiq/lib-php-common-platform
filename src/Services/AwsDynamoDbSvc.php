@@ -366,16 +366,16 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
         $_scanProperties = array( static::TABLE_INDICATOR => $table );
 
-        $_parsedFilter = static::buildCriteriaArray( $filter, $params, $_ssFilters );
-        if ( !empty( $_parsedFilter ) )
-        {
-            $_scanProperties['ScanFilter'] = $_parsedFilter;
-        }
-
         $_fields = static::_buildAttributesToGet( $_fields );
         if ( !empty( $_fields ) )
         {
             $_scanProperties['AttributesToGet'] = $_fields;
+        }
+
+        $_parsedFilter = static::buildCriteriaArray( $filter, $params, $_ssFilters );
+        if ( !empty( $_parsedFilter ) )
+        {
+            $_scanProperties['ScanFilter'] = $_parsedFilter;
         }
 
         $_limit = Option::get( $extras, 'limit' );
@@ -405,7 +405,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
     /**
      * @param array $record
-     * @param array $avail_fields
+     * @param array $fields_info
      * @param array $filter_info
      * @param bool  $for_update
      * @param array $old_record
@@ -413,15 +413,15 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
      * @return array
      * @throws \Exception
      */
-    protected function parseRecord( $record, $avail_fields, $filter_info = null, $for_update = false, $old_record = null )
+    protected function parseRecord( $record, $fields_info, $filter_info = null, $for_update = false, $old_record = null )
     {
 //        $record = DataFormat::arrayKeyLower( $record );
-        $_parsed = ( empty( $avail_fields ) ) ? $record : array();
-        if ( !empty( $avail_fields ) )
+        $_parsed = ( empty( $fields_info ) ) ? $record : array();
+        if ( !empty( $fields_info ) )
         {
             $_keys = array_keys( $record );
             $_values = array_values( $record );
-            foreach ( $avail_fields as $_fieldInfo )
+            foreach ( $fields_info as $_fieldInfo )
             {
 //            $name = strtolower( Option::get( $field_info, 'name', '' ) );
                 $_name = Option::get( $_fieldInfo, 'name', '' );

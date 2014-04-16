@@ -95,8 +95,8 @@ class SalesforceDbSvc extends BaseDbSvc
         {
             //	Default verb aliases
             $config['verb_aliases'] = array(
-                static::Patch => static::Put,
-                static::Merge => static::Put,
+                static::PATCH => static::PUT,
+                static::MERGE => static::PUT,
             );
         }
 
@@ -1157,6 +1157,36 @@ class SalesforceDbSvc extends BaseDbSvc
         throw new NotImplementedException( "Metadata actions currently not supported." );
     }
 
+    protected function getFieldsInfo( $table )
+    {
+        return $this->_getAllFields( $table, true );
+    }
+
+    protected function getIdsInfo( $table, $fields_info = null, &$requested = null )
+    {
+        $_idsInfo = array();
+        if ( empty( $requested ) )
+        {
+            $requested = array();
+            foreach ( $_idsInfo as $_info )
+            {
+                $requested[] = Option::get( $_info, 'name' );
+            }
+        }
+        else
+        {
+            if ( false !== $requested = static::validateAsArray( $requested, ',' ) )
+            {
+                foreach ( $requested as $_field )
+                {
+                    $_idsInfo[] = array( 'name' => $_field ); // search fields info
+                }
+            }
+        }
+
+        return $_idsInfo;
+    }
+
     /**
      * @param      $table
      * @param null $fields
@@ -1231,10 +1261,6 @@ class SalesforceDbSvc extends BaseDbSvc
      */
     protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false, $batch = false )
     {
-        $_parsed = Option::get( $extras, 'updates' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-        $_fields = Option::get( $extras, 'fields' );
-
         $_out = array();
         if ( !empty( $this->_batchRecords ) )
         {
@@ -1271,10 +1297,6 @@ class SalesforceDbSvc extends BaseDbSvc
      */
     protected function commitTransaction( $extras = null )
     {
-        $_parsed = Option::get( $extras, 'updates' );
-        $_ssFilters = Option::get( $extras, 'ss_filters' );
-        $_fields = Option::get( $extras, 'fields' );
-
         $_out = array();
         if ( !empty( $this->_batchRecords ) )
         {

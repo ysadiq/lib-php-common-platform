@@ -21,11 +21,9 @@ namespace DreamFactory\Platform\Services;
 
 use Aws\Common\Enum\Region;
 use Aws\SimpleDb\SimpleDbClient;
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
-use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Utilities;
 use Kisma\Core\Utility\Option;
@@ -48,7 +46,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     /**
      * Default record identifier field
      */
-    const DEFAULT_ID_FIELD = 'Name';
+    const DEFAULT_ID_FIELD = 'id';
 
     //*************************************************************************
     //	Members
@@ -76,7 +74,6 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         parent::__construct( $config );
 
         $_credentials = Option::get( $config, 'credentials' );
-        $_parameters = Option::get( $config, 'parameters' );
 
         // old way
         $_accessKey = Option::get( $_credentials, 'access_key' );
@@ -98,12 +95,6 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         {
             // use a default region if not present
             $_credentials['region'] = static::DEFAULT_REGION;
-        }
-
-        // reply in simplified blend format by default
-        if ( null !== ( $_blendFormat = Option::get( $_parameters, 'blend_format' ) ) )
-        {
-            $this->_defaultBlendFormat = DataFormat::boolval( $_blendFormat );
         }
 
         try
@@ -337,15 +328,16 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
-        $_select = 'select ';
-
         $_fields = static::_buildAttributesToGet( $_fields );
-        $_select .= $_fields . ' from ' . $table;
 
-        if ( !empty( $filter ) )
+        $_select = 'select ';
+        $_select .= ( empty( $_fields ) ) ? '*' : $_fields;
+        $_select .= ' from ' . $table;
+
+        $_parsedFilter = static::buildCriteriaArray( $filter, $params, $_ssFilters );
+        if ( !empty( $_parsedFilter ) )
         {
-            $filter = static::_parseFilter( $filter );
-            $_select .= ' where ' . $filter;
+            $_select .= ' where ' . $_parsedFilter;
         }
 
         $_order = Option::get( $extras, 'order' );
@@ -362,7 +354,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 
         try
         {
-            $_result = $this->_dbConn->select( array( 'SelectExpression' => $_select ) );
+            $_result = $this->_dbConn->select( array( 'SelectExpression' => $_select, 'ConsistentRead' => true ) );
             $_items = Option::clean( $_result['Items'] );
 
             $_out = array();
@@ -384,110 +376,28 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function retrieveRecord( $table, $record, $extras = array() )
+    protected function getIdsInfo( $table, $fields_info = null, &$requested = null )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-        $table = $this->correctTableName( $table );
-
-        $_fields = Option::get( $extras, 'fields' );
-
-        $_idField = Option::get( $extras, 'id_field', static::DEFAULT_ID_FIELD );
-        if ( empty( $_idField ) )
+        if ( empty( $requested ) )
         {
-            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-        }
-
-        $_id = Option::get( $record, $_idField );
-        $_scanProperties = array(
-            static::TABLE_INDICATOR => $table,
-            'ItemName'              => $_id,
-            'ConsistentRead'        => true,
-        );
-        $fields = static::_buildAttributesToGet( $_fields, $_idField );
-        if ( !empty( $fields ) )
-        {
-            $_scanProperties['AttributeNames'] = $fields;
-        }
-
-        try
-        {
-            $_result = $this->_dbConn->getAttributes( $_scanProperties );
-            $_out = array_merge(
-                static::_unformatAttributes( $_result['Attributes'] ),
-                array( $_idField => $_id )
+            $requested = array( static::DEFAULT_ID_FIELD ); // can only be this
+            $_ids = array(
+                array( 'name' => static::DEFAULT_ID_FIELD, 'type' => 'string', 'required' => true ),
             );
-
-            return $_out;
         }
-        catch ( \Exception $_ex )
+        else
         {
-            throw new InternalServerErrorException( "Failed to get records from '$table.\n{$_ex->getMessage()}" );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function retrieveRecordsByIds( $table, $ids, $extras = array() )
-    {
-        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
-
-        $_fields = Option::get( $extras, 'fields' );
-
-        $_filter = "itemName() in ('" . implode( "','", $ids ) . "')";
-
-        return $this->retrieveRecordsByFilter( $table, $_filter, $_fields, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function retrieveRecordById( $table, $id, $fields = null, $extras = array() )
-    {
-        if ( empty( $id ) )
-        {
-            throw new BadRequestException( "Identifying field(s) values can not be empty." );
-        }
-
-        $table = $this->correctTableName( $table );
-        $_idField = Option::get( $extras, 'id_field' );
-        if ( empty( $_idField ) )
-        {
-            $_idField = static::DEFAULT_ID_FIELD;
-        }
-        $_scanProperties = array(
-            static::TABLE_INDICATOR => $table,
-            'ItemName'              => $id,
-            'ConsistentRead'        => true,
-        );
-        $fields = static::_buildAttributesToGet( $fields, $_idField );
-        if ( !empty( $fields ) )
-        {
-            $_scanProperties['AttributeNames'] = $fields;
-        }
-
-        try
-        {
-            $_result = $this->_dbConn->getAttributes( $_scanProperties );
-            $_out = array_merge(
-                static::_unformatAttributes( $_result['Attributes'] ),
-                array( $_idField => $id )
+            $_ids = array(
+                array( 'name' => $requested, 'type' => 'string', 'required' => true ),
             );
+        }
 
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to get records from '$table'.\n{$_ex->getMessage()}" );
-        }
+        return $_ids;
     }
 
     /**
      * @param array $record
-     * @param array $avail_fields
+     * @param array $fields_info
      * @param array $filter_info
      * @param bool  $for_update
      * @param array $old_record
@@ -495,15 +405,15 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
      * @return array
      * @throws \Exception
      */
-    protected function parseRecord( $record, $avail_fields, $filter_info = null, $for_update = false, $old_record = null )
+    protected function parseRecord( $record, $fields_info, $filter_info = null, $for_update = false, $old_record = null )
     {
 //        $record = DataFormat::arrayKeyLower( $record );
-        $_parsed = ( empty( $avail_fields ) ) ? $record : array();
-        if ( !empty( $avail_fields ) )
+        $_parsed = ( empty( $fields_info ) ) ? $record : array();
+        if ( !empty( $fields_info ) )
         {
             $_keys = array_keys( $record );
             $_values = array_values( $record );
-            foreach ( $avail_fields as $_fieldInfo )
+            foreach ( $fields_info as $_fieldInfo )
             {
 //            $name = strtolower( Option::get( $field_info, 'name', '' ) );
                 $_name = Option::get( $_fieldInfo, 'name', '' );
@@ -734,13 +644,77 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         return $fields;
     }
 
+    protected static function buildCriteriaArray( $filter, $params = null, $ss_filters = null )
+    {
+        // build filter array if necessary, add server-side filters if necessary
+        $_criteria = static::_parseFilter( $filter, $params );
+        $_serverCriteria = static::buildSSFilterArray( $ss_filters );
+        if ( !empty( $_serverCriteria ) )
+        {
+            $_criteria = ( !empty( $_criteria ) ) ? '(' . $_serverCriteria . ') AND (' . $_criteria . ')' : $_serverCriteria;
+        }
+
+        return $_criteria;
+    }
+
+    protected static function buildSSFilterArray( $ss_filters )
+    {
+        if ( empty( $ss_filters ) )
+        {
+            return '';
+        }
+
+        // build the server side criteria
+        $_filters = Option::get( $ss_filters, 'filters' );
+        if ( empty( $_filters ) )
+        {
+            return '';
+        }
+
+        $_combiner = Option::get( $ss_filters, 'filter_op', 'and' );
+        switch ( strtoupper( $_combiner ) )
+        {
+            case 'AND':
+            case 'OR':
+                break;
+            default:
+                // log and bail
+                throw new InternalServerErrorException( 'Invalid server-side filter configuration detected.' );
+        }
+
+        $_criteria = '';
+        foreach ( $_filters as $_filter )
+        {
+            $_name = Option::get( $_filter, 'name' );
+            $_op = Option::get( $_filter, 'operator' );
+            if ( empty( $_name ) || empty( $_op ) )
+            {
+                // log and bail
+                throw new InternalServerErrorException( 'Invalid server-side filter configuration detected.' );
+            }
+
+            $_value = Option::get( $_filter, 'value' );
+            $_value = static::interpretFilterValue( $_value );
+
+            $_temp = static::_parseFilter( "$_name $_op $_value" );
+            if ( !empty( $_criteria ) )
+            {
+                $_criteria .= " $_combiner ";
+            }
+            $_criteria .= $_temp;
+        }
+
+        return $_criteria;
+    }
+
     /**
      * @param string|array $filter Filter for querying records by
+     * @param null         $params
      *
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return array
      */
-    protected static function _parseFilter( $filter )
+    protected static function _parseFilter( $filter, $params = null )
     {
         if ( empty( $filter ) )
         {
@@ -786,7 +760,6 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_fields = Option::get( $extras, 'fields' );
         $_fieldsInfo = Option::get( $extras, 'fields_info' );
-        $_idsInfo = Option::get( $extras, 'ids_info' );
         $_idFields = Option::get( $extras, 'id_fields' );
         $_updates = Option::get( $extras, 'updates' );
 
@@ -801,7 +774,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                 }
 
                 $_native = $this->_formatAttributes( $_parsed );
-                $_batched = array( 'Name' => $id, 'Attributes' => $_native );
+//                $_batched = array( 'Name' => $id, 'Attributes' => $_native );
 
                 /*$_result = */
                 $this->_dbConn->putAttributes(
@@ -835,11 +808,12 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                 }
 
                 $_native = $this->_formatAttributes( $_parsed, true );
-                $_batched = array( 'Name' => $id, 'Attributes' => $_native );
+//                $_batched = array( 'Name' => $id, 'Attributes' => $_native );
 
                 if ( !$continue && !$rollback )
                 {
                     $_batched = array( 'Name' => $id, 'Attributes' => $_native );
+
                     return parent::addToTransaction( $_batched, $id );
                 }
 
@@ -875,7 +849,6 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                 }
 
                 $_native = $this->_formatAttributes( $_parsed, true );
-            $_batched = array( 'Name' => $id, 'Attributes' => $_native );
 
                 $_result = $this->_dbConn->putAttributes(
                     array(
@@ -992,49 +965,50 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                 break;
 
             case static::DELETE:
-                $_requests = array();
-                foreach ( $this->_batchIds as $_id )
-                {
-                    $_record = array( $_idFields[0] => $_id );
-                    $_out[] = $_record;
-                    $_key = static::_buildKey( $_idsInfo, $_record );
-                    $_requests[] = array( 'DeleteRequest' => array( 'Key' => $_key ) );
-                }
                 if ( $_requireMore )
                 {
-                    $_scanProperties = array(
-                        'Items'          => $this->_batchRecords,
-                        'ConsistentRead' => true,
-                    );
+                    $_fields = static::_buildAttributesToGet( $_fields );
 
-                    $_attributes = static::_buildAttributesToGet( $_fields, $_idFields );
-                    if ( !empty( $_attributes ) )
+                    $_select = 'select ';
+                    $_select .= ( empty( $_fields ) ) ? '*' : $_fields;
+                    $_select .= ' from ' . $this->_transactionTable;
+
+                    $_filter = "itemName() in ('" . implode( "','", $this->_batchIds ) . "')";
+                    $_parsedFilter = static::buildCriteriaArray( $_filter, null, $_ssFilters );
+                    if ( !empty( $_parsedFilter ) )
                     {
-                        $_scanProperties['AttributesToGet'] = $_attributes;
+                        $_select .= ' where ' . $_parsedFilter;
                     }
 
-                    // Get multiple items by key in a BatchGetItem request
-                    $_result = $this->_dbConn->batchGetItem(
-                        array(
-                            'RequestItems' => array(
-                                $this->_transactionTable => $_scanProperties
-                            )
-                        )
-                    );
+                    $_result = $this->_dbConn->select( array( 'SelectExpression' => $_select, 'ConsistentRead' => true ) );
+                    $_items = Option::clean( $_result['Items'] );
 
                     $_out = array();
-                    $_items = $_result->getPath( "Responses/{$this->_transactionTable}" );
                     foreach ( $_items as $_item )
                     {
-                        $_out[] = $this->_unformatAttributes( $_item );
+                        $_attributes = Option::get( $_item, 'Attributes' );
+                        $_name = Option::get( $_item, static::DEFAULT_ID_FIELD );
+                        $_out[] = array_merge(
+                            static::_unformatAttributes( $_attributes ),
+                            array( $_idFields[0] => $_name )
+                        );
                     }
                 }
+                else
+                {
+                    $_out = static::cleanRecords( $this->_batchRecords, $_fields, $_idFields );
+                }
 
+                $_items = array();
+                foreach ($this->_batchIds as $_id)
+                {
+                    $_items[] = array( 'Name' => $_id );
+                }
                 /*$_result = */
                 $this->_dbConn->batchDeleteAttributes(
                     array(
                         static::TABLE_INDICATOR => $this->_transactionTable,
-                        'Items'                 => $this->_batchRecords
+                        'Items'                 => $_items
                     )
                 );
 
@@ -1042,38 +1016,31 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                 break;
 
             case static::GET:
-                $_keys = array();
-                foreach ( $this->_batchIds as $_id )
+                $_fields = static::_buildAttributesToGet( $_fields );
+
+                $_select = 'select ';
+                $_select .= ( empty( $_fields ) ) ? '*' : $_fields;
+                $_select .= ' from ' . $this->_transactionTable;
+
+                $_filter = "itemName() in ('" . implode( "','", $this->_batchIds ) . "')";
+                $_parsedFilter = static::buildCriteriaArray( $_filter, null, $_ssFilters );
+                if ( !empty( $_parsedFilter ) )
                 {
-                    $_record = array( $_idFields[0] => $_id );
-                    $_key = static::_buildKey( $_idsInfo, $_record );
-                    $_keys[] = $_key;
+                    $_select .= ' where ' . $_parsedFilter;
                 }
 
-                $_scanProperties = array(
-                    'Keys'           => $_keys,
-                    'ConsistentRead' => true,
-                );
+                $_result = $this->_dbConn->select( array( 'SelectExpression' => $_select, 'ConsistentRead' => true ) );
+                $_items = Option::clean( $_result['Items'] );
 
-                $_fields = static::_buildAttributesToGet( $_fields, $_idFields );
-                if ( !empty( $_fields ) )
-                {
-                    $_scanProperties['AttributesToGet'] = $_fields;
-                }
-
-                // Get multiple items by key in a BatchGetItem request
-                $_result = $this->_dbConn->batchGetItem(
-                    array(
-                        'RequestItems' => array(
-                            $this->_transactionTable => $_scanProperties
-                        )
-                    )
-                );
-
-                $_items = $_result->getPath( "Responses/{$this->_transactionTable}" );
+                $_out = array();
                 foreach ( $_items as $_item )
                 {
-                    $_out[] = $this->formatRecordFromNative( $_item );
+                    $_attributes = Option::get( $_item, 'Attributes' );
+                    $_name = Option::get( $_item, 'Name' );
+                    $_out[] = array_merge(
+                        static::_unformatAttributes( $_attributes ),
+                        array( $_idFields[0] => $_name )
+                    );
                 }
                 break;
             default:
@@ -1123,8 +1090,12 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                         $_requests[] = array( 'PutRequest' => array( 'Item' => $_item ) );
                     }
 
-                    /* $_result = */
-                    $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $this->_transactionTable => $_requests ) ) );
+                    $this->_dbConn->batchPutAttributes(
+                        array(
+                            static::TABLE_INDICATOR => $this->_transactionTable,
+                            'Items'                 => $this->_batchRecords,
+                        )
+                    );
 
                     // todo check $_result['UnprocessedItems'] for 'PutRequest'
                     break;

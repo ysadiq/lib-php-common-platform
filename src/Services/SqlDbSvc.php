@@ -43,10 +43,6 @@ class SqlDbSvc extends BaseDbSvc
     //*************************************************************************
 
     /**
-     * Default record identifier field, there is none, see schema for keys
-     */
-    const DEFAULT_ID_FIELD = null;
-    /**
      * @var bool If true, a database cache will be created for remote databases
      */
     const ENABLE_REMOTE_CACHE = true;
@@ -465,20 +461,21 @@ class SqlDbSvc extends BaseDbSvc
 
         $_fields = Option::get( $extras, 'fields' );
         $_related = Option::get( $extras, 'related' );
+        $_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
         try
         {
-            $_fieldInfo = $this->getFieldsInfo( $table );
+            $_fieldsInfo = $this->getFieldsInfo( $table );
+            $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
             $_relatedInfo = $this->describeTableRelated( $table );
-            $_idFieldNames = SqlDbUtilities::getPrimaryKeys( $_fieldInfo, true );
-            $_fields = ( empty( $_fields ) ) ? $_idFieldNames : $_fields;
-            $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldInfo );
+            $_fields = ( empty( $_fields ) ) ? $_idFields : $_fields;
+            $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
             $_bindings = Option::get( $_result, 'bindings' );
             $_fields = Option::get( $_result, 'fields' );
             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-            $_parsed = $this->parseRecord( $record, $_fieldInfo, $_ssFilters, true );
+            $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
 
             // build filter string if necessary, add server-side filters if necessary
             $_ssFilters = Option::get( $extras, 'ss_filters' );
@@ -486,18 +483,23 @@ class SqlDbSvc extends BaseDbSvc
             $_where = Option::get( $_criteria, 'where' );
             $_params = Option::get( $_criteria, 'params', array() );
 
-            /** @var \CDbCommand $command */
-            $command = $this->_dbConn->createCommand();
             if ( !empty( $_parsed ) )
             {
-                $command->update( $table, $_parsed, $_where, $_params );
+                /** @var \CDbCommand $_command */
+                $_command = $this->_dbConn->createCommand();
+                $_command->update( $table, $_parsed, $_where, $_params );
             }
 
             $_results = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
 
-            // update related info
             if ( !empty( $_relatedInfo ) )
             {
+                // update related info
+                foreach ( $_results as $_row )
+                {
+                    $_id = static::checkForIds( $_row, $_idsInfo, $extras );
+                    $this->updateRelations( $table, $record, $_id, $_relatedInfo, $_allowRelatedDelete );
+                }
                 // get latest with related changes if requested
                 if ( !empty( $_related ) )
                 {
@@ -535,19 +537,19 @@ class SqlDbSvc extends BaseDbSvc
         $table = $this->correctTableName( $table );
         try
         {
-            /** @var \CDbCommand $command */
-            $command = $this->_dbConn->createCommand();
+            /** @var \CDbCommand $_command */
+            $_command = $this->_dbConn->createCommand();
 
             // build filter string if necessary, add server-side filters if necessary
             $_ssFilters = Option::get( $extras, 'ss_filters' );
             $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
             if ( !empty( $_serverFilter ) )
             {
-                $command->delete( $table, $_serverFilter['filter'], $_serverFilter['params'] );
+                $_command->delete( $table, $_serverFilter['filter'], $_serverFilter['params'] );
             }
             else
             {
-                $command->truncateTable( $table );
+                $_command->truncateTable( $table );
             }
 
             return array( 'success' => true );
@@ -573,16 +575,24 @@ class SqlDbSvc extends BaseDbSvc
         }
 
         $table = $this->correctTableName( $table );
+
         try
         {
-            // get the returnable fields first, then issue delete
-            $_results = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
+            $_fieldsInfo = $this->getFieldsInfo( $table );
+            /*$_idsInfo = */$this->getIdsInfo($table, $_fieldsInfo, $_idFields);
+            $_fields = ( empty( $_fields ) ) ? $_idFields : $_fields;
+            $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
+            $_bindings = Option::get( $_result, 'bindings' );
+            $_fields = Option::get( $_result, 'fields' );
+            $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
             // build filter string if necessary, add server-side filters if necessary
             $_ssFilters = Option::get( $extras, 'ss_filters' );
             $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters );
             $_where = Option::get( $_criteria, 'where' );
             $_params = Option::get( $_criteria, 'params', array() );
+
+            $_results = $this->_recordQuery( $table, $_fields, $_where, $_params, $_bindings, $extras );
 
             /** @var \CDbCommand $_command */
             $_command = $this->_dbConn->createCommand();
@@ -607,17 +617,18 @@ class SqlDbSvc extends BaseDbSvc
     {
         $table = $this->correctTableName( $table );
 
+        $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+
         try
         {
-            $_availFields = $this->getFieldsInfo( $table );
-            $_fields = Option::get( $extras, 'fields' );
-            $_result = $this->parseFieldsForSqlSelect( $_fields, $_availFields );
+            $_fieldsInfo = $this->getFieldsInfo( $table );
+            $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
             $_bindings = Option::get( $_result, 'bindings' );
             $_fields = Option::get( $_result, 'fields' );
             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
             // build filter string if necessary, add server-side filters if necessary
-            $_ssFilters = Option::get( $extras, 'ss_filters' );
             $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters );
             $_where = Option::get( $_criteria, 'where' );
             $_params = Option::get( $_criteria, 'params', array() );
@@ -862,7 +873,7 @@ class SqlDbSvc extends BaseDbSvc
 
     /**
      * @param array $record
-     * @param array $avail_fields
+     * @param array $fields_info
      * @param array $filter_info
      * @param bool  $for_update
      * @param array $old_record
@@ -870,13 +881,13 @@ class SqlDbSvc extends BaseDbSvc
      * @return array
      * @throws \Exception
      */
-    protected function parseRecord( $record, $avail_fields, $filter_info = null, $for_update = false, $old_record = null )
+    protected function parseRecord( $record, $fields_info, $filter_info = null, $for_update = false, $old_record = null )
     {
         $_parsed = array();
 //        $record = DataFormat::arrayKeyLower( $record );
         $_keys = array_keys( $record );
         $_values = array_values( $record );
-        foreach ( $avail_fields as $_fieldInfo )
+        foreach ( $fields_info as $_fieldInfo )
         {
 //            $name = strtolower( Option::get( $field_info, 'name', '' ) );
             $_name = Option::get( $_fieldInfo, 'name', '' );
@@ -2093,12 +2104,12 @@ class SqlDbSvc extends BaseDbSvc
             throw new BadRequestException( 'No valid identifier found for this table.' );
         }
 
-        if ( !empty( $this->_batchIds ) )
+        if ( !empty( $this->_batchRecords ) )
         {
             if ( is_array( $this->_batchRecords[0] ) )
             {
                 $_temp = array();
-                foreach ( $this->_batchIds as $_record )
+                foreach ( $this->_batchRecords as $_record )
                 {
                     $_temp[] = Option::get( $_record, $_idName );
                 }
@@ -2157,6 +2168,8 @@ class SqlDbSvc extends BaseDbSvc
             {
                 $_out = $this->retrieveRecords( $this->_transactionTable, $this->_batchRecords, $extras );
             }
+
+            $this->_batchRecords = array();
         }
         elseif ( !empty( $this->_batchIds ) )
         {
@@ -2233,6 +2246,19 @@ class SqlDbSvc extends BaseDbSvc
                     break;
 
                 case static::GET:
+                    $_fields = ( empty( $_fields ) ) ? $_idFields : $_fields;
+                    $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
+                    $_bindings = Option::get( $_result, 'bindings' );
+                    $_fields = Option::get( $_result, 'fields' );
+                    $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+
+                    $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                    if ( empty( $_result ) )
+                    {
+                        throw new NotFoundException( 'No records were found using the given identifiers.' );
+                    }
+
+                    $_out = $_result;
                     break;
 
                 default:
@@ -2243,6 +2269,8 @@ class SqlDbSvc extends BaseDbSvc
             {
                 $_out = $this->_batchIds;
             }
+
+            $this->_batchIds = array();
         }
 
         if ( isset( $this->_transaction ) )
