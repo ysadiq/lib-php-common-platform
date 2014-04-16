@@ -200,12 +200,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/azure-sdk-for-php.git",
-                "reference": "c5a4b23f842bd934dc64573442a23676fc5e1f4a"
+                "reference": "90ecf642948b5b7b79c2b60dc6b2b6232020e14c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/azure-sdk-for-php/zipball/c5a4b23f842bd934dc64573442a23676fc5e1f4a",
-                "reference": "c5a4b23f842bd934dc64573442a23676fc5e1f4a",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/azure-sdk-for-php/zipball/90ecf642948b5b7b79c2b60dc6b2b6232020e14c",
+                "reference": "90ecf642948b5b7b79c2b60dc6b2b6232020e14c",
                 "shasum": ""
             },
             "require": {
@@ -225,7 +225,7 @@
                 }
             },
             "autoload": {
-                "psr-0": {
+                "psr-4": {
                     "WindowsAzure\\": "src/"
                 }
             },
@@ -250,7 +250,7 @@
                 "php",
                 "sdk"
             ],
-            "time": "2014-04-16 17:32:15"
+            "time": "2014-04-16 20:56:47"
         },
         {
             "name": "dreamfactory/javascript-sdk",
@@ -646,12 +646,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "4dc1ae96fb139fe502b19b837d763e3505865e76"
+                "reference": "765416be25fe145e1bc5cfe612709accc793796c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/4dc1ae96fb139fe502b19b837d763e3505865e76",
-                "reference": "4dc1ae96fb139fe502b19b837d763e3505865e76",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/765416be25fe145e1bc5cfe612709accc793796c",
+                "reference": "765416be25fe145e1bc5cfe612709accc793796c",
                 "shasum": ""
             },
             "require": {
@@ -696,7 +696,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-04-16 16:54:27"
+            "time": "2014-04-16 20:13:36"
         },
         {
             "name": "monolog/monolog",
