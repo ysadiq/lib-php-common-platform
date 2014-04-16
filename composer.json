@@ -16,8 +16,18 @@
 			"role":  "Lead Developer, server-side/client-side"
 		}
 	],
-	"require":           {
+        "repositories":      [
+                {
+                        "type": "pear",
+                        "url":  "http://pear.php.net"
+                }
+        ],
+        "require":           {
 		"php":                             ">=5.3.10",
+                "pear-pear.php.net/HTTP_Request2":   "*",
+                "pear-pear.php.net/Net_URL2":        "*",
+                "pear-pear.php.net/Mail_Mime":       "*",
+                "pear-pear.php.net/Mail_mimeDecode": "*",
 		"kisma/kisma":                     "~0.2@dev",
 		"dreamfactory/yii":                "1.1.13",
 		"dreamfactory/lib-php-common":     "~1.4@dev",
@@ -29,11 +39,7 @@
 		"rackspace/php-opencloud":         "~1.5.0@stable",
 		"dready92/php-on-couch":           "dev-master",
 		"phpforce/soap-client":            "dev-master",
-		"pear/net_url2":                   "*",
-		"pear/http_request2":              "*",
-		"pear/mail_mime-decode":           "*",
-		"pear/mail_mime":                  "*",
-		"dreamfactory/azure-sdk-for-php":  "~0.4@stable"
+		"dreamfactory/azure-sdk-for-php":  "~0.4.0@dev"
 	},
 	"require-dev":       {
 		"phpunit/phpunit":          "~3.7@stable",
