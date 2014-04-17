@@ -260,30 +260,32 @@ class Script extends BaseSystemRestResource
      */
     public static function runScript( $scriptName, $scriptId = null, array &$data = array(), &$output = null )
     {
-        $scriptId = $scriptId ? : $scriptName;
-
-        if ( !is_file( $scriptName ) || !is_readable( $scriptName ) )
-        {
-            throw new InternalServerErrorException( 'The script ID "' . $scriptId . '" is not valid or unreadable.' );
-        }
-
-        if ( false === ( $_script = @file_get_contents( $scriptName ) ) )
-        {
-            throw new InternalServerErrorException( 'The script ID "' . $scriptId . '" cannot be retrieved at this time.' );
-        }
-
-        Log::debug( 'Running script: ' . $scriptId );
-
         try
         {
+            $scriptId = $scriptId ? : $scriptName;
+
+            if ( !is_file( $scriptName ) || !is_readable( $scriptName ) )
+            {
+                throw new InternalServerErrorException( 'The script ID "' . $scriptId . '" is not valid or unreadable.' );
+            }
+
+            $_script = null;
+
+            if ( false === ( $_script = @file_get_contents( $scriptName ) ) )
+            {
+                throw new InternalServerErrorException( 'The script ID "' . $scriptId . '" cannot be retrieved at this time.' );
+            }
+
+            Log::debug( 'Running script: ' . $scriptId );
+
             $_runner = new \V8Js();
 
             $_runnerShell = <<<SCRIPT
-var _process_DSP_Event = function(event){
-    {$_script}
-};
-
-_result = _process_DSP_Event(PHP.event);
+var _platform = PHP;
+var _event = PHP.event;
+var _result = (function (event, platform) {
+{$_script}
+}(_event,_platform));
 SCRIPT;
 
             /** @noinspection PhpUndefinedFieldInspection */

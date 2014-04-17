@@ -23,6 +23,9 @@ use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\EventStoreLike;
 use DreamFactory\Platform\Events\PlatformEvent;
 
+/**
+ * BaseEventStore
+ */
 class BaseEventStore implements EventStoreLike
 {
     //*************************************************************************

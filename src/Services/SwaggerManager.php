@@ -61,6 +61,10 @@ class SwaggerManager extends BasePlatformRestService
      */
     const SWAGGER_EVENT_CACHE_FILE = '/_events.json';
     /**
+     * @const string A cached events list derived from Swagger
+     */
+    const SWAGGER_EVENT_CUBE_FILE = '/_events.cubed.json';
+    /**
      * @const string The private storage directory for non-generated files
      */
     const SWAGGER_CUSTOM_DIR = '/custom';
@@ -82,9 +86,17 @@ class SwaggerManager extends BasePlatformRestService
     //*************************************************************************
 
     /**
-     * @var array The event map
+     * @var array The events mapped by route then method
      */
     protected static $_eventMap = false;
+    /**
+     * @var array Events mapped by name
+     */
+    protected static $_eventCube = array();
+    /**
+     * @var array The default cube structure
+     */
+    protected static $_cubeDefaults = array( 'triggers' => array(), );
     /**
      * @var array The core DSP services that are built-in
      */
@@ -168,7 +180,7 @@ class SwaggerManager extends BasePlatformRestService
         );
 
         // build services from database
-        $_sql = <<<SQL
+        $_sql = <<<MYSQL
 SELECT
 	api_name,
 	type_id,
@@ -178,7 +190,7 @@ FROM
 	df_sys_service
 ORDER BY
 	api_name ASC
-SQL;
+MYSQL;
 
         //	Pull the services and add in the built-in services
         $_result = array_merge(
@@ -191,6 +203,7 @@ SQL;
 
         //	Initialize the event map
         static::$_eventMap = static::$_eventMap ? : array();
+        static::$_eventCube = static::$_eventCube ? : array();
 
         //	Spin through services and pull the configs
         foreach ( $_result as $_service )
@@ -261,18 +274,25 @@ SQL;
                 'description' => Option::get( $_service, 'description', 'Service' )
             );
 
-            if ( !isset( static::$_eventMap[$_apiName] ) || !is_array( static::$_eventMap[$_apiName] ) || empty( static::$_eventMap[$_apiName] ) )
+            if ( !isset( static::$_eventMap[ $_apiName ] ) || !is_array( static::$_eventMap[ $_apiName ] ) || empty( static::$_eventMap[ $_apiName ] ) )
             {
-                static::$_eventMap[$_apiName] = array();
+                static::$_eventMap[ $_apiName ] = array();
             }
 
-            $_serviceEvents = static::_parseSwaggerEvents( $_apiName, json_decode( $_content, true ) );
-
             //	Parse the events while we get the chance...
-            static::$_eventMap[$_apiName] = array_merge(
-                Option::clean( static::$_eventMap[$_apiName] ),
+            $_serviceEvents = static::_parseSwaggerEvents( $_apiName, json_decode( $_content, true ) );
+            $_cube = Option::get( $_serviceEvents, '.cubed', array(), true );
+
+            static::$_eventMap[ $_apiName ] = array_merge(
+                Option::clean( static::$_eventMap[ $_apiName ] ),
                 $_serviceEvents
             );
+
+            if ( !empty( $_cube ) )
+            {
+                static::$_eventCube[] = $_cube;
+                unset( $_cube );
+            }
 
             unset( $_content, $_filePath, $_service, $_serviceEvents );
         }
@@ -291,11 +311,23 @@ SQL;
         }
 
         //	Write event cache file
+        ksort( static::$_eventMap );
+
         if ( false ===
-             file_put_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE, json_encode( static::$_eventMap, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT ) )
+             file_put_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE, json_encode( static::$_eventMap, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) )
         )
         {
             Log::error( '  * File system error writing events cache file: ' . $_cachePath . static::SWAGGER_EVENT_CACHE_FILE );
+        }
+
+        //	Write event cube file
+        ksort( static::$_eventCube );
+
+        if ( false ===
+             file_put_contents( $_cachePath . static::SWAGGER_EVENT_CUBE_FILE, json_encode( static::$_eventCube, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) )
+        )
+        {
+            Log::error( '  * File system error writing events cache file: ' . $_cachePath . static::SWAGGER_EVENT_CUBE_FILE );
         }
 
         //	Create example file
@@ -318,7 +350,7 @@ SQL;
      */
     protected static function _parseSwaggerEvents( $apiName, $data )
     {
-        $_eventMap = array();
+        $_eventCube = $_eventMap = array();
 
         foreach ( Option::get( $data, 'apis', array() ) as $_api )
         {
@@ -335,24 +367,36 @@ SQL;
                 if ( null !== ( $_eventName = Option::get( $_operation, 'event_name' ) ) )
                 {
                     $_method = strtolower( Option::get( $_operation, 'method', HttpMethod::GET ) );
-
-                    $_events[$_method] = array(
-                        'event'   => $_eventName = str_ireplace(
-                            array( '{api_name}', '{action}', '{request.method}' ),
-                            array( $apiName, $_method, $_method ),
-                            $_eventName
-                        ),
-                        'scripts' => static::_findScripts( $_path, $_method ),
+                    $_scripts = static::_findScripts( $_path, $_method );
+                    $_eventName = str_ireplace(
+                        array( '{api_name}', '{action}', '{request.method}' ),
+                        array( $apiName, $_method, $_method ),
+                        $_eventName
                     );
+
+                    $_events[ $_method ] = array(
+                        'event'   => $_eventName,
+                        'scripts' => $_scripts,
+                    );
+
+                    //  Set defaults
+                    if ( !in_array( $_eventName, $_eventCube ) )
+                    {
+                        $_eventCube[ $_eventName ] = static::$_cubeDefaults;
+                    }
+
+                    $_eventCube[ $_eventName ]['triggers'][ $_path ][] = $_scripts;
                 }
 
                 unset( $_operation );
             }
 
-            $_eventMap[str_ireplace( '{api_name}', $apiName, $_api['path'] )] = $_events;
+            $_eventMap[ str_ireplace( '{api_name}', $apiName, $_api['path'] ) ] = $_events;
 
             unset( $_scripts, $_events, $_api );
         }
+
+        $_eventMap['.cubed'] = $_eventCube;
 
         return $_eventMap;
     }
@@ -419,9 +463,9 @@ SQL;
 
         $_hash = sha1( ( $service ? get_class( $service ) : '*' ) . ( $method = strtolower( $method ) ) );
 
-        if ( isset( $_cache[$_hash] ) )
+        if ( isset( $_cache[ $_hash ] ) )
         {
-            return $_cache[$_hash];
+            return $_cache[ $_hash ];
         }
 
         //  Global search by name
@@ -438,7 +482,7 @@ SQL;
 
                     if ( $eventName == ( $_eventName = Option::get( $_info, 'event' ) ) )
                     {
-                        $_cache[$_hash] = $_eventName;
+                        $_cache[ $_hash ] = $_eventName;
 
                         return true;
                     }
@@ -473,7 +517,7 @@ SQL;
         }
 
         $_servicePattern = '(' . implode( '|', array_keys( $_map ) ) . ')';
-        $_pathPattern = static::_normalizePath($_path);
+//        $_pathPattern = static::_normalizePath($_path);
 
         $_patterns = array();
         $_patterns[] = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '$@D';
@@ -503,17 +547,23 @@ SQL;
 
             if ( null !== ( $_eventName = Option::get( $_methodInfo, 'event' ) ) )
             {
-                return $_cache[$_hash] = $_eventName;
+                return $_cache[ $_hash ] = $_eventName;
             }
         }
 
         return null;
     }
 
-    protected static function _normalize( ){
-        
-     }    
-    
+    /**
+     * @param string $path
+     *
+     * @return string
+     */
+    protected static function _normalizePath( $path )
+    {
+        return $path;
+    }
+
     /**
      * Retrieves the cached event map or triggers a rebuild
      *
@@ -674,7 +724,7 @@ SQL;
                 {
                     if ( !isset( $_commonResponse['code'] ) || $_code != $_commonResponse['code'] )
                     {
-                        unset( $_response[$_commonResponse['code']] );
+                        unset( $_response[ $_commonResponse['code'] ] );
                     }
                 }
             }
