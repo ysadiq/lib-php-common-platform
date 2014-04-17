@@ -224,7 +224,7 @@ class EmailSvc extends BasePlatformRestService
 		Option::sins( $data, 'dsp.confirm_invite_url', $_hostUrl . Pii::getParam( 'dsp.confirm_invite_url' ) );
 		Option::sins( $data, 'dsp.confirm_register_url', $_hostUrl . Pii::getParam( 'dsp.confirm_register_url' ) );
 		Option::sins( $data, 'dsp.confirm_reset_url', $_hostUrl . Pii::getParam( 'dsp.confirm_reset_url' ) );
-		Option::sins( $data, 'dsp.name', \Kisma::get( 'app.app_name' ) );
+		Option::sins( $data, 'dsp.name', Pii::getParam( 'dsp_name' ) );
 
 		// do placeholder replacement, currently {xxx}
 		if ( !empty( $data ) )

@@ -72,9 +72,9 @@ class MongoDbSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Option::get( $config, 'credentials' );
-        $_dsn = Option::get( $_credentials, 'dsn', '' );
-        $_db = Option::get( $_credentials, 'db' );
+        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ));
+        $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn', '' ));
+        $_db = Session::replaceLookup( Option::get( $_credentials, 'db' ));
         if ( empty( $_dsn ) )
         {
             $_dsn = 'mongodb://localhost:27017';
@@ -105,11 +105,11 @@ class MongoDbSvc extends NoSqlDbSvc
             }
         }
 
-        $_username = Option::get( $_credentials, 'user' );
+        $_username = Session::replaceLookup( Option::get( $_credentials, 'user' ) );
         if ( !empty( $_username ) )
         {
             $_options['username'] = $_username;
-            $_password = Option::get( $_credentials, 'pwd' );
+            $_password = Session::replaceLookup( Option::get( $_credentials, 'pwd' ) );
             if ( !empty( $_password ) )
             {
                 $_options['password'] = $_password;

@@ -39,6 +39,7 @@ use DreamFactory\Platform\Yii\Models\LookupKey;
 use DreamFactory\Platform\Yii\Models\Role;
 use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
@@ -197,6 +198,16 @@ class Session extends BasePlatformRestResource
         }
     }
 
+    protected static function _generateTicket()
+    {
+        $_timestamp = time();
+        $_userId = static::getCurrentUserId();
+
+        $_ticket = Utilities::encryptCreds( "$_userId,$_timestamp", "gorilla" );
+
+        return $_ticket;
+    }
+
     /**
      * @param string $ticket
      *
@@ -310,8 +321,6 @@ class Session extends BasePlatformRestResource
             'last_name',
             'email',
             'is_sys_admin',
-            'role_id',
-            'default_app_id',
             'last_login_date'
         );
 
@@ -350,10 +359,10 @@ class Session extends BasePlatformRestResource
 
         $_cached = $_user->getAttributes( $_fields );
         $_public = $_cached;
-        $_defaultAppId = Option::get( $_public, 'default_app_id', null, true );
+        $_defaultAppId = $_user->default_app_id;
 
         $_roleApps = $_allowedApps = array();
-        $_roleId = Option::get( $_public, 'role_id', null, true );;
+        $_roleId = $_user->role_id;
         if ( !$_user->is_sys_admin )
         {
             if ( !$_user->role )
@@ -388,7 +397,7 @@ class Session extends BasePlatformRestResource
                 }
             }
 
-            $_role = array( 'name' => $_roleName );
+            $_role = array( 'name' => $_roleName, 'id' => $_roleId );
             $_role['apps'] = $_roleApps;
             $_role['services'] = $_user->getRoleServicePermissions();
 
@@ -441,7 +450,7 @@ class Session extends BasePlatformRestResource
         $_public = array();
         $_allowedApps = array();
         $_defaultAppId = $_role->default_app_id;
-        $_roleData = array( 'name', $_role->name );
+        $_roleData = array( 'name' => $_role->name, 'id' => $_role->id );
 
         /**
          * @var App[] $_apps
@@ -880,6 +889,21 @@ class Session extends BasePlatformRestResource
             {
                 switch ( $_section )
                 {
+                    case 'session':
+                        switch ( $_lookup )
+                        {
+                            case 'id':
+                                $value = session_id();
+
+                                return true;
+
+                            case 'ticket':
+                                $value = static::_generateTicket();
+
+                                return true;
+                        }
+                        break;
+
                     case 'user':
                         // get fields here
                         if ( !empty( $_lookup ) )
@@ -890,6 +914,54 @@ class Session extends BasePlatformRestResource
 
                                 return true;
                             }
+                        }
+                        break;
+
+                    case 'role':
+                        // get fields here
+                        if ( !empty( $_lookup ) )
+                        {
+                            if ( isset( static::$_cache, static::$_cache['role'], static::$_cache['role'][$_lookup] ) )
+                            {
+                                $value = static::$_cache['role'][$_lookup];
+
+                                return true;
+                            }
+                        }
+                        break;
+
+                    case 'app':
+                        switch ( $_lookup )
+                        {
+                            case 'id':
+                                $value = SystemManager::getCurrentAppId();;
+
+                                return true;
+
+                            case 'name':
+                                $value = SystemManager::getCurrentAppName();
+
+                                return true;
+                        }
+                        break;
+
+                    case 'dsp':
+                        switch ( $_lookup )
+                        {
+                            case 'host_url':
+                                $value = Curl::currentUrl( false, false );
+                                return true;
+                            case 'name':
+                                $value = Pii::getParam('dsp_name');
+
+                                return true;
+                            case 'version':
+                            case 'confirm_invite_url':
+                            case 'confirm_register_url':
+                            case 'confirm_reset_url':
+                                $value = Pii::getParam('dsp.'.$_lookup);
+
+                                return true;
                         }
                         break;
                 }
@@ -904,6 +976,24 @@ class Session extends BasePlatformRestResource
         }
 
         return false;
+    }
+
+    public static function replaceLookup( $lookup )
+    {
+        // filter string values should be wrapped in curly braces
+        if ( is_string( $lookup ) )
+        {
+            $_end = strlen( $lookup ) - 1;
+            if ( ( 0 === strpos( $lookup, '{' ) ) && ( $_end === strrpos( $lookup, '}' ) ) )
+            {
+                if ( static::getLookupValue( substr( $lookup, 1, $_end - 1 ), $_value ) )
+                {
+                    return $_value;
+                }
+            }
+        }
+
+        return $lookup;
     }
 
     /**
@@ -1017,10 +1107,7 @@ class Session extends BasePlatformRestResource
     public static function addSessionExtras( $session, $is_sys_admin = false, $add_apps = false )
     {
         $_data = Option::get( $session, 'public' );
-        $_userId = Option::get( $_data, 'id', '' );
-        $_timestamp = time();
-
-        $_data['ticket'] = static::$_ticket = $ticket = Utilities::encryptCreds( "$_userId,$_timestamp", "gorilla" );
+        $_data['ticket'] = static::$_ticket = static::_generateTicket();
         $_data['ticket_expiry'] = time() + ( 5 * 60 );
         $_data['session_id'] = session_id();
 

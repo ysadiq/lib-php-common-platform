@@ -94,12 +94,12 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Option::get( $config, 'credentials' );
+        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ) );
         $_parameters = Option::get( $config, 'parameters' );
 
         // old way
-        $_accessKey = Option::get( $_credentials, 'access_key' );
-        $_secretKey = Option::get( $_credentials, 'secret_key' );
+        $_accessKey = Session::replaceLookup( Option::get( $_credentials, 'access_key' ) );
+        $_secretKey = Session::replaceLookup( Option::get( $_credentials, 'secret_key' ) );
         if ( !empty( $_accessKey ) )
         {
             // old way, replace with 'key'
@@ -122,7 +122,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         // set up a default table schema
         if ( null !== ( $_table = Option::get( $_parameters, 'default_create_table' ) ) )
         {
-            $this->_defaultCreateTable = $_table;
+            $this->_defaultCreateTable = Session::replaceLookup( $_table );
         }
 
         try
@@ -1181,7 +1181,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
 //        $_ssFilters = Option::get( $extras, 'ss_filters' );
         $_fields = Option::get( $extras, 'fields' );
-        $_requireMore = Option::get( $extras, 'require_more');
+        $_requireMore = Option::get( $extras, 'require_more' );
         $_idsInfo = Option::get( $extras, 'ids_info' );
         $_idFields = Option::get( $extras, 'id_fields' );
 

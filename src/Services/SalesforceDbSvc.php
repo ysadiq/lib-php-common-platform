@@ -24,6 +24,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Exceptions\RestException;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
@@ -102,11 +103,11 @@ class SalesforceDbSvc extends BaseDbSvc
 
         parent::__construct( $config );
 
-        $_credentials = Option::get( $config, 'credentials' );
+        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ) );
 
-        $this->_username = Option::get( $_credentials, 'username' );
-        $this->_password = Option::get( $_credentials, 'password' );
-        $this->_securityToken = Option::get( $_credentials, 'security_token' );
+        $this->_username = Session::replaceLookup( Option::get( $_credentials, 'username' ) );
+        $this->_password = Session::replaceLookup( Option::get( $_credentials, 'password' ) );
+        $this->_securityToken = Session::replaceLookup( Option::get( $_credentials, 'security_token' ) );
         if ( empty( $this->_securityToken ) )
         {
             $this->_securityToken = ''; // gets appended to password

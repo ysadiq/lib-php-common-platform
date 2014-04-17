@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Exceptions\RestException;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\RestData;
 use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\Option;
@@ -127,7 +128,7 @@ class RemoteWebSvc extends BasePlatformRestService
                     }
                 }
                 $key = Option::get( $param, 'name' );
-                $value = Option::get( $param, 'value' );
+                $value = Session::replaceLookup( Option::get( $param, 'value' ) );
                 $param_str .= ( !empty( $param_str ) ) ? '&' : '';
                 $param_str .= urlencode( $key );
                 $param_str .= ( empty( $value ) ) ? '' : '=' . urlencode( $value );
@@ -160,7 +161,7 @@ class RemoteWebSvc extends BasePlatformRestService
                 }
 
                 $key = Option::get( $header, 'name' );
-                $value = Option::get( $header, 'value' );
+                $value = Session::replaceLookup( Option::get( $header, 'value' ) );
 
                 if ( null === Option::get( $options, CURLOPT_HTTPHEADER ) )
                 {

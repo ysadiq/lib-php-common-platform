@@ -101,14 +101,14 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Option::get( $config, 'credentials' );
-        $_name = Option::get( $_credentials, 'account_name' );
+        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ) );
+        $_name = Session::replaceLookup( Option::get( $_credentials, 'account_name' ) );
         if ( empty( $_name ) )
         {
             throw new \Exception( 'WindowsAzure storage name can not be empty.' );
         }
 
-        $_key = Option::get( $_credentials, 'account_key' );
+        $_key = Session::replaceLookup( Option::get( $_credentials, 'account_key' ) );
         if ( empty( $_key ) )
         {
             throw new \Exception( 'WindowsAzure storage key can not be empty.' );
