@@ -85,8 +85,8 @@ class Config extends BaseSystemRestResource
         $_fields = 'allow_open_registration, open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id';
 
         $_config = ResourceStore::model( 'config' )->find( array( 'select' => $_fields ) );
-
-        if ( null === $_config )
+        
+	if ( null === $_config )
         {
             throw new InternalServerErrorException( 'Unable to load system configuration.' );
         }
