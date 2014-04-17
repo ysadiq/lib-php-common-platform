@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Resources\User\Session;
 use Kisma\Core\Utility\Option;
 
 /**
