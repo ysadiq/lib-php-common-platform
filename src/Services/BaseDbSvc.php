@@ -2851,12 +2851,13 @@ abstract class BaseDbSvc extends BasePlatformRestService
             return $value;
         }
 
+        $_end = strlen( $value ) - 1;
         // filter string values should be wrapped in matching quotes
-        if ( ( ( 0 === strpos( $value, '"' ) ) && ( ( strlen( $value ) - 1 ) === strrpos( $value, '"' ) ) ) ||
-             ( ( 0 === strpos( $value, "'" ) ) && ( ( strlen( $value ) - 1 ) === strrpos( $value, "'" ) ) )
+        if ( ( ( 0 === strpos( $value, '"' ) ) && ( $_end === strrpos( $value, '"' ) ) ) ||
+             ( ( 0 === strpos( $value, "'" ) ) && ( $_end === strrpos( $value, "'" ) ) )
         )
         {
-            return substr( $value, 1, ( strlen( $value ) - 1 ) );
+            return substr( $value, 1, $_end - 1 );
         }
 
         // check for boolean or null values
@@ -2875,14 +2876,8 @@ abstract class BaseDbSvc extends BasePlatformRestService
             return $value + 0; // trick to get int or float
         }
 
-        // the rest should be lookup keys
-        if ( Session::getLookupValue( $value, $_result ) )
-        {
-            return $_result;
-        }
-
-        // todo Should we error here?
-        return $value;
+        // the rest should be lookup keys, or plain strings
+        return Session::replaceLookup( $value );
     }
 
     /**

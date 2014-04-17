@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Services;
 use Aws\S3\S3Client;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\BlobServiceException;
+use DreamFactory\Platform\Resources\User\Session;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -63,9 +64,9 @@ class AwsS3Svc extends RemoteFileSvc
 	{
 		parent::__construct( $config );
 
-		$_credentials = Option::get( $config, 'credentials' );
-		$_accessKey = Option::get( $_credentials, 'access_key' );
-		$_secretKey = Option::get( $_credentials, 'secret_key' );
+		$_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ) );
+		$_accessKey = Session::replaceLookup( Option::get( $_credentials, 'access_key' ) );
+		$_secretKey = Session::replaceLookup( Option::get( $_credentials, 'secret_key' ) );
 		if ( !empty( $_accessKey ) && !empty( $_secretKey ) )
 		{
 			// old way

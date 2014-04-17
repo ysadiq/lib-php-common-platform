@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Resources\User\Session;
 use Kisma\Core\Utility\Option;
 
 //	Load up SwiftMailer
@@ -58,8 +59,8 @@ class EmailUtilities
 					throw new \InvalidArgumentException( 'SMTP host name can not be empty.' );
 				}
 
-				$user = Option::get( $credentials, 'user', '' );
-				$pwd = Option::get( $credentials, 'pwd', '' );
+				$user = Session::replaceLookup( Option::get( $credentials, 'user', '' ) );
+				$pwd = Session::replaceLookup( Option::get( $credentials, 'pwd', '' ) );
 				$port = Option::get( $credentials, 'port', 25 );
 				$security = strtolower( Option::get( $credentials, 'security', null ) );
 

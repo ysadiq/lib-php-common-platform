@@ -24,6 +24,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\BlobServiceException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Resources\User\Session;
 use Kisma\Core\Utility\Option;
 use WindowsAzure\Blob\BlobRestProxy;
 use WindowsAzure\Blob\Models\CreateBlobOptions;
@@ -77,15 +78,15 @@ class WindowsAzureBlobSvc extends RemoteFileSvc
 	{
 		parent::__construct( $config );
 
-		$_credentials = Option::get( $config, 'credentials' );
-		$_connectionString = Option::get( $_credentials, 'connection_string' );
+		$_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ) );
+		$_connectionString = Session::replaceLookup( Option::get( $_credentials, 'connection_string' ) );
 		if ( empty( $_connectionString ) )
 		{
 			$_localDev = DataFormat::boolval( Option::get( $_credentials, 'local_dev', false ) );
 			if ( !$_localDev )
 			{
-				$_accountName = Option::get( $_credentials, 'account_name' );
-				$_accountKey = Option::get( $_credentials, 'account_key' );
+				$_accountName = Session::replaceLookup( Option::get( $_credentials, 'account_name' ) );
+				$_accountKey = Session::replaceLookup( Option::get( $_credentials, 'account_key' ) );
 				$_protocol = Option::get( $_credentials, 'protocol', 'https' );
 				if ( empty( $_accountName ) )
 				{
@@ -110,7 +111,7 @@ class WindowsAzureBlobSvc extends RemoteFileSvc
 		}
 		catch ( ServiceException $ex )
 		{
-			throw new \Exception( 'Unexpected Windows Azure Blob Service Exception: ' . $ex->getMessage() );
+			throw new \Exception( 'Windows Azure Blob Service Exception: ' . $ex->getMessage() );
 		}
 	}
 

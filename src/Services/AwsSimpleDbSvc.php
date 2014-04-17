@@ -73,11 +73,11 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Option::get( $config, 'credentials' );
+        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ));
 
         // old way
-        $_accessKey = Option::get( $_credentials, 'access_key' );
-        $_secretKey = Option::get( $_credentials, 'secret_key' );
+        $_accessKey = Session::replaceLookup( Option::get( $_credentials, 'access_key' ));
+        $_secretKey = Session::replaceLookup( Option::get( $_credentials, 'secret_key' ));
         if ( !empty( $_accessKey ) )
         {
             // old way, replace with 'key'

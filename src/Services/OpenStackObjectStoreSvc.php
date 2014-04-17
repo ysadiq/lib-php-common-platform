@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\BlobServiceException;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\FileUtilities;
 use Kisma\Core\Utility\Option;
 use OpenCloud\Common\Collection;
@@ -86,10 +87,10 @@ class OpenStackObjectStoreSvc extends RemoteFileSvc
 				break;
 		}
 
-		$_username = Option::get( $_credentials, 'username' );
-		$_password = Option::get( $_credentials, 'password' );
-		$_apiKey = Option::get( $_credentials, 'api_key' );
-		$_tenantName = Option::get( $_credentials, 'tenant_name' );
+		$_username = Session::replaceLookup( Option::get( $_credentials, 'username' ) );
+		$_password = Session::replaceLookup( Option::get( $_credentials, 'password' ) );
+		$_apiKey = Session::replaceLookup( Option::get( $_credentials, 'api_key' ) );
+		$_tenantName = Session::replaceLookup( Option::get( $_credentials, 'tenant_name' ) );
 		if ( empty( $_authUrl ) )
 		{
 			throw new \InvalidArgumentException( 'Object Store authentication URL can not be empty.' );

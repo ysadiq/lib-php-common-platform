@@ -23,6 +23,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Yii\Utility\Pii;
@@ -98,19 +99,19 @@ class SchemaSvc extends BasePlatformRestService
         }
         else
         {
-            $_credentials = Option::get( $config, 'credentials' );
+            $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ) );
 
-            if ( null === ( $dsn = Option::get( $_credentials, 'dsn' ) ) )
+            if ( null === ( $dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn' ) ) ) )
             {
                 throw new \InvalidArgumentException( 'DB connection string (DSN) can not be empty.' );
             }
 
-            if ( null === ( $user = Option::get( $_credentials, 'user' ) ) )
+            if ( null === ( $user = Session::replaceLookup( Option::get( $_credentials, 'user' ) ) ) )
             {
                 throw new \InvalidArgumentException( 'DB admin name can not be empty.' );
             }
 
-            if ( null === ( $password = Option::get( $_credentials, 'pwd' ) ) )
+            if ( null === ( $password = Session::replaceLookup( Option::get( $_credentials, 'pwd' ) ) ) )
             {
                 throw new \InvalidArgumentException( 'DB admin password can not be empty.' );
             }

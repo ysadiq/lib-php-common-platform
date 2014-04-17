@@ -20,7 +20,7 @@
 namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Yii\Utility\Pii;
+use DreamFactory\Platform\Resources\User\Session;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -47,6 +47,14 @@ class LookupKey extends BasePlatformSystemModel
     //*************************************************************************
     //* Methods
     //*************************************************************************
+    /**
+     * @var bool
+     */
+    protected static $_internal = false;
+
+    //*************************************************************************
+    //* Methods
+    //*************************************************************************
 
     /**
      * @return string the associated database table name
@@ -64,9 +72,9 @@ class LookupKey extends BasePlatformSystemModel
         return array_merge(
             parent::behaviors(),
             array(
-                //	Secure JSON
-                'base_platform_model.secure_json' => array(
-                    'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureJson',
+                //	Secure String
+                'base_platform_model.secure_string' => array(
+                    'class'            => 'DreamFactory\\Platform\\Yii\\Behaviors\\SecureString',
                     'salt'             => $this->getDb()->password,
                     'secureAttributes' => array(
                         'value',
@@ -154,7 +162,14 @@ class LookupKey extends BasePlatformSystemModel
     {
         parent::afterFind();
 
-        if ( $this->private )
+        // might be json
+        $_temp = json_decode( $this->value);
+        if ( JSON_ERROR_NONE == json_last_error() )
+        {
+            $this->value = $_temp;
+        }
+
+        if ( $this->private && !static::$_internal )
         {
             $this->value = '********';
         }
@@ -198,35 +213,30 @@ class LookupKey extends BasePlatformSystemModel
                 }
             }
 
-            $_table = static::tableNamePrefix() . 'lookup_key';
-            $_pkMapField = 'id';
-            // use query builder
-            $_command = Pii::db()->createCommand();
-            $_command->select( 'id,name,value,private' );
-            $_command->from( $_table );
             $_params = array();
             if ( !empty( $role_id ) )
             {
-                $_command->where( 'role_id = :role_id AND user_id IS NULL' );
+                $_where = 'role_id = :role_id AND user_id IS NULL';
                 $_params[':role_id'] = $role_id;
             }
             elseif ( !empty( $user_id ) )
             {
-                $_command->where( 'role_id IS NULL AND user_id = :user_id' );
+                $_where = 'role_id IS NULL AND user_id = :user_id';
                 $_params[':user_id'] = $user_id;
             }
             else
             {
-                $_command->where( 'role_id IS NULL AND user_id IS NULL' );
+                $_where = 'role_id IS NULL AND user_id IS NULL';
             }
 
-            $_oldLookups = $_command->queryAll( true, $_params );
+            static::$_internal = true;
+            $_oldLookups = static::model()->findAll( $_where, $_params );
             $_toDelete = array();
             $_toUpdate = array();
             foreach ( $_oldLookups as $_old )
             {
-                $_oldName = Option::get( $_old, 'name', '' );
-                $_id = Option::get( $_old, $_pkMapField, '' );
+                $_oldName = $_old->name;
+                $_id = $_old->id;
                 $_found = false;
                 foreach ( $lookups as $_key => $_item )
                 {
@@ -234,11 +244,11 @@ class LookupKey extends BasePlatformSystemModel
                     if ( $_assignName == $_oldName )
                     {
                         // found it, make sure nothing needs to be updated
-                        $_oldValue = Option::get( $_old, 'value' );
+                        $_oldValue = $_old->value;
                         $_assignValue = Option::get( $_item, 'value' );
-                        $_oldPrivate = Option::getBool( $_old, 'private' );
+                        $_oldPrivate = $_old->private;
                         $_assignPrivate = Option::getBool( $_item, 'private' );
-                        $_oldAllow = Option::getBool( $_old, 'allow_user_update' );
+                        $_oldAllow = $_old->allow_user_update;
                         $_assignAllow = Option::getBool( $_item, 'allow_user_update' );
                         if ( $_oldPrivate && !$_assignPrivate )
                         {
@@ -253,12 +263,12 @@ class LookupKey extends BasePlatformSystemModel
                         }
                         if ( $_oldPrivate != $_assignPrivate )
                         {
-                            $_old['private'] = $_assignPrivate;
+                            $_old->private = $_assignPrivate;
                             $_needUpdate = true;
                         }
                         if ( $_oldAllow != $_assignAllow )
                         {
-                            $_old['allow_user_update'] = $_assignAllow;
+                            $_old->allow_user_update = $_assignAllow;
                             $_needUpdate = true;
                         }
 
@@ -282,18 +292,17 @@ class LookupKey extends BasePlatformSystemModel
             if ( !empty( $_toDelete ) )
             {
                 // simple delete request
-                $_command->reset();
-                $_command->delete( $_table, array( 'in', $_pkMapField, $_toDelete ) );
+                $_criteria = new \CDbCriteria();
+                $_criteria->addInCondition( 'id', $_toDelete );
+                static::model()->deleteAll( $_criteria );
             }
             if ( !empty( $_toUpdate ) )
             {
+                /** @var LookupKey $_item */
                 foreach ( $_toUpdate as $_item )
                 {
-                    $_itemId = Option::get( $_item, 'id', '', true );
                     // simple update request
-                    $_command->reset();
-                    $_rows = $_command->update( $_table, $_item, 'id = :id', array( ':id' => $_itemId ) );
-                    if ( 0 >= $_rows )
+                    if ( !$_item->save() )
                     {
                         throw new \Exception( "Record update failed." );
                     }
@@ -320,18 +329,21 @@ class LookupKey extends BasePlatformSystemModel
                         $_record['user_id'] = $user_id;
                         $_record['allow_user_update'] = Option::get( $_item, 'allow_user_update', false );
                     }
-                    $_command->reset();
-                    $_rows = $_command->insert( $_table, $_record );
-                    if ( 0 >= $_rows )
+                    $_new = new LookupKey;
+                    $_new->setAttributes( $_record );
+                    if ( !$_new->save() )
                     {
                         throw new \Exception( "Record insert failed." );
                     }
                 }
             }
+
+            static::$_internal = false;
         }
         catch ( \Exception $ex )
         {
-            throw new \Exception( "Error updating lookups to role assignment.\n{$ex->getMessage()}" );
+            static::$_internal = false;
+            throw new \Exception( "Error updating lookups assignment.\n{$ex->getMessage()}" );
         }
     }
 
@@ -353,47 +365,34 @@ class LookupKey extends BasePlatformSystemModel
 
         try
         {
-            $_table = static::tableNamePrefix() . 'lookup_key';
-            $_fields = 'id,name,value,private';
-            if ( !empty( $user_id ) )
-            {
-                $_fields .= ',allow_user_update';
-            }
-
-            // use query builder
-            $_command = Pii::db()->createCommand();
-            $_command->select( $_fields );
-            $_command->from( $_table );
+            $_criteria = new \CDbCriteria();
             $_params = array();
             if ( !empty( $role_id ) )
             {
-                $_command->where( 'role_id = :role_id AND user_id IS NULL' );
+                $_criteria->addCondition( 'role_id = :role_id AND user_id IS NULL' );
                 $_params[':role_id'] = $role_id;
             }
             elseif ( !empty( $user_id ) )
             {
-                $_command->where( 'role_id IS NULL AND user_id = :user_id' );
+                $_criteria->addCondition( 'role_id IS NULL AND user_id = :user_id' );
                 $_params[':user_id'] = $user_id;
             }
             else
             {
-                $_command->where( 'role_id IS NULL AND user_id IS NULL' );
+                $_criteria->addCondition( 'role_id IS NULL AND user_id IS NULL' );
             }
 
-            $_lookups = $_command->queryAll( true, $_params );
-            if ( $mask_private )
+            static::$_internal = $mask_private;
+            $_lookups = static::model()->findAll( $_criteria, $_params );
+            $_out = array();
+            /** @var LookupKey $_lookup */
+            foreach ($_lookups as $_lookup)
             {
-                foreach ( $_lookups as $_ndx => $_lookup )
-                {
-                    if ( Option::getBool( $_lookup, 'private' ) )
-                    {
-                        $_lookup['value'] = '********';
-                        $_lookups[$_ndx] = $_lookup;
-                    }
-                }
+                $_out[] = $_lookup->getAttributes();
             }
+            static::$_internal = false;
 
-            return $_lookups;
+            return $_out;
         }
         catch ( \Exception $ex )
         {
@@ -413,30 +412,27 @@ class LookupKey extends BasePlatformSystemModel
     {
         try
         {
-            $_table = static::tableNamePrefix() . 'lookup_key';
-
-            // use query builder
-            $_command = Pii::db()->createCommand();
-            $_command->select();
-            $_command->from( $_table );
-            $_command->where( 'role_id IS NULL AND user_id IS NULL' );
+            $_where ='role_id IS NULL AND user_id IS NULL';
             $_params = array();
             if ( !empty( $role_id ) )
             {
-                $_command->orWhere( 'role_id = :role_id', array( ':role_id' => $role_id ) );
+                $_where .=  ' OR role_id = :role_id';
+                $_params[':role_id'] = $role_id;
             }
             elseif ( !empty( $user_id ) )
             {
-                $_command->orWhere( 'user_id = :user_id', array( ':user_id' => $user_id ) );
+                $_where .= ' OR user_id = :user_id';
+                $_params[':user_id'] = $user_id;
             }
 
-            $_lookups = $_command->queryAll( true, $_params );
-
-            $_flattened = array();
-
+            static::$_internal = true;
+            $_lookups = static::model()->findAll( $_where, $_params );
             //  Build semi-flat comparison array
-            foreach ( $_lookups as $_data )
+            $_flattened = array();
+            /** @var LookupKey $_lookup */
+            foreach ( $_lookups as $_lookup )
             {
+                $_data = $_lookup->getAttributes();
                 if ( !array_key_exists( $_data['name'], $_flattened ) )
                 {
                     if ( !isset( $_data['role_id'] ) )
@@ -477,13 +473,13 @@ class LookupKey extends BasePlatformSystemModel
                 $_flattened,
                 function ( &$lookup )
                 {
-                    $lookup = array( 'name' => $lookup['name'], 'value' => $lookup['value'] );
+                    $lookup = $lookup['value'];
 
                     return $lookup;
                 }
             );
 
-            return array_values( $_flattened );
+            return $_flattened;
         }
         catch ( \Exception $ex )
         {

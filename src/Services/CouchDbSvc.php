@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
+use DreamFactory\Platform\Resources\User\Session;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
@@ -75,8 +76,8 @@ class CouchDbSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Option::get( $config, 'credentials' );
-        $_dsn = Option::get( $_credentials, 'dsn' );
+        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ));
+        $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn' ));
         if ( empty( $_dsn ) )
         {
             $_dsn = 'http://localhost:5984';
