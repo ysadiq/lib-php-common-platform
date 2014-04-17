@@ -19,12 +19,15 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use Doctrine\Common\Cache\CacheProvider;
 use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Interfaces\PersistentStoreLike;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Components\Flexistore;
+use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Inflector;
@@ -263,8 +266,13 @@ class Platform extends SeedUtility
             hash(
                 'ripemd128',
                 uniqid( '', true ) . ( $_uuid ? : microtime( true ) ) . md5(
-                    $namespace . $_SERVER['REQUEST_TIME'] . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['LOCAL_ADDR'] . $_SERVER['LOCAL_PORT'] .
-                    $_SERVER['REMOTE_ADDR'] . $_SERVER['REMOTE_PORT']
+                    $namespace .
+                    $_SERVER['REQUEST_TIME'] .
+                    $_SERVER['HTTP_USER_AGENT'] .
+                    $_SERVER['LOCAL_ADDR'] .
+                    $_SERVER['LOCAL_PORT'] .
+                    $_SERVER['REMOTE_ADDR'] .
+                    $_SERVER['REMOTE_PORT']
                 )
             )
         );
@@ -311,38 +319,78 @@ class Platform extends SeedUtility
      * Retrieves the store instance for the platform. If it has not yet been created,
      * a new instance is created and seeded with $data
      *
-     * @param string $storeId If not provided, one will be created
-     * @param array  $data    An array of key value pairs with which to seed the store
+     * @param array $data An array of key value pairs with which to seed the store
      *
-     * @return PersistentStoreLike
+     * @return CacheProvider|Flexistore
      */
-    public static function getStore( $storeId = null, array $data = array() )
+    public static function getStore( array $data = array() )
     {
         if ( null === static::$_persistentStore )
         {
-            static::$_persistentStore = new PlatformStore( $storeId, $data );
+            static::$_persistentStore = new PlatformStore( CacheTypes::PHP_FILE, $data );
         }
 
         return static::$_persistentStore;
     }
 
     /**
-     * @param PersistentStoreLike $persistentStore
+     * @param string $id
+     * @param mixed  $value
+     * @param mixed  $defaultValue
+     * @param bool   $remove
+     *
+     * @return mixed
      */
-    public static function setPersistentStore( PersistentStoreLike $persistentStore )
+    public static function storeGet( $id, $value = null, $defaultValue = null, $remove = false )
     {
-        static::$_persistentStore = $persistentStore;
+        return static::getStore()->get( $id, $value, $defaultValue, $remove );
     }
 
     /**
-     * Triggers a DSP-level event
+     * Sets a value in the platform cache
+     * $id can be specified as an array of key-value pairs: array( 'alpha' => 'xyz', 'beta' => 'qrs', 'gamma' => 'lmo', ... )
+     *
+     *
+     * @param string|array $id       The cache id or array of key-value pairs
+     * @param mixed        $data     The cache entry/data.
+     * @param int          $lifeTime The cache lifetime. Sets a specific lifetime for this cache entry. Defaults to 0, or "never expire"
+     *
+     * @return boolean|boolean[] TRUE if the entry was successfully stored in the cache, FALSE otherwise.
+     */
+    public static function storeSet( $id, $data, $lifeTime = 300 )
+    {
+        return static::getStore()->set( $id, $data, $lifeTime );
+    }
+
+    /**
+     * @param string $id
+     *
+     * @return bool
+     */
+    public static function storeContains( $id )
+    {
+        return static::getStore()->contains( $id );
+    }
+
+    /**
+     * @param string $id
+     *
+     * @return bool
+     */
+    public static function storeDelete( $id )
+    {
+        return static::getStore()->delete( $id );
+    }
+
+    /**
+     * Triggers an event
      *
      * @param string        $eventName
      * @param PlatformEvent $event
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @throws \Exception
-     * @return DspEvent
+     * @return PlatformEvent
      */
     public static function trigger( $eventName, $event = null )
     {

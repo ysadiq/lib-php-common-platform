@@ -324,6 +324,9 @@ abstract class BaseDbSvc extends BasePlatformRestService
                 break;
         }
 
+        //  Trigger an event...
+        $this->_triggerActionEvent( $_result );
+
         return $_result;
     }
 

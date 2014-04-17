@@ -97,9 +97,10 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
      */
     protected function _listResources()
     {
-        $result = $this->listContainers();
+        $_result = $this->listContainers();
+        $this->_triggerActionEvent( $_result );
 
-        return array( 'resource' => $result );
+        return array( 'resource' => $_result );
     }
 
     /**
@@ -126,10 +127,12 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                 {
                     // no resource
                     $includeProperties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
+
                     if ( !$includeProperties )
                     {
                         return $this->_listResources();
                     }
+
                     $result = $this->listContainers( true );
                     $result = array( 'container' => $result );
                 }
@@ -498,6 +501,9 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
             default:
                 return false;
         }
+
+        //  Set out any events...
+        $this->_triggerActionEvent( $result );
 
         return $result;
     }

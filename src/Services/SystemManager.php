@@ -43,6 +43,7 @@ use DreamFactory\Platform\Yii\Models\User;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Curl;
+use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -1096,9 +1097,9 @@ SQL
         {
             $_schema = Storage::defrost( $_schema );
 
-            if ( isset( $_schema, $_schema[ $_schemaFilePath ] ) )
+            if ( isset( $_schema, $_schema[$_schemaFilePath] ) )
             {
-                return $_schema[ $_schemaFilePath ];
+                return $_schema[$_schemaFilePath];
             }
         }
 
@@ -1118,11 +1119,11 @@ SQL
             throw new InternalServerErrorException( static::BOGUS_INSTALL_MESSAGE );
         }
 
-        $_schema[ $_schemaFilePath ] = DataFormat::jsonToArray( $_jsonSchema );
+        $_schema[$_schemaFilePath] = DataFormat::jsonToArray( $_jsonSchema );
 
         if ( false !== $checkTables )
         {
-            $_tables = Option::get( $_schema[ $_schemaFilePath ], 'table' );
+            $_tables = Option::get( $_schema[$_schemaFilePath], 'table' );
 
             if ( empty( $_tables ) )
             {
@@ -1135,7 +1136,7 @@ SQL
             Storage::freeze( $_schema )
         );
 
-        return $_schema[ $_schemaFilePath ];
+        return $_schema[$_schemaFilePath];
     }
 
     /**
@@ -1313,6 +1314,72 @@ SQL
         return static::getAppIdFromName( static::getCurrentAppName() );
     }
 
+    /**
+     * Discovers any resources in the known resource-multiverse that have Swagger definition files.
+     * Output is returned in a form suitable for inclusion directly into a swagger definition file
+     * or pass in a $base and it will place the definitions in the proper place
+     *
+     * @param array $namespaces An array of namespaces to search for resourcs. If empty, all platform namespaces will be searched
+     * @param array $base       The base array of the Swagger tree
+     * @param bool  $force      If true, force a scan even if cached
+     *
+     * @return array
+     */
+    public static function discoverAvailableResources( array $namespaces = array(), array $base = array(), $force = false )
+    {
+        static $_resourceCache;
+
+        Log::debug( '  * Resource discovery engaged' );
+
+        if ( $force )
+        {
+            $_resourceCache = null;
+            Log::debug( '    - Resource cache cleared' );
+        }
+
+        $_count = 0;
+        $_base = $base;
+        $_basePath = dirname( __DIR__ );
+
+        //  Load resources
+        $_namespaces = $namespaces ? : Pii::app()->getResourceNamespaces();
+
+        foreach ( $_namespaces as $_namespace )
+        {
+            //  Kajigger me a path from a class name
+            $_resourcePath = $_basePath . '/' . trim(
+                    str_replace(
+                        array( '\\', 'DreamFactory/Platform/' ),
+                        array( '/', null ),
+                        $_namespace
+                    ),
+                    '/'
+                );
+
+            //  Glob it for swagger files
+            foreach ( FileSystem::glob( $_resourcePath . '/*.swagger.php' ) as $_file )
+            {
+                Log::debug( '    > Found ' . $_file );
+
+                $_load = array();
+                $_key = strtolower( str_replace( '.swagger.php', null, $_file ) );
+
+                /** @noinspection PhpIncludeInspection */
+                $_load[$_key] = require( $_resourcePath . '/' . $_file );
+                $_base['apis'] = array_merge( $_base['apis'], Option::get( $_load[$_key], 'apis', array() ) );
+                $_base['models'] = array_merge( $_base['models'], Option::get( $_load[$_key], 'models', array() ) );
+
+                $_count++;
+                unset( $_load );
+            }
+        }
+
+        unset( $_resourcePath, $_namespaces );
+
+        Log::debug( '  * Resource discovery complete > ' . $_count . ' resource(s) discovered.' );
+
+        return $_base;
+    }
 }
 
 //	Set the db connection

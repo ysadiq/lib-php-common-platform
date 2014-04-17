@@ -364,7 +364,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _loadLocalConfig()
     {
-        if ( null === ( $_config = \Kisma::get( 'platform.local_config' ) ) )
+        if ( false === ( $_config = Platform::getStore()->get( 'platform.local_config' ) ) )
         {
             $_config = array();
             $_configPath = Platform::getPrivatePath( '/config' );
@@ -394,7 +394,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                     else
                     {
                         $_config = array_merge( $_config, $_data );
-                        Log::debug( 'Loaded local config from "' . $_file . '"' );
                     }
                 }
                 catch ( FileSystemException $_ex )
@@ -403,7 +402,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 }
             }
 
-            \Kisma::set( 'platform.local_config', $_config );
+            Platform::getStore()->save( 'platform.local_config', $_config );
+            Log::debug( 'Loaded local configuration files' );
         }
 
         //  Merge config with our params...
@@ -560,13 +560,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $_headers = array();
 
         //  Deal with CORS headers
-        list(
-            $_key,
-            $_origin,
-            $_requestSource,
-            $_originParts,
-            $_originUri,
-            ) = $this->_buildCacheKey();
+        list( $_key, $_origin, $_requestSource, $_originParts, $_originUri, ) = $this->_buildCacheKey();
 
         //	Was an origin header passed? If not, don't do CORS.
         if ( !empty( $_origin ) )
@@ -588,7 +582,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             }
             else
             {
-                $_originUri = $_cache[ $_key ];
+                $_originUri = $_cache[$_key];
                 $_allowedMethods = Option::getDeep( $_cacheVerbs, $_key, 'allowed_methods' );
                 $_headers = Option::getDeep( $_cacheVerbs, $_key, 'headers' );
             }
@@ -604,8 +598,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             $_headers['Access-Control-Max-Age'] = static::CORS_DEFAULT_MAX_AGE;
 
             //	Store in cache...
-            $_cache[ $_key ] = $_originUri;
-            $_cacheVerbs[ $_key ] = array(
+            $_cache[$_key] = $_originUri;
+            $_cacheVerbs[$_key] = array(
                 'allowed_methods' => $_allowedMethods,
                 'headers'         => $_headers
             );
@@ -951,7 +945,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function setResourceNamespaces( $resourceNamespaces )
     {
-        static::$_namespaceMap[ static::NS_RESOURCES ] = $resourceNamespaces;
+        static::$_namespaceMap[static::NS_RESOURCES] = $resourceNamespaces;
 
         return $this;
     }
@@ -961,7 +955,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function getResourceNamespaces()
     {
-        return static::$_namespaceMap[ static::NS_RESOURCES ];
+        return static::$_namespaceMap[static::NS_RESOURCES];
     }
 
     /**
@@ -986,7 +980,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function setModelNamespaces( $modelNamespaces )
     {
-        static::$_namespaceMap[ static::NS_MODELS ] = $modelNamespaces;
+        static::$_namespaceMap[static::NS_MODELS] = $modelNamespaces;
 
         return $this;
     }
@@ -996,7 +990,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function getModelNamespaces()
     {
-        return static::$_namespaceMap[ static::NS_MODELS ];
+        return static::$_namespaceMap[static::NS_MODELS];
     }
 
     /**
@@ -1020,7 +1014,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public static function getNamespaceMap( $which = null )
     {
-        return $which ? static::$_namespaceMap[ $which ] : static::$_namespaceMap;
+        return $which ? static::$_namespaceMap[$which] : static::$_namespaceMap;
     }
 
     /**
@@ -1059,11 +1053,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         if ( $prepend )
         {
-            array_unshift( static::$_namespaceMap[ $which ], array( $namespace, $path ) );
+            array_unshift( static::$_namespaceMap[$which], array( $namespace, $path ) );
         }
         else
         {
-            static::$_namespaceMap[ $which ][ $namespace ] = $path;
+            static::$_namespaceMap[$which][$namespace] = $path;
         }
     }
 

@@ -232,14 +232,14 @@ SQL;
 
                     if ( file_exists( $_filePath ) )
                     {
-                        // todo check for RAML and convert
+                        //@todo check for RAML and convert
                     }
                 }
             }
 
             if ( empty( $_content ) )
             {
-                Log::info( '  * No Swagger content found for service "' . $_apiName . '"' );
+                Log::debug( '    ! Resource "' . $_apiName . '" not available. No Swagger definition.' );
                 continue;
             }
 
@@ -261,16 +261,16 @@ SQL;
                 'description' => Option::get( $_service, 'description', 'Service' )
             );
 
-            if ( !isset( static::$_eventMap[ $_apiName ] ) || !is_array( static::$_eventMap[ $_apiName ] ) || empty( static::$_eventMap[ $_apiName ] ) )
+            if ( !isset( static::$_eventMap[$_apiName] ) || !is_array( static::$_eventMap[$_apiName] ) || empty( static::$_eventMap[$_apiName] ) )
             {
-                static::$_eventMap[ $_apiName ] = array();
+                static::$_eventMap[$_apiName] = array();
             }
 
             $_serviceEvents = static::_parseSwaggerEvents( $_apiName, json_decode( $_content, true ) );
 
             //	Parse the events while we get the chance...
-            static::$_eventMap[ $_apiName ] = array_merge(
-                Option::clean( static::$_eventMap[ $_apiName ] ),
+            static::$_eventMap[$_apiName] = array_merge(
+                Option::clean( static::$_eventMap[$_apiName] ),
                 $_serviceEvents
             );
 
@@ -336,7 +336,7 @@ SQL;
                 {
                     $_method = strtolower( Option::get( $_operation, 'method', HttpMethod::GET ) );
 
-                    $_events[ $_method ] = array(
+                    $_events[$_method] = array(
                         'event'   => $_eventName = str_ireplace(
                             array( '{api_name}', '{action}', '{request.method}' ),
                             array( $apiName, $_method, $_method ),
@@ -349,7 +349,7 @@ SQL;
                 unset( $_operation );
             }
 
-            $_eventMap[ str_ireplace( '{api_name}', $apiName, $_api['path'] ) ] = $_events;
+            $_eventMap[str_ireplace( '{api_name}', $apiName, $_api['path'] )] = $_events;
 
             unset( $_scripts, $_events, $_api );
         }
@@ -374,8 +374,16 @@ SQL;
             $_scriptPath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
         }
 
+        //  Look for $apiName.$method.*.js
         $_scriptPattern = strtolower( $apiName ) . '.' . strtolower( $method ) . '.*.js';
         $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
+
+        //  Look for $apiName*.js (i.e. {table.list}.js)
+        if ( empty( $_scripts ) && strpos( $apiName, '.' ) )
+        {
+            $_scriptPattern = strtolower( preg_replace( '#\{(.*)+\}#', '#*#', $apiName ) ) . '.js';
+            $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
+        }
 
         if ( empty( $_scripts ) )
         {
@@ -387,7 +395,7 @@ SQL;
 
         foreach ( $_scripts as $_script )
         {
-            if ( 0 === preg_match( $_eventPattern, $_script ) )
+            if ( preg_match( $_eventPattern, $_script ) )
             {
                 $_response[] = $_script;
             }
@@ -409,11 +417,11 @@ SQL;
 
         $_map = static::getEventMap();
 
-        $_hash = sha1( ( $service ? get_class( $service ) : '*' ) . $method );
+        $_hash = sha1( ( $service ? get_class( $service ) : '*' ) . ( $method = strtolower( $method ) ) );
 
-        if ( isset( $_cache[ $_hash ] ) )
+        if ( isset( $_cache[$_hash] ) )
         {
-            return $_cache[ $_hash ];
+            return $_cache[$_hash];
         }
 
         //  Global search by name
@@ -423,14 +431,14 @@ SQL;
             {
                 foreach ( $_path as $_method => $_info )
                 {
-                    if ( 0 !== strcasecmp( $_method, $method ) )
+                    if ( $_method != $method )
                     {
                         continue;
                     }
 
                     if ( $eventName == ( $_eventName = Option::get( $_info, 'event' ) ) )
                     {
-                        $_cache[ $_hash ] = $_eventName;
+                        $_cache[$_hash] = $_eventName;
 
                         return true;
                     }
@@ -440,20 +448,19 @@ SQL;
             return false;
         }
 
-        $_resource = $service->getResource();
-
-        if ( empty( $_resource ) )
-        {
-            $_resource = $service->getApiName();
-        }
+        $_apiName = $service->getApiName();
+        $_resource = $service->getResource() ? : $_apiName;
 
         if ( null === ( $_resources = Option::get( $_map, $_resource ) ) )
         {
-            if ( !method_exists( $service, 'getServiceName' ) || null === ( $_resources = Option::get( $_map, $service->getServiceName() ) ) )
+            if ( null === ( $_resources = Option::get( $_map, $_apiName ) ) )
             {
-                if ( null === ( $_resources = Option::get( $_map, 'system' ) ) )
+                if ( !method_exists( $service, 'getServiceName' ) || null === ( $_resources = Option::get( $_map, $service->getServiceName() ) ) )
                 {
-                    return null;
+                    if ( null === ( $_resources = Option::get( $_map, 'system' ) ) )
+                    {
+                        return null;
+                    }
                 }
             }
         }
@@ -465,35 +472,48 @@ SQL;
             return null;
         }
 
-        $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '$@D';
+        $_servicePattern = '(' . implode( '|', array_keys( $_map ) ) . ')';
+        $_pathPattern = static::_normalizePath($_path);
 
-        $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
+        $_patterns = array();
+        $_patterns[] = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '$@D';
+        //	See if there is an event with /system at the front...
+        $_patterns[] = '@^' . preg_replace( '/\\\:' . $_servicePattern . '+/', '([a-zA-Z0-9\-\_]+)', $_path ) . '$@D';
 
-        if ( empty( $_matches ) )
+        foreach ( $_patterns as $_pattern )
         {
-            //	See if there is an event with /system at the front...
-            $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( str_replace( 'system/', null, $_path ) ) ) . '$@D';
             $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
-            if ( empty( $_matches ) )
+            if ( !empty( $_matches ) )
             {
-                return null;
+                break;
             }
         }
 
+        //  Nada
+        if ( empty( $_matches ) )
+        {
+            return null;
+        }
+
+        //  Now look in this mess for the event name
         foreach ( $_matches as $_match )
         {
             $_methodInfo = Option::getDeep( $_resources, $_match, $method );
 
             if ( null !== ( $_eventName = Option::get( $_methodInfo, 'event' ) ) )
             {
-                return $_cache[ $_hash ] = $_eventName;
+                return $_cache[$_hash] = $_eventName;
             }
         }
 
         return null;
     }
 
+    protected static function _normalize( ){
+        
+     }    
+    
     /**
      * Retrieves the cached event map or triggers a rebuild
      *
@@ -654,7 +674,7 @@ SQL;
                 {
                     if ( !isset( $_commonResponse['code'] ) || $_code != $_commonResponse['code'] )
                     {
-                        unset( $_response[ $_commonResponse['code'] ] );
+                        unset( $_response[$_commonResponse['code']] );
                     }
                 }
             }
