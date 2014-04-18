@@ -27,7 +27,7 @@ use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
 use Guzzle\Http\Client;
 use Guzzle\Http\Exception\MultiTransferException;
-use Kisma\Core\Components\Flexistore;
+use Kisma\Core\Components\DoctorCache;
 use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
@@ -107,7 +107,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected $_sorted = array();
     /**
-     * @var Flexistore
+     * @var DoctorCache
      */
     protected static $_store = null;
 
@@ -152,7 +152,7 @@ class EventDispatcher implements EventDispatcherInterface
             switch ( $type )
             {
                 case CacheTypes::PHP_FILE:
-                    return Flexistore::createFileStore(
+                    return DoctorCache::createFileStore(
                         Platform::getPrivatePath( static::DEFAULT_FILE_CACHE_PATH ),
                         '.bin',
                         $namespace ? : static::DEFAULT_STORE_NAMESPACE
@@ -160,7 +160,7 @@ class EventDispatcher implements EventDispatcherInterface
 
                 default:
                     return
-                        new Flexistore(
+                        new DoctorCache(
                             $type,
                             $namespace ? : static::DEFAULT_STORE_NAMESPACE
                         );
