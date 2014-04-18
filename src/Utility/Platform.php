@@ -26,7 +26,10 @@ use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Interfaces\PersistentStoreLike;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
+<<<<<<< HEAD
 use Kisma\Core\Components\Flexistore;
+=======
+>>>>>>> develop
 use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\SeedUtility;
@@ -47,6 +50,11 @@ class Platform extends SeedUtility
      * @var string The name of the storage container that stores applications
      */
     const APP_STORAGE_CONTAINER = 'applications';
+
+    //*************************************************************************
+    //	Members
+    //*************************************************************************
+
     /**
      * @var PersistentStoreLike The persistent store to use for local storage
      */
@@ -321,7 +329,11 @@ class Platform extends SeedUtility
      *
      * @param array $data An array of key value pairs with which to seed the store
      *
+<<<<<<< HEAD
      * @return CacheProvider|Flexistore
+=======
+     * @return PlatformStore
+>>>>>>> develop
      */
     public static function getStore( array $data = array() )
     {
@@ -382,6 +394,10 @@ class Platform extends SeedUtility
         return static::getStore()->delete( $id );
     }
 
+    //*************************************************************************
+    //	Event convenience methods
+    //*************************************************************************
+
     /**
      * Triggers an event
      *
@@ -394,7 +410,7 @@ class Platform extends SeedUtility
      */
     public static function trigger( $eventName, $event = null )
     {
-        return Pii::app()->getDispatcher()->dispatch( $eventName, $event );
+        return Pii::trigger( $eventName, $event );
     }
 
     /**
@@ -409,7 +425,7 @@ class Platform extends SeedUtility
      */
     public static function on( $eventName, $listener, $priority = 0 )
     {
-        Pii::app()->getDispatcher()->addListener( $eventName, $listener, $priority );
+        Pii::on( $eventName, $listener, $priority );
     }
 
     /**
@@ -422,7 +438,7 @@ class Platform extends SeedUtility
      */
     public static function off( $eventName, $listener )
     {
-        Pii::app()->getDispatcher()->removeListener( $eventName, $listener );
+        Pii::off( $eventName, $listener );
     }
 
 }

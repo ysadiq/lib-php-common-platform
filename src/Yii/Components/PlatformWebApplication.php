@@ -364,7 +364,13 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _loadLocalConfig()
     {
+<<<<<<< HEAD
         if ( false === ( $_config = Platform::getStore()->get( 'platform.local_config' ) ) )
+=======
+        $_config = Platform::getStore()->get( 'platform.local_config' );
+
+        if ( empty( $_config ) )
+>>>>>>> develop
         {
             $_config = array();
             $_configPath = Platform::getPrivatePath( '/config' );
@@ -402,8 +408,12 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 }
             }
 
+<<<<<<< HEAD
             Platform::getStore()->save( 'platform.local_config', $_config );
             Log::debug( 'Loaded local configuration files' );
+=======
+            Platform::getStore()->set( 'platform.local_config', $_config );
+>>>>>>> develop
         }
 
         //  Merge config with our params...

@@ -31,8 +31,6 @@ use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
 
-//use DreamFactory\Platform\Events\Enums\SwaggerEvents;
-
 /**
  * SwaggerManager
  * DSP API Documentation manager
@@ -375,8 +373,17 @@ MYSQL;
                     );
 
                     $_events[ $_method ] = array(
+<<<<<<< HEAD
                         'event'   => $_eventName,
                         'scripts' => $_scripts,
+=======
+                        'event'   => $_eventName = str_ireplace(
+                            array( '{api_name}', '{action}', '{request.method}' ),
+                            array( $apiName, $_method, $_method ),
+                            $_eventName
+                        ),
+                        'scripts' => static::_findScripts( $_path, $_method, $_eventName ),
+>>>>>>> develop
                     );
 
                     //  Set defaults
@@ -406,10 +413,11 @@ MYSQL;
      *
      * @param string $apiName
      * @param string $method
+     * @param string $eventName Optional event name to try
      *
      * @return array|bool
      */
-    protected static function _findScripts( $apiName, $method = HttpMethod::GET )
+    protected static function _findScripts( $apiName, $method = HttpMethod::GET, $eventName = null )
     {
         static $_scriptPath;
 
@@ -422,16 +430,30 @@ MYSQL;
         $_scriptPattern = strtolower( $apiName ) . '.' . strtolower( $method ) . '.*.js';
         $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
 
+<<<<<<< HEAD
         //  Look for $apiName*.js (i.e. {table.list}.js)
         if ( empty( $_scripts ) && strpos( $apiName, '.' ) )
         {
             $_scriptPattern = strtolower( preg_replace( '#\{(.*)+\}#', '#*#', $apiName ) ) . '.js';
             $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
+=======
+        if ( null !== $eventName && array() !== ( $_namedScripts = FileSystem::glob( $_scriptPath . '/' . $eventName . '.js' ) ) )
+        {
+            $_scripts = array_merge( $_scripts, $_namedScripts );
+>>>>>>> develop
         }
 
         if ( empty( $_scripts ) )
         {
-            return array();
+            if ( !empty( $eventName ) )
+            {
+                $_scripts = FileSystem::glob( $_scriptPath . '/' . $eventName . '.js' );
+            }
+
+            if ( empty( $_scripts ) )
+            {
+                return array();
+            }
         }
 
         $_response = array();
