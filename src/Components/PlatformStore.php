@@ -19,26 +19,27 @@
  */
 namespace DreamFactory\Platform\Components;
 
-use DreamFactory\Common\Components\DataCache;
-use DreamFactory\Platform\Interfaces\PersistentStoreLike;
-use Kisma\Core\Enums\HashType;
-use Kisma\Core\Utility\Hasher;
-use Kisma\Core\Utility\Option;
-use Symfony\Component\HttpFoundation\ParameterBag;
+use DreamFactory\Platform\Utility\Platform;
+use Kisma\Core\Components\Flexistore;
+use Kisma\Core\Enums\CacheTypes;
 
 /**
  * A simple store class that use's the Kisma store
  */
-class PlatformStore extends ParameterBag implements PersistentStoreLike
+class PlatformStore extends Flexistore
 {
     //*************************************************************************
-    //	Members
+    //	Constants
     //*************************************************************************
 
     /**
-     * @var string The ID of this store
+     * @type string
      */
-    protected $_storeId;
+    const DEFAULT_NAMESPACE = 'df.platform';
+    /**
+     * @type string
+     */
+    const STORE_CACHE_PATH = '/store.cache';
 
     //*************************************************************************
     //	Methods
@@ -47,109 +48,24 @@ class PlatformStore extends ParameterBag implements PersistentStoreLike
     /**
      * Constructor.
      *
-     * @param string $storeId
-     * @param array  $data An array of key value pairs with which to initialize storage
+     * @param array|string $type
+     * @param array        $data An array of key value pairs with which to initialize storage
      */
-    public function __construct( $storeId = null, array $data = array() )
+    public function __construct( $type = CacheTypes::PHP_FILE, array $data = array() )
     {
-        $this->_storeId = Option::get( $data, 'store_id', $storeId ) ? : $this->_buildStoreId();
+        parent::__construct(
+            $type,
+            array(
+                'namespace' => static::DEFAULT_NAMESPACE,
+                'arguments' => array( Platform::getPrivatePath( static::STORE_CACHE_PATH ), '.dfcc.php' )
+            ),
+            false
+        );
 
-        parent::__construct( $data );
-    }
-
-    /**
-     * Make sure we flush the cache upon destruction
-     */
-    public function __destruct()
-    {
-        //  Close it up
-        $this->flush();
-    }
-
-    /**
-     * {@InheritDoc}
-     */
-    public function open()
-    {
-        DataCache::load( $this->_storeId, $this->all() );
-    }
-
-    /**
-     * {@InheritDoc}
-     */
-    public function close()
-    {
-        DataCache::store( $this->_storeId, $this->all() );
-    }
-
-    /**
-     * {@InheritDoc}
-     */
-    public function flush()
-    {
-        //  Closing, flushing: same thing here...
-        $this->close();
-    }
-
-    /**
-     * {@InheritDoc}
-     */
-    public function reset( $valuesOnly = false )
-    {
-        if ( !$valuesOnly )
+        //  Load it up
+        foreach ( $data as $_key => $_value )
         {
-            $this->replace( array() );
-
-            return;
-        }
-
-        foreach ( $this->all() as $_key => $_value )
-        {
-            $this->set( $_key, null );
+            $this->_store->save( $_key, $_value );
         }
     }
-
-    /**
-     * @param string $storeId Hashes a store tag string into something unique enough
-     *
-     * @return string
-     */
-    protected function _buildStoreId( $storeId = null )
-    {
-        $_id = $storeId
-            ? : (
-                PHP_SAPI . '.' .
-                Option::server( 'REMOTE_ADDR', gethostname() ) . '.' .
-                Option::server( 'HTTP_HOST', gethostname() )
-            );
-
-        return Hasher::hash( $_id, 'sha256' );
-    }
-
-    /**
-     * @return string
-     */
-    public function getStoreId()
-    {
-        return $this->_storeId;
-    }
-
-    /**
-     * @param string $storeId
-     *
-     * @throws \InvalidArgumentException
-     * @return PlatformStore
-     */
-    public function setStoreId( $storeId )
-    {
-        if ( empty( $storeId ) )
-        {
-            throw new \InvalidArgumentException( 'The $storeId cannot be empty.' );
-        }
-
-        $this->_storeId = $this->_buildStoreId( $storeId );
-
-        return $this;
-    }
-
 }

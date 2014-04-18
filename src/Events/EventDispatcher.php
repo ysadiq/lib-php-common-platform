@@ -56,7 +56,7 @@ class EventDispatcher implements EventDispatcherInterface
     /**
      * @type string The default namespace for our store
      */
-    const DEFAULT_STORE_NAMESPACE = 'DreamFactory.Platform.EventDispatcher';
+    const DEFAULT_STORE_NAMESPACE = 'platform.events';
 
     //*************************************************************************
     //	Members
@@ -103,7 +103,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected $_sorted = array();
     /**
-     * @var Flexistore
+     * @var \Kisma\Core\Components\Flexistore
      */
     protected static $_store = null;
 
@@ -143,7 +143,7 @@ class EventDispatcher implements EventDispatcherInterface
      *
      * @return \Kisma\Core\Components\Flexistore
      */
-    protected static function _initializeStore( $type = CacheTypes::PHP_FILE, $namespace = null )
+    protected static function _initializeStore( $type = CacheTypes::PHP_FILE, $namespace = self::DEFAULT_STORE_NAMESPACE )
     {
         if ( null === static::$_store )
         {
@@ -152,14 +152,12 @@ class EventDispatcher implements EventDispatcherInterface
                 case CacheTypes::PHP_FILE:
                     return Flexistore::createFileStore(
                         Platform::getPrivatePath( static::DEFAULT_FILE_CACHE_PATH ),
-                        '.bin',
+                        null,
                         $namespace ? : static::DEFAULT_STORE_NAMESPACE
                     );
 
                 default:
-                    return new Flexistore(
-                        $type, $namespace ? : static::DEFAULT_STORE_NAMESPACE
-                    );
+                    return new Flexistore( $type, array( 'namespace' => $namespace ) );
             }
         }
     }
@@ -226,11 +224,11 @@ class EventDispatcher implements EventDispatcherInterface
                         $_eventKey = str_replace( '.js', null, $_script );
 
                         $this->_scripts[ $_eventKey ] = $_scriptPath . '/' . $_script;
-
-                        if ( static::$_logAllEvents )
-                        {
-                            Log::debug( 'Registered script "' . $this->_scripts[ $_eventKey ] . '" for event "' . $_eventKey . '"' );
-                        }
+//
+//                        if ( static::$_logAllEvents )
+//                        {
+//                            Log::debug( 'Registered script "' . $this->_scripts[ $_eventKey ] . '" for event "' . $_eventKey . '"' );
+//                        }
                     }
                 }
             }
@@ -372,28 +370,40 @@ class EventDispatcher implements EventDispatcherInterface
             )
         );
 
-        if ( static::$_enableEventScripts && isset( $this->_scripts[ $eventName ] ) )
+        if ( static::$_enableEventScripts )
         {
             //  Run scripts
-            $_script = $this->_scripts[ $eventName ];
-            $_event['script_result'] = $_result = Script::runScript( $_script, $eventName . '.js', $_event, $_output );
-            $_event['script_output'] = $_output;
-
-            Log::debug( 'Script "' . $eventName . '.js" output: ' . $_output );
-
-            //  Reconstitute the event object with data from script
-            $event->fromArray( $_event );
-
-            if ( Option::getBool( $_event, 'stop_propagation' ) )
+            if ( null === ( $_script = Option::get( $this->_scripts, $eventName ) ) )
             {
-                $event->stopPropagation();
+                //  See if we have a platform event handler...
+                if ( false === ( $_script = Script::existsForEvent( $eventName ) ) )
+                {
+                    $_script = null;
+                }
             }
 
-            if ( $event->isPropagationStopped() )
+            if ( !empty( $_script ) )
             {
-                Log::info( '  * Propagation stopped by script.' );
+                $_script = $this->_scripts[ $eventName ];
+                $_event['script_result'] = $_result = Script::runScript( $_script, $eventName . '.js', $_event, $_output );
+                $_event['script_output'] = $_output;
 
-                return true;
+                Log::debug( 'Script "' . $eventName . '.js" output: ' . $_output );
+
+                //  Reconstitute the event object with data from script
+                $event->fromArray( $_event );
+
+                if ( Option::getBool( $_event, 'stop_propagation' ) )
+                {
+                    $event->stopPropagation();
+                }
+
+                if ( $event->isPropagationStopped() )
+                {
+                    Log::info( '  * Propagation stopped by script.' );
+
+                    return true;
+                }
             }
         }
 

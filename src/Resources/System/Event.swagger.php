@@ -17,133 +17,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+use DreamFactory\Platform\Services\SwaggerManager;
 
-$_user = array();
+$_event = array();
 
-$_user['apis'] = array(
+$_event['apis'] = array(
     array(
-        'path'        => '/{api_name}/user',
+        'path'        => '/{api_name}/event',
         'operations'  => array(
             array(
                 'method'           => 'GET',
-                'summary'          => 'getUsers() - Retrieve one or more users.',
-                'nickname'         => 'getUsers',
-                'type'             => 'UsersResponse',
-                'event_name'       => 'users.read',
+                'summary'          => 'getEvents() - Retrieve one or more events.',
+                'nickname'         => 'getEvents',
+                'type'             => 'EventsResponse',
+                'event_name'       => 'events.list',
                 'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'parameters'       => array(
                     array(
-                        'name'          => 'ids',
-                        'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
-                        'allowMultiple' => true,
-                        'type'          => 'string',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
-                        'name'          => 'filter',
-                        'description'   => 'SQL-like filter to limit the records to retrieve.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
-                        'name'          => 'limit',
-                        'description'   => 'Set to limit the filter results.',
-                        'allowMultiple' => false,
-                        'type'          => 'integer',
-                        'format'        => 'int32',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
-                        'name'          => 'order',
-                        'description'   => 'SQL-like order containing field and direction for filter results.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
-                        'name'          => 'offset',
-                        'description'   => 'Set to offset the filter results to a particular record count.',
-                        'allowMultiple' => false,
-                        'type'          => 'integer',
-                        'format'        => 'int32',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
-                        'name'          => 'fields',
-                        'description'   => 'Comma-delimited list of field names to retrieve for each record.',
-                        'allowMultiple' => true,
-                        'type'          => 'string',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
-                        'name'          => 'related',
-                        'description'   => 'Comma-delimited list of related names to retrieve for each record.',
-                        'allowMultiple' => true,
-                        'type'          => 'string',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
-                        'name'          => 'include_count',
-                        'description'   => 'Include the total number of filter results in returned metadata.',
+                        'name'          => 'all_events',
+                        'description'   => 'If set to true, all events that are available are returned. Otherwise only events that are have registered listeners are returned.',
                         'allowMultiple' => false,
                         'type'          => 'boolean',
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
                     array(
-                        'name'          => 'include_schema',
-                        'description'   => 'Include the schema of the table queried in returned metadata.',
+                        'name'          => 'as_cached',
+                        'description'   => 'If set to true, the returned structure is identical the stored structure. If false, a simpler form is returned for client consumption.',
                         'allowMultiple' => false,
                         'type'          => 'boolean',
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
-                    array(
-                        'name'          => 'file',
-                        'description'   => 'Download the results of the request as a file.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
                 ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
-                'notes'            =>
-                    'Use the \'ids\' or \'filter\' parameter to limit records that are returned. ' .
-                    'By default, all records up to the maximum are returned. <br>' .
-                    'Use the \'fields\' and \'related\' parameters to limit properties returned for each record. ' .
-                    'By default, all fields and no relations are returned for each record. <br>' .
-                    'Alternatively, to retrieve by record, a large list of ids, or a complicated filter, ' .
-                    'use the POST request with X-HTTP-METHOD = GET header and post records or ids.',
+                'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
             ),
             array(
                 'method'           => 'POST',
-                'summary'          => 'createUsers() - Create one or more users.',
-                'nickname'         => 'createUsers',
-                'type'             => 'UsersResponse',
-                'event_name'       => 'users.create',
+                'summary'          => 'createEvents() - Create one or more events.',
+                'nickname'         => 'createEvents',
+                'type'             => 'EventsResponse',
+                'event_name'       => 'events.create',
                 'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'parameters'       => array(
@@ -151,7 +66,7 @@ $_user['apis'] = array(
                         'name'          => 'body',
                         'description'   => 'Data containing name-value pairs of records to create.',
                         'allowMultiple' => false,
-                        'type'          => 'UsersRequest',
+                        'type'          => 'EventsRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -181,20 +96,7 @@ $_user['apis'] = array(
                         'required'      => false,
                     ),
                 ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
+                'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
                 'notes'            =>
                     'Post data should be a single record or an array of records (shown). ' .
                     'By default, only the id property of the record affected is returned on success, ' .
@@ -202,10 +104,10 @@ $_user['apis'] = array(
             ),
             array(
                 'method'           => 'PATCH',
-                'summary'          => 'updateUsers() - Update one or more users.',
-                'nickname'         => 'updateUsers',
-                'type'             => 'UsersResponse',
-                'event_name'       => 'users.update',
+                'summary'          => 'updateEvents() - Update one or more events.',
+                'nickname'         => 'updateEvents',
+                'type'             => 'EventsResponse',
+                'event_name'       => 'events.update',
                 'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'parameters'       => array(
@@ -213,7 +115,7 @@ $_user['apis'] = array(
                         'name'          => 'body',
                         'description'   => 'Data containing name-value pairs of records to update.',
                         'allowMultiple' => false,
-                        'type'          => 'UsersRequest',
+                        'type'          => 'EventsRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -234,20 +136,7 @@ $_user['apis'] = array(
                         'required'      => false,
                     ),
                 ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
+                'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
                 'notes'            =>
                     'Post data should be a single record or an array of records (shown). ' .
                     'By default, only the id property of the record is returned on success, ' .
@@ -255,10 +144,10 @@ $_user['apis'] = array(
             ),
             array(
                 'method'           => 'DELETE',
-                'summary'          => 'deleteUsers() - Delete one or more users.',
-                'nickname'         => 'deleteUsers',
-                'type'             => 'UsersResponse',
-                'event_name'       => 'users.delete',
+                'summary'          => 'deleteEvents() - Delete one or more events.',
+                'nickname'         => 'deleteEvents',
+                'type'             => 'EventsResponse',
+                'event_name'       => 'events.delete',
                 'parameters'       => array(
                     array(
                         'name'          => 'ids',
@@ -294,20 +183,7 @@ $_user['apis'] = array(
                         'required'      => false,
                     ),
                 ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
+                'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
                 'notes'            =>
                     'By default, only the id property of the record deleted is returned on success. ' .
                     'Use \'fields\' and \'related\' to return more properties of the deleted records. <br>' .
@@ -315,17 +191,17 @@ $_user['apis'] = array(
                     'use the POST request with X-HTTP-METHOD = DELETE header and post records or ids.',
             ),
         ),
-        'description' => 'Operations for user administration.',
+        'description' => 'Operations for event administration.',
     ),
     array(
-        'path'        => '/{api_name}/user/{id}',
+        'path'        => '/{api_name}/event/{id}',
         'operations'  => array(
             array(
                 'method'           => 'GET',
-                'summary'          => 'getUser() - Retrieve one user.',
-                'nickname'         => 'getUser',
-                'type'             => 'UserResponse',
-                'event_name'       => 'user.read',
+                'summary'          => 'getEvent() - Retrieve one event.',
+                'nickname'         => 'getEvent',
+                'type'             => 'EventResponse',
+                'event_name'       => 'event.read',
                 'parameters'       => array(
                     array(
                         'name'          => 'id',
@@ -352,28 +228,15 @@ $_user['apis'] = array(
                         'required'      => false,
                     ),
                 ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
+                'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
                 'notes'            => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
             ),
             array(
                 'method'           => 'PATCH',
-                'summary'          => 'updateUser() - Update one user.',
-                'nickname'         => 'updateUser',
-                'type'             => 'UserResponse',
-                'event_name'       => 'user.update',
+                'summary'          => 'updateEvent() - Update one event.',
+                'nickname'         => 'updateEvent',
+                'type'             => 'EventResponse',
+                'event_name'       => 'event.update',
                 'parameters'       => array(
                     array(
                         'name'          => 'id',
@@ -387,7 +250,7 @@ $_user['apis'] = array(
                         'name'          => 'body',
                         'description'   => 'Data containing name-value pairs of fields to update.',
                         'allowMultiple' => false,
-                        'type'          => 'UserRequest',
+                        'type'          => 'EventRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -408,30 +271,17 @@ $_user['apis'] = array(
                         'required'      => false,
                     ),
                 ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
+                'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
                 'notes'            =>
                     'Post data should be an array of fields to update for a single record. <br>' .
                     'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return more properties.',
             ),
             array(
                 'method'           => 'DELETE',
-                'summary'          => 'deleteUser() - Delete one user.',
-                'nickname'         => 'deleteUser',
-                'type'             => 'UserResponse',
-                'event_name'       => 'user.delete',
+                'summary'          => 'deleteEvent() - Delete one event.',
+                'nickname'         => 'deleteEvent',
+                'type'             => 'EventResponse',
+                'event_name'       => 'event.delete',
                 'parameters'       => array(
                     array(
                         'name'          => 'id',
@@ -458,123 +308,71 @@ $_user['apis'] = array(
                         'required'      => false,
                     ),
                 ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
+                'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
                 'notes'            => 'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return deleted properties.',
             ),
         ),
-        'description' => 'Operations for individual user administration.',
+        'description' => 'Operations for individual event administration.',
     ),
 );
 
 $_commonProperties = array(
-    'id'             => array(
+    'id'         => array(
         'type'        => 'integer',
         'format'      => 'int32',
-        'description' => 'Identifier of this user.',
+        'description' => 'Identifier of this event.',
     ),
-    'email'          => array(
+    'event_name' => array(
         'type'        => 'string',
-        'description' => 'The email address required for this user.',
+        'description' => 'The name of this event',
     ),
-    'password'       => array(
-        'type'        => 'string',
-        'description' => 'The set-able, but never readable, password.',
-    ),
-    'first_name'     => array(
-        'type'        => 'string',
-        'description' => 'The first name for this user.',
-    ),
-    'last_name'      => array(
-        'type'        => 'string',
-        'description' => 'The last name for this user.',
-    ),
-    'display_name'   => array(
-        'type'        => 'string',
-        'description' => 'Displayable name of this user.',
-    ),
-    'phone'          => array(
-        'type'        => 'string',
-        'description' => 'Phone number for this user.',
-    ),
-    'is_active'      => array(
-        'type'        => 'boolean',
-        'description' => 'True if this user is active for use.',
-    ),
-    'is_sys_admin'   => array(
-        'type'        => 'boolean',
-        'description' => 'True if this user is a system admin.',
-    ),
-    'default_app_id' => array(
-        'type'        => 'string',
-        'description' => 'The default launched app for this user.',
-    ),
-    'role_id'        => array(
-        'type'        => 'string',
-        'description' => 'The role to which this user is assigned.',
-    ),
-);
-
-$_relatedProperties = array(
-    'default_app' => array(
-        'type'        => 'RelatedApp',
-        'description' => 'Related app by default_app_id.',
-    ),
-    'role'        => array(
-        'type'        => 'RelatedRole',
-        'description' => 'Related role by role_id.',
+    'listeners'  => array(
+        'type'        => 'array',
+        'description' => 'An array of listeners attached to this event.',
     ),
 );
 
 $_stampProperties = array(
     'created_date'        => array(
         'type'        => 'string',
-        'description' => 'Date this user was created.',
+        'description' => 'Date this event was created.',
+        'readOnly'    => true,
     ),
     'created_by_id'       => array(
         'type'        => 'integer',
         'format'      => 'int32',
-        'description' => 'User Id of who created this user.',
+        'description' => 'User Id of who created this event.',
+        'readOnly'    => true,
     ),
     'last_modified_date'  => array(
         'type'        => 'string',
-        'description' => 'Date this user was last modified.',
+        'description' => 'Date this event was last modified.',
+        'readOnly'    => true,
     ),
     'last_modified_by_id' => array(
         'type'        => 'integer',
         'format'      => 'int32',
-        'description' => 'User Id of who last modified this user.',
+        'description' => 'User Id of who last modified this event.',
+        'readOnly'    => true,
     ),
 );
 
-$_user['models'] = array(
-    'UserRequest'   => array(
-        'id'         => 'UserRequest',
+$_event['models'] = array(
+    'EventRequest'   => array(
+        'id'         => 'EventRequest',
         'properties' => array_merge(
             $_commonProperties,
             $_relatedProperties
         )
     ),
-    'UsersRequest'  => array(
-        'id'         => 'UsersRequest',
+    'EventsRequest'  => array(
+        'id'         => 'EventsRequest',
         'properties' => array(
             'record' => array(
                 'type'        => 'array',
-                'description' => 'Array of system user records.',
+                'description' => 'Array of system event records.',
                 'items'       => array(
-                    '$ref' => 'UserRequest',
+                    'type' => 'string',
                 ),
             ),
             'ids'    => array(
@@ -587,51 +385,21 @@ $_user['models'] = array(
             ),
         ),
     ),
-    'UserResponse'  => array(
-        'id'         => 'UserResponse',
-        'properties' => array_merge(
-            $_commonProperties,
-            $_relatedProperties,
-            $_stampProperties,
-            array(
-                'last_login_date' => array(
-                    'type'        => 'string',
-                    'description' => 'Timestamp of the last login.',
-                ),
-            )
-        ),
-    ),
-    'UsersResponse' => array(
-        'id'         => 'UsersResponse',
-        'properties' => array(
-            'record' => array(
-                'type'        => 'array',
-                'description' => 'Array of system user records.',
-                'items'       => array(
-                    '$ref' => 'UserResponse',
-                ),
-            ),
-            'meta'   => array(
-                'type'        => 'Metadata',
-                'description' => 'Array of metadata returned for GET requests.',
-            ),
-        ),
-    ),
-    'RelatedUser'   => array(
-        'id'         => 'RelatedUser',
+    'EventResponse'  => array(
+        'id'         => 'EventResponse',
         'properties' => array_merge(
             $_commonProperties,
             $_stampProperties
-        )
+        ),
     ),
-    'RelatedUsers'  => array(
-        'id'         => 'RelatedUsers',
+    'EventsResponse' => array(
+        'id'         => 'EventsResponse',
         'properties' => array(
             'record' => array(
                 'type'        => 'array',
-                'description' => 'Array of system user records.',
+                'description' => 'Array of system event records.',
                 'items'       => array(
-                    '$ref' => 'RelatedUser',
+                    'type' => 'string',
                 ),
             ),
             'meta'   => array(
@@ -642,4 +410,4 @@ $_user['models'] = array(
     ),
 );
 
-return $_user;
+return $_event;

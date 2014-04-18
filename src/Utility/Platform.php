@@ -25,6 +25,7 @@ use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Interfaces\PersistentStoreLike;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Inflector;
@@ -44,6 +45,11 @@ class Platform extends SeedUtility
      * @var string The name of the storage container that stores applications
      */
     const APP_STORAGE_CONTAINER = 'applications';
+
+    //*************************************************************************
+    //	Members
+    //*************************************************************************
+
     /**
      * @var PersistentStoreLike The persistent store to use for local storage
      */
@@ -311,16 +317,15 @@ class Platform extends SeedUtility
      * Retrieves the store instance for the platform. If it has not yet been created,
      * a new instance is created and seeded with $data
      *
-     * @param string $storeId If not provided, one will be created
-     * @param array  $data    An array of key value pairs with which to seed the store
+     * @param array $data An array of key value pairs with which to seed the store
      *
-     * @return PersistentStoreLike
+     * @return PlatformStore
      */
-    public static function getStore( $storeId = null, array $data = array() )
+    public static function getStore( array $data = array() )
     {
         if ( null === static::$_persistentStore )
         {
-            static::$_persistentStore = new PlatformStore( $storeId, $data );
+            static::$_persistentStore = new PlatformStore( CacheTypes::PHP_FILE, $data );
         }
 
         return static::$_persistentStore;
@@ -334,6 +339,10 @@ class Platform extends SeedUtility
         static::$_persistentStore = $persistentStore;
     }
 
+    //*************************************************************************
+    //	Event convenience methods
+    //*************************************************************************
+
     /**
      * Triggers a DSP-level event
      *
@@ -346,7 +355,7 @@ class Platform extends SeedUtility
      */
     public static function trigger( $eventName, $event = null )
     {
-        return Pii::app()->getDispatcher()->dispatch( $eventName, $event );
+        return Pii::trigger( $eventName, $event );
     }
 
     /**
@@ -361,7 +370,7 @@ class Platform extends SeedUtility
      */
     public static function on( $eventName, $listener, $priority = 0 )
     {
-        Pii::app()->getDispatcher()->addListener( $eventName, $listener, $priority );
+        Pii::on( $eventName, $listener, $priority );
     }
 
     /**
@@ -374,7 +383,7 @@ class Platform extends SeedUtility
      */
     public static function off( $eventName, $listener )
     {
-        Pii::app()->getDispatcher()->removeListener( $eventName, $listener );
+        Pii::off( $eventName, $listener );
     }
 
 }

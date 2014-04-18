@@ -25,9 +25,9 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\UnauthorizedException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Resources\User\Session;
-use DreamFactory\Platform\Services\BasePlatformService;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\Fabric;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Yii\Models\LookupKey;
 use DreamFactory\Platform\Yii\Models\Provider;
@@ -43,17 +43,20 @@ use Kisma\Core\Utility\Option;
 class Config extends BaseSystemRestResource
 {
     //*************************************************************************
+    //  Constants
+    //*************************************************************************
+
+    /**
+     * @type int The number of seconds at most to cache these resources
+     */
+    const CONFIG_CACHE_TTL = 60;
+
+    //*************************************************************************
     //	Methods
     //*************************************************************************
 
     /**
-     * Constructor
-     *
-     * @param BasePlatformService $consumer
-     * @param array               $resourceArray
-     *
-     * @throws \InvalidArgumentException
-     * @return Config
+     * {@InheritDoc}
      */
     public function __construct( $consumer = null, $resourceArray = array() )
     {
@@ -81,6 +84,11 @@ class Config extends BaseSystemRestResource
      */
     public static function getOpenRegistration()
     {
+        if ( null !== ( $_values = Platform::getStore()->get( 'platform.config.open_registration' ) ) )
+        {
+            return $_values;
+        }
+
         /** @var $_config \DreamFactory\Platform\Yii\Models\Config */
         $_fields = 'allow_open_registration, open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id';
 
@@ -93,10 +101,14 @@ class Config extends BaseSystemRestResource
 
         if ( !$_config->allow_open_registration )
         {
+            Platform::getStore()->set( 'platform.config.open_registration', null );
+
             return false;
         }
 
-        return $_config->getAttributes( null );
+        Platform::getStore()->set( 'platform.config.open_registration', $_values = $_config->getAttributes( null ) );
+
+        return $_values;
     }
 
     /**
@@ -166,7 +178,7 @@ class Config extends BaseSystemRestResource
     {
         static $_fabricHosted, $_fabricPrivate;
 
-        $_fabricHosted = $_fabricHosted ? : \Kisma::get( 'platform.fabric_hosted', Fabric::fabricHosted() );
+        $_fabricHosted = $_fabricHosted ? : Platform::getStore()->get( 'platform.fabric_hosted', Fabric::fabricHosted() );
         $_fabricPrivate = $_fabricPrivate ? : Fabric::hostedPrivatePlatform();
 
         //	Only return a single row, not in an array
@@ -178,7 +190,7 @@ class Config extends BaseSystemRestResource
         /**
          * Version and upgrade support
          */
-        if ( null === ( $_versionInfo = \Kisma::get( 'platform.version_info' ) ) )
+        if ( null === ( $_versionInfo = Platform::getStore()->get( 'platform.version_info' ) ) )
         {
             $_versionInfo = array(
                 'dsp_version'       => $_currentVersion = SystemManager::getCurrentVersion(),
@@ -186,7 +198,7 @@ class Config extends BaseSystemRestResource
                 'upgrade_available' => version_compare( $_currentVersion, $_latestVersion, '<' ),
             );
 
-            \Kisma::set( 'platform.version_info', $_versionInfo );
+            Platform::getStore()->set( 'platform.version_info', $_versionInfo );
         }
 
         $this->_response = array_merge( $this->_response, $_versionInfo );
@@ -252,6 +264,11 @@ class Config extends BaseSystemRestResource
      */
     protected function _getLookupKeys()
     {
+        if ( null !== ( $_lookups = Platform::getStore()->get( 'platform.config.lookup_keys' ) ) )
+        {
+            return $_lookups;
+        }
+
         /** @var LookupKey[] $_models */
         $_models = ResourceStore::model( 'lookup_key' )->findAll( 'user_id IS NULL AND role_id IS NULL' );
 
@@ -264,6 +281,9 @@ class Config extends BaseSystemRestResource
             }
         }
 
+        //  Keep these for 1 minute at the most
+        Platform::getStore()->set( 'platform.config.lookup_keys', $_lookups, static::CONFIG_CACHE_TTL );
+
         return $_lookups;
     }
 
@@ -275,79 +295,81 @@ class Config extends BaseSystemRestResource
      */
     protected function _getRemoteProviders()
     {
-        if ( null === ( $_remoteProviders = Pii::getState( 'platform.remote_login_providers' ) ) )
+        if ( null !== ( $_remoteProviders = Platform::getStore()->get( 'platform.config.remote_login_providers' ) ) )
         {
-            $_remoteProviders = array();
-
-            //*************************************************************************
-            //	Global Providers
-            //*************************************************************************
-
-            if ( null === ( $_providers = Pii::getState( 'platform.global_providers' ) ) )
-            {
-                Pii::setState( 'platform.global_providers', $_providers = Fabric::getProviderCredentials() );
-            }
-
-            if ( !empty( $_providers ) )
-            {
-                foreach ( $_providers as $_row )
-                {
-                    if ( 1 == $_row->login_provider_ind )
-                    {
-                        $_config = $this->_sanitizeProviderConfig( $_row->config_text, true );
-
-                        $_remoteProviders[] = array(
-                            'id'            => $_row->id,
-                            'provider_name' => $_row->provider_name_text,
-                            'api_name'      => $_row->endpoint_text,
-                            'config_text'   => $_config,
-                            'is_active'     => $_row->enable_ind,
-                            'is_system'     => true,
-                        );
-                    }
-
-                    unset( $_row );
-                }
-            }
-
-            unset( $_providers );
-
-            //*************************************************************************
-            //	Local Providers
-            //*************************************************************************
-
-            /** @var Provider[] $_models */
-            $_models = ResourceStore::model( 'provider' )->findAll( array( 'order' => 'provider_name' ) );
-
-            if ( !empty( $_models ) )
-            {
-                foreach ( $_models as $_row )
-                {
-                    if ( 1 == $_row->is_login_provider )
-                    {
-                        $_config = $this->_sanitizeProviderConfig( $_row->config_text );
-
-                        //	Local providers take precedent over global...
-                        foreach ( $_remoteProviders as $_index => $_priorRow )
-                        {
-                            if ( $_priorRow['api_name'] == $_row->api_name )
-                            {
-                                unset( $_remoteProviders[ $_index ] );
-                                break;
-                            }
-                        }
-
-                        $_remoteProviders[] = array_merge( $_row->getAttributes(), array( 'config_text' => $_config ) );
-                    }
-
-                    unset( $_row );
-                }
-
-                unset( $_models );
-            }
-
-            Pii::setState( 'platform.remote_login_providers', $_remoteProviders );
+            return $_remoteProviders;
         }
+
+        $_remoteProviders = array();
+
+        //*************************************************************************
+        //	Global Providers
+        //*************************************************************************
+
+        if ( null === ( $_providers = Pii::getState( 'platform.global_providers' ) ) )
+        {
+            Pii::setState( 'platform.global_providers', $_providers = Fabric::getProviderCredentials() );
+        }
+
+        if ( !empty( $_providers ) )
+        {
+            foreach ( $_providers as $_row )
+            {
+                if ( 1 == $_row->login_provider_ind )
+                {
+                    $_config = $this->_sanitizeProviderConfig( $_row->config_text, true );
+
+                    $_remoteProviders[] = array(
+                        'id'            => $_row->id,
+                        'provider_name' => $_row->provider_name_text,
+                        'api_name'      => $_row->endpoint_text,
+                        'config_text'   => $_config,
+                        'is_active'     => $_row->enable_ind,
+                        'is_system'     => true,
+                    );
+                }
+
+                unset( $_row );
+            }
+        }
+
+        unset( $_providers );
+
+        //*************************************************************************
+        //	Local Providers
+        //*************************************************************************
+
+        /** @var Provider[] $_models */
+        $_models = ResourceStore::model( 'provider' )->findAll( array( 'order' => 'provider_name' ) );
+
+        if ( !empty( $_models ) )
+        {
+            foreach ( $_models as $_row )
+            {
+                if ( 1 == $_row->is_login_provider )
+                {
+                    $_config = $this->_sanitizeProviderConfig( $_row->config_text );
+
+                    //	Local providers take precedent over global...
+                    foreach ( $_remoteProviders as $_index => $_priorRow )
+                    {
+                        if ( $_priorRow['api_name'] == $_row->api_name )
+                        {
+                            unset( $_remoteProviders[ $_index ] );
+                            break;
+                        }
+                    }
+
+                    $_remoteProviders[] = array_merge( $_row->getAttributes(), array( 'config_text' => $_config ) );
+                }
+
+                unset( $_row );
+            }
+
+            unset( $_models );
+        }
+
+        Platform::getStore()->set( 'platform.config.remote_login_providers', $_remoteProviders, static::CONFIG_CACHE_TTL );
 
         return $_remoteProviders;
     }
