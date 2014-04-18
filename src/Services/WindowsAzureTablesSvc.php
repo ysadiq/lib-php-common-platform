@@ -77,6 +77,10 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
      */
     protected $_dbConn = null;
     /**
+     * @var string
+     */
+    protected $_defaultPartitionKey = null;
+    /**
      * @var null | BatchOperations
      */
     protected $_batchOps = null;
@@ -102,21 +106,34 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         parent::__construct( $config );
 
         $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ) );
-        $_name = Session::replaceLookup( Option::get( $_credentials, 'account_name' ) );
-        if ( empty( $_name ) )
+        $_connectionString = Session::replaceLookup( Option::get( $_credentials, 'connection_string' ) );
+        if ( empty( $_connectionString ) )
         {
-            throw new \Exception( 'WindowsAzure storage name can not be empty.' );
+            $_name = Session::replaceLookup( Option::get( $_credentials, 'account_name', Option::get( $_credentials, 'AccountName' ) ) );
+            if ( empty( $_name ) )
+            {
+                throw new \InvalidArgumentException( 'WindowsAzure account name can not be empty.' );
+            }
+
+            $_key = Session::replaceLookup( Option::get( $_credentials, 'account_key', Option::get( $_credentials, 'AccountKey' ) ) );
+            if ( empty( $_key ) )
+            {
+                throw new \InvalidArgumentException( 'WindowsAzure account key can not be empty.' );
+            }
+
+            $_protocol = Option::get( $_credentials, 'protocol', 'https' );
+            $_connectionString = "DefaultEndpointsProtocol=$_protocol;AccountName=$_name;AccountKey=$_key";
         }
 
-        $_key = Session::replaceLookup( Option::get( $_credentials, 'account_key' ) );
-        if ( empty( $_key ) )
+        // set up a default partition key
+        $_partitionKey = Session::replaceLookup( Option::get( $_credentials, static::PARTITION_KEY ) );
+        if ( !empty( $_partitionKey ) )
         {
-            throw new \Exception( 'WindowsAzure storage key can not be empty.' );
+            $this->_defaultPartitionKey = $_partitionKey;
         }
 
         try
         {
-            $_connectionString = "DefaultEndpointsProtocol=https;AccountName=$_name;AccountKey=$_key";
             $this->_dbConn = ServicesBuilder::getInstance()->createTableService( $_connectionString );
         }
         catch ( \Exception $_ex )
@@ -159,7 +176,10 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     protected function _gatherExtrasFromRequest( $post_data = null )
     {
         $_extras = parent::_gatherExtrasFromRequest( $post_data );
-        $_extras[static::PARTITION_KEY] = FilterInput::request( static::PARTITION_KEY, Option::get( $post_data, static::PARTITION_KEY ) );
+        $_extras[static::PARTITION_KEY] = FilterInput::request(
+            static::PARTITION_KEY,
+            Option::get( $post_data, static::PARTITION_KEY, $this->_defaultPartitionKey )
+        );
 
         return $_extras;
     }
@@ -1042,7 +1062,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
                 break;
 
             case
-                static::MERGE:
+            static::MERGE:
             case static::PATCH:
                 if ( isset( $this->_batchOps ) )
                 {

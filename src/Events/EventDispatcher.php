@@ -28,6 +28,8 @@ use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Guzzle\Http\Client;
 use Guzzle\Http\Exception\MultiTransferException;
+use Kisma\Core\Components\DoctorCache;
+use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -94,7 +96,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected $_sorted = array();
     /**
-     * @var PlatformStore
+     * @var DoctorCache
      */
     protected static $_store = null;
 
@@ -133,7 +135,25 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected static function _initializeStore()
     {
-        return static::_getStore();
+        if ( null === static::$_store )
+        {
+            switch ( $type )
+            {
+                case CacheTypes::PHP_FILE:
+                    return DoctorCache::createFileStore(
+                        Platform::getPrivatePath( static::DEFAULT_FILE_CACHE_PATH ),
+                        '.bin',
+                        $namespace ? : static::DEFAULT_STORE_NAMESPACE
+                    );
+
+                default:
+                    return
+                        new DoctorCache(
+                            $type,
+                            $namespace ? : static::DEFAULT_STORE_NAMESPACE
+                        );
+            }
+        }
     }
 
     /**

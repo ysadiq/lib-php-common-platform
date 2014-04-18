@@ -1244,7 +1244,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 // convert to native format
                 $record = static::idToMongoId( $_parsed );
 
-                if ( !$continue && !$rollback )
+                if ( !$continue && !$rollback && !$single )
                 {
                     return parent::addToTransaction( $record, $id );
                 }
@@ -1278,7 +1278,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 }
 
                 // only update/patch by ids can use batching
-                if ( !$continue && !$rollback && !empty( $_updates ) )
+                if ( !$continue && !$rollback && !$single && !empty( $_updates ) )
                 {
                     return parent::addToTransaction( null, $id );
                 }
@@ -1335,7 +1335,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 }
 
                 // only update/patch by ids can use batching
-                if ( !$continue && !$rollback && !empty( $_updates ) )
+                if ( !$continue && !$rollback && !$single && !empty( $_updates ) )
                 {
                     return parent::addToTransaction( null, $id );
                 }
@@ -1381,7 +1381,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 break;
 
             case static::DELETE:
-                if ( !$continue && !$rollback )
+                if ( !$continue && !$rollback && !$single)
                 {
                     return parent::addToTransaction( null, $id );
                 }
@@ -1409,7 +1409,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 break;
 
             case static::GET:
-                if ( !$continue )
+                if ( !$continue && !$single )
                 {
                     return parent::addToTransaction( null, $id );
                 }
