@@ -733,7 +733,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         if ( !empty( $_records ) )
         {
-            $this->deleteRecords( $table, $_records );
+            $this->deleteRecords( $table, $_records, $extras );
         }
 
         return array( 'success' => true );
@@ -1944,16 +1944,17 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
     protected function checkForIds( &$record, $ids_info, $extras = null, $on_create = false, $remove = false )
     {
-        $_id = array();
+        $_id = null;
         if ( !empty( $ids_info ) )
         {
-            foreach ( $ids_info as $_info )
+            if ( 1 == count( $ids_info ) )
             {
+                $_info = $ids_info[0];
                 $_name = Option::get( $_info, 'name' );
                 $_value = Option::get( $record, $_name, null, $remove );
                 if ( !empty( $_value ) )
                 {
-                    $_id[] = Option::get( $record, $_name, null, $remove );
+                    $_id = Option::get( $record, $_name, null, $remove );
                 }
                 else
                 {
@@ -1966,15 +1967,33 @@ abstract class BaseDbSvc extends BasePlatformRestService
                     }
                 }
             }
+            else
+            {
+                $_id = array();
+                foreach ( $ids_info as $_info )
+                {
+                    $_name = Option::get( $_info, 'name' );
+                    $_value = Option::get( $record, $_name, null, $remove );
+                    if ( !empty( $_value ) )
+                    {
+                        $_id[$_name] = Option::get( $record, $_name, null, $remove );
+                    }
+                    else
+                    {
+                        $_required = Option::getBool( $_info, 'required' );
+                        // could be passed in as a parameter affecting all records
+                        $_param = Option::get( $extras, $_name );
+                        if ( $on_create && $_required && empty( $_param ) )
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
         }
 
         if ( !empty( $_id ) )
         {
-            if ( 1 == count( $_id ) )
-            {
-                return $_id[0];
-            }
-
             return $_id;
         }
         elseif ( $on_create )

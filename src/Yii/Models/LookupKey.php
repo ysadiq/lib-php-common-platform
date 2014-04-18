@@ -162,10 +162,13 @@ class LookupKey extends BasePlatformSystemModel
         parent::afterFind();
 
         // might be json
-        $_temp = json_decode( $this->value);
-        if ( JSON_ERROR_NONE == json_last_error() )
+        if ( !empty( $this->value ) && ( "0" !== $this->value ) )
         {
-            $this->value = $_temp;
+            $_temp = json_decode( $this->value, true );
+            if ( JSON_ERROR_NONE == json_last_error() )
+            {
+                $this->value = $_temp;
+            }
         }
 
         if ( $this->private && !static::$_internal )
@@ -257,7 +260,7 @@ class LookupKey extends BasePlatformSystemModel
                         $_needUpdate = false;
                         if ( !( $_oldPrivate && ( '********' === $_assignValue ) ) && ( $_oldValue != $_assignValue ) )
                         {
-                            $_old['value'] = is_array( $_assignValue ) ? json_encode( $_assignValue ) : $_assignValue;
+                            $_old->value = is_array( $_assignValue ) ? json_encode( $_assignValue ) : $_assignValue;
                             $_needUpdate = true;
                         }
                         if ( $_oldPrivate != $_assignPrivate )
@@ -385,7 +388,7 @@ class LookupKey extends BasePlatformSystemModel
             $_lookups = static::model()->findAll( $_criteria, $_params );
             $_out = array();
             /** @var LookupKey $_lookup */
-            foreach ($_lookups as $_lookup)
+            foreach ( $_lookups as $_lookup )
             {
                 $_out[] = $_lookup->getAttributes();
             }
@@ -411,14 +414,14 @@ class LookupKey extends BasePlatformSystemModel
     {
         try
         {
-            $_where ='role_id IS NULL AND user_id IS NULL';
+            $_where = 'role_id IS NULL AND user_id IS NULL';
             $_params = array();
             if ( !empty( $role_id ) )
             {
-                $_where .=  ' OR role_id = :role_id';
+                $_where .= ' OR role_id = :role_id';
                 $_params[':role_id'] = $role_id;
             }
-            elseif ( !empty( $user_id ) )
+            if ( !empty( $user_id ) )
             {
                 $_where .= ' OR user_id = :user_id';
                 $_params[':user_id'] = $user_id;
