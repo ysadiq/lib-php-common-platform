@@ -221,8 +221,8 @@ $_base['apis'] = array(
                 'method'           => 'GET',
                 'summary'          => 'getRecords() - Retrieve one or more records.',
                 'nickname'         => 'getRecords',
-                'type'             => 'Records',
-                'event_name'       => 'table.records.read',
+                'type'             => 'RecordsResponse',
+                'event_name'       => 'table.records.get',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -284,7 +284,7 @@ $_base['apis'] = array(
                     ),
                     array(
                         'name'          => 'include_count',
-                        'description'   => 'Include the total number of filter results.',
+                        'description'   => 'Include the total number of filter results as meta data.',
                         'allowMultiple' => false,
                         'type'          => 'boolean',
                         'paramType'     => 'query',
@@ -292,9 +292,31 @@ $_base['apis'] = array(
                     ),
                     array(
                         'name'          => 'id_field',
-                        'description'   => 'Comma-delimited list of the fields used as identifiers or primary keys for the table.',
+                        'description'   =>
+                            'Single or comma-delimited list of the fields used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
                         'allowMultiple' => true,
                         'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'id_type',
+                        'description'   =>
+                            'Single or comma-delimited list of the field types used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                ),
+                    array(
+                        'name'          => 'continue',
+                        'description'   =>
+                            'In batch scenarios, where supported, continue processing even after one record fails. ' .
+                            'Default behavior is to halt and return results up to the first point of failure.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
@@ -321,14 +343,14 @@ $_base['apis'] = array(
                     'Use the \'ids\' or \'filter\' parameter to limit resources that are returned. ' .
                     'Use the \'fields\' parameter to limit properties returned for each resource. ' .
                     'By default, all fields are returned for all resources. ' .
-                    'Alternatively, to send the \'ids\' or \'filter\' as posted data ' .
-                    'use the POST request with X-HTTP-METHOD = GET header and post array of ids or a filter.',
+                    'Alternatively, to send the \'ids\' or a \'filter\' with or without \'params\' as posted data ' .
+                    'use the POST request with X-HTTP-METHOD = GET header and post array of ids or a filter with params.',
             ),
             array(
                 'method'           => 'POST',
                 'summary'          => 'createRecords() - Create one or more records.',
                 'nickname'         => 'createRecords',
-                'type'             => 'Records',
+                'type'             => 'RecordsResponse',
                 'event_name'       => 'table.records.create',
                 'parameters'       => array(
                     array(
@@ -343,23 +365,55 @@ $_base['apis'] = array(
                         'name'          => 'body',
                         'description'   => 'Data containing name-value pairs of records to create.',
                         'allowMultiple' => false,
-                        'type'          => 'Records',
+                        'type'          => 'RecordsRequest',
                         'paramType'     => 'body',
                         'required'      => true,
-                    ),
-                    array(
-                        'name'          => 'id_field',
-                        'description'   => 'Comma-delimited list of the fields used as identifiers or primary keys for the table.',
-                        'allowMultiple' => true,
-                        'type'          => 'string',
-                        'paramType'     => 'query',
-                        'required'      => false,
                     ),
                     array(
                         'name'          => 'fields',
                         'description'   => 'Comma-delimited list of field names to retrieve for each record.',
                         'allowMultiple' => true,
                         'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'id_field',
+                        'description'   =>
+                            'Single or comma-delimited list of the fields used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'id_type',
+                        'description'   =>
+                            'Single or comma-delimited list of the field types used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'continue',
+                        'description'   =>
+                            'In batch scenarios, where supported, continue processing even after one record fails. ' .
+                            'Default behavior is to halt and return results up to the first point of failure.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'rollback',
+                        'description'   =>
+                            'In batch scenarios, where supported, rollback all changes if any record of the batch fails. ' .
+                            'Default behavior is to halt and return results up to the first point of failure, leaving any changes.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
@@ -400,7 +454,7 @@ $_base['apis'] = array(
                 'method'           => 'PUT',
                 'summary'          => 'replaceRecords() - Update (replace) one or more records.',
                 'nickname'         => 'replaceRecords',
-                'type'             => 'Records',
+                'type'             => 'RecordsResponse',
                 'event_name'       => 'table.records.replace',
                 'parameters'       => array(
                     array(
@@ -415,7 +469,7 @@ $_base['apis'] = array(
                         'name'          => 'body',
                         'description'   => 'Data containing name-value pairs of records to update.',
                         'allowMultiple' => false,
-                        'type'          => 'Records',
+                        'type'          => 'RecordsRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -436,18 +490,50 @@ $_base['apis'] = array(
                         'required'      => false,
                     ),
                     array(
-                        'name'          => 'id_field',
-                        'description'   => 'Comma-delimited list of the fields used as identifiers or primary keys for the table.',
+                        'name'          => 'fields',
+                        'description'   => 'Comma-delimited list of field names to retrieve for each record.',
                         'allowMultiple' => true,
                         'type'          => 'string',
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
                     array(
-                        'name'          => 'fields',
-                        'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+                        'name'          => 'id_field',
+                        'description'   =>
+                            'Single or comma-delimited list of the fields used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
                         'allowMultiple' => true,
                         'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'id_type',
+                        'description'   =>
+                            'Single or comma-delimited list of the field types used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'continue',
+                        'description'   =>
+                            'In batch scenarios, where supported, continue processing even after one record fails. ' .
+                            'Default behavior is to halt and return results up to the first point of failure.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'rollback',
+                        'description'   =>
+                            'In batch scenarios, where supported, rollback all changes if any record of the batch fails. ' .
+                            'Default behavior is to halt and return results up to the first point of failure, leaving any changes.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
@@ -479,7 +565,7 @@ $_base['apis'] = array(
                 'method'           => 'PATCH',
                 'summary'          => 'updateRecords() - Update (patch) one or more records.',
                 'nickname'         => 'updateRecords',
-                'type'             => 'Records',
+                'type'             => 'RecordsResponse',
                 'event_name'       => 'table.records.update',
                 'parameters'       => array(
                     array(
@@ -494,7 +580,7 @@ $_base['apis'] = array(
                         'name'          => 'body',
                         'description'   => 'Data containing name-value pairs of records to update.',
                         'allowMultiple' => false,
-                        'type'          => 'Records',
+                        'type'          => 'RecordsRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -515,18 +601,40 @@ $_base['apis'] = array(
                         'required'      => false,
                     ),
                     array(
-                        'name'          => 'id_field',
-                        'description'   => 'Comma-delimited list of the fields used as identifiers or primary keys for the table.',
+                        'name'          => 'fields',
+                        'description'   => 'Comma-delimited list of field names to retrieve for each record.',
                         'allowMultiple' => true,
                         'type'          => 'string',
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
                     array(
-                        'name'          => 'fields',
-                        'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+                        'name'          => 'id_type',
+                        'description'   =>
+                            'Single or comma-delimited list of the field types used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
                         'allowMultiple' => true,
                         'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'continue',
+                        'description'   =>
+                            'In batch scenarios, where supported, continue processing even after one record fails. ' .
+                            'Default behavior is to halt and return results up to the first point of failure.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'rollback',
+                        'description'   =>
+                            'In batch scenarios, where supported, rollback all changes if any record of the batch fails. ' .
+                            'Default behavior is to halt and return results up to the first point of failure, leaving any changes.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
@@ -558,7 +666,7 @@ $_base['apis'] = array(
                 'method'           => 'DELETE',
                 'summary'          => 'deleteRecords() - Delete one or more records.',
                 'nickname'         => 'deleteRecords',
-                'type'             => 'Records',
+                'type'             => 'RecordsResponse',
                 'event_name'       => 'table.records.delete',
                 'parameters'       => array(
                     array(
@@ -595,18 +703,50 @@ $_base['apis'] = array(
                         'default'       => false,
                     ),
                     array(
-                        'name'          => 'id_field',
-                        'description'   => 'Comma-delimited list of the fields used as identifiers or primary keys for the table.',
+                        'name'          => 'fields',
+                        'description'   => 'Comma-delimited list of field names to retrieve for each record.',
                         'allowMultiple' => true,
                         'type'          => 'string',
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
                     array(
-                        'name'          => 'fields',
-                        'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+                        'name'          => 'id_field',
+                        'description'   =>
+                            'Single or comma-delimited list of the fields used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
                         'allowMultiple' => true,
                         'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'id_type',
+                        'description'   =>
+                            'Single or comma-delimited list of the field types used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'continue',
+                        'description'   =>
+                            'In batch scenarios, where supported, continue processing even after one record fails. ' .
+                            'Default behavior is to halt and return results up to the first point of failure.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'rollback',
+                        'description'   =>
+                            'In batch scenarios, where supported, rollback all changes if any record of the batch fails. ' .
+                            'Default behavior is to halt and return results up to the first point of failure, leaving any changes.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
@@ -645,8 +785,8 @@ $_base['apis'] = array(
                 'method'           => 'GET',
                 'summary'          => 'getRecord() - Retrieve one record by identifier.',
                 'nickname'         => 'getRecord',
-                'type'             => 'Record',
-                'event_name'       => 'table.record.read',
+                'type'             => 'RecordResponse',
+                'event_name'       => 'table.record.get',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -673,16 +813,28 @@ $_base['apis'] = array(
                         'required'      => false,
                     ),
                     array(
-                        'name'          => 'id_field',
-                        'description'   => 'Comma-delimited list of the fields used as identifiers or primary keys for the table.',
+                        'name'          => 'fields',
+                        'description'   => 'Comma-delimited list of field names to retrieve for the record.',
                         'allowMultiple' => true,
                         'type'          => 'string',
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
                     array(
-                        'name'          => 'fields',
-                        'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+                        'name'          => 'id_field',
+                        'description'   =>
+                            'Single or comma-delimited list of the fields used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'id_type',
+                        'description'   =>
+                            'Single or comma-delimited list of the field types used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
                         'allowMultiple' => true,
                         'type'          => 'string',
                         'paramType'     => 'query',
@@ -713,7 +865,7 @@ $_base['apis'] = array(
                 'method'           => 'POST',
                 'summary'          => 'createRecord() - Create one record with given identifier.',
                 'nickname'         => 'createRecord',
-                'type'             => 'Record',
+                'type'             => 'RecordResponse',
                 'event_name'       => 'table.record.create',
                 'parameters'       => array(
                     array(
@@ -733,24 +885,36 @@ $_base['apis'] = array(
                         'required'      => true,
                     ),
                     array(
-                        'name'          => 'id_field',
-                        'description'   => 'Comma-delimited list of the fields used as identifiers or primary keys for the table.',
-                        'allowMultiple' => true,
-                        'type'          => 'string',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
                         'name'          => 'body',
                         'description'   => 'Data containing name-value pairs of the record to create.',
                         'allowMultiple' => false,
-                        'type'          => 'Record',
+                        'type'          => 'RecordRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
                     array(
                         'name'          => 'fields',
                         'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'id_field',
+                        'description'   =>
+                            'Single or comma-delimited list of the fields used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'id_type',
+                        'description'   =>
+                            'Single or comma-delimited list of the field types used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
                         'allowMultiple' => true,
                         'type'          => 'string',
                         'paramType'     => 'query',
@@ -783,7 +947,7 @@ $_base['apis'] = array(
                 'method'           => 'PUT',
                 'summary'          => 'replaceRecord() - Update (replace) one record by identifier.',
                 'nickname'         => 'replaceRecord',
-                'type'             => 'Record',
+                'type'             => 'RecordResponse',
                 'event_name'       => 'table.record.replace',
                 'parameters'       => array(
                     array(
@@ -803,24 +967,36 @@ $_base['apis'] = array(
                         'required'      => true,
                     ),
                     array(
-                        'name'          => 'id_field',
-                        'description'   => 'Comma-delimited list of the fields used as identifiers or primary keys for the table.',
-                        'allowMultiple' => true,
-                        'type'          => 'string',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
                         'name'          => 'body',
                         'description'   => 'Data containing name-value pairs of the replacement record.',
                         'allowMultiple' => false,
-                        'type'          => 'Record',
+                        'type'          => 'RecordRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
                     array(
                         'name'          => 'fields',
                         'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'id_field',
+                        'description'   =>
+                            'Single or comma-delimited list of the fields used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'id_type',
+                        'description'   =>
+                            'Single or comma-delimited list of the field types used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
                         'allowMultiple' => true,
                         'type'          => 'string',
                         'paramType'     => 'query',
@@ -845,13 +1021,15 @@ $_base['apis'] = array(
                         'code'    => 500,
                     ),
                 ),
-                'notes'            => 'Post data should be an array of fields for a single record. Use the \'fields\' parameter to return more properties. By default, the id is returned.',
+                'notes'            =>
+                    'Post data should be an array of fields for a single record. ' .
+                    'Use the \'fields\' parameter to return more properties. By default, the id is returned.',
             ),
             array(
                 'method'           => 'PATCH',
                 'summary'          => 'updateRecord() - Update (patch) one record by identifier.',
                 'nickname'         => 'updateRecord',
-                'type'             => 'Record',
+                'type'             => 'RecordResponse',
                 'event_name'       => 'table.record.update',
                 'parameters'       => array(
                     array(
@@ -871,24 +1049,36 @@ $_base['apis'] = array(
                         'required'      => true,
                     ),
                     array(
-                        'name'          => 'id_field',
-                        'description'   => 'Comma-delimited list of the fields used as identifiers or primary keys for the table.',
-                        'allowMultiple' => true,
-                        'type'          => 'string',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                    array(
                         'name'          => 'body',
                         'description'   => 'Data containing name-value pairs of the fields to update.',
                         'allowMultiple' => false,
-                        'type'          => 'Record',
+                        'type'          => 'RecordRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
                     array(
                         'name'          => 'fields',
                         'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'id_field',
+                        'description'   =>
+                            'Single or comma-delimited list of the fields used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'id_type',
+                        'description'   =>
+                            'Single or comma-delimited list of the field types used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
                         'allowMultiple' => true,
                         'type'          => 'string',
                         'paramType'     => 'query',
@@ -921,7 +1111,7 @@ $_base['apis'] = array(
                 'method'           => 'DELETE',
                 'summary'          => 'deleteRecord() - Delete one record by identifier.',
                 'nickname'         => 'deleteRecord',
-                'type'             => 'Record',
+                'type'             => 'RecordResponse',
                 'event_name'       => 'table.record.delete',
                 'parameters'       => array(
                     array(
@@ -941,16 +1131,28 @@ $_base['apis'] = array(
                         'required'      => true,
                     ),
                     array(
-                        'name'          => 'id_field',
-                        'description'   => 'Comma-delimited list of the fields used as identifiers or primary keys for the table.',
+                        'name'          => 'fields',
+                        'description'   => 'Comma-delimited list of field names to retrieve for each record.',
                         'allowMultiple' => true,
                         'type'          => 'string',
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
                     array(
-                        'name'          => 'fields',
-                        'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+                        'name'          => 'id_field',
+                        'description'   =>
+                            'Single or comma-delimited list of the fields used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'id_type',
+                        'description'   =>
+                            'Single or comma-delimited list of the field types used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
                         'allowMultiple' => true,
                         'type'          => 'string',
                         'paramType'     => 'query',
