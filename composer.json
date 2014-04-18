@@ -46,7 +46,8 @@
 		"phpunit/phpunit":          "~3.7@stable",
 		"phpunit/phpunit-selenium": "@stable",
 		"phpunit/phpunit-story":    "@stable",
-		"phpunit/dbunit":           "@stable"
+		"phpunit/dbunit":           "@stable",
+		"phpunit/php-invoker":	    "@stable"
 	},
 	"autoload":          {
 		"psr-4": {
