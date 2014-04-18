@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "a0c82e1a78b0f2553a8a3f3d4b4f5784",
+    "hash": "13a057e906c449b261bb8178e090ac5a",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -200,12 +200,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/azure-sdk-for-php.git",
-                "reference": "90ecf642948b5b7b79c2b60dc6b2b6232020e14c"
+                "reference": "9cd4deea63e70b68489588ee106be0f42fe4345d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/azure-sdk-for-php/zipball/90ecf642948b5b7b79c2b60dc6b2b6232020e14c",
-                "reference": "90ecf642948b5b7b79c2b60dc6b2b6232020e14c",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/azure-sdk-for-php/zipball/9cd4deea63e70b68489588ee106be0f42fe4345d",
+                "reference": "9cd4deea63e70b68489588ee106be0f42fe4345d",
                 "shasum": ""
             },
             "require": {
@@ -250,7 +250,7 @@
                 "php",
                 "sdk"
             ],
-            "time": "2014-04-16 20:56:47"
+            "time": "2014-04-16 22:03:38"
         },
         {
             "name": "dreamfactory/javascript-sdk",
@@ -297,12 +297,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common.git",
-                "reference": "38d11196ad681306227966f7be2d98782c86bf36"
+                "reference": "f0cb5784712fc75ade22199ae003814f8dc145bb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/38d11196ad681306227966f7be2d98782c86bf36",
-                "reference": "38d11196ad681306227966f7be2d98782c86bf36",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/f0cb5784712fc75ade22199ae003814f8dc145bb",
+                "reference": "f0cb5784712fc75ade22199ae003814f8dc145bb",
                 "shasum": ""
             },
             "require": {
@@ -331,7 +331,7 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer"
+                    "role": "DreamFactory Package Maintainer"
                 },
                 {
                     "name": "Lee Hicks",
@@ -345,7 +345,7 @@
                 "dsp",
                 "dsp-core"
             ],
-            "time": "2014-04-16 16:59:13"
+            "time": "2014-04-17 14:01:23"
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
@@ -353,12 +353,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "853aee963152b56f5ea38a18c3971ca14f66e8ae"
+                "reference": "4185e6fbcb316818abf828d02fe2715ad2709e0d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/853aee963152b56f5ea38a18c3971ca14f66e8ae",
-                "reference": "853aee963152b56f5ea38a18c3971ca14f66e8ae",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/4185e6fbcb316818abf828d02fe2715ad2709e0d",
+                "reference": "4185e6fbcb316818abf828d02fe2715ad2709e0d",
                 "shasum": ""
             },
             "require": {
@@ -392,7 +392,7 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer"
+                    "role": "DreamFactory Package Maintainer"
                 },
                 {
                     "name": "Jason Sykes",
@@ -416,7 +416,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-04-16 16:59:58"
+            "time": "2014-04-17 13:58:23"
         },
         {
             "name": "dreamfactory/oasys",
@@ -704,12 +704,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
-                "reference": "03000a7fcd4072bd7e1f99c8ce4328621c5773b9"
+                "reference": "7c002e9d555b9706e1d8a84aa017766db56e0c82"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/03000a7fcd4072bd7e1f99c8ce4328621c5773b9",
-                "reference": "03000a7fcd4072bd7e1f99c8ce4328621c5773b9",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/7c002e9d555b9706e1d8a84aa017766db56e0c82",
+                "reference": "7c002e9d555b9706e1d8a84aa017766db56e0c82",
                 "shasum": ""
             },
             "require": {
@@ -764,7 +764,7 @@
                 "logging",
                 "psr-3"
             ],
-            "time": "2014-04-10 15:52:42"
+            "time": "2014-04-17 11:19:47"
         },
         {
             "name": "pear-pear.php.net/Archive_Tar",
@@ -1533,6 +1533,52 @@
             "time": "2013-10-10 15:34:57"
         },
         {
+            "name": "phpunit/php-invoker",
+            "version": "1.1.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/sebastianbergmann/php-invoker.git",
+                "reference": "8696484458cb43eed025ab46260846de5b74655c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-invoker/zipball/8696484458cb43eed025ab46260846de5b74655c",
+                "reference": "8696484458cb43eed025ab46260846de5b74655c",
+                "shasum": ""
+            },
+            "require": {
+                "ext-pcntl": "*",
+                "php": ">=5.2.7",
+                "phpunit/php-timer": ">=1.0.4,<1.1.0"
+            },
+            "type": "library",
+            "autoload": {
+                "classmap": [
+                    "PHP/"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "include-path": [
+                ""
+            ],
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "authors": [
+                {
+                    "name": "Sebastian Bergmann",
+                    "email": "sb@sebastian-bergmann.de",
+                    "role": "lead"
+                }
+            ],
+            "description": "Utility class for invoking callables with a timeout.",
+            "homepage": "https://github.com/sebastianbergmann/php-invoker/",
+            "keywords": [
+                "process"
+            ],
+            "time": "2013-07-16 05:20:21"
+        },
+        {
             "name": "phpunit/php-text-template",
             "version": "1.2.0",
             "source": {
@@ -1977,7 +2023,8 @@
         "phpunit/phpunit": 0,
         "phpunit/phpunit-selenium": 0,
         "phpunit/phpunit-story": 0,
-        "phpunit/dbunit": 0
+        "phpunit/dbunit": 0,
+        "phpunit/php-invoker": 0
     },
     "platform": {
         "php": ">=5.3.18"
