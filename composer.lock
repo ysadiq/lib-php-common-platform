@@ -273,9 +273,9 @@
             ],
             "authors": [
                 {
-                    "name": "Jason Sykes",
+                    "name": "Sykes, Jason",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Developer, client-side"
+                    "role": "Lead Engineer, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Javascript SDK",
@@ -454,7 +454,7 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Lead Developer"
                 }
             ],
             "description": "DreamFactory Oasys(tm) Open Authentication System",
@@ -646,12 +646,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "765416be25fe145e1bc5cfe612709accc793796c"
+                "reference": "0c01299dcdaecbd85da20d8b400883522a03b9b0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/765416be25fe145e1bc5cfe612709accc793796c",
-                "reference": "765416be25fe145e1bc5cfe612709accc793796c",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/0c01299dcdaecbd85da20d8b400883522a03b9b0",
+                "reference": "0c01299dcdaecbd85da20d8b400883522a03b9b0",
                 "shasum": ""
             },
             "require": {
@@ -696,7 +696,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-04-16 20:13:36"
+            "time": "2014-04-18 19:50:45"
         },
         {
             "name": "monolog/monolog",
