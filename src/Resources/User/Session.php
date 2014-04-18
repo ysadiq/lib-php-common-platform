@@ -938,7 +938,7 @@ class Session extends BasePlatformRestResource
 
                                 return true;
 
-                            case 'name':
+                            case 'api_name':
                                 $value = SystemManager::getCurrentAppName();
 
                                 return true;
