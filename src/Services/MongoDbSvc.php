@@ -536,11 +536,14 @@ class MongoDbSvc extends NoSqlDbSvc
         }
     }
 
-    protected function getIdsInfo( $table, $fields_info = null, &$requested = null )
+    protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
-        $requested = static::DEFAULT_ID_FIELD; // can only be this
+        $requested_fields = static::DEFAULT_ID_FIELD; // can only be this
 
-        return array( array( 'name' => static::DEFAULT_ID_FIELD, 'type' => 'string,int', 'required' => false ) );
+        $_type = Option::get( Option::clean( $requested_types ), 0 );
+        $_type = (empty($_type)) ? 'string' : $_type;
+
+        return array( array( 'name' => static::DEFAULT_ID_FIELD, 'type' => $_type, 'required' => false ) );
     }
 
     /**

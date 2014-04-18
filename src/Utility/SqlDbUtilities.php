@@ -104,7 +104,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
         }
 
         //  Build the lower-cased table array
-        $_tables = is_array( $db ) ? $db : static::_getCachedTables();
+        $_tables = is_array( $db ) ? $db : static::_getCachedTables( $db );
 
         //	Make search case insensitive
         if ( false === ( $_key = array_search( strtolower( $name ), is_array( $db ) ? $_tables : static::$_tableNameCache ) ) )
@@ -842,13 +842,21 @@ class SqlDbUtilities implements SqlDbDriverTypes
                     $definition = 'int';
                     break;
                 case "timestamp_on_create":
-                    $definition = 'timestamp';
-                    $default = 0; // override
+                    $definition =
+                        ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) )
+                            ? 'datetime2' : 'timestamp';
+                    $default =
+                        ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) )
+                            ? 'getdate()' : 0; // override
                     $allowNull = ( isset( $field['allow_null'] ) ) ? $allowNull : false;
                     break;
                 case "timestamp_on_update":
-                    $definition = 'timestamp';
-                    $default = 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'; // override
+                    $definition =
+                        ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) )
+                            ? 'datetime2' : 'timestamp';
+                    $default =
+                        ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) )
+                            ? 'getdate()' : 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'; // override
                     $allowNull = ( isset( $field['allow_null'] ) ) ? $allowNull : false;
                     break;
                 case "user_id":
@@ -1103,8 +1111,9 @@ class SqlDbUtilities implements SqlDbDriverTypes
             // additional properties
             if ( !Utilities::boolval( $allowNull ) )
             {
-                $definition .= ' NOT NULL';
+                $definition .= ' NOT';
             }
+            $definition .= ' NULL';
             if ( isset( $default ) )
             {
                 if ( $quoteDefault )
@@ -1127,6 +1136,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
     }
 
     /**
+     * @param \CDbConnection       $db
      * @param string               $table_name
      * @param array                $fields
      * @param bool                 $allow_update
@@ -1135,12 +1145,14 @@ class SqlDbUtilities implements SqlDbDriverTypes
      * @throws \Exception
      * @return string
      */
-    protected static function buildTableFields( $table_name, $fields, $allow_update = true, $schema = null )
+    protected static function buildTableFields( $db, $table_name, $fields, $allow_update = true, $schema = null )
     {
         if ( empty( $fields ) )
         {
             throw new BadRequestException( "No fields given." );
         }
+
+        $_driverType = static::getDbDriverType( $db );
         $columns = array();
         $alter_columns = array();
         $references = array();
@@ -1182,7 +1194,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
                     }
                     else
                     {
-                        $definition = static::buildColumnType( $field );
+                        $definition = static::buildColumnType( $field, $_driverType );
                         if ( !empty( $definition ) )
                         {
                             $alter_columns[ $name ] = $definition;
@@ -1193,7 +1205,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
                 }
                 else
                 {
-                    $definition = static::buildColumnType( $field );
+                    $definition = static::buildColumnType( $field, $_driverType );
                     if ( !empty( $definition ) )
                     {
                         $columns[ $name ] = $definition;
@@ -1515,7 +1527,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
         try
         {
             $names = array();
-            $results = static::buildTableFields( $table_name, $fields, $allow_update, $schema );
+            $results = static::buildTableFields( $db, $table_name, $fields, $allow_update, $schema );
             $command = $db->createCommand();
             $columns = Utilities::getArrayValue( 'columns', $results, array() );
             foreach ( $columns as $name => $definition )
@@ -1535,7 +1547,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 
             // refresh the schema that we just added
             $db->schema->refresh();
-            static::_getCachedTables( true );
+            static::_getCachedTables( $db, true );
 
             return $names;
         }
@@ -1589,7 +1601,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 
         try
         {
-            $results = static::buildTableFields( $table_name, $fields );
+            $results = static::buildTableFields( $db, $table_name, $fields );
             $columns = Utilities::getArrayValue( 'columns', $results, array() );
 
             if ( empty( $columns ) )
@@ -1678,7 +1690,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
                 {
                     throw new NotFoundException( "Table '$table_name' does not exist in the database." );
                 }
-                $results = static::buildTableFields( $table_name, $fields, true, $schema );
+                $results = static::buildTableFields( $db, $table_name, $fields, true, $schema );
                 $columns = Option::get( $results, 'columns', array() );
                 foreach ( $columns as $name => $definition )
                 {
@@ -1739,7 +1751,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
     {
         //  Refresh the schema so we have the latest
         $db->schema->refresh();
-        static::_getCachedTables( true );
+        static::_getCachedTables( $db, true );
 
         $_created = $_references = $_indexes = $_labels = $_out = array();
         $_count = 0;
@@ -1817,7 +1829,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 
         //  Refresh the schema that we just added
         $db->schema->refresh();
-        static::_getCachedTables( true );
+        static::_getCachedTables( $db, true );
 
         if ( !$_singleTable )
         {
@@ -1860,7 +1872,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 
             //  Refresh the schema that we just added
             $db->schema->refresh();
-            static::_getCachedTables( true );
+            static::_getCachedTables( $db, true );
         }
         catch ( \Exception $_ex )
         {
@@ -1900,7 +1912,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 
             // refresh the schema that we just added
             $db->schema->refresh();
-            static::_getCachedTables( true );
+            static::_getCachedTables( $db, true );
         }
         catch ( \Exception $ex )
         {
@@ -2201,11 +2213,12 @@ SQL;
     }
 
     /**
+     * @param \CDbConnection $db
      * @param bool $reset
      *
      * @return array
      */
-    protected static function _getCachedTables( $reset = false )
+    protected static function _getCachedTables( $db, $reset = false )
     {
         if ( $reset )
         {
@@ -2215,7 +2228,7 @@ SQL;
 
         if ( !static::$_tableCache )
         {
-            static::$_tableCache = static::$_tableNameCache = Pii::db()->getSchema()->getTableNames();
+            static::$_tableCache = static::$_tableNameCache = $db->getSchema()->getTableNames();
 
             //  Make a new column for the search version of the table name
             foreach ( static::$_tableNameCache as &$_value )

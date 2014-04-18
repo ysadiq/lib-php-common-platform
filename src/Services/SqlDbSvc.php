@@ -459,6 +459,8 @@ class SqlDbSvc extends BaseDbSvc
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
         $table = $this->correctTableName( $table );
 
+        $_idFields = Option::get( $extras, 'id_field' );
+        $_idTypes = Option::get( $extras, 'id_type' );
         $_fields = Option::get( $extras, 'fields' );
         $_related = Option::get( $extras, 'related' );
         $_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
@@ -467,7 +469,7 @@ class SqlDbSvc extends BaseDbSvc
         try
         {
             $_fieldsInfo = $this->getFieldsInfo( $table );
-            $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+            $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields, $_idTypes );
             $_relatedInfo = $this->describeTableRelated( $table );
             $_fields = ( empty( $_fields ) ) ? $_idFields : $_fields;
             $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
@@ -576,10 +578,15 @@ class SqlDbSvc extends BaseDbSvc
 
         $table = $this->correctTableName( $table );
 
+        $_idFields = Option::get( $extras, 'id_field' );
+        $_idTypes = Option::get( $extras, 'id_type' );
+        $_fields = Option::get( $extras, 'fields' );
+
         try
         {
             $_fieldsInfo = $this->getFieldsInfo( $table );
-            /*$_idsInfo = */$this->getIdsInfo($table, $_fieldsInfo, $_idFields);
+            /*$_idsInfo = */
+            $this->getIdsInfo( $table, $_fieldsInfo, $_idFields, $_idTypes );
             $_fields = ( empty( $_fields ) ) ? $_idFields : $_fields;
             $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
             $_bindings = Option::get( $_result, 'bindings' );
@@ -1858,23 +1865,23 @@ class SqlDbSvc extends BaseDbSvc
         return $this->_driverType;
     }
 
-    protected function getIdsInfo( $table, $fields_info = null, &$requested = null )
+    protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
         $_idsInfo = array();
-        if ( empty( $requested ) )
+        if ( empty( $requested_fields ) )
         {
-            $requested = array();
+            $requested_fields = array();
             $_idsInfo = SqlDbUtilities::getPrimaryKeys( $fields_info );
             foreach ( $_idsInfo as $_info )
             {
-                $requested[] = Option::get( $_info, 'name' );
+                $requested_fields[] = Option::get( $_info, 'name' );
             }
         }
         else
         {
-            if ( false !== $requested = static::validateAsArray( $requested, ',' ) )
+            if ( false !== $requested_fields = static::validateAsArray( $requested_fields, ',' ) )
             {
-                foreach ( $requested as $_field )
+                foreach ( $requested_fields as $_field )
                 {
                     $_idsInfo[] = SqlDbUtilities::getFieldFromDescribe( $_field, $fields_info );
                 }

@@ -448,9 +448,9 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         return $_out;
     }
 
-    protected function getIdsInfo( $table, $fields_info = null, &$requested = null )
+    protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
-        $requested = array( static::PARTITION_KEY, static::ROW_KEY ); // can only be this
+        $requested_fields = array( static::PARTITION_KEY, static::ROW_KEY ); // can only be this
         $_ids = array(
             array( 'name' => static::PARTITION_KEY, 'type' => 'string', 'required' => true ),
             array( 'name' => static::ROW_KEY, 'type' => 'string', 'required' => true )

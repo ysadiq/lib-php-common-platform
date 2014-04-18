@@ -376,11 +376,11 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         }
     }
 
-    protected function getIdsInfo( $table, $fields_info = null, &$requested = null )
+    protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
-        if ( empty( $requested ) )
+        if ( empty( $requested_fields ) )
         {
-            $requested = array( static::DEFAULT_ID_FIELD ); // can only be this
+            $requested_fields = array( static::DEFAULT_ID_FIELD ); // can only be this
             $_ids = array(
                 array( 'name' => static::DEFAULT_ID_FIELD, 'type' => 'string', 'required' => true ),
             );
@@ -388,7 +388,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         else
         {
             $_ids = array(
-                array( 'name' => $requested, 'type' => 'string', 'required' => true ),
+                array( 'name' => $requested_fields, 'type' => 'string', 'required' => true ),
             );
         }
 

@@ -1163,22 +1163,22 @@ class SalesforceDbSvc extends BaseDbSvc
         return $this->_getAllFields( $table, true );
     }
 
-    protected function getIdsInfo( $table, $fields_info = null, &$requested = null )
+    protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
         $_idsInfo = array();
-        if ( empty( $requested ) )
+        if ( empty( $requested_fields ) )
         {
-            $requested = array();
+            $requested_fields = array();
             foreach ( $_idsInfo as $_info )
             {
-                $requested[] = Option::get( $_info, 'name' );
+                $requested_fields[] = Option::get( $_info, 'name' );
             }
         }
         else
         {
-            if ( false !== $requested = static::validateAsArray( $requested, ',' ) )
+            if ( false !== $requested_fields = static::validateAsArray( $requested_fields, ',' ) )
             {
-                foreach ( $requested as $_field )
+                foreach ( $requested_fields as $_field )
                 {
                     $_idsInfo[] = array( 'name' => $_field ); // search fields info
                 }

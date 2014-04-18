@@ -756,6 +756,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $_isSingle = ( 1 == count( $records ) );
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
+        $_idTypes = Option::get( $extras, 'id_type' );
         $_rollback = ( $_isSingle ) ? false : Option::getBool( $extras, 'rollback', false );
         $_continue = ( $_isSingle ) ? false : Option::getBool( $extras, 'continue', false );
         if ( $_rollback && $_continue )
@@ -766,7 +767,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $this->initTransaction( $table );
 
         $_fieldsInfo = $this->getFieldsInfo( $table );
-        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields, $_idTypes );
         if ( empty( $_idsInfo ) )
         {
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
@@ -890,6 +891,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
+        $_idTypes = Option::get( $extras, 'id_type' );
         $_isSingle = ( 1 == count( $records ) );
         $_rollback = ( $_isSingle ) ? false : Option::getBool( $extras, 'rollback', false );
         $_continue = ( $_isSingle ) ? false : Option::getBool( $extras, 'continue', false );
@@ -901,7 +903,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $this->initTransaction( $table );
 
         $_fieldsInfo = $this->getFieldsInfo( $table );
-        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields, $_idTypes );
         if ( empty( $_idsInfo ) )
         {
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
@@ -1026,6 +1028,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
+        $_idTypes = Option::get( $extras, 'id_type' );
 
         // slow, but workable for now, maybe faster than merging individuals
         $extras['fields'] = '';
@@ -1033,13 +1036,13 @@ abstract class BaseDbSvc extends BasePlatformRestService
         unset( $_records['meta'] );
 
         $_fieldsInfo = $this->getFieldsInfo( $table );
-        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields, $_idTypes );
         if ( empty( $_idsInfo ) )
         {
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
         }
 
-        $_ids = static::recordsAsIds( $_records, $_idFields );
+        $_ids = static::recordsAsIds( $_records, $_idsInfo );
         $extras['fields'] = $_fields;
 
         return $this->updateRecordsByIds( $table, $record, $_ids, $extras );
@@ -1063,6 +1066,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
+        $_idTypes = Option::get( $extras, 'id_type' );
         $_isSingle = ( 1 == count( $ids ) );
         $_rollback = ( $_isSingle ) ? false : Option::getBool( $extras, 'rollback', false );
         $_continue = ( $_isSingle ) ? false : Option::getBool( $extras, 'continue', false );
@@ -1074,7 +1078,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $this->initTransaction( $table );
 
         $_fieldsInfo = $this->getFieldsInfo( $table );
-        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields, $_idTypes );
         if ( empty( $_idsInfo ) )
         {
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
@@ -1096,9 +1100,9 @@ abstract class BaseDbSvc extends BasePlatformRestService
             {
                 try
                 {
-                    if ( empty( $_id ) )
+                    if ( false === $_id = $this->checkForIds( $_id, $_idsInfo, $extras, true ) )
                     {
-                        throw new BadRequestException( "Identifying field '_id' can not be empty for update record request." );
+                        throw new BadRequestException( "Required id field(s) not valid in request $_index: " . print_r( $_id, true ) );
                     }
 
                     $_result = $this->addToTransaction( null, $_id, $extras, $_rollback, $_continue, $_isSingle );
@@ -1201,6 +1205,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
+        $_idTypes = Option::get( $extras, 'id_type' );
         $_isSingle = ( 1 == count( $records ) );
         $_rollback = ( $_isSingle ) ? false : Option::getBool( $extras, 'rollback', false );
         $_continue = ( $_isSingle ) ? false : Option::getBool( $extras, 'continue', false );
@@ -1212,7 +1217,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $this->initTransaction( $table );
 
         $_fieldsInfo = $this->getFieldsInfo( $table );
-        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields, $_idTypes );
         if ( empty( $_idsInfo ) )
         {
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
@@ -1337,6 +1342,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
+        $_idTypes = Option::get( $extras, 'id_type' );
 
         // slow, but workable for now, maybe faster than merging individuals
         $extras['fields'] = '';
@@ -1344,13 +1350,13 @@ abstract class BaseDbSvc extends BasePlatformRestService
         unset( $_records['meta'] );
 
         $_fieldsInfo = $this->getFieldsInfo( $table );
-        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields, $_idTypes );
         if ( empty( $_idsInfo ) )
         {
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
         }
 
-        $_ids = static::recordsAsIds( $_records, $_idFields );
+        $_ids = static::recordsAsIds( $_records, $_idsInfo );
         $extras['fields'] = $_fields;
 
         return $this->mergeRecordsByIds( $table, $record, $_ids, $extras );
@@ -1372,6 +1378,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
+        $_idTypes = Option::get( $extras, 'id_type' );
         $_isSingle = ( 1 == count( $ids ) );
         $_rollback = ( $_isSingle ) ? false : Option::getBool( $extras, 'rollback', false );
         $_continue = ( $_isSingle ) ? false : Option::getBool( $extras, 'continue', false );
@@ -1383,7 +1390,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $this->initTransaction( $table );
 
         $_fieldsInfo = $this->getFieldsInfo( $table );
-        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields, $_idTypes );
         if ( empty( $_idsInfo ) )
         {
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
@@ -1405,9 +1412,9 @@ abstract class BaseDbSvc extends BasePlatformRestService
             {
                 try
                 {
-                    if ( empty( $_id ) )
+                    if ( false === $_id = $this->checkForIds( $_id, $_idsInfo, $extras, true ) )
                     {
-                        throw new BadRequestException( "Identifier can not be empty for update record request." );
+                        throw new BadRequestException( "Required id field(s) not valid in request $_index: " . print_r( $_id, true ) );
                     }
 
                     $_result = $this->addToTransaction( null, $_id, $extras, $_rollback, $_continue, $_isSingle );
@@ -1508,8 +1515,10 @@ abstract class BaseDbSvc extends BasePlatformRestService
     {
         $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
 
+        $_idFields = Option::get( $extras, 'id_field' );
+        $_idTypes = Option::get( $extras, 'id_type' );
         $_fieldsInfo = $this->getFieldsInfo( $table );
-        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields, $_idTypes );
         if ( empty( $_idsInfo ) )
         {
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
@@ -1554,20 +1563,21 @@ abstract class BaseDbSvc extends BasePlatformRestService
     {
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
+        $_idTypes = Option::get( $extras, 'id_type' );
 
-        // slow, but workable for now, maybe faster than merging individuals
+        // slow, but workable for now, maybe faster than deleting individuals
         $extras['fields'] = '';
         $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
         unset( $_records['meta'] );
 
         $_fieldsInfo = $this->getFieldsInfo( $table );
-        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields, $_idTypes );
         if ( empty( $_idsInfo ) )
         {
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
         }
 
-        $_ids = static::recordsAsIds( $_records, $_idFields );
+        $_ids = static::recordsAsIds( $_records, $_idsInfo, $extras );
         $extras['fields'] = $_fields;
 
         return $this->deleteRecordsByIds( $table, $_ids, $extras );
@@ -1587,6 +1597,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
+        $_idTypes = Option::get( $extras, 'id_type' );
         $_isSingle = ( 1 == count( $ids ) );
         $_rollback = ( $_isSingle ) ? false : Option::getBool( $extras, 'rollback', false );
         $_continue = ( $_isSingle ) ? false : Option::getBool( $extras, 'continue', false );
@@ -1598,7 +1609,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         $this->initTransaction( $table );
 
         $_fieldsInfo = $this->getFieldsInfo( $table );
-        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields, $_idTypes );
         if ( empty( $_idsInfo ) )
         {
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
@@ -1617,9 +1628,9 @@ abstract class BaseDbSvc extends BasePlatformRestService
             {
                 try
                 {
-                    if ( empty( $_id ) )
+                    if ( false === $_id = $this->checkForIds( $_id, $_idsInfo, $extras, true ) )
                     {
-                        throw new BadRequestException( "Identifying field '_id' can not be empty for delete record request." );
+                        throw new BadRequestException( "Required id field(s) not valid in request $_index: " . print_r( $_id, true ) );
                     }
 
                     $_result = $this->addToTransaction( null, $_id, $extras, $_rollback, $_continue, $_isSingle );
@@ -1728,15 +1739,11 @@ abstract class BaseDbSvc extends BasePlatformRestService
     {
         $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
 
-        $_fieldsInfo = $this->getFieldsInfo( $table );
-        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo );
-        if ( empty( $_idsInfo ) )
-        {
-            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-        }
+        $_idFields = Option::get( $extras, 'id_field' );
+        $_idTypes = Option::get( $extras, 'id_type' );
 
         $_fieldsInfo = $this->getFieldsInfo( $table );
-        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields, $_idTypes );
         if ( empty( $_idsInfo ) )
         {
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
@@ -1782,13 +1789,14 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
+        $_idTypes = Option::get( $extras, 'id_type' );
         $_isSingle = ( 1 == count( $ids ) );
         $_continue = ( $_isSingle ) ? false : Option::getBool( $extras, 'continue', false );
 
         $this->initTransaction( $table );
 
         $_fieldsInfo = $this->getFieldsInfo( $table );
-        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields );
+        $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields, $_idTypes );
         if ( empty( $_idsInfo ) )
         {
             throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
@@ -1808,9 +1816,9 @@ abstract class BaseDbSvc extends BasePlatformRestService
             {
                 try
                 {
-                    if ( empty( $_id ) )
+                    if ( false === $_id = $this->checkForIds( $_id, $_idsInfo, $extras, true ) )
                     {
-                        throw new BadRequestException( "Identifying field '_id' can not be empty for retrieve record request." );
+                        throw new BadRequestException( "Required id field(s) not valid in request $_index: " . print_r( $_id, true ) );
                     }
 
                     $_result = $this->addToTransaction( null, $_id, $extras, false, $_continue, $_isSingle );
@@ -1891,6 +1899,12 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
     // Helper function for record usage
 
+    /**
+     * @param $table
+     *
+     * @return array
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     */
     protected function getFieldsInfo( $table )
     {
         if ( empty( $table ) )
@@ -1901,8 +1915,21 @@ abstract class BaseDbSvc extends BasePlatformRestService
         return array();
     }
 
-    abstract protected function getIdsInfo( $table, $fields_info = null, &$requested = null );
+    /**
+     * @param      $table
+     * @param null $fields_info
+     * @param null $requested_fields
+     * @param null $requested_types
+     *
+     * @return mixed
+     */
+    abstract protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null );
 
+    /**
+     * @param $id_info
+     *
+     * @return array
+     */
     protected function getIdFieldsFromInfo( $id_info )
     {
         $_fields = array();
@@ -1914,34 +1941,15 @@ abstract class BaseDbSvc extends BasePlatformRestService
         return $_fields;
     }
 
-    protected function checkIds( $id, $ids_info )
-    {
-        if ( !empty( $ids_info ) )
-        {
-            $_count = count( $ids_info );
-            if ( !is_array( $id ) && ( 1 == $_count ) )
-            {
-                return true;
-            }
-
-            if ( $_count == count( Option::clean( $id ) ) )
-            {
-                foreach ( $ids_info as $_info )
-                {
-                    $_name = Option::get( $_info, 'name' );
-                    if ( null === Option::get( $id, $_name ) )
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
+    /**
+     * @param      $record
+     * @param      $ids_info
+     * @param null $extras
+     * @param bool $on_create
+     * @param bool $remove
+     *
+     * @return array|bool|int|mixed|null|string
+     */
     protected function checkForIds( &$record, $ids_info, $extras = null, $on_create = false, $remove = false )
     {
         $_id = null;
@@ -1951,10 +1959,20 @@ abstract class BaseDbSvc extends BasePlatformRestService
             {
                 $_info = $ids_info[0];
                 $_name = Option::get( $_info, 'name' );
-                $_value = Option::get( $record, $_name, null, $remove );
+                $_value = (is_array($record)) ? Option::get( $record, $_name, null, $remove ) : $record;
                 if ( !empty( $_value ) )
                 {
-                    $_id = Option::get( $record, $_name, null, $remove );
+                    $_type = Option::get( $_info, 'type' );
+                    switch ( $_type )
+                    {
+                        case 'int':
+                            $_value = intval( $_value );
+                            break;
+                        case 'string':
+                            $_value = strval( $_value );
+                            break;
+                    }
+                    $_id = $_value;
                 }
                 else
                 {
@@ -1976,7 +1994,17 @@ abstract class BaseDbSvc extends BasePlatformRestService
                     $_value = Option::get( $record, $_name, null, $remove );
                     if ( !empty( $_value ) )
                     {
-                        $_id[$_name] = Option::get( $record, $_name, null, $remove );
+                        $_type = Option::get( $_info, 'type' );
+                        switch ( $_type )
+                        {
+                            case 'int':
+                                $_value = intval( $_value );
+                                break;
+                            case 'string':
+                                $_value = strval( $_value );
+                                break;
+                        }
+                        $_id[$_name] = $_value;
                     }
                     else
                     {
@@ -2601,53 +2629,25 @@ abstract class BaseDbSvc extends BasePlatformRestService
     }
 
     /**
-     * @param array  $records
-     * @param string $id_field
-     * @param bool   $include_field
+     * @param array $records
+     * @param       $ids_info
+     * @param null  $extras
+     * @param bool  $on_create
+     * @param bool  $remove
      *
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @internal param string $id_field
+     * @internal param bool $include_field
+     *
      * @return array
      */
-    protected static function recordsAsIds( $records, $id_field, $include_field = false )
+    protected static function recordsAsIds( $records, $ids_info, $extras = null, $on_create = false, $remove = false )
     {
-        if ( empty( $id_field ) )
-        {
-            return array();
-        }
-
-        if ( !is_array( $id_field ) )
-        {
-            $id_field = array_map( 'trim', explode( ',', trim( $id_field, ',' ) ) );
-        }
-
         $_out = array();
-        foreach ( $records as $_index => $_record )
+        if ( !empty( $records ) )
         {
-            if ( count( $id_field ) > 1 )
+            foreach ( $records as $_record )
             {
-                $_ids = array();
-                foreach ( $id_field as $_field )
-                {
-                    $_id = Option::get( $_record, $_field );
-                    if ( empty( $_id ) )
-                    {
-                        throw new BadRequestException( "Identifying field '$_field' can not be empty for record index '$_index' request." );
-                    }
-                    $_ids[$_field] = $_id;
-                }
-
-                $_out[] = $_ids;
-            }
-            else
-            {
-                $_field = $id_field[0];
-                $_id = Option::get( $_record, $_field );
-                if ( empty( $_id ) )
-                {
-                    throw new BadRequestException( "Identifying field '$_field' can not be empty for record index '$_index' request." );
-                }
-
-                $_out[] = ( $include_field ) ? array( $_field => $_id ) : $_id;
+                $_out[] = static::checkForIds( $_record, $ids_info, $extras, $on_create, $remove );
             }
         }
 

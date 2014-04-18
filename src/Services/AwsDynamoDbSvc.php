@@ -593,9 +593,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         return $fields;
     }
 
-    protected function getIdsInfo( $table, $fields_info = null, &$requested = null )
+    protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
-        $requested = array();
+        $requested_fields = array();
         $_result = $this->getTable( $table );
         $_keys = Option::get( $_result, 'KeySchema', array() );
         $_definitions = Option::get( $_result, 'AttributeDefinitions', array() );
@@ -613,7 +613,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                 }
             }
 
-            $requested[] = $_name;
+            $requested_fields[] = $_name;
             $_fields[] = array( 'name' => $_name, 'key_type' => $_keyType, 'type' => $_type, 'required' => true );
         }
 
