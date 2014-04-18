@@ -131,6 +131,10 @@ abstract class BaseDbSvc extends BasePlatformRestService
         // or supply one when there is no default designated
         $_extras['id_field'] = static::getFromPostedData( $post_data, 'id_field', FilterInput::request( 'id_field' ) );
 
+        // means to override the default identifier type for a table
+        // or supply one when there is no default designated
+        $_extras['id_type'] = static::getFromPostedData( $post_data, 'id_type', FilterInput::request( 'id_type' ) );
+
         if ( null != $_ssFilters = Session::getServiceFilters( $this->_apiName, $this->_resource ) )
         {
             $_extras['ss_filters'] = $_ssFilters;

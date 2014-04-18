@@ -403,6 +403,8 @@ class Session extends BasePlatformRestResource
 
             $_cached['role'] = $_role;
             $_public['role'] = $_roleName;
+            $_public['role_id'] = $_roleId;
+            $_public['dsp_name'] = Pii::getParam('dsp_name');
         }
 
         $_cached['lookup'] = LookupKey::getForSession( $_roleId, $_user->id );
