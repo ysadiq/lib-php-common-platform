@@ -364,7 +364,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _loadLocalConfig()
     {
-        if ( null === ( $_config = \Kisma::get( 'platform.local_config' ) ) )
+        $_config = Platform::getStore()->get( 'platform.local_config' );
+
+        if ( empty( $_config ) )
         {
             $_config = array();
             $_configPath = Platform::getPrivatePath( '/config' );
@@ -403,7 +405,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 }
             }
 
-            \Kisma::set( 'platform.local_config', $_config );
+            Platform::getStore()->set( 'platform.local_config', $_config );
         }
 
         //  Merge config with our params...

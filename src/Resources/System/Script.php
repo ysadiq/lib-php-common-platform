@@ -250,6 +250,26 @@ class Script extends BaseSystemRestResource
     }
 
     /**
+     * @param string $eventName
+     *
+     * @return bool
+     */
+    public static function existsForEvent( $eventName )
+    {
+        $_scripts = FileSystem::glob( Platform::getPrivatePath( static::DEFAULT_SCRIPT_PATH ) . static::DEFAULT_SCRIPT_PATTERN, GlobFlags::GLOB_NODOTS );
+
+        foreach ( $_scripts as $_script )
+        {
+            if ( $eventName == str_replace( '.js', null, $_script ) )
+            {
+                return $_script;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @param string $scriptName
      * @param string $scriptId
      * @param array  $data   Bi-directional data to/from function
