@@ -1,8 +1,8 @@
 {
-	"version": "1.4.0",
+	"version": "1.5.0",
 	"scripts": {
 		"install": null,
-		"update":  "1.4.0-update.sql"
+		"update":  "1.5.0-update.sql"
 	},
 	"table":   [
 		{
@@ -110,24 +110,40 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
 					"allow_null": true,
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
 					"allow_null": true,
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -144,7 +160,10 @@
 					"length":     255,
 					"allow_null": false,
 					"is_unique":  true,
-					"validation": "not_empty,email"
+					"validation": {
+						"not_empty": {},
+						"email":     {}
+					}
 				},
 				{
 					"name":               "password",
@@ -253,30 +272,51 @@
 					"default":    0
 				},
 				{
-					"name": "last_login_date",
-					"type": "datetime"
+					"name":       "last_login_date",
+					"type":       "datetime",
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
 					"allow_null": true,
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
 					"allow_null": true,
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -319,22 +359,38 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -351,7 +407,9 @@
 					"length":     64,
 					"allow_null": false,
 					"is_unique":  true,
-					"validation": "not_empty"
+					"validation": {
+						"not_empty": {}
+					}
 				},
 				{
 					"name":               "name",
@@ -437,22 +495,38 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -469,7 +543,9 @@
 					"length":     64,
 					"allow_null": false,
 					"is_unique":  true,
-					"validation": "not_empty"
+					"validation": {
+						"not_empty": {}
+					}
 				},
 				{
 					"name":               "name",
@@ -507,7 +583,9 @@
 					"name":       "import_url",
 					"type":       "text",
 					"allow_null": true,
-					"validation": "url"
+					"validation": {
+						"url": {}
+					}
 				},
 				{
 					"name":          "storage_service_id",
@@ -552,22 +630,38 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -594,22 +688,38 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -737,7 +847,36 @@
 					"value":      ["No Access", "Read Only", "Write Only", "Read and Write", "Full Access"],
 					"default":    "No Access",
 					"allow_null": false,
-					"validation": "picklist"
+					"validation": {
+						"picklist": {}
+					}
+				},
+				{
+					"name":       "verbs",
+					"type":       "string",
+					"length":     64,
+					"value":      ["GET", "POST", "PUT", "MERGE", "DELETE"],
+					"default":    "",
+					"allow_null": false,
+					"validation": {
+						"multi_picklist": {}
+					}
+				},
+				{
+					"name":       "filters",
+					"type":       "mediumtext",
+					"allow_null": true
+				},
+				{
+					"name":       "filter_op",
+					"type":       "string",
+					"length":     64,
+					"value":      ["and", "or"],
+					"default":    "and",
+					"allow_null": false,
+					"validation": {
+						"picklist": {}
+					}
 				}
 			]
 		},
@@ -770,7 +909,87 @@
 					"value":      ["No Access", "Read Only", "Write Only", "Read and Write", "Full Access"],
 					"default":    "No Access",
 					"allow_null": false,
-					"validation": "picklist"
+					"validation": {
+						"picklist": {}
+					}
+				},
+				{
+					"name":       "verbs",
+					"type":       "string",
+					"length":     64,
+					"value":      ["GET", "POST", "PUT", "MERGE", "DELETE"],
+					"default":    "",
+					"allow_null": false,
+					"validation": {
+						"multi_picklist": {}
+					}
+				},
+				{
+					"name":       "filters",
+					"type":       "mediumtext",
+					"allow_null": true
+				},
+				{
+					"name":       "filter_op",
+					"type":       "string",
+					"length":     64,
+					"value":      ["and", "or"],
+					"default":    "and",
+					"allow_null": false,
+					"validation": {
+						"picklist": {}
+					}
+				}
+			]
+		},
+		{
+			"name":  "df_sys_lookup_key",
+			"field": [
+				{
+					"name": "id",
+					"type": "id"
+				},
+				{
+					"name":          "role_id",
+					"type":          "reference",
+					"ref_table":     "df_sys_role",
+					"ref_fields":    "id",
+					"ref_on_update": "CASCADE",
+					"ref_on_delete": "CASCADE",
+					"allow_null":    true
+				},
+				{
+					"name":          "user_id",
+					"type":          "reference",
+					"ref_table":     "df_sys_user",
+					"ref_fields":    "id",
+					"ref_on_update": "CASCADE",
+					"ref_on_delete": "CASCADE",
+					"allow_null":    true
+				},
+				{
+					"name":       "name",
+					"type":       "string",
+					"length":     64,
+					"allow_null": false,
+					"is_index":   true
+				},
+				{
+					"name":       "value",
+					"type":       "mediumtext",
+					"allow_null": true
+				},
+				{
+					"name":       "private",
+					"type":       "boolean",
+					"default":    false,
+					"allow_null": false
+				},
+				{
+					"name":       "allow_user_update",
+					"type":       "boolean",
+					"default":    false,
+					"allow_null": false
 				}
 			]
 		},
@@ -838,8 +1057,7 @@
 				},
 				{
 					"name":       "validation",
-					"type":       "string",
-					"length":     255,
+					"type":       "text",
 					"allow_null": true
 				},
 				{
@@ -946,22 +1164,38 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -977,7 +1211,9 @@
 					"type":       "int",
 					"length":     11,
 					"allow_null": false,
-					"validation": "not_empty"
+					"validation": {
+						"not_empty": {}
+					}
 				},
 				{
 					"name":       "user_id",
@@ -1006,12 +1242,20 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -1073,22 +1317,38 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_by_id",
 					"type":       "user_id_on_create",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_by_id",
 					"type":       "user_id_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -1137,17 +1397,29 @@
 				{
 					"name":       "last_use_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		},
@@ -1199,12 +1471,78 @@
 				{
 					"name":       "created_date",
 					"type":       "datetime",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				},
 				{
 					"name":       "last_modified_date",
 					"type":       "timestamp_on_update",
-					"validation": "api_read_only"
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name":  "df_sys_event",
+			"field": [
+				{
+					"name": "id",
+					"type": "id"
+				},
+				{
+					"name":       "event_name",
+					"type":       "string",
+					"length":     128,
+					"allow_null": false,
+					"is_unique":  true
+				},
+				{
+					"name":               "listeners",
+					"type":               "mediumtext",
+					"supports_multibyte": true,
+					"allow_null":         true
+				},
+				{
+					"name":       "created_date",
+					"type":       "datetime",
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
+				},
+				{
+					"name":       "created_by_id",
+					"type":       "user_id_on_create",
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
+				},
+				{
+					"name":       "last_modified_date",
+					"type":       "timestamp_on_update",
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
+				},
+				{
+					"name":       "last_modified_by_id",
+					"type":       "user_id_on_update",
+					"validation": {
+						"api_read_only": {
+							"on_fail": "ignore_field"
+						}
+					}
 				}
 			]
 		}

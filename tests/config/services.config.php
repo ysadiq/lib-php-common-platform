@@ -24,75 +24,74 @@ use DreamFactory\Platform\Enums\PlatformStorageTypes;
  * services.config.php
  * This file contains the master service mapping for the DSP
  */
-return
-	array(
-		PlatformServiceTypes::LOCAL_FILE_STORAGE   => array(
-			'class' => 'DreamFactory\\Platform\\Services\\LocalFileSvc',
-		),
-		PlatformServiceTypes::REMOTE_FILE_STORAGE  => array(
-			'class' => array(
-				PlatformStorageTypes::AZURE_BLOB               => array(
-					'class' => 'DreamFactory\\Platform\\Services\\WindowsAzureBlobSvc',
-				),
-				PlatformStorageTypes::AWS_S3                   => array(
-					'class' => 'DreamFactory\\Platform\\Services\\AwsS3Svc',
-				),
-				PlatformStorageTypes::OPENSTACK_OBJECT_STORAGE => array(
-					'class' => 'DreamFactory\\Platform\\Services\\OpenStackObjectStoreSvc',
-				),
-				PlatformStorageTypes::RACKSPACE_CLOUDFILES     => array(
-					'class' => 'DreamFactory\\Platform\\Services\\OpenStackObjectStoreSvc',
-				),
+return array(
+	PlatformServiceTypes::LOCAL_FILE_STORAGE   => array(
+		'class' => 'DreamFactory\\Platform\\Services\\LocalFileSvc',
+	),
+	PlatformServiceTypes::REMOTE_FILE_STORAGE  => array(
+		'class' => array(
+			PlatformStorageTypes::AZURE_BLOB               => array(
+				'class' => 'DreamFactory\\Platform\\Services\\WindowsAzureBlobSvc',
+			),
+			PlatformStorageTypes::AWS_S3                   => array(
+				'class' => 'DreamFactory\\Platform\\Services\\AwsS3Svc',
+			),
+			PlatformStorageTypes::OPENSTACK_OBJECT_STORAGE => array(
+				'class' => 'DreamFactory\\Platform\\Services\\OpenStackObjectStoreSvc',
+			),
+			PlatformStorageTypes::RACKSPACE_CLOUDFILES     => array(
+				'class' => 'DreamFactory\\Platform\\Services\\OpenStackObjectStoreSvc',
 			),
 		),
-		PlatformServiceTypes::LOCAL_SQL_DB         => array(
-			'class' => 'DreamFactory\\Platform\\Services\\SqlDbSvc',
-			'local' => true,
-		),
-		PlatformServiceTypes::REMOTE_SQL_DB        => array(
-			'class' => 'DreamFactory\\Platform\\Services\\SqlDbSvc',
-			'local' => false,
-		),
-		PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA  => array(
-			'class' => 'DreamFactory\\Platform\\Services\\SchemaSvc',
-			'local' => true,
-		),
-		PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA => array(
-			'class' => 'DreamFactory\\Platform\\Services\\SchemaSvc',
-			'local' => false,
-		),
-		PlatformServiceTypes::EMAIL_SERVICE        => array(
-			'class' => 'DreamFactory\\Platform\\Services\\EmailSvc',
-		),
-		PlatformServiceTypes::NOSQL_DB             => array(
-			'class' => array(
-				PlatformStorageTypes::AWS_DYNAMODB => array(
-					'class' => 'DreamFactory\\Platform\\Services\\AwsDynamoDbSvc',
-				),
-				PlatformStorageTypes::AWS_SIMPLEDB => array(
-					'class' => 'DreamFactory\\Platform\\Services\\AwsSimpleDbSvc',
-				),
-				PlatformStorageTypes::AZURE_TABLES => array(
-					'class' => 'DreamFactory\\Platform\\Services\\WindowsAzureTablesSvc',
-				),
-				PlatformStorageTypes::COUCHDB      => array(
-					'class' => 'DreamFactory\\Platform\\Services\\CouchDbSvc',
-				),
-				PlatformStorageTypes::MONGODB      => array(
-					'class' => 'DreamFactory\\Platform\\Services\\MongoDbSvc',
-				),
-				PlatformStorageTypes::MONGOHQ      => array(
-					'class' => 'DreamFactory\\Platform\\Services\\MongoDbSvc',
-				),
+	),
+	PlatformServiceTypes::LOCAL_SQL_DB         => array(
+		'class' => 'DreamFactory\\Platform\\Services\\SqlDbSvc',
+		'local' => true,
+	),
+	PlatformServiceTypes::REMOTE_SQL_DB        => array(
+		'class' => 'DreamFactory\\Platform\\Services\\SqlDbSvc',
+		'local' => false,
+	),
+	PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA  => array(
+		'class' => 'DreamFactory\\Platform\\Services\\SchemaSvc',
+		'local' => true,
+	),
+	PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA => array(
+		'class' => 'DreamFactory\\Platform\\Services\\SchemaSvc',
+		'local' => false,
+	),
+	PlatformServiceTypes::EMAIL_SERVICE        => array(
+		'class' => 'DreamFactory\\Platform\\Services\\EmailSvc',
+	),
+	PlatformServiceTypes::NOSQL_DB             => array(
+		'class' => array(
+			PlatformStorageTypes::AWS_DYNAMODB => array(
+				'class' => 'DreamFactory\\Platform\\Services\\AwsDynamoDbSvc',
+			),
+			PlatformStorageTypes::AWS_SIMPLEDB => array(
+				'class' => 'DreamFactory\\Platform\\Services\\AwsSimpleDbSvc',
+			),
+			PlatformStorageTypes::AZURE_TABLES => array(
+				'class' => 'DreamFactory\\Platform\\Services\\WindowsAzureTablesSvc',
+			),
+			PlatformStorageTypes::COUCHDB      => array(
+				'class' => 'DreamFactory\\Platform\\Services\\CouchDbSvc',
+			),
+			PlatformStorageTypes::MONGODB      => array(
+				'class' => 'DreamFactory\\Platform\\Services\\MongoDbSvc',
+			),
+			PlatformStorageTypes::MONGOHQ      => array(
+				'class' => 'DreamFactory\\Platform\\Services\\MongoDbSvc',
 			),
 		),
-		PlatformServiceTypes::LOCAL_PORTAL_SERVICE => array(
-			'class' => 'DreamFactory\\Platform\\Services\\Portal',
-		),
-		PlatformServiceTypes::REMOTE_WEB_SERVICE   => array(
-			'class' => 'DreamFactory\\Platform\\Services\\RemoteWebSvc',
-		),
-		PlatformServiceTypes::SALESFORCE           => array(
-			'class' => 'DreamFactory\\Platform\\Services\\SalesforceDbSvc',
-		),
-	);
+	),
+	PlatformServiceTypes::LOCAL_PORTAL_SERVICE => array(
+		'class' => 'DreamFactory\\Platform\\Services\\Portal',
+	),
+	PlatformServiceTypes::REMOTE_WEB_SERVICE   => array(
+		'class' => 'DreamFactory\\Platform\\Services\\RemoteWebSvc',
+	),
+	PlatformServiceTypes::SALESFORCE           => array(
+		'class' => 'DreamFactory\\Platform\\Services\\SalesforceDbSvc',
+	),
+);

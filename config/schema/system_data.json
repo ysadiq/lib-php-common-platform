@@ -56,7 +56,7 @@
 			"is_active":   1,
 			"type":        "Local Portal Service",
 			"type_id":     64,
-			"description": "Local Portal Service"
+			"description": "Portal service to authenticated resources"
 		}
 	],
 	"df_sys_email_template": [
@@ -87,16 +87,16 @@
 	],
 	"df_sys_app":            [
 		{
-			"url": "https://github.com/dreamfactorysoftware/app-todo-jquery/raw/master/todojquery.dfpkg"
+			"url": "https://raw.github.com/dreamfactorysoftware/app-todo-jquery/master/todojquery.dfpkg"
 		},
 		{
-			"url": "https://github.com/dreamfactorysoftware/app-todo-angular/raw/master/todoangular.dfpkg"
+			"url": "https://raw.github.com/dreamfactorysoftware/app-todo-angular/master/todoangular.dfpkg"
 		},
 		{
-			"url": "https://github.com/dreamfactorysoftware/app-todo-sencha/raw/master/todosencha.dfpkg"
+			"url": "https://raw.github.com/dreamfactorysoftware/app-todo-sencha/master/todosencha.dfpkg"
 		},
 		{
-			"url": "https://github.com/dreamfactorysoftware/app-calendar/raw/master/calendar.dfpkg"
+			"url": "https://raw.github.com/dreamfactorysoftware/app-calendar/master/calendar.dfpkg"
 		}
 	]
 }
