@@ -844,7 +844,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
                 case "timestamp_on_create":
                     $definition =
                         ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) )
-                            ? 'datetime2' : 'timestamp';
+                            ? 'datetimeoffset' : 'timestamp';
                     $default =
                         ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) )
                             ? 'getdate()' : 0; // override
@@ -853,7 +853,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
                 case "timestamp_on_update":
                     $definition =
                         ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) )
-                            ? 'datetime2' : 'timestamp';
+                            ? 'datetimeoffset' : 'timestamp';
                     $default =
                         ( ( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) || ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) )
                             ? 'getdate()' : 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'; // override

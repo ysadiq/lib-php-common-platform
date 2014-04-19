@@ -335,10 +335,11 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
         $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
         try
         {
             // parse filter
-            $filter = static::parseFilter( $filter );
+            $filter = static::buildCriteriaArray( $filter, $params, $_ssFilters );
             /** @var Entity[] $_entities */
             $_entities = $this->queryEntities( $table, $filter, $_fields, $extras );
             foreach ( $_entities as $_entity )
@@ -365,10 +366,11 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
         $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
         try
         {
             // parse filter
-            $filter = static::parseFilter( $filter );
+            $filter = static::buildCriteriaArray( $filter, $params, $_ssFilters );
             /** @var Entity[] $_entities */
             $_entities = $this->queryEntities( $table, $filter, $_fields, $extras );
             foreach ( $_entities as $_entity )
@@ -398,9 +400,10 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         }
 
         $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
         try
         {
-            $filter = static::parseFilter( $filter );
+            $filter = static::buildCriteriaArray( $filter, $params, $_ssFilters );
             /** @var Entity[] $_entities */
             $_entities = $this->queryEntities( $table, $filter, $_fields, $extras );
             foreach ( $_entities as $_entity )
@@ -427,6 +430,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     {
         $this->checkConnection();
         $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
 
         $_options = new QueryEntitiesOptions();
         $_options->setSelectFields( array() );
@@ -442,7 +446,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
             $_options->setTop( $limit );
         }
 
-        $filter = static::parseFilter( $filter );
+        $filter = static::buildCriteriaArray( $filter, $params, $_ssFilters );
         $_out = $this->queryEntities( $table, $filter, $_fields, $extras, true );
 
         return $_out;
@@ -731,12 +735,76 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         return $records;
     }
 
+    protected static function buildCriteriaArray( $filter, $params = null, $ss_filters = null )
+    {
+        // build filter array if necessary, add server-side filters if necessary
+        $_criteria = ( !is_array( $filter ) ) ? static::parseFilter( $filter, $params ) : $filter;
+        $_serverCriteria = static::buildSSFilterArray( $ss_filters );
+        if ( !empty( $_serverCriteria ) )
+        {
+            $_criteria = ( empty( $_criteria ) ) ? $_serverCriteria : "( $_serverCriteria ) and ( $_criteria )";
+        }
+
+        return $_criteria;
+    }
+
+    protected static function buildSSFilterArray( $ss_filters )
+    {
+        if ( empty( $ss_filters ) )
+        {
+            return '';
+        }
+
+        // build the server side criteria
+        $_filters = Option::get( $ss_filters, 'filters' );
+        if ( empty( $_filters ) )
+        {
+            return '';
+        }
+
+        $_combiner = Option::get( $ss_filters, 'filter_op', 'and' );
+        switch ( strtoupper( $_combiner ) )
+        {
+            case 'AND':
+            case 'OR':
+                break;
+            default:
+                // log and bail
+                throw new InternalServerErrorException( 'Invalid server-side filter configuration detected.' );
+        }
+
+        $_criteria = '';
+        foreach ( $_filters as $_filter )
+        {
+            $_name = Option::get( $_filter, 'name' );
+            $_op = Option::get( $_filter, 'operator' );
+            if ( empty( $_name ) || empty( $_op ) )
+            {
+                // log and bail
+                throw new InternalServerErrorException( 'Invalid server-side filter configuration detected.' );
+            }
+
+            $_value = Option::get( $_filter, 'value' );
+            $_value = static::interpretFilterValue( $_value );
+
+            $_temp = static::parseFilter( "$_name $_op $_value" );
+            if ( !empty( $_criteria ) )
+            {
+                $_criteria .= " $_combiner ";
+            }
+            $_criteria .= $_temp;
+        }
+
+        return $_criteria;
+    }
+
     /**
      * @param string|array $filter Filter for querying records by
+     * @param array        $params replacement parameters
      *
      * @return array
      */
-    protected static function parseFilter( $filter )
+    protected static function parseFilter( $filter, $params = array() )
     {
         if ( empty( $filter ) )
         {
@@ -756,8 +824,8 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 
         // the rest should be comparison operators
         // supported comparison operators are eq, ne, gt, ge, lt, le
-        $_search = array( '=', '!=', '>=', '<=', '>', '<', ' EQ ', ' NE ', ' LT ', ' LTE ', ' LE ', ' GT ', ' GTE', ' GE ' );
-        $_replace = array( ' eq ', ' ne ', ' ge ', ' le ', ' gt ', ' lt ', ' eq ', ' ne ', ' lt ', ' le ', ' le ', ' gt ', ' ge ', ' ge ' );
+        $_search = array( '!=', '>=', '<=', '>', '<', '=', ' EQ ', ' NE ', ' LT ', ' LTE ', ' LE ', ' GT ', ' GTE', ' GE ' );
+        $_replace = array( ' ne ', ' ge ', ' le ', ' gt ', ' lt ', ' eq ', ' eq ', ' ne ', ' lt ', ' le ', ' le ', ' gt ', ' ge ', ' ge ' );
         $filter = trim( str_ireplace( $_search, $_replace, $filter ) );
 
 //			WHERE name LIKE "%Joe%"	not supported
@@ -767,6 +835,14 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 //				 ( '%' != $_val[0] ) )
 //			{
 //			}
+
+        if ( !empty( $params ) )
+        {
+            foreach ( $params as $_name => $_value )
+            {
+                $filter = str_replace( $_name, $_value, $filter );
+            }
+        }
 
         return $filter;
     }
@@ -785,21 +861,21 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 
         $_filters = array();
         $_filter = '';
-        if ( !empty( $partition_key ) )
-        {
-            $_filter = static::PARTITION_KEY . " eq '$partition_key'";
-        }
         $_count = 0;
         foreach ( $ids as $_id )
         {
             if ( !empty( $_filter ) )
             {
-                $_filter .= ' and ';
+                $_filter .= ' or ';
             }
             $_filter .= static::ROW_KEY . " eq '$_id'";
             $_count++;
             if ( $_count >= 14 ) // max comparisons is 15, leave one for partition key
             {
+                if ( !empty( $partition_key ) )
+                {
+                    $_filter = static::PARTITION_KEY . " eq '$partition_key' and ( $_filter )";
+                }
                 $_filters[] = $_filter;
                 $_count = 0;
             }
@@ -807,10 +883,103 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 
         if ( !empty( $_filter ) )
         {
+            if ( !empty( $partition_key ) )
+            {
+                $_filter = static::PARTITION_KEY . " eq '$partition_key' and ( $_filter )";
+            }
             $_filters[] = $_filter;
         }
 
         return $_filters;
+    }
+
+    protected function checkForIds( &$record, $ids_info, $extras = null, $on_create = false, $remove = false )
+    {
+        $_id = null;
+        if ( !empty( $ids_info ) )
+        {
+            if ( 1 == count( $ids_info ) )
+            {
+                $_info = $ids_info[0];
+                $_name = Option::get( $_info, 'name' );
+                $_value = ( is_array( $record ) ) ? Option::get( $record, $_name, null, $remove ) : $record;
+                if ( !empty( $_value ) )
+                {
+                    $_type = Option::get( $_info, 'type' );
+                    switch ( $_type )
+                    {
+                        case 'int':
+                            $_value = intval( $_value );
+                            break;
+                        case 'string':
+                            $_value = strval( $_value );
+                            break;
+                    }
+                    $_id = $_value;
+                }
+                else
+                {
+                    $_required = Option::getBool( $_info, 'required' );
+                    // could be passed in as a parameter affecting all records
+                    $_param = Option::get( $extras, $_name );
+                    if ( $on_create && $_required && empty( $_param ) )
+                    {
+                        return false;
+                    }
+                }
+            }
+            else
+            {
+                $_id = array();
+                foreach ( $ids_info as $_info )
+                {
+                    $_name = Option::get( $_info, 'name' );
+                    $_value = Option::get( $record, $_name, null, $remove );
+                    if ( !empty( $_value ) )
+                    {
+                        $_type = Option::get( $_info, 'type' );
+                        switch ( $_type )
+                        {
+                            case 'int':
+                                $_value = intval( $_value );
+                                break;
+                            case 'string':
+                                $_value = strval( $_value );
+                                break;
+                        }
+                        $_id[$_name] = $_value;
+                    }
+                    else
+                    {
+                        $_required = Option::getBool( $_info, 'required' );
+                        // could be passed in as a parameter affecting all records
+                        $_param = Option::get( $extras, $_name );
+                        if ( $on_create && $_required && empty( $_param ) )
+                        {
+                            if ( !is_array( $record ) && ( static::ROW_KEY == $_name ) )
+                            {
+                                $_id[$_name] = $record;
+                            }
+                            else
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if ( !empty( $_id ) )
+        {
+            return $_id;
+        }
+        elseif ( $on_create )
+        {
+            return array();
+        }
+
+        return false;
     }
 
     /**
@@ -1061,8 +1230,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
                 }
                 break;
 
-            case
-            static::MERGE:
+            case static::MERGE:
             case static::PATCH:
                 if ( isset( $this->_batchOps ) )
                 {
