@@ -32,6 +32,7 @@ use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
+use DreamFactory\Platform\Yii\Components\PlatformUserIdentity;
 use DreamFactory\Platform\Yii\Models\App;
 use DreamFactory\Platform\Yii\Models\AppGroup;
 use DreamFactory\Platform\Yii\Models\Config;
@@ -152,17 +153,19 @@ class Session extends BasePlatformRestResource
     {
         try
         {
+            $_user = null;
             if ( !empty( $ticket ) )
             {
                 //	Process ticket
-                $_userId = static::_validateTicket( $ticket );
+                $_user = static::_validateTicket( $ticket );
+                $_userId = $_user->id;
             }
             else
             {
                 $_userId = static::validateSession();
             }
 
-            $_result = static::generateSessionDataFromUser( $_userId );
+            $_result = static::generateSessionDataFromUser( $_userId, $_user );
             static::$_cache = Option::get( $_result, 'cached' );
             Pii::setState( 'cached', static::$_cache );
 
@@ -236,7 +239,35 @@ class Session extends BasePlatformRestResource
             throw new UnauthorizedException( 'Session authorization ticket has expired.' );
         }
 
-        return $_userId;
+        /** @var User $_user */
+        $_user = ResourceStore::model( 'user' )->with(
+            'role.role_service_accesses',
+            'role.role_system_accesses',
+            'role.apps',
+            'role.services'
+        )->findByPk( $_userId );
+
+        if ( empty( $_user ) )
+        {
+            if ( empty( $_userId ) )
+            {
+                throw new UnauthorizedException( 'The user is invalid.' );
+            }
+
+            throw new UnauthorizedException( 'The user id ' . $_userId . ' is invalid.' );
+        }
+
+        $_identity = new PlatformUserIdentity( $_user->email, null );
+
+        if ( $_identity->logInUser( $_user ) )
+        {
+            if( !Pii::user()->login( $_identity, 0 ))
+            {
+                throw new UnauthorizedException( 'The user could not be logged in.' );
+            }
+        }
+
+        return $_user;
     }
 
     /**
@@ -404,9 +435,9 @@ class Session extends BasePlatformRestResource
             $_cached['role'] = $_role;
             $_public['role'] = $_roleName;
             $_public['role_id'] = $_roleId;
-            $_public['dsp_name'] = Pii::getParam('dsp_name');
         }
 
+        $_public['dsp_name'] = Pii::getParam('dsp_name');
         $_cached['lookup'] = LookupKey::getForSession( $_roleId, $_user->id );
 
         return array(
