@@ -1,5 +1,8 @@
 # DreamFactory Services Platform&trade; Change Log
 
+## v1.5.0 (Released 2014-04-19)
+
+
 ## v1.4.x (Last Updated 2014-03-03)
 
 ### Major Foundational Changes
