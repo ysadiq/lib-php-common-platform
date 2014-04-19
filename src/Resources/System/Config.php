@@ -52,7 +52,6 @@ class Config extends BaseSystemRestResource
      * @param BasePlatformService $consumer
      * @param array               $resourceArray
      *
-     * @throws \InvalidArgumentException
      * @return Config
      */
     public function __construct( $consumer = null, $resourceArray = array() )
@@ -103,11 +102,8 @@ class Config extends BaseSystemRestResource
      * Override for GET of public info
      *
      * @param string $operation
-     * @param mixed  $resource
+     * @param null   $resource
      *
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
-     * @throws \Exception
      * @return bool
      */
     public function checkPermission( $operation, $resource = null )
@@ -133,6 +129,7 @@ class Config extends BaseSystemRestResource
             //	Check for CORS changes...
             if ( null !== ( $_hostList = Option::get( $_payload, 'allowed_hosts', null, true ) ) )
             {
+//			Log::debug( 'Allowed hosts given: ' . print_r( $_hostList, true ) );
                 SystemManager::setAllowedHosts( $_hostList );
             }
 
@@ -247,7 +244,6 @@ class Config extends BaseSystemRestResource
     }
 
     /**
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return array|mixed
      */
     protected function _getLookupKeys()
@@ -268,9 +264,6 @@ class Config extends BaseSystemRestResource
     }
 
     /**
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-     * @throws \InvalidArgumentException
-     * @throws \Exception
      * @return array|mixed
      */
     protected function _getRemoteProviders()
@@ -332,7 +325,7 @@ class Config extends BaseSystemRestResource
                         {
                             if ( $_priorRow['api_name'] == $_row->api_name )
                             {
-                                unset( $_remoteProviders[ $_index ] );
+                                unset( $_remoteProviders[$_index] );
                                 break;
                             }
                         }
