@@ -305,18 +305,20 @@ class Script extends BaseSystemRestResource
             //  Don't show output
             ob_start();
 
+            /** @noinspection PhpUndefinedFieldInspection */
             $_runner->event = $data;
-
             /** @noinspection PhpUndefinedMethodInspection */
-            $data = $_runner->executeString( $_runnerShell, $scriptId, \V8Js::FLAG_FORCE_ARRAY ); //, static::$_scriptTimeout );
+            $_scriptResult = $_runner->executeString( $_runnerShell, $scriptId, \V8Js::FLAG_FORCE_ARRAY ); //, static::$_scriptTimeout );
+            /** @noinspection PhpUndefinedFieldInspection */
+            $data = $_runner->event;
 
             //  Put the result into the event data
-            if ( !array_key_exists( 'result', $data ) )
+            if ( !array_key_exists( 'result', $_scriptResult ) )
             {
                 $data['result'] = array();
             }
 
-            $data['result'][ $scriptId ] = $data;
+            $data['result'][ $scriptId ] = $_scriptResult;
 
             $output = ob_get_clean();
 
