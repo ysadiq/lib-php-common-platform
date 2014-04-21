@@ -8,7 +8,6 @@ PRM (Version: 1.2, Namespace: xforce_prm)
 Copyright 1999-2013 salesforce.com, inc.
 All Rights Reserved
 -->
-
 <definitions targetNamespace="urn:enterprise.soap.sforce.com"
 			 xmlns="http://schemas.xmlsoap.org/wsdl/"
 			 xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
@@ -17,11 +16,8 @@ All Rights Reserved
 			 xmlns:fns="urn:fault.enterprise.soap.sforce.com"
 			 xmlns:ens="urn:sobject.enterprise.soap.sforce.com">
 	<types>
-
 		<schema elementFormDefault="qualified" xmlns="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:sobject.enterprise.soap.sforce.com">
-
 			<import namespace="urn:enterprise.soap.sforce.com" />
-
 
 			<!-- Base sObject (abstract) -->
 			<complexType name="sObject">

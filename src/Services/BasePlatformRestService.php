@@ -25,6 +25,7 @@ use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
+use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Events\ResourceEvent;
 use DreamFactory\Platform\Events\RestServiceEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -599,7 +600,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     }
 
     /**
-     * {@InheritDoc}
+     * @param string        $eventName
+     * @param PlatformEvent $event
+     * @param int           $priority
+     *
+     * @return bool|PlatformEvent
      */
     public function trigger( $eventName, $event = null, $priority = 0 )
     {
@@ -623,7 +628,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      *
      * @return bool
      */
-    protected function _triggerActionEvent( $result, $eventName = null, $event = null )
+    protected function _triggerActionEvent( &$result, $eventName = null, $event = null )
     {
         $_eventName = $eventName ? : SwaggerManager::findEvent( $this, $this->_action );
 
@@ -632,10 +637,24 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             return false;
         }
 
-        return $this->trigger(
+        $_event = $this->trigger(
             $_eventName,
             $event ? : new RestServiceEvent( $this instanceOf BaseSystemRestResource ? 'system' : $this->_apiName, $this->_resource, $result )
         );
+
+        if ( $_event instanceOf PlatformEvent )
+        {
+            $_eventData = $_event->getData();
+
+            if ( $result !== $_eventData )
+            {
+                $result = $_event->getData();
+            }
+
+            unset( $_eventData );
+        }
+
+        return $_event;
     }
 
     /**
