@@ -175,7 +175,7 @@ class User extends BaseSystemRestResource
             }
             else
             {
-                $_defaultPath = Platform::getLibraryTemplatePath( '/email/confirm_user_invitation.json', true, true );
+                $_defaultPath = Platform::getLibraryTemplatePath( '/email/confirm_user_invitation.json' );
 
                 if ( !file_exists( $_defaultPath ) )
                 {

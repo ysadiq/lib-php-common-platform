@@ -178,14 +178,12 @@ class Platform extends SeedUtility
      * Returns the library template configuration path, not the platform's config path in the root
      *
      * @param string $append
-     * @param bool   $createIfMissing
-     * @param bool   $includesFile
      *
      * @return string
      */
-    public static function getLibraryTemplatePath( $append = null, $createIfMissing = true, $includesFile = false )
+    public static function getLibraryTemplatePath( $append = null )
     {
-        return static::getLibraryConfigPath( '/templates', $append, $createIfMissing, $includesFile );
+        return static::getLibraryConfigPath( '/templates' ) . ( $append ? '/' . ltrim( $append, '/' ) : null );
     }
 
     /**

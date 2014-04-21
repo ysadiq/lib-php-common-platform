@@ -192,7 +192,7 @@ class Register extends BasePlatformRestResource
 				}
 				else
 				{
-					$_defaultPath = Platform::getLibraryTemplatePath( '/email/confirm_user_registration.json', true, true );
+					$_defaultPath = Platform::getLibraryTemplatePath( '/email/confirm_user_registration.json' );
 
 					if ( !file_exists( $_defaultPath ) )
 					{

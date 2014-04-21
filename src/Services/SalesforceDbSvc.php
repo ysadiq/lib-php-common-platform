@@ -132,7 +132,7 @@ class SalesforceDbSvc extends BaseDbSvc
     protected function _getSoapLoginResult()
     {
         //@todo use client provided Salesforce wsdl for the different versions
-        $_wsdl = Platform::getLibraryTemplatePath( '/salesforce/salesforce.enterprise.wsdl.xml', true, true );
+        $_wsdl = Platform::getLibraryTemplatePath( '/salesforce/salesforce.enterprise.wsdl.xml' );
 
         $_builder = new SoapClient\ClientBuilder( $_wsdl, $this->_username, $this->_password, $this->_securityToken );
         $_soapClient = $_builder->build();

@@ -371,7 +371,7 @@ class Password extends BasePlatformRestResource
 				}
 				else
 				{
-					$_defaultPath = Platform::getLibraryTemplatePath( '/email/confirm_password_reset.json', true, true );
+					$_defaultPath = Platform::getLibraryTemplatePath( '/email/confirm_password_reset.json' );
 
 					if ( !file_exists( $_defaultPath ) )
 					{
