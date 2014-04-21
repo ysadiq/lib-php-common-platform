@@ -170,7 +170,7 @@ class Session extends BasePlatformRestResource
             Pii::setState( 'cached', static::$_cache );
 
             //	Additional stuff for session - launchpad mainly
-            return static::addSessionExtras( $_result, Option::getDeep( $_result, 'public', 'is_sys_admin', false ), true );
+            return static::addSessionExtras( $_result, true );
         }
         catch ( \Exception $_ex )
         {
@@ -192,7 +192,7 @@ class Session extends BasePlatformRestResource
                     $_result = static::generateSessionDataFromRole( null, $_config->getRelated( 'guest_role' ) );
 
                     // additional stuff for session - launchpad mainly
-                    return static::addSessionExtras( $_result, false, true );
+                    return static::addSessionExtras( $_result, true );
                 }
             }
 
@@ -298,7 +298,7 @@ class Session extends BasePlatformRestResource
         if ( $return_extras )
         {
             // 	Additional stuff for session - launchpad mainly
-            return static::addSessionExtras( $_result, $_user->is_sys_admin, true );
+            return static::addSessionExtras( $_result, true );
         }
 
         return true;
@@ -435,6 +435,10 @@ class Session extends BasePlatformRestResource
             $_cached['role'] = $_role;
             $_public['role'] = $_roleName;
             $_public['role_id'] = $_roleId;
+        }
+        else
+        {
+            $_allowedApps = ResourceStore::model( 'app' )->findAll( 'is_active = :ia', array( ':ia' => 1 ) );
         }
 
         $_public['dsp_name'] = Pii::getParam('dsp_name');
@@ -1132,12 +1136,11 @@ class Session extends BasePlatformRestResource
 
     /**
      * @param array $session
-     * @param bool  $is_sys_admin
      * @param bool  $add_apps
      *
      * @return array
      */
-    public static function addSessionExtras( $session, $is_sys_admin = false, $add_apps = false )
+    public static function addSessionExtras( $session, $add_apps = false )
     {
         $_data = Option::get( $session, 'public' );
         $_data['ticket'] = static::$_ticket = static::_generateTicket();
@@ -1151,10 +1154,6 @@ class Session extends BasePlatformRestResource
              * @var App[] $_apps
              */
             $_apps = Option::get( $session, 'allowed_apps', array() );
-            if ( $is_sys_admin )
-            {
-                $_apps = ResourceStore::model( 'app' )->findAll( 'is_active = :ia', array( ':ia' => 1 ) );
-            }
             /**
              * @var AppGroup[] $theGroups
              */
