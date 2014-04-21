@@ -2098,7 +2098,7 @@ class SqlDbSvc extends BaseDbSvc
         $_idsInfo = Option::get( $extras, 'ids_info' );
         $_idFields = Option::get( $extras, 'id_fields' );
         $_related = Option::get( $extras, 'related' );
-        $_requireMore = Option::getBool( $extras, 'requireMore' ) || !empty( $_related );
+        $_requireMore = Option::getBool( $extras, 'require_more' ) || !empty( $_related );
         $_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
         $_relatedInfo = $this->describeTableRelated( $this->_transactionTable );
 
