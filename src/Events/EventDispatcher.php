@@ -390,13 +390,8 @@ class EventDispatcher implements EventDispatcherInterface
 
                 Log::debug( 'Script "' . $eventName . '.js" output: ' . $_output );
 
-                //  Reconstitute the event object with data from script
-                $event->fromArray( $_event );
-
-                if ( Option::getBool( $_event, 'stop_propagation' ) )
-                {
-                    $event->stopPropagation();
-                }
+                //  Reconstitute the event object with data from script and 
+                $_event = $event->fromArray( $_event )->toArray();
 
                 if ( $event->isPropagationStopped() )
                 {
