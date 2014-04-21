@@ -362,7 +362,16 @@ class Script extends BaseSystemRestResource
 //# sourceMappingURL=underscore-min.map
 JS;
 
-        return $_underscoreJs . '; ' . $script . '; PHP.event = processEvent(PHP.event);';
+        return <<< JS
+{$_underscoreJs};
+
+function processEvent(event) {
+    {$script};
+    return event;
+}
+
+PHP.event = processEvent(PHP.event);
+JS;
     }
 
     /**
