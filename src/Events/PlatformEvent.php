@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Events;
 
 use Kisma\Core\Events\SeedEvent;
+use Kisma\Core\Utility\Option;
 
 /**
  * A basic DSP event for the server-side DSP events
@@ -82,5 +83,30 @@ class PlatformEvent extends SeedEvent
     public function isDirty()
     {
         return $this->_dirty;
+    }
+
+    /**
+     * @param array $data
+     *
+     * @return $this
+     */
+    public function fromArray( $data = array() )
+    {
+        foreach ( $data as $_key => $_value )
+        {
+            //  Event ID cannot be changed
+            if ( 'event_id' != $_key )
+            {
+                Option::set( $this, $_key, $_value );
+            }
+        }
+
+        //  Special propagation stopper
+        if ( Option::get( $data, 'stop_propagation', false ) )
+        {
+            $this->stopPropagation();
+        }
+
+        return $this;
     }
 }
