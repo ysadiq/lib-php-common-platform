@@ -344,8 +344,8 @@ class Platform extends SeedUtility
     /**
      * Triggers a DSP-level event
      *
-     * @param string        $eventName
-     * @param PlatformEvent $event
+     * @param string              $eventName
+     * @param PlatformEvent|array $event Pass a full event, and null or an array of event data and an event will be created
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @throws \Exception

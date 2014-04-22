@@ -30,6 +30,7 @@ use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
+use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -254,7 +255,13 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         $ids = Option::get( $_payload, 'ids' );
         $records = Option::get( $_payload, 'record', Option::getDeep( $_payload, 'records', 'record' ) );
 
-        return $_payload;
+        //  Throw an action event that includes the request payload
+        if ( $this->_action != HttpMethod::GET )
+        {
+            $this->_triggerActionEvent( $_payload );
+        }
+
+        return $this->_requestPayload = $_payload;
     }
 
     /**
@@ -269,18 +276,14 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected function _handleGet()
     {
-        //	Phone home...
-        parent::_handleGet();
+        $_singleRow = false;
+        $_payload = $this->_determineRequestedResource( $_ids, $_records );
 
         //	Single resource by ID
         if ( !empty( $this->_resourceId ) )
         {
             return ResourceStore::select( $this->_resourceId, null, array(), true );
         }
-
-        $_singleRow = false;
-
-        $_payload = $this->_determineRequestedResource( $_ids, $_records );
 
         //	Multiple resources by ID
         if ( !empty( $_ids ) )
@@ -370,9 +373,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected function _handlePut()
     {
-        //	Phone home...
-        parent::_handlePut();
-
         $_payload = $this->_determineRequestedResource( $_ids, $_records );
         $_rollback = Option::getBool( $_payload, 'rollback' );
         $_continue = Option::getBool( $_payload, 'continue' );
@@ -469,18 +469,16 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected function _handleDelete()
     {
-        //	Phone home...
-        parent::_handleDelete();
+        $_payload = $this->_determineRequestedResource( $_ids, $_records );
 
         if ( !empty( $this->_resourceId ) )
         {
             return ResourceStore::bulkDeleteById( $this->_resourceId, false, null, null, true );
         }
 
-        $_payload = $this->_determineRequestedResource( $_ids, $_records );
-
         $_rollback = Option::getBool( $_payload, 'rollback' );
         $_continue = Option::getBool( $_payload, 'continue' );
+
         if ( !empty( $_ids ) )
         {
             return ResourceStore::bulkDeleteById( $_ids, $_rollback, null, null, false, $_continue );

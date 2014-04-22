@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Resources;
 
 use DreamFactory\Platform\Enums\ResponseFormats;
-use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Interfaces\RestResourceLike;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
@@ -62,6 +61,10 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
      * @var int The way to format the response data, not the envelope.
      */
     protected $_responseFormat = ResponseFormats::RAW;
+    /**
+     * @var bool True when the action event has already fired...
+     */
+    protected $_actionEventFired = false;
     /**
      * @var string The class to pass to from __callStatic()
      */
@@ -106,8 +109,6 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
     {
         $this->_setAction( $action );
 
-        //	Require app name for security check
-        $this->_detectAppName();
         $this->_detectResourceMembers( $resource );
         $this->_detectResponseMembers( $output_format );
 
@@ -133,16 +134,6 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
     }
 
     /**
-     * @return mixed
-     */
-    protected function _preProcess()
-    {
-        $this->trigger( ResourceServiceEvents::PRE_PROCESS );
-
-        parent::_preProcess();
-    }
-
-    /**
      * A chance to format the response
      */
     protected function _postProcess()
@@ -150,8 +141,6 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
         $this->_formatResponse();
 
         parent::_postProcess();
-
-        $this->trigger( ResourceServiceEvents::POST_PROCESS );
     }
 
     /**

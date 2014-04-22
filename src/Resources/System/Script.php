@@ -48,8 +48,6 @@ class Script extends BaseSystemRestResource
     const DEFAULT_SCRIPT_PATH = '/scripts';
     /** @type string */
     const DEFAULT_SCRIPT_PATTERN = '/*.js';
-    /** @type string */
-    const JQUERY_HEADER = '/*! jQuery v1.11.0 | (c) 2005, 2014 jQuery Foundation, Inc. | jquery.org/license */';
 
     //*************************************************************************
     //	Members
@@ -307,11 +305,18 @@ class Script extends BaseSystemRestResource
 
             /** @noinspection PhpUndefinedFieldInspection */
             $_runner->event = $data;
+            /** @noinspection PhpUndefinedFieldInspection */
+            $_runner->event_return = null;
+
             /** @noinspection PhpUndefinedMethodInspection */
             $_scriptResult = $_runner->executeString( $_runnerShell, $scriptId, \V8Js::FLAG_FORCE_ARRAY ); //, static::$_scriptTimeout );
 
             /** @noinspection PhpUndefinedFieldInspection */
-            $data = $_scriptResult;
+            if ( !empty( $_scriptResult ) )
+            {
+                $data = $_scriptResult;
+            }
+            
             $output = ob_get_clean();
 
             return $data;
@@ -359,12 +364,21 @@ JS;
         return <<< JS
 {$_underscoreJs};
 
-function processEvent(event) {
+_originalEvent = PHP.event;
+
+function _processPlatformEvent( event ) {
     {$script};
+
     return event;
 }
 
-PHP.event = processEvent(PHP.event);
+_result = _processPlatformEvent( PHP.event );
+
+if ( _result !== _originalEvent ) {
+    PHP.event = _result;
+    PHP.event_return = _result;
+    print('[original differs]');
+}
 JS;
     }
 
