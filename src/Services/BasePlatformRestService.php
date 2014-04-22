@@ -178,11 +178,12 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     {
         $this->_setAction( $action );
 
-        //	Require app name for security check
+        //  Get and validate all the request parameters
         $this->_detectAppName();
         $this->_detectResourceMembers( $resource );
         $this->_detectResponseMembers( $output_format );
 
+        //  Perform any pre-request processing
         $this->_preProcess();
 
         //	Inherent failure?
@@ -315,7 +316,12 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         if ( $_methodToCall )
         {
             $_result = call_user_func( $_methodToCall );
-            $this->_triggerActionEvent( $_result );
+
+            //  Only GETs trigger after the call
+            if ( HttpMethod::GET == $this->_action )
+            {
+                $this->_triggerActionEvent( $_result );
+            }
 
             return $_result;
         }
@@ -348,22 +354,22 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     }
 
     /**
+     * Source of the PRE_PROCESS event
+     *
      * @return mixed
      */
     protected function _preProcess()
     {
-        // throw exception here to stop processing
     }
 
     /**
-     * Handles all processing after a request.
-     * Calls the default output formatter, which, like the goggles, does nothing.
+     * Handle any post-request processing
+     * Source of the POST_PROCESS event
      *
      * @return mixed
      */
     protected function _postProcess()
     {
-        // throw exception here to stop processing
     }
 
     /**
@@ -411,9 +417,12 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
         }
 
+        /**
+         * @todo This needs to move to the resource class but
+         */
         if ( $this instanceof BasePlatformRestResource )
         {
-            $this->_triggerActionEvent( $_result, ResourceServiceEvents::AFTER_DATA_FORMAT );
+            $this->trigger( ResourceServiceEvents::AFTER_DATA_FORMAT, $_result );
         }
 
         if ( !empty( $this->_outputFormat ) )
@@ -608,6 +617,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     public function trigger( $eventName, $event = null, $priority = 0 )
     {
+        if ( is_array( $event ) )
+        {
+            $event = new RestServiceEvent( $this->_apiName, $this->_resource, $event );
+        }
+
         return Platform::trigger(
             str_ireplace(
                 array( '{api_name}', '{action}' ),
@@ -620,7 +634,15 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     }
 
     /**
-     * Triggers the appropriate event for the action /api_name/resource/resourceId
+     * Triggers the appropriate event for the action /api_name/resource/resourceId.
+     *
+     * The appropriate event is determined by the event mapping maintained in the
+     * resources' Swagger files.
+     *
+     * The event data {@see PlatformEvent::getData()} in the event is the result/response that
+     * the initial REST request is now returning to the client.
+     *
+     * These events will only trigger a single time per request.
      *
      * @param mixed            $result    The result of the call
      * @param string           $eventName The event to trigger. If not supplied, one will looked up based on the context
@@ -630,18 +652,25 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _triggerActionEvent( &$result, $eventName = null, $event = null )
     {
+        static $_triggeredEvents = array();
+
+        //  Lookup the appropriate event if not specified. 
         $_eventName = $eventName ? : SwaggerManager::findEvent( $this, $this->_action );
 
-        if ( empty( $_eventName ) )
+        //  No event or already triggered, bail.
+        if ( empty( $_eventName ) || isset( $_triggeredEvents[ $_eventName ] ) )
         {
             return false;
         }
 
-        $_event = $this->trigger(
-            $_eventName,
-            $event ? : new RestServiceEvent( $this instanceOf BaseSystemRestResource ? 'system' : $this->_apiName, $this->_resource, $result )
-        );
+        //  Construct an event if necessary
+        $_service = ( $this instanceOf BaseSystemRestResource ? 'system' : $this->_apiName );
+        $_event = $event ? : new RestServiceEvent( $_service, $this->_resource, $result );
 
+        //  Fire it and get the maybe-modified event
+        $_event = $this->trigger( $_eventName, $_event );
+
+        //  Merge back the results
         if ( $_event instanceOf PlatformEvent )
         {
             $_eventData = $_event->getData();
@@ -653,6 +682,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
             unset( $_eventData );
         }
+
+        //  Cache and bail
+        $_triggeredEvents[ $_eventName ] = $_event;
 
         return $_event;
     }

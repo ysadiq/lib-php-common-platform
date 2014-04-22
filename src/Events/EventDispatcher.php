@@ -366,7 +366,6 @@ class EventDispatcher implements EventDispatcherInterface
                 'dispatcher_id'    => spl_object_hash( $dispatcher ),
                 'trigger'          => $_pathInfo,
                 'stop_propagation' => $event->isPropagationStopped(),
-                'script_result'    => null,
             )
         );
 
@@ -385,13 +384,18 @@ class EventDispatcher implements EventDispatcherInterface
             if ( !empty( $_script ) )
             {
                 $_script = $this->_scripts[ $eventName ];
-                $_event['script_result'] = $_result = Script::runScript( $_script, $eventName . '.js', $_event, $_output );
-                $_event['script_output'] = $_output;
 
-                Log::debug( 'Script "' . $eventName . '.js" output: ' . $_output );
+                $_result = Script::runScript( $_script, $eventName . '.js', $_event, $_output );
 
-                //  Reconstitute the event object with data from script and 
-                $_event = $event->fromArray( $_event )->toArray();
+                if ( $_result instanceof PlatformEvent && $_result !== $event )
+                {
+                    $_event = $event->fromArray( $_result )->toArray();
+                }
+
+                if ( !empty( $_output ) )
+                {
+                    Log::debug( 'Script "' . $eventName . '.js" output: ' . $_output );
+                }
 
                 if ( $event->isPropagationStopped() )
                 {

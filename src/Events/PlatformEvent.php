@@ -86,7 +86,7 @@ class PlatformEvent extends SeedEvent
     }
 
     /**
-     * @param array $data
+     * @param array|PlatformEvent $data
      *
      * @return $this
      */
