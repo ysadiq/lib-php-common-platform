@@ -249,17 +249,15 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             $_payload = $_REQUEST;
         }
 
+        //  Run the event on the payload before we pull data out...
+        if ( $triggerEvent )
+        {
+            $this->_triggerActionEvent( $_payload );
+        }
+
         //	Multiple resources by ID
         $ids = Option::get( $_payload, 'ids' );
         $records = Option::get( $_payload, 'record', Option::getDeep( $_payload, 'records', 'record' ) );
-
-        if ( $triggerEvent )
-        {
-            if ( false === ( $_event = $this->_triggerActionEvent( $_payload ) ) )
-            {
-                //  No event triggered...                
-            }
-        }
 
         return $_payload;
     }
