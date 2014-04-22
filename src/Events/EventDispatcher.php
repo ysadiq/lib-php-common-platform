@@ -385,11 +385,13 @@ class EventDispatcher implements EventDispatcherInterface
             {
                 $_script = $this->_scripts[ $eventName ];
 
-                $_result = Script::runScript( $_script, $eventName . '.js', $_event, $_output );
+                $_eventData = Option::get( $_event, 'data', array() );
+                $_result = Script::runScript( $_script, $eventName . '.js', $_eventData, $_output );
 
-                if ( $_result instanceof PlatformEvent && $_result !== $event )
+                if ( is_array( $_result ) )
                 {
-                    $_event = $event->fromArray( $_result )->toArray();
+                    $_event['data'] = $_result;
+                    $event->fromArray( $_event );
                 }
 
                 if ( !empty( $_output ) )
