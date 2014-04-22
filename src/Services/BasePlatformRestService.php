@@ -360,6 +360,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _preProcess()
     {
+        $this->trigger( ResourceServiceEvents::PRE_PROCESS );
     }
 
     /**
@@ -370,6 +371,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _postProcess()
     {
+        $this->trigger( ResourceServiceEvents::POST_PROCESS );
     }
 
     /**

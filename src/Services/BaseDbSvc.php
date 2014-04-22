@@ -196,6 +196,12 @@ abstract class BaseDbSvc extends BasePlatformRestService
         );
         $_extras['include_count'] = $_includeCount;
 
+        // trigger action events...should be called somewhere more generic, but this is called by every action here...
+        if ( static::GET != $this->_action )
+        {
+            $this->_triggerActionEvent( $post_data );
+        }
+
         return $_extras;
     }
 
@@ -1959,7 +1965,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
             {
                 $_info = $ids_info[0];
                 $_name = Option::get( $_info, 'name' );
-                $_value = (is_array($record)) ? Option::get( $record, $_name, null, $remove ) : $record;
+                $_value = ( is_array( $record ) ) ? Option::get( $record, $_name, null, $remove ) : $record;
                 if ( !empty( $_value ) )
                 {
                     $_type = Option::get( $_info, 'type' );
