@@ -373,17 +373,8 @@ MYSQL;
                     );
 
                     $_events[ $_method ] = array(
-<<<<<<< HEAD
                         'event'   => $_eventName,
                         'scripts' => $_scripts,
-=======
-                        'event'   => $_eventName = str_ireplace(
-                            array( '{api_name}', '{action}', '{request.method}' ),
-                            array( $apiName, $_method, $_method ),
-                            $_eventName
-                        ),
-                        'scripts' => static::_findScripts( $_path, $_method, $_eventName ),
->>>>>>> develop
                     );
 
                     //  Set defaults
@@ -430,17 +421,11 @@ MYSQL;
         $_scriptPattern = strtolower( $apiName ) . '.' . strtolower( $method ) . '.*.js';
         $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
 
-<<<<<<< HEAD
         //  Look for $apiName*.js (i.e. {table.list}.js)
         if ( empty( $_scripts ) && strpos( $apiName, '.' ) )
         {
             $_scriptPattern = strtolower( preg_replace( '#\{(.*)+\}#', '#*#', $apiName ) ) . '.js';
             $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
-=======
-        if ( null !== $eventName && array() !== ( $_namedScripts = FileSystem::glob( $_scriptPath . '/' . $eventName . '.js' ) ) )
-        {
-            $_scripts = array_merge( $_scripts, $_namedScripts );
->>>>>>> develop
         }
 
         if ( empty( $_scripts ) )

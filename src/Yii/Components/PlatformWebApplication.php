@@ -364,13 +364,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _loadLocalConfig()
     {
-<<<<<<< HEAD
         if ( false === ( $_config = Platform::getStore()->get( 'platform.local_config' ) ) )
-=======
-        $_config = Platform::getStore()->get( 'platform.local_config' );
-
-        if ( empty( $_config ) )
->>>>>>> develop
         {
             $_config = array();
             $_configPath = Platform::getPrivatePath( '/config' );
@@ -408,12 +402,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 }
             }
 
-<<<<<<< HEAD
             Platform::getStore()->save( 'platform.local_config', $_config );
             Log::debug( 'Loaded local configuration files' );
-=======
-            Platform::getStore()->set( 'platform.local_config', $_config );
->>>>>>> develop
         }
 
         //  Merge config with our params...
@@ -592,7 +582,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             }
             else
             {
-                $_originUri = $_cache[$_key];
+                $_originUri = $_cache[ $_key ];
                 $_allowedMethods = Option::getDeep( $_cacheVerbs, $_key, 'allowed_methods' );
                 $_headers = Option::getDeep( $_cacheVerbs, $_key, 'headers' );
             }
@@ -608,8 +598,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             $_headers['Access-Control-Max-Age'] = static::CORS_DEFAULT_MAX_AGE;
 
             //	Store in cache...
-            $_cache[$_key] = $_originUri;
-            $_cacheVerbs[$_key] = array(
+            $_cache[ $_key ] = $_originUri;
+            $_cacheVerbs[ $_key ] = array(
                 'allowed_methods' => $_allowedMethods,
                 'headers'         => $_headers
             );
@@ -955,7 +945,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function setResourceNamespaces( $resourceNamespaces )
     {
-        static::$_namespaceMap[static::NS_RESOURCES] = $resourceNamespaces;
+        static::$_namespaceMap[ static::NS_RESOURCES ] = $resourceNamespaces;
 
         return $this;
     }
@@ -965,7 +955,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function getResourceNamespaces()
     {
-        return static::$_namespaceMap[static::NS_RESOURCES];
+        return static::$_namespaceMap[ static::NS_RESOURCES ];
     }
 
     /**
@@ -990,7 +980,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function setModelNamespaces( $modelNamespaces )
     {
-        static::$_namespaceMap[static::NS_MODELS] = $modelNamespaces;
+        static::$_namespaceMap[ static::NS_MODELS ] = $modelNamespaces;
 
         return $this;
     }
@@ -1000,7 +990,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function getModelNamespaces()
     {
-        return static::$_namespaceMap[static::NS_MODELS];
+        return static::$_namespaceMap[ static::NS_MODELS ];
     }
 
     /**
@@ -1024,7 +1014,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public static function getNamespaceMap( $which = null )
     {
-        return $which ? static::$_namespaceMap[$which] : static::$_namespaceMap;
+        return $which ? static::$_namespaceMap[ $which ] : static::$_namespaceMap;
     }
 
     /**
@@ -1063,11 +1053,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         if ( $prepend )
         {
-            array_unshift( static::$_namespaceMap[$which], array( $namespace, $path ) );
+            array_unshift( static::$_namespaceMap[ $which ], array( $namespace, $path ) );
         }
         else
         {
-            static::$_namespaceMap[$which][$namespace] = $path;
+            static::$_namespaceMap[ $which ][ $namespace ] = $path;
         }
     }
 

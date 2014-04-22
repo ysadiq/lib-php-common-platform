@@ -35,11 +35,7 @@ class PlatformStore extends Flexistore
     /**
      * @type string
      */
-<<<<<<< HEAD
     const DEFAULT_NAMESPACE = 'DreamFactory.Platform';
-=======
-    const DEFAULT_NAMESPACE = 'df.platform';
->>>>>>> develop
     /**
      * @type string
      */
@@ -57,21 +53,10 @@ class PlatformStore extends Flexistore
      */
     public function __construct( $type = CacheTypes::PHP_FILE, array $data = array() )
     {
-<<<<<<< HEAD
         parent::__construct( $type, static::DEFAULT_NAMESPACE, '.dsp', false );
 
         /** @noinspection PhpUndefinedMethodInspection */
         $this->setDirectory( Platform::getPrivatePath( static::STORE_CACHE_PATH ) );
-=======
-        parent::__construct(
-            $type,
-            array(
-                'namespace' => static::DEFAULT_NAMESPACE,
-                'arguments' => array( Platform::getPrivatePath( static::STORE_CACHE_PATH ), '.dfcc.php' )
-            ),
-            false
-        );
->>>>>>> develop
 
         //  Load it up
         foreach ( $data as $_key => $_value )
@@ -79,8 +64,4 @@ class PlatformStore extends Flexistore
             $this->_store->save( $_key, $_value );
         }
     }
-<<<<<<< HEAD
-
-=======
->>>>>>> develop
 }

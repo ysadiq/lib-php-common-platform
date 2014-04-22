@@ -51,13 +51,6 @@ class EventDispatcher implements EventDispatcherInterface
      */
     const DEFAULT_USER_AGENT = 'DreamFactory/SSE_1.0';
     /**
-<<<<<<< HEAD
-=======
-     * @type string The name of the subdirectory under private in which to save the store
-     */
-    const DEFAULT_FILE_CACHE_PATH = '/store.cache';
-    /**
->>>>>>> develop
      * @type string The default namespace for our store
      */
     const DEFAULT_STORE_NAMESPACE = 'platform.events';
@@ -103,7 +96,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected $_sorted = array();
     /**
-     * @var \Kisma\Core\Components\Flexistore
+     * @var PlatformStore
      */
     protected static $_store = null;
 
@@ -125,46 +118,12 @@ class EventDispatcher implements EventDispatcherInterface
 
         try
         {
-            $this->_initializeStore();
             $this->_initializeEvents();
             $this->_initializeEventScripting();
         }
         catch ( \Exception $_ex )
         {
             Log::notice( 'Event system unavailable at this time.' );
-        }
-    }
-
-    /**
-     * Create a shared store for server-side events
-     *
-<<<<<<< HEAD
-     * @return \Kisma\Core\Components\Flexistore
-     */
-    protected static function _initializeStore()
-=======
-     * @param string $type
-     * @param string $namespace
-     *
-     * @return \Kisma\Core\Components\Flexistore
-     */
-    protected static function _initializeStore( $type = CacheTypes::PHP_FILE, $namespace = self::DEFAULT_STORE_NAMESPACE )
->>>>>>> develop
-    {
-        if ( null === static::$_store )
-        {
-            switch ( $type )
-            {
-                case CacheTypes::PHP_FILE:
-                    return Flexistore::createFileStore(
-                        Platform::getPrivatePath( static::DEFAULT_FILE_CACHE_PATH ),
-                        null,
-                        $namespace ? : static::DEFAULT_STORE_NAMESPACE
-                    );
-
-                default:
-                    return new Flexistore( $type, array( 'namespace' => $namespace ) );
-            }
         }
     }
 
@@ -181,7 +140,7 @@ class EventDispatcher implements EventDispatcherInterface
         }
 
         /** @var \DreamFactory\Platform\Yii\Models\Event[] $_events */
-        $_events = static::_getStore()->get( 'listeners', array() );
+        $_events = Platform::getStore()->get( 'listeners', array() );
 
         if ( empty( $_events ) || !is_array( $_events ) )
         {
@@ -192,18 +151,8 @@ class EventDispatcher implements EventDispatcherInterface
         {
             foreach ( $_events as $_event )
             {
-<<<<<<< HEAD
-                $this->_listeners[$_event['event_name']] = $_event['listeners'];
+                $this->_listeners[ $_event['event_name'] ] = $_event['listeners'];
                 unset( $_event );
-=======
-                foreach ( $_events as $_event )
-                {
-                    $this->_listeners[ $_event->event_name ] = $_event->listeners;
-                    unset( $_event );
-                }
-
-                unset( $_events );
->>>>>>> develop
             }
 
             unset( $_events );
@@ -235,7 +184,7 @@ class EventDispatcher implements EventDispatcherInterface
         //  Restore any cached ones first...
         if ( static::_getStore()->contains( 'scripts' ) )
         {
-            $this->_scripts = static::_getStore()->get( 'scripts', array() );
+            $this->_scripts = Platform::getStore()->fetch( 'scripts', array() );
         }
 
         if ( empty( $this->_scripts ) )
@@ -246,23 +195,12 @@ class EventDispatcher implements EventDispatcherInterface
                 {
                     foreach ( $_routeInfo as $_methodInfo )
                     {
-<<<<<<< HEAD
                         foreach ( Option::get( $_methodInfo, 'scripts', array() ) as $_script )
                         {
                             $_eventKey = str_replace( '.js', null, $_script );
-                            $this->_scripts[$_eventKey] = $_scriptPath . '/' . $_script;
+                            $this->_scripts[ $_eventKey ] = $_scriptPath . '/' . $_script;
                             $_count++;
                         }
-=======
-                        $_eventKey = str_replace( '.js', null, $_script );
-
-                        $this->_scripts[ $_eventKey ] = $_scriptPath . '/' . $_script;
-//
-//                        if ( static::$_logAllEvents )
-//                        {
-//                            Log::debug( 'Registered script "' . $this->_scripts[ $_eventKey ] . '" for event "' . $_eventKey . '"' );
-//                        }
->>>>>>> develop
                     }
                 }
             }
@@ -290,23 +228,8 @@ class EventDispatcher implements EventDispatcherInterface
 
             foreach ( array_keys( $this->_listeners ) as $_eventName )
             {
-<<<<<<< HEAD
-                $_events[] = array( 'event_name' => $_eventName, 'listeners' => $this->_listeners[$_eventName] );
+                $_events[] = array( 'event_name' => $_eventName, 'listeners' => $this->_listeners[ $_eventName ] );
             }
-=======
-                /** @var \DreamFactory\Platform\Yii\Models\Event $_model */
-                /** @noinspection PhpUndefinedMethodInspection */
-                $_model = ResourceStore::model( 'event' )->byEventName( $_eventName )->find();
-
-                if ( null === $_model )
-                {
-                    $_model = ResourceStore::model( 'event' );
-                    $_model->setIsNewRecord( true );
-                    $_model->event_name = $_eventName;
-                }
-
-                $_model->listeners = $this->_listeners[ $_eventName ];
->>>>>>> develop
 
             try
             {
@@ -392,7 +315,7 @@ class EventDispatcher implements EventDispatcherInterface
         //  Anything to do?
         $eventName = $this->_normalizeEventName( $event, $eventName );
 
-        $_pathInfo = str_replace( '/rest', null, Pii::app()->getRequestObject()->getPathInfo() );
+        $_pathInfo = str_replace( '/rest', null, Pii::request( false )->getPathInfo() );
 
         if ( static::$_logAllEvents )
         {
@@ -777,7 +700,7 @@ class EventDispatcher implements EventDispatcherInterface
             Option::server( 'REMOTE_ADDR', gethostbyname( $_host ) )
         );
 
-        $_ro = Pii::app()->getRequestObject();
+        $_ro = Pii::request( false );
 
         $_container = array(
             'success' => $success,
@@ -853,7 +776,7 @@ class EventDispatcher implements EventDispatcherInterface
         if ( null === $_requestValues )
         {
             $_requestValues = array();
-            $_request = Pii::app()->getRequestObject();
+            $_request = Pii::request( false );
 
             if ( !empty( $_request ) )
             {

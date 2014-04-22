@@ -19,17 +19,13 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use Doctrine\Common\Cache\CacheProvider;
 use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
+use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
-use DreamFactory\Platform\Interfaces\PersistentStoreLike;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
-<<<<<<< HEAD
 use Kisma\Core\Components\Flexistore;
-=======
->>>>>>> develop
 use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\SeedUtility;
@@ -56,7 +52,7 @@ class Platform extends SeedUtility
     //*************************************************************************
 
     /**
-     * @var PersistentStoreLike The persistent store to use for local storage
+     * @var PlatformStore|Flexistore The persistent store to use for local storage
      */
     protected static $_persistentStore;
 
@@ -329,11 +325,7 @@ class Platform extends SeedUtility
      *
      * @param array $data An array of key value pairs with which to seed the store
      *
-<<<<<<< HEAD
-     * @return CacheProvider|Flexistore
-=======
-     * @return PlatformStore
->>>>>>> develop
+     * @return PlatformStore|Flexistore
      */
     public static function getStore( array $data = array() )
     {
@@ -410,7 +402,7 @@ class Platform extends SeedUtility
      */
     public static function trigger( $eventName, $event = null )
     {
-        return Pii::trigger( $eventName, $event );
+        return Pii::app()->trigger( $eventName, $event );
     }
 
     /**
@@ -425,7 +417,7 @@ class Platform extends SeedUtility
      */
     public static function on( $eventName, $listener, $priority = 0 )
     {
-        Pii::on( $eventName, $listener, $priority );
+        Pii::app()->on( $eventName, $listener, $priority );
     }
 
     /**
@@ -438,7 +430,17 @@ class Platform extends SeedUtility
      */
     public static function off( $eventName, $listener )
     {
-        Pii::off( $eventName, $listener );
+        Pii::app()->off( $eventName, $listener );
+    }
+
+    /**
+     * @return EventDispatcher
+     */
+    public static function getDispatcher()
+    {
+        static $_dispatcher;
+
+        return $_dispatcher ? : $_dispatcher = Pii::app()->getDispatcher();
     }
 
 }
