@@ -330,21 +330,32 @@ SQL;
 
             foreach ( Option::get( $_api, 'operations', array() ) as $_operation )
             {
-                if ( null !== ( $_eventName = Option::get( $_operation, 'event_name' ) ) )
+                if ( null !== ( $_swaggerEvents = Option::get( $_operation, 'event_name' ) ) )
                 {
                     $_method = strtolower( Option::get( $_operation, 'method', HttpMethod::GET ) );
 
-                    $_events[ $_method ] = array(
-                        'event'   => $_eventName = str_ireplace(
+                    $_scripts = array();
+                    $_eventsThrown = array();
+
+                    foreach ( Option::clean( $_swaggerEvents ) as $_eventName )
+                    {
+                        $_scripts += static::_findScripts( $_path, $_method, $_eventName );
+
+                        $_eventsThrown[] = str_ireplace(
                             array( '{api_name}', '{action}', '{request.method}' ),
                             array( $apiName, $_method, $_method ),
                             $_eventName
-                        ),
-                        'scripts' => static::_findScripts( $_path, $_method, $_eventName ),
+                        );
+                    }
+
+                    $_events[ $_method ] = array(
+                        'event'   => $_eventsThrown,
+                        'scripts' => $_scripts,
                     );
+
                 }
 
-                unset( $_operation );
+                unset( $_operation, $_scripts, $_eventsThrown );
             }
 
             $_eventMap[ str_ireplace( '{api_name}', $apiName, $_api['path'] ) ] = $_events;

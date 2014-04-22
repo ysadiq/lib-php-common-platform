@@ -18,6 +18,8 @@
  * limitations under the License.
  */
 
+use DreamFactory\Platform\Services\SwaggerManager;
+
 $_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
 
 $_base['apis'] = array(

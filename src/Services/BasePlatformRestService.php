@@ -656,39 +656,45 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     {
         static $_triggeredEvents = array();
 
-        //  Lookup the appropriate event if not specified. 
-        $_eventName = $eventName ? : SwaggerManager::findEvent( $this, $this->_action );
+        //  Lookup the appropriate event if not specified.
+        $_swaggerEvents = $eventName ? : SwaggerManager::findEvent( $this, $this->_action );
 
-        //  No event or already triggered, bail.
-        if ( empty( $_eventName ) || isset( $_triggeredEvents[ $_eventName ] ) )
+        $_result = array();
+
+        foreach ( Option::clean( $_swaggerEvents ) as $_eventName )
         {
-            return false;
-        }
-
-        //  Construct an event if necessary
-        $_service = ( $this instanceOf BaseSystemRestResource ? 'system' : $this->_apiName );
-        $_event = $event ? : new RestServiceEvent( $_service, $this->_resource, $result );
-
-        //  Fire it and get the maybe-modified event
-        $_event = $this->trigger( $_eventName, $_event );
-
-        //  Merge back the results
-        if ( $_event instanceOf PlatformEvent )
-        {
-            $_eventData = $_event->getData();
-
-            if ( $result !== $_eventData )
+            //  No event or already triggered, bail.
+            if ( empty( $_eventName ) || isset( $_triggeredEvents[ $_eventName ] ) )
             {
-                $result = $_event->getData();
+                continue;
             }
 
-            unset( $_eventData );
+            //  Construct an event if necessary
+            $_service = ( $this instanceOf BaseSystemRestResource ? 'system' : $this->_apiName );
+            $_event = $event ? : new RestServiceEvent( $_service, $this->_resource, $result );
+
+            //  Fire it and get the maybe-modified event
+            $_event = $this->trigger( $_eventName, $_event );
+
+            //  Merge back the results
+            if ( $_event instanceOf PlatformEvent )
+            {
+                $_eventData = $_event->getData();
+
+                if ( $result !== $_eventData )
+                {
+                    $result = $_event->getData();
+                }
+
+                unset( $_eventData );
+            }
+
+            //  Cache and bail
+            $_triggeredEvents[ $_eventName ] = $_event;
+            $_result[] = $_event;
         }
 
-        //  Cache and bail
-        $_triggeredEvents[ $_eventName ] = $_event;
-
-        return $_event;
+        return $_result;
     }
 
     /**

@@ -33,7 +33,7 @@ $_base['apis'] = array(
                 'nickname'   => 'getResources',
                 'type'       => 'Resources',
                 'notes'      => 'See listed operations for each resource available.',
-                'event_name' => 'resources.list',
+                'event_name' => '{api_name}.list',
             ),
         ),
         'description' => 'Operations available for system management.',
@@ -74,9 +74,9 @@ foreach ( $_namespaces as $_namespace )
         $_key = strtolower( str_replace( '.swagger.php', null, $_file ) );
 
         /** @noinspection PhpIncludeInspection */
-        $_load[$_key] = require( $_resourcePath . '/' . $_file );
-        $_base['apis'] = array_merge( $_base['apis'], Option::get( $_load[$_key], 'apis', array() ) );
-        $_base['models'] = array_merge( $_base['models'], Option::get( $_load[$_key], 'models', array() ) );
+        $_load[ $_key ] = require( $_resourcePath . '/' . $_file );
+        $_base['apis'] = array_merge( $_base['apis'], Option::get( $_load[ $_key ], 'apis', array() ) );
+        $_base['models'] = array_merge( $_base['models'], Option::get( $_load[ $_key ], 'models', array() ) );
 
         Log::debug( '    * Found ' . $_file );
         unset( $_load );

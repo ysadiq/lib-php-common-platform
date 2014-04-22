@@ -644,7 +644,7 @@ $_base['apis'] = array(
                 'summary'          => 'createFile() - Create a new file.',
                 'nickname'         => 'createFile',
                 'type'             => 'FileResponse',
-                'event_name'       => array( '{api_name}.{container}.{file_path}.create', '{api_name}.{container}.new_file' ),
+                'event_name'       => array( '{api_name}.{container}.{file_path}.create', '{api_name}.{container}.file_created' ),
                 'parameters'       => array(
                     array(
                         'name'          => 'container',
