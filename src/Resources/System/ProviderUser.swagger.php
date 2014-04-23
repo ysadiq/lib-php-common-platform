@@ -318,7 +318,7 @@ $_providerProviderUser['apis'] = array(
         'description' => 'Operations for provider user administration.',
     ),
     array(
-        'path'        => '/{api_name}/user/{id}',
+        'path'        => '/{api_name}/provider_user/{id}',
         'operations'  => array(
             array(
                 'method'           => 'GET',
