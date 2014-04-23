@@ -1881,6 +1881,8 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
             if ( $_ex instanceof RestException )
             {
+                $_temp = $_ex->getContext();
+                $_context = (empty($_temp)) ? $_context : $_temp;
                 throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
             }
 
