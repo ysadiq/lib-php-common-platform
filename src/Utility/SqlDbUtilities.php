@@ -1361,6 +1361,10 @@ class SqlDbUtilities implements SqlDbDriverTypes
                 {
                     $values = ( isset( $field['values']['value'] ) ) ? $field['values']['value'] : array();
                 }
+                if (!is_array($values))
+                {
+                    $values = array_map( 'trim', explode( ',', trim( $values, ',' ) ) );
+                }
                 if ( !empty( $values ) )
                 {
                     foreach ( $values as $value )
