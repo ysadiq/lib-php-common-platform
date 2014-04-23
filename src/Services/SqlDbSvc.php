@@ -2281,6 +2281,8 @@ class SqlDbSvc extends BaseDbSvc
                                     if ( $_id == Option::get( $_record, $_idName ) )
                                     {
                                         $_out[$_index] = $_record;
+                                        $_found = true;
+                                        continue;
                                     }
                                 }
                                 if ( !$_found )
