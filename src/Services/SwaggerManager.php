@@ -59,6 +59,10 @@ class SwaggerManager extends BasePlatformRestService
      */
     const SWAGGER_EVENT_CACHE_FILE = '/_events.json';
     /**
+     * @const string A cached events list derived from Swagger
+     */
+    const SWAGGER_EVENT_CUBE_FILE = '/_events.cubed.json';
+    /**
      * @const string The private storage directory for non-generated files
      */
     const SWAGGER_CUSTOM_DIR = '/custom';
@@ -80,9 +84,17 @@ class SwaggerManager extends BasePlatformRestService
     //*************************************************************************
 
     /**
-     * @var array The event map
+     * @var array The events mapped by route then method
      */
     protected static $_eventMap = false;
+    /**
+     * @var array Events mapped by name
+     */
+    protected static $_eventCube = array();
+    /**
+     * @var array The default cube structure
+     */
+    protected static $_cubeDefaults = array( 'triggers' => array(), );
     /**
      * @var array The core DSP services that are built-in
      */
@@ -166,17 +178,17 @@ class SwaggerManager extends BasePlatformRestService
         );
 
         // build services from database
-        $_sql = <<<SQL
+        $_sql = <<<MYSQL
 SELECT
 	api_name,
 	type_id,
 	storage_type_id,
 	description
 FROM
-	df_sys_service
+    df_sys_service	
 ORDER BY
 	api_name ASC
-SQL;
+MYSQL;
 
         //	Pull the services and add in the built-in services
         $_result = array_merge(
@@ -189,6 +201,7 @@ SQL;
 
         //	Initialize the event map
         static::$_eventMap = static::$_eventMap ? : array();
+        static::$_eventCube = static::$_eventCube ? : array();
 
         //	Spin through services and pull the configs
         foreach ( $_result as $_service )
@@ -230,14 +243,14 @@ SQL;
 
                     if ( file_exists( $_filePath ) )
                     {
-                        // todo check for RAML and convert
+                        //@todo check for RAML and convert
                     }
                 }
             }
 
             if ( empty( $_content ) )
             {
-                Log::info( '  * No Swagger content found for service "' . $_apiName . '"' );
+                Log::debug( '    ! Resource "' . $_apiName . '" not available. No Swagger definition.' );
                 continue;
             }
 
@@ -264,13 +277,21 @@ SQL;
                 static::$_eventMap[ $_apiName ] = array();
             }
 
+            //	Parse the events while we get the chance...
             $_serviceEvents = static::_parseSwaggerEvents( $_apiName, json_decode( $_content, true ) );
+            $_cube = Option::get( $_serviceEvents, '.cubed', array(), true );
 
             //	Parse the events while we get the chance...
             static::$_eventMap[ $_apiName ] = array_merge(
                 Option::clean( static::$_eventMap[ $_apiName ] ),
                 $_serviceEvents
             );
+
+            if ( !empty( $_cube ) )
+            {
+                static::$_eventCube[] = $_cube;
+                unset( $_cube );
+            }
 
             unset( $_content, $_filePath, $_service, $_serviceEvents );
         }
@@ -289,11 +310,23 @@ SQL;
         }
 
         //	Write event cache file
+        ksort( static::$_eventMap );
+
         if ( false ===
-             file_put_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE, json_encode( static::$_eventMap, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT ) )
+             file_put_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE, json_encode( static::$_eventMap, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) )
         )
         {
             Log::error( '  * File system error writing events cache file: ' . $_cachePath . static::SWAGGER_EVENT_CACHE_FILE );
+        }
+
+        //	Write event cube file
+        ksort( static::$_eventCube );
+
+        if ( false ===
+             file_put_contents( $_cachePath . static::SWAGGER_EVENT_CUBE_FILE, json_encode( static::$_eventCube, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) )
+        )
+        {
+            Log::error( '  * File system error writing events cache file: ' . $_cachePath . static::SWAGGER_EVENT_CUBE_FILE );
         }
 
         //	Create example file
@@ -316,7 +349,7 @@ SQL;
      */
     protected static function _parseSwaggerEvents( $apiName, $data )
     {
-        $_eventMap = array();
+        $_eventCube = $_eventMap = array();
 
         foreach ( Option::get( $data, 'apis', array() ) as $_api )
         {
@@ -336,6 +369,7 @@ SQL;
 
                     $_scripts = array();
                     $_eventsThrown = array();
+                    $_eventName = null;
 
                     foreach ( Option::clean( $_swaggerEvents ) as $_eventName )
                     {
@@ -353,9 +387,14 @@ SQL;
                         'scripts' => $_scripts,
                     );
 
+                    //  Set defaults
+                    if ( !in_array( $_eventName, $_eventCube ) )
+                    {
+                        $_eventCube[ $_eventName ] = static::$_cubeDefaults;
+                    }
+                    $_eventCube[ $_eventName ]['triggers'][ $_path ][] = $_scripts;
                 }
 
-                unset( $_operation, $_scripts, $_eventsThrown );
             }
 
             $_eventMap[ str_ireplace( '{api_name}', $apiName, $_api['path'] ) ] = $_events;
@@ -383,6 +422,17 @@ SQL;
         {
             $_scriptPath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
         }
+
+//        //  Look for $apiName.$method.*.js
+//        $_scriptPattern = strtolower( $apiName ) . '.' . strtolower( $method ) . '.*.js';
+//        $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
+//
+//        //  Look for $apiName*.js (i.e. {table.list}.js)
+//        if ( empty( $_scripts ) && strpos( $apiName, '.' ) )
+//        {
+//            $_scriptPattern = strtolower( preg_replace( '#\{(.*)+\}#', '#*#', $apiName ) ) . '.js';
+//            $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
+//        }
 
         $_scriptPattern = strtolower( $apiName ) . '.' . strtolower( $method ) . '.*.js';
         $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
@@ -432,7 +482,7 @@ SQL;
 
         $_map = static::getEventMap();
 
-        $_hash = sha1( ( $service ? get_class( $service ) : '*' ) . $method );
+        $_hash = sha1( ( $service ? get_class( $service ) : '*' ) . ( $method = strtolower( $method ) ) );
 
         if ( isset( $_cache[ $_hash ] ) )
         {
@@ -446,7 +496,7 @@ SQL;
             {
                 foreach ( $_path as $_method => $_info )
                 {
-                    if ( 0 !== strcasecmp( $_method, $method ) )
+                    if ( $_method != $method )
                     {
                         continue;
                     }
@@ -463,7 +513,8 @@ SQL;
             return false;
         }
 
-        $_resource = $service->getResource();
+        $_apiName = $service->getApiName();
+        $_resource = $service->getResource() ? : $_apiName;
 
         if ( empty( $_resource ) )
         {
@@ -487,6 +538,17 @@ SQL;
         {
             return null;
         }
+
+//        //  Look for $apiName.$method.*.js
+//        $_scriptPattern = strtolower( $apiName ) . '.' . strtolower( $method ) . '.*.js';
+//        $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
+//
+//        //  Look for $apiName*.js (i.e. {table.list}.js)
+//        if ( empty( $_scripts ) && strpos( $apiName, '.' ) )
+//        {
+//            $_scriptPattern = strtolower( preg_replace( '#\{(.*)+\}#', '#*#', $apiName ) ) . '.js';
+//            $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
+//        }
 
         $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '$@D';
 
