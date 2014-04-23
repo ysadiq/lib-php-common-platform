@@ -2033,7 +2033,18 @@ class SqlDbSvc extends BaseDbSvc
                     $_rows = $_command->update( $this->_transactionTable, $_parsed, $_where, $_params );
                     if ( 0 >= $_rows )
                     {
-                        throw new NotFoundException( "Record with id '" . print_r( $id, true ) . "' not found." );
+                        // could have just not updated anything, or could be bad id
+                        $_fields = ( empty( $_fields ) ) ? $_idFields : $_fields;
+                        $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
+                        $_bindings = Option::get( $_result, 'bindings' );
+                        $_fields = Option::get( $_result, 'fields' );
+                        $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+
+                        $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                        if ( empty( $_result ) )
+                        {
+                            throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
+                        }
                     }
                 }
 
@@ -2079,7 +2090,21 @@ class SqlDbSvc extends BaseDbSvc
                 $_rows = $_command->delete( $this->_transactionTable, $_where, $_params );
                 if ( 0 >= $_rows )
                 {
-                    throw new NotFoundException( "Record with id '" . print_r( $id, true ) . "' not found." );
+                    if ( empty( $_out ) )
+                    {
+                        // could have just not updated anything, or could be bad id
+                        $_fields = ( empty( $_fields ) ) ? $_idFields : $_fields;
+                        $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
+                        $_bindings = Option::get( $_result, 'bindings' );
+                        $_fields = Option::get( $_result, 'fields' );
+                        $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+
+                        $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                        if ( empty( $_result ) )
+                        {
+                            throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
+                        }
+                    }
                 }
 
                 if ( empty( $_out ) )
@@ -2280,24 +2305,22 @@ class SqlDbSvc extends BaseDbSvc
                         $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
                         $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
-                        if ( empty( $_result ) )
-                        {
-                            throw new NotFoundException( 'No records were found using the given identifiers.' );
-                        }
-
                         if ( count( $this->_batchIds ) !== count( $_result ) )
                         {
                             $_errors = array();
                             foreach ( $this->_batchIds as $_index => $_id )
                             {
                                 $_found = false;
-                                foreach ( $_result as $_record )
+                                if ( empty( $_result ) )
                                 {
-                                    if ( $_id == Option::get( $_record, $_idName ) )
+                                    foreach ( $_result as $_record )
                                     {
-                                        $_out[$_index] = $_record;
-                                        $_found = true;
-                                        continue;
+                                        if ( $_id == Option::get( $_record, $_idName ) )
+                                        {
+                                            $_out[$_index] = $_record;
+                                            $_found = true;
+                                            continue;
+                                        }
                                     }
                                 }
                                 if ( !$_found )
@@ -2314,11 +2337,6 @@ class SqlDbSvc extends BaseDbSvc
                     }
 
                     $_rows = $_command->delete( $this->_transactionTable, $_where, $_params );
-                    if ( 0 === $_rows )
-                    {
-                        throw new NotFoundException( 'No records were found using the given identifiers.' );
-                    }
-
                     if ( count( $this->_batchIds ) !== $_rows )
                     {
                         throw new BadRequestException( 'Batch Error: Not all requested records were deleted.' );
