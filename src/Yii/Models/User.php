@@ -1,6 +1,4 @@
 <?php
-use DreamFactory\Platform\Yii\Models\ProviderUser;
-
 /**
  * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
@@ -412,8 +410,8 @@ class User extends BasePlatformSystemModel
             'role.apps',
             'role.services'
         )->findByAttributes(
-                array( 'email' => $userName )
-            );
+            array( 'email' => $userName )
+        );
 
         if ( empty( $_user ) )
         {
@@ -617,7 +615,7 @@ class User extends BasePlatformSystemModel
             $_data = array();
         }
 
-        $_data[$providerId . '.profile'] = $profile->toArray();
+        $_data[ $providerId . '.profile' ] = $profile->toArray();
 
         //	Save the remote profile info... and then the row
         $_user->user_data = $_data;
