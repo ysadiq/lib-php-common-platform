@@ -28,6 +28,7 @@ use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\Schwag;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Utility\Option;
@@ -87,7 +88,7 @@ class Event extends BaseSystemRestResource
     protected function _getAllEvents( $as_cached = false )
     {
         //  Make sure the file exists.
-        $_cacheFile = Platform::getSwaggerPath( SwaggerManager::SWAGGER_CACHE_DIR . SwaggerManager::SWAGGER_EVENT_CACHE_FILE, true, true );
+        $_cacheFile = Platform::getSwaggerPath( SwaggerManager::SWAGGER_CACHE_DIR . Schwag::SWAGGER_EVENT_CACHE_FILE, true, true );
 
         //  If not, rebuild the swagger cache
         if ( !file_exists( $_cacheFile ) )
@@ -152,7 +153,7 @@ class Event extends BaseSystemRestResource
                     $_service['paths'][] = $_path;
                     unset( $_path );
                 }
-                
+
                 $_rebuild[] = $_service;
                 unset( $_service );
             }
@@ -277,7 +278,7 @@ class Event extends BaseSystemRestResource
             {
                 if ( $_listener == $_listenerToRemove )
                 {
-                    unset( $_storedListeners[$_key] );
+                    unset( $_storedListeners[ $_key ] );
                 }
             }
         }

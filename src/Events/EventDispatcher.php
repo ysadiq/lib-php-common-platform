@@ -19,11 +19,14 @@
  */
 namespace DreamFactory\Platform\Events;
 
+error_reporting( -1 );
+ini_set( 'display_errors', 1 );
+
 use DreamFactory\Platform\Resources\System\Script;
 use DreamFactory\Platform\Services\BasePlatformRestService;
-use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\Schwag;
 use DreamFactory\Yii\Utility\Pii;
 use Guzzle\Http\Client;
 use Guzzle\Http\Exception\MultiTransferException;
@@ -213,7 +216,7 @@ class EventDispatcher implements EventDispatcherInterface
 
         $_scriptPath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
 
-        foreach ( SwaggerManager::getEventMap() as $_routes )
+        foreach ( Schwag::getEventMap() as $_routes )
         {
             foreach ( $_routes as $_routeInfo )
             {

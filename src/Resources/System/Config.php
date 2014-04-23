@@ -32,6 +32,7 @@ use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Yii\Models\LookupKey;
 use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Option;
 
@@ -136,11 +137,11 @@ class Config extends BaseSystemRestResource
     /**
      * {@InheritDoc}
      */
-    protected function _determineRequestedResource( &$ids = null, &$records = null )
+    protected function _determineRequestedResource( &$ids = null, &$records = null, $triggerEvent = true )
     {
-        $_payload = parent::_determineRequestedResource( $ids, $records );
+        $_payload = parent::_determineRequestedResource( $ids, $records, $triggerEvent );
 
-        if ( 'GET' != $this->_action )
+        if ( HttpMethod::GET != $this->_action )
         {
             //	Check for CORS changes...
             if ( null !== ( $_hostList = Option::get( $_payload, 'allowed_hosts', null, true ) ) )
