@@ -34,7 +34,6 @@ use DreamFactory\Platform\Exceptions\NoExtraActionsException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Interfaces\TransformerLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
-use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestResponse;
@@ -360,7 +359,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _preProcess()
     {
-        if ( $this instanceof BasePlatformRestResource )
+        if ( $this instanceof BasePlatformRestResource || $this instanceof BaseDbSvc || $this instanceof NoSqlDbSvc || $this instanceof SqlDbSvc )
         {
             $this->_triggerActionEvent( $this->_requestPayload, ResourceServiceEvents::PRE_PROCESS );
         }
@@ -374,7 +373,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _postProcess()
     {
-        if ( $this instanceof BasePlatformRestResource )
+        if ( $this instanceof BasePlatformRestResource || $this instanceof BaseDbSvc || $this instanceof NoSqlDbSvc || $this instanceof SqlDbSvc )
         {
             $this->_triggerActionEvent( $this->_response, ResourceServiceEvents::POST_PROCESS );
         }
@@ -677,8 +676,15 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             }
 
             //  Construct an event if necessary
-            $_service = ( $this instanceOf BaseSystemRestResource ? 'system' : $this->_apiName );
+            $_service = $this->_apiName;
             $_event = $event ? : new RestServiceEvent( $_service, $this->_resource, $result );
+
+            switch ( $this->_apiName )
+            {
+                case 'db':
+                    $_eventName = str_replace( '{api_name}', $this->_apiName . '.' . $this->_resource, $_eventName );
+                    break;
+            }
 
             //  Fire it and get the maybe-modified event
             $_event = $this->trigger( $_eventName, $_event );

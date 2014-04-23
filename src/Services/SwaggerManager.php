@@ -466,11 +466,21 @@ SQL;
             return false;
         }
 
-        $_resource = $service->getResource();
+        $_apiName = $service->getApiName();
+        $_savedResource = $_resource = $service->getResource();
 
         if ( empty( $_resource ) )
         {
-            $_resource = $service->getApiName();
+            $_resource = $_apiName;
+        }
+        else
+        {
+            switch ( $_apiName )
+            {
+                case 'db':
+                    $_resource = 'db';
+                    break;
+            }
         }
 
         if ( null === ( $_resources = Option::get( $_map, $_resource ) ) )
@@ -485,6 +495,11 @@ SQL;
         }
 
         $_path = str_replace( 'rest', null, trim( !Pii::cli() ? Pii::app()->getRequestObject()->getPathInfo() : $service->getResourcePath(), '/' ) );
+
+        if ( 'db' == $_apiName && 'db' == $_resource )
+        {
+            $_path = str_replace( $_savedResource, '{table_name}', $_path );
+        }
 
         if ( empty( $_path ) )
         {
@@ -513,6 +528,13 @@ SQL;
 
             if ( null !== ( $_eventName = Option::get( $_methodInfo, 'event' ) ) )
             {
+                switch ( $_apiName )
+                {
+                    case 'db':
+                        $_eventName = str_replace( '{table_name}', $_savedResource, $_eventName );
+                        break;
+                }
+
                 return $_cache[ $_hash ] = $_eventName;
             }
         }
