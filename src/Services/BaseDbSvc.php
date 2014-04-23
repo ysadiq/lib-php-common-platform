@@ -200,7 +200,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         // trigger action events...should be called somewhere more generic, but this is called by every action here...
         if ( static::GET != $this->_action )
         {
-            $this->_triggerActionEvent( $post_data, null, null, array( '{table_name}' => $this->_resource ) );
+            $this->_triggerActionEvent( $post_data );
         }
 
         return $_extras;
@@ -437,11 +437,12 @@ abstract class BaseDbSvc extends BasePlatformRestService
         }
 
         $_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
+
         if ( empty( $this->_resourceId ) )
         {
             $_records = static::getFromPostedData( $this->_requestData, 'record' );
-
             $_ids = static::getFromPostedData( $this->_requestData, 'ids', FilterInput::request( 'ids' ) );
+
             if ( !empty( $_ids ) )
             {
                 $_result = $this->updateRecordsByIds( $this->_resource, $_records, $_ids, $_extras );
