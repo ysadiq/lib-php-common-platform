@@ -19,9 +19,6 @@
  */
 namespace DreamFactory\Platform\Events;
 
-error_reporting( -1 );
-ini_set( 'display_errors', 1 );
-
 use DreamFactory\Platform\Resources\System\Script;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\SwaggerManager;

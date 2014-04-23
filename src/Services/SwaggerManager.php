@@ -498,7 +498,7 @@ SQL;
         if ( empty( $_matches ) )
         {
             //	See if there is an event with /system at the front...
-            $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( str_replace( 'system/', null, $_path ) ) ) . '$@D';
+            $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '$@D';
             $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
             if ( empty( $_matches ) )

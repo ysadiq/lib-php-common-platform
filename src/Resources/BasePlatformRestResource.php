@@ -103,10 +103,7 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
      */
     public function processRequest( $resource = null, $action = self::GET, $output_format = null )
     {
-        $this->_setAction( $action );
-
         //	Require app name for security check
-        $this->_detectAppName();
         $this->_detectResourceMembers( $resource );
         $this->_detectResponseMembers( $output_format );
 

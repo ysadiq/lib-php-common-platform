@@ -39,7 +39,7 @@ $_base['apis'] = array_merge(
                     'nickname'   => 'getResources',
                     'type'       => 'Resources',
                     'notes'      => 'See listed operations for each resource available.',
-                    'event_name' => '{api_name}.list',
+                    'event_name' => 'system.list',
                 ),
             ),
             'description' => 'Operations available for user session management.',
