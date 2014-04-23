@@ -2314,14 +2314,14 @@ class SqlDbSvc extends BaseDbSvc
                     }
 
                     $_rows = $_command->delete( $this->_transactionTable, $_where, $_params );
-                    if ( 0 >= $_rows )
+                    if ( 0 === $_rows )
                     {
                         throw new NotFoundException( 'No records were found using the given identifiers.' );
                     }
 
                     if ( count( $this->_batchIds ) !== $_rows )
                     {
-                        throw new BadRequestException( 'Batch Error: Not all requested records could be retrieved.' );
+                        throw new BadRequestException( 'Batch Error: Not all requested records were deleted.' );
                     }
                     break;
 
