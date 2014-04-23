@@ -2058,19 +2058,34 @@ class SqlDbSvc extends BaseDbSvc
                     return parent::addToTransaction( null, $id );
                 }
 
+                // add via record, so batch processing can retrieve extras
+                if ( $_requireMore )
+                {
+                    $_fields = ( empty( $_fields ) ) ? $_idFields : $_fields;
+                    $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
+                    $_bindings = Option::get( $_result, 'bindings' );
+                    $_fields = Option::get( $_result, 'fields' );
+                    $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+
+                    $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                    if ( empty( $_result ) )
+                    {
+                        throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
+                    }
+
+                    $_out = $_result[0];
+                }
+
                 $_rows = $_command->delete( $this->_transactionTable, $_where, $_params );
                 if ( 0 >= $_rows )
                 {
                     throw new NotFoundException( "Record with id '" . print_r( $id, true ) . "' not found." );
                 }
 
-                $_idName = ( isset( $_idsInfo, $_idsInfo[0], $_idsInfo[0]['name'] ) ) ? $_idsInfo[0]['name'] : null;
-                $_out = ( is_array( $id ) ) ? $id : array( $_idName => $id );
-
-                // add via record, so batch processing can retrieve extras
-                if ( $_requireMore )
+                if ( empty( $_out ) )
                 {
-                    parent::addToTransaction( $id );
+                    $_idName = ( isset( $_idsInfo, $_idsInfo[0], $_idsInfo[0]['name'] ) ) ? $_idsInfo[0]['name'] : null;
+                    $_out = ( is_array( $id ) ) ? $id : array( $_idName => $id );
                 }
                 break;
 
@@ -2092,7 +2107,7 @@ class SqlDbSvc extends BaseDbSvc
                     throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
                 }
 
-                $_out = $_result;
+                $_out = $_result[0];
                 break;
         }
 
