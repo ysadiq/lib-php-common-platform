@@ -22,10 +22,11 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Events\Enums\SwaggerEvents;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Resources\System\Script;
 use DreamFactory\Platform\Utility\Platform;
-use DreamFactory\Platform\Utility\Schwag;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
+use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -54,6 +55,10 @@ class SwaggerManager extends BasePlatformRestService
      */
     const SWAGGER_CACHE_FILE = '/_.json';
     /**
+     * @const string A cached events list derived from Swagger
+     */
+    const SWAGGER_EVENT_CACHE_FILE = '/_events.json';
+    /**
      * @const string The private storage directory for non-generated files
      */
     const SWAGGER_CUSTOM_DIR = '/custom';
@@ -69,15 +74,15 @@ class SwaggerManager extends BasePlatformRestService
      * @const string When a swagger file is not found for a route, this will be used.
      */
     const SWAGGER_DEFAULT_BASE_FILE = '/BasePlatformRestSvc.swagger.php';
-    /**
-     * @const string The default extension for swagger config files
-     */
-    const SWAGGER_DEFAULT_EXTENSION_PATTERN = '.swagger.php';
 
     //*************************************************************************
     //	Members
     //*************************************************************************
 
+    /**
+     * @var array The event map
+     */
+    protected static $_eventMap = false;
     /**
      * @var array The core DSP services that are built-in
      */
@@ -85,10 +90,6 @@ class SwaggerManager extends BasePlatformRestService
         array( 'api_name' => 'user', 'type_id' => 0, 'description' => 'User Login' ),
         array( 'api_name' => 'system', 'type_id' => 0, 'description' => 'System Configuration' )
     );
-    /**
-     * @var int The default encoding options
-     */
-    protected static $_jsonEncodeOptions = JSON_UNESCAPED_SLASHES;
 
     //*************************************************************************
     //	Methods
@@ -110,178 +111,6 @@ class SwaggerManager extends BasePlatformRestService
                 'native_format' => 'json',
             )
         );
-    }
-
-    /**
-     * @param $apiName
-     * @param $path
-     * @param $customPath
-     *
-     * @return bool|string
-     */
-    protected static function _loadSwaggerFile( $apiName, $path, $customPath, $baseSwagger )
-    {
-        $_paths = array(
-            $path,
-            $customPath . '/' . $apiName . '.json',
-            $customPath . '/' . $apiName . '.raml',
-        );
-
-        foreach ( $_paths as $_path )
-        {
-            if ( file_exists( $_path ) && is_readable( $_path ) )
-            {
-                if ( 'php' == strtolower( pathinfo( $_path, PATHINFO_EXTENSION ) ) )
-                {
-                    $_data = require( $_path );
-                    $_eventCube = $_eventMap = array();
-
-                    //@todo do we NOT want to return an empty array if one is in the file?
-                    if ( is_array( $_data ) && !empty( $_data ) )
-                    {
-                        //  Fix up the event arrays into to a string
-                        foreach ( Option::get( $_data, 'apis', array() ) as $_ixApi => $_api )
-                        {
-                            foreach ( Option::get( $_api, 'operations', array() ) as $_ixOps => $_op )
-                            {
-                                if ( null !== ( $_events = Option::get( $_op, 'event_name' ) ) )
-                                {
-                                    //  Build up the event map
-                                    if ( !isset( $_eventMap[ $apiName ] ) || !is_array( $_eventMap[ $apiName ] ) || empty( $_eventMap[ $apiName ] ) )
-                                    {
-                                        $_eventMap[ $apiName ] = array();
-                                    }
-
-                                    //	Parse the events while we get the chance...
-                                    $_serviceEvents = Schwag::parseSwaggerEvents( $apiName, $_data );
-                                    $_cube = Option::get( $_serviceEvents, '.cubed', array(), true );
-
-                                    //	Parse the events while we get the chance...
-                                    $_eventMap[ $apiName ] = array_merge(
-                                        Option::clean( $_eventMap[ $apiName ] ),
-                                        $_serviceEvents
-                                    );
-
-                                    if ( !empty( $_cube ) )
-                                    {
-                                        $_eventCube[] = $_cube;
-                                        unset( $_cube );
-                                    }
-
-                                    if ( is_array( $_events ) )
-                                    {
-                                        $_data['apis'][ $_ixApi ]['operations'][ $_ixOps ]['event_name'] = implode( ',', $_events );
-                                    }
-                                }
-                            }
-                        }
-
-                        //  Save events
-                        Schwag::saveEventCache( Platform::getSwaggerPath( static::SWAGGER_CACHE_DIR ), $_eventMap, $_eventCube );
-
-                        $_json = json_encode( array_merge( $baseSwagger, $_data ), static::$_jsonEncodeOptions );
-
-                        if ( false !== $_json && JSON_ERROR_NONE == json_last_error() )
-                        {
-                            return $_json;
-                        }
-                    }
-                }
-
-                return file_get_contents( $_path );
-            }
-        }
-
-        return false;
-    }
-
-    protected static function _buildSwaggerServices()
-    {
-        //  Our base
-        $_baseSwagger = array(
-            'swaggerVersion' => static::SWAGGER_VERSION,
-            'apiVersion'     => API_VERSION,
-            'basePath'       => Pii::request()->getHostInfo() . '/rest',
-        );
-
-        //	Create cache & custom directories
-        $_cachePath = Platform::getSwaggerPath( static::SWAGGER_CACHE_DIR );
-        $_customPath = Platform::getSwaggerPath( static::SWAGGER_CUSTOM_DIR );
-
-        $_platformServices = static::_getRegisteredServices();
-
-        //	Spin through services and pull the configs
-        $_services = array();
-
-        foreach ( $_platformServices as $_service )
-        {
-            $_apiName = Option::get( $_service, 'api_name' );
-            $_typeId = (int)Option::get( $_service, 'type_id', PlatformServiceTypes::SYSTEM_SERVICE );
-            $_fileName = PlatformServiceTypes::getFileName( $_typeId, $_apiName );
-            $_filePath = __DIR__ . '/' . $_fileName . static::SWAGGER_DEFAULT_EXTENSION_PATTERN;
-
-            $_content = static::_loadSwaggerFile( $_apiName, $_filePath, $_customPath, $_baseSwagger );
-
-            if ( empty( $_content ) )
-            {
-                Log::debug( '    ! Resource "' . $_apiName . '" not available. No Swagger definition.' );
-                continue;
-            }
-
-            // replace service type placeholder with api name for this service instance
-            $_content = str_replace( '/{api_name}', '/' . $_apiName, $_content );
-
-            // cache it to a file for later access
-            $_filePath = $_cachePath . '/' . $_apiName . '.json';
-
-            if ( false === file_put_contents( $_filePath, $_content ) )
-            {
-                Log::error( '  * File system error creating swagger cache file: ' . $_filePath );
-                continue;
-            }
-
-            // build main services list
-            $_services[] = array(
-                'path'        => '/' . $_apiName,
-                'description' => Option::get( $_service, 'description', 'Service' )
-            );
-
-            unset( $_content, $_filePath, $_service );
-        }
-
-        return $_services;
-    }
-
-    /**
-     * Returns a list of registered services
-     *
-     * @return array
-     */
-    protected static function _getRegisteredServices()
-    {
-        if ( null === ( $_services = Platform::storeGet( 'swagger.registered_services' ) ) )
-        {
-            $_sql = <<<MYSQL
-SELECT
-	api_name,
-	type_id,
-	storage_type_id,
-	description
-FROM
-    df_sys_service
-ORDER BY
-	api_name ASC
-MYSQL;
-
-            $_services = array_merge(
-                static::$_builtInServices,
-                $_rows = Sql::findAll( $_sql, null, Pii::pdo() )
-            );
-
-            Platform::storeSet( 'swagger.registered_services', $_services );
-        }
-
-        return $_services;
     }
 
     /**
@@ -327,12 +156,127 @@ MYSQL;
         $_customPath = Platform::getSwaggerPath( static::SWAGGER_CUSTOM_DIR );
         $_templatePath = Platform::getLibraryTemplatePath( '/swagger' );
 
-        //  Generate swagger output from file annotations
-        $_services = static::_buildSwaggerServices();
+        //	Generate swagger output from file annotations
+        $_scanPath = __DIR__;
 
-        //  Cache main API listing file
-        $_main = __DIR__ . static::SWAGGER_BASE_API_FILE;
+        $_baseSwagger = array(
+            'swaggerVersion' => static::SWAGGER_VERSION,
+            'apiVersion'     => API_VERSION,
+            'basePath'       => Pii::request()->getHostInfo() . '/rest',
+        );
 
+        // build services from database
+        $_sql = <<<SQL
+SELECT
+	api_name,
+	type_id,
+	storage_type_id,
+	description
+FROM
+	df_sys_service
+ORDER BY
+	api_name ASC
+SQL;
+
+        //	Pull the services and add in the built-in services
+        $_result = array_merge(
+            static::$_builtInServices,
+            $_rows = Sql::findAll( $_sql, null, Pii::pdo() )
+        );
+
+        // gather the services
+        $_services = array();
+
+        //	Initialize the event map
+        static::$_eventMap = static::$_eventMap ? : array();
+
+        //	Spin through services and pull the configs
+        foreach ( $_result as $_service )
+        {
+            $_content = null;
+            $_apiName = Option::get( $_service, 'api_name' );
+            $_typeId = (int)Option::get( $_service, 'type_id', PlatformServiceTypes::SYSTEM_SERVICE );
+            $_fileName = PlatformServiceTypes::getFileName( $_typeId, $_apiName );
+
+            $_filePath = $_scanPath . '/' . $_fileName . '.swagger.php';
+
+            //	Check php file path, then custom...
+            if ( file_exists( $_filePath ) )
+            {
+                /** @noinspection PhpIncludeInspection */
+                $_fromFile = require( $_filePath );
+
+                if ( is_array( $_fromFile ) && !empty( $_fromFile ) )
+                {
+                    $_content = json_encode( array_merge( $_baseSwagger, $_fromFile ), JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT );
+                }
+            }
+            else //	Check custom path, uses api name
+            {
+                $_filePath = $_customPath . '/' . $_apiName . '.json';
+
+                if ( file_exists( $_filePath ) )
+                {
+                    $_fromFile = file_get_contents( $_filePath );
+
+                    if ( !empty( $_fromFile ) )
+                    {
+                        $_content = $_fromFile;
+                    }
+                }
+                else
+                {
+                    $_filePath = $_customPath . '/' . $_apiName . '.raml';
+
+                    if ( file_exists( $_filePath ) )
+                    {
+                        // todo check for RAML and convert
+                    }
+                }
+            }
+
+            if ( empty( $_content ) )
+            {
+                Log::info( '  * No Swagger content found for service "' . $_apiName . '"' );
+                continue;
+            }
+
+            // replace service type placeholder with api name for this service instance
+            $_content = str_replace( '/{api_name}', '/' . $_apiName, $_content );
+
+            // cache it to a file for later access
+            $_filePath = $_cachePath . '/' . $_apiName . '.json';
+
+            if ( false === file_put_contents( $_filePath, $_content ) )
+            {
+                Log::error( '  * File system error creating swagger cache file: ' . $_filePath );
+                continue;
+            }
+
+            // build main services list
+            $_services[] = array(
+                'path'        => '/' . $_apiName,
+                'description' => Option::get( $_service, 'description', 'Service' )
+            );
+
+            if ( !isset( static::$_eventMap[ $_apiName ] ) || !is_array( static::$_eventMap[ $_apiName ] ) || empty( static::$_eventMap[ $_apiName ] ) )
+            {
+                static::$_eventMap[ $_apiName ] = array();
+            }
+
+            $_serviceEvents = static::_parseSwaggerEvents( $_apiName, json_decode( $_content, true ) );
+
+            //	Parse the events while we get the chance...
+            static::$_eventMap[ $_apiName ] = array_merge(
+                Option::clean( static::$_eventMap[ $_apiName ] ),
+                $_serviceEvents
+            );
+
+            unset( $_content, $_filePath, $_service, $_serviceEvents );
+        }
+
+        // cache main api listing file
+        $_main = $_scanPath . static::SWAGGER_BASE_API_FILE;
         /** @noinspection PhpIncludeInspection */
         $_resourceListing = require( $_main );
         $_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
@@ -344,20 +288,268 @@ MYSQL;
             Log::error( '  * File system error creating swagger cache file: ' . $_filePath );
         }
 
+        //	Write event cache file
+        if ( false ===
+             file_put_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE, json_encode( static::$_eventMap, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT ) )
+        )
+        {
+            Log::error( '  * File system error writing events cache file: ' . $_cachePath . static::SWAGGER_EVENT_CACHE_FILE );
+        }
+
         //	Create example file
         if ( !file_exists( $_customPath . static::SWAGGER_CUSTOM_EXAMPLE_FILE ) && file_exists( $_templatePath . static::SWAGGER_CUSTOM_EXAMPLE_FILE ) )
         {
             file_put_contents( $_customPath . static::SWAGGER_CUSTOM_EXAMPLE_FILE, file_get_contents( $_templatePath . static::SWAGGER_CUSTOM_EXAMPLE_FILE ) );
         }
 
-        //  Write out the event cache last...
-        Schwag::saveEventCache( $_cachePath );
-
         Log::info( 'Swagger cache build process complete' );
-
         Pii::app()->trigger( SwaggerEvents::CACHE_REBUILT );
 
         return $_out;
+    }
+
+    /**
+     * @param string $apiName
+     * @param array  $data
+     *
+     * @return array
+     */
+    protected static function _parseSwaggerEvents( $apiName, $data )
+    {
+        $_eventMap = array();
+
+        foreach ( Option::get( $data, 'apis', array() ) as $_api )
+        {
+            $_scripts = $_events = array();
+
+            $_path = str_replace(
+                array( '{api_name}', '/' ),
+                array( $apiName, '.' ),
+                trim( Option::get( $_api, 'path' ), '/' )
+            );
+
+            foreach ( Option::get( $_api, 'operations', array() ) as $_operation )
+            {
+                if ( null !== ( $_eventName = Option::get( $_operation, 'event_name' ) ) )
+                {
+                    $_method = strtolower( Option::get( $_operation, 'method', HttpMethod::GET ) );
+
+                    $_scripts = array();
+                    $_eventsThrown = array();
+
+                    if ( is_array( $_eventName ) )
+                    {
+                        $_eventName = implode( ', ', $_eventName );
+                    }
+
+                    $_scripts += static::_findScripts( $_path, $_method, $_eventName );
+
+                    $_eventsThrown[] = str_ireplace(
+                        array( '{api_name}', '{action}', '{request.method}' ),
+                        array( $apiName, $_method, $_method ),
+                        $_eventName
+
+                    );
+
+                    $_events[ $_method ] = array(
+                        'event'   => $_eventsThrown,
+                        'scripts' => $_scripts,
+                    );
+
+                }
+
+                unset( $_operation, $_scripts, $_eventsThrown );
+            }
+
+            $_eventMap[ str_ireplace( '{api_name}', $apiName, $_api['path'] ) ] = $_events;
+
+            unset( $_scripts, $_events, $_api );
+        }
+
+        return $_eventMap;
+    }
+
+    /**
+     * Returns a list of scripts that can response to specified events
+     *
+     * @param string $apiName
+     * @param string $method
+     * @param string $eventName Optional event name to try
+     *
+     * @return array|bool
+     */
+    protected static function _findScripts( $apiName, $method = HttpMethod::GET, $eventName = null )
+    {
+        static $_scriptPath;
+
+        if ( empty( $_scriptPath ) )
+        {
+            $_scriptPath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
+        }
+
+        $_scriptPattern = strtolower( $apiName ) . '.' . strtolower( $method ) . '.*.js';
+        $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
+
+        if ( null !== $eventName && array() !== ( $_namedScripts = FileSystem::glob( $_scriptPath . '/' . $eventName . '.js' ) ) )
+        {
+            $_scripts = array_merge( $_scripts, $_namedScripts );
+        }
+
+        if ( empty( $_scripts ) )
+        {
+            if ( !empty( $eventName ) )
+            {
+                $_scripts = FileSystem::glob( $_scriptPath . '/' . $eventName . '.js' );
+            }
+
+            if ( empty( $_scripts ) )
+            {
+                return array();
+            }
+        }
+
+        $_response = array();
+        $_eventPattern = '/^' . str_replace( array( '.*.js', '.' ), array( null, '\\.' ), $_scriptPattern ) . '\\.(\w)\\.js$/i';
+
+        foreach ( $_scripts as $_script )
+        {
+            if ( 0 === preg_match( $_eventPattern, $_script ) )
+            {
+                $_response[] = $_script;
+            }
+        }
+
+        return $_response;
+    }
+
+    /**
+     * @param BasePlatformRestService $service
+     * @param string                  $method
+     * @param string                  $eventName Global search for event name
+     *
+     * @return string
+     */
+    public static function findEvent( BasePlatformRestService $service, $method, $eventName = null )
+    {
+        static $_cache = array();
+
+        $_map = static::getEventMap();
+
+        $_hash = sha1( ( $service ? get_class( $service ) : '*' ) . $method );
+
+        if ( isset( $_cache[ $_hash ] ) )
+        {
+            return $_cache[ $_hash ];
+        }
+
+        //  Global search by name
+        if ( null !== $eventName )
+        {
+            foreach ( $_map as $_path )
+            {
+                foreach ( $_path as $_method => $_info )
+                {
+                    if ( 0 !== strcasecmp( $_method, $method ) )
+                    {
+                        continue;
+                    }
+
+                    if ( $eventName == ( $_eventName = Option::get( $_info, 'event' ) ) )
+                    {
+                        $_cache[ $_hash ] = $_eventName;
+
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        $_resource = $service->getResource();
+
+        if ( empty( $_resource ) )
+        {
+            $_resource = $service->getApiName();
+        }
+
+        if ( null === ( $_resources = Option::get( $_map, $_resource ) ) )
+        {
+            if ( !method_exists( $service, 'getServiceName' ) || null === ( $_resources = Option::get( $_map, $service->getServiceName() ) ) )
+            {
+                if ( null === ( $_resources = Option::get( $_map, 'system' ) ) )
+                {
+                    return null;
+                }
+            }
+        }
+
+        $_path = str_replace( 'rest', null, trim( !Pii::cli() ? Pii::app()->getRequestObject()->getPathInfo() : $service->getResourcePath(), '/' ) );
+
+        if ( empty( $_path ) )
+        {
+            return null;
+        }
+
+        $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '$@D';
+
+        $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
+
+        if ( empty( $_matches ) )
+        {
+            //	See if there is an event with /system at the front...
+            $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( str_replace( 'system/', null, $_path ) ) ) . '$@D';
+            $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
+
+            if ( empty( $_matches ) )
+            {
+                return null;
+            }
+        }
+
+        foreach ( $_matches as $_match )
+        {
+            $_methodInfo = Option::getDeep( $_resources, $_match, $method );
+
+            if ( null !== ( $_eventName = Option::get( $_methodInfo, 'event' ) ) )
+            {
+                return $_cache[ $_hash ] = $_eventName;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Retrieves the cached event map or triggers a rebuild
+     *
+     * @return array
+     */
+    public static function getEventMap()
+    {
+        if ( !empty( static::$_eventMap ) )
+        {
+            return static::$_eventMap;
+        }
+
+        $_cachePath = Platform::getSwaggerPath( static::SWAGGER_CACHE_DIR );
+        $_encoded = @file_get_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE );
+
+        if ( !empty( $_encoded ) )
+        {
+            if ( false === ( static::$_eventMap = json_decode( $_encoded, true ) ) )
+            {
+                Log::error( '  * Event cache file appears corrupt, or cannot be read.' );
+            }
+        }
+
+        //	If we still have no event map, build it.
+        if ( empty( static::$_eventMap ) )
+        {
+            static::_buildSwagger();
+        }
+
+        return static::$_eventMap;
     }
 
     /**
@@ -453,11 +645,11 @@ MYSQL;
     /**
      * Returns an array of common responses for merging into Swagger files.
      *
-     * @param array $onlyTheseCodes Array of response codes to return. If empty, all are returned.
+     * @param array $codes Array of response codes to return only. If empty, all are returned.
      *
      * @return array
      */
-    public static function getCommonResponses( array $onlyTheseCodes = array() )
+    public static function getCommonResponses( array $codes = array() )
     {
         static $_commonResponses = array(
             array(
@@ -480,9 +672,9 @@ MYSQL;
 
         $_response = $_commonResponses;
 
-        if ( !empty( $onlyTheseCodes ) )
+        if ( !empty( $codes ) )
         {
-            foreach ( $onlyTheseCodes as $_code )
+            foreach ( $codes as $_code )
             {
                 foreach ( $_commonResponses as $_commonResponse )
                 {
@@ -495,36 +687,6 @@ MYSQL;
         }
 
         return $_response;
-    }
-
-    /**
-     * Requests a rebuild of the Swagger cache.
-     *
-     * @todo Currently, only ($immediately == true) is supported. Eventually, it will be handed off to the process server.
-     *
-     * @param bool $immediately Rebuild now or queue for later?
-     *
-     * @return array
-     */
-    public static function requestRebuild( $immediately = true )
-    {
-        return static::_buildSwagger();
-    }
-
-    /**
-     * @return int
-     */
-    public static function getJsonEncodeOptions()
-    {
-        return static::$_jsonEncodeOptions;
-    }
-
-    /**
-     * @param int $jsonEncodeOptions
-     */
-    public static function setJsonEncodeOptions( $jsonEncodeOptions )
-    {
-        static::$_jsonEncodeOptions = $jsonEncodeOptions;
     }
 
 }

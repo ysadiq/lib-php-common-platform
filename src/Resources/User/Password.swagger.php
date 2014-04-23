@@ -29,7 +29,7 @@ $_password['apis'] = array(
 				'summary'          => 'changePassword() - Change or reset the current user\'s password.',
 				'nickname'         => 'changePassword',
 				'type'             => 'PasswordResponse',
-				'event_name'       => 'user.password.update',
+				'event_name'       => '{api_name}.user.password.update',
 				'parameters'       => array(
 					array(
 						'name'          => 'reset',

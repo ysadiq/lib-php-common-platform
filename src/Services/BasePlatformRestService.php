@@ -38,7 +38,6 @@ use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestResponse;
-use DreamFactory\Platform\Utility\Schwag;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
@@ -658,7 +657,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         static $_triggeredEvents = array();
 
         //  Lookup the appropriate event if not specified.
-        $_eventNames = $eventName ? : Schwag::findEvent( $this, $this->_action );
+        $_eventNames = $eventName ? : SwaggerManager::findEvent( $this, $this->_action );
         $_eventNames = is_array( $_eventNames ) ? $_eventNames : array( $_eventNames );
 
         $_result = array();

@@ -29,7 +29,7 @@ $_custom['apis'] = array(
 				'summary'          => 'getCustomSettings() - Retrieve all custom user settings.',
 				'nickname'         => 'getCustomSettings',
 				'type'             => 'CustomSettings',
-				'event_name'       => 'user.settings.list',
+				'event_name'       => '{api_name}.user.settings.list',
 				'responseMessages' => array(
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
@@ -51,7 +51,7 @@ $_custom['apis'] = array(
 				'summary'          => 'setCustomSettings() - Set or update one or more custom user settings.',
 				'nickname'         => 'setCustomSettings',
 				'type'             => 'Success',
-				'event_name'       => 'user.settings.update',
+				'event_name'       => '{api_name}.user.settings.update',
 				'parameters'       => array(
 					array(
 						'name'          => 'body',
@@ -93,7 +93,7 @@ $_custom['apis'] = array(
 				'summary'          => 'getCustomSetting() - Retrieve one custom user setting.',
 				'nickname'         => 'getCustomSetting',
 				'type'             => 'CustomSetting',
-				'event_name'       => 'user.setting.read',
+				'event_name'       => '{api_name}.user.setting.read',
 				'parameters'       => array(
 					array(
 						'name'          => 'setting',
@@ -126,7 +126,7 @@ $_custom['apis'] = array(
 				'summary'          => 'deleteCustomSetting() - Delete one custom setting.',
 				'nickname'         => 'deleteCustomSetting',
 				'type'             => 'Success',
-				'event_name'       => 'user.setting.delete',
+				'event_name'       => '{api_name}.user.setting.delete',
 				'parameters'       => array(
 					array(
 						'name'          => 'setting',

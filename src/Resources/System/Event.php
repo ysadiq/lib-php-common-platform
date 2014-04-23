@@ -21,17 +21,10 @@ namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Components\EventProxy;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
-use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Platform;
-use DreamFactory\Platform\Utility\ResourceStore;
-use DreamFactory\Platform\Utility\Schwag;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Exceptions\StorageException;
-use Kisma\Core\Utility\Option;
 
 /**
  * Event
@@ -88,7 +81,7 @@ class Event extends BaseSystemRestResource
     protected function _getAllEvents( $as_cached = false )
     {
         //  Make sure the file exists.
-        $_cacheFile = Platform::getSwaggerPath( SwaggerManager::SWAGGER_CACHE_DIR . Schwag::SWAGGER_EVENT_CACHE_FILE, true, true );
+        $_cacheFile = Platform::getSwaggerPath( SwaggerManager::SWAGGER_CACHE_DIR . SwaggerManager::SWAGGER_EVENT_CACHE_FILE, true, true );
 
         //  If not, rebuild the swagger cache
         if ( !file_exists( $_cacheFile ) )

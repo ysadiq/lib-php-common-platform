@@ -29,7 +29,7 @@ $_device['apis'] = array(
                 'summary'          => 'getDevices() - Retrieve one or more devices.',
                 'nickname'         => 'getDevices',
                 'type'             => 'DevicesResponse',
-                'event_name'       => 'devices.read',
+                'event_name'       => '{api_name}.devices.read',
                 'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'parameters'       => array(
@@ -135,7 +135,7 @@ $_device['apis'] = array(
                 'summary'          => 'deleteDevices() - Delete one or more devices.',
                 'nickname'         => 'deleteDevices',
                 'type'             => 'DevicesResponse',
-                'event_name'       => 'devices.delete',
+                'event_name'       => '{api_name}.devices.delete',
                 'parameters'       => array(
                     array(
                         'name'          => 'ids',
@@ -202,7 +202,7 @@ $_device['apis'] = array(
                 'summary'          => 'getDevice() - Retrieve one device.',
                 'nickname'         => 'getDevice',
                 'type'             => 'DeviceResponse',
-                'event_name'       => 'device.read',
+                'event_name'       => '{api_name}.device.read',
                 'parameters'       => array(
                     array(
                         'name'          => 'id',
@@ -250,7 +250,7 @@ $_device['apis'] = array(
                 'summary'          => 'deleteDevice() - Delete one device.',
                 'nickname'         => 'deleteDevice',
                 'type'             => 'DeviceResponse',
-                'event_name'       => 'device.delete',
+                'event_name'       => '{api_name}.device.delete',
                 'parameters'       => array(
                     array(
                         'name'          => 'id',

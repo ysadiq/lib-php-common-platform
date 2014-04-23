@@ -29,7 +29,7 @@ $_profile['apis'] = array(
 				'summary'          => 'getProfile() - Retrieve the current user\'s profile information.',
 				'nickname'         => 'getProfile',
 				'type'             => 'ProfileResponse',
-				'event_name'       => 'user.profile.read',
+				'event_name'       => '{api_name}.user.profile.read',
 				'responseMessages' => array(
 					array(
 						'message' => 'Unauthorized Access - No currently valid session available.',
@@ -49,7 +49,7 @@ $_profile['apis'] = array(
 				'summary'          => 'updateProfile() - Update the current user\'s profile information.',
 				'nickname'         => 'updateProfile',
 				'type'             => 'Success',
-				'event_name'       => 'user.profile.update',
+				'event_name'       => '{api_name}.user.profile.update',
 				'parameters'       => array(
 					array(
 						'name'          => 'body',

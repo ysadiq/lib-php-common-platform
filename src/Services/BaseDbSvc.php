@@ -194,12 +194,13 @@ abstract class BaseDbSvc extends BasePlatformRestService
             Option::getBool( $post_data, 'include_count', false ),
             FILTER_VALIDATE_BOOLEAN
         );
+
         $_extras['include_count'] = $_includeCount;
 
         // trigger action events...should be called somewhere more generic, but this is called by every action here...
         if ( static::GET != $this->_action )
         {
-            $this->_triggerActionEvent( $post_data );
+            $this->_triggerActionEvent( $post_data, null, null, array( '{table_name}' => $this->_resource ) );
         }
 
         return $_extras;
@@ -801,7 +802,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
-                        $_out[$_index] = $_result;
+                        $_out[ $_index ] = $_result;
                     }
                 }
                 catch ( \Exception $_ex )
@@ -813,7 +814,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                             // first error, don't worry about batch just throw it
                             // mark last error and index for batch results
                             $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
+                            $_out[ $_index ] = $_ex->getMessage();
                         }
 
                         throw $_ex;
@@ -821,7 +822,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
+                    $_out[ $_index ] = $_ex->getMessage();
                 }
             }
 
@@ -937,7 +938,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
-                        $_out[$_index] = $_result;
+                        $_out[ $_index ] = $_result;
                     }
                 }
                 catch ( \Exception $_ex )
@@ -949,7 +950,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                             // first error, don't worry about batch just throw it
                             // mark last error and index for batch results
                             $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
+                            $_out[ $_index ] = $_ex->getMessage();
                         }
 
                         throw $_ex;
@@ -957,7 +958,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
+                    $_out[ $_index ] = $_ex->getMessage();
                 }
             }
 
@@ -1115,7 +1116,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
-                        $_out[$_index] = $_result;
+                        $_out[ $_index ] = $_result;
                     }
                 }
                 catch ( \Exception $_ex )
@@ -1127,7 +1128,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                             // first error, don't worry about batch just throw it
                             // mark last error and index for batch results
                             $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
+                            $_out[ $_index ] = $_ex->getMessage();
                         }
 
                         throw $_ex;
@@ -1135,7 +1136,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
+                    $_out[ $_index ] = $_ex->getMessage();
                 }
             }
 
@@ -1251,7 +1252,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
-                        $_out[$_index] = $_result;
+                        $_out[ $_index ] = $_result;
                     }
                 }
                 catch ( \Exception $_ex )
@@ -1263,7 +1264,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                             // first error, don't worry about batch just throw it
                             // mark last error and index for batch results
                             $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
+                            $_out[ $_index ] = $_ex->getMessage();
                         }
 
                         throw $_ex;
@@ -1271,7 +1272,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
+                    $_out[ $_index ] = $_ex->getMessage();
                 }
             }
 
@@ -1427,7 +1428,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
-                        $_out[$_index] = $_result;
+                        $_out[ $_index ] = $_result;
                     }
                 }
                 catch ( \Exception $_ex )
@@ -1439,7 +1440,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                             // first error, don't worry about batch just throw it
                             // mark last error and index for batch results
                             $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
+                            $_out[ $_index ] = $_ex->getMessage();
                         }
 
                         throw $_ex;
@@ -1447,7 +1448,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
+                    $_out[ $_index ] = $_ex->getMessage();
                 }
             }
 
@@ -1643,7 +1644,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
-                        $_out[$_index] = $_result;
+                        $_out[ $_index ] = $_result;
                     }
                 }
                 catch ( \Exception $_ex )
@@ -1655,7 +1656,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                             // first error, don't worry about batch just throw it
                             // mark last error and index for batch results
                             $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
+                            $_out[ $_index ] = $_ex->getMessage();
                         }
 
                         throw $_ex;
@@ -1663,7 +1664,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
+                    $_out[ $_index ] = $_ex->getMessage();
                 }
             }
 
@@ -1831,7 +1832,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
-                        $_out[$_index] = $_result;
+                        $_out[ $_index ] = $_result;
                     }
                 }
                 catch ( \Exception $_ex )
@@ -1843,7 +1844,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                             // first error, don't worry about batch just throw it
                             // mark last error and index for batch results
                             $_errors[] = $_index;
-                            $_out[$_index] = $_ex->getMessage();
+                            $_out[ $_index ] = $_ex->getMessage();
                         }
 
                         throw $_ex;
@@ -1851,7 +1852,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
-                    $_out[$_index] = $_ex->getMessage();
+                    $_out[ $_index ] = $_ex->getMessage();
                 }
             }
 
@@ -2012,7 +2013,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                                 $_value = strval( $_value );
                                 break;
                         }
-                        $_id[$_name] = $_value;
+                        $_id[ $_name ] = $_value;
                     }
                     else
                     {
@@ -2079,14 +2080,14 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
                     if ( !static::validateFieldValue( $_name, $_fieldVal, $_validations, $for_update, $_fieldInfo ) )
                     {
-                        unset( $_keys[$_pos] );
-                        unset( $_values[$_pos] );
+                        unset( $_keys[ $_pos ] );
+                        unset( $_values[ $_pos ] );
                         continue;
                     }
 
-                    $_parsed[$_name] = $_fieldVal;
-                    unset( $_keys[$_pos] );
-                    unset( $_values[$_pos] );
+                    $_parsed[ $_name ] = $_fieldVal;
+                    unset( $_keys[ $_pos ] );
+                    unset( $_values[ $_pos ] );
                 }
 
                 // add or override for specific fields
@@ -2095,11 +2096,11 @@ abstract class BaseDbSvc extends BasePlatformRestService
                     case 'timestamp_on_create':
                         if ( !$for_update )
                         {
-                            $_parsed[$_name] = time();
+                            $_parsed[ $_name ] = time();
                         }
                         break;
                     case 'timestamp_on_update':
-                        $_parsed[$_name] = time();
+                        $_parsed[ $_name ] = time();
                         break;
                     case 'user_id_on_create':
                         if ( !$for_update )
@@ -2107,7 +2108,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                             $userId = Session::getCurrentUserId();
                             if ( isset( $userId ) )
                             {
-                                $_parsed[$_name] = $userId;
+                                $_parsed[ $_name ] = $userId;
                             }
                         }
                         break;
@@ -2115,7 +2116,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                         $userId = Session::getCurrentUserId();
                         if ( isset( $userId ) )
                         {
-                            $_parsed[$_name] = $userId;
+                            $_parsed[ $_name ] = $userId;
                         }
                         break;
                 }
@@ -2609,7 +2610,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
             $_out = array();
             foreach ( $include as $_key )
             {
-                $_out[$_key] = Option::get( $record, $_key );
+                $_out[ $_key ] = Option::get( $record, $_key );
             }
 
             return $_out;
@@ -2693,7 +2694,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                 {
                     throw new BadRequestException( "Identifying field '$_field' can not be empty for record." );
                 }
-                $_ids[$_field] = $_id;
+                $_ids[ $_field ] = $_id;
             }
 
             return $_ids;
@@ -2739,13 +2740,13 @@ abstract class BaseDbSvc extends BasePlatformRestService
                 foreach ( $id_field as $_index => $_field )
                 {
                     $_search = ( $field_included ) ? $_field : $_index;
-                    $_ids[$_field] = Option::get( $_id, $_search );
+                    $_ids[ $_field ] = Option::get( $_id, $_search );
                 }
             }
             else
             {
                 $_field = $id_field[0];
-                $_ids[$_field] = $_id;
+                $_ids[ $_field ] = $_id;
             }
 
             $_out[] = $_ids;
@@ -2770,7 +2771,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
 
             foreach ( $id_field as $_name )
             {
-                unset( $record[$_name] );
+                unset( $record[ $_name ] );
             }
         }
     }
@@ -2832,7 +2833,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
         {
             if ( false !== array_search( $_name, $fields ) )
             {
-                unset( $fields[$_key] );
+                unset( $fields[ $_key ] );
             }
         }
 
@@ -2861,7 +2862,7 @@ abstract class BaseDbSvc extends BasePlatformRestService
                 $_secondId = Option::get( $_second, $id_field );
                 if ( $_firstId == $_secondId )
                 {
-                    $first_array[$_key] = array_merge( $_first, $_second );
+                    $first_array[ $_key ] = array_merge( $_first, $_second );
                 }
             }
         }
