@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "4f601ef3a453415100a5db8e69f5476e",
+    "hash": "df0916df5ecd5f9eb09d6755a7e3fdd2",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -273,9 +273,9 @@
             ],
             "authors": [
                 {
-                    "name": "Jason Sykes",
+                    "name": "Sykes, Jason",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Developer, client-side"
+                    "role": "Lead Engineer, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Javascript SDK",
@@ -554,12 +554,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/guzzle3.git",
-                "reference": "dc4a4af0ba585522863f75324bbfe2e0009f2893"
+                "reference": "e4d12d7d6acccf75a5e504114e2df9195e494108"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle3/zipball/dc4a4af0ba585522863f75324bbfe2e0009f2893",
-                "reference": "dc4a4af0ba585522863f75324bbfe2e0009f2893",
+                "url": "https://api.github.com/repos/guzzle/guzzle3/zipball/e4d12d7d6acccf75a5e504114e2df9195e494108",
+                "reference": "e4d12d7d6acccf75a5e504114e2df9195e494108",
                 "shasum": ""
             },
             "require": {
@@ -638,7 +638,7 @@
                 "rest",
                 "web service"
             ],
-            "time": "2014-04-16 17:46:30"
+            "time": "2014-04-23 21:43:40"
         },
         {
             "name": "kisma/kisma",
@@ -704,12 +704,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
-                "reference": "1afc39690e7414412face1f8cbf67b73db34485c"
+                "reference": "65026b610f8c19e61d7242f600530677b0466aac"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/1afc39690e7414412face1f8cbf67b73db34485c",
-                "reference": "1afc39690e7414412face1f8cbf67b73db34485c",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/65026b610f8c19e61d7242f600530677b0466aac",
+                "reference": "65026b610f8c19e61d7242f600530677b0466aac",
                 "shasum": ""
             },
             "require": {
@@ -764,7 +764,7 @@
                 "logging",
                 "psr-3"
             ],
-            "time": "2014-04-20 16:41:26"
+            "time": "2014-04-24 13:29:03"
         },
         {
             "name": "pear-pear.php.net/Archive_Tar",
