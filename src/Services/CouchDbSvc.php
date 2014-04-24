@@ -137,7 +137,7 @@ class CouchDbSvc extends NoSqlDbSvc
      *
      * @return array
      */
-    protected function _gatherExtrasFromRequest( $post_data = null )
+    protected function _gatherExtrasFromRequest( &$post_data = null )
     {
         $_extras = parent::_gatherExtrasFromRequest( $post_data );
         $_extras[static::REV_FIELD] = FilterInput::request( static::REV_FIELD, Option::get( $post_data, static::REV_FIELD ) );

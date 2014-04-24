@@ -173,7 +173,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
      *
      * @return array
      */
-    protected function _gatherExtrasFromRequest( $post_data = null )
+    protected function _gatherExtrasFromRequest( &$post_data = null )
     {
         $_extras = parent::_gatherExtrasFromRequest( $post_data );
         $_extras[static::PARTITION_KEY] = FilterInput::request(

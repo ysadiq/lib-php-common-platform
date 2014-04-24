@@ -140,7 +140,7 @@ class SalesforceDbSvc extends BaseDbSvc
      *
      * @return array
      */
-    protected function _gatherExtrasFromRequest( $post_data = null )
+    protected function _gatherExtrasFromRequest( &$post_data = null )
     {
         $_extras = parent::_gatherExtrasFromRequest( $post_data );
 

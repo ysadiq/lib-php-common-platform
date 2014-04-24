@@ -118,7 +118,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      *
      * @return array
      */
-    protected function _gatherExtrasFromRequest( $post_data = null )
+    protected function _gatherExtrasFromRequest( &$post_data = null )
     {
         // most DBs support the following filter extras from url or posted data
         $_extras = array();
