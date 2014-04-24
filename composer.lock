@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "4f601ef3a453415100a5db8e69f5476e",
+    "hash": "df0916df5ecd5f9eb09d6755a7e3fdd2",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -273,9 +273,9 @@
             ],
             "authors": [
                 {
-                    "name": "Jason Sykes",
+                    "name": "Sykes, Jason",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Developer, client-side"
+                    "role": "Lead Engineer, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Javascript SDK",
@@ -293,18 +293,6 @@
         },
         {
             "name": "dreamfactory/lib-php-common",
-<<<<<<< HEAD
-            "version": "1.4.3",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/dreamfactorysoftware/lib-php-common.git",
-                "reference": "4879553d3a3c00e0a10af937c16450df848d24ed"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/4879553d3a3c00e0a10af937c16450df848d24ed",
-                "reference": "4879553d3a3c00e0a10af937c16450df848d24ed",
-=======
             "version": "dev-develop",
             "source": {
                 "type": "git",
@@ -315,7 +303,6 @@
                 "type": "zip",
                 "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/bbd935d3dd228790343b5c6b00f044929c435fcc",
                 "reference": "bbd935d3dd228790343b5c6b00f044929c435fcc",
->>>>>>> release/1.5.1
                 "shasum": ""
             },
             "require": {
@@ -358,22 +345,6 @@
                 "dsp",
                 "dsp-core"
             ],
-<<<<<<< HEAD
-            "time": "2014-04-19 17:44:57"
-        },
-        {
-            "name": "dreamfactory/lib-php-common-yii",
-            "version": "1.4.5",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "77e2ace2d8213075d0e9e502050c825f5ef63969"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/77e2ace2d8213075d0e9e502050c825f5ef63969",
-                "reference": "77e2ace2d8213075d0e9e502050c825f5ef63969",
-=======
             "time": "2014-04-19 17:45:06"
         },
         {
@@ -388,7 +359,6 @@
                 "type": "zip",
                 "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/dcb83b8243c8a99a790ab7d44109d61dea1b6900",
                 "reference": "dcb83b8243c8a99a790ab7d44109d61dea1b6900",
->>>>>>> release/1.5.1
                 "shasum": ""
             },
             "require": {
@@ -446,11 +416,7 @@
                 "sdk",
                 "yii"
             ],
-<<<<<<< HEAD
-            "time": "2014-04-19 17:49:13"
-=======
             "time": "2014-04-19 17:49:19"
->>>>>>> release/1.5.1
         },
         {
             "name": "dreamfactory/oasys",
@@ -588,12 +554,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/guzzle3.git",
-                "reference": "dc4a4af0ba585522863f75324bbfe2e0009f2893"
+                "reference": "e4d12d7d6acccf75a5e504114e2df9195e494108"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle3/zipball/dc4a4af0ba585522863f75324bbfe2e0009f2893",
-                "reference": "dc4a4af0ba585522863f75324bbfe2e0009f2893",
+                "url": "https://api.github.com/repos/guzzle/guzzle3/zipball/e4d12d7d6acccf75a5e504114e2df9195e494108",
+                "reference": "e4d12d7d6acccf75a5e504114e2df9195e494108",
                 "shasum": ""
             },
             "require": {
@@ -672,7 +638,7 @@
                 "rest",
                 "web service"
             ],
-            "time": "2014-04-16 17:46:30"
+            "time": "2014-04-23 21:43:40"
         },
         {
             "name": "kisma/kisma",
@@ -738,12 +704,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
-                "reference": "1afc39690e7414412face1f8cbf67b73db34485c"
+                "reference": "65026b610f8c19e61d7242f600530677b0466aac"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/1afc39690e7414412face1f8cbf67b73db34485c",
-                "reference": "1afc39690e7414412face1f8cbf67b73db34485c",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/65026b610f8c19e61d7242f600530677b0466aac",
+                "reference": "65026b610f8c19e61d7242f600530677b0466aac",
                 "shasum": ""
             },
             "require": {
@@ -798,7 +764,7 @@
                 "logging",
                 "psr-3"
             ],
-            "time": "2014-04-20 16:41:26"
+            "time": "2014-04-24 13:29:03"
         },
         {
             "name": "pear-pear.php.net/Archive_Tar",
