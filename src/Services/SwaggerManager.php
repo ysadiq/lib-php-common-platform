@@ -208,7 +208,7 @@ SQL;
 
                 if ( is_array( $_fromFile ) && !empty( $_fromFile ) )
                 {
-                    $_content = json_encode( array_merge( $_baseSwagger, $_fromFile ), JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT );
+                    $_content = json_encode( array_merge( $_baseSwagger, $_fromFile ), JSON_UNESCAPED_SLASHES );
                 }
             }
             else //	Check custom path, uses api name
@@ -244,6 +244,15 @@ SQL;
             // replace service type placeholder with api name for this service instance
             $_content = str_replace( '/{api_name}', '/' . $_apiName, $_content );
 
+            if ( !isset( static::$_eventMap[ $_apiName ] ) || !is_array( static::$_eventMap[ $_apiName ] ) || empty( static::$_eventMap[ $_apiName ] ) )
+            {
+                static::$_eventMap[ $_apiName ] = array();
+            }
+
+            $_chunk = json_decode( $_content, true );
+            $_serviceEvents = static::_parseSwaggerEvents( $_apiName, $_chunk );
+            $_content = json_encode( $_chunk, JSON_UNESCAPED_SLASHES );
+
             // cache it to a file for later access
             $_filePath = $_cachePath . '/' . $_apiName . '.json';
 
@@ -258,13 +267,6 @@ SQL;
                 'path'        => '/' . $_apiName,
                 'description' => Option::get( $_service, 'description', 'Service' )
             );
-
-            if ( !isset( static::$_eventMap[ $_apiName ] ) || !is_array( static::$_eventMap[ $_apiName ] ) || empty( static::$_eventMap[ $_apiName ] ) )
-            {
-                static::$_eventMap[ $_apiName ] = array();
-            }
-
-            $_serviceEvents = static::_parseSwaggerEvents( $_apiName, json_decode( $_content, true ) );
 
             //	Parse the events while we get the chance...
             static::$_eventMap[ $_apiName ] = array_merge(
@@ -283,14 +285,13 @@ SQL;
 
         $_filePath = $_cachePath . static::SWAGGER_CACHE_FILE;
 
-        if ( false === file_put_contents( $_filePath, json_encode( $_out, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT ) ) )
+        if ( false === file_put_contents( $_filePath, json_encode( $_out, JSON_UNESCAPED_SLASHES ) ) )
         {
             Log::error( '  * File system error creating swagger cache file: ' . $_filePath );
         }
 
         //	Write event cache file
-        if ( false ===
-             file_put_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE, json_encode( static::$_eventMap, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT ) )
+        if ( false === file_put_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE, json_encode( static::$_eventMap, JSON_UNESCAPED_SLASHES ) )
         )
         {
             Log::error( '  * File system error writing events cache file: ' . $_cachePath . static::SWAGGER_EVENT_CACHE_FILE );
@@ -314,11 +315,11 @@ SQL;
      *
      * @return array
      */
-    protected static function _parseSwaggerEvents( $apiName, $data )
+    protected static function _parseSwaggerEvents( $apiName, &$data )
     {
         $_eventMap = array();
 
-        foreach ( Option::get( $data, 'apis', array() ) as $_api )
+        foreach ( Option::get( $data, 'apis', array() ) as $_ixApi => &$_api )
         {
             //  Trim slashes for use as a file name
             $_scripts = $_events = array();
@@ -329,7 +330,7 @@ SQL;
                 trim( Option::get( $_api, 'path' ), '/' )
             );
 
-            foreach ( Option::get( $_api, 'operations', array() ) as $_operation )
+            foreach ( Option::get( $_api, 'operations', array() ) as $_ixOps => &$_operation )
             {
                 if ( null !== ( $_eventNames = Option::get( $_operation, 'event_name' ) ) )
                 {
@@ -348,14 +349,20 @@ SQL;
                         }
                     }
 
-                    if ( !is_array( $_eventNames ) )
+                    if ( empty( $_eventNames ) )
+                    {
+                        $_eventNames = array();
+                    }
+                    else if ( !is_array( $_eventNames ) )
                     {
                         $_eventNames = array($_eventNames);
                     }
 
-                    foreach ( $_eventNames as $_templateEventName )
-                    {
+                    //  Set into master record
+                    $data['apis'][ $_ixApi ]['operations'][ $_ixOps ]['event_name'] = $_eventNames;
 
+                    foreach ( $_eventNames as $_ixEventNames => &$_templateEventName )
+                    {
                         $_eventName = str_replace(
                             array(
                                 '{api_name}',
@@ -375,6 +382,9 @@ SQL;
                         $_scripts += static::_findScripts( $_path, $_method, $_eventName );
 
                         $_eventsThrown[] = $_eventName;
+
+                        //  Set actual name in swagger file
+                        $data['apis'][ $_ixApi ]['operations'][ $_ixOps ]['event_name'][ $_ixEventNames ] = $_eventName;
                     }
 
                     $_events[ $_method ] = array(
