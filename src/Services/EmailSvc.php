@@ -25,8 +25,6 @@ use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\EmailUtilities;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\EmailTemplate;
-use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 

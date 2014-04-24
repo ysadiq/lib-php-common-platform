@@ -19,10 +19,8 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
+use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Services\SwaggerManager;
-use DreamFactory\Platform\Utility\SwaggerUtilities;
-use Swagger\Annotations as SWG;
 
 /**
  * Provider

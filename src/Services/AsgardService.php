@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Components\Counter;
+use DreamFactory\Platform\Yii\Models\Stat;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\SeedBag;
 use Kisma\Core\Utility\Log;

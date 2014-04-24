@@ -26,7 +26,6 @@ use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
 use DreamFactory\Platform\Events\PlatformEvent;
-use DreamFactory\Platform\Events\ResourceEvent;
 use DreamFactory\Platform\Events\RestServiceEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;

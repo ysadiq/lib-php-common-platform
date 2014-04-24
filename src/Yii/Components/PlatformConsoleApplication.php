@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Yii\Components;
 use Composer\Autoload\ClassLoader;
 use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\CorsManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
@@ -242,7 +243,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
      * @param bool $createIfNull If true, the default, the response object will be created if it hasn't already
      * @param bool $sendHeaders
      *
-     * @throws \DreamFactory\Platform\Utility\RestException
+     * @throws RestException
      * @return \Symfony\Component\HttpFoundation\Response
      */
     public function getResponseObject( $createIfNull = true, $sendHeaders = true )
@@ -258,7 +259,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
     /**
      * @param \Symfony\Component\HttpFoundation\Response $responseObject
      *
-     * @throws \DreamFactory\Platform\Utility\RestException
+     * @throws RestException
      * @return PlatformWebApplication
      */
     public function setResponseObject( $responseObject )
@@ -431,7 +432,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
     /**
      * @param array $corsWhitelist
      *
-     * @throws \DreamFactory\Platform\Utility\RestException
+     * @throws RestException
      * @return PlatformWebApplication
      */
     public function setCorsWhitelist( $corsWhitelist )
