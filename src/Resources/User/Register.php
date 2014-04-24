@@ -27,6 +27,7 @@ use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Services\EmailSvc;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Platform\Yii\Models\User;

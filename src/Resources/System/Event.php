@@ -19,16 +19,22 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
-use DreamFactory\Platform\Components\EventProxy;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Events\Enums\PlatformEvents;
 use DreamFactory\Platform\Events\PlatformEvent;
+use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Platform;
+use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Event

@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Components;
 
 use DreamFactory\Platform\Interfaces\FormatterLike;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Controllers\BaseWebController;
 use Kisma\Core\Utility\Option;
 

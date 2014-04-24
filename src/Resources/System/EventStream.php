@@ -20,9 +20,7 @@
 namespace DreamFactory\Platform\Resources\System;
 
 use Aws\S3\Exception\NotImplementedException;
-use DreamFactory\Platform\Components\EventProxy;
 use DreamFactory\Platform\Events\Chunnel;
-use DreamFactory\Platform\Events\Enums\StreamEvents;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 
 /**

@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Utility;
 
 use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
+use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Interfaces\PersistentStoreLike;
 use DreamFactory\Platform\Services\SystemManager;
@@ -30,6 +31,7 @@ use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
