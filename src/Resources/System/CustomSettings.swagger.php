@@ -29,7 +29,7 @@ $_custom['apis'] = array(
                 'summary'          => 'getCustomSettings() - Retrieve all custom system settings.',
                 'nickname'         => 'getCustomSettings',
                 'type'             => 'CustomSettings',
-                'event_name'       => 'settings.read',
+                'event_name'       => '{api_name}.settings.read',
                 'responseMessages' => array(
                     array(
                         'message' => 'System Error - Specific reason is included in the error message.',
@@ -43,7 +43,7 @@ $_custom['apis'] = array(
                 'summary'          => 'setCustomSettings() - Update one or more custom system settings.',
                 'nickname'         => 'setCustomSettings',
                 'type'             => 'Success',
-                'event_name'       => 'settings.update',
+                'event_name'       => '{api_name}.settings.update',
                 'parameters'       => array(
                     array(
                         'name'          => 'body',
@@ -82,7 +82,7 @@ $_custom['apis'] = array(
                 'summary'          => 'getCustomSetting() - Retrieve one custom system setting.',
                 'nickname'         => 'getCustomSetting',
                 'type'             => 'CustomSetting',
-                'event_name'       => 'setting.read',
+                'event_name'       => '{api_name}.setting.read',
                 'parameters'       => array(
                     array(
                         'name'          => 'setting',
@@ -106,7 +106,7 @@ $_custom['apis'] = array(
                 'summary'          => 'deleteCustomSetting() - Delete one custom setting.',
                 'nickname'         => 'deleteCustomSetting',
                 'type'             => 'Success',
-                'event_name'       => 'setting.delete',
+                'event_name'       => '{api_name}.setting.delete',
                 'parameters'       => array(
                     array(
                         'name'          => 'setting',

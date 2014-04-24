@@ -26,46 +26,46 @@
  *
  */
 return array(
-	'resourcePath' => '/{api_name}',
-	'produces'     => array( 'application/json', 'application/xml' ),
-	'consumes'     => array( 'application/json', 'application/xml' ),
-	'apis'         => array(
-		array(
-			'path'        => '/{api_name}',
-			'operations'  => array(),
-			'description' => 'No operations currently defined for this service.',
-		),
-	),
-	'models'       => array(
-		'Resources' => array(
-			'id'         => 'Resources',
-			'properties' => array(
-				'resource' => array(
-					'type'        => 'Array',
-					'description' => 'Array of resources available by this service.',
-					'items'       => array(
-						'$ref' => 'Resource',
-					),
-				),
-			),
-		),
-		'Resource'  => array(
-			'id'         => 'Resource',
-			'properties' => array(
-				'name' => array(
-					'type'        => 'string',
-					'description' => 'Name of the resource.',
-				),
-			),
-		),
-		'Success'   => array(
-			'id'         => 'Success',
-			'properties' => array(
-				'success' => array(
-					'type'        => 'boolean',
-					'description' => 'True when API call was successful, false or error otherwise.',
-				),
-			),
-		),
-	),
+    'resourcePath' => '/{api_name}',
+    'produces'     => array( 'application/json', 'application/xml' ),
+    'consumes'     => array( 'application/json', 'application/xml' ),
+    'apis'         => array(
+        array(
+            'path'        => '/{api_name}',
+            'operations'  => array(),
+            'description' => 'No operations currently defined for this service.',
+        ),
+    ),
+    'models'       => array(
+        'Resource'  => array(
+            'id'         => 'Resource',
+            'properties' => array(
+                'name' => array(
+                    'type'        => 'string',
+                    'description' => 'Name of the resource.',
+                ),
+            ),
+        ),
+        'Resources' => array(
+            'id'         => 'Resources',
+            'properties' => array(
+                'resource' => array(
+                    'type'        => 'Array',
+                    'description' => 'Array of resources available by this service.',
+                    'items'       => array(
+                        '$ref' => 'Resource',
+                    ),
+                ),
+            ),
+        ),
+        'Success'   => array(
+            'id'         => 'Success',
+            'properties' => array(
+                'success' => array(
+                    'type'        => 'boolean',
+                    'description' => 'True when API call was successful, false or error otherwise.',
+                ),
+            ),
+        ),
+    ),
 );

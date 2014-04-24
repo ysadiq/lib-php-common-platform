@@ -26,7 +26,6 @@ use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Platform;
-use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Guzzle\Http\Client as GuzzleClient;
 use Kisma\Core\Utility\FilterInput;
@@ -129,10 +128,256 @@ class SalesforceDbSvc extends BaseDbSvc
         $this->_fieldCache = array();
     }
 
+    /**
+     * Object destructor
+     */
+    public function __destruct()
+    {
+    }
+
+    /**
+     * @param null|array $post_data
+     *
+     * @return array
+     */
+    protected function _gatherExtrasFromRequest( &$post_data = null )
+    {
+        $_extras = parent::_gatherExtrasFromRequest( $post_data );
+
+        // get possible paging parameter for large requests
+        $_next = FilterInput::request( 'next' );
+        if ( empty( $_next ) && !empty( $post_data ) )
+        {
+            $_next = Option::get( $post_data, 'next' );
+        }
+        $_extras['next'] = $_next;
+
+        // continue batch processing if an error occurs, if applicable
+        $_continue = FilterInput::request( 'continue', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+        if ( empty( $_continue ) && !empty( $post_data ) )
+        {
+            $_continue = Option::getBool( $post_data, 'continue' );
+        }
+        $_extras['continue'] = $_continue;
+
+        return $_extras;
+    }
+
+    // REST service implementation
+
+    /**
+     * @throws \Exception
+     * @return array
+     */
+    protected function _getSObjectsArray( $list_only = false )
+    {
+        $_result = $this->callGuzzle( 'GET', 'sobjects/' );
+
+        $_tables = Option::clean( Option::get( $_result, 'sobjects' ) );
+        if ( $list_only )
+        {
+            $_out = array();
+            foreach ( $_tables as $_table )
+            {
+                $_out[] = Option::get( $_table, 'name' );
+            }
+
+            return $_out;
+        }
+
+        return $_tables;
+    }
+
+    /**
+     * @throws \Exception
+     * @return array
+     */
+    protected function _listResources()
+    {
+        try
+        {
+            $_resources = array();
+            $_result = $this->_getSObjectsArray();
+            foreach ( $_result as $_table )
+            {
+                $_name = Option::get( $_table, 'name' );
+                $_access = $this->getPermissions( $_name );
+                if ( !empty( $_access ) )
+                {
+                    $_resources[] = array_merge( $_table, array( 'access' => $_access ) );
+                }
+            }
+
+            return array( 'resource' => $_resources );
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+        }
+    }
+
+    // Handle administrative options, table add, delete, etc
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getTable( $table )
+    {
+        static $_existing = null;
+
+        if ( !$_existing )
+        {
+            $_existing = $this->_getSObjectsArray( true );
+        }
+
+        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
+        if ( empty( $_name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        if ( false === array_search( $_name, $_existing ) )
+        {
+            throw new NotFoundException( "Table '$_name' not found." );
+        }
+
+        try
+        {
+            $result = $this->callGuzzle( 'GET', 'sobjects/' . $table . '/describe' );
+
+            $_out = $result;
+            $_out['access'] = $this->getPermissions( $_name );
+
+            return $_out;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function createTable( $properties = array() )
+    {
+        throw new NotImplementedException( "Metadata actions currently not supported." );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateTable( $properties = array() )
+    {
+        throw new NotImplementedException( "Metadata actions currently not supported." );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function deleteTable( $table, $check_empty = false )
+    {
+        throw new NotImplementedException( "Metadata actions currently not supported." );
+    }
+
+    //-------- Table Records Operations ---------------------
+    // records is an array of field arrays
+
+    /**
+     * {@inheritdoc}
+     */
+    public function mergeRecords( $table, $records, $extras = array() )
+    {
+        // currently the same as update here
+        return $this->updateRecords( $table, $records, $extras );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    {
+        // currently the same as update here
+        return $this->updateRecordsByFilter( $table, $record, $filter, $extras );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function mergeRecordsByIds( $table, $record, $ids, $extras = array() )
+    {
+        // currently the same as update here
+        return $this->updateRecordsByIds( $table, $record, $ids, $extras );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
+    {
+        $_fields = Option::get( $extras, 'fields' );
+        $_idField = Option::get( $extras, 'id_field' );
+        $fields = $this->_buildFieldList( $table, $_fields, $_idField );
+
+        $_next = Option::get( $extras, 'next' );
+        if ( !empty( $_next ) )
+        {
+            $_result = $this->callGuzzle( 'GET', 'query/' . $_next );
+        }
+        else
+        {
+            // build query string
+            $_query = 'SELECT ' . $fields . ' FROM ' . $table;
+
+            if ( !empty( $filter ) )
+            {
+                $_query .= ' WHERE ' . $filter;
+            }
+
+            $_order = Option::get( $extras, 'order' );
+            if ( !empty( $_order ) )
+            {
+                $_query .= ' ORDER BY ' . $_order;
+            }
+
+            $_offset = intval( Option::get( $extras, 'offset', 0 ) );
+            if ( $_offset > 0 )
+            {
+                $_query .= ' OFFSET ' . $_offset;
+            }
+
+            $_limit = intval( Option::get( $extras, 'limit', 0 ) );
+            if ( $_limit > 0 )
+            {
+                $_query .= ' LIMIT ' . $_limit;
+            }
+
+            $_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
+        }
+
+        $_data = Option::get( $_result, 'records', array() );
+
+        $_includeCount = Option::getBool( $extras, 'include_count', false );
+        $_moreToken = Option::get( $_result, 'nextRecordsUrl' );
+        if ( $_includeCount || $_moreToken )
+        {
+            // count total records
+            $_data['meta']['count'] = intval( Option::get( $_result, 'totalSize' ) );
+            if ( $_moreToken )
+            {
+                $_data['meta']['next'] = substr( $_moreToken, strrpos( $_moreToken, '/' ) + 1 );
+            }
+        }
+
+        return $_data;
+    }
+
+    // Helper functions
+
     protected function _getSoapLoginResult()
     {
         //@todo use client provided Salesforce wsdl for the different versions
-        $_wsdl = Platform::getLibraryTemplatePath( '/salesforce/salesforce.enterprise.wsdl.xml', true, true );
+        $_wsdl = Platform::getLibraryTemplatePath( '/salesforce/salesforce.enterprise.wsdl.xml' );
 
         $_builder = new SoapClient\ClientBuilder( $_wsdl, $this->_username, $this->_password, $this->_securityToken );
         $_soapClient = $_builder->build();
@@ -293,59 +538,32 @@ class SalesforceDbSvc extends BaseDbSvc
         return new GuzzleClient( $this->getBaseUrl() );
     }
 
-    /**
-     * Object destructor
-     */
-    public function __destruct()
+    protected function getFieldsInfo( $table )
     {
+        $_result = $this->getTable( $table );
+        $_result = Option::get( $_result, 'fields' );
+        if ( empty( $_result ) )
+        {
+            return array();
+        }
+
+        $_fields = array();
+        foreach ( $_result as $_field )
+        {
+            $_fields[] = Option::get( $_field, 'name' );
+        }
+
+        return $_result;
     }
 
-    /**
-     * @param null|array $post_data
-     *
-     * @return array
-     */
-    protected function _gatherExtrasFromRequest( $post_data = null )
+    protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
-        $_extras = parent::_gatherExtrasFromRequest( $post_data );
+        $requested_fields = static::DEFAULT_ID_FIELD; // can only be this
 
-        // get possible paging parameter for large requests
-        $_next = FilterInput::request( 'next' );
-        if ( empty( $_next ) && !empty( $post_data ) )
-        {
-            $_next = Option::get( $post_data, 'next' );
-        }
-        $_extras['next'] = $_next;
+        $_type = Option::get( Option::clean( $requested_types ), 0 );
+        $_type = (empty($_type)) ? 'string' : $_type;
 
-        // continue batch processing if an error occurs, if applicable
-        $_continue = FilterInput::request( 'continue', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
-        if ( empty( $_continue ) && !empty( $post_data ) )
-        {
-            $_continue = Option::getBool( $post_data, 'continue' );
-        }
-        $_extras['continue'] = $_continue;
-
-        return $_extras;
-    }
-
-    // REST service implementation
-
-    /**
-     * @throws \Exception
-     * @return array
-     */
-    protected function _getSObjectsArray()
-    {
-        try
-        {
-            $_result = $this->callGuzzle( 'GET', 'sobjects/' );
-
-            return Option::get( $_result, 'sobjects' );
-        }
-        catch ( RestException $ex )
-        {
-            throw new RestException( $ex->getStatusCode(), "Failed to describe sobjects on Salesforce service.{$ex->getMessage()}" );
-        }
+        return array( array( 'name' => static::DEFAULT_ID_FIELD, 'type' => $_type, 'required' => false ) );
     }
 
     /**
@@ -375,817 +593,6 @@ class SalesforceDbSvc extends BaseDbSvc
         }
 
         return implode( ',', $_fields );
-    }
-
-    /**
-     * @throws \Exception
-     * @return array
-     */
-    protected function _listResources()
-    {
-        $_out = array();
-        $_result = $this->_getSObjectsArray();
-        foreach ( $_result as $_table )
-        {
-            $_out[] = array( 'name' => Option::get( $_table, 'name' ), 'label' => Option::get( $_table, 'label' ) );
-        }
-
-        return array( 'resource' => $_out );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getTables( $tables = array() )
-    {
-        if ( empty( $tables ) )
-        {
-            return $this->_getSObjectsArray();
-        }
-
-        return parent::getTables( $tables );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getTable( $table )
-    {
-        if ( is_array( $table ) )
-        {
-            $table = Option::get( $table, 'name' );
-        }
-        if ( empty( $table ) )
-        {
-            throw new BadRequestException( "No 'name' field in data." );
-        }
-
-        try
-        {
-            $result = $this->callGuzzle( 'GET', 'sobjects/' . $table . '/describe' );
-
-            return $result;
-        }
-        catch ( RestException $ex )
-        {
-            throw new RestException( $ex->getStatusCode(), "Failed to describe sobject '$table' on Salesforce service. {$ex->getMessage()}" );
-        }
-    }
-
-    //-------- Table Records Operations ---------------------
-    // records is an array of field arrays
-
-    /**
-     * {@inheritdoc}
-     */
-    public function createRecords( $table, $records, $fields = null, $extras = array() )
-    {
-        if ( empty( $records ) || !is_array( $records ) )
-        {
-            throw new BadRequestException( 'There are no record sets in the request.' );
-        }
-        if ( !isset( $records[0] ) )
-        {
-            // single record possibly passed in without wrapper array
-            $records = array( $records );
-        }
-
-        $_isSingle = ( 1 == count( $records ) );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_idField = Option::get( $extras, 'id_field' );
-        if ( empty( $_idField ) )
-        {
-            $_idField = static::DEFAULT_ID_FIELD;
-        }
-
-        $_ids = array();
-        $_errors = array();
-        $_client = $this->getGuzzleClient();
-
-        foreach ( $records as $_key => $_record )
-        {
-            try
-            {
-                $_result = $this->callGuzzle( 'POST', 'sobjects/' . $table . '/', null, json_encode( $_record ), $_client );
-                if ( !Option::getBool( $_result, 'success', false ) )
-                {
-                    $_msg = json_encode( Option::get( $_result, 'errors' ) );
-                    throw new InternalServerErrorException( "Record insert failed for table '$table'.\n" . $_msg );
-                }
-                $_ids[$_key] = Option::get( $_result, 'id' );
-            }
-            catch ( \Exception $ex )
-            {
-                if ( $_isSingle )
-                {
-                    throw $ex;
-                }
-
-                $_errors[] = $_key;
-                $_ids[$_key] = $ex->getMessage();
-                if ( !$_continue )
-                {
-                    break;
-                }
-            }
-        }
-
-        if ( !empty( $_errors ) )
-        {
-            $_msg = array( 'errors' => $_errors, 'ids' => $_ids );
-            throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
-        }
-
-        $_results = array();
-        if ( !static::_requireMoreFields( $fields, $_idField ) )
-        {
-            foreach ( $_ids as $_id )
-            {
-                $_results[] = array( $_idField => $_id );
-            }
-        }
-        else
-        {
-            $_results = $this->retrieveRecordsByIds( $table, $_ids, $fields, $extras );
-        }
-
-        return $_results;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function updateRecords( $table, $records, $fields = null, $extras = array() )
-    {
-        if ( empty( $records ) || !is_array( $records ) )
-        {
-            throw new BadRequestException( 'There are no record sets in the request.' );
-        }
-        if ( !isset( $records[0] ) )
-        {
-            // single record possibly passed in without wrapper array
-            $records = array( $records );
-        }
-
-        $_isSingle = ( 1 == count( $records ) );
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_idField = Option::get( $extras, 'id_field' );
-        if ( empty( $_idField ) )
-        {
-            $_idField = static::DEFAULT_ID_FIELD;
-        }
-
-        $_ids = array();
-        $_errors = array();
-        $_client = $this->getGuzzleClient();
-
-        foreach ( $records as $_key => $_record )
-        {
-            try
-            {
-                $_id = Option::get( $_record, $_idField );
-                if ( empty( $_id ) )
-                {
-                    throw new BadRequestException( "Identifying field '$_idField' can not be empty for update record [$_key] request." );
-                }
-
-                $_record = Utilities::removeOneFromArray( $_idField, $_record );
-
-                $_result = $this->callGuzzle( 'PATCH', 'sobjects/' . $table . '/' . $_id, null, json_encode( $_record ), $_client );
-                if ( $_result && !Option::getBool( $_result, 'success', false ) )
-                {
-                    $msg = Option::get( $_result, 'errors' );
-                    throw new InternalServerErrorException( "Record update failed for table '$table'.\n" . $msg );
-                }
-                $_ids[$_key] = $_id;
-            }
-            catch ( \Exception $ex )
-            {
-                if ( $_isSingle )
-                {
-                    throw $ex;
-                }
-
-                $_errors[] = $_key;
-                $_ids[$_key] = $ex->getMessage();
-                if ( !$_continue )
-                {
-                    break;
-                }
-            }
-        }
-
-        if ( !empty( $_errors ) )
-        {
-            $_msg = array( 'errors' => $_errors, 'ids' => $_ids );
-            throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
-        }
-
-        $_results = array();
-        if ( !static::_requireMoreFields( $fields, $_idField ) )
-        {
-            foreach ( $_ids as $_id )
-            {
-                $_results[] = array( $_idField => $_id );
-            }
-        }
-        else
-        {
-            $_results = $this->retrieveRecordsByIds( $table, $_ids, $fields, $extras );
-        }
-
-        return $_results;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function updateRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
-    {
-        if ( !is_array( $record ) || empty( $record ) )
-        {
-            throw new BadRequestException( 'There are no fields in the record.' );
-        }
-
-        if ( empty( $filter ) )
-        {
-            throw new BadRequestException( "Filter for delete request can not be empty." );
-        }
-
-        $_records = $this->retrieveRecordsByFilter( $table, $filter, null, $extras );
-
-        $_idField = Option::get( $extras, 'id_field' );
-        if ( empty( $_idField ) )
-        {
-            $_idField = static::DEFAULT_ID_FIELD;
-        }
-        $_ids = array();
-
-        foreach ( $_records as $_key => $_record )
-        {
-            $_id = Option::get( $_record, $_idField );
-            if ( empty( $_id ) )
-            {
-                throw new BadRequestException( "Identifying field '$_idField' can not be empty for update record [$_key] request." );
-            }
-
-            $_ids[$_key] = $_id;
-        }
-
-        return $this->updateRecordsByIds( $table, $record, $_ids, $fields, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function updateRecordsByIds( $table, $record, $ids, $fields = null, $extras = array() )
-    {
-        if ( !is_array( $record ) || empty( $record ) )
-        {
-            throw new BadRequestException( "No record fields were passed in the request." );
-        }
-
-        $_client = $this->getGuzzleClient();
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_idField = Option::get( $extras, 'id_field' );
-        if ( empty( $_idField ) )
-        {
-            $_idField = static::DEFAULT_ID_FIELD;
-        }
-
-        if ( !is_array( $ids ) )
-        {
-            $ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
-        }
-        if ( empty( $ids ) )
-        {
-            throw new BadRequestException( "Identifying values for '$_idField' can not be empty for update request." );
-        }
-
-        $_isSingle = ( 1 == count( $ids ) );
-
-        try
-        {
-            $record = Utilities::removeOneFromArray( $_idField, $record );
-
-            $_errors = array();
-
-            foreach ( $ids as $_key => $_id )
-            {
-                try
-                {
-                    if ( empty( $_id ) )
-                    {
-                        throw new BadRequestException( "Identifying field '$_idField' can not be empty for update record [$_key] request." );
-                    }
-
-                    $_result = $this->callGuzzle( 'PATCH', 'sobjects/' . $table . '/' . $_id, null, json_encode( $record ), $_client );
-                    if ( $_result && !Option::getBool( $_result, 'success', false ) )
-                    {
-                        $msg = Option::get( $_result, 'errors' );
-                        throw new InternalServerErrorException( "Record update failed for table '$table'.\n" . $msg );
-                    }
-                }
-                catch ( \Exception $ex )
-                {
-                    if ( $_isSingle )
-                    {
-                        throw $ex;
-                    }
-
-                    $_errors[] = $_key;
-                    $ids[$_key] = $ex->getMessage();
-                    if ( !$_continue )
-                    {
-                        break;
-                    }
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                $_msg = array( 'errors' => $_errors, 'ids' => $ids );
-                throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
-            }
-
-            $_results = array();
-            if ( !static::_requireMoreFields( $fields, $_idField ) )
-            {
-                foreach ( $ids as $_id )
-                {
-                    $_results[] = array( $_idField => $_id );
-                }
-            }
-            else
-            {
-                $_results = $this->retrieveRecordsByIds( $table, $ids, $fields, $extras );
-            }
-
-            return $_results;
-        }
-        catch ( \Exception $ex )
-        {
-            throw $ex;
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function mergeRecords( $table, $records, $fields = null, $extras = array() )
-    {
-        // currently the same as update here
-        return $this->updateRecords( $table, $records, $fields, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function mergeRecordsByFilter( $table, $record, $filter = null, $fields = null, $extras = array() )
-    {
-        // currently the same as update here
-        return $this->updateRecordsByFilter( $table, $record, $filter, $fields, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function mergeRecordsByIds( $table, $record, $ids, $fields = null, $extras = array() )
-    {
-        // currently the same as update here
-        return $this->updateRecordsByIds( $table, $record, $ids, $fields, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteRecords( $table, $records, $fields = null, $extras = array() )
-    {
-        if ( !is_array( $records ) || empty( $records ) )
-        {
-            throw new BadRequestException( 'There are no record sets in the request.' );
-        }
-        if ( !isset( $records[0] ) )
-        {
-            // single record possibly passed in without wrapper array
-            $records = array( $records );
-        }
-
-        $_idField = Option::get( $extras, 'id_field' );
-        if ( empty( $_idField ) )
-        {
-            $_idField = static::DEFAULT_ID_FIELD;
-        }
-
-        $_ids = array();
-        foreach ( $records as $_key => $_record )
-        {
-            $_id = Option::get( $_record, $_idField );
-            if ( empty( $_id ) )
-            {
-                throw new BadRequestException( "Identifying field '$_idField' can not be empty for delete record [$_key] request." );
-            }
-            $_ids[$_key] = $_id;
-        }
-
-        return $this->deleteRecordsByIds( $table, $_ids, $fields, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteRecordsByFilter( $table, $filter, $fields = null, $extras = array() )
-    {
-        if ( empty( $filter ) )
-        {
-            throw new BadRequestException( "Filter for delete request can not be empty." );
-        }
-
-        $_records = $this->retrieveRecordsByFilter( $table, $filter, null, $extras );
-
-        return $this->deleteRecords( $table, $_records, $fields, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteRecordsByIds( $table, $ids, $fields = null, $extras = array() )
-    {
-        $_client = $this->getGuzzleClient();
-        $_continue = Option::getBool( $extras, 'continue', false );
-        $_idField = Option::get( $extras, 'id_field' );
-        if ( empty( $_idField ) )
-        {
-            $_idField = static::DEFAULT_ID_FIELD;
-        }
-
-        if ( !is_array( $ids ) )
-        {
-            $ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
-        }
-        if ( empty( $ids ) )
-        {
-            throw new BadRequestException( "Identifying values for '$_idField' can not be empty for delete request." );
-        }
-
-        $_isSingle = ( 1 == count( $ids ) );
-
-        try
-        {
-            $_errors = array();
-
-            // get the returnable fields first, then issue delete
-            $_outResults = array();
-            if ( static::_requireMoreFields( $fields, $_idField ) )
-            {
-                $_outResults = $this->retrieveRecordsByIds( $table, $ids, $fields, $extras );
-            }
-
-            foreach ( $ids as $_key => $_id )
-            {
-                try
-                {
-                    if ( empty( $_id ) )
-                    {
-                        throw new BadRequestException( "Identifying field '$_idField' can not be empty for delete record [$_key] request." );
-                    }
-
-                    $_result = $this->callGuzzle( 'DELETE', 'sobjects/' . $table . '/' . $_id, null, null, $_client );
-                    if ( $_result && !Option::getBool( $_result, 'success', false ) )
-                    {
-                        $msg = Option::get( $_result, 'errors' );
-                        throw new InternalServerErrorException( "Record delete failed for table '$table'.\n" . $msg );
-                    }
-                }
-                catch ( \Exception $ex )
-                {
-                    if ( $_isSingle )
-                    {
-                        throw $ex;
-                    }
-
-                    $_errors[] = $_key;
-                    $ids[$_key] = $ex->getMessage();
-                    if ( !$_continue )
-                    {
-                        break;
-                    }
-                }
-            }
-
-            if ( !empty( $_errors ) )
-            {
-                $_msg = array( 'errors' => $_errors, 'ids' => $ids );
-                throw new BadRequestException( "Batch Error: Not all parts of the request were successful.", null, null, $_msg );
-            }
-
-            $_results = array();
-            if ( !static::_requireMoreFields( $fields, $_idField ) )
-            {
-                foreach ( $ids as $_id )
-                {
-                    $_results[] = array( $_idField => $_id );
-                }
-            }
-            else
-            {
-                $_results = $_outResults;
-            }
-
-            return $_results;
-        }
-        catch ( \Exception $ex )
-        {
-            throw $ex;
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function retrieveRecordsByFilter( $table, $filter = null, $fields = null, $extras = array() )
-    {
-        $_idField = Option::get( $extras, 'id_field' );
-        $fields = $this->_buildFieldList( $table, $fields, $_idField );
-
-        $_next = Option::get( $extras, 'next' );
-        if ( !empty( $_next ) )
-        {
-            $_result = $this->callGuzzle( 'GET', 'query/' . $_next );
-        }
-        else
-        {
-            // build query string
-            $_query = 'SELECT ' . $fields . ' FROM ' . $table;
-
-            if ( !empty( $filter ) )
-            {
-                $_query .= ' WHERE ' . $filter;
-            }
-
-            $_order = Option::get( $extras, 'order' );
-            if ( !empty( $_order ) )
-            {
-                $_query .= ' ORDER BY ' . $_order;
-            }
-
-            $_offset = intval( Option::get( $extras, 'offset', 0 ) );
-            if ( $_offset > 0 )
-            {
-                $_query .= ' OFFSET ' . $_offset;
-            }
-
-            $_limit = intval( Option::get( $extras, 'limit', 0 ) );
-            if ( $_limit > 0 )
-            {
-                $_query .= ' LIMIT ' . $_limit;
-            }
-
-            $_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
-        }
-
-        $_data = Option::get( $_result, 'records', array() );
-
-        $_includeCount = Option::getBool( $extras, 'include_count', false );
-        $_moreToken = Option::get( $_result, 'nextRecordsUrl' );
-        if ( $_includeCount || $_moreToken )
-        {
-            // count total records
-            $_data['meta']['count'] = intval( Option::get( $_result, 'totalSize' ) );
-            if ( $_moreToken )
-            {
-                $_data['meta']['next'] = substr( $_moreToken, strrpos( $_moreToken, '/' ) + 1 );
-            }
-        }
-
-        return $_data;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function retrieveRecords( $table, $records, $fields = null, $extras = array() )
-    {
-        if ( empty( $records ) || !is_array( $records ) )
-        {
-            throw new BadRequestException( 'There are no record sets in the request.' );
-        }
-        if ( !isset( $records[0] ) )
-        {
-            // single record
-            $records = array( $records );
-        }
-
-        $_idField = Option::get( $extras, 'id_field' );
-        if ( empty( $_idField ) )
-        {
-            $_idField = static::DEFAULT_ID_FIELD;
-        }
-
-        $_ids = array();
-        foreach ( $records as $_key => $_record )
-        {
-            $_id = Option::get( $_record, $_idField );
-            if ( empty( $_id ) )
-            {
-                throw new BadRequestException( "Identifying field '$_idField' can not be empty for retrieve record [$_key] request." );
-            }
-            $_ids[] = $_id;
-        }
-
-        return $this->retrieveRecordsByIds( $table, $_ids, $fields, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function retrieveRecord( $table, $record, $fields = null, $extras = array() )
-    {
-        if ( !is_array( $record ) || empty( $record ) )
-        {
-            throw new BadRequestException( 'There are no fields in the record.' );
-        }
-
-        $_idField = Option::get( $extras, 'id_field' );
-        if ( empty( $_idField ) )
-        {
-            $_idField = static::DEFAULT_ID_FIELD;
-        }
-
-        $_id = Option::get( $record, $_idField );
-        if ( empty( $_id ) )
-        {
-            throw new BadRequestException( "Identifying field '$_idField' can not be empty for retrieve record request." );
-        }
-
-        return $this->retrieveRecordById( $table, $_id, $fields, $extras );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function retrieveRecordsByIds( $table, $ids, $fields = null, $extras = array() )
-    {
-        if ( empty( $ids ) )
-        {
-            return array();
-        }
-
-        if ( !is_array( $ids ) )
-        {
-            $ids = array_map( 'trim', explode( ',', $ids ) );
-        }
-
-        $_idField = Option::get( $extras, 'id_field' );
-        if ( empty( $_idField ) )
-        {
-            $_idField = static::DEFAULT_ID_FIELD;
-        }
-
-        $fields = $this->_buildFieldList( $table, $fields, $_idField );
-
-        $_idList = "('" . implode( "','", $ids ) . "')";
-        $_query = 'SELECT ' . $fields . ' FROM ' . $table . ' WHERE ' . $_idField . ' IN ' . $_idList;
-
-        $_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
-
-        $_data = Option::get( $_result, 'records', array() );
-
-        return $_data;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function retrieveRecordById( $table, $id, $fields = null, $extras = array() )
-    {
-        if ( empty( $id ) )
-        {
-            return array();
-        }
-
-        $_idField = Option::get( $extras, 'id_field' );
-        $fields = $this->_buildFieldList( $table, $fields, $_idField );
-
-        $_result = $this->callGuzzle( 'GET', 'sobjects/' . $table . '/' . $id, array( 'fields' => $fields ) );
-
-        if ( empty( $_result ) )
-        {
-            throw new NotFoundException( "Record with id '$id' was not found." );
-        }
-
-        return $_result;
-    }
-
-    // Handle administrative options, table add, delete, etc
-
-    /**
-     * Create one or more tables by array of table properties
-     *
-     * @param array $tables
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function createTables( $tables = array() )
-    {
-        throw new NotImplementedException( "Metadata actions currently not supported." );
-    }
-
-    /**
-     * Create a single table by name, additional properties
-     *
-     * @param array $properties
-     *
-     * @throws \Exception
-     */
-    public function createTable( $properties = array() )
-    {
-        throw new NotImplementedException( "Metadata actions currently not supported." );
-    }
-
-    /**
-     * Update properties related to the table
-     *
-     * @param array $tables
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function updateTables( $tables = array() )
-    {
-        throw new NotImplementedException( "Metadata actions currently not supported." );
-    }
-
-    /**
-     * Update properties related to the table
-     *
-     * @param array $properties
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function updateTable( $properties = array() )
-    {
-        throw new NotImplementedException( "Metadata actions currently not supported." );
-    }
-
-    /**
-     * Delete multiple tables and all of their contents
-     *
-     * @param array $tables
-     * @param bool  $check_empty
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function deleteTables( $tables = array(), $check_empty = false )
-    {
-        throw new NotImplementedException( "Metadata actions currently not supported." );
-    }
-
-    /**
-     * Delete the table and all of its contents
-     *
-     * @param string $table
-     * @param bool   $check_empty
-     *
-     * @throws \Exception
-     * @return array
-     */
-    public function deleteTable( $table, $check_empty = false )
-    {
-        throw new NotImplementedException( "Metadata actions currently not supported." );
-    }
-
-    protected function getFieldsInfo( $table )
-    {
-        return $this->_getAllFields( $table, true );
-    }
-
-    protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
-    {
-        $_idsInfo = array();
-        if ( empty( $requested_fields ) )
-        {
-            $requested_fields = array();
-            foreach ( $_idsInfo as $_info )
-            {
-                $requested_fields[] = Option::get( $_info, 'name' );
-            }
-        }
-        else
-        {
-            if ( false !== $requested_fields = static::validateAsArray( $requested_fields, ',' ) )
-            {
-                foreach ( $requested_fields as $_field )
-                {
-                    $_idsInfo[] = array( 'name' => $_field ); // search fields info
-                }
-            }
-        }
-
-        return $_idsInfo;
     }
 
     /**
@@ -1237,77 +644,164 @@ class SalesforceDbSvc extends BaseDbSvc
     }
 
     /**
-     * @param mixed|null $handle
-     *
-     * @return bool
+     * {@inheritdoc}
      */
     protected function initTransaction( $handle = null )
     {
-        $this->_collection = $handle;
-        $this->_batchRecords = array();
-        $this->_rollbackRecords = array();
 
-        return true;
+        return parent::initTransaction( $handle );
     }
 
     /**
-     * @param mixed      $record
-     * @param mixed      $id
-     * @param null|array $extras Additional items needed to complete the transaction
-     * @param bool       $save_old
-     * @param bool       $batch  Request for batch, if applicable
-     *
-     * @throws \DreamFactory\Platform\Exceptions\NotImplementedException
-     * @return null|array Array of output fields
+     * {@inheritdoc}
      */
-    protected function addToTransaction( $record = null, $id = null, $extras = null, $save_old = false, $batch = false )
+    protected function addToTransaction( $record = null, $id = null, $extras = null, $rollback = false, $continue = false, $single = false )
     {
+        $_fields = Option::get( $extras, 'fields' );
+        $_fieldsInfo = Option::get( $extras, 'fields_info' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
+        $_updates = Option::get( $extras, 'updates' );
+        $_idsInfo = Option::get( $extras, 'ids_info' );
+        $_idFields = Option::get( $extras, 'id_fields' );
+        $_needToIterate = ( $single || $continue || ( 1 < count( $_idsInfo ) ) );
+        $_requireMore = Option::getBool( $extras, 'require_more' );
+
+        $_client = $this->getGuzzleClient();
+
         $_out = array();
-        if ( !empty( $this->_batchRecords ) )
+        switch ( $this->getAction() )
         {
-            switch ( $this->getAction() )
-            {
-                case static::POST:
-                    break;
-                case static::PUT:
-                    break;
+            case static::POST:
+                $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters );
+                if ( empty( $_parsed ) )
+                {
+                    throw new BadRequestException( 'No valid fields were found in record.' );
+                }
 
-                case static::MERGE:
-                case static::PATCH:
-                    break;
+                $_native = json_encode( $_parsed );
+                $_result = $this->callGuzzle( 'POST', 'sobjects/' . $this->_transactionTable . '/', null, $_native, $_client );
+                if ( !Option::getBool( $_result, 'success', false ) )
+                {
+                    $_msg = json_encode( Option::get( $_result, 'errors' ) );
+                    throw new InternalServerErrorException( "Record insert failed for table '$this->_transactionTable'.\n" . $_msg );
+                }
 
-                case static::DELETE:
-                    break;
+                $id = Option::get( $_result, 'id' );
 
-                default:
-                    break;
-            }
+                // add via record, so batch processing can retrieve extras
+                return ( $_requireMore ) ? parent::addToTransaction( $id ) : array( $_idFields => $id );
 
-            $this->_batchRecords = array();
+            case static::PUT:
+            case static::MERGE:
+            case static::PATCH:
+                if ( !empty( $_updates ) )
+                {
+                    $record = $_updates;
+                }
+
+                $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
+                if ( empty( $_parsed ) )
+                {
+                    throw new BadRequestException( 'No valid fields were found in record.' );
+                }
+
+                static::removeIds($_parsed, $_idFields);
+                $_native = json_encode( $_parsed );
+
+                $_result = $this->callGuzzle( 'PATCH', 'sobjects/' . $this->_transactionTable . '/' . $id, null, $_native, $_client );
+                if ( $_result && !Option::getBool( $_result, 'success', false ) )
+                {
+                    $msg = Option::get( $_result, 'errors' );
+                    throw new InternalServerErrorException( "Record update failed for table '$this->_transactionTable'.\n" . $msg );
+                }
+
+                // add via record, so batch processing can retrieve extras
+                return ( $_requireMore ) ? parent::addToTransaction( $id ) : array( $_idFields => $id );
+
+            case static::DELETE:
+                $_result = $this->callGuzzle( 'DELETE', 'sobjects/' . $this->_transactionTable . '/' . $id, null, null, $_client );
+                if ( $_result && !Option::getBool( $_result, 'success', false ) )
+                {
+                    $msg = Option::get( $_result, 'errors' );
+                    throw new InternalServerErrorException( "Record delete failed for table '$this->_transactionTable'.\n" . $msg );
+                }
+
+                // add via record, so batch processing can retrieve extras
+                return ( $_requireMore ) ? parent::addToTransaction( $id ) : array( $_idFields => $id );
+
+            case static::GET:
+                if ( !$_needToIterate )
+                {
+                    return parent::addToTransaction( null, $id );
+                }
+
+                $_fields = $this->_buildFieldList( $this->_transactionTable, $_fields, $_idFields );
+
+                $_result = $this->callGuzzle( 'GET', 'sobjects/' . $this->_transactionTable . '/' . $id, array( 'fields' => $_fields ) );
+                if ( empty( $_result ) )
+                {
+                    throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
+                }
+
+                $_out = $_result;
+                break;
         }
 
         return $_out;
     }
 
     /**
-     * @param null|array $extras
-     *
-     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return array
+     * {@inheritdoc}
      */
     protected function commitTransaction( $extras = null )
     {
+        if ( empty( $this->_batchRecords ) && empty( $this->_batchIds ) )
+        {
+            if ( isset( $this->_transaction ) )
+            {
+                $this->_transaction->commit();
+            }
+
+            return null;
+        }
+
+        $_fields = Option::get( $extras, 'fields' );
+        $_idsInfo = Option::get( $extras, 'ids_info' );
+        $_idFields = Option::get( $extras, 'id_fields' );
+
         $_out = array();
+        $_action = $this->getAction();
         if ( !empty( $this->_batchRecords ) )
         {
-            switch ( $this->getAction() )
+            if ( 1 == count( $_idsInfo ) )
             {
-                case static::POST:
-                    break;
-                case static::PUT:
-                    break;
+                // records are used to retrieve extras
+                // ids array are now more like records
+                $_fields = $this->_buildFieldList( $this->_transactionTable, $_fields, $_idFields );
 
+                $_idList = "('" . implode( "','", $this->_batchRecords ) . "')";
+                $_query = 'SELECT ' . $_fields . ' FROM ' . $this->_transactionTable . ' WHERE ' . $_idFields . ' IN ' . $_idList;
+
+                $_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
+
+                $_out = Option::get( $_result, 'records', array() );
+                if ( empty( $_out ) )
+                {
+                    throw new NotFoundException( 'No records were found using the given identifiers.' );
+                }
+            }
+            else
+            {
+                $_out = $this->retrieveRecords( $this->_transactionTable, $this->_batchRecords, $extras );
+            }
+
+            $this->_batchRecords = array();
+        }
+        elseif ( !empty( $this->_batchIds ) )
+        {
+            switch ( $_action )
+            {
+                case static::PUT:
                 case static::MERGE:
                 case static::PATCH:
                     break;
@@ -1315,30 +809,39 @@ class SalesforceDbSvc extends BaseDbSvc
                 case static::DELETE:
                     break;
 
+                case static::GET:
+                    $_fields = $this->_buildFieldList( $this->_transactionTable, $_fields, $_idFields );
+
+                    $_idList = "('" . implode( "','", $this->_batchIds ) . "')";
+                    $_query = 'SELECT ' . $_fields . ' FROM ' . $this->_transactionTable . ' WHERE ' . $_idFields . ' IN ' . $_idList;
+
+                    $_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
+
+                    $_out = Option::get( $_result, 'records', array() );
+                    if ( empty( $_out ) )
+                    {
+                        throw new NotFoundException( 'No records were found using the given identifiers.' );
+                    }
+
+                    break;
+
                 default:
                     break;
             }
 
-            $this->_batchRecords = array();
+            if ( empty( $_out ) )
+            {
+                $_out = $this->_batchIds;
+            }
+
+            $this->_batchIds = array();
         }
 
         return $_out;
     }
 
     /**
-     * @param mixed $record
-     *
-     * @return bool
-     */
-    protected function addToRollback( $record )
-    {
-        $this->_rollbackRecords[] = $record;
-
-        return true;
-    }
-
-    /**
-     * @return bool
+     * {@inheritdoc}
      */
     protected function rollbackTransaction()
     {

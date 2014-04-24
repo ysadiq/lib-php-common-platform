@@ -57,7 +57,7 @@ $_script = array(
                     'summary'          => 'getScripts() - List all scripts',
                     'nickname'         => 'getScripts',
                     'type'             => 'Scripts',
-                    'event_name'       => 'scripts.list',
+                    'event_name'       => '{api_name}.scripts.list',
                     'notes'            => 'List all known scripts',
                     'responseMessages' => $_commonResponses,
                 ),
@@ -72,7 +72,7 @@ $_script = array(
                     'summary'          => 'getScript() - Get the script with ID provided',
                     'nickname'         => 'getScript',
                     'type'             => 'ScriptResponse',
-                    'event_name'       => 'script.read',
+                    'event_name'       => '{api_name}.script.read',
                     'parameters'       => array(
                         array(
                             'name'          => 'script_id',
@@ -90,7 +90,7 @@ $_script = array(
                     'summary'          => 'runScript() - Runs the specified script.',
                     'nickname'         => 'runScript',
                     'type'             => 'ScriptOutput',
-                    'event_name'       => 'script.run',
+                    'event_name'       => '{api_name}.script.run',
                     'parameters'       => array(
                         array(
                             'name'          => 'script_id',
@@ -110,7 +110,7 @@ $_script = array(
                     'notes'            => 'Post data as a string.',
                     'nickname'         => 'writeScript',
                     'type'             => 'ScriptResponse',
-                    'event_name'       => 'script.write',
+                    'event_name'       => '{api_name}.script.write',
                     'parameters'       => array(
                         array(
                             'name'          => 'script_id',
@@ -136,7 +136,7 @@ $_script = array(
                     'summary'          => 'deleteScript() - Delete the script with ID provided',
                     'nickname'         => 'deleteScript',
                     'type'             => 'ScriptResponse',
-                    'event_name'       => 'script.delete',
+                    'event_name'       => '{api_name}.script.delete',
                     'parameters'       => array(
                         array(
                             'name'          => 'script_id',

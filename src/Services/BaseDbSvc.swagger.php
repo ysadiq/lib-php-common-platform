@@ -18,7 +18,10 @@
  * limitations under the License.
  */
 
+use DreamFactory\Platform\Services\SwaggerManager;
+
 $_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
+$_commonResponses = SwaggerManager::getCommonResponses();
 
 $_base['apis'] = array(
     array(
@@ -30,20 +33,7 @@ $_base['apis'] = array(
                 'nickname'         => 'getResources',
                 'type'             => 'Resources',
                 'event_name'       => '{api_name}.list',
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
+                'responseMessages' => SwaggerManager::getCommonResponses( array(400, 401, 500) ),
                 'notes'            => 'List the names of the available tables in this storage. ',
             ),
             array(
@@ -51,7 +41,7 @@ $_base['apis'] = array(
                 'summary'          => 'getTables() - List all properties on given tables.',
                 'nickname'         => 'getTables',
                 'type'             => 'Tables',
-                'event_name'       => 'tables.describe',
+                'event_name'       => '{api_name}.describe',
                 'parameters'       => array(
                     array(
                         'name'          => 'names',
@@ -62,20 +52,7 @@ $_base['apis'] = array(
                         'required'      => true,
                     ),
                 ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
+                'responseMessages' => SwaggerManager::getCommonResponses( array(400, 401, 500) ),
                 'notes'            => 'List the properties of the given tables in this storage.',
             ),
         ),
@@ -89,7 +66,7 @@ $_base['apis'] = array(
                 'summary'          => 'getRecords() - Retrieve one or more records.',
                 'nickname'         => 'getRecords',
                 'type'             => 'RecordsResponse',
-                'event_name'       => 'table.records.get',
+                'event_name'       => '{api_name}.{table_name}.select',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -188,24 +165,7 @@ $_base['apis'] = array(
                         'required'      => false,
                     ),
                 ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'Not Found - Requested table does not exist.',
-                        'code'    => 404,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
+                'responseMessages' => $_commonResponses,
                 'notes'            =>
                     'Use the \'ids\' or \'filter\' parameter to limit resources that are returned. ' .
                     'Use the \'fields\' parameter to limit properties returned for each resource. ' .
@@ -218,7 +178,7 @@ $_base['apis'] = array(
                 'summary'          => 'createRecords() - Create one or more records.',
                 'nickname'         => 'createRecords',
                 'type'             => 'RecordsResponse',
-                'event_name'       => 'table.records.create',
+                'event_name'       => '{api_name}.{table_name}.insert',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -287,31 +247,14 @@ $_base['apis'] = array(
                     array(
                         'name'          => 'X-HTTP-METHOD',
                         'description'   => 'Override request using POST to tunnel other http request, such as DELETE.',
-                        'enum'          => array( 'GET', 'PUT', 'PATCH', 'DELETE' ),
+                        'enum'          => array('GET', 'PUT', 'PATCH', 'DELETE'),
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'header',
                         'required'      => false,
                     ),
                 ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'Not Found - Requested table does not exist.',
-                        'code'    => 404,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
+                'responseMessages' => $_commonResponses,
                 'notes'            =>
                     'Post data should be a single record or an array of records (shown). ' .
                     'By default, only the id property of the record is returned on success. ' .
@@ -322,7 +265,7 @@ $_base['apis'] = array(
                 'summary'          => 'updateRecords() - Update (patch) one or more records.',
                 'nickname'         => 'updateRecords',
                 'type'             => 'RecordsResponse',
-                'event_name'       => 'table.records.update',
+                'event_name'       => '{api_name}.{table_name}.update',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -405,24 +348,101 @@ $_base['apis'] = array(
                         'required'      => false,
                     ),
                 ),
-                'responseMessages' => array(
+                'responseMessages' => $_commonResponses,
+                'notes'            =>
+                    'Post data should be a single record or an array of records (shown). ' .
+                    'By default, only the id property of the record is returned on success. ' .
+                    'Use \'fields\' parameter to return more info.',
+            ),
+            array(
+                'method'           => 'PUT',
+                'summary'          => 'updateRecords() - Update (patch) one or more records.',
+                'nickname'         => 'updateRecords',
+                'type'             => 'RecordsResponse',
+                'event_name'       => '{api_name}.{table_name}.update',
+                'parameters'       => array(
                     array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
+                        'name'          => 'table_name',
+                        'description'   => 'Name of the table to perform operations on.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'path',
+                        'required'      => true,
                     ),
                     array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
+                        'name'          => 'body',
+                        'description'   => 'Data containing name-value pairs of records to update.',
+                        'allowMultiple' => false,
+                        'type'          => 'RecordsRequest',
+                        'paramType'     => 'body',
+                        'required'      => true,
                     ),
                     array(
-                        'message' => 'Not Found - Requested table does not exist.',
-                        'code'    => 404,
+                        'name'          => 'ids',
+                        'description'   => 'Comma-delimited list of the identifiers of the resources to modify.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
                     ),
                     array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
+                        'name'          => 'filter',
+                        'description'   => 'SQL-like filter to limit the resources to modify.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'fields',
+                        'description'   => 'Comma-delimited list of field names to retrieve for each record.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'id_field',
+                        'description'   =>
+                            'Single or comma-delimited list of the fields used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'id_type',
+                        'description'   =>
+                            'Single or comma-delimited list of the field types used as identifiers for the table, ' .
+                            'used to override defaults or provide identifiers when none are provisioned.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'continue',
+                        'description'   =>
+                            'In batch scenarios, where supported, continue processing even after one record fails. ' .
+                            'Default behavior is to halt and return results up to the first point of failure.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'rollback',
+                        'description'   =>
+                            'In batch scenarios, where supported, rollback all changes if any record of the batch fails. ' .
+                            'Default behavior is to halt and return results up to the first point of failure, leaving any changes.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
                     ),
                 ),
+                'responseMessages' => $_commonResponses,
                 'notes'            =>
                     'Post data should be a single record or an array of records (shown). ' .
                     'By default, only the id property of the record is returned on success. ' .
@@ -433,7 +453,7 @@ $_base['apis'] = array(
                 'summary'          => 'deleteRecords() - Delete one or more records.',
                 'nickname'         => 'deleteRecords',
                 'type'             => 'RecordsResponse',
-                'event_name'       => 'table.records.delete',
+                'event_name'       => '{api_name}.{table_name}.delete',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -517,24 +537,7 @@ $_base['apis'] = array(
                         'required'      => false,
                     ),
                 ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'Not Found - Requested table does not exist.',
-                        'code'    => 404,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
+                'responseMessages' => $_commonResponses,
                 'notes'            =>
                     'Use \'ids\' or filter to delete specific records, otherwise set \'force\' to true to clear the table. ' .
                     'By default, only the id property of the record is returned on success, use \'fields\' to return more info. ' .
@@ -552,7 +555,7 @@ $_base['apis'] = array(
                 'summary'          => 'getRecord() - Retrieve one record by identifier.',
                 'nickname'         => 'getRecord',
                 'type'             => 'RecordResponse',
-                'event_name'       => 'table.record.get',
+                'event_name'       => '{api_name}.{table_name}.select',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -607,24 +610,7 @@ $_base['apis'] = array(
                         'required'      => false,
                     ),
                 ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'Not Found - Requested table or record does not exist.',
-                        'code'    => 404,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
+                'responseMessages' => $_commonResponses,
                 'notes'            => 'Use the \'fields\' parameter to limit properties that are returned. By default, all fields are returned.',
             ),
             array(
@@ -632,7 +618,7 @@ $_base['apis'] = array(
                 'summary'          => 'createRecord() - Create one record with given identifier.',
                 'nickname'         => 'createRecord',
                 'type'             => 'RecordResponse',
-                'event_name'       => 'table.record.create',
+                'event_name'       => '{api_name}.{table_name}.create',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -687,24 +673,7 @@ $_base['apis'] = array(
                         'required'      => false,
                     ),
                 ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'Not Found - Requested table does not exist.',
-                        'code'    => 404,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
+                'responseMessages' => $_commonResponses,
                 'notes'            =>
                     'Post data should be an array of fields for a single record. ' .
                     'Use the \'fields\' parameter to return more properties. By default, the id is returned.',
@@ -714,7 +683,7 @@ $_base['apis'] = array(
                 'summary'          => 'updateRecord() - Update (patch) one record by identifier.',
                 'nickname'         => 'updateRecord',
                 'type'             => 'RecordResponse',
-                'event_name'       => 'table.record.update',
+                'event_name'       => '{api_name}.{table_name}.update',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -769,24 +738,7 @@ $_base['apis'] = array(
                         'required'      => false,
                     ),
                 ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'Not Found - Requested table or record does not exist.',
-                        'code'    => 404,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
+                'responseMessages' => $_commonResponses,
                 'notes'            =>
                     'Post data should be an array of fields for a single record. ' .
                     'Use the \'fields\' parameter to return more properties. By default, the id is returned.',
@@ -796,7 +748,7 @@ $_base['apis'] = array(
                 'summary'          => 'deleteRecord() - Delete one record by identifier.',
                 'nickname'         => 'deleteRecord',
                 'type'             => 'RecordResponse',
-                'event_name'       => 'table.record.delete',
+                'event_name'       => '{api_name}.{table_name}.delete',
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -843,24 +795,7 @@ $_base['apis'] = array(
                         'required'      => false,
                     ),
                 ),
-                'responseMessages' => array(
-                    array(
-                        'message' => 'Bad Request - Request does not have a valid format, all required parameters, etc.',
-                        'code'    => 400,
-                    ),
-                    array(
-                        'message' => 'Unauthorized Access - No currently valid session available.',
-                        'code'    => 401,
-                    ),
-                    array(
-                        'message' => 'Not Found - Requested table or record does not exist.',
-                        'code'    => 404,
-                    ),
-                    array(
-                        'message' => 'System Error - Specific reason is included in the error message.',
-                        'code'    => 500,
-                    ),
-                ),
+                'responseMessages' => $_commonResponses,
                 'notes'            => 'Use the \'fields\' parameter to return more deleted properties. By default, the id is returned.',
             ),
         ),
@@ -869,7 +804,7 @@ $_base['apis'] = array(
 );
 
 $_commonProperties = array(
-    'id'             => array(
+    'id' => array(
         'type'        => 'integer',
         'format'      => 'int32',
         'description' => 'Sample identifier of this record.',
@@ -877,7 +812,7 @@ $_commonProperties = array(
 );
 
 $_models = array(
-    'Tables'   => array(
+    'Tables'          => array(
         'id'         => 'Tables',
         'properties' => array(
             'table' => array(
@@ -889,7 +824,7 @@ $_models = array(
             ),
         ),
     ),
-    'Table'    => array(
+    'Table'           => array(
         'id'         => 'Table',
         'properties' => array(
             'name' => array(
@@ -922,15 +857,15 @@ $_models = array(
                     'format' => 'int32',
                 ),
             ),
-            'filter'    => array(
+            'filter' => array(
                 'type'        => 'string',
                 'description' => 'Array of record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
             ),
-            'params'    => array(
+            'params' => array(
                 'type'        => 'array',
                 'description' => 'Array of name-value pairs, used for parameter replacement on filters in GET, PUT, PATCH, and DELETE.',
                 'items'       => array(
-                    'type'   => 'string',
+                    'type' => 'string',
                 ),
             ),
         ),
@@ -957,7 +892,7 @@ $_models = array(
             ),
         ),
     ),
-    'Metadata' => array(
+    'Metadata'        => array(
         'id'         => 'Metadata',
         'properties' => array(
             'schema' => array(
@@ -977,5 +912,7 @@ $_models = array(
 );
 
 $_base['models'] = array_merge( $_base['models'], $_models );
+
+unset( $_commonProperties, $_commonResponses, $_models );
 
 return $_base;

@@ -171,7 +171,7 @@ class MongoDbSvc extends NoSqlDbSvc
      *
      * @return array
      */
-    protected function _gatherExtrasFromRequest( $post_data = null )
+    protected function _gatherExtrasFromRequest( &$post_data = null )
     {
         $_extras = parent::_gatherExtrasFromRequest( $post_data );
 
@@ -1412,7 +1412,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 break;
 
             case static::GET:
-                if ( !$continue && !$single )
+                if ( $continue && !$single )
                 {
                     return parent::addToTransaction( null, $id );
                 }
@@ -1536,7 +1536,38 @@ class MongoDbSvc extends NoSqlDbSvc
                     $_fieldArray = static::buildFieldArray( $_fields );
                     /** @var \MongoCursor $_result */
                     $_result = $this->_collection->find( $_criteria, $_fieldArray );
-                    $_out = static::cleanRecords( iterator_to_array( $_result ) );
+                    $_result = static::cleanRecords( iterator_to_array( $_result ) );
+                    if ( empty( $_result ) )
+                    {
+                        throw new NotFoundException( 'No records were found using the given identifiers.' );
+                    }
+
+                    if ( count( $this->_batchIds ) !== count( $_result ) )
+                    {
+                        $_errors = array();
+                        foreach ( $this->_batchIds as $_index => $_id )
+                        {
+                            $_found = false;
+                            foreach ( $_result as $_record )
+                            {
+                                if ( $_id == Option::get( $_record, static::DEFAULT_ID_FIELD ) )
+                                {
+                                    $_out[$_index] = $_record;
+                                    $_found = true;
+                                    continue;
+                                }
+                            }
+                            if ( !$_found )
+                            {
+                                $_errors[] = $_index;
+                                $_out[$_index] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
+                            }
+                        }
+                    }
+                    else
+                    {
+                        $_out = $_result;
+                    }
                 }
                 else
                 {
@@ -1547,11 +1578,12 @@ class MongoDbSvc extends NoSqlDbSvc
                 $_rows = static::processResult( $_result );
                 if ( 0 === $_rows )
                 {
-                    throw new NotFoundException( 'No requested ids were found to delete.' );
+                    throw new NotFoundException( 'No records were found using the given identifiers.' );
                 }
+
                 if ( count( $this->_batchIds ) !== $_rows )
                 {
-                    throw new BadRequestException( 'Batch Error: Not all requested ids were found to delete.' );
+                    throw new BadRequestException( 'Batch Error: Not all requested records were deleted.' );
                 }
                 break;
 
@@ -1559,13 +1591,45 @@ class MongoDbSvc extends NoSqlDbSvc
                 $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_batchIds ) );
                 $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
                 $_fieldArray = static::buildFieldArray( $_fields );
+
                 /** @var \MongoCursor $_result */
                 $_result = $this->_collection->find( $_criteria, $_fieldArray );
-                $_out = static::cleanRecords( iterator_to_array( $_result ) );
-                if ( count( $this->_batchIds ) !== count( $_out ) )
+                $_result = static::cleanRecords( iterator_to_array( $_result ) );
+                if ( empty( $_result ) )
                 {
-                    throw new BadRequestException( 'Batch Error: Not all requested ids were found to retrieve.' );
+                    throw new NotFoundException( 'No records were found using the given identifiers.' );
                 }
+
+                if ( count( $this->_batchIds ) !== count( $_result ) )
+                {
+                    $_errors = array();
+                    foreach ( $this->_batchIds as $_index => $_id )
+                    {
+                        $_found = false;
+                        foreach ( $_result as $_record )
+                        {
+                            if ( $_id == Option::get( $_record, static::DEFAULT_ID_FIELD ) )
+                            {
+                                $_out[$_index] = $_record;
+                                $_found = true;
+                                continue;
+                            }
+                        }
+                        if ( !$_found )
+                        {
+                            $_errors[] = $_index;
+                            $_out[$_index] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
+                        }
+                    }
+
+                    if ( !empty( $_errors ) )
+                    {
+                        $_context = array( 'error' => $_errors, 'record' => $_out );
+                        throw new NotFoundException( 'Batch Error: Not all records could be retrieved.', null, null, $_context );
+                    }
+                }
+
+                $_out = $_result;
                 break;
 
             default:
@@ -1576,14 +1640,6 @@ class MongoDbSvc extends NoSqlDbSvc
         $this->_batchRecords = array();
 
         return $_out;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    protected function addToRollback( $record )
-    {
-        return parent::addToRollback( $record );
     }
 
     /**

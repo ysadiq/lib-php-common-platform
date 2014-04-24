@@ -305,7 +305,7 @@ class SqlDbSvc extends BaseDbSvc
      *
      * @return array
      */
-    protected function _gatherExtrasFromRequest( $post_data = null )
+    protected function _gatherExtrasFromRequest( &$post_data = null )
     {
         $_extras = parent::_gatherExtrasFromRequest( $post_data );
 
@@ -1921,7 +1921,7 @@ class SqlDbSvc extends BaseDbSvc
         $_updates = Option::get( $extras, 'updates' );
         $_idsInfo = Option::get( $extras, 'ids_info' );
         $_idFields = Option::get( $extras, 'id_fields' );
-        $_needToIterate = ( $single || $continue || ( 1 < count( $_idsInfo ) ) );
+        $_needToIterate = ( $single || !$continue || ( 1 < count( $_idsInfo ) ) );
 
         $_related = Option::get( $extras, 'related' );
         $_requireMore = Option::getBool( $extras, 'require_more' ) || !empty( $_related );
@@ -1974,8 +1974,8 @@ class SqlDbSvc extends BaseDbSvc
                     throw new BadRequestException( 'No valid fields were found in record.' );
                 }
 
-                $rows = $_command->insert( $this->_transactionTable, $_parsed );
-                if ( 0 >= $rows )
+                $_rows = $_command->insert( $this->_transactionTable, $_parsed );
+                if ( 0 >= $_rows )
                 {
                     throw new InternalServerErrorException( "Record insert failed." );
                 }
@@ -2002,8 +2002,15 @@ class SqlDbSvc extends BaseDbSvc
                     $this->updateRelations( $this->_transactionTable, $record, $id, $_relatedInfo, $_allowRelatedDelete );
                 }
 
+                $_idName = ( isset( $_idsInfo, $_idsInfo[0], $_idsInfo[0]['name'] ) ) ? $_idsInfo[0]['name'] : null;
+                $_out = ( is_array( $id ) ) ? $id : array( $_idName => $id );
+
                 // add via record, so batch processing can retrieve extras
-                return ( $_requireMore ) ? parent::addToTransaction( $id ) : $id;
+                if ( $_requireMore )
+                {
+                    parent::addToTransaction( $id );
+                }
+                break;
 
             case static::PUT:
             case static::MERGE:
@@ -2015,18 +2022,29 @@ class SqlDbSvc extends BaseDbSvc
 
                 $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
 
-                // only update by ids can use batching
-                if ( !$_needToIterate && !empty( $_updates ) )
-                {
-                    return parent::addToTransaction( null, $id );
-                }
+                // only update by ids can use batching, too complicated with ssFilters and related update
+//                if ( !$_needToIterate && !empty( $_updates ) )
+//                {
+//                    return parent::addToTransaction( null, $id );
+//                }
 
                 if ( !empty( $_parsed ) )
                 {
-                    $rows = $_command->update( $this->_transactionTable, $_parsed, $_where, $_params );
-                    if ( 0 >= $rows )
+                    $_rows = $_command->update( $this->_transactionTable, $_parsed, $_where, $_params );
+                    if ( 0 >= $_rows )
                     {
-                        throw new NotFoundException( "Record with id '" . print_r( $id, true ) . "' not found." );
+                        // could have just not updated anything, or could be bad id
+                        $_fields = ( empty( $_fields ) ) ? $_idFields : $_fields;
+                        $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
+                        $_bindings = Option::get( $_result, 'bindings' );
+                        $_fields = Option::get( $_result, 'fields' );
+                        $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+
+                        $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                        if ( empty( $_result ) )
+                        {
+                            throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
+                        }
                     }
                 }
 
@@ -2035,7 +2053,15 @@ class SqlDbSvc extends BaseDbSvc
                     $this->updateRelations( $this->_transactionTable, $record, $id, $_relatedInfo, $_allowRelatedDelete );
                 }
 
-                return ( $_requireMore ) ? parent::addToTransaction( $id ) : $id;
+                $_idName = ( isset( $_idsInfo, $_idsInfo[0], $_idsInfo[0]['name'] ) ) ? $_idsInfo[0]['name'] : null;
+                $_out = ( is_array( $id ) ) ? $id : array( $_idName => $id );
+
+                // add via record, so batch processing can retrieve extras
+                if ( $_requireMore )
+                {
+                    parent::addToTransaction( $id );
+                }
+                break;
 
             case static::DELETE:
                 if ( !$_needToIterate )
@@ -2043,13 +2069,50 @@ class SqlDbSvc extends BaseDbSvc
                     return parent::addToTransaction( null, $id );
                 }
 
-                $rows = $_command->delete( $this->_transactionTable, $_where, $_params );
-                if ( 0 >= $rows )
+                // add via record, so batch processing can retrieve extras
+                if ( $_requireMore )
                 {
-                    throw new NotFoundException( "Record with id '" . print_r( $id, true ) . "' not found." );
+                    $_fields = ( empty( $_fields ) ) ? $_idFields : $_fields;
+                    $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
+                    $_bindings = Option::get( $_result, 'bindings' );
+                    $_fields = Option::get( $_result, 'fields' );
+                    $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+
+                    $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                    if ( empty( $_result ) )
+                    {
+                        throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
+                    }
+
+                    $_out = $_result[0];
                 }
 
-                return ( $_requireMore ) ? parent::addToTransaction( $id ) : $id;
+                $_rows = $_command->delete( $this->_transactionTable, $_where, $_params );
+                if ( 0 >= $_rows )
+                {
+                    if ( empty( $_out ) )
+                    {
+                        // could have just not updated anything, or could be bad id
+                        $_fields = ( empty( $_fields ) ) ? $_idFields : $_fields;
+                        $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
+                        $_bindings = Option::get( $_result, 'bindings' );
+                        $_fields = Option::get( $_result, 'fields' );
+                        $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+
+                        $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                        if ( empty( $_result ) )
+                        {
+                            throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
+                        }
+                    }
+                }
+
+                if ( empty( $_out ) )
+                {
+                    $_idName = ( isset( $_idsInfo, $_idsInfo[0], $_idsInfo[0]['name'] ) ) ? $_idsInfo[0]['name'] : null;
+                    $_out = ( is_array( $id ) ) ? $id : array( $_idName => $id );
+                }
+                break;
 
             case static::GET:
                 if ( !$_needToIterate )
@@ -2069,7 +2132,7 @@ class SqlDbSvc extends BaseDbSvc
                     throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
                 }
 
-                $_out = $_result;
+                $_out = $_result[0];
                 break;
         }
 
@@ -2098,7 +2161,7 @@ class SqlDbSvc extends BaseDbSvc
         $_idsInfo = Option::get( $extras, 'ids_info' );
         $_idFields = Option::get( $extras, 'id_fields' );
         $_related = Option::get( $extras, 'related' );
-        $_requireMore = Option::getBool( $extras, 'requireMore' ) || !empty( $_related );
+        $_requireMore = Option::getBool( $extras, 'require_more' ) || !empty( $_related );
         $_allowRelatedDelete = Option::getBool( $extras, 'allow_related_delete', false );
         $_relatedInfo = $this->describeTableRelated( $this->_transactionTable );
 
@@ -2193,10 +2256,15 @@ class SqlDbSvc extends BaseDbSvc
                         $_parsed = $this->parseRecord( $_updates, $_fieldsInfo, $_ssFilters, true );
                         if ( !empty( $_parsed ) )
                         {
-                            $rows = $_command->update( $this->_transactionTable, $_parsed, $_where, $_params );
-                            if ( 0 >= $rows )
+                            $_rows = $_command->update( $this->_transactionTable, $_parsed, $_where, $_params );
+                            if ( 0 >= $_rows )
                             {
                                 throw new NotFoundException( 'No records were found using the given identifiers.' );
+                            }
+
+                            if ( count( $this->_batchIds ) !== $_rows )
+                            {
+                                throw new BadRequestException( 'Batch Error: Not all requested records could be retrieved.' );
                             }
                         }
 
@@ -2237,18 +2305,41 @@ class SqlDbSvc extends BaseDbSvc
                         $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
                         $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
-                        if ( empty( $_result ) )
+                        if ( count( $this->_batchIds ) !== count( $_result ) )
                         {
-                            throw new NotFoundException( 'No records were found using the given identifiers.' );
+                            $_errors = array();
+                            foreach ( $this->_batchIds as $_index => $_id )
+                            {
+                                $_found = false;
+                                if ( empty( $_result ) )
+                                {
+                                    foreach ( $_result as $_record )
+                                    {
+                                        if ( $_id == Option::get( $_record, $_idName ) )
+                                        {
+                                            $_out[$_index] = $_record;
+                                            $_found = true;
+                                            continue;
+                                        }
+                                    }
+                                }
+                                if ( !$_found )
+                                {
+                                    $_errors[] = $_index;
+                                    $_out[$_index] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
+                                }
+                            }
                         }
-
-                        $_out = $_result;
+                        else
+                        {
+                            $_out = $_result;
+                        }
                     }
 
-                    $rows = $_command->delete( $this->_transactionTable, $_where, $_params );
-                    if ( 0 >= $rows )
+                    $_rows = $_command->delete( $this->_transactionTable, $_where, $_params );
+                    if ( count( $this->_batchIds ) !== $_rows )
                     {
-                        throw new NotFoundException( 'No records were found using the given identifiers.' );
+                        throw new BadRequestException( 'Batch Error: Not all requested records were deleted.' );
                     }
                     break;
 
@@ -2265,6 +2356,35 @@ class SqlDbSvc extends BaseDbSvc
                         throw new NotFoundException( 'No records were found using the given identifiers.' );
                     }
 
+                    if ( count( $this->_batchIds ) !== count( $_result ) )
+                    {
+                        $_errors = array();
+                        foreach ( $this->_batchIds as $_index => $_id )
+                        {
+                            $_found = false;
+                            foreach ( $_result as $_record )
+                            {
+                                if ( $_id == Option::get( $_record, $_idName ) )
+                                {
+                                    $_out[$_index] = $_record;
+                                    $_found = true;
+                                    continue;
+                                }
+                            }
+                            if ( !$_found )
+                            {
+                                $_errors[] = $_index;
+                                $_out[$_index] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
+                            }
+                        }
+
+                        if ( !empty( $_errors ) )
+                        {
+                            $_context = array( 'error' => $_errors, 'record' => $_out );
+                            throw new NotFoundException( 'Batch Error: Not all records could be retrieved.', null, null, $_context );
+                        }
+                    }
+
                     $_out = $_result;
                     break;
 
@@ -2274,7 +2394,11 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( empty( $_out ) )
             {
-                $_out = $this->_batchIds;
+                $_out = array();
+                foreach ( $this->_batchIds as $_id )
+                {
+                    $_out[] = array( $_idName => $_id );
+                }
             }
 
             $this->_batchIds = array();

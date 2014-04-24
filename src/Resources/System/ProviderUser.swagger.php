@@ -29,7 +29,7 @@ $_providerProviderUser['apis'] = array(
                 'summary'          => 'getProviderUsers() - Retrieve one or more provider provider users.',
                 'nickname'         => 'getProviderUsers',
                 'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'provider_users.list',
+                'event_name'       => '{api_name}.provider_users.list',
                 'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'parameters'       => array(
@@ -143,7 +143,7 @@ $_providerProviderUser['apis'] = array(
                 'summary'          => 'createProviderUsers() - Create one or more provider users.',
                 'nickname'         => 'createProviderUsers',
                 'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'provider_users.create',
+                'event_name'       => '{api_name}.provider_users.create',
                 'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'parameters'       => array(
@@ -205,7 +205,7 @@ $_providerProviderUser['apis'] = array(
                 'summary'          => 'updateProviderUsers() - Update one or more provider provider users.',
                 'nickname'         => 'updateProviderUsers',
                 'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'provider_users.update',
+                'event_name'       => '{api_name}.provider_users.update',
                 'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                 'parameters'       => array(
@@ -258,7 +258,7 @@ $_providerProviderUser['apis'] = array(
                 'summary'          => 'deleteProviderUsers() - Delete one or more provider users.',
                 'nickname'         => 'deleteProviderUsers',
                 'type'             => 'ProviderUsersResponse',
-                'event_name'       => 'provider_users.delete',
+                'event_name'       => '{api_name}.provider_users.delete',
                 'parameters'       => array(
                     array(
                         'name'          => 'ids',
@@ -318,14 +318,14 @@ $_providerProviderUser['apis'] = array(
         'description' => 'Operations for provider user administration.',
     ),
     array(
-        'path'        => '/{api_name}/user/{id}',
+        'path'        => '/{api_name}/provider_user/{id}',
         'operations'  => array(
             array(
                 'method'           => 'GET',
                 'summary'          => 'getProviderUser() - Retrieve one provider user.',
                 'nickname'         => 'getProviderUser',
                 'type'             => 'ProviderUserResponse',
-                'event_name'       => 'provider_user.read',
+                'event_name'       => '{api_name}.provider_user.read',
                 'parameters'       => array(
                     array(
                         'name'          => 'id',
@@ -373,7 +373,7 @@ $_providerProviderUser['apis'] = array(
                 'summary'          => 'updateProviderUser() - Update one provider user.',
                 'nickname'         => 'updateProviderUser',
                 'type'             => 'ProviderUserResponse',
-                'event_name'       => 'provider_user.update',
+                'event_name'       => '{api_name}.provider_user.update',
                 'parameters'       => array(
                     array(
                         'name'          => 'id',
@@ -431,7 +431,7 @@ $_providerProviderUser['apis'] = array(
                 'summary'          => 'deleteProviderUser() - Delete one provider user.',
                 'nickname'         => 'deleteProviderUser',
                 'type'             => 'ProviderUserResponse',
-                'event_name'       => 'provider_user.delete',
+                'event_name'       => '{api_name}.provider_user.delete',
                 'parameters'       => array(
                     array(
                         'name'          => 'id',

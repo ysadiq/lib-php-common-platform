@@ -87,8 +87,8 @@ class SwaggerManager extends BasePlatformRestService
      * @var array The core DSP services that are built-in
      */
     protected static $_builtInServices = array(
-        array( 'api_name' => 'user', 'type_id' => 0, 'description' => 'User Login' ),
-        array( 'api_name' => 'system', 'type_id' => 0, 'description' => 'System Configuration' )
+        array('api_name' => 'user', 'type_id' => 0, 'description' => 'User Login'),
+        array('api_name' => 'system', 'type_id' => 0, 'description' => 'System Configuration')
     );
 
     //*************************************************************************
@@ -208,7 +208,7 @@ SQL;
 
                 if ( is_array( $_fromFile ) && !empty( $_fromFile ) )
                 {
-                    $_content = json_encode( array_merge( $_baseSwagger, $_fromFile ), JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT );
+                    $_content = json_encode( array_merge( $_baseSwagger, $_fromFile ), JSON_UNESCAPED_SLASHES );
                 }
             }
             else //	Check custom path, uses api name
@@ -244,6 +244,15 @@ SQL;
             // replace service type placeholder with api name for this service instance
             $_content = str_replace( '/{api_name}', '/' . $_apiName, $_content );
 
+            if ( !isset( static::$_eventMap[ $_apiName ] ) || !is_array( static::$_eventMap[ $_apiName ] ) || empty( static::$_eventMap[ $_apiName ] ) )
+            {
+                static::$_eventMap[ $_apiName ] = array();
+            }
+
+            $_chunk = json_decode( $_content, true );
+            $_serviceEvents = static::_parseSwaggerEvents( $_apiName, $_chunk );
+            $_content = json_encode( $_chunk, JSON_UNESCAPED_SLASHES );
+
             // cache it to a file for later access
             $_filePath = $_cachePath . '/' . $_apiName . '.json';
 
@@ -259,13 +268,6 @@ SQL;
                 'description' => Option::get( $_service, 'description', 'Service' )
             );
 
-            if ( !isset( static::$_eventMap[ $_apiName ] ) || !is_array( static::$_eventMap[ $_apiName ] ) || empty( static::$_eventMap[ $_apiName ] ) )
-            {
-                static::$_eventMap[ $_apiName ] = array();
-            }
-
-            $_serviceEvents = static::_parseSwaggerEvents( $_apiName, json_decode( $_content, true ) );
-
             //	Parse the events while we get the chance...
             static::$_eventMap[ $_apiName ] = array_merge(
                 Option::clean( static::$_eventMap[ $_apiName ] ),
@@ -279,18 +281,17 @@ SQL;
         $_main = $_scanPath . static::SWAGGER_BASE_API_FILE;
         /** @noinspection PhpIncludeInspection */
         $_resourceListing = require( $_main );
-        $_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
+        $_out = array_merge( $_resourceListing, array('apis' => $_services) );
 
         $_filePath = $_cachePath . static::SWAGGER_CACHE_FILE;
 
-        if ( false === file_put_contents( $_filePath, json_encode( $_out, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT ) ) )
+        if ( false === file_put_contents( $_filePath, json_encode( $_out, JSON_UNESCAPED_SLASHES ) ) )
         {
             Log::error( '  * File system error creating swagger cache file: ' . $_filePath );
         }
 
         //	Write event cache file
-        if ( false ===
-             file_put_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE, json_encode( static::$_eventMap, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT ) )
+        if ( false === file_put_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE, json_encode( static::$_eventMap, JSON_UNESCAPED_SLASHES ) )
         )
         {
             Log::error( '  * File system error writing events cache file: ' . $_cachePath . static::SWAGGER_EVENT_CACHE_FILE );
@@ -314,37 +315,85 @@ SQL;
      *
      * @return array
      */
-    protected static function _parseSwaggerEvents( $apiName, $data )
+    protected static function _parseSwaggerEvents( $apiName, &$data )
     {
         $_eventMap = array();
 
-        foreach ( Option::get( $data, 'apis', array() ) as $_api )
+        foreach ( Option::get( $data, 'apis', array() ) as $_ixApi => $_api )
         {
+            //  Trim slashes for use as a file name
             $_scripts = $_events = array();
 
             $_path = str_replace(
-                array( '{api_name}', '/' ),
-                array( $apiName, '.' ),
+                array('{api_name}', '/'),
+                array($apiName, '.'),
                 trim( Option::get( $_api, 'path' ), '/' )
             );
 
-            foreach ( Option::get( $_api, 'operations', array() ) as $_operation )
+            foreach ( Option::get( $_api, 'operations', array() ) as $_ixOps => $_operation )
             {
-                if ( null !== ( $_eventName = Option::get( $_operation, 'event_name' ) ) )
+                if ( null !== ( $_eventNames = Option::get( $_operation, 'event_name' ) ) )
                 {
                     $_method = strtolower( Option::get( $_operation, 'method', HttpMethod::GET ) );
+                    $_scripts = array();
+                    $_eventsThrown = array();
+
+                    if ( is_string( $_eventNames ) && false !== strpos( $_eventNames, ',' ) )
+                    {
+                        $_events = explode( ',', $_eventNames );
+
+                        //  Clean up any spaces...
+                        foreach ( $_events as &$_tempEvent )
+                        {
+                            $_tempEvent = trim( $_tempEvent );
+                        }
+                    }
+
+                    if ( empty( $_eventNames ) )
+                    {
+                        $_eventNames = array();
+                    }
+                    else if ( !is_array( $_eventNames ) )
+                    {
+                        $_eventNames = array($_eventNames);
+                    }
+
+                    //  Set into master record
+                    $data['apis'][ $_ixApi ]['operations'][ $_ixOps ]['event_name'] = $_eventNames;
+
+                    foreach ( $_eventNames as $_ixEventNames => $_templateEventName )
+                    {
+                        $_eventName = str_replace(
+                            array(
+                                '{api_name}',
+                                $apiName . '.' . $apiName . '.',
+                                '{action}',
+                                '{request.method}'
+                            ),
+                            array(
+                                $apiName,
+                                'system.' . $apiName . '.',
+                                $_method,
+                                $_method,
+                            ),
+                            $_templateEventName
+                        );
+
+                        $_scripts += static::_findScripts( $_path, $_method, $_eventName );
+
+                        $_eventsThrown[] = $_eventName;
+
+                        //  Set actual name in swagger file
+                        $data['apis'][ $_ixApi ]['operations'][ $_ixOps ]['event_name'][ $_ixEventNames ] = $_eventName;
+                    }
 
                     $_events[ $_method ] = array(
-                        'event'   => $_eventName = str_ireplace(
-                            array( '{api_name}', '{action}', '{request.method}' ),
-                            array( $apiName, $_method, $_method ),
-                            $_eventName
-                        ),
-                        'scripts' => static::_findScripts( $_path, $_method, $_eventName ),
+                        'event'   => $_eventsThrown,
+                        'scripts' => $_scripts,
                     );
                 }
 
-                unset( $_operation );
+                unset( $_operation, $_scripts, $_eventsThrown );
             }
 
             $_eventMap[ str_ireplace( '{api_name}', $apiName, $_api['path'] ) ] = $_events;
@@ -373,12 +422,20 @@ SQL;
             $_scriptPath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
         }
 
+        //  Find standard pattern scripts: [api_name].[method].*.js
         $_scriptPattern = strtolower( $apiName ) . '.' . strtolower( $method ) . '.*.js';
         $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
 
-        if ( null !== $eventName && array() !== ( $_namedScripts = FileSystem::glob( $_scriptPath . '/' . $eventName . '.js' ) ) )
+        if ( !empty( $eventName ) )
         {
-            $_scripts = array_merge( $_scripts, $_namedScripts );
+            //  If an event name is given, look for the specific script [event_name].js
+            $_namedScripts = FileSystem::glob( $_scriptPath . '/' . $eventName . '.js' );
+
+            //  Finally, glob any placeholders that are left in the event name...
+            $_globbed = preg_replace( '/({.*})/', '*', $eventName );
+            $_globbedScripts = FileSystem::glob( $_scriptPath . '/' . $_globbed . '.js' );
+
+            $_scripts = array_merge( $_scripts, $_globbedScripts, $_namedScripts );
         }
 
         if ( empty( $_scripts ) )
@@ -395,7 +452,7 @@ SQL;
         }
 
         $_response = array();
-        $_eventPattern = '/^' . str_replace( array( '.*.js', '.' ), array( null, '\\.' ), $_scriptPattern ) . '\\.(\w)\\.js$/i';
+        $_eventPattern = '/^' . str_replace( array('.*.js', '.'), array(null, '\\.'), $_scriptPattern ) . '\\.(\w)\\.js$/i';
 
         foreach ( $_scripts as $_script )
         {
@@ -420,6 +477,8 @@ SQL;
         static $_cache = array();
 
         $_map = static::getEventMap();
+        $_aliases = $service->getVerbAliases();
+        $method = Option::get( $_aliases, $method, $method );
 
         $_hash = sha1( ( $service ? get_class( $service ) : '*' ) . $method );
 
@@ -452,11 +511,33 @@ SQL;
             return false;
         }
 
-        $_resource = $service->getResource();
+        $_apiName = $service->getApiName();
+        $_savedResource = $_resource = $service->getResource();
+        $_pathParts =
+            explode(
+                '/',
+                ltrim( str_replace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) ), '/' )
+            );
 
         if ( empty( $_resource ) )
         {
-            $_resource = $service->getApiName();
+            $_resource = $_apiName;
+        }
+        else
+        {
+            switch ( $_apiName )
+            {
+                case 'db':
+                    $_resource = 'db';
+                    break;
+
+                default:
+                    if ( $_resource != ( $_requested = Option::get( $_pathParts, 0 ) ) )
+                    {
+                        $_resource = $_requested;
+                    }
+                    break;
+            }
         }
 
         if ( null === ( $_resources = Option::get( $_map, $_resource ) ) )
@@ -470,7 +551,12 @@ SQL;
             }
         }
 
-        $_path = str_replace( 'rest', null, trim( !Pii::cli() ? Pii::app()->getRequestObject()->getPathInfo() : $service->getResourcePath(), '/' ) );
+        $_path = str_replace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) );
+
+        if ( 'db' == $_apiName && 'db' == $_resource )
+        {
+            $_path = str_replace( $_savedResource, '{table_name}', $_path );
+        }
 
         if ( empty( $_path ) )
         {
@@ -484,7 +570,7 @@ SQL;
         if ( empty( $_matches ) )
         {
             //	See if there is an event with /system at the front...
-            $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( str_replace( 'system/', null, $_path ) ) ) . '$@D';
+            $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '$@D';
             $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
             if ( empty( $_matches ) )
@@ -499,6 +585,13 @@ SQL;
 
             if ( null !== ( $_eventName = Option::get( $_methodInfo, 'event' ) ) )
             {
+                switch ( $_apiName )
+                {
+                    case 'db':
+                        $_eventName = str_replace( '{table_name}', $_savedResource, $_eventName );
+                        break;
+                }
+
                 return $_cache[ $_hash ] = $_eventName;
             }
         }
@@ -617,7 +710,7 @@ SQL;
 
         if ( file_exists( $_swaggerPath ) )
         {
-            $files = array_diff( scandir( $_swaggerPath ), array( '.', '..' ) );
+            $files = array_diff( scandir( $_swaggerPath ), array('.', '..') );
             foreach ( $files as $file )
             {
                 @unlink( $_swaggerPath . '/' . $file );

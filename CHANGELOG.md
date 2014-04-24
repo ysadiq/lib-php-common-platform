@@ -1,6 +1,6 @@
 # DreamFactory Services Platform&trade; Change Log
 
-## v1.5.1 (Release 2014-04-19)
+## v1.5.3 (Release 2014-04-24)
 ### New!
 * New DSP-level persistent storage mechanism interfaces with redis, xcache, memcache(d), etc.
 * Added support for [libv8](https://github.com/v8) for server-side Javascript support
@@ -9,7 +9,7 @@
   * Client event handler registration via new /rest/system/event API. See Live API for more info.
  * Server-side scripts now supported for REST events
   * Client event script registration via new /rest/system/script API. See Live API for more info.
-* Lookup Key System
+* Lookup Key System enabling per-user permissions among other things.
 * Local configuration file support (/path/to/dsp/.private/config)
 * New configuration options for events and event logging control
 

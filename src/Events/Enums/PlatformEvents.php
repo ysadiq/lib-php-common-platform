@@ -20,28 +20,8 @@
 namespace DreamFactory\Platform\Events\Enums;
 
 /**
- * The base events raised by streams
+ * The base events raised by resources and services
  */
-class StreamEvents
+class PlatformEvents extends ResourceServiceEvents
 {
-    //*************************************************************************
-    //	Constants
-    //*************************************************************************
-
-    /**
-     * @var string Triggered when an event stream is created
-     */
-    const STREAM_CREATED = 'event_stream.created';
-    /**
-     * @var string Triggered when an event stream is closing
-     */
-    const STREAM_CLOSING = 'event_stream.closing';
-    /**
-     * @var string Used by heartbeat service
-     */
-    const PING = 'event_stream.ping';
-    /**
-     * @var string Used by heartbeat service
-     */
-    const PONG = 'event_stream.pong';
 }

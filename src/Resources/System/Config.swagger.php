@@ -29,7 +29,7 @@ $_config['apis'] = array(
                 'summary'    => 'getConfig() - Retrieve system configuration properties.',
                 'nickname'   => 'getConfig',
                 'type'       => 'ConfigResponse',
-                'event_name' => 'config.read',
+                'event_name' => '{api_name}.config.read',
                 'notes'      => 'The retrieved properties control how the system behaves.',
             ),
             array(
@@ -37,7 +37,7 @@ $_config['apis'] = array(
                 'summary'          => 'setConfig() - Update one or more system configuration properties.',
                 'nickname'         => 'setConfig',
                 'type'             => 'ConfigResponse',
-                'event_name'       => 'config.update',
+                'event_name'       => '{api_name}.config.update',
                 'parameters'       => array(
                     array(
                         'name'          => 'body',

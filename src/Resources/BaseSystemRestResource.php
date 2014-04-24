@@ -231,15 +231,14 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     }
 
     /**
-     * @param array $ids     IDs returned here
-     * @param array $records Records returned here
+     * @param array $ids          IDs returned here
+     * @param array $records      Records returned here
+     * @param bool  $triggerEvent If true, the default, the action event will be triggered with the posted data
      *
-     * @throws \LogicException
-     * @throws \InvalidArgumentException
      * @throws \Exception
      * @return array The payload operated upon
      */
-    protected function _determineRequestedResource( &$ids = null, &$records = null )
+    protected function _determineRequestedResource( &$ids = null, &$records = null, $triggerEvent = true )
     {
         //	Which payload do we love?
         $_payload = RestData::getPostedData( true, true );
@@ -248,6 +247,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         if ( empty( $_payload ) )
         {
             $_payload = $_REQUEST;
+        }
+
+        //  Run the event on the payload before we pull data out...
+        if ( $triggerEvent )
+        {
+            $this->_triggerActionEvent( $_payload );
         }
 
         //	Multiple resources by ID
@@ -269,8 +274,8 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected function _handleGet()
     {
-        //	Phone home...
-        parent::_handleGet();
+        //  No event here, triggered in handleResource
+        $_payload = $this->_determineRequestedResource( $_ids, $_records, false );
 
         //	Single resource by ID
         if ( !empty( $this->_resourceId ) )
@@ -279,8 +284,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         }
 
         $_singleRow = false;
-
-        $_payload = $this->_determineRequestedResource( $_ids, $_records );
 
         //	Multiple resources by ID
         if ( !empty( $_ids ) )
@@ -370,9 +373,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected function _handlePut()
     {
-        //	Phone home...
-        parent::_handlePut();
-
         $_payload = $this->_determineRequestedResource( $_ids, $_records );
         $_rollback = Option::getBool( $_payload, 'rollback' );
         $_continue = Option::getBool( $_payload, 'continue' );
@@ -469,15 +469,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected function _handleDelete()
     {
-        //	Phone home...
-        parent::_handleDelete();
+        $_payload = $this->_determineRequestedResource( $_ids, $_records );
 
         if ( !empty( $this->_resourceId ) )
         {
             return ResourceStore::bulkDeleteById( $this->_resourceId, false, null, null, true );
         }
-
-        $_payload = $this->_determineRequestedResource( $_ids, $_records );
 
         $_rollback = Option::getBool( $_payload, 'rollback' );
         $_continue = Option::getBool( $_payload, 'continue' );
