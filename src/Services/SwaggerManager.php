@@ -513,6 +513,11 @@ SQL;
 
         $_apiName = $service->getApiName();
         $_savedResource = $_resource = $service->getResource();
+        $_pathParts =
+            explode(
+                '/',
+                ltrim( str_replace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) ), '/' )
+            );
 
         if ( empty( $_resource ) )
         {
@@ -524,6 +529,13 @@ SQL;
             {
                 case 'db':
                     $_resource = 'db';
+                    break;
+
+                default:
+                    if ( $_resource != ( $_requested = Option::get( $_pathParts, 0 ) ) )
+                    {
+                        $_resource = $_requested;
+                    }
                     break;
             }
         }
@@ -539,7 +551,7 @@ SQL;
             }
         }
 
-        $_path = str_replace( 'rest', null, trim( !Pii::cli() ? Pii::app()->getRequestObject()->getPathInfo() : $service->getResourcePath(), '/' ) );
+        $_path = str_replace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) );
 
         if ( 'db' == $_apiName && 'db' == $_resource )
         {

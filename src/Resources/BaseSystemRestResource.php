@@ -274,6 +274,9 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected function _handleGet()
     {
+        //  No event here, triggered in handleResource
+        $_payload = $this->_determineRequestedResource( $_ids, $_records, false );
+
         //	Single resource by ID
         if ( !empty( $this->_resourceId ) )
         {
@@ -281,9 +284,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         }
 
         $_singleRow = false;
-
-        //  No event here, triggered in handleResource
-        $_payload = $this->_determineRequestedResource( $_ids, $_records, false );
 
         //	Multiple resources by ID
         if ( !empty( $_ids ) )
