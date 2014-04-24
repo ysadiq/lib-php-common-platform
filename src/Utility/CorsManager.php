@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Utility;
 
 use Composer\Autoload\ClassLoader;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Exceptions\RestException;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -508,7 +509,6 @@ class CorsManager
      * @param array $corsWhitelist
      *
      * @throws RestException
-     * @return PlatformWebApplication
      */
     public static function setCorsWhitelist( $corsWhitelist )
     {
@@ -529,7 +529,6 @@ class CorsManager
     /**
      * @param boolean $autoAddHeaders
      *
-     * @return PlatformWebApplication
      */
     public static function setAutoAddHeaders( $autoAddHeaders = true )
     {
