@@ -319,7 +319,7 @@ SQL;
     {
         $_eventMap = array();
 
-        foreach ( Option::get( $data, 'apis', array() ) as $_ixApi => &$_api )
+        foreach ( Option::get( $data, 'apis', array() ) as $_ixApi => $_api )
         {
             //  Trim slashes for use as a file name
             $_scripts = $_events = array();
@@ -330,7 +330,7 @@ SQL;
                 trim( Option::get( $_api, 'path' ), '/' )
             );
 
-            foreach ( Option::get( $_api, 'operations', array() ) as $_ixOps => &$_operation )
+            foreach ( Option::get( $_api, 'operations', array() ) as $_ixOps => $_operation )
             {
                 if ( null !== ( $_eventNames = Option::get( $_operation, 'event_name' ) ) )
                 {
@@ -361,7 +361,7 @@ SQL;
                     //  Set into master record
                     $data['apis'][ $_ixApi ]['operations'][ $_ixOps ]['event_name'] = $_eventNames;
 
-                    foreach ( $_eventNames as $_ixEventNames => &$_templateEventName )
+                    foreach ( $_eventNames as $_ixEventNames => $_templateEventName )
                     {
                         $_eventName = str_replace(
                             array(
