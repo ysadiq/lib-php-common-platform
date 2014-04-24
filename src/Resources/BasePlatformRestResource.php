@@ -23,6 +23,7 @@ use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Interfaces\RestResourceLike;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
+use DreamFactory\Platform\Interfaces\ServiceOnlyResourceLike;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use Kisma\Core\Utility\Option;
 
@@ -73,8 +74,8 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
     /**
      * Create a new service
      *
-     * @param RestServiceLike|RestResourceLike $consumer
-     * @param array                            $settings configuration array
+     * @param RestServiceLike|RestResourceLike|ServiceOnlyResourceLike $consumer
+     * @param array                                                    $settings configuration array
      *
      * @throws \InvalidArgumentException
      */
@@ -158,7 +159,7 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
     public static function __callStatic( $name, $arguments )
     {
         //	Passthru to store
-        return call_user_func_array( array( static::$_passthruClass, $name ), $arguments );
+        return call_user_func_array( array(static::$_passthruClass, $name), $arguments );
     }
 
     /**

@@ -29,7 +29,7 @@ $_register['apis'] = array(
 				'summary'          => 'register() - Register a new user in the system.',
 				'nickname'         => 'register',
 				'type'             => 'Success',
-				'event_name'       => '{api_name}.user.create',
+				'event_name'       => '{api_name}.create',
 				'parameters'       => array(
 					array(
 						'name'          => 'body',

@@ -23,6 +23,7 @@ use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\DataFormats;
+use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
 use DreamFactory\Platform\Events\PlatformEvent;
@@ -32,8 +33,10 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
+use DreamFactory\Platform\Interfaces\ServiceOnlyResourceLike;
 use DreamFactory\Platform\Interfaces\TransformerLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
+use DreamFactory\Platform\Resources\System\Event;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestResponse;
@@ -308,7 +311,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
             if ( $this->_autoDispatch && method_exists( $this, $_method ) )
             {
-                $_methodToCall = array( $this, $_method );
+                $_methodToCall = array($this, $_method);
             }
         }
 
@@ -359,7 +362,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _preProcess()
     {
-        if ( $this instanceof BasePlatformRestResource || $this instanceof BaseDbSvc || $this instanceof NoSqlDbSvc || $this instanceof SqlDbSvc )
+        if ( $this instanceof BasePlatformRestResource || $this instanceof ServiceOnlyResourceLike )
         {
             $this->_triggerActionEvent( $this->_requestPayload, ResourceServiceEvents::PRE_PROCESS );
         }
@@ -373,7 +376,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _postProcess()
     {
-        if ( $this instanceof BasePlatformRestResource || $this instanceof BaseDbSvc || $this instanceof NoSqlDbSvc || $this instanceof SqlDbSvc )
+        if ( $this instanceof BasePlatformRestResource || $this instanceof ServiceOnlyResourceLike )
         {
             $this->_triggerActionEvent( $this->_response, ResourceServiceEvents::POST_PROCESS );
         }
@@ -393,7 +396,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         }
 
         //	Native and PHP response types return, not emit...
-        if ( in_array( $this->_outputFormat, array( false, DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE ) ) )
+        if ( in_array( $this->_outputFormat, array(false, DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE) ) )
         {
             return $this->_response;
         }
@@ -631,8 +634,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
         return Platform::trigger(
             str_ireplace(
-                array( '{api_name}', '{action}' ),
-                array( $this->_apiName == 'system' ? $this->_resource : $this->_apiName, strtolower( $this->_action ) ),
+                array('{api_name}', '{action}'),
+                array($this->_apiName == 'system' ? $this->_resource : $this->_apiName, strtolower( $this->_action )),
                 $eventName
             ),
             $event ? : new RestServiceEvent( $this->_apiName, $this->_resource, $this->_response ),
@@ -663,14 +666,25 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
         //  Lookup the appropriate event if not specified.
         $_eventNames = $eventName ? : SwaggerManager::findEvent( $this, $this->_action );
-        $_eventNames = is_array( $_eventNames ) ? $_eventNames : array( $_eventNames );
+        $_eventNames = is_array( $_eventNames ) ? $_eventNames : array($_eventNames);
 
         $_result = array();
+        
+        $_values = array(
+            'api_name'        => $this->_apiName,
+            'service_name'    => $this->_apiName,
+            'service_id'      => $this->_serviceId,
+            'request_payload' => $this->_requestPayload,
+            'table_name'      => $this->_resource,
+            'container'       => $this->_resource,
+            'folder_path'     => Option::get( $this->_resourceArray, 1 ),
+            'file_path'       => Option::get( $this->_resourceArray, 2 ),
+        );
 
         foreach ( $_eventNames as $_eventName )
         {
             //  No event or already triggered, bail.
-            if ( empty( $_eventName ) || isset( $_triggeredEvents[ $_eventName ] ) )
+            if ( empty( $_eventName ) )
             {
                 continue;
             }
@@ -679,11 +693,13 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $_service = $this->_apiName;
             $_event = $event ? : new RestServiceEvent( $_service, $this->_resource, $result );
 
-            switch ( $this->_apiName )
+            //  Normalize the event name
+            $_eventName = Event::normalizeEventName( $_event, $_eventName, $_values );
+
+            //  Already triggered?
+            if ( isset( $_triggeredEvents[ $_eventName ] ) )
             {
-                case 'db':
-                    $_eventName = str_replace( '{api_name}', $this->_apiName . '.' . $this->_resource, $_eventName );
-                    break;
+                continue;
             }
 
             //  Fire it and get the maybe-modified event

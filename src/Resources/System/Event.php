@@ -21,10 +21,12 @@ namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Components\EventProxy;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -39,8 +41,8 @@ class Event extends BaseSystemRestResource
     //*************************************************************************
 
     /**
-     * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
-     * @param array                                               $resources
+     * @param \DreamFactory\Platform\Interfaces\RestResourceLike|\DreamFactory\Platform\Interfaces\RestServiceLike $consumer
+     * @param array                                                                                                $resources
      */
     public function __construct( $consumer, $resources = array() )
     {
@@ -55,6 +57,97 @@ class Event extends BaseSystemRestResource
         );
 
         parent::__construct( $consumer, $_config, $resources );
+    }
+
+    /**
+     * @param PlatformEvent $event            The event
+     * @param string        $eventName        The event containing placeholders (i.e. {api_name})
+     * @param Request|array $values           The values to use for replacements in the event name templates.
+     *
+     * @param bool          $addRequestValues If true, the $_REQUEST variables will be used.
+     *                                        The current class's variables are also available for replacement.
+     *
+     * @return string
+     */
+    public static function normalizeEventName( $event, &$eventName, $values = null, $addRequestValues = false )
+    {
+        static $_requestValues = array();
+
+        if ( false === strpos( $eventName, '{' ) )
+        {
+            return $eventName;
+        }
+
+        if ( $addRequestValues && empty( $_requestValues ) )
+        {
+            $_request = Pii::request( true );
+
+            if ( !empty( $_request ) )
+            {
+                $_requestValues = array(
+                    'headers'    => $_request->headers,
+                    'attributes' => $_request->attributes,
+                    'cookie'     => $_request->cookies,
+                    'files'      => $_request->files,
+                    'query'      => $_request->query,
+                    'request'    => $_request->request,
+                    'server'     => $_request->server,
+                    'action'     => $_request->getMethod(),
+                );
+            }
+        }
+
+        $_tag = Inflector::neutralize( $eventName );
+
+        $_combinedValues = Option::merge(
+            $_requestValues,
+            is_object( $values ) ? Inflector::neutralizeObject( $values ) : Option::clean( $values ),
+            $event->toArray()
+        );
+
+        if ( empty( $_replacements ) && !empty( $_combinedValues ) )
+        {
+            $_replacements = array();
+
+            foreach ( $_combinedValues as $_key => $_value )
+            {
+                if ( is_scalar( $_value ) )
+                {
+                    $_replacements[ '{' . $_key . '}' ] = $_value;
+                }
+
+                else if ( $_value instanceof \IteratorAggregate && $_value instanceof \Countable )
+                {
+                    foreach ( $_value as $_bagKey => $_bagValue )
+                    {
+                        $_bagKey = Inflector::neutralize( ltrim( $_bagKey, '_' ) );
+
+                        if ( is_array( $_bagValue ) )
+                        {
+                            if ( !empty( $_bagValue ) )
+                            {
+                                $_bagValue = current( $_bagValue );
+                            }
+                            else
+                            {
+                                $_bagValue = null;
+                            }
+                        }
+                        elseif ( !is_scalar( $_bagValue ) )
+                        {
+                            continue;
+                        }
+
+                        $_replacements[ '{' . $_key . '.' . $_bagKey . '}' ] = $_bagValue;
+                    }
+                }
+            }
+        }
+
+        //	Construct and neutralize...
+        $_tag = Inflector::neutralize( str_ireplace( array_keys( $_replacements ), array_values( $_replacements ), $_tag ) );
+
+        return $eventName = $_tag;
     }
 
     /**
@@ -153,13 +246,15 @@ class Event extends BaseSystemRestResource
             }
         }
 
-        return array( 'record' => $_rebuild );
+        return array('record' => $_rebuild);
     }
 
     /**
      * Post/create event handler
      *
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws BadRequestException
+     * @throws InternalServerErrorException
+     * @throws StorageException
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return array|bool
      */
@@ -176,7 +271,7 @@ class Event extends BaseSystemRestResource
         {
             $_eventName = Option::get( $_body, 'event_name' );
             $_listeners = Option::get( $_body, 'listeners' );
-            $_apiKey = Option::get( $_body, 'api_key', 'unknown' );
+//            $_apiKey = Option::get( $_body, 'api_key', 'unknown' );
             $_priority = Option::get( $_body, 'priority', 0 );
         }
 
@@ -220,14 +315,15 @@ class Event extends BaseSystemRestResource
 
         Pii::app()->on( $_eventName, $_listeners, $_priority );
 
-        return array( 'record' => $_model->getAttributes() );
+        return array('record' => $_model->getAttributes());
     }
 
     /**
+     * @throws BadRequestException
+     * @throws InternalServerErrorException
+     * @throws NotFoundException
+     * @throws StorageException
      * @return array
-     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      */
     protected function _handleDelete()
     {
@@ -294,7 +390,7 @@ class Event extends BaseSystemRestResource
 
         Pii::app()->on( $_eventName, $_listeners, $_priority );
 
-        return array( 'record' => $_model->getAttributes() );
+        return array('record' => $_model->getAttributes());
     }
 
     /**

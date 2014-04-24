@@ -87,8 +87,8 @@ class SwaggerManager extends BasePlatformRestService
      * @var array The core DSP services that are built-in
      */
     protected static $_builtInServices = array(
-        array( 'api_name' => 'user', 'type_id' => 0, 'description' => 'User Login' ),
-        array( 'api_name' => 'system', 'type_id' => 0, 'description' => 'System Configuration' )
+        array('api_name' => 'user', 'type_id' => 0, 'description' => 'User Login'),
+        array('api_name' => 'system', 'type_id' => 0, 'description' => 'System Configuration')
     );
 
     //*************************************************************************
@@ -279,7 +279,7 @@ SQL;
         $_main = $_scanPath . static::SWAGGER_BASE_API_FILE;
         /** @noinspection PhpIncludeInspection */
         $_resourceListing = require( $_main );
-        $_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
+        $_out = array_merge( $_resourceListing, array('apis' => $_services) );
 
         $_filePath = $_cachePath . static::SWAGGER_CACHE_FILE;
 
@@ -320,42 +320,67 @@ SQL;
 
         foreach ( Option::get( $data, 'apis', array() ) as $_api )
         {
+            //  Trim slashes for use as a file name
             $_scripts = $_events = array();
 
             $_path = str_replace(
-                array( '{api_name}', '/' ),
-                array( $apiName, '.' ),
+                array('{api_name}', '/'),
+                array($apiName, '.'),
                 trim( Option::get( $_api, 'path' ), '/' )
             );
 
             foreach ( Option::get( $_api, 'operations', array() ) as $_operation )
             {
-                if ( null !== ( $_eventName = Option::get( $_operation, 'event_name' ) ) )
+                if ( null !== ( $_eventNames = Option::get( $_operation, 'event_name' ) ) )
                 {
                     $_method = strtolower( Option::get( $_operation, 'method', HttpMethod::GET ) );
-
                     $_scripts = array();
                     $_eventsThrown = array();
 
-                    if ( is_array( $_eventName ) )
+                    if ( is_string( $_eventNames ) && false !== strpos( $_eventNames, ',' ) )
                     {
-                        $_eventName = implode( ', ', $_eventName );
+                        $_events = explode( ',', $_eventNames );
+
+                        //  Clean up any spaces...
+                        foreach ( $_events as &$_tempEvent )
+                        {
+                            $_tempEvent = trim( $_tempEvent );
+                        }
                     }
 
-                    $_scripts += static::_findScripts( $_path, $_method, $_eventName );
+                    if ( !is_array( $_eventNames ) )
+                    {
+                        $_eventNames = array($_eventNames);
+                    }
 
-                    $_eventsThrown[] = str_ireplace(
-                        array( '{api_name}', '{action}', '{request.method}' ),
-                        array( $apiName, $_method, $_method ),
-                        $_eventName
+                    foreach ( $_eventNames as $_templateEventName )
+                    {
 
-                    );
+                        $_eventName = str_replace(
+                            array(
+                                '{api_name}',
+                                $apiName . '.' . $apiName . '.',
+                                '{action}',
+                                '{request.method}'
+                            ),
+                            array(
+                                $apiName,
+                                'system.' . $apiName . '.',
+                                $_method,
+                                $_method,
+                            ),
+                            $_templateEventName
+                        );
+
+                        $_scripts += static::_findScripts( $_path, $_method, $_eventName );
+
+                        $_eventsThrown[] = $_eventName;
+                    }
 
                     $_events[ $_method ] = array(
                         'event'   => $_eventsThrown,
                         'scripts' => $_scripts,
                     );
-
                 }
 
                 unset( $_operation, $_scripts, $_eventsThrown );
@@ -387,12 +412,20 @@ SQL;
             $_scriptPath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
         }
 
+        //  Find standard pattern scripts: [api_name].[method].*.js
         $_scriptPattern = strtolower( $apiName ) . '.' . strtolower( $method ) . '.*.js';
         $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
 
-        if ( null !== $eventName && array() !== ( $_namedScripts = FileSystem::glob( $_scriptPath . '/' . $eventName . '.js' ) ) )
+        if ( !empty( $eventName ) )
         {
-            $_scripts = array_merge( $_scripts, $_namedScripts );
+            //  If an event name is given, look for the specific script [event_name].js
+            $_namedScripts = FileSystem::glob( $_scriptPath . '/' . $eventName . '.js' );
+
+            //  Finally, glob any placeholders that are left in the event name...
+            $_globbed = preg_replace( '/({.*})/', '*', $eventName );
+            $_globbedScripts = FileSystem::glob( $_scriptPath . '/' . $_globbed . '.js' );
+
+            $_scripts = array_merge( $_scripts, $_globbedScripts, $_namedScripts );
         }
 
         if ( empty( $_scripts ) )
@@ -409,7 +442,7 @@ SQL;
         }
 
         $_response = array();
-        $_eventPattern = '/^' . str_replace( array( '.*.js', '.' ), array( null, '\\.' ), $_scriptPattern ) . '\\.(\w)\\.js$/i';
+        $_eventPattern = '/^' . str_replace( array('.*.js', '.'), array(null, '\\.'), $_scriptPattern ) . '\\.(\w)\\.js$/i';
 
         foreach ( $_scripts as $_script )
         {
@@ -434,6 +467,8 @@ SQL;
         static $_cache = array();
 
         $_map = static::getEventMap();
+        $_aliases = $service->getVerbAliases();
+        $method = Option::get( $_aliases, $method, $method );
 
         $_hash = sha1( ( $service ? get_class( $service ) : '*' ) . $method );
 
@@ -653,7 +688,7 @@ SQL;
 
         if ( file_exists( $_swaggerPath ) )
         {
-            $files = array_diff( scandir( $_swaggerPath ), array( '.', '..' ) );
+            $files = array_diff( scandir( $_swaggerPath ), array('.', '..') );
             foreach ( $files as $file )
             {
                 @unlink( $_swaggerPath . '/' . $file );
