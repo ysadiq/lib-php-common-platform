@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Components\EventProxy;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Events\Enums\PlatformEvents;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\SwaggerManager;
@@ -71,7 +72,7 @@ class Event extends BaseSystemRestResource
      */
     public static function normalizeEventName( $event, &$eventName, $values = null, $addRequestValues = false )
     {
-        static $_requestValues = array();
+        static $_requestValues = array(), $_replacements = array();
 
         if ( false === strpos( $eventName, '{' ) )
         {
@@ -97,7 +98,7 @@ class Event extends BaseSystemRestResource
             }
         }
 
-        $_tag = Inflector::neutralize( $eventName );
+        $_tag = $eventName;
 
         $_combinedValues = Option::merge(
             $_requestValues,
@@ -144,8 +145,13 @@ class Event extends BaseSystemRestResource
             }
         }
 
+        if ( PlatformEvents::contains( $_tag ) && false !== strpos( $_tag, '{api_name}.{action}' ) )
+        {
+            $_replacements['{api_name}'] = implode( '.', $_combinedValues['request_uri'] );
+        }
+
         //	Construct and neutralize...
-        $_tag = Inflector::neutralize( str_ireplace( array_keys( $_replacements ), array_values( $_replacements ), $_tag ) );
+        $_tag = str_ireplace( array_keys( $_replacements ), array_values( $_replacements ), $_tag );
 
         return $eventName = $_tag;
     }
@@ -246,7 +252,7 @@ class Event extends BaseSystemRestResource
             }
         }
 
-        return array('record' => $_rebuild);
+        return array( 'record' => $_rebuild );
     }
 
     /**
@@ -315,7 +321,7 @@ class Event extends BaseSystemRestResource
 
         Pii::app()->on( $_eventName, $_listeners, $_priority );
 
-        return array('record' => $_model->getAttributes());
+        return array( 'record' => $_model->getAttributes() );
     }
 
     /**
@@ -390,7 +396,7 @@ class Event extends BaseSystemRestResource
 
         Pii::app()->on( $_eventName, $_listeners, $_priority );
 
-        return array('record' => $_model->getAttributes());
+        return array( 'record' => $_model->getAttributes() );
     }
 
     /**

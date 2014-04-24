@@ -174,7 +174,7 @@ class EventDispatcher implements EventDispatcherInterface
 
         $this->_scripts = Platform::storeGet( static::STORE_SCRIPTS_KEY, array() );
 
-        if ( empty( $this->_scripts ) )
+//        if ( empty( $this->_scripts ) )
         {
             $_scriptPath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
 

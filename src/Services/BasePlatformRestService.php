@@ -23,7 +23,6 @@ use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\DataFormats;
-use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
 use DreamFactory\Platform\Events\PlatformEvent;
@@ -311,7 +310,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
             if ( $this->_autoDispatch && method_exists( $this, $_method ) )
             {
-                $_methodToCall = array($this, $_method);
+                $_methodToCall = array( $this, $_method );
             }
         }
 
@@ -396,7 +395,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         }
 
         //	Native and PHP response types return, not emit...
-        if ( in_array( $this->_outputFormat, array(false, DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE) ) )
+        if ( in_array( $this->_outputFormat, array( false, DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE ) ) )
         {
             return $this->_response;
         }
@@ -634,8 +633,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
         return Platform::trigger(
             str_ireplace(
-                array('{api_name}', '{action}'),
-                array($this->_apiName == 'system' ? $this->_resource : $this->_apiName, strtolower( $this->_action )),
+                array( '{api_name}', '{action}' ),
+                array( $this->_apiName == 'system' ? $this->_resource : $this->_apiName, strtolower( $this->_action ) ),
                 $eventName
             ),
             $event ? : new RestServiceEvent( $this->_apiName, $this->_resource, $this->_response ),
@@ -666,20 +665,25 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
         //  Lookup the appropriate event if not specified.
         $_eventNames = $eventName ? : SwaggerManager::findEvent( $this, $this->_action );
-        $_eventNames = is_array( $_eventNames ) ? $_eventNames : array($_eventNames);
+        $_eventNames = is_array( $_eventNames ) ? $_eventNames : array( $_eventNames );
 
         $_result = array();
-        
+
         $_values = array(
             'api_name'        => $this->_apiName,
-            'service_name'    => $this->_apiName,
             'service_id'      => $this->_serviceId,
             'request_payload' => $this->_requestPayload,
             'table_name'      => $this->_resource,
             'container'       => $this->_resource,
             'folder_path'     => Option::get( $this->_resourceArray, 1 ),
             'file_path'       => Option::get( $this->_resourceArray, 2 ),
+            'request_uri'     => explode( '/', Pii::request( true )->getPathInfo() ),
         );
+
+        if ( 'rest' !== ( $_part = array_shift( $_values['request_uri'] ) ) )
+        {
+            array_unshift( $_values['request_uri'], $_part );
+        }
 
         foreach ( $_eventNames as $_eventName )
         {
