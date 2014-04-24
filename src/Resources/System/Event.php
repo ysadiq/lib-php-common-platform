@@ -147,7 +147,19 @@ class Event extends BaseSystemRestResource
 
         if ( PlatformEvents::contains( $_tag ) && false !== strpos( $_tag, '{api_name}.{action}' ) )
         {
-            $_replacements['{api_name}'] = implode( '.', $_combinedValues['request_uri'] );
+            $_first = Option::getDeep( $_combinedValues, 'request_uri', 0 );
+            $_second = Option::getDeep( $_combinedValues, 'request_uri', 1 );
+
+            if ( empty( $_second ) )
+            {
+                $_value = $_first;
+            }
+            else
+            {
+                $_value = $_first . '.' . $_second;
+            }
+
+            $_replacements['{api_name}'] = $_value;
         }
 
         //	Construct and neutralize...
