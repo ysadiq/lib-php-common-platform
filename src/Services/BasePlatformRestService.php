@@ -617,9 +617,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     }
 
     /**
-     * @param string        $eventName
-     * @param PlatformEvent $event
-     * @param int           $priority
+     * @param string              $eventName
+     * @param PlatformEvent|array $event
+     * @param int                 $priority
      *
      * @return bool|PlatformEvent
      */
@@ -629,14 +629,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         {
             $event = new RestServiceEvent( $this->_apiName, $this->_resource, $event );
         }
+        else
+        {
+            $event = $event ? : new RestServiceEvent( $this->_apiName, $this->_resource, $this->_response );
+        };
 
         return Platform::trigger(
-            str_ireplace(
-                array( '{api_name}', '{action}' ),
-                array( $this->_apiName == 'system' ? $this->_resource : $this->_apiName, strtolower( $this->_action ) ),
-                $eventName
-            ),
-            $event ? : new RestServiceEvent( $this->_apiName, $this->_resource, $this->_response ),
+            Event::normalizeEventName( $event, $eventName, array( 'action' => $this->_action ) ),
+            $event,
             $priority
         );
     }

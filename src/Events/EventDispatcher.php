@@ -211,10 +211,11 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param string $eventName
-     * @param Event  $event
+     * @param string                                   $eventName
+     * @param \Symfony\Component\EventDispatcher\Event $event
      *
-     * @return \Symfony\Component\EventDispatcher\Event|void
+     * @throws \Exception
+     * @return PlatformEvent
      */
     public function dispatch( $eventName, Event $event = null )
     {
@@ -690,7 +691,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     public static function setLogEvents( $logEvents )
     {
-        self::$_logEvents = $logEvents;
+        static::$_logEvents = $logEvents;
     }
 
     /**
@@ -698,7 +699,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     public static function getLogEvents()
     {
-        return self::$_logEvents;
+        return static::$_logEvents;
     }
 
     /**
@@ -706,7 +707,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     public static function getLogAllEvents()
     {
-        return self::$_logAllEvents;
+        return static::$_logAllEvents;
     }
 
     /**
@@ -714,7 +715,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     public static function setLogAllEvents( $logAllEvents )
     {
-        self::$_logAllEvents = $logAllEvents;
+        static::$_logAllEvents = $logAllEvents;
     }
 
 }

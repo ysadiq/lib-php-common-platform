@@ -270,8 +270,13 @@ class Platform extends SeedUtility
             hash(
                 'ripemd128',
                 uniqid( '', true ) . ( $_uuid ? : microtime( true ) ) . md5(
-                    $namespace . $_SERVER['REQUEST_TIME'] . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['LOCAL_ADDR'] . $_SERVER['LOCAL_PORT'] .
-                    $_SERVER['REMOTE_ADDR'] . $_SERVER['REMOTE_PORT']
+                    $namespace .
+                    $_SERVER['REQUEST_TIME'] .
+                    $_SERVER['HTTP_USER_AGENT'] .
+                    $_SERVER['LOCAL_ADDR'] .
+                    $_SERVER['LOCAL_PORT'] .
+                    $_SERVER['REMOTE_ADDR'] .
+                    $_SERVER['REMOTE_PORT']
                 )
             )
         );
@@ -442,5 +447,4 @@ class Platform extends SeedUtility
 
         return $_dispatcher ? : $_dispatcher = Pii::app()->getDispatcher();
     }
-
 }

@@ -23,6 +23,7 @@ use Composer\Autoload\ClassLoader;
 use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Events\DspEvent;
 use DreamFactory\Platform\Events\Enums\DspEvents;
+use DreamFactory\Platform\Events\Enums\SessionEvents;
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -182,6 +183,17 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         //	Setup the request handler and events
         $this->onBeginRequest = array( $this, '_onBeginRequest' );
         $this->onEndRequest = array( $this, '_onEndRequest' );
+
+        $this->on(
+            SessionEvents::USER_LOGOUT,
+            function ( $event, $eventName, $dispatcher )
+            {
+                Platform::getStore()->deleteAll();
+
+                /** @var PlatformEvent $event */
+                Log::debug( '  * ' . $eventName . ' event id#' . $event->getEventId() . '. Store wiped.' );
+            }
+        );
     }
 
     /**
@@ -269,9 +281,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         return true;
     }
 
-    //*************************************************************************
-    //	Event Handlers
-    //*************************************************************************
+//*************************************************************************
+//	Event Handlers
+//*************************************************************************
 
     /**
      * Handles an OPTIONS request to the server to allow CORS and optionally sends the CORS headers
@@ -415,9 +427,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
     }
 
-    //*************************************************************************
-    //  Server-Side Event Support
-    //*************************************************************************
+//*************************************************************************
+//  Server-Side Event Support
+//*************************************************************************
 
     /**
      * Triggers a DSP-level event
@@ -462,9 +474,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         static::getDispatcher()->removeListener( $eventName, $listener );
     }
 
-    //*************************************************************************
-    //	CORS Support
-    //*************************************************************************
+//*************************************************************************
+//	CORS Support
+//*************************************************************************
 
     /**
      * @param array|bool $whitelist     Set to "false" to reset the internal method cache.
@@ -562,13 +574,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $_headers = array();
 
         //  Deal with CORS headers
-        list(
-            $_key,
-            $_origin,
-            $_requestSource,
-            $_originParts,
-            $_originUri,
-            ) = $this->_buildCacheKey();
+        list( $_key, $_origin, $_requestSource, $_originParts, $_originUri, ) = $this->_buildCacheKey();
 
         //	Was an origin header passed? If not, don't do CORS.
         if ( !empty( $_origin ) )
@@ -808,9 +814,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         return $this->setCorsWhitelist( $_whitelist );
     }
 
-    //*************************************************************************
-    //	Accessors
-    //*************************************************************************
+//*************************************************************************
+//	Accessors
+//*************************************************************************
 
     /**
      * @param array $corsWhitelist
@@ -1110,4 +1116,23 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         return $this;
     }
 
+    /**
+     * @param PlatformEvent   $event
+     * @param string          $eventName
+     * @param EventDispatcher $dispatcher
+     */
+    public static function onUserLogout( $event, $eventName, $dispatcher )
+    {
+        Platform::getStore()->deleteAll();
+
+        Log::debug( '  * ' . $eventName . ' event id#' . $event->getEventId() . '. Store wiped.' );
+    }
+
+    /**
+     * {@InheritDoc}
+     */
+    public static function getSubscribedEvents()
+    {
+        return array( SessionEvents::USER_LOGOUT => 'onUserLogout' );
+    }
 }

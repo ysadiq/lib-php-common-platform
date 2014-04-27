@@ -114,7 +114,7 @@ class Event extends BaseSystemRestResource
 
         if ( empty( $_replacements ) && !empty( $_combinedValues ) )
         {
-            $_replacements = array();
+            $_replacements = array( '{action}' => strtolower( Pii::request( false )->getMethod() ) );
 
             foreach ( $_combinedValues as $_key => $_value )
             {

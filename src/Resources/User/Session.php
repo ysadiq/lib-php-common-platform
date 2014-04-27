@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Resources\User;
 use DreamFactory\Common\Components\DataCache;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
+use DreamFactory\Platform\Events\Enums\SessionEvents;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\UnauthorizedException;
@@ -133,7 +134,7 @@ class Session extends BasePlatformRestResource
      */
     protected function _handleDelete()
     {
-        $this->userLogout();
+        static::userLogout( $this );
 
         return array( 'success' => true );
     }
@@ -201,6 +202,9 @@ class Session extends BasePlatformRestResource
         }
     }
 
+    /**
+     * @return string
+     */
     protected static function _generateTicket()
     {
         $_timestamp = time();
@@ -261,7 +265,7 @@ class Session extends BasePlatformRestResource
 
         if ( $_identity->logInUser( $_user ) )
         {
-            if( !Pii::user()->login( $_identity, 0 ))
+            if ( !Pii::user()->login( $_identity, 0 ) )
             {
                 throw new UnauthorizedException( 'The user could not be logged in.' );
             }
@@ -305,10 +309,17 @@ class Session extends BasePlatformRestResource
     }
 
     /**
-     *
+     * Perform the user logout functions
      */
-    public static function userLogout()
+    public static function userLogout( Session $currentSession = null )
     {
+        //  Let the world know...
+        if ( !empty( $currentSession ) )
+        {
+            $_data = array( 'user_id' => static::getCurrentUserId(), 'session' => static::_getSession() );
+            $currentSession->trigger( SessionEvents::USER_LOGOUT, $_data );
+        }
+
         // helper for non-browser-managed sessions
         $_sessionId = FilterInput::server( 'HTTP_X_DREAMFACTORY_SESSION_TOKEN' );
 
@@ -319,7 +330,7 @@ class Session extends BasePlatformRestResource
 
             if ( session_start() )
             {
-                if ( session_id() !== '' )
+                if ( '' !== session_id() )
                 {
                     @session_unset();
                     @session_destroy();
@@ -441,7 +452,7 @@ class Session extends BasePlatformRestResource
             $_allowedApps = ResourceStore::model( 'app' )->findAll( 'is_active = :ia', array( ':ia' => 1 ) );
         }
 
-        $_public['dsp_name'] = Pii::getParam('dsp_name');
+        $_public['dsp_name'] = Pii::getParam( 'dsp_name' );
         $_cached['lookup'] = LookupKey::getForSession( $_roleId, $_user->id );
 
         return array(
@@ -891,10 +902,15 @@ class Session extends BasePlatformRestResource
         return array( 'filters' => $_filters, 'filter_op' => $_operator );
     }
 
+    /**
+     * @param string $service
+     * @param string $component
+     *
+     * @return array
+     */
     public static function getServicePermissions( $service, $component = null )
     {
-        $_access = static::getServiceAccess( $service, $component );
-        if ( true === $_access )
+        if ( true === ( $_access = static::getServiceAccess( $service, $component ) ) )
         {
             return array( static::GET, static::POST, static::PUT, static::PATCH, static::DELETE );
         }
@@ -945,9 +961,9 @@ class Session extends BasePlatformRestResource
                         // get fields here
                         if ( !empty( $_lookup ) )
                         {
-                            if ( isset( static::$_cache, static::$_cache[$_lookup] ) )
+                            if ( isset( static::$_cache, static::$_cache[ $_lookup ] ) )
                             {
-                                $value = static::$_cache[$_lookup];
+                                $value = static::$_cache[ $_lookup ];
 
                                 return true;
                             }
@@ -958,9 +974,9 @@ class Session extends BasePlatformRestResource
                         // get fields here
                         if ( !empty( $_lookup ) )
                         {
-                            if ( isset( static::$_cache, static::$_cache['role'], static::$_cache['role'][$_lookup] ) )
+                            if ( isset( static::$_cache, static::$_cache['role'], static::$_cache['role'][ $_lookup ] ) )
                             {
-                                $value = static::$_cache['role'][$_lookup];
+                                $value = static::$_cache['role'][ $_lookup ];
 
                                 return true;
                             }
@@ -987,16 +1003,17 @@ class Session extends BasePlatformRestResource
                         {
                             case 'host_url':
                                 $value = Curl::currentUrl( false, false );
+
                                 return true;
                             case 'name':
-                                $value = Pii::getParam('dsp_name');
+                                $value = Pii::getParam( 'dsp_name' );
 
                                 return true;
                             case 'version':
                             case 'confirm_invite_url':
                             case 'confirm_register_url':
                             case 'confirm_reset_url':
-                                $value = Pii::getParam('dsp.'.$_lookup);
+                                $value = Pii::getParam( 'dsp.' . $_lookup );
 
                                 return true;
                         }
@@ -1005,9 +1022,9 @@ class Session extends BasePlatformRestResource
             }
         }
 
-        if ( isset( static::$_cache, static::$_cache['lookup'], static::$_cache['lookup'][$lookup] ) )
+        if ( isset( static::$_cache, static::$_cache['lookup'], static::$_cache['lookup'][ $lookup ] ) )
         {
-            $value = static::$_cache['lookup'][$lookup];
+            $value = static::$_cache['lookup'][ $lookup ];
 
             return true;
         }
@@ -1015,12 +1032,18 @@ class Session extends BasePlatformRestResource
         return false;
     }
 
+    /**
+     * @param string $lookup
+     *
+     * @return mixed
+     */
     public static function replaceLookup( $lookup )
     {
         // filter string values should be wrapped in curly braces
         if ( is_string( $lookup ) )
         {
             $_end = strlen( $lookup ) - 1;
+            //@todo consider regex for this
             if ( ( 0 === strpos( $lookup, '{' ) ) && ( $_end === strrpos( $lookup, '}' ) ) )
             {
                 if ( static::getLookupValue( substr( $lookup, 1, $_end - 1 ), $_value ) )
@@ -1173,7 +1196,7 @@ class Session extends BasePlatformRestResource
                 foreach ( $theGroups as $g_key => $group )
                 {
                     $groupId = $group->id;
-                    $groupData = ( isset( $appGroups[$g_key] ) ) ? $appGroups[$g_key] : $group->getAttributes( array( 'id', 'name', 'description' ) );
+                    $groupData = ( isset( $appGroups[ $g_key ] ) ) ? $appGroups[ $g_key ] : $group->getAttributes( array( 'id', 'name', 'description' ) );
                     foreach ( $tempGroups as $tempGroup )
                     {
                         if ( $tempGroup->id === $groupId )
@@ -1184,7 +1207,7 @@ class Session extends BasePlatformRestResource
                             $groupData['apps'] = $temp;
                         }
                     }
-                    $appGroups[$g_key] = $groupData;
+                    $appGroups[ $g_key ] = $groupData;
                 }
                 if ( !$found )
                 {
@@ -1196,7 +1219,7 @@ class Session extends BasePlatformRestResource
             {
                 if ( !isset( $group['apps'] ) )
                 {
-                    unset( $appGroups[$g_key] );
+                    unset( $appGroups[ $g_key ] );
                 }
             }
             $_data['app_groups'] = array_values( $appGroups ); // reset indexing

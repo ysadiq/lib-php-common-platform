@@ -87,8 +87,8 @@ class SwaggerManager extends BasePlatformRestService
      * @var array The core DSP services that are built-in
      */
     protected static $_builtInServices = array(
-        array('api_name' => 'user', 'type_id' => 0, 'description' => 'User Login'),
-        array('api_name' => 'system', 'type_id' => 0, 'description' => 'System Configuration')
+        array( 'api_name' => 'user', 'type_id' => 0, 'description' => 'User Login' ),
+        array( 'api_name' => 'system', 'type_id' => 0, 'description' => 'System Configuration' )
     );
 
     //*************************************************************************
@@ -281,7 +281,7 @@ SQL;
         $_main = $_scanPath . static::SWAGGER_BASE_API_FILE;
         /** @noinspection PhpIncludeInspection */
         $_resourceListing = require( $_main );
-        $_out = array_merge( $_resourceListing, array('apis' => $_services) );
+        $_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
 
         $_filePath = $_cachePath . static::SWAGGER_CACHE_FILE;
 
@@ -325,8 +325,8 @@ SQL;
             $_scripts = $_events = array();
 
             $_path = str_replace(
-                array('{api_name}', '/'),
-                array($apiName, '.'),
+                array( '{api_name}', '/' ),
+                array( $apiName, '.' ),
                 trim( Option::get( $_api, 'path' ), '/' )
             );
 
@@ -355,7 +355,7 @@ SQL;
                     }
                     else if ( !is_array( $_eventNames ) )
                     {
-                        $_eventNames = array($_eventNames);
+                        $_eventNames = array( $_eventNames );
                     }
 
                     //  Set into master record
@@ -452,7 +452,7 @@ SQL;
         }
 
         $_response = array();
-        $_eventPattern = '/^' . str_replace( array('.*.js', '.'), array(null, '\\.'), $_scriptPattern ) . '\\.(\w)\\.js$/i';
+        $_eventPattern = '/^' . str_replace( array( '.*.js', '.' ), array( null, '\\.' ), $_scriptPattern ) . '\\.(\w)\\.js$/i';
 
         foreach ( $_scripts as $_script )
         {
@@ -513,11 +513,10 @@ SQL;
 
         $_apiName = $service->getApiName();
         $_savedResource = $_resource = $service->getResource();
-        $_pathParts =
-            explode(
-                '/',
-                ltrim( str_replace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) ), '/' )
-            );
+        $_pathParts = explode(
+            '/',
+            ltrim( str_replace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) ), '/' )
+        );
 
         if ( empty( $_resource ) )
         {
@@ -710,7 +709,7 @@ SQL;
 
         if ( file_exists( $_swaggerPath ) )
         {
-            $files = array_diff( scandir( $_swaggerPath ), array('.', '..') );
+            $files = array_diff( scandir( $_swaggerPath ), array( '.', '..' ) );
             foreach ( $files as $file )
             {
                 @unlink( $_swaggerPath . '/' . $file );
@@ -728,7 +727,7 @@ SQL;
      *
      * @return array
      */
-    public static function getCommonResponses( array $codes = array() )
+    public static function getCommonResponses( $codes = array() )
     {
         static $_commonResponses = array(
             array(
@@ -750,6 +749,11 @@ SQL;
         );
 
         $_response = $_commonResponses;
+
+        if ( !is_array( $codes ) )
+        {
+            $codes = func_get_args();
+        }
 
         if ( !empty( $codes ) )
         {
