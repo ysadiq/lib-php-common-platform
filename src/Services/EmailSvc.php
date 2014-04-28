@@ -264,28 +264,26 @@ class EmailSvc extends BasePlatformRestService
     {
         if ( false !== strpos( $string, '{' ) )
         {
-            $_change = false;
+            $_search = array();
+            $_replace = array();
             // brute force, yeah this could be better
-            $_exploded = explode( ' ', $string );
-            foreach ( $_exploded as $_key => $_word )
+            $_exploded = explode( '{', $string );
+            foreach ( $_exploded as $_word )
             {
-                if ( is_string( $_word ) )
+                $_lookup = strstr( $_word, '}', true );
+                if ( !empty( $_lookup ) )
                 {
-                    $_end = strlen( $_word ) - 1;
-                    if ( ( 0 === strpos( $_word, '{' ) ) && ( $_end === strrpos( $_word, '}' ) ) )
+                    if ( Session::getLookupValue( $_lookup, $_value ) )
                     {
-                        if ( Session::getLookupValue( substr( $_word, 1, $_end - 1 ), $_value ) )
-                        {
-                            $_change = true;
-                            $_exploded[$_key] = $_value;
-                        }
+                        $_search[] = '{'.$_lookup.'}';
+                        $_replace[] = $_value;
                     }
                 }
             }
 
-            if ( $_change )
+            if ( !empty( $_search ) )
             {
-                $string = implode( ' ', $_exploded );
+                $string = str_replace( $_search, $_replace, $string );
             }
         }
     }
