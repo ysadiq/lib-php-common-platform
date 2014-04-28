@@ -642,16 +642,16 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "dev-develop",
+            "version": "0.2.39",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "6f324b08c4d8f6c835cd5eb40ccc93af024f5f36"
+                "reference": "4a2c3d8191120584799474e847796600e789fcf3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/6f324b08c4d8f6c835cd5eb40ccc93af024f5f36",
-                "reference": "6f324b08c4d8f6c835cd5eb40ccc93af024f5f36",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/4a2c3d8191120584799474e847796600e789fcf3",
+                "reference": "4a2c3d8191120584799474e847796600e789fcf3",
                 "shasum": ""
             },
             "require": {
@@ -696,7 +696,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-04-25 20:55:54"
+            "time": "2014-04-28 23:39:30"
         },
         {
             "name": "monolog/monolog",

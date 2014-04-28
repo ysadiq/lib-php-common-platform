@@ -1,6 +1,6 @@
 # lib-php-common-platform
 
-## DreamFactory Services Platform&trade; SDK For PHP v1.5.5
+## DreamFactory Services Platform&trade; SDK For PHP v1.5.6
 
 [![Build Status](http://tc.dreamfactory.com:8111/httpAuth/app/rest/builds/buildType:id:DreamfactoryLibPhpCommonPlatform_Release/statusIcon)](http://tc.dreamfactory.com:8111/viewType.html?buildTypeId=DreamfactoryLibPhpCommonPlatform_Release&tab=buildTypeStatusDiv&guest=1)
 [![Dependency Status](https://www.versioneye.com/php/dreamfactory:lib-php-common-platform/badge.png)](https://www.versioneye.com/php/dreamfactory:lib-php-common-platform)
