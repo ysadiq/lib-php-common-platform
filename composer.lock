@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "4f601ef3a453415100a5db8e69f5476e",
+    "hash": "b51aef635a0470205a3cc65ab99af234",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -273,9 +273,9 @@
             ],
             "authors": [
                 {
-                    "name": "Jason Sykes",
+                    "name": "Sykes, Jason",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Developer, client-side"
+                    "role": "Lead Engineer, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Javascript SDK",
@@ -642,16 +642,16 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.37",
+            "version": "dev-develop",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "d3bdca2aacd5ee6a99a26d384104a9259c417a75"
+                "reference": "6f324b08c4d8f6c835cd5eb40ccc93af024f5f36"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/d3bdca2aacd5ee6a99a26d384104a9259c417a75",
-                "reference": "d3bdca2aacd5ee6a99a26d384104a9259c417a75",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/6f324b08c4d8f6c835cd5eb40ccc93af024f5f36",
+                "reference": "6f324b08c4d8f6c835cd5eb40ccc93af024f5f36",
                 "shasum": ""
             },
             "require": {
@@ -696,7 +696,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-04-18 19:50:40"
+            "time": "2014-04-25 20:55:54"
         },
         {
             "name": "monolog/monolog",
@@ -2009,7 +2009,7 @@
     ],
     "minimum-stability": "dev",
     "stability-flags": {
-        "kisma/kisma": 0,
+        "kisma/kisma": 20,
         "swiftmailer/swiftmailer": 0,
         "aws/aws-sdk-php": 0,
         "rackspace/php-opencloud": 0,
