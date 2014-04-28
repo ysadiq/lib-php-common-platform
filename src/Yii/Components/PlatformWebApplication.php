@@ -562,13 +562,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $_headers = array();
 
         //  Deal with CORS headers
-        list(
-            $_key,
-            $_origin,
-            $_requestSource,
-            $_originParts,
-            $_originUri,
-            ) = $this->_buildCacheKey();
+        list( $_key, $_origin, $_requestSource, $_originParts, $_originUri, ) = $this->_buildCacheKey();
 
         //	Was an origin header passed? If not, don't do CORS.
         if ( !empty( $_origin ) )
@@ -747,7 +741,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $_uri = array(
             'scheme' => Option::get( $_parts, 'scheme', $_protocol ),
             'host'   => Option::get( $_parts, 'host' ),
-            'port'   => Option::get( $_parts, 'port' ),
+            'port'   => Option::get( $_parts, 'port', Option::server( 'SERVER_PORT' ) ),
         );
 
         return $normalize ? $this->_normalizeUri( $_uri ) : $_uri;
@@ -761,8 +755,14 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     protected function _normalizeUri( $parts )
     {
         return is_array( $parts ) ?
-            ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
-            : $parts;
+            Option::get( $parts, 'scheme', 'http' ) .
+            '://' .
+            Option::get( $parts, 'host' ) .
+            ':' .
+            Option::get( $parts, 'port', Option::server( 'SERVER_PORT' ) ) : $parts;
+
+//            ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
+//            : $parts;
     }
 
     /**

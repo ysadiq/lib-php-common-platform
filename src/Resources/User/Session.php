@@ -996,7 +996,7 @@ class Session extends BasePlatformRestResource
                             case 'confirm_invite_url':
                             case 'confirm_register_url':
                             case 'confirm_reset_url':
-                                $value = Pii::getParam('dsp.'.$_lookup);
+                                $value = Curl::currentUrl( false, false ) . Pii::getParam('dsp.'.$_lookup);
 
                                 return true;
                         }
