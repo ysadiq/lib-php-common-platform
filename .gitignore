@@ -7,3 +7,4 @@ tests/storage
 tests/log
 build
 src/OLD_*.php
+docs
