@@ -51,13 +51,13 @@ class PlatformStore extends Flexistore
      * @param array|string $type
      * @param array        $data An array of key value pairs with which to initialize storage
      */
-    public function __construct( $type = CacheTypes::PHP_FILE, array $data = array() )
+    public function __construct( $type = CacheTypes::FILE_SYSTEM, array $data = array() )
     {
         parent::__construct(
             $type,
             array(
                 'namespace' => static::DEFAULT_NAMESPACE,
-                'arguments' => array( Platform::getPrivatePath( static::STORE_CACHE_PATH ), '.dfcc.php' )
+                'arguments' => array( Platform::getPrivatePath( static::STORE_CACHE_PATH ), '.dfcc' )
             ),
             false
         );
@@ -68,4 +68,5 @@ class PlatformStore extends Flexistore
             $this->_store->save( $_key, $_value );
         }
     }
+
 }

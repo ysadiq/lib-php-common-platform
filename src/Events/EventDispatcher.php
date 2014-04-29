@@ -206,8 +206,15 @@ class EventDispatcher implements EventDispatcherInterface
     public function __destruct()
     {
         //  Save off listeners and scripts
-        Platform::storeSet( static::STORE_LISTENERS_KEY, $this->_listeners, PlatformStore::DEFAULT_CACHE_TTL );
-        Platform::storeSet( static::STORE_SCRIPTS_KEY, $this->_scripts, 30 );
+        if ( static::$_enableRestEvents || static::$_enablePlatformEvents )
+        {
+            Platform::storeSet( static::STORE_LISTENERS_KEY, $this->_listeners, PlatformStore::DEFAULT_CACHE_TTL );
+        }
+        
+        if ( static::$_enableEventScripts )
+        {
+            Platform::storeSet( static::STORE_SCRIPTS_KEY, $this->_scripts, 30 );
+        }
     }
 
     /**

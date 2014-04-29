@@ -330,7 +330,7 @@ class Platform extends SeedUtility
     {
         if ( null === static::$_persistentStore )
         {
-            static::$_persistentStore = new PlatformStore( CacheTypes::PHP_FILE, $data );
+            static::$_persistentStore = new PlatformStore( CacheTypes::FILE_SYSTEM, $data );
         }
 
         return static::$_persistentStore;
