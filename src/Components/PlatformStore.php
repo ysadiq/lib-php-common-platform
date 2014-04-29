@@ -57,7 +57,7 @@ class PlatformStore extends Flexistore
             $type,
             array(
                 'namespace' => static::DEFAULT_NAMESPACE,
-                'arguments' => array(Platform::getPrivatePath( static::STORE_CACHE_PATH ), '.dfcc.php')
+                'arguments' => array( Platform::getPrivatePath( static::STORE_CACHE_PATH ), '.dfcc' )
             ),
             false
         );
@@ -68,4 +68,5 @@ class PlatformStore extends Flexistore
             $this->_store->save( $_key, $_value );
         }
     }
+
 }
