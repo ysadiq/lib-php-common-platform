@@ -24,6 +24,7 @@ use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\CorsManager;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Utility\Log;
@@ -79,7 +80,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
     /**
      * @var array[] The namespaces in use by this system. Used by the routing engine
      */
-    protected static $_namespaceMap = array( self::NS_MODELS => array(), self::NS_SERVICES => array(), self::NS_RESOURCES => array() );
+    protected static $_namespaceMap = array(self::NS_MODELS => array(), self::NS_SERVICES => array(), self::NS_RESOURCES => array());
     /**
      * @var array The namespaces that contain resources. Used by the routing engine
      */
@@ -117,9 +118,10 @@ class PlatformConsoleApplication extends \CConsoleApplication
 
         //	Setup the request handler and events
         /** @noinspection PhpUndefinedFieldInspection */
-        $this->onBeginRequest = array( $this, '_onBeginRequest' );
+        $this->onBeginRequest = array($this, '_onBeginRequest');
+
         /** @noinspection PhpUndefinedFieldInspection */
-        $this->onEndRequest = array( $this, '_onEndRequest' );
+        $this->onEndRequest = array($this, '_onEndRequest');
     }
 
     /**
@@ -167,15 +169,14 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     protected function _loadPlugins()
     {
-        if ( null === ( $_autoloadPath = \Kisma::get( 'dsp.plugin_autoload_path' ) ) )
+        if ( null === ( $_autoloadPath = Platform::storeGet( 'dsp.plugin_autoload_path' ) ) )
         {
             //	Locate plug-in directory...
-            $_path = Pii::getParam( 'dsp.plugins_path', Pii::getParam( 'dsp.base_path' ) . static::DEFAULT_PLUGINS_PATH );
+            $_path = Platform::getPluginsPath();
 
             if ( !is_dir( $_path ) )
             {
                 // No plug-ins installed
-
                 return false;
             }
 
@@ -191,7 +192,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
                 return false;
             }
 
-            \Kisma::set( 'dsp.plugin_autoload_path', $_autoloadPath );
+            Platform::storeSet( 'dsp.plugin_autoload_path', $_autoloadPath );
         }
 
         /** @noinspection PhpIncludeInspection */
@@ -313,7 +314,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     public function setResourceNamespaces( $resourceNamespaces )
     {
-        static::$_namespaceMap[static::NS_RESOURCES] = $resourceNamespaces;
+        static::$_namespaceMap[ static::NS_RESOURCES ] = $resourceNamespaces;
 
         return $this;
     }
@@ -323,7 +324,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     public function getResourceNamespaces()
     {
-        return static::$_namespaceMap[static::NS_RESOURCES];
+        return static::$_namespaceMap[ static::NS_RESOURCES ];
     }
 
     /**
@@ -348,7 +349,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     public function setModelNamespaces( $modelNamespaces )
     {
-        static::$_namespaceMap[static::NS_MODELS] = $modelNamespaces;
+        static::$_namespaceMap[ static::NS_MODELS ] = $modelNamespaces;
 
         return $this;
     }
@@ -358,7 +359,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     public function getModelNamespaces()
     {
-        return static::$_namespaceMap[static::NS_MODELS];
+        return static::$_namespaceMap[ static::NS_MODELS ];
     }
 
     /**
@@ -382,7 +383,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     public static function getNamespaceMap( $which = null )
     {
-        return $which ? static::$_namespaceMap[$which] : static::$_namespaceMap;
+        return $which ? static::$_namespaceMap[ $which ] : static::$_namespaceMap;
     }
 
     /**
@@ -399,7 +400,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
     public static function addNamespace( $prefix, $paths, $prepend = false )
     {
         /** @var ClassLoader $_loader */
-        if ( null === ( $_loader = \Kisma::get( CoreSettings::AUTO_LOADER ) ) )
+        if ( null === ( $_loader = Platform::storeGet( CoreSettings::AUTO_LOADER ) ) )
         {
             throw new InternalServerErrorException( 'Unable to find auto-loader. :(' );
         }
@@ -421,11 +422,11 @@ class PlatformConsoleApplication extends \CConsoleApplication
     {
         if ( $prepend )
         {
-            array_unshift( static::$_namespaceMap[$which], array( $namespace, $path ) );
+            array_unshift( static::$_namespaceMap[ $which ], array($namespace, $path) );
         }
         else
         {
-            static::$_namespaceMap[$which][$namespace] = $path;
+            static::$_namespaceMap[ $which ][ $namespace ] = $path;
         }
     }
 
