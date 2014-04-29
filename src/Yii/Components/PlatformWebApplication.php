@@ -27,17 +27,16 @@ use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\Interfaces\PublisherLike;
 use Kisma\Core\Interfaces\SubscriberLike;
 use Kisma\Core\Utility\FileSystem;
+use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
@@ -128,7 +127,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @var array[] The namespaces in use by this system. Used by the routing engine
      */
-    protected static $_namespaceMap = array( self::NS_MODELS => array(), self::NS_SERVICES => array(), self::NS_RESOURCES => array() );
+    protected static $_namespaceMap = array(self::NS_MODELS => array(), self::NS_SERVICES => array(), self::NS_RESOURCES => array());
     /**
      * @var array An indexed array of white-listed hosts (ajax.example.com or foo.bar.com or just bar.com)
      */
@@ -174,14 +173,15 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         parent::init();
 
+        //  Load the CORS config file
         $this->_loadCorsConfig();
 
         //	Debug options
         static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
 
         //	Setup the request handler and events
-        $this->onBeginRequest = array( $this, '_onBeginRequest' );
-        $this->onEndRequest = array( $this, '_onEndRequest' );
+        $this->onBeginRequest = array($this, '_onBeginRequest');
+        $this->onEndRequest = array($this, '_onEndRequest');
     }
 
     /**
@@ -229,7 +229,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _loadPlugins()
     {
-        if ( null === ( $_autoloadPath = \Kisma::get( 'dsp.plugin_autoload_path' ) ) )
+        if ( null === ( $_autoloadPath = Platform::storeGet( 'dsp.plugin_autoload_path' ) ) )
         {
             //	Locate plug-in directory...
             $_path = Pii::getParam( 'dsp.plugins_path', Pii::getParam( 'dsp.base_path' ) . static::DEFAULT_PLUGINS_PATH );
@@ -253,7 +253,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 return false;
             }
 
-            \Kisma::set( 'dsp.plugin_autoload_path', $_autoloadPath );
+            Platform::storeSet( 'dsp.plugin_autoload_path', $_autoloadPath );
         }
 
         /** @noinspection PhpIncludeInspection */
@@ -274,6 +274,25 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     //*************************************************************************
 
     /**
+     * Before any action is processed, load the local config and plugins...
+     *
+     * @param \CController $controller
+     * @param \CAction     $action
+     *
+     * @return bool
+     */
+    public function beforeControllerAction( $controller, $action )
+    {
+        //  Load any user config files...
+        $this->_loadLocalConfig();
+
+        //	Load any plug-ins
+        $this->_loadPlugins();
+
+        return parent::beforeControllerAction( $controller, $action );
+    }
+
+    /**
      * Handles an OPTIONS request to the server to allow CORS and optionally sends the CORS headers
      *
      * @param \CEvent $event
@@ -292,11 +311,18 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
         $this->_requestObject = Request::createFromGlobals();
 
-        //  Call getter to get CORS headers auto-added
-        $_response = $this->_useResponseObject ? $this->getResponseObject() : null;
-
-        switch ( $this->_requestObject->getMethod() )
+        //	Answer an options call...
+        switch ( FilterInput::server( 'REQUEST_METHOD' ) )
         {
+            case HttpMethod::OPTIONS:
+                header( 'HTTP/1.1 204' );
+                header( 'content-length: 0' );
+                header( 'content-type: text/plain' );
+
+                $this->addCorsHeaders();
+                Pii::end();
+                break;
+
             case HttpMethod::TRACE:
                 Log::error(
                     'HTTP TRACE received!',
@@ -307,24 +333,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 );
 
                 throw new BadRequestException();
-
-            case HttpMethod::OPTIONS:
-                if ( $this->_useResponseObject )
-                {
-                    $_response->setStatusCode( HttpResponse::NoContent )->setContent( '' )->headers->set( 'Content-Type', 'text/plain', true );
-                    $_response->send();
-                }
-                else
-                {
-                    header( 'HTTP/1.1 204' );
-                    header( 'content-length: 0' );
-                    header( 'content-type: text/plain' );
-
-                    $this->_useResponseObject = false;
-                    $this->addCorsHeaders();
-                }
-
-                return Pii::end();
         }
 
         //	Auto-add the CORS headers...
@@ -343,28 +351,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     }
 
     /**
-     * @param \CController $controller
-     * @param \CAction     $action
-     *
-     * @return bool
-     */
-    public function beforeControllerAction( $controller, $action )
-    {
-        //  Load any user config files...
-        $this->_loadLocalConfig();
-
-        //	Load any plug-ins
-        $this->_loadPlugins();
-
-        return parent::beforeControllerAction( $controller, $action );
-    }
-
-    /**
      * Loads any local configuration files
      */
     protected function _loadLocalConfig()
     {
-        $_config = Platform::getStore()->get( 'platform.local_config' );
+        $_config = Platform::storeGet( 'platform.local_config' );
 
         if ( empty( $_config ) )
         {
@@ -405,7 +396,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 }
             }
 
-            Platform::getStore()->set( 'platform.local_config', $_config );
+            Platform::storeSet( 'platform.local_config', $_config );
         }
 
         //  Merge config with our params...
@@ -475,77 +466,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function addCorsHeaders( $whitelist = array(), $returnHeaders = false, $sendHeaders = true )
     {
-        $_headers = $this->_buildCorsHeaders( $whitelist );
-
-        if ( $returnHeaders )
-        {
-            return $_headers;
-        }
-
-        if ( $this->_useResponseObject )
-        {
-            //  Initialize the response object if not already
-            $this->getResponseObject();
-
-            foreach ( $_headers as $_key => $_value )
-            {
-                $this->_responseObject->headers->set( $_key, $_value, true );
-            }
-
-            if ( $sendHeaders )
-            {
-                $this->_responseObject->sendHeaders();
-            }
-        }
-        elseif ( $sendHeaders )
-        {
-            //	Dump the headers
-            foreach ( $_headers as $_key => $_value )
-            {
-                header( $_key . ': ' . $_value, true );
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Builds a cache key for a request and returns the constituent parts
-     *
-     * @return array
-     */
-    protected function _buildCacheKey()
-    {
-        $_origin = trim( Option::server( 'HTTP_ORIGIN' ) );
-        $_requestSource = Option::server( 'SERVER_NAME', \Kisma::get( 'platform.host_name', gethostname() ) );
-
-        if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
-        {
-            //	Not parse-able, set to itself, check later (testing from local files - no session)?
-            Log::warning( 'Unable to parse received origin: [' . $_origin . ']' );
-            $_originParts = $_origin;
-        }
-
-        $_originUri = $this->_normalizeUri( $_originParts );
-        $_key = sha1( $_requestSource . $_originUri );
-
-        return array(
-            $_key,
-            $_origin,
-            $_requestSource,
-            $_originParts,
-            $_originUri,
-        );
-    }
-
-    /**
-     * @param array|bool $whitelist Set to "false" to reset the internal method cache.
-     *
-     * @throws \DreamFactory\Platform\Exceptions\RestException
-     * @return array
-     */
-    protected function _buildCorsHeaders( $whitelist = array() )
-    {
         static $_cache = array();
         static $_cacheVerbs = array();
 
@@ -559,79 +479,99 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         $_originUri = null;
-        $_headers = array();
-
-        //  Deal with CORS headers
-        list( $_key, $_origin, $_requestSource, $_originParts, $_originUri, ) = $this->_buildCacheKey();
+        $_requestSource = Option::server( 'SERVER_NAME' );
+        $_origin = trim( Option::server( 'HTTP_ORIGIN' ) );
 
         //	Was an origin header passed? If not, don't do CORS.
-        if ( !empty( $_origin ) )
+        if ( empty( $_origin ) )
         {
-            //	Not in cache, check it out...
-            if ( !in_array( $_key, $_cache ) )
-            {
-                if ( false === ( $_allowedMethods = $this->_allowedOrigin( $_originParts, $_requestSource ) ) )
-                {
-                    Log::error( 'Unauthorized origin rejected via CORS > Source: ' . $_requestSource . ' > Origin: ' . $_originUri );
-
-                    /**
-                     * No sir, I didn't like it.
-                     *
-                     * @link http://www.youtube.com/watch?v=VRaoHi_xcWk
-                     */
-                    throw new RestException( HttpResponse::Forbidden );
-                }
-            }
-            else
-            {
-                $_originUri = $_cache[ $_key ];
-                $_allowedMethods = Option::getDeep( $_cacheVerbs, $_key, 'allowed_methods' );
-                $_headers = Option::getDeep( $_cacheVerbs, $_key, 'headers' );
-            }
-
-            if ( !empty( $_originUri ) )
-            {
-                $_headers['Access-Control-Allow-Origin'] = $_originUri;
-            }
-
-            $_headers['Access-Control-Allow-Credentials'] = 'true';
-            $_headers['Access-Control-Allow-Headers'] = static::CORS_DEFAULT_ALLOWED_HEADERS;
-            $_headers['Access-Control-Allow-Methods'] = $_allowedMethods;
-            $_headers['Access-Control-Max-Age'] = static::CORS_DEFAULT_MAX_AGE;
-
-            //	Store in cache...
-            $_cache[ $_key ] = $_originUri;
-            $_cacheVerbs[ $_key ] = array(
-                'allowed_methods' => $_allowedMethods,
-                'headers'         => $_headers
-            );
+            return true;
         }
 
-        return $_headers + $this->_buildExtendedHeaders( $_requestSource, $_originUri, !empty( $_origin ) );
-    }
+        if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
+        {
+            //	Not parse-able, set to itself, check later (testing from local files - no session)?
+            Log::warning( 'Unable to parse received origin: [' . $_origin . ']' );
+            $_originParts = $_origin;
+        }
 
-    /**
-     * @param string $requestSource
-     * @param string $originUri
-     * @param bool   $whitelisted If the origin is whitelisted
-     *
-     * @return array
-     */
-    protected function _buildExtendedHeaders( $requestSource, $originUri, $whitelisted = true )
-    {
+        $_originUri = $this->_normalizeUri( $_originParts );
+        $_key = sha1( $_requestSource . $_originUri );
+
+        //	Not in cache, check it out...
+        if ( !in_array( $_key, $_cache ) )
+        {
+            if ( false === ( $_allowedMethods = $this->_allowedOrigin( $_originParts, $_requestSource ) ) )
+            {
+                Log::error( 'Unauthorized origin rejected via CORS > Source: ' . $_requestSource . ' > Origin: ' . $_originUri );
+
+                /**
+                 * No sir, I didn't like it.
+                 *
+                 * @link http://www.youtube.com/watch?v=VRaoHi_xcWk
+                 */
+                header( 'HTTP/1.1 403 Forbidden' );
+
+                Pii::end();
+
+                //	If end fails for some unknown impossible reason...
+                return false;
+            }
+
+//			Log::debug( 'Committing origin to the CORS cache > Source: ' . $_requestSource . ' > Origin: ' . $_originUri );
+            $_cache[ $_key ] = $_originUri;
+            $_cacheVerbs[ $_key ] = $_allowedMethods;
+        }
+        else
+        {
+            $_originUri = $_cache[ $_key ];
+            $_allowedMethods = $_cacheVerbs[ $_key ];
+        }
+
         $_headers = array();
+
+        if ( !empty( $_originUri ) )
+        {
+            $_headers['Access-Control-Allow-Origin'] = $_originUri;
+        }
+
+        $_headers['Access-Control-Allow-Credentials'] = 'true';
+        $_headers['Access-Control-Allow-Headers'] = static::CORS_DEFAULT_ALLOWED_HEADERS;
+        $_headers['Access-Control-Allow-Methods'] = $_allowedMethods;
+        $_headers['Access-Control-Max-Age'] = static::CORS_DEFAULT_MAX_AGE;
 
         if ( $this->_extendedHeaders )
         {
-            $_headers['X-DreamFactory-Source'] = $requestSource;
+            $_headers['X-DreamFactory-Source'] = $_requestSource;
 
-            if ( $whitelisted )
+            if ( $_origin )
             {
-                $_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '/^([\w_-]+\.)*' . $requestSource . '$/', $originUri );
+                $_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '/^([\w_-]+\.)*' . $_requestSource . '$/', $_originUri );
             }
         }
 
-        return $_headers;
+        //	Store in cache...
+        $_cache[ $_key ] = $_originUri;
+        $_cacheVerbs[ $_key ] = array(
+            'allowed_methods' => $_allowedMethods,
+            'headers'         => $_headers
+        );
+
+        if ( $returnHeaders )
+        {
+            return $_headers;
+        }
+
+        //  Send all the headers
+        if ( $sendHeaders )
+        {
+            foreach ( $_headers as $_key => $_value )
+            {
+                header( $_key . ': ' . $_value );
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -736,12 +676,12 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             unset( $_parts['path'] );
         }
 
-        $_protocol = $this->_requestObject->isSecure() ? 'https' : 'http';
+        $_protocol = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] != 'off' ) ? 'https' : 'http';
 
         $_uri = array(
             'scheme' => Option::get( $_parts, 'scheme', $_protocol ),
             'host'   => Option::get( $_parts, 'host' ),
-            'port'   => Option::get( $_parts, 'port', Option::server( 'SERVER_PORT' ) ),
+            'port'   => Option::get( $_parts, 'port' ),
         );
 
         return $normalize ? $this->_normalizeUri( $_uri ) : $_uri;
@@ -755,14 +695,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     protected function _normalizeUri( $parts )
     {
         return is_array( $parts ) ?
-            Option::get( $parts, 'scheme', 'http' ) .
-            '://' .
-            Option::get( $parts, 'host' ) .
-            ':' .
-            Option::get( $parts, 'port', Option::server( 'SERVER_PORT' ) ) : $parts;
-
-//            ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
-//            : $parts;
+            ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
+            : $parts;
     }
 
     /**
@@ -775,7 +709,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         static $_whitelist = null;
 
-        if ( null === $_whitelist && null === ( $_whitelist = \Kisma::get( 'cors.whitelist' ) ) )
+        if ( null === $_whitelist && null === ( $_whitelist = Platform::storeGet( 'cors.whitelist' ) ) )
         {
             //  Empty whitelist...
             $_whitelist = array();
@@ -802,7 +736,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 }
             }
 
-            \Kisma::set( 'cors.whitelist', $_whitelist );
+            Platform::storeSet( 'cors.whitelist', $_whitelist );
         }
 
         return $this->setCorsWhitelist( $_whitelist );
@@ -823,7 +757,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->_corsWhitelist = $corsWhitelist;
 
         //	Reset the header cache
-        $this->_buildCorsHeaders( false );
+        $this->addCorsHeaders( false );
 
         return $this;
     }
@@ -1039,7 +973,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     public static function addNamespace( $prefix, $paths, $prepend = false )
     {
         /** @var ClassLoader $_loader */
-        if ( null === ( $_loader = \Kisma::get( CoreSettings::AUTO_LOADER ) ) )
+        if ( null === ( $_loader = Platform::storeGet( CoreSettings::AUTO_LOADER ) ) )
         {
             throw new InternalServerErrorException( 'Unable to find auto-loader. :(' );
         }
@@ -1061,7 +995,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         if ( $prepend )
         {
-            array_unshift( static::$_namespaceMap[ $which ], array( $namespace, $path ) );
+            array_unshift( static::$_namespaceMap[ $which ], array($namespace, $path) );
         }
         else
         {

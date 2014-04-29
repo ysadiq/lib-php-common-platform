@@ -480,7 +480,6 @@ class SqlDbSvc extends BaseDbSvc
             $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
 
             // build filter string if necessary, add server-side filters if necessary
-            $_ssFilters = Option::get( $extras, 'ss_filters' );
             $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters );
             $_where = Option::get( $_criteria, 'where' );
             $_params = Option::get( $_criteria, 'params', array() );
@@ -581,6 +580,7 @@ class SqlDbSvc extends BaseDbSvc
         $_idFields = Option::get( $extras, 'id_field' );
         $_idTypes = Option::get( $extras, 'id_type' );
         $_fields = Option::get( $extras, 'fields' );
+        $_ssFilters = Option::get( $extras, 'ss_filters' );
 
         try
         {
@@ -594,7 +594,6 @@ class SqlDbSvc extends BaseDbSvc
             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
             // build filter string if necessary, add server-side filters if necessary
-            $_ssFilters = Option::get( $extras, 'ss_filters' );
             $_criteria = $this->_convertFilterToNative( $filter, $params, $_ssFilters );
             $_where = Option::get( $_criteria, 'where' );
             $_params = Option::get( $_criteria, 'params', array() );
@@ -1077,7 +1076,7 @@ class SqlDbSvc extends BaseDbSvc
     protected function updateRelations( $table, $record, $id, $avail_relations, $allow_delete = false )
     {
         // update currently only supports one id field
-        $id = @current( reset( $id ) );
+        $id = ( is_array( $id ) ) ? @current( reset( $id ) ) : $id;
         $keys = array_keys( $record );
         $values = array_values( $record );
         foreach ( $avail_relations as $relationInfo )
@@ -1393,14 +1392,40 @@ class SqlDbSvc extends BaseDbSvc
         switch ( $relationType )
         {
             case 'belongs_to':
-                $relatedRecords = $this->retrieveRecordsByFilter( $relatedTable, "$relatedField = '$fieldVal'", $extras );
+                $_fields = Option::get( $extras, 'fields' );
+                $_ssFilters = Option::get( $extras, 'ss_filters' );
+                $_fieldsInfo = $this->getFieldsInfo( $relatedTable );
+                $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
+                $_bindings = Option::get( $_result, 'bindings' );
+                $_fields = Option::get( $_result, 'fields' );
+                $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+
+                // build filter string if necessary, add server-side filters if necessary
+                $_criteria = $this->_convertFilterToNative( "$relatedField = '$fieldVal'", array(), $_ssFilters );
+                $_where = Option::get( $_criteria, 'where' );
+                $_params = Option::get( $_criteria, 'params', array() );
+
+                $relatedRecords = $this->_recordQuery( $relatedTable, $_fields, $_where, $_params, $_bindings, $extras );
                 if ( !empty( $relatedRecords ) )
                 {
                     return Option::get( $relatedRecords, 0 );
                 }
                 break;
             case 'has_many':
-                return $this->retrieveRecordsByFilter( $relatedTable, "$relatedField = '$fieldVal'", $extras );
+                $_fields = Option::get( $extras, 'fields' );
+                $_ssFilters = Option::get( $extras, 'ss_filters' );
+                $_fieldsInfo = $this->getFieldsInfo( $relatedTable );
+                $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
+                $_bindings = Option::get( $_result, 'bindings' );
+                $_fields = Option::get( $_result, 'fields' );
+                $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+
+                // build filter string if necessary, add server-side filters if necessary
+                $_criteria = $this->_convertFilterToNative( "$relatedField = '$fieldVal'", array(), $_ssFilters );
+                $_where = Option::get( $_criteria, 'where' );
+                $_params = Option::get( $_criteria, 'params', array() );
+
+                return $this->_recordQuery( $relatedTable, $_fields, $_where, $_params, $_bindings, $extras );
                 break;
             case 'many_many':
                 $join = Option::get( $relation, 'join', '' );
@@ -1410,8 +1435,18 @@ class SqlDbSvc extends BaseDbSvc
                 $joinRightField = trim( Option::get( $other, 1 ) );
                 if ( !empty( $joinLeftField ) && !empty( $joinRightField ) )
                 {
-                    $joinExtras = array( 'fields' => $joinRightField );
-                    $joinData = $this->retrieveRecordsByFilter( $joinTable, "$joinLeftField = '$fieldVal'", $joinExtras );
+                    $_fieldsInfo = $this->getFieldsInfo( $joinTable );
+                    $_result = $this->parseFieldsForSqlSelect( $joinRightField, $_fieldsInfo );
+                    $_bindings = Option::get( $_result, 'bindings' );
+                    $_fields = Option::get( $_result, 'fields' );
+                    $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+
+                    // build filter string if necessary, add server-side filters if necessary
+                    $_criteria = $this->_convertFilterToNative( "$joinLeftField = '$fieldVal'" );
+                    $_where = Option::get( $_criteria, 'where' );
+                    $_params = Option::get( $_criteria, 'params', array() );
+
+                    $joinData = $this->_recordQuery( $joinTable, $_fields, $_where, $_params, $_bindings, $extras );
                     if ( !empty( $joinData ) )
                     {
                         $relatedIds = array();
@@ -1421,10 +1456,15 @@ class SqlDbSvc extends BaseDbSvc
                         }
                         if ( !empty( $relatedIds ) )
                         {
-                            $relatedIds = implode( ',', $relatedIds );
-                            $relatedExtras['id_field'] = $relatedField;
+                            $_fields = Option::get( $extras, 'fields' );
+                            $_fieldsInfo = $this->getFieldsInfo( $relatedTable );
+                            $_result = $this->parseFieldsForSqlSelect( $_fields, $_fieldsInfo );
+                            $_bindings = Option::get( $_result, 'bindings' );
+                            $_fields = Option::get( $_result, 'fields' );
+                            $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                            return $this->retrieveRecordsByIds( $relatedTable, $relatedIds, $extras );
+                            $_where = array( 'in', $relatedField, $relatedIds );
+                            return $this->_recordQuery( $relatedTable, $_fields, $_where, $_params, $_bindings, $extras );
                         }
                     }
                 }
@@ -1457,44 +1497,45 @@ class SqlDbSvc extends BaseDbSvc
 
         try
         {
-            $manyFields = $this->getFieldsInfo( $many_table );
-            $pkField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $manyFields );
-            $fieldInfo = SqlDbUtilities::getFieldFromDescribe( $many_field, $manyFields );
-            $deleteRelated = ( !Option::getBool( $fieldInfo, 'allow_null' ) && $allow_delete );
-            $relateMany = array();
-            $disownMany = array();
-            $createMany = array();
-            $updateMany = array();
-            $deleteMany = array();
+            $_ssFilters = Session::getServiceFilters( $this->_apiName, $many_table );
+            $_manyFields = $this->getFieldsInfo( $many_table );
+            $_pkField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $_manyFields );
+            $_fieldInfo = SqlDbUtilities::getFieldFromDescribe( $many_field, $_manyFields );
+            $_deleteRelated = ( !Option::getBool( $_fieldInfo, 'allow_null' ) && $allow_delete );
+            $_relateMany = array();
+            $_disownMany = array();
+            $_createMany = array();
+            $_updateMany = array();
+            $_deleteMany = array();
 
-            foreach ( $many_records as $item )
+            foreach ( $many_records as $_item )
             {
-                $id = Option::get( $item, $pkField );
-                if ( empty( $id ) )
+                $_id = Option::get( $_item, $_pkField );
+                if ( empty( $_id ) )
                 {
                     // create new child record
-                    $item[$many_field] = $one_id; // assign relationship
-                    $createMany[] = $item;
+                    $_item[$many_field] = $one_id; // assign relationship
+                    $_createMany[] = $_item;
                 }
                 else
                 {
-                    if ( array_key_exists( $many_field, $item ) )
+                    if ( array_key_exists( $many_field, $_item ) )
                     {
-                        if ( null == Option::get( $item, $many_field, null, true ) )
+                        if ( null == Option::get( $_item, $many_field, null, true ) )
                         {
                             // disown this child or delete them
-                            if ( $deleteRelated )
+                            if ( $_deleteRelated )
                             {
-                                $deleteMany[] = $id;
+                                $_deleteMany[] = $_id;
                             }
-                            elseif ( count( $item ) > 1 )
+                            elseif ( count( $_item ) > 1 )
                             {
-                                $item[$many_field] = null; // assign relationship
-                                $updateMany[] = $item;
+                                $_item[$many_field] = null; // assign relationship
+                                $_updateMany[] = $_item;
                             }
                             else
                             {
-                                $disownMany[] = $id;
+                                $_disownMany[] = $_id;
                             }
 
                             continue;
@@ -1502,55 +1543,184 @@ class SqlDbSvc extends BaseDbSvc
                     }
 
                     // update this child
-                    if ( count( $item ) > 1 )
+                    if ( count( $_item ) > 1 )
                     {
-                        $item[$many_field] = $one_id; // assign relationship
-                        $updateMany[] = $item;
+                        $_item[$many_field] = $one_id; // assign relationship
+                        $_updateMany[] = $_item;
                     }
                     else
                     {
-                        $relateMany[] = $id;
+                        $_relateMany[] = $_id;
                     }
                 }
             }
 
-            if ( !empty( $createMany ) )
+            /** @var \CDbCommand $_command */
+            $_command = $this->_dbConn->createCommand();
+
+            if ( !empty( $_createMany ) )
             {
                 // create new children
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::POST );
-                $this->createRecords( $many_table, $createMany );
+                foreach ( $_createMany as $_record )
+                {
+                    $_parsed = $this->parseRecord( $_record, $_manyFields, $_ssFilters );
+                    if ( empty( $_parsed ) )
+                    {
+                        throw new BadRequestException( 'No valid fields were found in record.' );
+                    }
+
+                    $_rows = $_command->insert( $many_table, $_parsed );
+                    if ( 0 >= $_rows )
+                    {
+                        throw new InternalServerErrorException( "Creating related $many_table records failed." );
+                    }
+                }
             }
 
-            if ( !empty( $deleteMany ) )
+            if ( !empty( $_deleteMany ) )
             {
                 // destroy linked children that can't stand alone - sounds sinister
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::DELETE );
-                $this->deleteRecordsByIds( $many_table, $deleteMany );
+                $_where = array();
+                $_params = array();
+                $_where[] = array( 'in', $_pkField, $_deleteMany );
+                $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
+                if ( !empty( $_serverFilter ) )
+                {
+                    $_where[] = $_serverFilter['filter'];
+                    $_params = array_merge( $_params, $_serverFilter['params'] );
+                }
+
+                if ( count( $_where ) > 1 )
+                {
+                    array_unshift( $_where, 'AND' );
+                }
+                else
+                {
+                    $_where = $_where[0];
+                }
+
+                $_command->delete( $many_table, $_where, $_params );
+//                if ( 0 >= $_rows )
+//                {
+//                    throw new NotFoundException( "Deleting related $many_table records failed." );
+//                }
             }
 
-            if ( !empty( $updateMany ) || !empty( $relateMany ) || !empty( $disownMany ) )
+            if ( !empty( $_updateMany ) || !empty( $_relateMany ) || !empty( $_disownMany ) )
             {
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::PUT );
 
-                if ( !empty( $updateMany ) )
+                if ( !empty( $_updateMany ) )
                 {
                     // update existing and adopt new children
-                    $this->updateRecords( $many_table, $updateMany );
+                    $_where = array();
+                    $_params = array();
+                    $_where[] = "$_pkField = :f_$_pkField";
+
+                    $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
+                    if ( !empty( $_serverFilter ) )
+                    {
+                        $_where[] = $_serverFilter['filter'];
+                        $_params = array_merge( $_params, $_serverFilter['params'] );
+                    }
+
+                    if ( count( $_where ) > 1 )
+                    {
+                        array_unshift( $_where, 'AND' );
+                    }
+                    else
+                    {
+                        $_where = $_where[0];
+                    }
+
+                    foreach ( $_updateMany as $_record )
+                    {
+                        $_params[":f_$_pkField"] = Option::get( $_record, $_pkField );
+                        $_parsed = $this->parseRecord( $_record, $_manyFields, $_ssFilters, true );
+                        if ( empty( $_parsed ) )
+                        {
+                            throw new BadRequestException( 'No valid fields were found in record.' );
+                        }
+
+                        $_command->update( $many_table, $_parsed, $_where, $_params );
+//                        if ( 0 >= $_rows )
+//                        {
+//                            throw new InternalServerErrorException( "Updating related $many_table records failed." );
+//                        }
+                    }
                 }
 
-                if ( !empty( $relateMany ) )
+                if ( !empty( $_relateMany ) )
                 {
                     // adopt/relate/link unlinked children
-                    $this->updateRecordsByIds( $many_table, array( $many_field => $one_id ), $relateMany );
+                    $_where = array();
+                    $_params = array();
+                    $_where[] = array( 'in', $_pkField, $_relateMany );
+                    $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
+                    if ( !empty( $_serverFilter ) )
+                    {
+                        $_where[] = $_serverFilter['filter'];
+                        $_params = array_merge( $_params, $_serverFilter['params'] );
+                    }
+
+                    if ( count( $_where ) > 1 )
+                    {
+                        array_unshift( $_where, 'AND' );
+                    }
+                    else
+                    {
+                        $_where = $_where[0];
+                    }
+
+                    $_updates = array( $many_field => $one_id );
+                    $_parsed = $this->parseRecord( $_updates, $_manyFields, $_ssFilters, true );
+                    if ( !empty( $_parsed ) )
+                    {
+                        $_command->update( $many_table, $_parsed, $_where, $_params );
+//                        if ( 0 >= $_rows )
+//                        {
+//                            throw new InternalServerErrorException( "Updating related $many_table records failed." );
+//                        }
+                    }
                 }
 
-                if ( !empty( $disownMany ) )
+                if ( !empty( $_disownMany ) )
                 {
                     // disown/un-relate/unlink linked children
-                    $this->updateRecordsByIds( $many_table, array( $many_field => null ), $disownMany );
+                    $_where = array();
+                    $_params = array();
+                    $_where[] = array( 'in', $_pkField, $_disownMany );
+                    $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
+                    if ( !empty( $_serverFilter ) )
+                    {
+                        $_where[] = $_serverFilter['filter'];
+                        $_params = array_merge( $_params, $_serverFilter['params'] );
+                    }
+
+                    if ( count( $_where ) > 1 )
+                    {
+                        array_unshift( $_where, 'AND' );
+                    }
+                    else
+                    {
+                        $_where = $_where[0];
+                    }
+
+                    $_updates = array( $many_field => null );
+                    $_parsed = $this->parseRecord( $_updates, $_manyFields, $_ssFilters, true );
+                    if ( !empty( $_parsed ) )
+                    {
+                        $_command->update( $many_table, $_parsed, $_where, $_params );
+//                        if ( 0 >= $_rows )
+//                        {
+//                            throw new NotFoundException( 'No records were found using the given identifiers.' );
+//                        }
+                    }
                 }
             }
         }
@@ -1581,14 +1751,23 @@ class SqlDbSvc extends BaseDbSvc
         }
         try
         {
+            $_ssManyFilters = Session::getServiceFilters( $this->_apiName, $many_table );
+            $_ssMapFilters = Session::getServiceFilters( $this->_apiName, $map_table );
             $oneFields = $this->getFieldsInfo( $one_table );
             $pkOneField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $oneFields );
             $manyFields = $this->getFieldsInfo( $many_table );
             $pkManyField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $manyFields );
-//			$mapFields = $this->describeTableFields( $map_table );
+			$mapFields = $this->getFieldsInfo( $map_table );
 //			$pkMapField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $mapFields );
-            $relatedExtras = array( 'fields' => $many_field, 'limit' => static::DB_MAX_RECORDS_RETURNED );
-            $maps = $this->retrieveRecordsByFilter( $map_table, "$one_field = ?", array( $one_id ), $relatedExtras );
+
+            $_result = $this->parseFieldsForSqlSelect( $many_field, $mapFields );
+            $_bindings = Option::get( $_result, 'bindings' );
+            $_fields = Option::get( $_result, 'fields' );
+            $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
+            $_params[":f_$one_field"] = $one_id;
+            $maps = $this->_recordQuery($map_table, $_fields, "$one_field = :f_$one_field", $_params, $_bindings, null );
+            unset($maps['meta']);
+
             $createMap = array(); // map records to create
             $deleteMap = array(); // ids of 'many' records to delete from maps
             $createMany = array();
@@ -1634,20 +1813,34 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
+            /** @var \CDbCommand $_command */
+            $_command = $this->_dbConn->createCommand();
+
             if ( !empty( $createMany ) )
             {
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::POST );
                 // create new many records
-                $results = $this->createRecords( $many_table, $createMany );
-                // create new relationships for results
-                foreach ( $results as $item )
+                foreach ( $createMany as $_record )
                 {
-                    $itemId = Option::get( $item, $pkManyField );
-                    if ( !empty( $itemId ) )
+                    $_parsed = $this->parseRecord( $_record, $manyFields, $_ssManyFilters );
+                    if ( empty( $_parsed ) )
                     {
-                        $createMap[] = array( $many_field => $itemId, $one_field => $one_id );
+                        throw new BadRequestException( 'No valid fields were found in record.' );
                     }
+
+                    $_rows = $_command->insert( $many_table, $_parsed );
+                    if ( 0 >= $_rows )
+                    {
+                        throw new InternalServerErrorException( "Creating related $many_table records failed." );
+                    }
+
+                    $_manyId = (int)$this->_dbConn->lastInsertID;
+                    if ( !empty( $_manyId ) )
+                    {
+                        $createMap[] = array( $many_field => $_manyId, $one_field => $one_id );
+                    }
+
                 }
             }
 
@@ -1656,23 +1849,93 @@ class SqlDbSvc extends BaseDbSvc
                 // update existing many records
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::PUT );
-                $this->updateRecords( $many_table, $updateMany );
+
+                $_where = array();
+                $_params = array();
+                $_where[] = "$pkManyField = :f_$pkManyField";
+
+                $_serverFilter = $this->buildQueryStringFromData( $_ssManyFilters, true );
+                if ( !empty( $_serverFilter ) )
+                {
+                    $_where[] = $_serverFilter['filter'];
+                    $_params = array_merge( $_params, $_serverFilter['params'] );
+                }
+
+                if ( count( $_where ) > 1 )
+                {
+                    array_unshift( $_where, 'AND' );
+                }
+                else
+                {
+                    $_where = $_where[0];
+                }
+
+                foreach ( $updateMany as $_record )
+                {
+                    $_params[":f_$pkManyField"] = Option::get( $_record, $pkManyField );
+                    $_parsed = $this->parseRecord( $_record, $manyFields, $_ssManyFilters, true );
+                    if ( empty( $_parsed ) )
+                    {
+                        throw new BadRequestException( 'No valid fields were found in record.' );
+                    }
+
+                    $_command->update( $many_table, $_parsed, $_where, $_params );
+//                        if ( 0 >= $_rows )
+//                        {
+//                            throw new InternalServerErrorException( "Updating related $many_table records failed." );
+//                        }
+                }
             }
 
             if ( !empty( $createMap ) )
             {
                 // do we have permission to do so?
                 $this->validateTableAccess( $map_table, static::POST );
-                $this->createRecords( $map_table, $createMap );
+                foreach ( $createMap as $_record )
+                {
+                    $_parsed = $this->parseRecord( $_record, $mapFields, $_ssMapFilters );
+                    if ( empty( $_parsed ) )
+                    {
+                        throw new BadRequestException( "No valid fields were found in related $map_table record." );
+                    }
+
+                    $_rows = $_command->insert( $map_table, $_parsed );
+                    if ( 0 >= $_rows )
+                    {
+                        throw new InternalServerErrorException( "Creating related $map_table records failed." );
+                    }
+                }
             }
 
             if ( !empty( $deleteMap ) )
             {
                 // do we have permission to do so?
                 $this->validateTableAccess( $map_table, static::DELETE );
-                $mapList = "'" . implode( "','", $deleteMap ) . "'";
-                $filter = "$one_field = '$one_id' && $many_field IN ($mapList)";
-                $this->deleteRecordsByFilter( $map_table, $filter );
+                $_where = array();
+                $_params = array();
+                $_where[] = "$one_field = '$one_id'";
+                $_where[] = array( 'in', $many_field, $deleteMap );
+                $_serverFilter = $this->buildQueryStringFromData( $_ssMapFilters, true );
+                if ( !empty( $_serverFilter ) )
+                {
+                    $_where[] = $_serverFilter['filter'];
+                    $_params = array_merge( $_params, $_serverFilter['params'] );
+                }
+
+                if ( count( $_where ) > 1 )
+                {
+                    array_unshift( $_where, 'AND' );
+                }
+                else
+                {
+                    $_where = $_where[0];
+                }
+
+                $_command->delete( $map_table, $_where, $_params );
+//                if ( 0 >= $_rows )
+//                {
+//                    throw new NotFoundException( "Deleting related $map_table records failed." );
+//                }
             }
         }
         catch ( \Exception $_ex )
@@ -2264,7 +2527,7 @@ class SqlDbSvc extends BaseDbSvc
 
                             if ( count( $this->_batchIds ) !== $_rows )
                             {
-                                throw new BadRequestException( 'Batch Error: Not all requested records could be retrieved.' );
+                                throw new BadRequestException( 'Batch Error: Not all requested records could be updated.' );
                             }
                         }
 
