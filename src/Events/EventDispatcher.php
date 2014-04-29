@@ -154,7 +154,7 @@ class EventDispatcher implements EventDispatcherInterface
         //  Load any stored listeners
         $this->_listeners = Platform::storeGet( static::STORE_LISTENERS_KEY, array() );
 
-        if ( !empty( $this->_listeners ) )
+        if ( !empty( $this->_listeners ) && static::$_logAllEvents )
         {
             Log::debug( 'Registered ' . count( $this->_listeners ) . ' cached listeners.' );
         }
@@ -210,7 +210,7 @@ class EventDispatcher implements EventDispatcherInterface
         {
             Platform::storeSet( static::STORE_LISTENERS_KEY, $this->_listeners, PlatformStore::DEFAULT_CACHE_TTL );
         }
-        
+
         if ( static::$_enableEventScripts )
         {
             Platform::storeSet( static::STORE_SCRIPTS_KEY, $this->_scripts, 30 );
@@ -395,7 +395,7 @@ class EventDispatcher implements EventDispatcherInterface
 
                 $_posts[] = static::$_client->post(
                     $_listener,
-                    array( 'content-type' => 'application/json' ),
+                    array('content-type' => 'application/json'),
                     json_encode( $_payload, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT )
                 );
             }
@@ -463,7 +463,7 @@ class EventDispatcher implements EventDispatcherInterface
     protected function _executeEventPhpScript( $className, $methodName, Event $event, $eventName = null, $dispatcher = null )
     {
         return call_user_func(
-            array( $className, $methodName ),
+            array($className, $methodName),
             $event,
             $eventName,
             $dispatcher
@@ -569,17 +569,17 @@ class EventDispatcher implements EventDispatcherInterface
         {
             if ( is_string( $_params ) )
             {
-                $this->addListener( $_eventName, array( $subscriber, $_params ) );
+                $this->addListener( $_eventName, array($subscriber, $_params) );
             }
             elseif ( is_string( $_params[0] ) )
             {
-                $this->addListener( $_eventName, array( $subscriber, $_params[0] ), isset( $_params[1] ) ? $_params[1] : 0 );
+                $this->addListener( $_eventName, array($subscriber, $_params[0]), isset( $_params[1] ) ? $_params[1] : 0 );
             }
             else
             {
                 foreach ( $_params as $listener )
                 {
-                    $this->addListener( $_eventName, array( $subscriber, $listener[0] ), isset( $listener[1] ) ? $listener[1] : 0 );
+                    $this->addListener( $_eventName, array($subscriber, $listener[0]), isset( $listener[1] ) ? $listener[1] : 0 );
                 }
             }
         }
@@ -596,12 +596,12 @@ class EventDispatcher implements EventDispatcherInterface
             {
                 foreach ( $_params as $listener )
                 {
-                    $this->removeListener( $_eventName, array( $subscriber, $listener[0] ) );
+                    $this->removeListener( $_eventName, array($subscriber, $listener[0]) );
                 }
             }
             else
             {
-                $this->removeListener( $_eventName, array( $subscriber, is_string( $_params ) ? $_params : $_params[0] ) );
+                $this->removeListener( $_eventName, array($subscriber, is_string( $_params ) ? $_params : $_params[0]) );
             }
         }
     }
