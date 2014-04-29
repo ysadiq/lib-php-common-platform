@@ -768,4 +768,37 @@ SQL;
         return $_response;
     }
 
+    /**
+     * Returns a common set of properties for all system resources
+     *
+     * @return array
+     */
+    public static function getCommonProperties()
+    {
+        return array(
+            'created_date'        => array(
+                'type'        => 'string',
+                'description' => 'The date the resource was created.',
+                'readOnly'    => true,
+            ),
+            'created_by_id'       => array(
+                'type'        => 'integer',
+                'format'      => 'int32',
+                'description' => 'The ID of the user that created this resource.',
+                'readOnly'    => true,
+            ),
+            'last_modified_date'  => array(
+                'type'        => 'string',
+                'description' => 'The date the resource was last modified.',
+                'readOnly'    => true,
+            ),
+            'last_modified_by_id' => array(
+                'type'        => 'integer',
+                'format'      => 'int32',
+                'description' => 'The ID of the user that last modified this resource.',
+                'readOnly'    => true,
+            ),
+        );
+
+    }
 }
