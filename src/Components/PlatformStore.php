@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Components;
 use DreamFactory\Platform\Utility\Platform;
 use Kisma\Core\Components\Flexistore;
 use Kisma\Core\Enums\CacheTypes;
+use Kisma\Core\Utility\Option;
 
 /**
  * A simple store class that use's the Kisma store
