@@ -507,7 +507,7 @@ SQL;
                         continue;
                     }
 
-                    if ( $eventName == ( $_eventName = Option::get( $_info, 'event' ) ) )
+                    if ( 0 == strcasecmp( $eventName, $_eventName = Option::get( $_info, 'event' ) ) )
                     {
                         $_cache[ $_hash ] = $_eventName;
 
@@ -519,7 +519,7 @@ SQL;
             return false;
         }
 
-        $_apiName = $service->getApiName();
+        $_apiName = strtolower( $service->getApiName() );
         $_savedResource = $_resource = $service->getResource();
 
         /** @noinspection PhpUndefinedMethodInspection */
@@ -527,7 +527,7 @@ SQL;
 
         $_pathParts = explode(
             '/',
-            ltrim( str_replace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) ), '/' )
+            ltrim( str_ireplace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) ), '/' )
         );
 
         if ( empty( $_resource ) )
@@ -562,10 +562,10 @@ SQL;
             }
         }
 
-        $_path = str_replace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) );
+        $_path = str_ireplace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) );
 
         //  Strip off the resource ID if any...
-        if ( $_resourceId && false !== ( $_pos = strpos( $_path, '/' . $_resourceId ) ) )
+        if ( $_resourceId && false !== ( $_pos = stripos( $_path, '/' . $_resourceId ) ) )
         {
             $_path = substr( $_path, 0, $_pos );
         }
@@ -583,7 +583,7 @@ SQL;
                 ),
             );
 
-            $_path = str_replace( $_swaps[0], $_swaps[1], $_path );
+            $_path = str_ireplace( $_swaps[0], $_swaps[1], $_path );
         }
         else if ( $service instanceof BaseFileSvc )
         {
@@ -617,7 +617,7 @@ SQL;
                 $_swaps[1][] = '{file_path}';
             }
 
-            $_path = str_replace( $_swaps[0], $_swaps[1], $_path );
+            $_path = str_ireplace( $_swaps[0], $_swaps[1], $_path );
         }
 
         if ( empty( $_path ) )
@@ -625,14 +625,14 @@ SQL;
             return null;
         }
 
-        $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$@D';
+        $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$@iD';
 
         $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
         if ( empty( $_matches ) )
         {
             //	See if there is an event with /system at the front...
-            $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '$@D';
+            $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$@iD';
             $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
             if ( empty( $_matches ) )
@@ -653,7 +653,7 @@ SQL;
                 if ( null !== ( $_eventName = Option::get( $_methodInfo, 'event' ) ) )
                 {
                     //  Restore the original path...
-                    $_eventName = str_replace( $_swaps[1], $_swaps[0], $_eventName );
+                    $_eventName = str_ireplace( $_swaps[1], $_swaps[0], $_eventName );
 
                     $_cache[ $_hash ] = $_eventName;
 
