@@ -474,13 +474,21 @@ SQL;
      */
     public static function findEvent( BasePlatformRestService $service, $method, $eventName = null )
     {
-        static $_cache = array();
+        $_cache = Platform::storeGet( 'swagger.event_map_cache', array() );
 
         $_map = static::getEventMap();
         $_aliases = $service->getVerbAliases();
-        $method = Option::get( $_aliases, $method, $method );
+        $_methods = array($method);
 
-        $_hash = sha1( ( $service ? get_class( $service ) : '*' ) . $method );
+        foreach ( Option::clean( $_aliases ) as $_action => $_alias )
+        {
+            if ( $method == $_alias )
+            {
+                $_methods[] = $_action;
+            }
+        }
+
+        $_hash = sha1( $method . '.' . Pii::request( false )->getRequestUri() );
 
         if ( isset( $_cache[ $_hash ] ) )
         {
@@ -499,7 +507,7 @@ SQL;
                         continue;
                     }
 
-                    if ( $eventName == ( $_eventName = Option::get( $_info, 'event' ) ) )
+                    if ( 0 == strcasecmp( $eventName, $_eventName = Option::get( $_info, 'event' ) ) )
                     {
                         $_cache[ $_hash ] = $_eventName;
 
@@ -511,13 +519,16 @@ SQL;
             return false;
         }
 
-        $_apiName = $service->getApiName();
+        $_apiName = strtolower( $service->getApiName() );
         $_savedResource = $_resource = $service->getResource();
-        $_pathParts =
-            explode(
-                '/',
-                ltrim( str_replace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) ), '/' )
-            );
+
+        /** @noinspection PhpUndefinedMethodInspection */
+        $_resourceId = method_exists( $service, 'getResourceId' ) ? @$service->getResourceId() : null;
+
+        $_pathParts = explode(
+            '/',
+            ltrim( str_ireplace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) ), '/' )
+        );
 
         if ( empty( $_resource ) )
         {
@@ -551,11 +562,62 @@ SQL;
             }
         }
 
-        $_path = str_replace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) );
+        $_path = str_ireplace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) );
+
+        //  Strip off the resource ID if any...
+        if ( $_resourceId && false !== ( $_pos = stripos( $_path, '/' . $_resourceId ) ) )
+        {
+            $_path = substr( $_path, 0, $_pos );
+        }
+
+        $_swaps = array(array(), array());
 
         if ( 'db' == $_apiName && 'db' == $_resource )
         {
-            $_path = str_replace( $_savedResource, '{table_name}', $_path );
+            $_swaps = array(
+                array(
+                    $_savedResource,
+                ),
+                array(
+                    '{table_name}',
+                ),
+            );
+
+            $_path = str_ireplace( $_swaps[0], $_swaps[1], $_path );
+        }
+        else if ( $service instanceof BaseFileSvc )
+        {
+            $_swaps = array(
+                array(
+                    $service->getContainerId(),
+                    $_folderPath = $service->getFolderPath(),
+                    $_filePath = $service->getFilePath(),
+                    //  This one removes any slashes from the final event name...
+                    null,
+                ),
+                array(
+                    '{container}',
+                    '{folder_path}',
+                    '{file_path}',
+                    //  This one removes any slashes from the final event name...
+                    '/',
+                ),
+            );
+
+            //  Add in optional trailing slashes
+            if ( $_folderPath )
+            {
+                $_swaps[0][] = $_folderPath[ strlen( $_folderPath ) - 1 ] != '/' ? $_folderPath . '/' : substr( $_folderPath, 0, strlen( $_folderPath ) - 1 );
+                $_swaps[1][] = '{folder_path}';
+            }
+
+            if ( $_filePath )
+            {
+                $_swaps[0][] = $_filePath[ strlen( $_filePath ) - 1 ] != '/' ? $_filePath . '/' : substr( $_filePath, 0, strlen( $_filePath ) - 1 );
+                $_swaps[1][] = '{file_path}';
+            }
+
+            $_path = str_ireplace( $_swaps[0], $_swaps[1], $_path );
         }
 
         if ( empty( $_path ) )
@@ -563,14 +625,14 @@ SQL;
             return null;
         }
 
-        $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '$@D';
+        $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$@iD';
 
         $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
         if ( empty( $_matches ) )
         {
             //	See if there is an event with /system at the front...
-            $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '$@D';
+            $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$@iD';
             $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
             if ( empty( $_matches ) )
@@ -581,18 +643,25 @@ SQL;
 
         foreach ( $_matches as $_match )
         {
-            $_methodInfo = Option::getDeep( $_resources, $_match, $method );
-
-            if ( null !== ( $_eventName = Option::get( $_methodInfo, 'event' ) ) )
+            foreach ( $_methods as $_method )
             {
-                switch ( $_apiName )
+                if ( null === ( $_methodInfo = Option::getDeep( $_resources, $_match, $_method ) ) )
                 {
-                    case 'db':
-                        $_eventName = str_replace( '{table_name}', $_savedResource, $_eventName );
-                        break;
+                    continue;
                 }
 
-                return $_cache[ $_hash ] = $_eventName;
+                if ( null !== ( $_eventName = Option::get( $_methodInfo, 'event' ) ) )
+                {
+                    //  Restore the original path...
+                    $_eventName = str_ireplace( $_swaps[1], $_swaps[0], $_eventName );
+
+                    $_cache[ $_hash ] = $_eventName;
+
+                    //  Cache for one minute...
+                    Platform::storeSet( 'swagger.event_map_cache', $_cache, 60 );
+
+                    return $_eventName;
+                }
             }
         }
 

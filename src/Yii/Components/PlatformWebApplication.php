@@ -381,6 +381,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             {
                 try
                 {
+                    /** @noinspection PhpIncludeInspection */
                     if ( false === ( $_data = @include( $_configPath . '/' . $_file ) ) )
                     {
                         throw new FileSystemException( 'File system error reading local config file "' . $_file . '"' );
@@ -511,8 +512,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             $_originParts = $_origin;
         }
 
-        $_originUri = $this->_normalizeUri( $_originParts );
+        $_originUri = trim( $this->_normalizeUri( $_originParts ) );
         $_key = sha1( $_requestUri . $_originUri );
+        $_isStar = false;
 
         if ( $this->_logCorsInfo )
         {
@@ -522,7 +524,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         //	Not in cache, check it out...
         if ( !in_array( $_key, $_cache ) )
         {
-            if ( false === ( $_allowedMethods = $this->_allowedOrigin( $_originParts, $_requestUri ) ) )
+            if ( false === ( $_allowedMethods = $this->_allowedOrigin( $_originParts, $_requestUri, $_isStar ) ) )
             {
                 Log::error( 'Unauthorized origin rejected via CORS > Source: ' . $_requestUri . ' > Origin: ' . $_originUri );
 
@@ -545,15 +547,15 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
         else
         {
-            $_originUri = $_cache[ $_key ];
+            $_originUri = trim( $_cache[ $_key ] );
             $_allowedMethods = $_cacheVerbs[ $_key ];
         }
 
         $_headers = array();
 
-        if ( !empty( $_originUri ) )
+        if ( !empty( $_originUri ) || $_isStar )
         {
-            $_headers['Access-Control-Allow-Origin'] = $_originUri;
+            $_headers['Access-Control-Allow-Origin'] = ( $_isStar ? '*' : $_originUri );
         }
 
         $_headers['Access-Control-Allow-Credentials'] = 'true';
@@ -606,10 +608,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @param string|array $origin     The parse_url value of origin
      * @param array        $additional Additional origins to allow
+     * @param bool         $isStar     Set to true if the allowed origin is "*"
      *
      * @return bool|array false if not allowed, otherwise array of verbs allowed
      */
-    protected function _allowedOrigin( $origin, $additional = array() )
+    protected function _allowedOrigin( $origin, $additional = array(), &$isStar = false )
     {
         foreach ( array_merge( $this->_corsWhitelist, Option::clean( $additional ) ) as $_hostInfo )
         {
@@ -648,6 +651,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             //	All allowed?
             if ( '*' == $_whiteGuy )
             {
+                $isStar = true;
+
                 return $_allowedMethods;
             }
 
