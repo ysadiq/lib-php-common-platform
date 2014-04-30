@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Resources\User;
 
 use DreamFactory\Common\Components\DataCache;
 use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
@@ -29,6 +30,7 @@ use DreamFactory\Platform\Interfaces\PermissionTypes;
 use DreamFactory\Platform\Interfaces\RestServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Services\SystemManager;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
@@ -135,7 +137,7 @@ class Session extends BasePlatformRestResource
     {
         $this->userLogout();
 
-        return array( 'success' => true );
+        return array('success' => true);
     }
 
     //-------- User Operations ------------------------------------------------
@@ -261,7 +263,7 @@ class Session extends BasePlatformRestResource
 
         if ( $_identity->logInUser( $_user ) )
         {
-            if( !Pii::user()->login( $_identity, 0 ))
+            if ( !Pii::user()->login( $_identity, 0 ) )
             {
                 throw new UnauthorizedException( 'The user could not be logged in.' );
             }
@@ -293,7 +295,7 @@ class Session extends BasePlatformRestResource
         static::$_ownerId = sha1( $_user->email );
 
         // write back login datetime
-        $_user->update( array( 'last_login_date' => date( 'c' ) ) );
+        $_user->update( array('last_login_date' => date( 'c' )) );
 
         if ( $return_extras )
         {
@@ -332,6 +334,9 @@ class Session extends BasePlatformRestResource
 
         //	Now, if we have a DFCC session key...
         DataCache::flush( DataCache::getKey() );
+
+        //  Flush any stored config
+        Platform::storeDelete( PlatformStore::buildCacheKey() );
     }
 
     /**
@@ -355,7 +360,7 @@ class Session extends BasePlatformRestResource
             'last_login_date'
         );
 
-        static $_appFields = array( 'id', 'api_name', 'is_active' );
+        static $_appFields = array('id', 'api_name', 'is_active');
 
         /** @var User $_user */
         $_user = $user
@@ -428,7 +433,7 @@ class Session extends BasePlatformRestResource
                 }
             }
 
-            $_role = array( 'name' => $_roleName, 'id' => $_roleId );
+            $_role = array('name' => $_roleName, 'id' => $_roleId);
             $_role['apps'] = $_roleApps;
             $_role['services'] = $_user->getRoleServicePermissions();
 
@@ -438,10 +443,10 @@ class Session extends BasePlatformRestResource
         }
         else
         {
-            $_allowedApps = ResourceStore::model( 'app' )->findAll( 'is_active = :ia', array( ':ia' => 1 ) );
+            $_allowedApps = ResourceStore::model( 'app' )->findAll( 'is_active = :ia', array(':ia' => 1) );
         }
 
-        $_public['dsp_name'] = Pii::getParam('dsp_name');
+        $_public['dsp_name'] = Pii::getParam( 'dsp_name' );
         $_cached['lookup'] = LookupKey::getForSession( $_roleId, $_user->id );
 
         return array(
@@ -462,7 +467,7 @@ class Session extends BasePlatformRestResource
      */
     public static function generateSessionDataFromRole( $roleId, $role = null )
     {
-        static $_appFields = array( 'id', 'api_name', 'is_active' );
+        static $_appFields = array('id', 'api_name', 'is_active');
 
         /** @var Role $_role */
         $_role = $role
@@ -487,7 +492,7 @@ class Session extends BasePlatformRestResource
         $_public = array();
         $_allowedApps = array();
         $_defaultAppId = $_role->default_app_id;
-        $_roleData = array( 'name' => $_role->name, 'id' => $_role->id );
+        $_roleData = array('name' => $_role->name, 'id' => $_role->id);
 
         /**
          * @var App[] $_apps
@@ -852,16 +857,16 @@ class Session extends BasePlatformRestResource
         {
             case PermissionTypes::READ_ONLY:
             case 'Read Only':
-                return array( static::GET );
+                return array(static::GET);
             case PermissionTypes::WRITE_ONLY:
             case 'Write Only':
-                return array( static::POST );
+                return array(static::POST);
             case PermissionTypes::READ_WRITE:
             case 'Read and Write':
-                return array( static::GET, static::POST, static::PUT, static::PATCH );
+                return array(static::GET, static::POST, static::PUT, static::PATCH);
             case PermissionTypes::FULL_ACCESS:
             case 'Full Access':
-                return array( static::GET, static::POST, static::PUT, static::PATCH, static::DELETE );
+                return array(static::GET, static::POST, static::PUT, static::PATCH, static::DELETE);
         }
 
         return array();
@@ -888,7 +893,7 @@ class Session extends BasePlatformRestResource
             return null;
         }
 
-        return array( 'filters' => $_filters, 'filter_op' => $_operator );
+        return array('filters' => $_filters, 'filter_op' => $_operator);
     }
 
     public static function getServicePermissions( $service, $component = null )
@@ -896,7 +901,7 @@ class Session extends BasePlatformRestResource
         $_access = static::getServiceAccess( $service, $component );
         if ( true === $_access )
         {
-            return array( static::GET, static::POST, static::PUT, static::PATCH, static::DELETE );
+            return array(static::GET, static::POST, static::PUT, static::PATCH, static::DELETE);
         }
 
         return static::convertAccessToVerbs( Option::get( $_access, 'access' ) );
@@ -945,9 +950,9 @@ class Session extends BasePlatformRestResource
                         // get fields here
                         if ( !empty( $_lookup ) )
                         {
-                            if ( isset( static::$_cache, static::$_cache[$_lookup] ) )
+                            if ( isset( static::$_cache, static::$_cache[ $_lookup ] ) )
                             {
-                                $value = static::$_cache[$_lookup];
+                                $value = static::$_cache[ $_lookup ];
 
                                 return true;
                             }
@@ -958,9 +963,9 @@ class Session extends BasePlatformRestResource
                         // get fields here
                         if ( !empty( $_lookup ) )
                         {
-                            if ( isset( static::$_cache, static::$_cache['role'], static::$_cache['role'][$_lookup] ) )
+                            if ( isset( static::$_cache, static::$_cache['role'], static::$_cache['role'][ $_lookup ] ) )
                             {
-                                $value = static::$_cache['role'][$_lookup];
+                                $value = static::$_cache['role'][ $_lookup ];
 
                                 return true;
                             }
@@ -987,16 +992,17 @@ class Session extends BasePlatformRestResource
                         {
                             case 'host_url':
                                 $value = Curl::currentUrl( false, false );
+
                                 return true;
                             case 'name':
-                                $value = Pii::getParam('dsp_name');
+                                $value = Pii::getParam( 'dsp_name' );
 
                                 return true;
                             case 'version':
                             case 'confirm_invite_url':
                             case 'confirm_register_url':
                             case 'confirm_reset_url':
-                                $value = Curl::currentUrl( false, false ) . Pii::getParam('dsp.'.$_lookup);
+                                $value = Curl::currentUrl( false, false ) . Pii::getParam( 'dsp.' . $_lookup );
 
                                 return true;
                         }
@@ -1005,9 +1011,9 @@ class Session extends BasePlatformRestResource
             }
         }
 
-        if ( isset( static::$_cache, static::$_cache['lookup'], static::$_cache['lookup'][$lookup] ) )
+        if ( isset( static::$_cache, static::$_cache['lookup'], static::$_cache['lookup'][ $lookup ] ) )
         {
-            $value = static::$_cache['lookup'][$lookup];
+            $value = static::$_cache['lookup'][ $lookup ];
 
             return true;
         }
@@ -1173,7 +1179,7 @@ class Session extends BasePlatformRestResource
                 foreach ( $theGroups as $g_key => $group )
                 {
                     $groupId = $group->id;
-                    $groupData = ( isset( $appGroups[$g_key] ) ) ? $appGroups[$g_key] : $group->getAttributes( array( 'id', 'name', 'description' ) );
+                    $groupData = ( isset( $appGroups[ $g_key ] ) ) ? $appGroups[ $g_key ] : $group->getAttributes( array('id', 'name', 'description') );
                     foreach ( $tempGroups as $tempGroup )
                     {
                         if ( $tempGroup->id === $groupId )
@@ -1184,7 +1190,7 @@ class Session extends BasePlatformRestResource
                             $groupData['apps'] = $temp;
                         }
                     }
-                    $appGroups[$g_key] = $groupData;
+                    $appGroups[ $g_key ] = $groupData;
                 }
                 if ( !$found )
                 {
@@ -1196,7 +1202,7 @@ class Session extends BasePlatformRestResource
             {
                 if ( !isset( $group['apps'] ) )
                 {
-                    unset( $appGroups[$g_key] );
+                    unset( $appGroups[ $g_key ] );
                 }
             }
             $_data['app_groups'] = array_values( $appGroups ); // reset indexing

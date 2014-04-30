@@ -642,6 +642,13 @@ SQL;
         // back to normal
         chdir( $_oldWorkingDir );
 
+//        //  Reload autoloader with new libraries...
+//        /** @noinspection PhpIncludeInspection */
+//        if ( true !== ( $_loader = require Pii::getParam( 'vendor_path' ) . '/autoload.php' ) )
+//        {
+//            \Kisma::set( CoreSettings::AUTO_LOADER, $_loader );
+//        }
+        
         // clear out swagger cache
         SwaggerManager::clearCache();
     }

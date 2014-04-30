@@ -161,6 +161,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @var bool If true, headers will be added to the response object instance of this run
      */
     protected $_useResponseObject = false;
+    /**
+     * @var bool If true, CORS info will be logged
+     */
+    protected $_logCorsInfo = false;
 
     //*************************************************************************
     //	Methods
@@ -172,6 +176,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     protected function init()
     {
         parent::init();
+
+        $this->_logCorsInfo = Pii::getParam( 'dsp.log_cors_info', false );
 
         //  Load the CORS config file
         $this->_loadCorsConfig();
@@ -475,17 +481,27 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             $_cache = array();
             $_cacheVerbs = array();
 
+            if ( $this->_logCorsInfo )
+            {
+                Log::debug( 'CORS internal cache reset.' );
+            }
+
             return true;
         }
 
         $_originUri = null;
-        $_requestSource = Option::server( 'SERVER_NAME' );
+        $_requestUri = Pii::request( false )->getSchemeAndHttpHost();
         $_origin = trim( Option::server( 'HTTP_ORIGIN' ) );
 
         //	Was an origin header passed? If not, don't do CORS.
         if ( empty( $_origin ) )
         {
             return true;
+        }
+
+        if ( $this->_logCorsInfo )
+        {
+            Log::debug( 'CORS origin received: ' . $_origin );
         }
 
         if ( false === ( $_originParts = $this->_parseUri( $_origin ) ) )
@@ -496,14 +512,19 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         $_originUri = $this->_normalizeUri( $_originParts );
-        $_key = sha1( $_requestSource . $_originUri );
+        $_key = sha1( $_requestUri . $_originUri );
+
+        if ( $this->_logCorsInfo )
+        {
+            Log::debug( 'CORS origin URI "' . $_originUri . '" assigned key "' . $_key . '"' );
+        }
 
         //	Not in cache, check it out...
         if ( !in_array( $_key, $_cache ) )
         {
-            if ( false === ( $_allowedMethods = $this->_allowedOrigin( $_originParts, $_requestSource ) ) )
+            if ( false === ( $_allowedMethods = $this->_allowedOrigin( $_originParts, $_requestUri ) ) )
             {
-                Log::error( 'Unauthorized origin rejected via CORS > Source: ' . $_requestSource . ' > Origin: ' . $_originUri );
+                Log::error( 'Unauthorized origin rejected via CORS > Source: ' . $_requestUri . ' > Origin: ' . $_originUri );
 
                 /**
                  * No sir, I didn't like it.
@@ -518,7 +539,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 return false;
             }
 
-//			Log::debug( 'Committing origin to the CORS cache > Source: ' . $_requestSource . ' > Origin: ' . $_originUri );
+//			Log::debug( 'Committing origin to the CORS cache > Source: ' . $_requestUri . ' > Origin: ' . $_originUri );
             $_cache[ $_key ] = $_originUri;
             $_cacheVerbs[ $_key ] = $_allowedMethods;
         }
@@ -542,11 +563,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
         if ( $this->_extendedHeaders )
         {
-            $_headers['X-DreamFactory-Source'] = $_requestSource;
+            $_headers['X-DreamFactory-Source'] = $_requestUri;
 
             if ( $_origin )
             {
-                $_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '/^([\w_-]+\.)*' . $_requestSource . '$/', $_originUri );
+                $_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
             }
         }
 
@@ -565,9 +586,17 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         //  Send all the headers
         if ( $sendHeaders )
         {
+            $_out = null;
+
             foreach ( $_headers as $_key => $_value )
             {
                 header( $_key . ': ' . $_value );
+                $_out .= $_key . ': ' . $_value . PHP_EOL;
+            }
+
+            if ( $this->_logCorsInfo )
+            {
+                Log::debug( 'CORS headers sent: ' . $_out );
             }
         }
 
@@ -607,6 +636,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                         // add OPTION to allowed list
                         $_hostInfo['verbs'][] = static::CORS_OPTION_METHOD;
                     }
+
                     $_allowedMethods = implode( ', ', $_hostInfo['verbs'] );
                 }
             }
@@ -623,7 +653,13 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
             if ( false === ( $_whiteParts = $this->_parseUri( $_whiteGuy ) ) )
             {
+                Log::debug( 'CORS unable to parse "' . $_whiteGuy . '" whitelist entry' );
                 continue;
+            }
+
+            if ( $this->_logCorsInfo )
+            {
+                Log::debug( 'CORS whitelist "' . $_whiteGuy . '" > parts: ' . print_r( $_whiteParts, true ) );
             }
 
             //	Check for un-parsed origin, 'null' sent when testing js files locally
@@ -648,7 +684,16 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _compareUris( $first, $second )
     {
-        return ( $first['scheme'] == $second['scheme'] ) && ( $first['host'] == $second['host'] ) && ( $first['port'] == $second['port'] );
+        $_match = ( ( $first['scheme'] == $second['scheme'] ) && ( $first['host'] == $second['host'] ) && ( $first['port'] == $second['port'] ) );
+
+        if ( $this->_logCorsInfo )
+        {
+            Log::debug( 'CORS compare inbound origin to whitelisted host: ' . ( $_match ? 'Success' : 'FAIL' ) );
+            Log::debug( '  * ORIGIN: ' . print_r( $first, true ) );
+            Log::debug( '  *  WHITE: ' . print_r( $second, true ) );
+        }
+
+        return $_match;
     }
 
     /**
@@ -662,6 +707,20 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         if ( false === ( $_parts = parse_url( $uri ) ) || !( isset( $_parts['host'] ) || isset( $_parts['path'] ) ) )
         {
             return false;
+        }
+
+        $_parts['scheme'] = Option::get( $_parts, 'scheme', 'http' . ( Option::getBool( $_SERVER, 'HTTPS', false ) ? 's' : null ) );
+        $_parts['port'] = Option::get( $_parts, 'port', Option::server( 'SERVER_PORT' ) );
+
+        //  If standard port 80 or 443 and there is no port in uri, clear from parse...
+        if ( !empty( $_parts['port'] ) && ( $_parts['port'] == 80 || $_parts['port'] == 443 ) && false === strpos( $uri, ':' . $_parts['port'] ) )
+        {
+            $_parts['port'] = null;
+        }
+
+        if ( $this->_logCorsInfo )
+        {
+            Log::debug( 'CORS parsed inbound URI "' . $uri . '": ' . print_r( $_parts, true ) );
         }
 
         if ( isset( $_parts['path'] ) && !isset( $_parts['host'] ) )
@@ -694,9 +753,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _normalizeUri( $parts )
     {
-        return is_array( $parts ) ?
-            ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null )
-            : $parts;
+        return !is_array( $parts )
+            ? $parts :
+            ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null );
     }
 
     /**
@@ -709,7 +768,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         static $_whitelist = null;
 
-        if ( null === $_whitelist && null === ( $_whitelist = Platform::storeGet( 'cors.whitelist' ) ) )
+        if ( null === $_whitelist /*&& null === ( $_whitelist = Platform::storeGet( 'cors.whitelist' ) )*/ )
         {
             //  Empty whitelist...
             $_whitelist = array();
@@ -733,10 +792,27 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                     {
                         throw new InternalServerErrorException( 'The CORS configuration file is corrupt. Cannot continue.' );
                     }
+
+                    if ( $this->_logCorsInfo )
+                    {
+                        Log::debug( 'CORS configuration loaded. Whitelist = ' . print_r( $_whitelist, true ) );
+                    }
                 }
             }
 
-            Platform::storeSet( 'cors.whitelist', $_whitelist );
+            if ( Platform::storeSet( 'cors.whitelist', $_whitelist ) )
+            {
+                if ( $this->_logCorsInfo )
+                {
+                    Log::debug( 'CORS whitelist cached' );
+                }
+            }
+        }
+
+        //  Don't reset if they're the same.
+        if ( $this->_corsWhitelist === $_whitelist )
+        {
+            return;
         }
 
         return $this->setCorsWhitelist( $_whitelist );
