@@ -1,6 +1,6 @@
 # DreamFactory Services Platform&trade; Change Log
 
-## v1.5.10 (Release 2014-04-30)
+## v1.5.11 (Release 2014-04-30)
 ### New!
 * New DSP-level persistent storage mechanism interfaces with redis, xcache, memcache(d), etc.
 * Added support for [libv8](https://github.com/v8) for server-side Javascript support
