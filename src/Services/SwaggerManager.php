@@ -474,13 +474,21 @@ SQL;
      */
     public static function findEvent( BasePlatformRestService $service, $method, $eventName = null )
     {
-        static $_cache = array();
+        $_cache = Platform::storeGet( 'swagger.event_map_cache', array() );
 
         $_map = static::getEventMap();
         $_aliases = $service->getVerbAliases();
-        $method = Option::get( $_aliases, $method, $method );
+        $_methods = array($method);
 
-        $_hash = sha1( ( $service ? get_class( $service ) : '*' ) . $method );
+        foreach ( $_aliases as $_action => $_alias )
+        {
+            if ( $method == $_alias )
+            {
+                $_methods[] = $_action;
+            }
+        }
+
+        $_hash = sha1( $method . '.' . Pii::request( false )->getRequestUri() );
 
         if ( isset( $_cache[ $_hash ] ) )
         {
@@ -513,11 +521,10 @@ SQL;
 
         $_apiName = $service->getApiName();
         $_savedResource = $_resource = $service->getResource();
-        $_pathParts =
-            explode(
-                '/',
-                ltrim( str_replace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) ), '/' )
-            );
+        $_pathParts = explode(
+            '/',
+            ltrim( str_replace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) ), '/' )
+        );
 
         if ( empty( $_resource ) )
         {
@@ -581,18 +588,29 @@ SQL;
 
         foreach ( $_matches as $_match )
         {
-            $_methodInfo = Option::getDeep( $_resources, $_match, $method );
-
-            if ( null !== ( $_eventName = Option::get( $_methodInfo, 'event' ) ) )
+            foreach ( $_methods as $_method )
             {
-                switch ( $_apiName )
+                if ( null === ( $_methodInfo = Option::getDeep( $_resources, $_match, $_method ) ) )
                 {
-                    case 'db':
-                        $_eventName = str_replace( '{table_name}', $_savedResource, $_eventName );
-                        break;
+                    continue;
                 }
 
-                return $_cache[ $_hash ] = $_eventName;
+                if ( null !== ( $_eventName = Option::get( $_methodInfo, 'event' ) ) )
+                {
+                    switch ( $_apiName )
+                    {
+                        case 'db':
+                            $_eventName = str_replace( '{table_name}', $_savedResource, $_eventName );
+                            break;
+                    }
+
+                    $_cache[ $_hash ] = $_eventName;
+
+                    //  Cache for one minute...
+                    Platform::storeSet( 'swagger.event_map_cache', $_cache, 60 );
+
+                    return $_eventName;
+                }
             }
         }
 
