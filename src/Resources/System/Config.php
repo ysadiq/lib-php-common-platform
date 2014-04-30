@@ -93,7 +93,7 @@ class Config extends BaseSystemRestResource
         /** @var $_config \DreamFactory\Platform\Yii\Models\Config */
         $_fields = 'allow_open_registration, open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id';
 
-        $_config = ResourceStore::model( 'config' )->find( array( 'select' => $_fields ) );
+        $_config = ResourceStore::model( 'config' )->find( array('select' => $_fields) );
 
         if ( null === $_config )
         {
@@ -278,7 +278,7 @@ class Config extends BaseSystemRestResource
         {
             foreach ( $_models as $_row )
             {
-                $_lookups[] = $_row->getAttributes( array( 'name', 'value', 'private' ) );
+                $_lookups[] = $_row->getAttributes( array('name', 'value', 'private') );
             }
         }
 
@@ -341,7 +341,7 @@ class Config extends BaseSystemRestResource
         //*************************************************************************
 
         /** @var Provider[] $_models */
-        $_models = ResourceStore::model( 'provider' )->findAll( array( 'order' => 'provider_name' ) );
+        $_models = ResourceStore::model( 'provider' )->findAll( array('order' => 'provider_name') );
 
         if ( !empty( $_models ) )
         {
@@ -361,7 +361,7 @@ class Config extends BaseSystemRestResource
                         }
                     }
 
-                    $_remoteProviders[] = array_merge( $_row->getAttributes(), array( 'config_text' => $_config ) );
+                    $_remoteProviders[] = array_merge( $_row->getAttributes(), array('config_text' => $_config) );
                 }
 
                 unset( $_row );
@@ -388,7 +388,7 @@ class Config extends BaseSystemRestResource
     {
         try
         {
-            if ( false === $force && Session::isSystemAdmin() )
+            if ( false === $force && !Pii::guest() && Session::isSystemAdmin() )
             {
                 return $config;
             }
