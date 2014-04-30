@@ -480,7 +480,7 @@ SQL;
         $_aliases = $service->getVerbAliases();
         $_methods = array($method);
 
-        foreach ( $_aliases as $_action => $_alias )
+        foreach ( Option::clean( $_aliases ) as $_action => $_alias )
         {
             if ( $method == $_alias )
             {
@@ -570,25 +570,54 @@ SQL;
             $_path = substr( $_path, 0, $_pos );
         }
 
+        $_swaps = array(array(), array());
+
         if ( 'db' == $_apiName && 'db' == $_resource )
         {
-            $_path = str_replace( $_savedResource, '{table_name}', $_path );
+            $_swaps = array(
+                array(
+                    $_savedResource,
+                ),
+                array(
+                    '{table_name}',
+                ),
+            );
+
+            $_path = str_replace( $_swaps[0], $_swaps[1], $_path );
         }
         else if ( $service instanceof BaseFileSvc )
         {
-            $_path = str_replace(
+            $_swaps = array(
                 array(
                     $service->getContainerId(),
-                    $service->getFolderPath(),
-                    $service->getFilePath(),
+                    $_folderPath = $service->getFolderPath(),
+                    $_filePath = $service->getFilePath(),
+                    //  This one removes any slashes from the final event name...
+                    null,
                 ),
                 array(
                     '{container}',
                     '{folder_path}',
                     '{file_path}',
+                    //  This one removes any slashes from the final event name...
+                    '/',
                 ),
-                $_path
             );
+
+            //  Add in optional trailing slashes
+            if ( $_folderPath )
+            {
+                $_swaps[0][] = $_folderPath[ strlen( $_folderPath ) - 1 ] != '/' ? $_folderPath . '/' : substr( $_folderPath, 0, strlen( $_folderPath ) - 1 );
+                $_swaps[1][] = '{folder_path}';
+            }
+
+            if ( $_filePath )
+            {
+                $_swaps[0][] = $_filePath[ strlen( $_filePath ) - 1 ] != '/' ? $_filePath . '/' : substr( $_filePath, 0, strlen( $_filePath ) - 1 );
+                $_swaps[1][] = '{file_path}';
+            }
+
+            $_path = str_replace( $_swaps[0], $_swaps[1], $_path );
         }
 
         if ( empty( $_path ) )
@@ -596,7 +625,7 @@ SQL;
             return null;
         }
 
-        $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '$@D';
+        $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$@D';
 
         $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
@@ -623,12 +652,8 @@ SQL;
 
                 if ( null !== ( $_eventName = Option::get( $_methodInfo, 'event' ) ) )
                 {
-                    switch ( $_apiName )
-                    {
-                        case 'db':
-                            $_eventName = str_replace( '{table_name}', $_savedResource, $_eventName );
-                            break;
-                    }
+                    //  Restore the original path...
+                    $_eventName = str_replace( $_swaps[1], $_swaps[0], $_eventName );
 
                     $_cache[ $_hash ] = $_eventName;
 

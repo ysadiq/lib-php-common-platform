@@ -119,24 +119,20 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
      */
     protected function _handleResource()
     {
+        $_includeProperties = Option::getBool( $_REQUEST, 'include_properties', false );
+
         switch ( $this->_action )
         {
             case static::GET:
                 if ( empty( $this->_container ) )
                 {
-                    // no resource
-                    $includeProperties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
-                    if ( !$includeProperties )
-                    {
-                        return $this->_listResources();
-                    }
-                    $result = $this->listContainers( true );
+                    //  Mo resource
+                    $result = $this->listContainers( $_includeProperties );
                     $result = array('container' => $result);
                 }
                 else if ( empty( $this->_folderPath ) )
                 {
                     // resource is a container
-                    $includeProperties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
                     $includeFiles = FilterInput::request( 'include_files', true, FILTER_VALIDATE_BOOLEAN );
                     $includeFolders = FilterInput::request( 'include_folders', true, FILTER_VALIDATE_BOOLEAN );
                     $fullTree = FilterInput::request( 'full_tree', false, FILTER_VALIDATE_BOOLEAN );
@@ -166,13 +162,12 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     }
                     else
                     {
-                        $result = $this->getContainer( $this->_container, $includeFiles, $includeFolders, $fullTree, $includeProperties );
+                        $result = $this->getContainer( $this->_container, $includeFiles, $includeFolders, $fullTree, $_includeProperties );
                     }
                 }
                 else if ( empty( $this->_filePath ) )
                 {
                     // resource is a folder
-                    $includeProperties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
                     $includeFiles = FilterInput::request( 'include_files', true, FILTER_VALIDATE_BOOLEAN );
                     $includeFolders = FilterInput::request( 'include_folders', true, FILTER_VALIDATE_BOOLEAN );
                     $fullTree = FilterInput::request( 'full_tree', false, FILTER_VALIDATE_BOOLEAN );
@@ -201,14 +196,13 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     }
                     else
                     {
-                        $result = $this->getFolder( $this->_container, $this->_folderPath, $includeFiles, $includeFolders, $fullTree, $includeProperties );
+                        $result = $this->getFolder( $this->_container, $this->_folderPath, $includeFiles, $includeFolders, $fullTree, $_includeProperties );
                     }
                 }
                 else
                 {
                     // resource is a file
-                    $includeProperties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
-                    if ( $includeProperties )
+                    if ( $_includeProperties )
                     {
                         // just properties of the file itself
                         $content = FilterInput::request( 'content', false, FILTER_VALIDATE_BOOLEAN );
@@ -224,6 +218,9 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                         $result = null;
                     }
                 }
+
+                //  How about an event?
+                $this->_triggerActionEvent( $result );
                 break;
 
             case static::POST:
