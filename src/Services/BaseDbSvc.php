@@ -2975,4 +2975,13 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     {
         return ( substr( $haystack, -strlen( $needle ) ) === $needle );
     }
+
+    /**
+     * @return int|string
+     */
+    public function getResourceId()
+    {
+        return $this->_resourceId;
+    }
+
 }

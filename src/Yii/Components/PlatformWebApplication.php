@@ -381,6 +381,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             {
                 try
                 {
+                    /** @noinspection PhpIncludeInspection */
                     if ( false === ( $_data = @include( $_configPath . '/' . $_file ) ) )
                     {
                         throw new FileSystemException( 'File system error reading local config file "' . $_file . '"' );

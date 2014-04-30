@@ -521,6 +521,10 @@ SQL;
 
         $_apiName = $service->getApiName();
         $_savedResource = $_resource = $service->getResource();
+
+        /** @noinspection PhpUndefinedMethodInspection */
+        $_resourceId = method_exists( $service, 'getResourceId' ) ? @$service->getResourceId() : null;
+
         $_pathParts = explode(
             '/',
             ltrim( str_replace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) ), '/' )
@@ -560,9 +564,31 @@ SQL;
 
         $_path = str_replace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) );
 
+        //  Strip off the resource ID if any...
+        if ( $_resourceId && false !== ( $_pos = strpos( $_path, '/' . $_resourceId ) ) )
+        {
+            $_path = substr( $_path, 0, $_pos );
+        }
+
         if ( 'db' == $_apiName && 'db' == $_resource )
         {
             $_path = str_replace( $_savedResource, '{table_name}', $_path );
+        }
+        else if ( $service instanceof BaseFileSvc )
+        {
+            $_path = str_replace(
+                array(
+                    $service->getContainerId(),
+                    $service->getFolderPath(),
+                    $service->getFilePath(),
+                ),
+                array(
+                    '{container}',
+                    '{folder_path}',
+                    '{file_path}',
+                ),
+                $_path
+            );
         }
 
         if ( empty( $_path ) )
