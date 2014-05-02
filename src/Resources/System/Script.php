@@ -280,26 +280,21 @@ class Script extends BaseSystemRestResource
     }
 
     /**
-     * @param string $scriptName
-     * @param string $scriptId
-     * @param array  $data   Bi-directional data to/from function
-     * @param string $output Any output of the script
+     * @param string $scriptPath The full /path/to/script/to/run.js
+     * @param string $scriptId   The name of the script/event including extension (.js)
+     * @param array  $data       Bi-directional data to/from function
+     * @param string $output     Any output of the script
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return array
      */
-    public static function runScript( $scriptName, $scriptId = null, array &$data = array(), &$output = null )
+    public static function runScript( $scriptPath, $scriptId = null, array &$data = array(), &$output = null )
     {
-        $scriptId = $scriptId ? : $scriptName;
+        $scriptId = str_replace( '.js', null, $scriptId ? : basename( $scriptPath ) );
 
-        if ( !is_file( $scriptName ) || !is_readable( $scriptName ) )
+        if ( ( !is_file( $scriptPath ) || !is_readable( $scriptPath ) ) || false === ( $_script = @file_get_contents( $scriptPath ) ) )
         {
-            throw new InternalServerErrorException( 'The script ID "' . $scriptId . '" is not valid or unreadable.' );
-        }
-
-        if ( false === ( $_script = @file_get_contents( $scriptName ) ) )
-        {
-            throw new InternalServerErrorException( 'The script ID "' . $scriptId . '" cannot be retrieved at this time.' );
+            throw new InternalServerErrorException( 'The script ID "' . $scriptId . '" is not valid.' );
         }
 
         Log::debug( 'Running script: ' . $scriptId );
@@ -311,8 +306,7 @@ class Script extends BaseSystemRestResource
             //  Don't show output
             ob_start();
 
-            $_result =
-                static::getScriptEngine( $data )->executeString( $_runnerShell, $scriptId, \V8Js::FLAG_FORCE_ARRAY );
+            $_result = static::getScriptEngine( $data )->executeString( $_runnerShell, $scriptId, \V8Js::FLAG_FORCE_ARRAY );
 
             $output = ob_get_clean();
 
@@ -328,8 +322,7 @@ class Script extends BaseSystemRestResource
             $output = ob_end_clean();
 
             /**
-             * @note     V8JsTimeLimitException was released in a later version of the libv8
-             * library than is supported by the current PECL v8js extension. Hence the check below.
+             * @note     V8JsTimeLimitException was released in a later version of the libv8 library than is supported by the current PECL v8js extension. Hence the check below.
              * @noteDate 2014-04-03
              */
             if ( class_exists( '\\V8JsTimeLimitException', false ) && $_ex instanceof \V8JsTimeLimitException )
@@ -339,7 +332,7 @@ class Script extends BaseSystemRestResource
             }
             else
             {
-                Log::error( 'Exception executing javascript: ' . $_ex->getMessage() );
+                Log::error( 'Exception executing script: ' . $_ex->getMessage() );
             }
 
             throw new InternalServerErrorException( $_ex->getMessage() );
@@ -353,8 +346,10 @@ class Script extends BaseSystemRestResource
      */
     protected static function _preparePayload( $payload = array() )
     {
+        $_options = JSON_UNESCAPED_SLASHES + ( version_compare( '5.4.0', PHP_VERSION, '>=' ) ? JSON_PRETTY_PRINT : 0 );
+
         //  Quick and dirty object conversion
-        return json_decode( json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) );
+        return json_decode( json_encode( $payload, $_options ) );
     }
 
     /**
