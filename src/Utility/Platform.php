@@ -23,10 +23,9 @@ use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
-use DreamFactory\Platform\Interfaces\PersistentStoreLike;
+use DreamFactory\Platform\Interfaces\StoreLike;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Components\Flexistore;
 use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\SeedUtility;
@@ -54,13 +53,31 @@ class Platform extends SeedUtility
     //*************************************************************************
 
     /**
-     * @var PersistentStoreLike The persistent store to use for local storage
+     * @var StoreLike The persistent store to use for local storage
      */
     protected static $_persistentStore;
+    /**
+     * @var EventDispatcher
+     */
+    protected static $_dispatcher;
 
     //*************************************************************************
     //	Methods
     //*************************************************************************
+
+    /**
+     * Constructs the virtual storage path
+     *
+     * @param string $append
+     * @param bool   $createIfMissing
+     * @param bool   $includesFile
+     *
+     * @return string
+     */
+    public static function getStorageBasePath( $append = null, $createIfMissing = true, $includesFile = false )
+    {
+        return static::_getPlatformPath( LocalStorageTypes::STORAGE_BASE_PATH, $append, $createIfMissing, $includesFile );
+    }
 
     /**
      * Constructs a virtual platform path
@@ -132,20 +149,6 @@ class Platform extends SeedUtility
      *
      * @return string
      */
-    public static function getStorageBasePath( $append = null, $createIfMissing = true, $includesFile = false )
-    {
-        return static::_getPlatformPath( LocalStorageTypes::STORAGE_BASE_PATH, $append, $createIfMissing, $includesFile );
-    }
-
-    /**
-     * Constructs the virtual storage path
-     *
-     * @param string $append
-     * @param bool   $createIfMissing
-     * @param bool   $includesFile
-     *
-     * @return string
-     */
     public static function getStoragePath( $append = null, $createIfMissing = true, $includesFile = false )
     {
         return static::_getPlatformPath( LocalStorageTypes::STORAGE_PATH, $append, $createIfMissing, $includesFile );
@@ -166,18 +169,6 @@ class Platform extends SeedUtility
     }
 
     /**
-     * Returns the library configuration path, not the platform's config path in the root
-     *
-     * @param string $append
-     *
-     * @return string
-     */
-    public static function getLibraryConfigPath( $append = null )
-    {
-        return SystemManager::getConfigPath() . ( $append ? '/' . ltrim( $append, '/' ) : null );
-    }
-
-    /**
      * Returns the library template configuration path, not the platform's config path in the root
      *
      * @param string $append
@@ -187,6 +178,18 @@ class Platform extends SeedUtility
     public static function getLibraryTemplatePath( $append = null )
     {
         return static::getLibraryConfigPath( '/templates' ) . ( $append ? '/' . ltrim( $append, '/' ) : null );
+    }
+
+    /**
+     * Returns the library configuration path, not the platform's config path in the root
+     *
+     * @param string $append
+     *
+     * @return string
+     */
+    public static function getLibraryConfigPath( $append = null )
+    {
+        return SystemManager::getConfigPath() . ( $append ? '/' . ltrim( $append, '/' ) : null );
     }
 
     /**
@@ -270,8 +273,13 @@ class Platform extends SeedUtility
             hash(
                 'ripemd128',
                 uniqid( '', true ) . ( $_uuid ? : microtime( true ) ) . md5(
-                    $namespace . $_SERVER['REQUEST_TIME'] . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['LOCAL_ADDR'] . $_SERVER['LOCAL_PORT'] .
-                    $_SERVER['REMOTE_ADDR'] . $_SERVER['REMOTE_PORT']
+                    $namespace .
+                    $_SERVER['REQUEST_TIME'] .
+                    $_SERVER['HTTP_USER_AGENT'] .
+                    $_SERVER['LOCAL_ADDR'] .
+                    $_SERVER['LOCAL_PORT'] .
+                    $_SERVER['REMOTE_ADDR'] .
+                    $_SERVER['REMOTE_PORT']
                 )
             )
         );
@@ -319,12 +327,25 @@ class Platform extends SeedUtility
     //*************************************************************************
 
     /**
+     * @param string $key
+     * @param mixed  $value
+     * @param mixed  $defaultValue
+     * @param bool   $remove
+     *
+     * @return mixed
+     */
+    public static function storeGet( $key, $value = null, $defaultValue = null, $remove = false )
+    {
+        return static::getStore()->get( $key, $value, $defaultValue, $remove );
+    }
+
+    /**
      * Retrieves the store instance for the platform. If it has not yet been created,
      * a new instance is created and seeded with $data
      *
      * @param array $data An array of key value pairs with which to seed the store
      *
-     * @return PlatformStore|Flexistore
+     * @return StoreLike
      */
     public static function getStore( array $data = array() )
     {
@@ -337,32 +358,18 @@ class Platform extends SeedUtility
     }
 
     /**
-     * @param string $id
-     * @param mixed  $value
-     * @param mixed  $defaultValue
-     * @param bool   $remove
-     *
-     * @return mixed
-     */
-    public static function storeGet( $id, $value = null, $defaultValue = null, $remove = false )
-    {
-        return static::getStore()->get( $id, $value, $defaultValue, $remove );
-    }
-
-    /**
      * Sets a value in the platform cache
-     * $id can be specified as an array of key-value pairs: array( 'alpha' => 'xyz', 'beta' => 'qrs', 'gamma' => 'lmo', ... )
+     * $key can be specified as an array of key-value pairs: array( 'alpha' => 'xyz', 'beta' => 'qrs', 'gamma' => 'lmo', ... )
      *
-     *
-     * @param string|array $id       The cache id or array of key-value pairs
-     * @param mixed        $data     The cache entry/data.
-     * @param int          $lifeTime The cache lifetime. Sets a specific lifetime for this cache entry. Defaults to 0, or "never expire"
+     * @param string|array $key  The cache id or array of key-value pairs
+     * @param mixed        $data The cache entry/data.
+     * @param int          $ttl  The cache lifetime. Sets a specific lifetime for this cache entry. Defaults to 0, or "never expire"
      *
      * @return boolean|boolean[] TRUE if the entry was successfully stored in the cache, FALSE otherwise.
      */
-    public static function storeSet( $id, $data, $lifeTime = 300 )
+    public static function storeSet( $key, $data, $ttl = 300 )
     {
-        return static::getStore()->set( $id, $data, $lifeTime );
+        return static::getStore()->set( $key, $data, $ttl );
     }
 
     /**
@@ -382,8 +389,15 @@ class Platform extends SeedUtility
      */
     public static function storeDelete( $id )
     {
-        /** @noinspection PhpUndefinedMethodInspection */
         return static::getStore()->delete( $id );
+    }
+
+    /**
+     * @return bool
+     */
+    public static function storeDeleteAll()
+    {
+        return static::getStore()->deleteAll();
     }
 
     //*************************************************************************
@@ -434,13 +448,13 @@ class Platform extends SeedUtility
     }
 
     /**
+     * Cache a reference to the application-level event dispatcher for easy access
+     *
      * @return EventDispatcher
      */
     public static function getDispatcher()
     {
-        static $_dispatcher;
-
-        return $_dispatcher ? : $_dispatcher = Pii::app()->getDispatcher();
+        return static::$_dispatcher ? : static::$_dispatcher = Pii::app()->getDispatcher();
     }
 
 }

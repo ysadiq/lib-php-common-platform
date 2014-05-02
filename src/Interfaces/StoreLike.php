@@ -16,39 +16,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Events;
+namespace DreamFactory\Platform\Interfaces;
 
 use Doctrine\Common\Cache\Cache;
 
 /**
- * EventStoreLike
- * Something that acts like an event store
+ * StoreLike
+ * An object that can hold stuff
  */
-interface EventStoreLike extends Cache
+interface StoreLike extends Cache
 {
     //*************************************************************************
     //	Methods
     //*************************************************************************
 
     /**
-     * Stores an event at key "$key"
+     * Stores a value for $key
      *
-     * @param string $key  Identifier for this event
-     * @param mixed  $data The event data
-     * @param int    $ttl  The expiration TTL for this key
+     * @param string $key  The key to under which to store the data
+     * @param mixed  $data The data to store
+     * @param int    $ttl  The number of seconds for this value to live. Defaults to 0, meaning forever.
      *
-     * @return mixed
+     * @return bool True if the value was successfully stored
      */
-    public static function set( $key, $data, $ttl = null );
+    public function set( $key, $data, $ttl = null );
 
     /**
      * Gets an event from key "$key"
      *
-     * @param string $key Identifier for this event
-     * @param mixed  $defaultValue
-     * @param bool   $unsetIfFound
+     * @param string $key          The key to retrieve
+     * @param mixed  $defaultValue The value to return if the $key is not found in the cache
+     * @param bool   $remove       If true, remove the item after it has been retrieved
+     *
+     * @return mixed The value stored under $key
+     */
+    public function get( $key, $defaultValue = null, $remove = false );
+
+    /**
+     * Deletes all items from the store
      *
      * @return mixed
      */
-    public static function get( $key, $defaultValue = null, $unsetIfFound = false );
+    public function deleteAll();
 }
