@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Components;
 use DreamFactory\Platform\Utility\Platform;
 use Kisma\Core\Components\Flexistore;
 use Kisma\Core\Enums\CacheTypes;
+use Kisma\Core\Utility\Option;
 
 /**
  * A simple store class that use's the Kisma store
@@ -40,6 +41,10 @@ class PlatformStore extends Flexistore
      * @type string
      */
     const STORE_CACHE_PATH = '/store.cache';
+    /**
+     * @type string The session key
+     */
+    const PERSISTENT_STORAGE_KEY = 'df.session_key';
 
     //*************************************************************************
     //	Methods
@@ -69,4 +74,21 @@ class PlatformStore extends Flexistore
         }
     }
 
+    /**
+     * @param string $addendum Additional data to add to key
+     *
+     * @return string
+     */
+    public static function buildCacheKey( $addendum = null )
+    {
+        $_key =
+            PHP_SAPI .
+            '.' .
+            Option::server( 'REMOTE_ADDR', gethostname() ) .
+            '.' .
+            Option::server( 'HTTP_HOST', gethostname() ) .
+            ( $addendum ? '.' . $addendum : null );
+
+        return $_key;
+    }
 }

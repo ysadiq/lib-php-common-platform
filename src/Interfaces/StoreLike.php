@@ -18,14 +18,36 @@
  */
 namespace DreamFactory\Platform\Interfaces;
 
-use Doctrine\Common\Cache\Cache;
-
 /**
  * StoreLike
- * An object that can hold stuff
+ * An object tha acts like a data store.
+ *
+ * Add-on to the Doctrine Cache {@see Doctring\Common\Cache\Cache} interface. Adds methods
+ * "get" and "set, plus the method missing from the Cache interface, "deleteAll".
  */
-interface StoreLike extends Cache
+interface StoreLike
 {
+    //*************************************************************************
+    //	Constants
+    //*************************************************************************
+
+    /**
+     * @type int Nada = forever
+     */
+    const TTL_FOREVER = 0;
+    /**
+     * @type int One minute
+     */
+    const TTL_MINUTE = 60;
+    /**
+     * @type int One hour
+     */
+    const TTL_HOUR = 3600;
+    /**
+     * @type int One day
+     */
+    const TTL_DAY = 86400;
+
     //*************************************************************************
     //	Methods
     //*************************************************************************
@@ -39,7 +61,7 @@ interface StoreLike extends Cache
      *
      * @return bool True if the value was successfully stored
      */
-    public function set( $key, $data, $ttl = null );
+    public function set( $key, $data, $ttl = self::TTL_FOREVER );
 
     /**
      * Gets an event from key "$key"
@@ -47,15 +69,17 @@ interface StoreLike extends Cache
      * @param string $key          The key to retrieve
      * @param mixed  $defaultValue The value to return if the $key is not found in the cache
      * @param bool   $remove       If true, remove the item after it has been retrieved
+     * @param int    $ttl          The number of seconds for the default value to live if $remove is FALSE.
+     *                             Defaults to 0, meaning forever.
      *
      * @return mixed The value stored under $key
      */
-    public function get( $key, $defaultValue = null, $remove = false );
+    public function get( $key, $defaultValue = null, $remove = false, $ttl = self::TTL_FOREVER );
 
     /**
      * Deletes all items from the store
      *
-     * @return mixed
+     * @return bool
      */
     public function deleteAll();
 }
