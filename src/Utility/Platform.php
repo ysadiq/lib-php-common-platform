@@ -19,15 +19,16 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use Doctrine\Common\Cache\CacheProvider;
 use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
-use DreamFactory\Platform\Interfaces\StoreLike;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Exceptions\FileSystemException;
+use Kisma\Core\Interfaces\StoreLike;
 use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
@@ -53,7 +54,7 @@ class Platform extends SeedUtility
     //*************************************************************************
 
     /**
-     * @var StoreLike The persistent store to use for local storage
+     * @var CacheProvider The persistent store to use for local storage
      */
     protected static $_persistentStore;
     /**
@@ -331,12 +332,13 @@ class Platform extends SeedUtility
      * @param mixed  $value
      * @param mixed  $defaultValue
      * @param bool   $remove
+     * @param int    $ttl The TTL for non-removed defaults
      *
      * @return mixed
      */
-    public static function storeGet( $key, $value = null, $defaultValue = null, $remove = false )
+    public static function storeGet( $key, $value = null, $defaultValue = null, $remove = false, $ttl = PlatformStore::DEFAULT_TTL )
     {
-        return static::getStore()->get( $key, $value, $defaultValue, $remove );
+        return static::getStore()->get( $key, $value, $defaultValue, $remove, $ttl );
     }
 
     /**
@@ -345,7 +347,7 @@ class Platform extends SeedUtility
      *
      * @param array $data An array of key value pairs with which to seed the store
      *
-     * @return StoreLike
+     * @return StoreLike|CacheProvider
      */
     public static function getStore( array $data = array() )
     {
@@ -367,7 +369,7 @@ class Platform extends SeedUtility
      *
      * @return boolean|boolean[] TRUE if the entry was successfully stored in the cache, FALSE otherwise.
      */
-    public static function storeSet( $key, $data, $ttl = 300 )
+    public static function storeSet( $key, $data, $ttl = PlatformStore::DEFAULT_TTL )
     {
         return static::getStore()->set( $key, $data, $ttl );
     }

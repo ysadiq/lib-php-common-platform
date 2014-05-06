@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
+use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
@@ -34,6 +35,7 @@ use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -80,20 +82,32 @@ class Config extends BaseSystemRestResource
     }
 
     /**
-     * @return array|bool
+     * @param bool $flushCache If true, any cached data will be removed
+     *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @return array|bool
      */
-    public static function getOpenRegistration()
+    public static function getOpenRegistration( $flushCache = false )
     {
-        if ( null !== ( $_values = Platform::getStore()->get( 'platform.config.open_registration' ) ) )
+        static $CACHE_KEY = 'config.open_registration';
+        static $COLUMNS = array( 'allow_open_registration', 'open_reg_role_id', 'open_reg_email_service_id', 'open_reg_email_template_id' );
+
+        if ( $flushCache )
+        {
+            if ( false === Platform::storeDelete( $CACHE_KEY ) )
+            {
+                Log::error( 'Unable to delete configuration cache key "' . $CACHE_KEY . '"' );
+                Platform::storeSet( $CACHE_KEY, null, static::CONFIG_CACHE_TTL );
+            }
+        }
+
+        if ( null !== ( $_values = Platform::storeGet( $CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) ) )
         {
             return $_values;
         }
 
         /** @var $_config \DreamFactory\Platform\Yii\Models\Config */
-        $_fields = 'allow_open_registration, open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id';
-
-        $_config = ResourceStore::model( 'config' )->find( array( 'select' => $_fields ) );
+        $_config = ResourceStore::model( 'config' )->find( array( 'select' => $COLUMNS ) );
 
         if ( null === $_config )
         {
@@ -102,12 +116,12 @@ class Config extends BaseSystemRestResource
 
         if ( !$_config->allow_open_registration )
         {
-            Platform::getStore()->set( 'platform.config.open_registration', null );
+            Platform::storeSet( $CACHE_KEY, null, PlatformStore::TTL_FOREVER );
 
             return false;
         }
 
-        Platform::getStore()->set( 'platform.config.open_registration', $_values = $_config->getAttributes( null ) );
+        Platform::storeSet( $CACHE_KEY, $_values = $_config->getAttributes( null ), static::CONFIG_CACHE_TTL );
 
         return $_values;
     }
@@ -177,9 +191,12 @@ class Config extends BaseSystemRestResource
      */
     protected function _postProcess()
     {
+        static $CACHE_KEY = 'platform.fabric_hosted';
+        static $VERSION_CACHE_KEY = 'platform.version_info';
+
         static $_fabricHosted, $_fabricPrivate;
 
-        $_fabricHosted = $_fabricHosted ? : Platform::getStore()->get( 'platform.fabric_hosted', Fabric::fabricHosted() );
+        $_fabricHosted = $_fabricHosted ? : Platform::storeGet( $CACHE_KEY, Fabric::fabricHosted(), static::CONFIG_CACHE_TTL );
         $_fabricPrivate = $_fabricPrivate ? : Fabric::hostedPrivatePlatform();
 
         //	Only return a single row, not in an array
@@ -191,7 +208,7 @@ class Config extends BaseSystemRestResource
         /**
          * Version and upgrade support
          */
-        if ( null === ( $_versionInfo = Platform::getStore()->get( 'platform.version_info' ) ) )
+        if ( null === ( $_versionInfo = Platform::storeGet( $VERSION_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) ) )
         {
             $_versionInfo = array(
                 'dsp_version'       => $_currentVersion = SystemManager::getCurrentVersion(),
@@ -199,7 +216,7 @@ class Config extends BaseSystemRestResource
                 'upgrade_available' => version_compare( $_currentVersion, $_latestVersion, '<' ),
             );
 
-            Platform::getStore()->set( 'platform.version_info', $_versionInfo );
+            Platform::storeSet( $VERSION_CACHE_KEY, $_versionInfo, static::CONFIG_CACHE_TTL );
         }
 
         $this->_response = array_merge( $this->_response, $_versionInfo );
@@ -260,20 +277,31 @@ class Config extends BaseSystemRestResource
     }
 
     /**
+     * @param bool $flushCache
+     *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return array|mixed
      */
-    protected function _getLookupKeys()
+    protected function _getLookupKeys( $flushCache = false )
     {
-        if ( null !== ( $_lookups = Platform::getStore()->get( 'platform.config.lookup_keys' ) ) )
+        static $CACHE_KEY = 'config.lookup_keys';
+        static $CACHE_TTL = 60;
+
+        if ( $flushCache )
+        {
+            Platform::storeDelete( $CACHE_KEY );
+        }
+
+        if ( null !== ( $_lookups = Platform::storeGet( $CACHE_KEY, null, false, $CACHE_TTL ) ) )
         {
             return $_lookups;
         }
 
+        $_lookups = array();
+
         /** @var LookupKey[] $_models */
         $_models = ResourceStore::model( 'lookup_key' )->findAll( 'user_id IS NULL AND role_id IS NULL' );
 
-        $_lookups = array();
         if ( !empty( $_models ) )
         {
             foreach ( $_models as $_row )
@@ -283,7 +311,7 @@ class Config extends BaseSystemRestResource
         }
 
         //  Keep these for 1 minute at the most
-        Platform::getStore()->set( 'platform.config.lookup_keys', $_lookups, static::CONFIG_CACHE_TTL );
+        Platform::storeSet( $CACHE_KEY, $_lookups, $CACHE_TTL );
 
         return $_lookups;
     }
@@ -296,7 +324,9 @@ class Config extends BaseSystemRestResource
      */
     protected function _getRemoteProviders()
     {
-        if ( null !== ( $_remoteProviders = Platform::getStore()->get( 'platform.config.remote_login_providers' ) ) )
+        static $CACHE_KEY = 'config.remote_login_providers';
+
+        if ( null !== ( $_remoteProviders = Platform::storeGet( $CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) ) )
         {
             return $_remoteProviders;
         }
@@ -370,7 +400,7 @@ class Config extends BaseSystemRestResource
             unset( $_models );
         }
 
-        Platform::getStore()->set( 'platform.config.remote_login_providers', $_remoteProviders, static::CONFIG_CACHE_TTL );
+        Platform::storeSet( $CACHE_KEY, $_remoteProviders, static::CONFIG_CACHE_TTL );
 
         return $_remoteProviders;
     }

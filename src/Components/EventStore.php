@@ -19,18 +19,17 @@
  */
 namespace DreamFactory\Platform\Components;
 
-use Doctrine\Common\Cache\CacheProvider;
-use Doctrine\Common\Cache\FilesystemCache;
-use DreamFactory\Platform\Interfaces\StoreLike;
-use DreamFactory\Platform\Utility\Platform;
-use Kisma\Core\Components\Flexistore;
+use DreamFactory\Platform\Events\EventDispatcher;
+use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Utility\Hasher;
+use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Log;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * A store for the platform event system
  */
-class EventStore extends Flexistore implements StoreLike
+class EventStore extends PlatformStore
 {
     //*************************************************************************
     //	Constants
@@ -48,14 +47,19 @@ class EventStore extends Flexistore implements StoreLike
      * @type string
      */
     const CACHE_EXTENSION = '.dfec';
-    /**
-     * @var CacheProvider
-     */
-    protected $_store = null;
+
+    //*************************************************************************
+    //	Members
+    //*************************************************************************
+
     /**
      * @var string
      */
     protected $_storeId = null;
+    /**
+     * @var EventDispatcher
+     */
+    protected $_dispatcher = null;
 
     //*************************************************************************
     //	Methods
@@ -64,20 +68,34 @@ class EventStore extends Flexistore implements StoreLike
     /**
      * Constructor.
      *
-     * @param string                                                      $storeId The ID to assign this store
      * @param \Symfony\Component\EventDispatcher\EventDispatcherInterface $dispatcher
      */
-    public function __construct( $storeId, EventDispatcherInterface $dispatcher )
+    public function __construct( EventDispatcherInterface $dispatcher )
     {
-        $this->_store = new FilesystemCache(
-            Platform::getPrivatePath( static::CACHE_PATH ), static::CACHE_EXTENSION
-        );
-
-        $this->_store->setNamespace( static::CACHE_NAMESPACE );
+        parent::__construct( CacheTypes::FILE_SYSTEM );
 
         //  Freshen up
-        $this->_storeId = $storeId ? : spl_object_hash( $dispatcher );
-        $this->flush( $dispatcher );
+        $this->_storeId = hash( 'sha256', Inflector::neutralize( get_class( $dispatcher ) ) );
+
+        if ( false === ( $_dispatcher = $this->fetch( $this->_storeId ) ) )
+        {
+            $this->_dispatcher = $dispatcher;
+        }
+        else
+        {
+            Log::debug( 'Event store id #' . $this->_storeId . ' retrieved from cache.' );
+        }
+
+        $this->setNamespace( static::CACHE_NAMESPACE );
+    }
+
+    /**
+     * Kill!
+     */
+    public function __destruct()
+    {
+        //  Save the dispatcher state
+        $this->set( $this->_storeId, $this->_dispatcher, static::DEFAULT_TTL );
     }
 
     /**
@@ -93,12 +111,10 @@ class EventStore extends Flexistore implements StoreLike
     }
 
     /**
-     * Deletes all items from the store
-     *
-     * @return bool
+     * @return EventDispatcher
      */
-    public function deleteAll()
+    public function getCachedData()
     {
-        return $this->_store->deleteAll();
+        return $this->_dispatcher;
     }
 }
