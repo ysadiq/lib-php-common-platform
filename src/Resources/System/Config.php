@@ -196,6 +196,7 @@ class Config extends BaseSystemRestResource
 
         static $_fabricHosted, $_fabricPrivate;
 
+        $_refresh = ( HttpMethod::GET != $this->_action );
         $_fabricHosted = $_fabricHosted ? : Platform::storeGet( $CACHE_KEY, Fabric::fabricHosted(), static::CONFIG_CACHE_TTL );
         $_fabricPrivate = $_fabricPrivate ? : Fabric::hostedPrivatePlatform();
 
@@ -208,7 +209,7 @@ class Config extends BaseSystemRestResource
         /**
          * Version and upgrade support
          */
-        if ( null === ( $_versionInfo = Platform::storeGet( $VERSION_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) ) )
+        if ( $_refresh || null === ( $_versionInfo = Platform::storeGet( $VERSION_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) ) )
         {
             $_versionInfo = array(
                 'dsp_version'       => $_currentVersion = SystemManager::getCurrentVersion(),
@@ -317,16 +318,17 @@ class Config extends BaseSystemRestResource
     }
 
     /**
+     * @param bool $refresh
+     *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-     * @throws \InvalidArgumentException
      * @throws \Exception
      * @return array|mixed
      */
-    protected function _getRemoteProviders()
+    protected function _getRemoteProviders( $refresh = false )
     {
         static $CACHE_KEY = 'config.remote_login_providers';
 
-        if ( null !== ( $_remoteProviders = Platform::storeGet( $CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) ) )
+        if ( !$refresh && null !== ( $_remoteProviders = Platform::storeGet( $CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) ) )
         {
             return $_remoteProviders;
         }
