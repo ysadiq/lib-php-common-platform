@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
-use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
@@ -116,7 +115,7 @@ class Config extends BaseSystemRestResource
 
         if ( !$_config->allow_open_registration )
         {
-            Platform::storeSet( $CACHE_KEY, null, PlatformStore::TTL_FOREVER );
+            Platform::storeSet( $CACHE_KEY, null, static::CONFIG_CACHE_TTL );
 
             return false;
         }
