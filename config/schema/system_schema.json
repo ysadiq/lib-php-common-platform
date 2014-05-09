@@ -1,5 +1,5 @@
 {
-	"version": "1.5.0",
+	"version": "1.5.10",
 	"scripts": {
 		"install": null,
 		"update":  "1.5.0-update.sql"
@@ -1545,6 +1545,89 @@
 					}
 				}
 			]
-		}
+		},
+        {
+            "name":  "df_sys_component",
+            "field": [
+                {
+                    "name": "id",
+                    "type": "id"
+                },
+                {
+                    "name":       "name",
+                    "type":       "string",
+                    "length":     128,
+                    "allow_null": false,
+                    "is_unique":  true
+                },
+                {
+                    "name":               "path",
+                    "type":               "string",
+                    "length":             128,
+                    "allow_null":         false,
+                    "is_unique":          true
+                },
+                {
+                    "name":               "provider",
+                    "type":               "string",
+                    "length":             128,
+                    "allow_null":         false
+                },
+                {
+                    "name":               "is_active",
+                    "type":               "boolean",
+                    "default":             false,
+                    "allow_null":         false
+                },
+                {
+                    "name":               "description",
+                    "type":               "mediumtext",
+                    "supports_multibyte": true,
+                    "allow_null":         true
+                },
+                {
+                    "name":               "version",
+                    "type":               "string",
+                    "length":             128,
+                    "allow_null":         false
+                },
+                {
+                    "name":       "created_date",
+                    "type":       "datetime",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name":       "created_by_id",
+                    "type":       "user_id_on_create",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name":       "last_modified_date",
+                    "type":       "timestamp_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                },
+                {
+                    "name":       "last_modified_by_id",
+                    "type":       "user_id_on_update",
+                    "validation": {
+                        "api_read_only": {
+                            "on_fail": "ignore_field"
+                        }
+                    }
+                }
+            ]
+        }
 	]
 }

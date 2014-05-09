@@ -25,6 +25,7 @@ use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\User\Session;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Log;
 
 /**
  * MongoDbSvc.php
@@ -206,6 +207,7 @@ class MongoDbSvc extends NoSqlDbSvc
             throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
         }
     }
+
 
     // Handle administrative options, table add, delete, etc
 
@@ -483,6 +485,10 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
     {
+
+        Log::debug($filter);
+
+
         $_coll = $this->selectTable( $table );
 
         $_fields = Option::get( $extras, 'fields' );
@@ -781,8 +787,11 @@ class MongoDbSvc extends NoSqlDbSvc
 
     protected static function buildCriteriaArray( $filter, $params = null, $ss_filters = null )
     {
+
+        $filter = json_decode($filter, true);
+
         // build filter array if necessary, add server-side filters if necessary
-        $_criteria = ( !is_array( $filter ) ) ? static::buildFilterArray( $filter, $params ) : $filter;
+        $_criteria = ( !is_array($filter) ) ? static::buildFilterArray( $filter, $params ) : $filter;
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
         if ( !empty( $_serverCriteria ) )
         {

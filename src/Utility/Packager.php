@@ -507,4 +507,312 @@ class Packager
 
 		return $returnData;
 	}
+
+    // MNM CHANGE
+    /**
+     * @param string $pkg_file
+     * @param string $import_url
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public static function importComponentFromPackage( $pkg_file, $import_url = '' )
+    {
+
+
+        // Create a new ZipArchive object
+        $_zip = new \ZipArchive();
+
+
+        // Can we open the zip
+        if ( true !== $_zip->open( $pkg_file ) )
+        {
+            // No.  Throw error. Exit
+            throw new InternalServerErrorException( 'Error opening zip file.' );
+        }
+
+
+        // Get description.json from zip file
+        $_data = $_zip->getFromName( 'description.json' );
+
+
+        // Is there data
+        if ( false === $_data )
+        {
+            // No. Throw error.  Exit.
+            throw new BadRequestException( 'No component description file in this package file.' );
+        }
+
+
+        // convert json to php array
+        $_record = DataFormat::jsonToArray( $_data );
+
+
+        // if we have an import url.
+        if ( !empty( $import_url ) && !isset( $_record['import_url'] ) )
+        {
+            // set it
+            $_record['import_url'] = $import_url;
+        }
+
+        // Get storage service
+        $_storageServiceId = Option::get( $_record, 'storage_service_id' );
+
+        // Get storage container
+        $_container = Option::get( $_record, 'storage_container' );
+
+        // Did we provide a storage service we want to use
+        if ( empty( $_storageServiceId ) )
+        {
+            // must be set or defaulted to local
+            $_model = Service::model()->find(
+                'type_id = :type',
+                array( ':type' => PlatformServiceTypes::LOCAL_FILE_STORAGE )
+            );
+
+            // Get the service Id
+            $_storageServiceId = ( $_model ) ? $_model->getPrimaryKey() : null;
+
+            // Store it in the $_record
+            $_record['storage_service_id'] = $_storageServiceId;
+
+            // Did we provide a container
+            if ( empty( $_container ) )
+            {
+                // no.  set container to components
+                $_container = 'components';
+
+                // Set container on $_record
+                $_record['storage_container'] = $_container;
+            }
+        }
+
+        // Store it in the db
+        try
+        {
+            ResourceStore::setResourceName( 'component' );
+            $returnData = ResourceStore::insertOne( $_record, 'id,name,path,provider,description,version' );
+        }
+        catch ( \Exception $ex )
+        {
+            throw new InternalServerErrorException( "Could not create the component.\n{$ex->getMessage()}" );
+        }
+
+
+        // $id = Option::get( $returnData, 'id' );
+        $_zip->deleteName( 'description.json' );
+
+
+
+//
+//        try
+//        {
+//            $_data = $_zip->getFromName( 'services.json' );
+//            if ( false !== $_data )
+//            {
+//                $_data = DataFormat::jsonToArray( $_data );
+//                try
+//                {
+//                    //set service 'service',
+//                    ResourceStore::setResourceName( 'service' );
+//                    $result = ResourceStore::insert( $_data );
+//                    if ( empty( $result ) )
+//                    {
+//                        // error nothing
+//                    }
+//                    // clear swagger cache upon any service changes.
+//                    SwaggerManager::clearCache();
+//                }
+//                catch ( \Exception $ex )
+//                {
+//                    throw new InternalServerErrorException( "Could not create the services.\n{$ex->getMessage()}" );
+//                }
+//                $_zip->deleteName( 'services.json' );
+//            }
+//            $_data = $_zip->getFromName( 'schema.json' );
+//            if ( false !== $_data )
+//            {
+//                $_data = DataFormat::jsonToArray( $_data );
+//                $services = Option::get( $_data, 'service' );
+//                if ( !empty( $services ) )
+//                {
+//                    foreach ( $services as $schemas )
+//                    {
+//                        $serviceName = Option::get( $schemas, 'api_name' );
+//                        $db = ServiceHandler::getServiceObject( $serviceName );
+//                        $tables = Option::get( $schemas, 'table' );
+//                        if ( !empty( $tables ) )
+//                        {
+//                            /** @var $db SchemaSvc */
+//                            $result = $db->createTables( $tables, true );
+//                            if ( isset( $result[0]['error'] ) )
+//                            {
+//                                $msg = $result[0]['error']['message'];
+//                                throw new InternalServerErrorException( "Could not create the database tables for this application.\n$msg" );
+//                            }
+//                        }
+//                    }
+//                }
+//                else
+//                {
+//                    // single or multiple tables for one service
+//                    $tables = Option::get( $_data, 'table' );
+//                    if ( !empty( $tables ) )
+//                    {
+//                        $serviceName = Option::get( $_data, 'api_name' );
+//                        if ( empty( $serviceName ) )
+//                        {
+//                            $serviceName = 'schema'; // for older packages
+//                        }
+//                        /** @var $db SchemaSvc */
+//                        $db = ServiceHandler::getServiceObject( $serviceName );
+//                        $result = $db->createTables( $tables, true );
+//                        if ( isset( $result[0]['error'] ) )
+//                        {
+//                            $msg = $result[0]['error']['message'];
+//                            throw new InternalServerErrorException( "Could not create the database tables for this application.\n$msg" );
+//                        }
+//                    }
+//                    else
+//                    {
+//                        // single table with no wrappers - try default schema service
+//                        $table = Option::get( $_data, 'name' );
+//                        if ( !empty( $table ) )
+//                        {
+//                            $serviceName = 'schema';
+//                            /** @var $db SchemaSvc */
+//                            $db = ServiceHandler::getServiceObject( $serviceName );
+//                            $result = $db->createTables( $_data, true );
+//                            if ( isset( $result['error'] ) )
+//                            {
+//                                $msg = $result['error']['message'];
+//                                throw new InternalServerErrorException( "Could not create the database tables for this application.\n$msg" );
+//                            }
+//                        }
+//                    }
+//                }
+//                $_zip->deleteName( 'schema.json' );
+//            }
+//
+//            $_data = $_zip->getFromName( 'data.json' );
+//            if ( false !== $_data )
+//            {
+//                $_data = DataFormat::jsonToArray( $_data );
+//                $services = Option::get( $_data, 'service' );
+//                if ( !empty( $services ) )
+//                {
+//                    foreach ( $services as $service )
+//                    {
+//                        $serviceName = Option::get( $service, 'api_name' );
+//
+//                        /** @var BaseDbSvc $db */
+//                        $db = ServiceHandler::getServiceObject( $serviceName );
+//                        $tables = Option::get( $_data, 'table' );
+//
+//                        foreach ( $tables as $table )
+//                        {
+//                            $tableName = Option::get( $table, 'name' );
+//                            $records = Option::get( $table, 'record' );
+//
+//                            $result = $db->createRecords( $tableName, $records );
+//
+//                            if ( isset( $result['record'][0]['error'] ) )
+//                            {
+//                                $msg = $result['record'][0]['error']['message'];
+//                                throw new InternalServerErrorException( "Could not insert the database entries for table '$tableName'' for this application.\n$msg" );
+//                            }
+//                        }
+//                    }
+//                }
+//                else
+//                {
+//                    // single or multiple tables for one service
+//                    $tables = Option::get( $_data, 'table' );
+//                    if ( !empty( $tables ) )
+//                    {
+//                        $serviceName = Option::get( $_data, 'api_name' );
+//                        if ( empty( $serviceName ) )
+//                        {
+//                            $serviceName = 'db'; // for older packages
+//                        }
+//                        $db = ServiceHandler::getServiceObject( $serviceName );
+//                        foreach ( $tables as $table )
+//                        {
+//                            $tableName = Option::get( $table, 'name' );
+//                            $records = Option::get( $table, 'record' );
+//                            /** @var $db BaseDbSvc */
+//                            $result = $db->createRecords( $tableName, $records );
+//                            if ( isset( $result['record'][0]['error'] ) )
+//                            {
+//                                $msg = $result['record'][0]['error']['message'];
+//                                throw new InternalServerErrorException( "Could not insert the database entries for table '$tableName'' for this application.\n$msg" );
+//                            }
+//                        }
+//                    }
+//                    else
+//                    {
+//                        // single table with no wrappers - try default database service
+//                        $tableName = Option::get( $_data, 'name' );
+//                        if ( !empty( $tableName ) )
+//                        {
+//                            $serviceName = 'db';
+//                            $db = ServiceHandler::getServiceObject( $serviceName );
+//                            $records = Option::get( $_data, 'record' );
+//                            /** @var $db BaseDbSvc */
+//                            $result = $db->createRecords( $tableName, $records );
+//                            if ( isset( $result['record'][0]['error'] ) )
+//                            {
+//                                $msg = $result['record'][0]['error']['message'];
+//                                throw new InternalServerErrorException( "Could not insert the database entries for table '$tableName'' for this application.\n$msg" );
+//                            }
+//                        }
+//                    }
+//                }
+//                $_zip->deleteName( 'data.json' );
+//            }
+//        }
+//        catch ( \Exception $ex )
+//        {
+//            // delete db record
+//            // todo anyone else using schema created?
+//            if ( !empty( $id ) )
+//            {
+//                ResourceStore::setResourceName( 'app' );
+//                ResourceStore::delete( array( 'id' => $id ) );
+//            }
+//
+//            throw $ex;
+//        }
+
+
+        // extract the rest of the zip file into storage
+        $_name = Option::get( $_record, 'name' );
+        $_provider = Option::get( $_record, 'provider');
+
+
+        /** @var $_service BaseFileSvc */
+        $_service = ServiceHandler::getServiceObjectById( $_storageServiceId );
+
+        // Did we find the storage service
+        if ( empty( $_service ) )
+        {
+            // no.  Throw error
+            throw new InternalServerErrorException( "Component record created, but failed to import files due to unknown storage service with id '$_storageServiceId'." );
+        }
+
+        // Is the container set?
+        if ( empty( $_container ) )
+        {
+            // no.
+            $_service->extractZipFile( $_name, '', $_zip, false, $_name . '/' );
+        }
+        else
+        {
+            $_service->extractZipFile( $_container, $_provider . '/', $_zip, false);
+        }
+
+
+
+        return $returnData;
+    }
 }

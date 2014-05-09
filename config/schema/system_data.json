@@ -98,5 +98,39 @@
 		{
 			"url": "https://raw.github.com/dreamfactorysoftware/app-calendar/master/calendar.dfpkg"
 		}
-	]
+	],
+    "df_sys_component":      [
+        {
+            "name":         "Dashboard",
+            "path":         "/dashboard",
+            "provider":     "dreamfactory",
+            "description":  "Application Dashboard Module",
+            "version":      "1.0.0",
+            "is_active":    true
+        },
+        {
+            "name":         "Installer",
+            "path":         "/installer",
+            "provider":     "dreamfactory",
+            "description":  "Module Installer Module",
+            "version":      "1.0.0",
+            "is_active":    true
+        },
+        {
+            "name":         "System Config",
+            "path":         "/system-config",
+            "provider":     "dreamfactory",
+            "description":  "DSP System Config Module",
+            "version":      "1.0.0",
+            "is_active":    true
+        },
+        {
+            "name":         "Console",
+            "path":         "/console",
+            "provider":     "dreamfactory",
+            "description":  "Application Console Module",
+            "version":      "1.0.0",
+            "is_active":    true
+        }
+    ]
 }

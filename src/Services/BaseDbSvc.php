@@ -32,6 +32,7 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Log;
 
 /**
  * BaseDbSvc
@@ -344,6 +345,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected function _handleGet()
     {
+
+
         $_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
 
         if ( empty( $this->_resourceId ) )
@@ -368,6 +371,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 else
                 {
                     $_filter = Option::get( $this->_requestData, 'filter', FilterInput::request( 'filter' ) );
+
                     if ( empty( $_filter ) && !empty( $this->_requestData ) )
                     {
                         // query by record map
