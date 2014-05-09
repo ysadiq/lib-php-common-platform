@@ -19,7 +19,7 @@
  */
 use DreamFactory\Platform\Services\SwaggerManager;
 
-$_commonResponses = SwaggerManager::getCommonResponses( array(400, 401, 500) );
+$_commonResponses = SwaggerManager::getCommonResponses( array( 400, 401, 500 ) );
 
 $_eventProperties = array_merge(
     array(
@@ -50,9 +50,9 @@ $_event = array(
                     'summary'          => 'getEvents() - Retrieve one or more events/listeners.',
                     'nickname'         => 'getEvents',
                     'type'             => 'EventsResponse',
-                    'event_name'       => array('{api_name}.events.list'),
-                    'consumes'         => array('application/json', 'application/xml', 'text/csv'),
-                    'produces'         => array('application/json', 'application/xml', 'text/csv'),
+                    'event_name'       => array( '{api_name}.events.list' ),
+                    'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
+                    'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                     'parameters'       => array(
                         array(
                             'name'          => 'all_events',
@@ -75,12 +75,12 @@ $_event = array(
                 ),
                 array(
                     'method'           => 'POST',
-                    'summary'          => 'createEvents() - Create one or more event listeners.',
+                    'summary'          => 'createEvents() - Register one or more event listeners.',
                     'nickname'         => 'createEvents',
                     'type'             => 'EventsResponse',
-                    'event_name'       => array('{api_name}.events.create'),
-                    'consumes'         => array('application/json', 'application/xml', 'text/csv'),
-                    'produces'         => array('application/json', 'application/xml', 'text/csv'),
+                    'event_name'       => array( '{api_name}.events.create' ),
+                    'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
+                    'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                     'parameters'       => array(
                         array(
                             'name'          => 'body',
@@ -102,9 +102,9 @@ $_event = array(
                     'summary'          => 'updateEvents() - Update one or more event listeners.',
                     'nickname'         => 'updateEvents',
                     'type'             => 'EventsResponse',
-                    'event_name'       => array('{api_name}.events.update'),
-                    'consumes'         => array('application/json', 'application/xml', 'text/csv'),
-                    'produces'         => array('application/json', 'application/xml', 'text/csv'),
+                    'event_name'       => array( '{api_name}.events.update' ),
+                    'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
+                    'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
                     'parameters'       => array(
                         array(
                             'name'          => 'body',
@@ -126,7 +126,7 @@ $_event = array(
                     'summary'          => 'deleteEvents() - Delete one or more event listeners.',
                     'nickname'         => 'deleteEvents',
                     'type'             => 'EventsResponse',
-                    'event_name'       => array('{api_name}.events.delete'),
+                    'event_name'       => array( '{api_name}.events.delete' ),
                     'parameters'       => array(
                         array(
                             'name'          => 'body',
@@ -155,43 +155,34 @@ $_event = array(
                     'summary'          => 'getEvent() - Retrieve one event.',
                     'nickname'         => 'getEvent',
                     'type'             => 'EventResponse',
-                    'event_name'       => array('{api_name}.event.read'),
+                    'event_name'       => array( '{api_name}.event.read' ),
                     'parameters'       => array(
                         array(
                             'name'          => 'id',
-                            'description'   => 'Identifier of the record to retrieve.',
+                            'description'   => 'The event ID',
                             'allowMultiple' => false,
                             'type'          => 'string',
                             'paramType'     => 'path',
                             'required'      => true,
                         ),
-                        array(
-                            'name'          => 'fields',
-                            'description'   => 'Comma-delimited list of field names to return.',
-                            'allowMultiple' => true,
-                            'type'          => 'string',
-                            'paramType'     => 'query',
-                            'required'      => false,
-                        ),
-                        array(
-                            'name'          => 'related',
-                            'description'   => 'Comma-delimited list of related records to return.',
-                            'allowMultiple' => true,
-                            'type'          => 'string',
-                            'paramType'     => 'query',
-                            'required'      => false,
-                        ),
                     ),
                     'responseMessages' => $_commonResponses,
-                    'notes'            => 'Use the \'fields\' and/or \'related\' parameter to limit properties that are returned. By default, all fields and no relations are returned.',
                 ),
                 array(
                     'method'           => 'PATCH',
                     'summary'          => 'updateEvent() - Update one event listeners.',
                     'nickname'         => 'updateEvent',
                     'type'             => 'EventResponse',
-                    'event_name'       => array('{api_name}.event.update'),
+                    'event_name'       => array( '{api_name}.event.update' ),
                     'parameters'       => array(
+                        array(
+                            'name'          => 'id',
+                            'description'   => 'The event ID',
+                            'allowMultiple' => false,
+                            'type'          => 'string',
+                            'paramType'     => 'path',
+                            'required'      => true,
+                        ),
                         array(
                             'name'          => 'body',
                             'description'   => 'Data containing name-value pairs of fields to update.',
@@ -202,17 +193,22 @@ $_event = array(
                         ),
                     ),
                     'responseMessages' => $_commonResponses,
-                    'notes'            =>
-                        'Post data should be an array of fields to update for a single record. <br>' .
-                        'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return more properties.',
                 ),
                 array(
                     'method'           => 'DELETE',
-                    'summary'          => 'deleteEvent() - Delete one event.',
+                    'summary'          => 'deleteEvent() - Delete one event listener.',
                     'nickname'         => 'deleteEvent',
                     'type'             => 'EventResponse',
-                    'event_name'       => array('{api_name}.event.delete'),
+                    'event_name'       => array( '{api_name}.event.delete' ),
                     'parameters'       => array(
+                        array(
+                            'name'          => 'id',
+                            'description'   => 'The event ID',
+                            'allowMultiple' => false,
+                            'type'          => 'string',
+                            'paramType'     => 'path',
+                            'required'      => true,
+                        ),
                         array(
                             'name'          => 'body',
                             'description'   => 'Data containing name-value pairs of fields to update.',
@@ -223,7 +219,6 @@ $_event = array(
                         ),
                     ),
                     'responseMessages' => $_commonResponses,
-                    'notes'            => 'By default, only the id is returned. Use the \'fields\' and/or \'related\' parameter to return deleted properties.',
                 ),
             ),
             'description' => 'Operations for individual event administration.',

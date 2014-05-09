@@ -196,7 +196,7 @@ class Event extends BaseSystemRestResource
             return $this->_getAllEvents( $this->_requestObject->get( 'as_cached', false ) );
         }
 
-        return Pii::app()->getDispatcher()->getListeners( $this->_resourceId );
+        return Platform::getDispatcher()->getListeners( $this->_resourceId );
     }
 
     /**
@@ -280,7 +280,7 @@ class Event extends BaseSystemRestResource
             }
         }
 
-        return array('record' => $_rebuild);
+        return array( 'record' => $_rebuild );
     }
 
     /**
@@ -295,13 +295,14 @@ class Event extends BaseSystemRestResource
      */
     protected function _handlePost()
     {
-        $_dispatcher = Pii::app()->getDispatcher();
         $_payload = $this->_determineRequestedResource( $_ids, $_records );
+        $_dispatcher = Platform::getDispatcher();
+
         $_response = array();
 
         if ( empty( $_records ) )
         {
-            $_records = array($_payload);
+            $_records = array( $_payload );
         }
 
         foreach ( $_records as $_record )
@@ -317,7 +318,7 @@ class Event extends BaseSystemRestResource
 
             if ( !is_array( $_listeners ) )
             {
-                $_listeners = array($_listeners);
+                $_listeners = array( $_listeners );
             }
 
             //  Add the listener
@@ -327,10 +328,10 @@ class Event extends BaseSystemRestResource
             }
 
             //  Add to response
-            $_response[] = array('event_name' => $_eventName, 'listeners' => $_dispatcher->getListeners( $_eventName ));
+            $_response[] = array( 'event_name' => $_eventName, 'listeners' => $_dispatcher->getListeners( $_eventName ) );
         }
 
-        return array('record' => $_response);
+        return array( 'record' => $_response );
     }
 
     /**
@@ -342,13 +343,13 @@ class Event extends BaseSystemRestResource
      */
     protected function _handleDelete()
     {
-        $_dispatcher = Pii::app()->getDispatcher();
+        $_dispatcher = Platform::getDispatcher();
         $_payload = $this->_determineRequestedResource( $_ids, $_records );
         $_response = array();
 
         if ( empty( $_records ) )
         {
-            $_records = array($_payload);
+            $_records = array( $_payload );
         }
 
         foreach ( $_records as $_record )
@@ -363,7 +364,7 @@ class Event extends BaseSystemRestResource
 
             if ( !is_array( $_listeners ) )
             {
-                $_listeners = array($_listeners);
+                $_listeners = array( $_listeners );
             }
 
             foreach ( $_listeners as $_listener )
@@ -372,10 +373,10 @@ class Event extends BaseSystemRestResource
             }
 
             //  Add to response
-            $_response[] = array('event_name' => $_eventName, 'listeners' => $_dispatcher->getListeners( $_eventName ));
+            $_response[] = array( 'event_name' => $_eventName, 'listeners' => $_dispatcher->getListeners( $_eventName ) );
         }
 
-        return array('record' => $_response);
+        return array( 'record' => $_response );
     }
 
     /**
