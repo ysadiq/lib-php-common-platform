@@ -19,16 +19,16 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use Doctrine\Common\Cache\CacheProvider;
 use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
-use DreamFactory\Platform\Interfaces\PersistentStoreLike;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Components\Flexistore;
 use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Exceptions\FileSystemException;
+use Kisma\Core\Interfaces\StoreLike;
 use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
@@ -54,7 +54,7 @@ class Platform extends SeedUtility
     //*************************************************************************
 
     /**
-     * @var PersistentStoreLike The persistent store to use for local storage
+     * @var CacheProvider The persistent store to use for local storage
      */
     protected static $_persistentStore;
 
@@ -324,7 +324,7 @@ class Platform extends SeedUtility
      *
      * @param array $data An array of key value pairs with which to seed the store
      *
-     * @return PlatformStore|Flexistore
+     * @return StoreLike|CacheProvider
      */
     public static function getStore( array $data = array() )
     {
@@ -337,32 +337,31 @@ class Platform extends SeedUtility
     }
 
     /**
-     * @param string $id
-     * @param mixed  $value
+     * @param string $key
      * @param mixed  $defaultValue
      * @param bool   $remove
+     * @param int    $ttl The TTL for non-removed defaults
      *
      * @return mixed
      */
-    public static function storeGet( $id, $value = null, $defaultValue = null, $remove = false )
+    public static function storeGet( $key, $defaultValue = null, $remove = false, $ttl = PlatformStore::DEFAULT_TTL )
     {
-        return static::getStore()->get( $id, $value, $defaultValue, $remove );
+        return static::getStore()->get( $key, $defaultValue, $remove, $ttl );
     }
 
     /**
      * Sets a value in the platform cache
-     * $id can be specified as an array of key-value pairs: array( 'alpha' => 'xyz', 'beta' => 'qrs', 'gamma' => 'lmo', ... )
+     * $key can be specified as an array of key-value pairs: array( 'alpha' => 'xyz', 'beta' => 'qrs', 'gamma' => 'lmo', ... )
      *
-     *
-     * @param string|array $id       The cache id or array of key-value pairs
+     * @param string|array $key  The cache id or array of key-value pairs
      * @param mixed        $data     The cache entry/data.
-     * @param int          $lifeTime The cache lifetime. Sets a specific lifetime for this cache entry. Defaults to 0, or "never expire"
+     * @param int          $ttl  The cache lifetime. Sets a specific lifetime for this cache entry. Defaults to 0, or "never expire"
      *
      * @return boolean|boolean[] TRUE if the entry was successfully stored in the cache, FALSE otherwise.
      */
-    public static function storeSet( $id, $data, $lifeTime = 300 )
+    public static function storeSet( $key, $data, $ttl = PlatformStore::DEFAULT_TTL )
     {
-        return static::getStore()->set( $id, $data, $lifeTime );
+        return static::getStore()->set( $key, $data, $ttl );
     }
 
     /**
@@ -382,8 +381,15 @@ class Platform extends SeedUtility
      */
     public static function storeDelete( $id )
     {
-        /** @noinspection PhpUndefinedMethodInspection */
         return static::getStore()->delete( $id );
+    }
+
+    /**
+     * @return bool
+     */
+    public static function storeDeleteAll()
+    {
+        return static::getStore()->deleteAll();
     }
 
     //*************************************************************************

@@ -781,8 +781,23 @@ class MongoDbSvc extends NoSqlDbSvc
 
     protected static function buildCriteriaArray( $filter, $params = null, $ss_filters = null )
     {
-        // build filter array if necessary, add server-side filters if necessary
-        $_criteria = ( !is_array( $filter ) ) ? static::buildFilterArray( $filter, $params ) : $filter;
+        // build filter array if necessary
+        $_criteria = $filter;
+        if ( !is_array( $filter ) )
+        {
+            $_test = json_decode( $filter, true );
+            if ( !is_null( $_test ) )
+            {
+                // original filter was a json string, use it as array
+                $_criteria = $_test;
+            }
+            else
+            {
+                $_criteria = static::buildFilterArray( $filter, $params );
+            }
+        }
+
+        // add server-side filters if necessary
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
         if ( !empty( $_serverCriteria ) )
         {
