@@ -26,6 +26,7 @@ use Kisma\Core\Utility\Option;
 
 /**
  * A simple store class that use's the Kisma store
+ * @method bool setNamespace( string $namespace )
  */
 class PlatformStore extends Flexistore
 {
@@ -45,6 +46,10 @@ class PlatformStore extends Flexistore
      * @type string The session key
      */
     const PERSISTENT_STORAGE_KEY = 'df.session_key';
+    /**
+     * @type int Platform store items only live for five minutes
+     */
+    const DEFAULT_TTL = 300;
 
     //*************************************************************************
     //	Methods
@@ -70,16 +75,24 @@ class PlatformStore extends Flexistore
         //  Load it up
         foreach ( $data as $_key => $_value )
         {
-            $this->_store->save( $_key, $_value );
+            $this->_store->save( $_key, $_value, static::DEFAULT_TTL );
         }
     }
 
     /**
+     * @param string $addendum Additional data to add to key
+     *
      * @return string
      */
-    public static function buildCacheKey()
+    public static function buildCacheKey( $addendum = null )
     {
-        $_key = PHP_SAPI . '.' . Option::server( 'REMOTE_ADDR', gethostname() ) . '.' . Option::server( 'HTTP_HOST', gethostname() );
+        $_key =
+            PHP_SAPI .
+            '.' .
+            Option::server( 'REMOTE_ADDR', gethostname() ) .
+            '.' .
+            Option::server( 'HTTP_HOST', gethostname() ) .
+            ( $addendum ? '.' . $addendum : null );
 
         return $_key;
     }

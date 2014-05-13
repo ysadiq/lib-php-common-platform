@@ -692,7 +692,14 @@ class MongoDbSvc extends NoSqlDbSvc
                     case '$in':
                     case '$nin':
                         // todo check for list of mongoIds
-                        return array( $_field => array( $_mongoOp => $_val ) );
+                        $_val = array_map( 'trim', explode( ',', trim( trim( $_val, '(,)' ), ',' ) ) );
+                        $_valArray = array();
+                        foreach ($_val as $_item)
+                        {
+                            $_valArray[] = static::_determineValue( $_item, $_field, $params );
+                        }
+
+                        return array( $_field => array( $_mongoOp => $_valArray ) );
 
                     case 'MongoRegex':
 //			WHERE name LIKE "%Joe%"	(array("name" => new MongoRegex("/Joe/")));
@@ -781,8 +788,23 @@ class MongoDbSvc extends NoSqlDbSvc
 
     protected static function buildCriteriaArray( $filter, $params = null, $ss_filters = null )
     {
-        // build filter array if necessary, add server-side filters if necessary
-        $_criteria = ( !is_array( $filter ) ) ? static::buildFilterArray( $filter, $params ) : $filter;
+        // build filter array if necessary
+        $_criteria = $filter;
+        if ( !is_array( $filter ) )
+        {
+            $_test = json_decode( $filter, true );
+            if ( !is_null( $_test ) )
+            {
+                // original filter was a json string, use it as array
+                $_criteria = $_test;
+            }
+            else
+            {
+                $_criteria = static::buildFilterArray( $filter, $params );
+            }
+        }
+
+        // add server-side filters if necessary
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
         if ( !empty( $_serverCriteria ) )
         {

@@ -72,9 +72,9 @@ $_base['apis'] = array(
                         'required'      => true,
                     ),
                 ),
+                'responseMessages' => $_commonResponses,
+                'notes'            => 'Post data should be a single table definition or an array of table definitions.',
             ),
-            'responseMessages' => $_commonResponses,
-            'notes'            => 'Post data should be a single table definition or an array of table definitions.',
         ),
     ),
     array(

@@ -315,7 +315,7 @@ class ResourceStore implements UtilityLike
 		//	Return a count of rows
 		if ( false !== static::$_includeCount )
 		{
-			$_response['meta']['count'] = $_count;
+			$_response['meta']['count'] = static::model()->count( $_criteria, $params );
 		}
 
 		return $_response;
