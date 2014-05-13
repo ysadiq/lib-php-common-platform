@@ -791,6 +791,18 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     }
 
     /**
+     * @param string $action
+     *
+     * @return BasePlatformRestService
+     */
+    public function overrideAction( $action )
+    {
+        $this->_action = trim( strtoupper( $action ) );
+
+        return $this;
+    }
+
+    /**
      * @return string
      */
     public function getAction()
