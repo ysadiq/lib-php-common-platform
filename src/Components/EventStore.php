@@ -73,20 +73,18 @@ class EventStore extends PlatformStore
     public function __construct( EventDispatcherInterface $dispatcher )
     {
         parent::__construct( CacheTypes::FILE_SYSTEM );
+        $this->setNamespace( static::CACHE_NAMESPACE );
 
         //  Freshen up
         $this->_storeId = hash( 'sha256', Inflector::neutralize( get_class( $dispatcher ) ) );
 
-        if ( false === ( $_dispatcher = $this->fetch( $this->_storeId ) ) )
-        {
-            $this->_dispatcher = $dispatcher;
-        }
-        else
+        if ( false !== ( $_dispatcher = $this->fetch( $this->_storeId ) ) )
         {
             Log::debug( 'Event store id #' . $this->_storeId . ' retrieved from cache.' );
         }
 
-        $this->setNamespace( static::CACHE_NAMESPACE );
+        //  Set our version...
+        $this->_dispatcher = $_dispatcher ? : $dispatcher;
     }
 
     /**
@@ -95,7 +93,7 @@ class EventStore extends PlatformStore
     public function __destruct()
     {
         //  Save the dispatcher state
-        $this->set( $this->_storeId, $this->_dispatcher, static::DEFAULT_TTL );
+        $this->setCachedData( $this->_dispatcher );
     }
 
     /**
@@ -108,6 +106,19 @@ class EventStore extends PlatformStore
     protected function _obscureKey( $id )
     {
         return hash( 'sha256', parent::_obscureKey( $id ) );
+    }
+
+    /**
+     * @param EventDispatcher $dispatcher
+     *
+     * @return $this
+     */
+    public function setCachedData( $dispatcher )
+    {
+        //  Save the dispatcher state
+        $this->set( $this->_storeId, $this->_dispatcher = $dispatcher, static::DEFAULT_TTL );
+
+        return $this;
     }
 
     /**

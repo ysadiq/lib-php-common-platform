@@ -21,35 +21,33 @@ use DreamFactory\Platform\Services\SwaggerManager;
 
 $_commonResponses = SwaggerManager::getCommonResponses( array( 400, 401, 500 ) );
 
-$_eventProperties = array_merge(
-    array(
-        'id'         => array(
-            'type'        => 'integer',
-            'format'      => 'int32',
-            'description' => 'Identifier of this event.',
-        ),
-        'event_name' => array(
-            'type'        => 'string',
-            'description' => 'The name of this event',
-        ),
-        'listeners'  => array(
-            'type'        => 'array',
-            'description' => 'An array of listeners attached to this event.',
-        ),
+$_eventProperties = array(
+    'event_name' => array(
+        'type'        => 'string',
+        'description' => 'The name of this event',
+        'required'    => true,
     ),
-    SwaggerManager::getCommonProperties()
+    'listeners'  => array(
+        'type'        => 'array',
+        'description' => 'An array of listeners attached to this event.',
+        'required'    => true,
+    ),
 );
 
+//*************************************************************************
+//	API/Operations
+//*************************************************************************
+
 $_event = array(
-    'apis'   => array(
+    'apis' => array(
         array(
             'path'        => '/{api_name}/event',
             'operations'  => array(
                 array(
                     'method'           => 'GET',
-                    'summary'          => 'getEvents() - Retrieve one or more events/listeners.',
+                    'summary'          => 'getEvents() - Retrieve events and registered listeners.',
                     'nickname'         => 'getEvents',
-                    'type'             => 'EventsResponse',
+                    'type'             => 'EventCacheResponse',
                     'event_name'       => array( '{api_name}.events.list' ),
                     'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
                     'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
@@ -75,8 +73,8 @@ $_event = array(
                 ),
                 array(
                     'method'           => 'POST',
-                    'summary'          => 'createEvents() - Register one or more event listeners.',
-                    'nickname'         => 'createEvents',
+                    'summary'          => 'registerEvents() - Register one or more event listeners.',
+                    'nickname'         => 'registerEvents',
                     'type'             => 'EventsResponse',
                     'event_name'       => array( '{api_name}.events.create' ),
                     'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
@@ -84,7 +82,7 @@ $_event = array(
                     'parameters'       => array(
                         array(
                             'name'          => 'body',
-                            'description'   => 'Data containing name-value pairs of records to create.',
+                            'description'   => 'Data containing event registration records to create.',
                             'allowMultiple' => false,
                             'type'          => 'EventsRequest',
                             'paramType'     => 'body',
@@ -92,45 +90,18 @@ $_event = array(
                         ),
                     ),
                     'responseMessages' => $_commonResponses,
-                    'notes'            =>
-                        'Post data should be a single record or an array of records (shown). ' .
-                        'By default, only the id property of the record affected is returned on success, ' .
-                        'use \'fields\' and \'related\' to return more info.',
-                ),
-                array(
-                    'method'           => 'PATCH',
-                    'summary'          => 'updateEvents() - Update one or more event listeners.',
-                    'nickname'         => 'updateEvents',
-                    'type'             => 'EventsResponse',
-                    'event_name'       => array( '{api_name}.events.update' ),
-                    'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
-                    'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
-                    'parameters'       => array(
-                        array(
-                            'name'          => 'body',
-                            'description'   => 'Data containing name-value pairs of records to update.',
-                            'allowMultiple' => false,
-                            'type'          => 'EventsRequest',
-                            'paramType'     => 'body',
-                            'required'      => true,
-                        ),
-                    ),
-                    'responseMessages' => $_commonResponses,
-                    'notes'            =>
-                        'Post data should be a single record or an array of records (shown). ' .
-                        'By default, only the id property of the record is returned on success, ' .
-                        'use \'fields\' and \'related\' to return more info.',
+                    'notes'            => 'Post data should be a single record or an array of records. No data is returned from this call. You will get a 201 (created) upon success.',
                 ),
                 array(
                     'method'           => 'DELETE',
-                    'summary'          => 'deleteEvents() - Delete one or more event listeners.',
-                    'nickname'         => 'deleteEvents',
+                    'summary'          => 'unregisterEvents() - Delete one or more event listeners.',
+                    'nickname'         => 'unregisterEvents',
                     'type'             => 'EventsResponse',
                     'event_name'       => array( '{api_name}.events.delete' ),
                     'parameters'       => array(
                         array(
                             'name'          => 'body',
-                            'description'   => 'Data containing name-value pairs of records to create.',
+                            'description'   => 'Data containing event registration records to delete.',
                             'allowMultiple' => false,
                             'type'          => 'EventsRequest',
                             'paramType'     => 'body',
@@ -138,17 +109,13 @@ $_event = array(
                         ),
                     ),
                     'responseMessages' => $_commonResponses,
-                    'notes'            =>
-                        'By default, only the id property of the record deleted is returned on success. ' .
-                        'Use \'fields\' and \'related\' to return more properties of the deleted records. <br>' .
-                        'Alternatively, to delete by record or a large list of ids, ' .
-                        'use the POST request with X-HTTP-METHOD = DELETE header and post records or ids.',
+                    'notes'            => 'Post data should be a single record or an array of records. No data is returned from this call. You will get a 200 (OK) upon success.',
                 ),
             ),
             'description' => 'Operations for event administration.',
         ),
         array(
-            'path'        => '/{api_name}/event/{id}',
+            'path'        => '/{api_name}/event/{event_name}',
             'operations'  => array(
                 array(
                     'method'           => 'GET',
@@ -158,8 +125,8 @@ $_event = array(
                     'event_name'       => array( '{api_name}.event.read' ),
                     'parameters'       => array(
                         array(
-                            'name'          => 'id',
-                            'description'   => 'The event ID',
+                            'name'          => 'event_name',
+                            'description'   => 'Identifier of the record to retrieve.',
                             'allowMultiple' => false,
                             'type'          => 'string',
                             'paramType'     => 'path',
@@ -169,8 +136,29 @@ $_event = array(
                     'responseMessages' => $_commonResponses,
                 ),
                 array(
+                    'method'           => 'POST',
+                    'summary'          => 'registerEvent() - Register one event listeners.',
+                    'nickname'         => 'registerEvent',
+                    'type'             => 'EventResponse',
+                    'event_name'       => array( '{api_name}.event.create' ),
+                    'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
+                    'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
+                    'parameters'       => array(
+                        array(
+                            'name'          => 'body',
+                            'description'   => 'Data containing event registration record to create.',
+                            'allowMultiple' => false,
+                            'type'          => 'EventRequest',
+                            'paramType'     => 'body',
+                            'required'      => true,
+                        ),
+                    ),
+                    'responseMessages' => $_commonResponses,
+                    'notes'            => 'Post data must be a single record. No data is returned from this call. You will get a 201 (created) upon success.',
+                ),
+                array(
                     'method'           => 'PATCH',
-                    'summary'          => 'updateEvent() - Update one event listeners.',
+                    'summary'          => 'updateEvent() - Update one listener(s) for a single event.',
                     'nickname'         => 'updateEvent',
                     'type'             => 'EventResponse',
                     'event_name'       => array( '{api_name}.event.update' ),
@@ -185,7 +173,7 @@ $_event = array(
                         ),
                         array(
                             'name'          => 'body',
-                            'description'   => 'Data containing name-value pairs of fields to update.',
+                            'description'   => 'Data containing event registration record to update.',
                             'allowMultiple' => false,
                             'type'          => 'EventRequest',
                             'paramType'     => 'body',
@@ -193,11 +181,12 @@ $_event = array(
                         ),
                     ),
                     'responseMessages' => $_commonResponses,
+                    'notes'            => 'Post data must be a single record. No data is returned from this call. You will get a 200 (OK) upon success.',
                 ),
                 array(
                     'method'           => 'DELETE',
-                    'summary'          => 'deleteEvent() - Delete one event listener.',
-                    'nickname'         => 'deleteEvent',
+                    'summary'          => 'unregisterEvent() - Delete one event.',
+                    'nickname'         => 'unregisterEvent',
                     'type'             => 'EventResponse',
                     'event_name'       => array( '{api_name}.event.delete' ),
                     'parameters'       => array(
@@ -211,7 +200,7 @@ $_event = array(
                         ),
                         array(
                             'name'          => 'body',
-                            'description'   => 'Data containing name-value pairs of fields to update.',
+                            'description'   => 'Data containing event registration record to delete.',
                             'allowMultiple' => false,
                             'type'          => 'EventRequest',
                             'paramType'     => 'body',
@@ -219,45 +208,115 @@ $_event = array(
                         ),
                     ),
                     'responseMessages' => $_commonResponses,
+                    'notes'            => 'Post data must be a single record. No data is returned from this call. You will get a 200 (OK) upon success.',
                 ),
             ),
             'description' => 'Operations for individual event administration.',
         ),
     ),
-    'models' => array(
-        'EventRequest'   => array(
-            'id'         => 'EventRequest',
-            'properties' => $_eventProperties,
+);
+
+//*************************************************************************
+//	Models
+//*************************************************************************
+
+$_event['models'] = array(
+    'EventVerbs'         => array(
+        'id'         => 'EventVerbs',
+        'properties' => array(
+            'type'      => array(
+                'type'        => 'string',
+                'description' => 'The verb for this path',
+                'required'    => true,
+            ),
+            'event'     => array(
+                'type'        => 'array',
+                'description' => 'An array of event names triggered by this path/verb combo',
+                'required'    => true,
+            ),
+            'scripts'   => array(
+                'type'        => 'array',
+                'description' => 'An array of scripts registered to this event',
+                'required'    => true,
+            ),
+            'listeners' => array(
+                'type'        => 'array',
+                'description' => 'An array of listeners registered to this event',
+                'required'    => true,
+            ),
         ),
-        'EventsRequest'  => array(
-            'id'         => 'EventsRequest',
-            'properties' => array(
-                'record' => array(
-                    'type'        => 'array',
-                    'description' => 'Array of system event records.',
-                    'items'       => array(
-                        '$ref' => 'EventRequest',
-                    ),
+    ),
+    'EventPaths'         => array(
+        'id'         => 'EventPaths',
+        'properties' => array(
+            'path'  => array(
+                'type'        => 'string',
+                'description' => 'The full path to which triggers this event',
+                'required'    => true,
+            ),
+            'verbs' => array(
+                'type'        => 'array',
+                'description' => 'An array of path/verb combinations which contain events',
+                'required'    => true,
+                'items'       => array(
+                    '$ref' => 'EventVerbs',
                 ),
             ),
         ),
-        'EventResponse'  => array(
-            'id'         => 'EventResponse',
-            'properties' => $_eventProperties,
-        ),
-        'EventsResponse' => array(
-            'id'         => 'EventsResponse',
-            'properties' => array(
-                'record' => array(
-                    'type'        => 'array',
-                    'description' => 'Array of event records.',
-                    'items'       => array(
-                        '$ref' => 'EventResponse',
-                    ),
+    ),
+    //  Event Cache Response
+    'EventCacheResponse' => array(
+        'id'         => 'EventCacheResponse',
+        'properties' => array(
+            'name'  => array(
+                'type'        => 'string',
+                'description' => 'The owner API of this event',
+                'required'    => true,
+            ),
+            'paths' => array(
+                'type'        => 'array',
+                'description' => 'An array of paths which trigger this event',
+                'items'       => array(
+                    '$ref' => 'EventPaths',
                 ),
-                'meta'   => array(
-                    'type'        => 'Metadata',
-                    'description' => 'Array of metadata returned for GET requests.',
+                'required'    => true,
+            ),
+        ),
+    ),
+    //  Single event
+    'EventRequest'       => array(
+        'id'         => 'EventRequest',
+        'properties' => $_eventProperties,
+    ),
+    //  Multiple events
+    'EventsRequest'      => array(
+        'id'         => 'EventsRequest',
+        'properties' => array(
+            'record' => array(
+                'type'        => 'array',
+                'description' => 'Array of system event records.',
+                'required'    => true,
+                'items'       => array(
+                    '$ref' => 'EventRequest',
+                ),
+            ),
+        ),
+    ),
+    //  Single event response
+    'EventResponse'      => array(
+        'id'         => 'EventResponse',
+        'properties' => $_eventProperties,
+    ),
+    //  Multiple events response
+    'EventsResponse'     => array(
+        'id'         => 'EventsResponse',
+        'properties' => array(
+            'record' => array(
+                'type'        => 'array',
+                'description' => 'Array of event records.',
+                'required'    => true,
+                'items'       => array(
+                    '$ref' => 'EventResponse',
                 ),
             ),
         ),
