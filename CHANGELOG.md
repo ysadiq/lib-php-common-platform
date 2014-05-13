@@ -1,5 +1,13 @@
 # DreamFactory Services Platform&trade; Change Log
 
+## v1.5.12 (Release 2014-05-09)
+### Fixes
+* System Config caching issue
+* MongoDB support for MongoDB style filters in url filter parameter, and fix IN support
+* Importing data records from app package
+* User display name on registration
+* Parameter include_count usage on system object queries has been corrected to be total count
+
 ## v1.5.11 (Release 2014-04-30)
 ### New!
 * New DSP-level persistent storage mechanism interfaces with redis, xcache, memcache(d), etc.
