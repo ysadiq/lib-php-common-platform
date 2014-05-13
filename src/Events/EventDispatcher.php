@@ -161,6 +161,15 @@ class EventDispatcher implements EventDispatcherInterface
 
         //  Listen for swagger cache rebuilds...
         $this->addListener( SwaggerEvents::CACHE_REBUILT, array( $this, '_checkMappedScripts' ) );
+
+        //  Now save what we got
+        $this->getEventStore( $this )->setCachedData( $this );
+    }
+
+    //  Save off our stuff
+    public function __destruct()
+    {
+        static::getEventStore( $this )->setCachedData( $this );
     }
 
     /**
@@ -584,7 +593,7 @@ class EventDispatcher implements EventDispatcherInterface
             '_info'   => array_merge(
                 array(
                     'id'        => $_id,
-                    'timestamp' => date( 'c', $_start = Option::server( 'REQUEST_TIME_FLOAT', Option::server( 'REQUEST_TIME', microtime( true ) ) ) ),
+                    'timestamp' => date( 'c', $_start = $_SERVER['REQUEST_TIME'] ),
                     'elapsed'   => (float)number_format( microtime( true ) - $_start, 4 ),
                     'verb'      => $_ro->getMethod(),
                     'uri'       => $_ro->server->get( 'request-uri' ),
@@ -671,11 +680,13 @@ class EventDispatcher implements EventDispatcherInterface
             $this->_listeners[ $eventName ] = array();
         }
 
-        foreach ( $this->_listeners[ $eventName ] as $priority => $listeners )
+        foreach ( $this->_listeners[ $eventName ] as $_priority => $_listeners )
         {
-            if ( false !== ( $_key = array_search( $listener, $listeners, true ) ) )
+            if ( false !== ( $_key = array_search( $listener, $_listeners, true ) ) )
             {
-                $this->_listeners[ $eventName ][ $priority ][ $_key ] = $listener;
+                Log::debug( 'Replacing listener for event "' . $eventName . '"' );
+
+                $this->_listeners[ $eventName ][ $_priority ][ $_key ] = $listener;
                 unset( $this->_sorted[ $eventName ] );
 
                 return;
@@ -684,6 +695,8 @@ class EventDispatcher implements EventDispatcherInterface
 
         $this->_listeners[ $eventName ][ $priority ][] = $listener;
         unset( $this->_sorted[ $eventName ] );
+
+        $this->getEventStore( $this )->setCachedData( $this );
     }
 
     /**
@@ -705,6 +718,8 @@ class EventDispatcher implements EventDispatcherInterface
                 $this->removeListener( $_eventName, array( $subscriber, is_string( $_params ) ? $_params : $_params[0] ) );
             }
         }
+
+        $this->getEventStore( $this )->setCachedData( $this );
     }
 
     /**
@@ -717,13 +732,15 @@ class EventDispatcher implements EventDispatcherInterface
             return;
         }
 
-        foreach ( $this->_listeners[ $eventName ] as $priority => $listeners )
+        foreach ( $this->_listeners[ $eventName ] as $_priority => $_listeners )
         {
-            if ( false !== ( $key = array_search( $listener, $listeners, true ) ) )
+            if ( false !== ( $key = array_search( $listener, $_listeners, true ) ) )
             {
-                unset( $this->_listeners[ $eventName ][ $priority ][ $key ], $this->_sorted[ $eventName ] );
+                unset( $this->_listeners[ $eventName ][ $_priority ][ $key ], $this->_sorted[ $eventName ] );
             }
         }
+
+        $this->getEventStore( $this )->setCachedData( $this );
     }
 
     /**
