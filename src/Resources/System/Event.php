@@ -31,6 +31,7 @@ use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Exceptions\StorageException;
+use Kisma\Core\Interfaces\HttpResponse;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -177,26 +178,26 @@ class Event extends BaseSystemRestResource
     /**
      * Default GET implementation
      *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return bool
      */
     protected function _handleGet()
     {
-        if ( empty( $this->_resourceId ) && Pii::requestObject()->get( 'all_events' ) )
-        {
-            return $this->_getAllEvents( Pii::requestObject()->get( 'as_cached', false ) );
-        }
-
-        return parent::_handleGet();
+        return $this->_getAllEvents(
+            'true' == Pii::requestObject()->get( 'all_events', 'false' ),
+            'true' == Pii::requestObject()->get( 'as_cached', 'false' )
+        );
     }
 
     /**
      * Retrieves the event cache file detailing all registered events
      *
-     * @param bool $as_cached If true, the event cache will be returned as stored on disk. Otherwise in a more consumable format for clients.
+     * @param bool $all_events If true, all events are returned, otherwise just events with scripts/listeners
+     * @param bool $as_cached  If true, the event cache will be returned as stored on disk. Otherwise in a more consumable format for clients.
      *
      * @return array
      */
-    protected function _getAllEvents( $as_cached = false )
+    protected function _getAllEvents( $all_events = false, $as_cached = false )
     {
         //  Make sure the file exists.
         $_cacheFile = Platform::getSwaggerPath( SwaggerManager::SWAGGER_CACHE_DIR . SwaggerManager::SWAGGER_EVENT_CACHE_FILE, true, true );
@@ -254,18 +255,35 @@ class Event extends BaseSystemRestResource
 
                     foreach ( $_verbs as $_verb => $_event )
                     {
+                        $_scripts = Option::get( $_event, 'scripts', array() );
+                        $_listeners = Option::get( $_event, 'listeners', array() );
+
+                        if ( !$all_events && empty( $_scripts ) && empty( $_listeners ) )
+                        {
+                            continue;
+                        }
+
                         $_path['verbs'][] = array(
-                            'type'    => $_verb,
-                            'event'   => Option::get( $_event, 'event' ),
-                            'scripts' => Option::get( $_event, 'scripts', array() ),
+                            'type'      => $_verb,
+                            'event'     => Option::get( $_event, 'event' ),
+                            'scripts'   => $_scripts,
+                            'listeners' => $_listeners,
                         );
                     }
 
-                    $_service['paths'][] = $_path;
+                    if ( !empty( $_path['verbs'] ) )
+                    {
+                        $_service['paths'][] = $_path;
+                    }
+
                     unset( $_path );
                 }
 
-                $_rebuild[] = $_service;
+                if ( !empty( $_service['paths'] ) )
+                {
+                    $_rebuild[] = $_service;
+                }
+
                 unset( $_service );
             }
         }
@@ -284,62 +302,31 @@ class Event extends BaseSystemRestResource
      */
     protected function _handlePost()
     {
-        parent::_handlePost();
+        $_payload = $this->_determineRequestedResource( $_ids, $_records );
 
-        $_request = Pii::app()->getRequestObject();
-
-        $_body = @json_decode( $_request->getContent(), true );
-        $_eventName = $_listeners = $_apiKey = $_priority = null;
-
-        if ( !empty( $_body ) && JSON_ERROR_NONE == json_last_error() )
+        if ( empty( $_records ) )
         {
-            $_eventName = Option::get( $_body, 'event_name' );
-            $_listeners = Option::get( $_body, 'listeners' );
-//            $_apiKey = Option::get( $_body, 'api_key', 'unknown' );
-            $_priority = Option::get( $_body, 'priority', 0 );
+            $_records = $_payload;
         }
 
-        if ( empty( $_eventName ) || ( !is_array( $_listeners ) || empty( $_listeners ) ) )
+        foreach ( $_records as $_record )
         {
-            throw new BadRequestException( 'You must specify an "event_name", "listeners", and an "api_key" in your POST.' );
-        }
+            $_eventName = Option::get( $_record, 'event_name' );
+            $_listeners = Option::get( $_record, 'listeners', array() );
+            $_priority = Option::get( $_record, 'priority', 0 );
 
-        /** @var \DreamFactory\Platform\Yii\Models\Event $_model */
-        $_model = ResourceStore::model( 'event' )->find(
-            array(
-                'condition' => 'event_name = :event_name',
-                'params'    => array(
-                    ':event_name' => $_eventName
-                )
-            )
-        );
-
-        if ( null === $_model )
-        {
-            $_model = ResourceStore::model( 'event' );
-            $_model->setIsNewRecord( true );
-            $_model->event_name = $_eventName;
-        }
-
-        //	Merge listeners
-        $_model->listeners = array_merge( $_model->listeners, $_listeners );
-
-        try
-        {
-            if ( !$_model->save() )
+            if ( empty( $_eventName ) || empty( $_listeners ) )
             {
-                throw new StorageException( $_model->getErrorsForLogging() );
+                throw new BadRequestException( 'You must specify an "event_name" and "listeners" in your POST.' );
+            }
+
+            foreach ( Option::clean( $_listeners ) as $_listener )
+            {
+                Platform::on( $_eventName, $_listener, $_priority );
             }
         }
-        catch ( \Exception $_ex )
-        {
-            //	Log error
-            throw new InternalServerErrorException( $_ex->getMessage() );
-        }
 
-        Pii::app()->on( $_eventName, $_listeners, $_priority );
-
-        return array( 'record' => $_model->getAttributes() );
+        $this->setResponseCode( HttpResponse::Created );
     }
 
     /**

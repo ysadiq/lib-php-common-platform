@@ -238,7 +238,7 @@ class RestResponse extends HttpResponse
         }
 
         //	Some REST services may handle the response, they just return null
-        if ( is_null( $result ) )
+        if ( is_null( $result ) && headers_sent() )
         {
             Pii::end();
 
@@ -255,7 +255,7 @@ class RestResponse extends HttpResponse
                 {
                     $result = DataFormat::arrayToJson( $result );
                 }
-             
+
                 // JSON if no callback
                 if ( isset( $_GET['callback'] ) )
                 {
@@ -341,8 +341,8 @@ class RestResponse extends HttpResponse
             foreach ( $_sentHeaders as $_index => $_header )
             {
                 $_parts = explode( ': ', $_header, 1 );
-                unset( $_sentHeaders[$_index] );
-                $_sentHeaders[$_parts[0]] = Option::get( $_parts, 1, '' );
+                unset( $_sentHeaders[ $_index ] );
+                $_sentHeaders[ $_parts[0] ] = Option::get( $_parts, 1, '' );
             }
         }
 

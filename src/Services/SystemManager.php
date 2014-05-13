@@ -648,7 +648,7 @@ SQL;
 //        {
 //            \Kisma::set( CoreSettings::AUTO_LOADER, $_loader );
 //        }
-        
+
         // clear out swagger cache
         SwaggerManager::clearCache();
     }
@@ -943,6 +943,7 @@ SQL;
 
         //	Let the resource handle it...
         $_resource = ResourceStore::resource( $_resource, $this->_resourceArray );
+        $_resource->setService( $this );
 
         return $_resource->processRequest( $this->_resourcePath, $this->_action );
     }

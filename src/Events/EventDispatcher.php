@@ -19,7 +19,10 @@
  */
 namespace DreamFactory\Platform\Events;
 
+use DreamFactory\Events\Interfaces\EventObserverLike;
+use DreamFactory\Platform\Components\EventStore;
 use DreamFactory\Platform\Components\PlatformStore;
+use DreamFactory\Platform\Events\Enums\SwaggerEvents;
 use DreamFactory\Platform\Resources\System\Script;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\SwaggerManager;
@@ -27,6 +30,8 @@ use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Guzzle\Http\Client;
 use Guzzle\Http\Exception\MultiTransferException;
+use Kisma\Core\Enums\GlobFlags;
+use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\Event;
@@ -49,24 +54,24 @@ class EventDispatcher implements EventDispatcherInterface
     /**
      * @type string The name of the subdirectory under private in which to save the store
      */
-    const DEFAULT_FILE_CACHE_PATH = '/store.cache';
+    const DEFAULT_FILE_CACHE_PATH = PlatformStore::STORE_CACHE_PATH;
     /**
      * @type string The default namespace for our store
      */
     const DEFAULT_STORE_NAMESPACE = 'platform.events';
-    /**
-     * @typ string
-     */
-    const STORE_LISTENERS_KEY = 'platform.events.listeners';
-    /**
-     * @typ string
-     */
-    const STORE_SCRIPTS_KEY = 'platform.events.scripts';
 
     //*************************************************************************
     //	Members
     //*************************************************************************
 
+    /**
+     * @var array The cached portions of this object
+     */
+    protected static $_cachedData = array( 'listeners', 'scripts', 'observers' );
+    /**
+     * @var EventObserverLike[]|array
+     */
+    protected static $_observers = array();
     /**
      * @var bool Will log dispatched events if true
      */
@@ -88,9 +93,21 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected static $_enableEventScripts = true;
     /**
+     * @var bool Enable/disable event observation
+     */
+    protected static $_enableEventObservers = true;
+    /**
      * @var Client
      */
     protected static $_client = null;
+    /**
+     * @var EventStore
+     */
+    protected static $_store = null;
+    /**
+     * @var string
+     */
+    protected static $_storeId = null;
     /**
      * @var BasePlatformRestService
      */
@@ -100,17 +117,13 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected $_listeners = array();
     /**
-     * @var array
+     * @var array[]
      */
     protected $_scripts = array();
     /**
      * @var array
      */
     protected $_sorted = array();
-    /**
-     * @var \Kisma\Core\Components\Flexistore
-     */
-    protected static $_store = null;
 
     //*************************************************************************
     //	Methods
@@ -127,37 +140,35 @@ class EventDispatcher implements EventDispatcherInterface
         static::$_enableRestEvents = Pii::getParam( 'dsp.enable_rest_events', static::$_enableRestEvents );
         static::$_enablePlatformEvents = Pii::getParam( 'dsp.enable_rest_events', static::$_enablePlatformEvents );
         static::$_enableEventScripts = Pii::getParam( 'dsp.enable_event_scripts', static::$_enableEventScripts );
+        static::$_enableEventObservers = Pii::getParam( 'dsp.enable_event_observers', static::$_enableEventObservers );
 
         try
         {
-            $this->_initializeEvents();
+            //  Initialize the cache and load any cached data
+            /** @var EventDispatcherInterface $_dispatcher */
+            if ( null !== ( $_dispatcher = static::getEventStore( $this )->getCachedData() ) )
+            {
+                $this->_mergeCachedData( $_dispatcher );
+            }
+
+            $this->_initializeEventObservation();
             $this->_initializeEventScripting();
         }
         catch ( \Exception $_ex )
         {
             Log::notice( 'Event system unavailable at this time.' );
         }
+
+        //  Listen for swagger cache rebuilds...
+        $this->addListener( SwaggerEvents::CACHE_REBUILT, array( $this, '_checkMappedScripts' ) );
     }
 
     /**
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @return bool
      */
-    protected function _initializeEvents()
+    protected function _initializeEventObservation()
     {
-        if ( !static::$_enablePlatformEvents && !static::$_enableRestEvents )
-        {
-            Log::info( 'Events disabled.' );
-
-            return false;
-        }
-
-        //  Load any stored listeners
-        $this->_listeners = Platform::storeGet( static::STORE_LISTENERS_KEY, array() );
-
-        if ( !empty( $this->_listeners ) && static::$_logAllEvents )
-        {
-            Log::debug( 'Registered ' . count( $this->_listeners ) . ' cached listeners.' );
-        }
+        //@todo decide what needs to happen here
     }
 
     /**
@@ -165,56 +176,58 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected function _initializeEventScripting()
     {
+        static $CACHE_KEY = 'platform.scripts_last_check';
+        /**
+         * @var int Make sure we check for new scripts at least once per minute
+         */
+        static $CACHE_TTL = 60;
+
         if ( !static::$_enableEventScripts )
         {
-            Log::info( 'Event scripting disabled.' );
-
+            //  Scripting is disabled
             return false;
         }
 
-        $this->_scripts = Platform::storeGet( static::STORE_SCRIPTS_KEY, array() );
+        $_lastCheck = Platform::storeGet( $CACHE_KEY, $_timestamp = time(), false, $CACHE_TTL );
 
-//        if ( empty( $this->_scripts ) )
+        if ( $_timestamp - $_lastCheck == 0 || empty( $this->_scripts ) )
         {
-            $_scriptPath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
-
-            foreach ( SwaggerManager::getEventMap() as $_routes )
-            {
-                foreach ( $_routes as $_routeInfo )
-                {
-                    foreach ( $_routeInfo as $_methodInfo )
-                    {
-                        foreach ( Option::get( $_methodInfo, 'scripts', array() ) as $_script )
-                        {
-                            $_eventKey = str_replace( '.js', null, $_script );
-                            $this->_scripts[ $_eventKey ] = $_scriptPath . '/' . $_script;
-                        }
-                    }
-                }
-            }
-
-            //  Cache for 30 seconds. New scripts will have to wait.
-            Platform::storeSet( static::STORE_SCRIPTS_KEY, $this->_scripts, 30 );
+            $this->_checkMappedScripts();
         }
 
         return true;
     }
 
     /**
-     * Destruction
+     * @return boolean
      */
-    public function __destruct()
+    public static function getLogEvents()
     {
-        //  Save off listeners and scripts
-        if ( static::$_enableRestEvents || static::$_enablePlatformEvents )
-        {
-            Platform::storeSet( static::STORE_LISTENERS_KEY, $this->_listeners, PlatformStore::DEFAULT_CACHE_TTL );
-        }
+        return self::$_logEvents;
+    }
 
-        if ( static::$_enableEventScripts )
-        {
-            Platform::storeSet( static::STORE_SCRIPTS_KEY, $this->_scripts, 30 );
-        }
+    /**
+     * @param boolean $logEvents
+     */
+    public static function setLogEvents( $logEvents )
+    {
+        self::$_logEvents = $logEvents;
+    }
+
+    /**
+     * @return boolean
+     */
+    public static function getLogAllEvents()
+    {
+        return self::$_logAllEvents;
+    }
+
+    /**
+     * @param boolean $logAllEvents
+     */
+    public static function setLogAllEvents( $logAllEvents )
+    {
+        self::$_logAllEvents = $logAllEvents;
     }
 
     /**
@@ -226,37 +239,6 @@ class EventDispatcher implements EventDispatcherInterface
     public function dispatch( $eventName, Event $event = null )
     {
         $_event = $event ? : new PlatformEvent( $eventName );
-
-        $this->_doDispatch( $_event, $eventName, $this );
-
-        return $_event;
-    }
-
-    /**
-     * @param BasePlatformRestService                        $service
-     * @param string                                         $eventName
-     * @param \DreamFactory\Platform\Events\RestServiceEvent $event
-     *
-     * @return \DreamFactory\Platform\Events\RestServiceEvent
-     */
-    public function dispatchRestServiceEvent( $service, $eventName, RestServiceEvent $event = null )
-    {
-        $_event = $event ? : new RestServiceEvent( $eventName, $service->getApiName(), $service->getResource() );
-
-        $this->_doDispatch( $_event, $eventName, $this );
-
-        return $_event;
-    }
-
-    /**
-     * @param string                                 $eventName
-     * @param \DreamFactory\Platform\Events\DspEvent $event
-     *
-     * @return \DreamFactory\Platform\Events\DspEvent
-     */
-    public function dispatchDspEvent( $eventName, DspEvent $event = null )
-    {
-        $_event = $event ? : new DspEvent();
 
         $this->_doDispatch( $_event, $eventName, $this );
 
@@ -277,13 +259,12 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected function _doDispatch( &$event, $eventName, $dispatcher )
     {
-        if ( !static::$_enableRestEvents && !static::$_enablePlatformEvents && !static::$_enableEventScripts )
+        //  Do nothing if not wanted
+        if ( !static::$_enableRestEvents && !static::$_enablePlatformEvents && !static::$_enableEventScripts && !static::$_enableEventObservers )
         {
             return false;
         }
 
-        //	Queue up the posts
-        $_posts = array();
         $_dispatched = true;
         $_pathInfo = preg_replace( '#^\/rest#', null, Pii::request( true )->getPathInfo(), 1 );
 
@@ -294,11 +275,7 @@ class EventDispatcher implements EventDispatcherInterface
             );
         }
 
-        if ( null === Option::get( $this->_listeners, $eventName ) && null === Option::get( $this->_scripts, $eventName ) )
-        {
-            return false;
-        }
-
+        //  Prepare the event we are passing around
         $_event = array_merge(
             $event->toArray(),
             array(
@@ -309,46 +286,72 @@ class EventDispatcher implements EventDispatcherInterface
             )
         );
 
+        //-------------------------------------------------------------------------
+        //	Observers
+        //-------------------------------------------------------------------------
+
+        //  Observers get the event first...
+        if ( static::$_enableEventObservers && !empty( static::$_observers ) )
+        {
+            foreach ( static::$_observers as $_observer )
+            {
+                $_observer->handleEvent( $eventName, $event, $this );
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        //	Scripts
+        //-------------------------------------------------------------------------
+
+        //@todo convert to EventObserver
         if ( static::$_enableEventScripts )
         {
             //  Run scripts
-            if ( null === ( $_script = Option::get( $this->_scripts, $eventName ) ) )
+            if ( null === ( $_scripts = Option::get( $this->_scripts, $eventName ) ) )
             {
                 //  See if we have a platform event handler...
                 if ( false === ( $_script = Script::existsForEvent( $eventName ) ) )
                 {
-                    $_script = null;
+                    $_scripts = null;
                 }
             }
 
-            if ( !empty( $_script ) )
+            if ( !empty( $_scripts ) )
             {
-                $_script = $this->_scripts[ $eventName ];
-
-                $_eventData = Option::get( $_event, 'data', array() );
-                $_result = Script::runScript( $_script, $eventName . '.js', $_eventData, $_output );
-
-                if ( is_array( $_result ) )
+                foreach ( Option::clean( $_scripts ) as $_script )
                 {
-                    $_event['data'] = $_result;
-                    $event->fromArray( $_event );
-                }
+                    $_eventData = Option::get( $_event, 'data', array() );
+                    $_result = Script::runScript( $_script, $eventName . '.js', $_eventData, $_output );
 
-                if ( !empty( $_output ) )
-                {
-                    Log::debug( 'Script "' . $eventName . '.js" output: ' . $_output );
-                }
+                    if ( is_array( $_result ) )
+                    {
+                        $_event['data'] = $_result;
+                        $event->fromArray( $_event );
+                    }
 
-                if ( $event->isPropagationStopped() )
-                {
-                    Log::info( '  * Propagation stopped by script.' );
+                    if ( !empty( $_output ) )
+                    {
+                        Log::debug( 'Script "' . $eventName . '.js" output: ' . $_output );
+                    }
 
-                    return true;
+                    if ( $event->isPropagationStopped() )
+                    {
+                        Log::info( '  * Propagation stopped by script.' );
+
+                        return true;
+                    }
                 }
             }
         }
 
-        //  Callbacks
+        //-------------------------------------------------------------------------
+        //	Callbacks/POSTs
+        //-------------------------------------------------------------------------
+
+        //	Queue up the posts
+        $_posts = array();
+
+        //@todo convert to EventObserver
         foreach ( $this->getListeners( $eventName ) as $_listener )
         {
             //  Local code listener
@@ -395,7 +398,7 @@ class EventDispatcher implements EventDispatcherInterface
 
                 $_posts[] = static::$_client->post(
                     $_listener,
-                    array('content-type' => 'application/json'),
+                    array( 'content-type' => 'application/json' ),
                     json_encode( $_payload, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT )
                 );
             }
@@ -452,25 +455,6 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param string          $className
-     * @param string          $methodName
-     * @param Event           $event
-     * @param string          $eventName
-     * @param EventDispatcher $dispatcher
-     *
-     * @return mixed
-     */
-    protected function _executeEventPhpScript( $className, $methodName, Event $event, $eventName = null, $dispatcher = null )
-    {
-        return call_user_func(
-            array($className, $methodName),
-            $event,
-            $eventName,
-            $dispatcher
-        );
-    }
-
-    /**
      * @param string $eventName
      *
      * @return array
@@ -499,114 +483,6 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param $callable
-     *
-     * @return bool
-     */
-    protected function isPhpScript( $callable )
-    {
-        return false === strpos( $callable, ' ' ) && false !== strpos( $callable, '::' );
-    }
-
-    /**
-     * @see EventDispatcherInterface::hasListeners
-     */
-    public function hasListeners( $eventName = null )
-    {
-        return (Boolean)count( $this->getListeners( $eventName ) );
-    }
-
-    /**
-     * @see EventDispatcherInterface::addListener
-     */
-    public function addListener( $eventName, $listener, $priority = 0 )
-    {
-        if ( !isset( $this->_listeners[ $eventName ] ) )
-        {
-            $this->_listeners[ $eventName ] = array();
-        }
-
-        foreach ( $this->_listeners[ $eventName ] as $priority => $listeners )
-        {
-            if ( false !== ( $_key = array_search( $listener, $listeners, true ) ) )
-            {
-                $this->_listeners[ $eventName ][ $priority ][ $_key ] = $listener;
-                unset( $this->_sorted[ $eventName ] );
-
-                return;
-            }
-        }
-
-        $this->_listeners[ $eventName ][ $priority ][] = $listener;
-        unset( $this->_sorted[ $eventName ] );
-    }
-
-    /**
-     * @see EventDispatcherInterface::removeListener
-     */
-    public function removeListener( $eventName, $listener )
-    {
-        if ( !isset( $this->_listeners[ $eventName ] ) )
-        {
-            return;
-        }
-
-        foreach ( $this->_listeners[ $eventName ] as $priority => $listeners )
-        {
-            if ( false !== ( $key = array_search( $listener, $listeners, true ) ) )
-            {
-                unset( $this->_listeners[ $eventName ][ $priority ][ $key ], $this->_sorted[ $eventName ] );
-            }
-        }
-    }
-
-    /**
-     * @see EventDispatcherInterface::addSubscriber
-     */
-    public function addSubscriber( EventSubscriberInterface $subscriber )
-    {
-        foreach ( $subscriber->getSubscribedEvents() as $_eventName => $_params )
-        {
-            if ( is_string( $_params ) )
-            {
-                $this->addListener( $_eventName, array($subscriber, $_params) );
-            }
-            elseif ( is_string( $_params[0] ) )
-            {
-                $this->addListener( $_eventName, array($subscriber, $_params[0]), isset( $_params[1] ) ? $_params[1] : 0 );
-            }
-            else
-            {
-                foreach ( $_params as $listener )
-                {
-                    $this->addListener( $_eventName, array($subscriber, $listener[0]), isset( $listener[1] ) ? $listener[1] : 0 );
-                }
-            }
-        }
-    }
-
-    /**
-     * @see EventDispatcherInterface::removeSubscriber
-     */
-    public function removeSubscriber( EventSubscriberInterface $subscriber )
-    {
-        foreach ( $subscriber->getSubscribedEvents() as $_eventName => $_params )
-        {
-            if ( is_array( $_params ) && is_array( $_params[0] ) )
-            {
-                foreach ( $_params as $listener )
-                {
-                    $this->removeListener( $_eventName, array($subscriber, $listener[0]) );
-                }
-            }
-            else
-            {
-                $this->removeListener( $_eventName, array($subscriber, is_string( $_params ) ? $_params : $_params[0]) );
-            }
-        }
-    }
-
-    /**
      * Sorts the internal list of listeners for the given event by priority.
      *
      * @param string $eventName The name of the event.
@@ -620,6 +496,35 @@ class EventDispatcher implements EventDispatcherInterface
             krsort( $this->_listeners[ $eventName ] );
             $this->_sorted[ $eventName ] = call_user_func_array( 'array_merge', $this->_listeners[ $eventName ] );
         }
+    }
+
+    /**
+     * @param $callable
+     *
+     * @return bool
+     */
+    protected function isPhpScript( $callable )
+    {
+        return is_callable( $callable ) || ( ( false === strpos( $callable, ' ' ) && false !== strpos( $callable, '::' ) ) );
+    }
+
+    /**
+     * @param string          $className
+     * @param string          $methodName
+     * @param Event           $event
+     * @param string          $eventName
+     * @param EventDispatcher $dispatcher
+     *
+     * @return mixed
+     */
+    protected function _executeEventPhpScript( $className, $methodName, Event $event, $eventName = null, $dispatcher = null )
+    {
+        return call_user_func(
+            array( $className, $methodName ),
+            $event,
+            $eventName,
+            $dispatcher
+        );
     }
 
     /**
@@ -671,7 +576,7 @@ class EventDispatcher implements EventDispatcherInterface
             Option::server( 'REMOTE_ADDR', gethostbyname( $_host ) )
         );
 
-        $_ro = Pii::app()->getRequestObject();
+        $_ro = Pii::request( false );
 
         $_container = array(
             'success' => $success,
@@ -679,7 +584,7 @@ class EventDispatcher implements EventDispatcherInterface
             '_info'   => array_merge(
                 array(
                     'id'        => $_id,
-                    'timestamp' => date( 'c', $_start = $_SERVER['REQUEST_TIME'] ),
+                    'timestamp' => date( 'c', $_start = Option::server( 'REQUEST_TIME_FLOAT', Option::server( 'REQUEST_TIME', microtime( true ) ) ) ),
                     'elapsed'   => (float)number_format( microtime( true ) - $_start, 4 ),
                     'verb'      => $_ro->getMethod(),
                     'uri'       => $_ro->server->get( 'request-uri' ),
@@ -693,35 +598,238 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param boolean $logEvents
+     * @param BasePlatformRestService                        $service
+     * @param string                                         $eventName
+     * @param \DreamFactory\Platform\Events\RestServiceEvent $event
+     *
+     * @return \DreamFactory\Platform\Events\RestServiceEvent
      */
-    public static function setLogEvents( $logEvents )
+    public function dispatchRestServiceEvent( $service, $eventName, RestServiceEvent $event = null )
     {
-        self::$_logEvents = $logEvents;
+        $_event = $event ? : new RestServiceEvent( $eventName, $service->getApiName(), $service->getResource() );
+
+        $this->_doDispatch( $_event, $eventName, $this );
+
+        return $_event;
     }
 
     /**
-     * @return boolean
+     * @param string                                 $eventName
+     * @param \DreamFactory\Platform\Events\DspEvent $event
+     *
+     * @return \DreamFactory\Platform\Events\DspEvent
      */
-    public static function getLogEvents()
+    public function dispatchDspEvent( $eventName, DspEvent $event = null )
     {
-        return self::$_logEvents;
+        $_event = $event ? : new DspEvent();
+
+        $this->_doDispatch( $_event, $eventName, $this );
+
+        return $_event;
     }
 
     /**
-     * @return boolean
+     * @see EventDispatcherInterface::hasListeners
      */
-    public static function getLogAllEvents()
+    public function hasListeners( $eventName = null )
     {
-        return self::$_logAllEvents;
+        return (bool)count( $this->getListeners( $eventName ) );
     }
 
     /**
-     * @param boolean $logAllEvents
+     * @see EventDispatcherInterface::addSubscriber
      */
-    public static function setLogAllEvents( $logAllEvents )
+    public function addSubscriber( EventSubscriberInterface $subscriber )
     {
-        self::$_logAllEvents = $logAllEvents;
+        foreach ( $subscriber->getSubscribedEvents() as $_eventName => $_params )
+        {
+            if ( is_string( $_params ) )
+            {
+                $this->addListener( $_eventName, array( $subscriber, $_params ) );
+            }
+            elseif ( is_string( $_params[0] ) )
+            {
+                $this->addListener( $_eventName, array( $subscriber, $_params[0] ), isset( $_params[1] ) ? $_params[1] : 0 );
+            }
+            else
+            {
+                foreach ( $_params as $listener )
+                {
+                    $this->addListener( $_eventName, array( $subscriber, $listener[0] ), isset( $listener[1] ) ? $listener[1] : 0 );
+                }
+            }
+        }
+    }
+
+    /**
+     * @see EventDispatcherInterface::addListener
+     */
+    public function addListener( $eventName, $listener, $priority = 0 )
+    {
+        if ( !isset( $this->_listeners[ $eventName ] ) )
+        {
+            $this->_listeners[ $eventName ] = array();
+        }
+
+        foreach ( $this->_listeners[ $eventName ] as $priority => $listeners )
+        {
+            if ( false !== ( $_key = array_search( $listener, $listeners, true ) ) )
+            {
+                $this->_listeners[ $eventName ][ $priority ][ $_key ] = $listener;
+                unset( $this->_sorted[ $eventName ] );
+
+                return;
+            }
+        }
+
+        $this->_listeners[ $eventName ][ $priority ][] = $listener;
+        unset( $this->_sorted[ $eventName ] );
+    }
+
+    /**
+     * @see EventDispatcherInterface::removeSubscriber
+     */
+    public function removeSubscriber( EventSubscriberInterface $subscriber )
+    {
+        foreach ( $subscriber->getSubscribedEvents() as $_eventName => $_params )
+        {
+            if ( is_array( $_params ) && is_array( $_params[0] ) )
+            {
+                foreach ( $_params as $listener )
+                {
+                    $this->removeListener( $_eventName, array( $subscriber, $listener[0] ) );
+                }
+            }
+            else
+            {
+                $this->removeListener( $_eventName, array( $subscriber, is_string( $_params ) ? $_params : $_params[0] ) );
+            }
+        }
+    }
+
+    /**
+     * @see EventDispatcherInterface::removeListener
+     */
+    public function removeListener( $eventName, $listener )
+    {
+        if ( !isset( $this->_listeners[ $eventName ] ) )
+        {
+            return;
+        }
+
+        foreach ( $this->_listeners[ $eventName ] as $priority => $listeners )
+        {
+            if ( false !== ( $key = array_search( $listener, $listeners, true ) ) )
+            {
+                unset( $this->_listeners[ $eventName ][ $priority ][ $key ], $this->_sorted[ $eventName ] );
+            }
+        }
+    }
+
+    /**
+     * @param EventDispatcherInterface $dispatcher
+     *
+     * @return \DreamFactory\Platform\Components\EventStore
+     */
+    public static function getEventStore( $dispatcher )
+    {
+        if ( empty( static::$_store ) )
+        {
+            static::$_store = new EventStore( $dispatcher );
+        }
+
+        return static::$_store;
+    }
+
+    /**
+     * Merges any cached data into $this
+     *
+     * @param EventDispatcherInterface $dispatcher
+     */
+    protected function _mergeCachedData( EventDispatcherInterface $dispatcher )
+    {
+        foreach ( static::$_cachedData as $_property )
+        {
+            $_data = call_user_func( array( $dispatcher, 'get' . $_property ) );
+
+            if ( !empty( $_data ) )
+            {
+                $this->{'_' . $_property} = array_merge( $_data, $this->{'_' . $_property} );
+            }
+        }
+    }
+
+    /**
+     * Verify that mapped scripts exist. Optionally check for new drop-ins
+     *
+     * @param bool $scanForNew If true, the $scriptPath will be scanned for new scripts
+     */
+    protected function _checkMappedScripts( $scanForNew = true )
+    {
+        $_found = array();
+        $_basePath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
+
+        foreach ( SwaggerManager::getEventMap() as $_routes )
+        {
+            foreach ( $_routes as $_routeInfo )
+            {
+                foreach ( $_routeInfo as $_methodInfo )
+                {
+                    foreach ( Option::get( $_methodInfo, 'scripts', array() ) as $_script )
+                    {
+                        $_eventKey = str_ireplace( '.js', null, $_script );
+
+                        //  Don't add bogus scripts
+                        $_scriptFile = $_basePath . '/' . $_script;
+
+                        if ( is_file( $_scriptFile ) && is_readable( $_scriptFile ) )
+                        {
+                            if ( !isset( $this->_scripts[ $_eventKey ] ) || !in_array( $_scriptFile, $this->_scripts[ $_eventKey ] ) )
+                            {
+                                $_found[] = str_replace( $_basePath, '.', $_scriptFile );
+                                $this->_scripts[ $_eventKey ][] = $_scriptFile;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        //  Check for new
+        if ( $scanForNew && !empty( $_found ) )
+        {
+            $_scripts = FileSystem::glob( $_basePath . '/*.js', GlobFlags::GLOB_NODIR | GlobFlags::GLOB_NODOTS | GlobFlags::GLOB_RECURSE );
+
+            if ( !empty( $_scripts ) )
+            {
+                foreach ( $_scripts as $_newScript )
+                {
+                    $_eventKey = str_ireplace( '.js', null, $_newScript );
+                    $_scriptFile = $_basePath . '/' . $_newScript;
+
+                    if ( !array_key_exists( $_eventKey, $this->_scripts ) || !in_array( $_scriptFile, $this->_scripts[ $_eventKey ] ) )
+                    {
+                        $this->_scripts[ $_eventKey ][] = $_scriptFile;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * @return array
+     */
+    public function getScripts()
+    {
+        return $this->_scripts;
+    }
+
+    /**
+     * @return array|\DreamFactory\Events\Interfaces\EventObserverLike[]
+     */
+    public static function getObservers()
+    {
+        return static::$_observers;
     }
 
 }
