@@ -1,6 +1,6 @@
 # lib-php-common-platform
 
-## DreamFactory Services Platform&trade; SDK For PHP v1.5.11
+## DreamFactory Services Platform&trade; SDK For PHP v1.5.12
 
 [![Build Status](http://tc.dreamfactory.com:8111/httpAuth/app/rest/builds/buildType:id:DreamfactoryLibPhpCommonPlatform_Release/statusIcon)](http://tc.dreamfactory.com:8111/viewType.html?buildTypeId=DreamfactoryLibPhpCommonPlatform_Release&tab=buildTypeStatusDiv&guest=1)
 [![Dependency Status](https://www.versioneye.com/php/dreamfactory:lib-php-common-platform/badge.png)](https://www.versioneye.com/php/dreamfactory:lib-php-common-platform)
@@ -14,7 +14,7 @@ This library contains common components for interacting with the DreamFactory Se
 Add a line to your "require" section in your composer configuration:
 
 	"require":           {
-		"dreamfactory/lib-php-common-platform": "~1.4@stable"
+		"dreamfactory/lib-php-common-platform": "~1.5@stable"
 	}
 
 Run a composer update:

@@ -22,16 +22,16 @@ use DreamFactory\Platform\Services\SwaggerManager;
 $_commonResponses = SwaggerManager::getCommonResponses( array( 400, 401, 500 ) );
 
 $_eventProperties = array(
-    'event_name' => array(
-        'type'        => 'string',
-        'description' => 'The name of this event',
+        'event_name' => array(
+            'type'        => 'string',
+            'description' => 'The name of this event',
         'required'    => true,
-    ),
-    'listeners'  => array(
-        'type'        => 'array',
-        'description' => 'An array of listeners attached to this event.',
+        ),
+        'listeners'  => array(
+            'type'        => 'array',
+            'description' => 'An array of listeners attached to this event.',
         'required'    => true,
-    ),
+        ),
 );
 
 //*************************************************************************
@@ -132,7 +132,7 @@ $_event = array(
                             'paramType'     => 'path',
                             'required'      => true,
                         ),
-                    ),
+                        ),
                     'responseMessages' => $_commonResponses,
                 ),
                 array(
@@ -285,38 +285,38 @@ $_event['models'] = array(
     ),
     //  Single event
     'EventRequest'       => array(
-        'id'         => 'EventRequest',
-        'properties' => $_eventProperties,
-    ),
+            'id'         => 'EventRequest',
+            'properties' => $_eventProperties,
+        ),
     //  Multiple events
     'EventsRequest'      => array(
-        'id'         => 'EventsRequest',
-        'properties' => array(
-            'record' => array(
-                'type'        => 'array',
-                'description' => 'Array of system event records.',
+            'id'         => 'EventsRequest',
+            'properties' => array(
+                'record' => array(
+                    'type'        => 'array',
+                    'description' => 'Array of system event records.',
                 'required'    => true,
-                'items'       => array(
-                    '$ref' => 'EventRequest',
+                    'items'       => array(
+                        '$ref' => 'EventRequest',
+                    ),
                 ),
             ),
         ),
-    ),
     //  Single event response
     'EventResponse'      => array(
-        'id'         => 'EventResponse',
-        'properties' => $_eventProperties,
-    ),
+            'id'         => 'EventResponse',
+            'properties' => $_eventProperties,
+        ),
     //  Multiple events response
     'EventsResponse'     => array(
-        'id'         => 'EventsResponse',
-        'properties' => array(
-            'record' => array(
-                'type'        => 'array',
-                'description' => 'Array of event records.',
+            'id'         => 'EventsResponse',
+            'properties' => array(
+                'record' => array(
+                    'type'        => 'array',
+                    'description' => 'Array of event records.',
                 'required'    => true,
-                'items'       => array(
-                    '$ref' => 'EventResponse',
+                    'items'       => array(
+                        '$ref' => 'EventResponse',
                 ),
             ),
         ),

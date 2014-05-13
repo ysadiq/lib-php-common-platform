@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
+use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
@@ -33,7 +34,6 @@ use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Yii\Models\LookupKey;
 use DreamFactory\Platform\Yii\Models\Provider;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -52,7 +52,7 @@ class Config extends BaseSystemRestResource
     /**
      * @type int The number of seconds at most to cache these resources
      */
-    const CONFIG_CACHE_TTL = 600;
+    const CONFIG_CACHE_TTL = PlatformStore::DEFAULT_TTL;
     /**
      * @type string The cache key for lookups config
      */
@@ -203,7 +203,7 @@ class Config extends BaseSystemRestResource
 
         static $_fabricHosted, $_fabricPrivate;
 
-        $_refresh = ( HttpMethod::GET != $this->_action );
+        $_refresh = ( static::GET != $this->_action );
         $_fabricHosted = $_fabricHosted ? : Platform::storeGet( $HOSTED_CACHE_KEY, Fabric::fabricHosted(), false, static::CONFIG_CACHE_TTL );
         $_fabricPrivate = $_fabricPrivate ? : Fabric::hostedPrivatePlatform();
 

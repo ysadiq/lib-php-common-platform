@@ -692,7 +692,14 @@ class MongoDbSvc extends NoSqlDbSvc
                     case '$in':
                     case '$nin':
                         // todo check for list of mongoIds
-                        return array( $_field => array( $_mongoOp => $_val ) );
+                        $_val = array_map( 'trim', explode( ',', trim( trim( $_val, '(,)' ), ',' ) ) );
+                        $_valArray = array();
+                        foreach ($_val as $_item)
+                        {
+                            $_valArray[] = static::_determineValue( $_item, $_field, $params );
+                        }
+
+                        return array( $_field => array( $_mongoOp => $_valArray ) );
 
                     case 'MongoRegex':
 //			WHERE name LIKE "%Joe%"	(array("name" => new MongoRegex("/Joe/")));
