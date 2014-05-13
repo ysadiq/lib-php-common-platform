@@ -22,11 +22,12 @@ namespace DreamFactory\Platform\Events;
 use DreamFactory\Events\Interfaces\EventObserverLike;
 use DreamFactory\Platform\Components\EventStore;
 use DreamFactory\Platform\Components\PlatformStore;
-use DreamFactory\Platform\Events\Enums\SwaggerEvents;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\System\Script;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Platform;
+use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
 use Guzzle\Http\Client;
 use Guzzle\Http\Exception\MultiTransferException;
@@ -144,13 +145,7 @@ class EventDispatcher implements EventDispatcherInterface
 
         try
         {
-            //  Initialize the cache and load any cached data
-            /** @var EventDispatcherInterface $_dispatcher */
-            if ( null !== ( $_dispatcher = static::getEventStore( $this )->getCachedData() ) )
-            {
-                $this->_mergeCachedData( $_dispatcher );
-            }
-
+            $this->_initializeEvents();
             $this->_initializeEventObservation();
             $this->_initializeEventScripting();
         }
@@ -158,18 +153,63 @@ class EventDispatcher implements EventDispatcherInterface
         {
             Log::notice( 'Event system unavailable at this time.' );
         }
-
-        //  Listen for swagger cache rebuilds...
-        $this->addListener( SwaggerEvents::CACHE_REBUILT, array( $this, '_checkMappedScripts' ) );
-
-        //  Now save what we got
-        $this->getEventStore( $this )->setCachedData( $this );
     }
 
     //  Save off our stuff
     public function __destruct()
     {
-        static::getEventStore( $this )->setCachedData( $this );
+        foreach ( Option::clean( $this->_listeners ) as $_eventName => $_listeners )
+        {
+            //  Don't store deaf events...
+            if ( empty( $_listeners ) )
+            {
+                continue;
+            }
+
+            /** @var \DreamFactory\Platform\Yii\Models\Event $_model */
+            $_model = ResourceStore::model( 'event' )->find( 'event_name = :event_name', array( ':event_name' => $_eventName ) );
+
+            if ( null === $_model )
+            {
+                $_model = new \DreamFactory\Platform\Yii\Models\Event();
+                $_model->event_name = $_eventName;
+            }
+
+            $_model->listeners = $_listeners;
+
+            if ( !$_model->save() )
+            {
+                throw new InternalServerErrorException( 'Error storing event information.' );
+            }
+
+            unset( $_model );
+        }
+    }
+
+    protected function _initializeEvents()
+    {
+        $_events = ResourceStore::model( 'event' )->findAll();
+
+        if ( empty( $_events ) )
+        {
+            return;
+        }
+
+        foreach ( $_events as $_event )
+        {
+            if ( !empty( $_event->listeners ) )
+            {
+                if ( !isset( $this->_listeners[ $_event->event_name ] ) )
+                {
+                    $this->_listeners[ $_event->event_name ] = array();
+                }
+
+                $this->_listeners[ $_event->event_name ] = array_merge( $this->_listeners[ $_event->event_name ], $_event->listeners );
+            }
+
+            unset( $_event );
+        }
+
     }
 
     /**
@@ -684,7 +724,7 @@ class EventDispatcher implements EventDispatcherInterface
         {
             if ( false !== ( $_key = array_search( $listener, $_listeners, true ) ) )
             {
-                Log::debug( 'Replacing listener for event "' . $eventName . '"' );
+                Log::debug( 'Replacing listener for event "' . $eventName . '" at ' . $_key );
 
                 $this->_listeners[ $eventName ][ $_priority ][ $_key ] = $listener;
                 unset( $this->_sorted[ $eventName ] );
@@ -693,10 +733,10 @@ class EventDispatcher implements EventDispatcherInterface
             }
         }
 
+        Log::debug( 'Added listener for event "' . $eventName . '"' );
+
         $this->_listeners[ $eventName ][ $priority ][] = $listener;
         unset( $this->_sorted[ $eventName ] );
-
-        $this->getEventStore( $this )->setCachedData( $this );
     }
 
     /**

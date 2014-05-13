@@ -28,7 +28,6 @@ use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Platform;
-use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Interfaces\HttpResponse;
@@ -44,6 +43,15 @@ use Symfony\Component\HttpFoundation\Request;
  */
 class Event extends BaseSystemRestResource
 {
+    //*************************************************************************
+    //	Members
+    //*************************************************************************
+
+    /**
+     * @var Request The inbound request
+     */
+    protected $_requestObject;
+
     //*************************************************************************
     //	Methods
     //*************************************************************************
@@ -63,6 +71,8 @@ class Event extends BaseSystemRestResource
             'description'  => 'System event manager',
             'is_active'    => true,
         );
+
+        $this->_requestObject = Pii::request( false );
 
         parent::__construct( $consumer, $_config, $resources );
     }
@@ -178,26 +188,26 @@ class Event extends BaseSystemRestResource
     /**
      * Default GET implementation
      *
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return bool
      */
     protected function _handleGet()
     {
-        return $this->_getAllEvents(
-            'true' == Pii::requestObject()->get( 'all_events', 'false' ),
-            'true' == Pii::requestObject()->get( 'as_cached', 'false' )
-        );
+        if ( empty( $this->_resourceId ) && $this->_requestObject->get( 'all_events' ) )
+        {
+            return $this->_getAllEvents( $this->_requestObject->get( 'as_cached', false ) );
+        }
+
+        return Pii::app()->getDispatcher()->getListeners( $this->_resourceId );
     }
 
     /**
      * Retrieves the event cache file detailing all registered events
      *
-     * @param bool $all_events If true, all events are returned, otherwise just events with scripts/listeners
-     * @param bool $as_cached  If true, the event cache will be returned as stored on disk. Otherwise in a more consumable format for clients.
+     * @param bool $as_cached If true, the event cache will be returned as stored on disk. Otherwise in a more consumable format for clients.
      *
      * @return array
      */
-    protected function _getAllEvents( $all_events = false, $as_cached = false )
+    protected function _getAllEvents( $as_cached = false )
     {
         //  Make sure the file exists.
         $_cacheFile = Platform::getSwaggerPath( SwaggerManager::SWAGGER_CACHE_DIR . SwaggerManager::SWAGGER_EVENT_CACHE_FILE, true, true );
@@ -255,35 +265,18 @@ class Event extends BaseSystemRestResource
 
                     foreach ( $_verbs as $_verb => $_event )
                     {
-                        $_scripts = Option::get( $_event, 'scripts', array() );
-                        $_listeners = Option::get( $_event, 'listeners', array() );
-
-                        if ( !$all_events && empty( $_scripts ) && empty( $_listeners ) )
-                        {
-                            continue;
-                        }
-
                         $_path['verbs'][] = array(
-                            'type'      => $_verb,
-                            'event'     => Option::get( $_event, 'event' ),
-                            'scripts'   => $_scripts,
-                            'listeners' => $_listeners,
+                            'type'    => $_verb,
+                            'event'   => Option::get( $_event, 'event' ),
+                            'scripts' => Option::get( $_event, 'scripts', array() ),
                         );
                     }
 
-                    if ( !empty( $_path['verbs'] ) )
-                    {
-                        $_service['paths'][] = $_path;
-                    }
-
+                    $_service['paths'][] = $_path;
                     unset( $_path );
                 }
 
-                if ( !empty( $_service['paths'] ) )
-                {
-                    $_rebuild[] = $_service;
-                }
-
+                $_rebuild[] = $_service;
                 unset( $_service );
             }
         }
@@ -292,6 +285,7 @@ class Event extends BaseSystemRestResource
     }
 
     /**
+     *
      * Post/create event handler
      *
      * @throws BadRequestException
@@ -302,31 +296,42 @@ class Event extends BaseSystemRestResource
      */
     protected function _handlePost()
     {
+        $_dispatcher = Pii::app()->getDispatcher();
         $_payload = $this->_determineRequestedResource( $_ids, $_records );
+        $_response = array();
 
         if ( empty( $_records ) )
         {
-            $_records = $_payload;
+            $_records = array( $_payload );
         }
 
         foreach ( $_records as $_record )
         {
-            $_eventName = Option::get( $_record, 'event_name' );
             $_listeners = Option::get( $_record, 'listeners', array() );
+            $_eventName = Option::get( $_record, 'event_name' );
             $_priority = Option::get( $_record, 'priority', 0 );
 
             if ( empty( $_eventName ) || empty( $_listeners ) )
             {
-                throw new BadRequestException( 'You must specify an "event_name" and "listeners" in your POST.' );
+                throw new BadRequestException( 'No "event_name" or "listeners" in request.' );
             }
 
-            foreach ( Option::clean( $_listeners ) as $_listener )
+            if ( !is_array( $_listeners ) )
             {
-                Platform::on( $_eventName, $_listener, $_priority );
+                $_listeners = array( $_listeners );
             }
+
+            //  Add the listener
+            foreach ( $_listeners as $_listener )
+            {
+                $_dispatcher->addListener( $_eventName, $_listener, $_priority );
+            }
+
+            //  Add to response
+            $_response[] = array( 'event_name' => $_eventName, 'listeners' => $_dispatcher->getListeners( $_eventName ) );
         }
 
-        $this->setResponseCode( HttpResponse::Created );
+        return array( 'record' => $_response );
     }
 
     /**
@@ -338,70 +343,40 @@ class Event extends BaseSystemRestResource
      */
     protected function _handleDelete()
     {
-        $_request = Pii::app()->getRequestObject();
+        $_dispatcher = Pii::app()->getDispatcher();
+        $_payload = $this->_determineRequestedResource( $_ids, $_records );
+        $_response = array();
 
-        $_body = @json_decode( $_request->getContent(), true );
-        $_eventName = $_listeners = $_apiKey = $_priority = null;
-
-        if ( !empty( $_body ) && JSON_ERROR_NONE == json_last_error() )
+        if ( empty( $_records ) )
         {
-            $_eventName = Option::get( $_body, 'event_name' );
-            $_listeners = Option::get( $_body, 'listeners' );
-            $_priority = Option::get( $_body, 'priority', 0 );
+            $_records = array( $_payload );
         }
 
-        if ( empty( $_eventName ) || ( !is_array( $_listeners ) || empty( $_listeners ) ) || empty( $_apiKey ) )
+        foreach ( $_records as $_record )
         {
-            throw new BadRequestException( 'You must specify an "event_name", "listeners", and an "api_key" in your POST.' );
-        }
+            $_listeners = Option::get( $_record, 'listeners', array() );
+            $_eventName = Option::get( $_record, 'event_name' );
 
-        /** @var \DreamFactory\Platform\Yii\Models\Event $_model */
-        $_model = ResourceStore::model( 'event' )->find(
-            array(
-                'condition' => 'event_name = :event_name',
-                'params'    => array(
-                    ':event_name' => $_eventName
-                )
-            )
-        );
-
-        if ( null === $_model )
-        {
-            throw new NotFoundException( 'The requested event "' . $_eventName . '" could not be found.' );
-        }
-
-        //	Remove requested listener
-        $_storedListeners = $_model->listeners;
-
-        foreach ( $_storedListeners as $_key => $_listener )
-        {
-            foreach ( $_listeners as $_listenerToRemove )
+            if ( empty( $_eventName ) || empty( $_listeners ) )
             {
-                if ( $_listener == $_listenerToRemove )
-                {
-                    unset( $_storedListeners[ $_key ] );
-                }
+                throw new BadRequestException( 'No "event_name" or "listeners" in request.' );
             }
-        }
 
-        $_model->listeners = $_storedListeners;
-
-        try
-        {
-            if ( !$_model->save() )
+            if ( !is_array( $_listeners ) )
             {
-                throw new StorageException( $_model->getErrorsForLogging() );
+                $_listeners = array( $_listeners );
             }
-        }
-        catch ( \Exception $_ex )
-        {
-            //	Log error
-            throw new InternalServerErrorException( $_ex->getMessage() );
+
+            foreach ( $_listeners as $_listener )
+            {
+                $_dispatcher->removeListener( $_eventName, $_listener );
+            }
+
+            //  Add to response
+            $_response[] = array( 'event_name' => $_eventName, 'listeners' => $_dispatcher->getListeners( $_eventName ) );
         }
 
-        Pii::app()->on( $_eventName, $_listeners, $_priority );
-
-        return array( 'record' => $_model->getAttributes() );
+        return array( 'record' => $_response );
     }
 
     /**
