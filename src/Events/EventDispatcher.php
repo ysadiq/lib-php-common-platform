@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Events;
 
 use DreamFactory\Events\Interfaces\EventObserverLike;
-use DreamFactory\Platform\Components\EventStore;
 use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\System\Script;
@@ -102,14 +101,6 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected static $_client = null;
     /**
-     * @var EventStore
-     */
-    protected static $_store = null;
-    /**
-     * @var string
-     */
-    protected static $_storeId = null;
-    /**
      * @var BasePlatformRestService
      */
     protected $_service;
@@ -155,10 +146,15 @@ class EventDispatcher implements EventDispatcherInterface
         }
     }
 
-    //  Save off our stuff
+    /**
+     * @throws \CDbException
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     */
     public function __destruct()
     {
-        foreach ( Option::clean( $this->_listeners ) as $_eventName => $_listeners )
+        $_eventListeners = !empty( $this->_listeners ) ? $this->_listeners : array();
+
+        foreach ( $_eventListeners as $_eventName => $_listeners )
         {
             //  Don't store deaf events...
             if ( empty( $_listeners ) )
@@ -175,7 +171,12 @@ class EventDispatcher implements EventDispatcherInterface
                 $_model->event_name = $_eventName;
             }
 
-            $_model->listeners = $_listeners;
+            $_model->listeners = new SerializableClosure(
+                function () use ( $_listeners )
+                {
+                    return $_listeners;
+                }
+            );
 
             if ( !$_model->save() )
             {
@@ -781,21 +782,6 @@ class EventDispatcher implements EventDispatcherInterface
         }
 
         $this->getEventStore( $this )->setCachedData( $this );
-    }
-
-    /**
-     * @param EventDispatcherInterface $dispatcher
-     *
-     * @return \DreamFactory\Platform\Components\EventStore
-     */
-    public static function getEventStore( $dispatcher )
-    {
-        if ( empty( static::$_store ) )
-        {
-            static::$_store = new EventStore( $dispatcher );
-        }
-
-        return static::$_store;
     }
 
     /**
