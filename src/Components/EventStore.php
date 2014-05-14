@@ -21,9 +21,8 @@ namespace DreamFactory\Platform\Components;
 
 use DreamFactory\Platform\Events\EventDispatcher;
 use Kisma\Core\Enums\CacheTypes;
-use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Inflector;
-use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
@@ -73,29 +72,67 @@ class EventStore extends PlatformStore
     public function __construct( EventDispatcherInterface $dispatcher )
     {
         parent::__construct( CacheTypes::FILE_SYSTEM );
-
-        //  Freshen up
-        $this->_storeId = hash( 'sha256', Inflector::neutralize( get_class( $dispatcher ) ) );
-
-        if ( false === ( $_dispatcher = $this->fetch( $this->_storeId ) ) )
-        {
-            $this->_dispatcher = $dispatcher;
-        }
-        else
-        {
-            Log::debug( 'Event store id #' . $this->_storeId . ' retrieved from cache.' );
-        }
-
         $this->setNamespace( static::CACHE_NAMESPACE );
+
+        //  Get set up...
+        $this->_storeId = hash( 'sha256', Inflector::neutralize( get_class( $dispatcher ) ) );
+        $this->_dispatcher = $dispatcher;
     }
 
     /**
-     * Kill!
+     * @return bool|void
      */
-    public function __destruct()
+    public function load()
     {
-        //  Save the dispatcher state
-        $this->set( $this->_storeId, $this->_dispatcher, static::DEFAULT_TTL );
+        $_data = parent::fetch( $this->_storeId, array(), false );
+
+        //  Listeners
+        foreach ( Option::get( $_data, 'listeners', array() ) as $_eventName => $_callables )
+        {
+            if ( empty( $_callables ) )
+            {
+                continue;
+            }
+
+            foreach ( $_callables as $_priority => $_listeners )
+            {
+                foreach ( $_listeners as $_listener )
+                {
+                    $this->_dispatcher->addListener( $_eventName, $_listener, $_priority );
+                }
+            }
+        }
+
+        //  Scripts
+        foreach ( Option::get( $_data, 'scripts', array() ) as $_eventName => $_scripts )
+        {
+            foreach ( $_scripts as $_script )
+            {
+                $this->_dispatcher->addScript( $_eventName, $_script );
+            }
+        }
+
+        //  Observers
+        foreach ( Option::get( $_data, 'observers', array() ) as $_observer )
+        {
+            $this->_dispatcher->addObserver( $_observer );
+        }
+
+        return true;
+    }
+
+    /**
+     * @return bool|void
+     */
+    public function save()
+    {
+        $_data = array(
+            'listeners' => $this->_dispatcher->getAllListeners(),
+            'observers' => $this->_dispatcher->getObservers(),
+            'scripts'   => $this->_dispatcher->getScripts(),
+        );
+
+        parent::save( $this->_storeId, $_data );
     }
 
     /**
@@ -108,13 +145,5 @@ class EventStore extends PlatformStore
     protected function _obscureKey( $id )
     {
         return hash( 'sha256', parent::_obscureKey( $id ) );
-    }
-
-    /**
-     * @return EventDispatcher
-     */
-    public function getCachedData()
-    {
-        return $this->_dispatcher;
     }
 }
