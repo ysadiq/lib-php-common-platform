@@ -21,7 +21,6 @@ namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
 use DreamFactory\Platform\Components\Profiler;
-use DreamFactory\Platform\Events\DspEvent;
 use DreamFactory\Platform\Events\Enums\DspEvents;
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;

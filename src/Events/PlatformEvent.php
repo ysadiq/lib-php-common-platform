@@ -36,6 +36,15 @@ use Kisma\Core\Utility\Option;
  */
 class PlatformEvent extends SeedEvent
 {
+    //*************************************************************************
+    //	Constants
+    //*************************************************************************
+
+    /**
+     * @type string The default DSP namespace
+     */
+    const EVENT_NAMESPACE = 'dsp';
+
     //**************************************************************************
     //* Members
     //**************************************************************************
@@ -62,7 +71,8 @@ class PlatformEvent extends SeedEvent
     }
 
     /**
-     * Tells the event manager to prevent the default action from being performed
+     * "preventDefault" flag for jQuery compatibility.
+     * Unused by server but available for client use
      */
     public function preventDefault()
     {
@@ -70,6 +80,9 @@ class PlatformEvent extends SeedEvent
     }
 
     /**
+     * "preventDefault" flag for jQuery compatibility.
+     * Unused by server but available for client use
+     *
      * @return bool
      */
     public function isDefaultPrevented()
@@ -78,6 +91,8 @@ class PlatformEvent extends SeedEvent
     }
 
     /**
+     * Indicates if this event has altered the original state, not including flags
+     *
      * @return boolean
      */
     public function isDirty()
@@ -98,6 +113,7 @@ class PlatformEvent extends SeedEvent
             if ( 'event_id' != $_key )
             {
                 Option::set( $this, $_key, $_value );
+                $this->_dirty = true;
             }
         }
 
@@ -108,5 +124,15 @@ class PlatformEvent extends SeedEvent
         }
 
         return $this;
+    }
+
+    /**
+     * {@InheritDoc}
+     */
+    public function setData( $data )
+    {
+        $this->_dirty = true;
+
+        return parent::setData( $data );
     }
 }

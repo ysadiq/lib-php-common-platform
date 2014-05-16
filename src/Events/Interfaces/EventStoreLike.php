@@ -18,37 +18,23 @@
  */
 namespace DreamFactory\Platform\Events;
 
-use DreamFactory\Platform\Interfaces\StreamListenerLike;
-
 /**
  * EventStoreLike
  * Something that acts like an event store
  */
-interface EventStoreLike extends StreamListenerLike
+interface EventStoreLike
 {
     //*************************************************************************
     //	Methods
     //*************************************************************************
 
     /**
-     * Stores an event at key "$key"
-     *
-     * @param string $key  Identifier for this event
-     * @param mixed  $data The event data
-     * @param int    $ttl  The expiration TTL for this key
-     *
-     * @return mixed
+     * @return bool|void
      */
-    public static function set( $key, $data, $ttl = null );
+    public function load();
 
     /**
-     * Gets an event from key "$key"
-     *
-     * @param string $key Identifier for this event
-     * @param mixed  $defaultValue
-     * @param bool   $unsetIfFound
-     *
-     * @return mixed
+     * @return bool|void
      */
-    public static function get( $key, $defaultValue = null, $unsetIfFound = false );
+    public function save();
 }

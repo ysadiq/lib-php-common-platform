@@ -17,9 +17,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Components;
+namespace DreamFactory\Platform\Events\Stores;
 
+use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Events\EventDispatcher;
+use DreamFactory\Platform\Events\EventStoreLike;
 use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
@@ -28,7 +30,7 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 /**
  * A store for the platform event system
  */
-class EventStore extends PlatformStore
+class EventStore extends PlatformStore implements EventStoreLike
 {
     //*************************************************************************
     //	Constants

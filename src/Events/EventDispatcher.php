@@ -21,7 +21,7 @@ namespace DreamFactory\Platform\Events;
 
 use DreamFactory\Events\Interfaces\EventObserverLike;
 use DreamFactory\Platform\Components\ApiResponse;
-use DreamFactory\Platform\Components\EventStore;
+use DreamFactory\Platform\Events\Stores\EventStore;
 use DreamFactory\Platform\Resources\System\Script;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\SwaggerManager;
@@ -213,7 +213,7 @@ class EventDispatcher implements EventDispatcherInterface
      * @param string $eventName
      * @param Event  $event
      *
-     * @return \Symfony\Component\EventDispatcher\Event|void
+     * @return PlatformEvent|\Symfony\Component\EventDispatcher\Event
      */
     public function dispatch( $eventName, Event $event = null )
     {

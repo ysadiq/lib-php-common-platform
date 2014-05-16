@@ -20,10 +20,11 @@
 namespace DreamFactory\Platform\Events;
 
 /**
- * Contains additional information about the REST service call being made
+ * Contains additional information about the REST service call triggering the event
  */
 class RestServiceEvent extends PlatformEvent
 {
+
     //**************************************************************************
     //* Members
     //**************************************************************************
