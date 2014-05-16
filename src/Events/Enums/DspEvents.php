@@ -26,16 +26,20 @@ use Kisma\Core\Events\Enums\LifeEvents;
  */
 class DspEvents extends LifeEvents
 {
-	/**
-	 * @var string Triggered immediately before a request is dispatched to a handler
-	 */
-	const BEFORE_REQUEST = 'dsp.before_request';
-	/**
-	 * @var string Triggered immediately after the dispatched request handler returns
-	 */
-	const AFTER_REQUEST = 'dsp.after_request';
-	/**
-	 * @var string Triggered immediately after any plugins have been loaded
-	 */
-	const PLUGINS_LOADED = 'dsp.plugins_loaded';
+    /**
+     * @var string Triggered immediately before a request is dispatched to a handler
+     */
+    const BEFORE_REQUEST = 'dsp.before_request';
+    /**
+     * @var string Triggered immediately after the dispatched request handler returns
+     */
+    const AFTER_REQUEST = 'dsp.after_request';
+    /**
+     * @var string Triggered immediately after any plugins have been loaded
+     */
+    const PLUGINS_LOADED = 'dsp.plugins_loaded';
+    /**
+     * @var string Triggered immediately after any plugins have been loaded
+     */
+    const LOCAL_CONFIG_LOADED = 'dsp.local_config_loaded';
 }

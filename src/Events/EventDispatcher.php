@@ -34,6 +34,8 @@ use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Scalar;
+use Kisma\Core\Utility\Storage;
 use Symfony\Component\EventDispatcher\Event;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -146,14 +148,6 @@ class EventDispatcher implements EventDispatcherInterface
         {
             Log::notice( 'Event system unavailable at this time.' );
         }
-
-        $this->addListener(
-            'swagger.cache_rebuilt',
-            function ( $eventName, $event, $dispatcher )
-            {
-                return call_user_func( array( $dispatcher, '_checkMappedScripts' ), $eventName, $event, $dispatcher );
-            }
-        );
     }
 
     /**
@@ -203,8 +197,17 @@ class EventDispatcher implements EventDispatcherInterface
 
         if ( $_timestamp - $_lastCheck == 0 || empty( $this->_scripts ) )
         {
-            $this->_checkMappedScripts();
+            $this->checkMappedScripts();
         }
+
+        //  If the cache rebuilds, bust our cache and remap scripts
+        $this->addListener(
+            'swagger.cache_rebuilt',
+            function ( $eventName, $event, $dispatcher )
+            {
+                return call_user_func( array( $dispatcher, 'checkMappedScripts' ), true, true );
+            }
+        );
 
         return true;
     }
@@ -328,35 +331,63 @@ class EventDispatcher implements EventDispatcherInterface
     /**
      * @see EventDispatcherInterface::addListener
      */
-    public function addListener( $eventName, $listener, $priority = 0 )
+    /**
+     * @param string   $eventName
+     * @param callable $listener
+     * @param int      $priority
+     * @param bool     $fromCache If true, this request came from the EventStore
+     *
+     * @return bool
+     */
+    public function addListener( $eventName, $listener, $priority = 0, $fromCache = false )
     {
-        if ( !isset( $this->_listeners[ $eventName ] ) )
+        if ( !isset( $this->_listeners[ $eventName ] ) || empty( $this->_listeners[ $eventName ] ) )
         {
             $this->_listeners[ $eventName ] = array();
         }
 
-        if ( $listener instanceof \Closure )
+        if ( !isset( $this->_listeners[ $eventName ][ $priority ] ) )
         {
-            $listener = new SerializableClosure( $listener );
+            $this->_listeners[ $eventName ][ $priority ] = array();
         }
 
-        foreach ( $this->_listeners[ $eventName ] as $_priority => $_listeners )
+        if ( !( $listener instanceof SerializableClosure ) )
         {
-            if ( false !== ( $_key = array_search( $listener, $_listeners, true ) ) )
+            if ( ( !is_string( $listener ) && !is_array( $listener ) ) || $listener instanceof \Closure )
             {
-                Log::debug( 'Replacing listener for event "' . $eventName . '" at ' . $_key );
-
-                $this->_listeners[ $eventName ][ $_priority ][ $_key ] = $listener;
-                unset( $this->_sorted[ $eventName ] );
-
-                return;
+                $listener = new SerializableClosure( $listener );
             }
         }
 
-        Log::debug( 'Adding listener for event "' . $eventName . '"' );
+        $_found = false;
+        $_newListener = serialize( $listener );
 
-        $this->_listeners[ $eventName ][ $priority ][] = $listener;
-        unset( $this->_sorted[ $eventName ] );
+        foreach ( $this->_listeners[ $eventName ][ $priority ] as $_liveListener )
+        {
+            if ( $_newListener === serialize( $_liveListener ) )
+            {
+                if ( static::$_logAllEvents && $fromCache )
+                {
+                    Log::debug( '  * Existing listener found and skipped for "' . spl_object_hash( $this ) . '::' . $eventName . '"' );
+                }
+
+                $_found = true;
+                continue;
+            }
+        }
+
+        if ( !$_found )
+        {
+            if ( static::$_logAllEvents )
+            {
+                Log::debug( '  * Added ' . ( $fromCache ? 'cached' : 'new' ) . ' listener for "' . spl_object_hash( $this ) . '::' . $eventName . '"' );
+            }
+
+            $this->_listeners[ $eventName ][ $priority ][] = $listener;
+            unset( $this->_sorted[ $eventName ] );
+        }
+
+        return true;
     }
 
     /**
@@ -386,7 +417,7 @@ class EventDispatcher implements EventDispatcherInterface
     /**
      * @see EventDispatcherInterface::addSubscriber
      */
-    public function addSubscriber( EventSubscriberInterface $subscriber )
+    public function addSubscriber( EventSubscriberInterface $subscriber, $fromCache = false )
     {
         foreach ( $subscriber->getSubscribedEvents() as $_eventName => $_params )
         {
@@ -479,12 +510,18 @@ class EventDispatcher implements EventDispatcherInterface
 
     /**
      * @param EventDispatcher $dispatcher
+     * @param bool            $flush If true, empties this dispatcher's cache
      *
      * @return bool
      */
-    protected static function _saveToStore( EventDispatcher $dispatcher )
+    protected static function _saveToStore( EventDispatcher $dispatcher, $flush = false )
     {
         $_store = new EventStore( $dispatcher );
+
+        if ( $flush )
+        {
+            return $_store->flushAll();
+        }
 
         return $_store->save();
     }
@@ -525,9 +562,15 @@ class EventDispatcher implements EventDispatcherInterface
      * Verify that mapped scripts exist. Optionally check for new drop-ins
      *
      * @param bool $scanForNew If true, the $scriptPath will be scanned for new scripts
+     * @param bool $flush
      */
-    protected function _checkMappedScripts( $scanForNew = true )
+    public function checkMappedScripts( $scanForNew = true, $flush = false )
     {
+        if ( $flush )
+        {
+            return static::_saveToStore( $this, true );
+        }
+
         $_found = array();
         $_basePath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
 
@@ -591,7 +634,7 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @return array|\DreamFactory\Events\Interfaces\EventObserverLike[]
+     * @return array|EventObserverLike[]
      */
     public static function getObservers()
     {
@@ -817,36 +860,79 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param string $eventName
-     * @param string $scriptPath
+     * @param string       $eventName
+     * @param string|array $scriptPath One or more scripts to run on this event
+     * @param bool         $fromCache  True if the cache is adding this handler
+     *
+     * @return bool False if no observers added, otherwise how many were added
      */
-    public function addScript( $eventName, $scriptPath )
+    public function addScript( $eventName, $scriptPath, $fromCache = false )
     {
         if ( !isset( $this->_scripts[ $eventName ] ) )
         {
             $this->_scripts[ $eventName ] = array();
         }
 
-        if ( !in_array( $scriptPath, $this->_scripts ) )
+        if ( !is_array( $scriptPath ) )
         {
-            $this->_scripts[ $eventName ][] = $scriptPath;
+            $scriptPath = array( $scriptPath );
         }
+
+        foreach ( $scriptPath as $_script )
+        {
+            if ( !in_array( $_script, $this->_scripts[ $eventName ] ) )
+            {
+                $this->_scripts[ $eventName ][] = $_script;
+            }
+        }
+
+        return count( $scriptPath ) ? : false;
     }
 
     /**
-     * @param \DreamFactory\Events\Interfaces\EventObserverLike $observer
+     * @param EventObserverLike|EventObserverLike[] $observer
+     * @param bool                                  $fromCache True if the cache is adding this handler
+     *
+     * @return bool False if no observers added, otherwise how many were added
      */
-    public function addObserver( EventObserverLike $observer )
+    public function addObserver( $observer, $fromCache = false )
     {
-        if ( !isset( $this->_observers ) )
+        if ( !isset( static::$_observers ) )
         {
-            $this->_observers = array();
+            static::$_observers = array();
         }
 
-        if ( !in_array( $observer, $this->_observers ) )
+        if ( empty( $observer ) )
         {
-            $this->_observers[] = $observer;
+            return false;
         }
+
+        if ( !is_array( $observer ) )
+        {
+            $observer = array( $observer );
+        }
+
+        $_serializedObserver = serialize( $observer );
+        $_additions = array();
+
+        \array_walk(
+            static::$_observers,
+            function ( $item, $index, $serializedObserver ) use ( $_additions )
+            {
+                if ( $serializedObserver != serialize( $item ) )
+                {
+                    $_additions[] = $index;
+                }
+            },
+            $_serializedObserver
+        );
+
+        if ( !empty( $_additions ) )
+        {
+            static::$_observers = array_merge( static::$_observers, $_additions );
+        }
+
+        return count( $_additions ) ? : false;
     }
 
 }

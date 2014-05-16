@@ -126,7 +126,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @var array[] The namespaces in use by this system. Used by the routing engine
      */
-    protected static $_namespaceMap = array(self::NS_MODELS => array(), self::NS_SERVICES => array(), self::NS_RESOURCES => array());
+    protected static $_namespaceMap = array( self::NS_MODELS => array(), self::NS_SERVICES => array(), self::NS_RESOURCES => array() );
     /**
      * @var array An indexed array of white-listed hosts (ajax.example.com or foo.bar.com or just bar.com)
      */
@@ -185,8 +185,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
 
         //	Setup the request handler and events
-        $this->onBeginRequest = array($this, '_onBeginRequest');
-        $this->onEndRequest = array($this, '_onEndRequest');
+        $this->onBeginRequest = array( $this, '_onBeginRequest' );
+        $this->onEndRequest = array( $this, '_onEndRequest' );
     }
 
     /**
@@ -393,7 +393,16 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                     else
                     {
                         $_config = array_merge( $_config, $_data );
-                        Log::debug( 'Loaded local config from "' . $_file . '"' );
+
+                        $this->trigger(
+                            DspEvents::LOCAL_CONFIG_LOADED,
+                            new DspEvent(
+                                array(
+                                    'file' => $_file,
+                                    'data' => $_data
+                                )
+                            )
+                        );
                     }
                 }
                 catch ( FileSystemException $_ex )
@@ -1075,7 +1084,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         if ( $prepend )
         {
-            array_unshift( static::$_namespaceMap[ $which ], array($namespace, $path) );
+            array_unshift( static::$_namespaceMap[ $which ], array( $namespace, $path ) );
         }
         else
         {

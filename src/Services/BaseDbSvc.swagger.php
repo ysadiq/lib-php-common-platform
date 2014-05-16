@@ -33,7 +33,7 @@ $_base['apis'] = array(
                 'nickname'         => 'getResources',
                 'type'             => 'Resources',
                 'event_name'       => '{api_name}.list',
-                'responseMessages' => SwaggerManager::getCommonResponses( array(400, 401, 500) ),
+                'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
                 'notes'            => 'List the names of the available tables in this storage. ',
             ),
             array(
@@ -52,7 +52,7 @@ $_base['apis'] = array(
                         'required'      => true,
                     ),
                 ),
-                'responseMessages' => SwaggerManager::getCommonResponses( array(400, 401, 500) ),
+                'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
                 'notes'            => 'List the properties of the given tables in this storage.',
             ),
         ),
@@ -66,7 +66,7 @@ $_base['apis'] = array(
                 'summary'          => 'getRecords() - Retrieve one or more records.',
                 'nickname'         => 'getRecords',
                 'type'             => 'RecordsResponse',
-                'event_name'       => '{api_name}.{table_name}.select',
+                'event_name'       => array( '{api_name}.{table_name}.select', '{api_name}.table_selected', ),
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -178,6 +178,7 @@ $_base['apis'] = array(
                 'summary'          => 'createRecords() - Create one or more records.',
                 'nickname'         => 'createRecords',
                 'type'             => 'RecordsResponse',
+                'event_name'       => array( '{api_name}.{table_name}.insert', '{api_name}.table_inserted', ),
                 'event_name'       => '{api_name}.{table_name}.insert',
                 'parameters'       => array(
                     array(
@@ -247,7 +248,7 @@ $_base['apis'] = array(
                     array(
                         'name'          => 'X-HTTP-METHOD',
                         'description'   => 'Override request using POST to tunnel other http request, such as DELETE.',
-                        'enum'          => array('GET', 'PUT', 'PATCH', 'DELETE'),
+                        'enum'          => array( 'GET', 'PUT', 'PATCH', 'DELETE' ),
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'header',
@@ -265,7 +266,7 @@ $_base['apis'] = array(
                 'summary'          => 'updateRecords() - Update (patch) one or more records.',
                 'nickname'         => 'updateRecords',
                 'type'             => 'RecordsResponse',
-                'event_name'       => '{api_name}.{table_name}.update',
+                'event_name'       => array( '{api_name}.{table_name}.update', '{api_name}.table_updated', ),
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -359,7 +360,7 @@ $_base['apis'] = array(
                 'summary'          => 'updateRecords() - Update (patch) one or more records.',
                 'nickname'         => 'updateRecords',
                 'type'             => 'RecordsResponse',
-                'event_name'       => '{api_name}.{table_name}.update',
+                'event_name'       => array( '{api_name}.{table_name}.update', '{api_name}.table_updated', ),
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -453,7 +454,7 @@ $_base['apis'] = array(
                 'summary'          => 'deleteRecords() - Delete one or more records.',
                 'nickname'         => 'deleteRecords',
                 'type'             => 'RecordsResponse',
-                'event_name'       => '{api_name}.{table_name}.delete',
+                'event_name'       => array( '{api_name}.{table_name}.delete', '{api_name}.table_deleted', ),
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -555,7 +556,7 @@ $_base['apis'] = array(
                 'summary'          => 'getRecord() - Retrieve one record by identifier.',
                 'nickname'         => 'getRecord',
                 'type'             => 'RecordResponse',
-                'event_name'       => '{api_name}.{table_name}.select',
+                'event_name'       => array( '{api_name}.{table_name}.select', '{api_name}.table_selected', ),
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -618,7 +619,7 @@ $_base['apis'] = array(
                 'summary'          => 'createRecord() - Create one record with given identifier.',
                 'nickname'         => 'createRecord',
                 'type'             => 'RecordResponse',
-                'event_name'       => '{api_name}.{table_name}.create',
+                'event_name'       => array( '{api_name}.{table_name}.create', '{api_name}.table_created', ),
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -683,7 +684,7 @@ $_base['apis'] = array(
                 'summary'          => 'updateRecord() - Update (patch) one record by identifier.',
                 'nickname'         => 'updateRecord',
                 'type'             => 'RecordResponse',
-                'event_name'       => '{api_name}.{table_name}.update',
+                'event_name'       => array( '{api_name}.{table_name}.update', '{api_name}.table_updated', ),
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -748,7 +749,7 @@ $_base['apis'] = array(
                 'summary'          => 'deleteRecord() - Delete one record by identifier.',
                 'nickname'         => 'deleteRecord',
                 'type'             => 'RecordResponse',
-                'event_name'       => '{api_name}.{table_name}.delete',
+                'event_name'       => array( '{api_name}.{table_name}.delete', '{api_name}.table_deleted', ),
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',

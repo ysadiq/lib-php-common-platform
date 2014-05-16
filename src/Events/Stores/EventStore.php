@@ -24,6 +24,7 @@ use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\EventStoreLike;
 use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
@@ -88,6 +89,11 @@ class EventStore extends PlatformStore implements EventStoreLike
     {
         $_data = parent::fetch( $this->_storeId, array(), false );
 
+        if ( $this->_dispatcher->getLogAllEvents() )
+        {
+            Log::debug( 'EventStore: Loading dispatcher state' );
+        }
+
         //  Listeners
         foreach ( Option::get( $_data, 'listeners', array() ) as $_eventName => $_callables )
         {
@@ -100,7 +106,7 @@ class EventStore extends PlatformStore implements EventStoreLike
             {
                 foreach ( $_listeners as $_listener )
                 {
-                    $this->_dispatcher->addListener( $_eventName, $_listener, $_priority );
+                    $this->_dispatcher->addListener( $_eventName, $_listener, $_priority, true );
                 }
             }
         }
@@ -108,17 +114,11 @@ class EventStore extends PlatformStore implements EventStoreLike
         //  Scripts
         foreach ( Option::get( $_data, 'scripts', array() ) as $_eventName => $_scripts )
         {
-            foreach ( $_scripts as $_script )
-            {
-                $this->_dispatcher->addScript( $_eventName, $_script );
-            }
+            $this->_dispatcher->addScript( $_eventName, $_scripts, true );
         }
 
         //  Observers
-        foreach ( Option::get( $_data, 'observers', array() ) as $_observer )
-        {
-            $this->_dispatcher->addObserver( $_observer );
-        }
+        $this->_dispatcher->addObserver( Option::get( $_data, 'observers', array() ), true );
 
         return true;
     }
@@ -128,6 +128,11 @@ class EventStore extends PlatformStore implements EventStoreLike
      */
     public function save()
     {
+        if ( $this->_dispatcher->getLogAllEvents() )
+        {
+            Log::debug( 'EventStore: Saving dispatcher state', array( 'name' => 'EventStore' ) );
+        }
+
         $_data = array(
             'listeners' => $this->_dispatcher->getAllListeners(),
             'observers' => $this->_dispatcher->getObservers(),
@@ -135,6 +140,17 @@ class EventStore extends PlatformStore implements EventStoreLike
         );
 
         parent::save( $this->_storeId, $_data );
+    }
+
+    /**
+     * Flush the cache
+     *
+     * @return bool
+     */
+    public function flushAll()
+    {
+        //  drop a null in for 1 second
+        return parent::save( $this->_storeId, null, 1 );
     }
 
     /**
