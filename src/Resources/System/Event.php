@@ -197,7 +197,20 @@ class Event extends BaseSystemRestResource
             return $this->_getAllEvents( $this->_requestObject->get( 'as_cached', false ) );
         }
 
-        return Pii::app()->getDispatcher()->getListeners( $this->_resourceId );
+        $_result = Platform::getDispatcher()->getListeners( $this->_resourceId );
+
+        foreach ( $_result as $_eventName => $_listeners )
+        {
+            foreach ( $_listeners as $_index => $_listener )
+            {
+                if ( is_object( $_listener ) )
+                {
+                    $_result[ $_eventName ][ $_index ] = gettype($_listener) .':'. spl_object_hash( $_listener );
+                }
+            }
+        }
+
+        return $_result;
     }
 
     /**
