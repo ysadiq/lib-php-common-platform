@@ -24,9 +24,9 @@ use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\ResponseFormats;
-use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
+use DreamFactory\Platform\Events\Enums\PlatformServiceEvents;
 use DreamFactory\Platform\Events\PlatformEvent;
-use DreamFactory\Platform\Events\RestServiceEvent;
+use DreamFactory\Platform\Events\PlatformServiceEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
@@ -362,7 +362,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     {
         if ( $this instanceof BasePlatformRestResource || $this instanceof ServiceOnlyResourceLike )
         {
-            $this->_triggerActionEvent( $this->_requestPayload, ResourceServiceEvents::PRE_PROCESS );
+            $this->_triggerActionEvent( $this->_requestPayload, PlatformServiceEvents::PRE_PROCESS );
         }
     }
 
@@ -376,7 +376,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     {
         if ( $this instanceof BasePlatformRestResource || $this instanceof ServiceOnlyResourceLike )
         {
-            $this->_triggerActionEvent( $this->_response, ResourceServiceEvents::POST_PROCESS );
+            $this->_triggerActionEvent( $this->_response, PlatformServiceEvents::POST_PROCESS );
         }
     }
 
@@ -426,11 +426,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         }
 
         /**
-         * @todo This needs to move to the resource class but
+         * @todo This should be in the resource class itself really...
          */
-        if ( $this instanceof BasePlatformRestResource )
+        if ( $this->isResource() )
         {
-            $this->trigger( ResourceServiceEvents::AFTER_DATA_FORMAT, $_result );
+            $this->trigger( PlatformServiceEvents::AFTER_DATA_FORMAT, $_result );
         }
 
         if ( !empty( $this->_outputFormat ) )
@@ -627,7 +627,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     {
         if ( is_array( $event ) )
         {
-            $event = new RestServiceEvent( $this->_apiName, $this->_resource, $event );
+            $event = new PlatformServiceEvent( $this->_apiName, $this->_resource, $event );
         }
 
         return Platform::trigger(
@@ -636,7 +636,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
                 array( $this->_apiName == 'system' ? $this->_resource : $this->_apiName, strtolower( $this->_action ) ),
                 $eventName
             ),
-            $event ? : new RestServiceEvent( $this->_apiName, $this->_resource, $this->_response ),
+            $event ? : new PlatformServiceEvent( $this->_apiName, $this->_resource, $this->_response ),
             $priority
         );
     }
@@ -652,9 +652,9 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      *
      * These events will only trigger a single time per request.
      *
-     * @param mixed            $result    The result of the call
-     * @param string           $eventName The event to trigger. If not supplied, one will looked up based on the context
-     * @param RestServiceEvent $event
+     * @param mixed                $result    The result of the call
+     * @param string               $eventName The event to trigger. If not supplied, one will looked up based on the context
+     * @param PlatformServiceEvent $event
      *
      * @return bool
      */
@@ -694,7 +694,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
             //  Construct an event if necessary
             $_service = $this->_apiName;
-            $_event = $event ? : new RestServiceEvent( $_service, $this->_resource, $result );
+            $_event = $event ? : new PlatformServiceEvent( $_service, $this->_resource, $result );
 
             //  Normalize the event name
             $_eventName = Event::normalizeEventName( $_event, $_eventName, $_values );

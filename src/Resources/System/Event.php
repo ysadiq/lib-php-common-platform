@@ -20,7 +20,7 @@
 namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
-use DreamFactory\Platform\Events\Enums\PlatformEvents;
+use DreamFactory\Platform\Events\Enums\PlatformServiceEvents;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
@@ -30,7 +30,6 @@ use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Exceptions\StorageException;
-use Kisma\Core\Interfaces\HttpResponse;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -75,6 +74,242 @@ class Event extends BaseSystemRestResource
         $this->_requestObject = Pii::request( false );
 
         parent::__construct( $consumer, $_config, $resources );
+    }
+
+    /**
+     * Default GET implementation
+     *
+     * @return bool
+     */
+    protected function _handleGet()
+    {
+        if ( empty( $this->_resourceId ) && $this->_requestObject->get( 'all_events' ) )
+        {
+            return $this->_getAllEvents( $this->_requestObject->get( 'as_cached', false ) );
+        }
+
+        return Platform::getDispatcher()->getListeners( $this->_resourceId );
+    }
+
+    /**
+     * Retrieves the event cache file detailing all registered events
+     *
+     * @param bool $as_cached If true, the event cache will be returned as stored on disk. Otherwise in a more consumable format for clients.
+     *
+     * @return array
+     */
+    protected function _getAllEvents( $as_cached = false )
+    {
+        //  Make sure the file exists.
+        $_cacheFile = Platform::getSwaggerPath( SwaggerManager::SWAGGER_CACHE_DIR . SwaggerManager::SWAGGER_EVENT_CACHE_FILE, true, true );
+
+        //  If not, rebuild the swagger cache
+        if ( !file_exists( $_cacheFile ) )
+        {
+            //  This will trigger the event dispatcher to flush as well
+            SwaggerManager::clearCache();
+
+            //  Still not here? No events then
+            if ( !file_exists( $_cacheFile ) )
+            {
+                return array();
+            }
+        }
+
+        $_json = json_decode( file_get_contents( $_cacheFile ), true );
+
+        if ( false === $_json || JSON_ERROR_NONE !== json_last_error() )
+        {
+            Log::error( 'Error reading contents of "' . $_cacheFile . '"' );
+
+            return array();
+        }
+
+        //  Original version?
+        if ( 'true' == $as_cached )
+        {
+            $_rebuild = $_json;
+        }
+        else
+        {
+            /**
+             * Rebuild the cached structure into a more consumable client version
+             */
+            $_template = array(
+                'name'  => '{domain}',
+                'paths' => array(),
+            );
+
+            $_pathTemplate = array(
+                'path'  => '{route}',
+                'verbs' => array(),
+            );
+
+            $_rebuild = array();
+
+            foreach ( $_json as $_domain => $_routes )
+            {
+                $_service = $this->_fromTemplate( $_template, get_defined_vars() );
+
+                foreach ( $_routes as $_route => $_verbs )
+                {
+                    $_path = $this->_fromTemplate( $_pathTemplate, get_defined_vars() );
+
+                    foreach ( $_verbs as $_verb => $_event )
+                    {
+                        $_path['verbs'][] = array(
+                            'type'    => $_verb,
+                            'event'   => Option::get( $_event, 'event' ),
+                            'scripts' => Option::get( $_event, 'scripts', array() ),
+                        );
+                    }
+
+                    $_service['paths'][] = $_path;
+                    unset( $_path );
+                }
+
+                $_rebuild[] = $_service;
+                unset( $_service );
+            }
+        }
+
+        return array( 'record' => $_rebuild );
+    }
+
+    /**
+     *
+     * Post/create event handler
+     *
+     * @throws BadRequestException
+     * @throws InternalServerErrorException
+     * @throws StorageException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array|bool
+     */
+    protected function _handlePost()
+    {
+        $_dispatcher = Platform::getDispatcher();
+        $_payload = $this->_determineRequestedResource( $_ids, $_records );
+        $_response = array();
+
+        if ( empty( $_records ) )
+        {
+            $_records = array( $_payload );
+        }
+
+        foreach ( $_records as $_record )
+        {
+            $_eventName = Option::get( $_record, 'event_name' );
+            $_priority = Option::get( $_record, 'priority', 0 );
+            $_listeners = Option::get( $_record, 'listeners', array() );
+
+            if ( empty( $_eventName ) || empty( $_listeners ) )
+            {
+                throw new BadRequestException( 'No "event_name" or "listeners" in request.' );
+            }
+
+            if ( !is_array( $_listeners ) )
+            {
+                $_listeners = array( $_listeners );
+            }
+
+            //  Add the listener
+            foreach ( $_listeners as $_listener )
+            {
+                $_dispatcher->addListener( $_eventName, $_listener, $_priority );
+            }
+
+            //  Add to response
+            $_response[] = array( 'event_name' => $_eventName, 'listeners' => $_dispatcher->getListeners( $_eventName ) );
+        }
+
+        return array( 'record' => $_response );
+    }
+
+    /**
+     * @throws BadRequestException
+     * @throws InternalServerErrorException
+     * @throws NotFoundException
+     * @throws StorageException
+     * @return array
+     */
+    protected function _handleDelete()
+    {
+        $_dispatcher = Platform::getDispatcher();
+        $_payload = $this->_determineRequestedResource( $_ids, $_records );
+        $_response = array();
+
+        if ( empty( $_records ) )
+        {
+            $_records = array( $_payload );
+        }
+
+        foreach ( $_records as $_record )
+        {
+            $_listeners = Option::get( $_record, 'listeners', array() );
+            $_eventName = Option::get( $_record, 'event_name' );
+
+            if ( empty( $_eventName ) || empty( $_listeners ) )
+            {
+                throw new BadRequestException( 'No "event_name" or "listeners" in request.' );
+            }
+
+            if ( !is_array( $_listeners ) )
+            {
+                $_listeners = array( $_listeners );
+            }
+
+            foreach ( $_listeners as $_listener )
+            {
+                $_dispatcher->removeListener( $_eventName, $_listener );
+            }
+
+            //  Add to response
+            $_response[] = array( 'event_name' => $_eventName, 'listeners' => $_dispatcher->getListeners( $_eventName ) );
+        }
+
+        return array( 'record' => $_response );
+    }
+
+    /**
+     * @param string $template
+     * @param array  $variables
+     *
+     * @return mixed|string
+     */
+    protected function _fromTemplate( $template, array $variables = array() )
+    {
+        $_wasArray = false;
+        $_template = $template;
+
+        if ( is_array( $_template ) )
+        {
+            $_template = json_encode( $_template, true );
+
+            if ( JSON_ERROR_NONE != json_last_error() )
+            {
+                return $template;
+            }
+
+            $_wasArray = true;
+        }
+
+        foreach ( $variables as $_key => $_value )
+        {
+            $_tag = '{' . ltrim( $_key, '_' ) . '}';
+
+            if ( false !== stripos( $_template, $_tag, 0 ) )
+            {
+                $_template = str_ireplace( $_tag, $_value, $_template );
+            }
+        }
+
+        if ( $_wasArray )
+        {
+            $_template = json_decode( $_template, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+        }
+
+        return $_template;
     }
 
     /**
@@ -162,7 +397,7 @@ class Event extends BaseSystemRestResource
             }
         }
 
-        if ( PlatformEvents::contains( $_tag ) && false !== strpos( $_tag, '{api_name}.{action}' ) )
+        if ( PlatformServiceEvents::contains( $_tag ) && false !== strpos( $_tag, '{api_name}.{action}' ) )
         {
             $_first = Option::getDeep( $_combinedValues, 'request_uri', 0 );
             $_second = Option::getDeep( $_combinedValues, 'request_uri', 1 );
@@ -185,251 +420,4 @@ class Event extends BaseSystemRestResource
         return $eventName = $_tag;
     }
 
-    /**
-     * Default GET implementation
-     *
-     * @return bool
-     */
-    protected function _handleGet()
-    {
-        if ( empty( $this->_resourceId ) && $this->_requestObject->get( 'all_events' ) )
-        {
-            return $this->_getAllEvents( $this->_requestObject->get( 'as_cached', false ) );
-        }
-
-        $_result = Platform::getDispatcher()->getListeners( $this->_resourceId );
-
-        foreach ( $_result as $_eventName => $_listeners )
-        {
-            foreach ( $_listeners as $_index => $_listener )
-            {
-                if ( is_object( $_listener ) )
-                {
-                    $_result[ $_eventName ][ $_index ] = gettype($_listener) .':'. spl_object_hash( $_listener );
-                }
-            }
-        }
-
-        return $_result;
-    }
-
-    /**
-     * Retrieves the event cache file detailing all registered events
-     *
-     * @param bool $as_cached If true, the event cache will be returned as stored on disk. Otherwise in a more consumable format for clients.
-     *
-     * @return array
-     */
-    protected function _getAllEvents( $as_cached = false )
-    {
-        //  Make sure the file exists.
-        $_cacheFile = Platform::getSwaggerPath( SwaggerManager::SWAGGER_CACHE_DIR . SwaggerManager::SWAGGER_EVENT_CACHE_FILE, true, true );
-
-        //  If not, rebuild the swagger cache
-        if ( !file_exists( $_cacheFile ) )
-        {
-            SwaggerManager::clearCache();
-
-            //  Still not here? No events then
-            if ( !file_exists( $_cacheFile ) )
-            {
-                return array();
-            }
-        }
-
-        $_json = json_decode( file_get_contents( $_cacheFile ), true );
-
-        if ( false === $_json || JSON_ERROR_NONE !== json_last_error() )
-        {
-            Log::error( 'Error reading contents of "' . $_cacheFile . '"' );
-
-            return array();
-        }
-
-        //  Original version?
-        if ( 'true' == $as_cached )
-        {
-            $_rebuild = $_json;
-        }
-        else
-        {
-            /**
-             * Rebuild the cached structure into a more consumable client version
-             */
-            $_template = array(
-                'name'  => '{domain}',
-                'paths' => array(),
-            );
-
-            $_pathTemplate = array(
-                'path'  => '{route}',
-                'verbs' => array(),
-            );
-
-            $_rebuild = array();
-
-            foreach ( $_json as $_domain => $_routes )
-            {
-                $_service = $this->_fromTemplate( $_template, get_defined_vars() );
-
-                foreach ( $_routes as $_route => $_verbs )
-                {
-                    $_path = $this->_fromTemplate( $_pathTemplate, get_defined_vars() );
-
-                    foreach ( $_verbs as $_verb => $_event )
-                    {
-                        $_path['verbs'][] = array(
-                            'type'    => $_verb,
-                            'event'   => Option::get( $_event, 'event' ),
-                            'scripts' => Option::get( $_event, 'scripts', array() ),
-                        );
-                    }
-
-                    $_service['paths'][] = $_path;
-                    unset( $_path );
-                }
-
-                $_rebuild[] = $_service;
-                unset( $_service );
-            }
-        }
-
-        return array( 'record' => $_rebuild );
-    }
-
-    /**
-     *
-     * Post/create event handler
-     *
-     * @throws BadRequestException
-     * @throws InternalServerErrorException
-     * @throws StorageException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return array|bool
-     */
-    protected function _handlePost()
-    {
-        $_dispatcher = Pii::app()->getDispatcher();
-        $_payload = $this->_determineRequestedResource( $_ids, $_records );
-        $_response = array();
-
-        if ( empty( $_records ) )
-        {
-            $_records = array( $_payload );
-        }
-
-        foreach ( $_records as $_record )
-        {
-            $_listeners = Option::get( $_record, 'listeners', array() );
-            $_eventName = Option::get( $_record, 'event_name' );
-            $_priority = Option::get( $_record, 'priority', 0 );
-
-            if ( empty( $_eventName ) || empty( $_listeners ) )
-            {
-                throw new BadRequestException( 'No "event_name" or "listeners" in request.' );
-            }
-
-            if ( !is_array( $_listeners ) )
-            {
-                $_listeners = array( $_listeners );
-            }
-
-            //  Add the listener
-            foreach ( $_listeners as $_listener )
-            {
-                $_dispatcher->addListener( $_eventName, $_listener, $_priority );
-            }
-
-            //  Add to response
-            $_response[] = array( 'event_name' => $_eventName, 'listeners' => $_dispatcher->getListeners( $_eventName ) );
-        }
-
-        return array( 'record' => $_response );
-    }
-
-    /**
-     * @throws BadRequestException
-     * @throws InternalServerErrorException
-     * @throws NotFoundException
-     * @throws StorageException
-     * @return array
-     */
-    protected function _handleDelete()
-    {
-        $_dispatcher = Pii::app()->getDispatcher();
-        $_payload = $this->_determineRequestedResource( $_ids, $_records );
-        $_response = array();
-
-        if ( empty( $_records ) )
-        {
-            $_records = array( $_payload );
-        }
-
-        foreach ( $_records as $_record )
-        {
-            $_listeners = Option::get( $_record, 'listeners', array() );
-            $_eventName = Option::get( $_record, 'event_name' );
-
-            if ( empty( $_eventName ) || empty( $_listeners ) )
-            {
-                throw new BadRequestException( 'No "event_name" or "listeners" in request.' );
-            }
-
-            if ( !is_array( $_listeners ) )
-            {
-                $_listeners = array( $_listeners );
-            }
-
-            foreach ( $_listeners as $_listener )
-            {
-                $_dispatcher->removeListener( $_eventName, $_listener );
-            }
-
-            //  Add to response
-            $_response[] = array( 'event_name' => $_eventName, 'listeners' => $_dispatcher->getListeners( $_eventName ) );
-        }
-
-        return array( 'record' => $_response );
-    }
-
-    /**
-     * @param string $template
-     * @param array  $variables
-     *
-     * @return mixed|string
-     */
-    protected function _fromTemplate( $template, array $variables = array() )
-    {
-        $_wasArray = false;
-        $_template = $template;
-
-        if ( is_array( $_template ) )
-        {
-            $_template = json_encode( $_template, true );
-
-            if ( JSON_ERROR_NONE != json_last_error() )
-            {
-                return $template;
-            }
-
-            $_wasArray = true;
-        }
-
-        foreach ( $variables as $_key => $_value )
-        {
-            $_tag = '{' . ltrim( $_key, '_' ) . '}';
-
-            if ( false !== stripos( $_template, $_tag, 0 ) )
-            {
-                $_template = str_ireplace( $_tag, $_value, $_template );
-            }
-        }
-
-        if ( $_wasArray )
-        {
-            $_template = json_decode( $_template, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
-        }
-
-        return $_template;
-    }
 }

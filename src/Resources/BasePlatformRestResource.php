@@ -280,4 +280,23 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
         return $this->_service;
     }
 
+    /**
+     * @return bool We are a resource
+     */
+    public function isResource()
+    {
+        return true;
+    }
+
+    /**
+     * @param bool $isResource
+     *
+     * @return \DreamFactory\Platform\Services\BasePlatformService
+     */
+    public function setIsResource( $isResource )
+    {
+        //  We are a resource, so it's true no matter what anyone says
+        return parent::setIsResource( $isResource = true );
+    }
+
 }

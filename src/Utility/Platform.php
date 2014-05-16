@@ -270,8 +270,13 @@ class Platform extends SeedUtility
             hash(
                 'ripemd128',
                 uniqid( '', true ) . ( $_uuid ? : microtime( true ) ) . md5(
-                    $namespace . $_SERVER['REQUEST_TIME'] . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['LOCAL_ADDR'] . $_SERVER['LOCAL_PORT'] .
-                    $_SERVER['REMOTE_ADDR'] . $_SERVER['REMOTE_PORT']
+                    $namespace .
+                    $_SERVER['REQUEST_TIME'] .
+                    $_SERVER['HTTP_USER_AGENT'] .
+                    $_SERVER['LOCAL_ADDR'] .
+                    $_SERVER['LOCAL_PORT'] .
+                    $_SERVER['REMOTE_ADDR'] .
+                    $_SERVER['REMOTE_PORT']
                 )
             )
         );
@@ -354,7 +359,7 @@ class Platform extends SeedUtility
      * $key can be specified as an array of key-value pairs: array( 'alpha' => 'xyz', 'beta' => 'qrs', 'gamma' => 'lmo', ... )
      *
      * @param string|array $key  The cache id or array of key-value pairs
-     * @param mixed        $data     The cache entry/data.
+     * @param mixed        $data The cache entry/data.
      * @param int          $ttl  The cache lifetime. Sets a specific lifetime for this cache entry. Defaults to 0, or "never expire"
      *
      * @return boolean|boolean[] TRUE if the entry was successfully stored in the cache, FALSE otherwise.
@@ -445,6 +450,9 @@ class Platform extends SeedUtility
     public static function getDispatcher()
     {
         static $_dispatcher;
+
+        //  This is the only place in the library where we call Pii to get the dispatcher.
+        //  In v2, the source of the dispatcher location will be different, most likely a service
 
         return $_dispatcher ? : $_dispatcher = Pii::app()->getDispatcher();
     }

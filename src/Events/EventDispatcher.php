@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Events;
 use DreamFactory\Events\Interfaces\EventObserverLike;
 use DreamFactory\Platform\Components\ApiResponse;
 use DreamFactory\Platform\Events\Stores\EventStore;
+use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Resources\System\Script;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\SwaggerManager;
@@ -34,8 +35,6 @@ use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\Scalar;
-use Kisma\Core\Utility\Storage;
 use Symfony\Component\EventDispatcher\Event;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -148,6 +147,14 @@ class EventDispatcher implements EventDispatcherInterface
         {
             Log::notice( 'Event system unavailable at this time.' );
         }
+
+        $this->addListener(
+            'swagger.cache_rebuilt',
+            function ( $eventName, $event, $dispatcher )
+            {
+                return call_user_func( array( $dispatcher, '_checkMappedScripts' ), $eventName, $event, $dispatcher );
+            }
+        );
     }
 
     /**
@@ -197,17 +204,8 @@ class EventDispatcher implements EventDispatcherInterface
 
         if ( $_timestamp - $_lastCheck == 0 || empty( $this->_scripts ) )
         {
-            $this->checkMappedScripts();
+            $this->_checkMappedScripts();
         }
-
-        //  If the cache rebuilds, bust our cache and remap scripts
-        $this->addListener(
-            'swagger.cache_rebuilt',
-            function ( $eventName, $event, $dispatcher )
-            {
-                return call_user_func( array( $dispatcher, 'checkMappedScripts' ), true, true );
-            }
-        );
 
         return true;
     }
@@ -228,8 +226,8 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param PlatformEvent|RestServiceEvent $event
-     * @param string                         $eventName
+     * @param PlatformEvent|PlatformServiceEvent $event
+     * @param string                             $eventName
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @throws \Exception
@@ -286,10 +284,11 @@ class EventDispatcher implements EventDispatcherInterface
 
     /**
      * @param string $eventName
+     * @param bool   $prettyPrintObjects
      *
      * @return array
      */
-    public function getListeners( $eventName = null )
+    public function getListeners( $eventName = null, $prettyPrintObjects = false )
     {
         if ( !empty( $eventName ) )
         {
@@ -307,6 +306,28 @@ class EventDispatcher implements EventDispatcherInterface
             {
                 $this->_sortListeners( $eventName );
             }
+        }
+
+        if ( $prettyPrintObjects )
+        {
+            $_result = $this->_sorted;
+
+            foreach ( $_result as $_eventName => &$_listeners )
+            {
+                foreach ( $_listeners as &$_listener )
+                {
+                    if ( is_string( $_listener ) )
+                    {
+                        continue;
+                    }
+
+                    $_hash = spl_object_hash( $_listener );
+                    $_name = gettype( $_listener );
+                    $_listener = ( ( $_listener instanceof \Closure || $_listener instanceof SerializableClosure ) ? 'Closure' : $_name ) . 'id#' . $_hash;
+                }
+            }
+
+            return $_result;
         }
 
         return $this->_sorted;
@@ -331,63 +352,38 @@ class EventDispatcher implements EventDispatcherInterface
     /**
      * @see EventDispatcherInterface::addListener
      */
-    /**
-     * @param string   $eventName
-     * @param callable $listener
-     * @param int      $priority
-     * @param bool     $fromCache If true, this request came from the EventStore
-     *
-     * @return bool
-     */
-    public function addListener( $eventName, $listener, $priority = 0, $fromCache = false )
+    public function addListener( $eventName, $listener, $priority = 0 )
     {
-        if ( !isset( $this->_listeners[ $eventName ] ) || empty( $this->_listeners[ $eventName ] ) )
+        if ( !isset( $this->_listeners[ $eventName ] ) )
         {
             $this->_listeners[ $eventName ] = array();
         }
 
-        if ( !isset( $this->_listeners[ $eventName ][ $priority ] ) )
-        {
-            $this->_listeners[ $eventName ][ $priority ] = array();
-        }
+        $this->_sanitizeListener( $listener );
 
-        if ( !( $listener instanceof SerializableClosure ) )
+        foreach ( $this->_listeners[ $eventName ] as $_priority => $_listeners )
         {
-            if ( ( !is_string( $listener ) && !is_array( $listener ) ) || $listener instanceof \Closure )
+            if ( false !== ( $_key = array_search( $listener, $_listeners, true ) ) )
             {
-                $listener = new SerializableClosure( $listener );
-            }
-        }
-
-        $_found = false;
-        $_newListener = serialize( $listener );
-
-        foreach ( $this->_listeners[ $eventName ][ $priority ] as $_liveListener )
-        {
-            if ( $_newListener === serialize( $_liveListener ) )
-            {
-                if ( static::$_logAllEvents && $fromCache )
+                if ( static::$_logAllEvents )
                 {
-                    Log::debug( '  * Existing listener found and skipped for "' . spl_object_hash( $this ) . '::' . $eventName . '"' );
+                    Log::debug( 'Replacing listener for event "' . $eventName . '" at ' . $_key );
                 }
 
-                $_found = true;
-                continue;
+                $this->_listeners[ $eventName ][ $_priority ][ $_key ] = $listener;
+                unset( $this->_sorted[ $eventName ] );
+
+                return;
             }
         }
 
-        if ( !$_found )
+        if ( static::$_logAllEvents )
         {
-            if ( static::$_logAllEvents )
-            {
-                Log::debug( '  * Added ' . ( $fromCache ? 'cached' : 'new' ) . ' listener for "' . spl_object_hash( $this ) . '::' . $eventName . '"' );
-            }
-
-            $this->_listeners[ $eventName ][ $priority ][] = $listener;
-            unset( $this->_sorted[ $eventName ] );
+            Log::debug( 'Adding listener for event "' . $eventName . '"' );
         }
 
-        return true;
+        $this->_listeners[ $eventName ][ $priority ][] = $listener;
+        unset( $this->_sorted[ $eventName ] );
     }
 
     /**
@@ -400,10 +396,7 @@ class EventDispatcher implements EventDispatcherInterface
             return;
         }
 
-        if ( $listener instanceof \Closure )
-        {
-            $listener = new SerializableClosure( $listener );
-        }
+        $this->_sanitizeListener( $listener );
 
         foreach ( $this->_listeners[ $eventName ] as $_priority => $_listeners )
         {
@@ -417,7 +410,7 @@ class EventDispatcher implements EventDispatcherInterface
     /**
      * @see EventDispatcherInterface::addSubscriber
      */
-    public function addSubscriber( EventSubscriberInterface $subscriber, $fromCache = false )
+    public function addSubscriber( EventSubscriberInterface $subscriber )
     {
         foreach ( $subscriber->getSubscribedEvents() as $_eventName => $_params )
         {
@@ -468,9 +461,9 @@ class EventDispatcher implements EventDispatcherInterface
         return $this->_listeners;
     }
 
-    //-------------------------------------------------------------------------
-    //	Utilities
-    //-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+//	Utilities
+//-------------------------------------------------------------------------
 
     /**
      * @param $callable
@@ -510,18 +503,12 @@ class EventDispatcher implements EventDispatcherInterface
 
     /**
      * @param EventDispatcher $dispatcher
-     * @param bool            $flush If true, empties this dispatcher's cache
      *
      * @return bool
      */
-    protected static function _saveToStore( EventDispatcher $dispatcher, $flush = false )
+    protected static function _saveToStore( EventDispatcher $dispatcher )
     {
         $_store = new EventStore( $dispatcher );
-
-        if ( $flush )
-        {
-            return $_store->flushAll();
-        }
 
         return $_store->save();
     }
@@ -562,15 +549,9 @@ class EventDispatcher implements EventDispatcherInterface
      * Verify that mapped scripts exist. Optionally check for new drop-ins
      *
      * @param bool $scanForNew If true, the $scriptPath will be scanned for new scripts
-     * @param bool $flush
      */
-    public function checkMappedScripts( $scanForNew = true, $flush = false )
+    protected function _checkMappedScripts( $scanForNew = true )
     {
-        if ( $flush )
-        {
-            return static::_saveToStore( $this, true );
-        }
-
         $_found = array();
         $_basePath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
 
@@ -634,7 +615,7 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @return array|EventObserverLike[]
+     * @return array|\DreamFactory\Events\Interfaces\EventObserverLike[]
      */
     public static function getObservers()
     {
@@ -741,8 +722,8 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param string           $eventName The name of the event
-     * @param RestServiceEvent $event     The event
+     * @param string               $eventName The name of the event
+     * @param PlatformServiceEvent $event     The event
      *
      * @throws \Exception
      * @return bool False if propagation has stopped, true otherwise.
@@ -755,8 +736,8 @@ class EventDispatcher implements EventDispatcherInterface
 
         foreach ( $this->getListeners( $eventName ) as $_listener )
         {
-            //  Local code listener
-            if ( !is_string( $_listener ) && is_callable( $_listener ) )
+            //  Local code/closure listener
+            if ( is_callable( $_listener ) )
             {
                 call_user_func( $_listener, $event, $eventName, $this );
             }
@@ -768,7 +749,7 @@ class EventDispatcher implements EventDispatcherInterface
 
                 if ( !class_exists( $_className ) )
                 {
-                    Log::warning( 'Class ' . $_className . ' is not auto-loadable. Cannot call ' . $eventName . ' script' );
+                    Log::warning( 'Class ' . $_className . ' is unknown/not auto-loadable. Cannot call ' . $eventName . ' script' );
                     continue;
                 }
 
@@ -802,7 +783,7 @@ class EventDispatcher implements EventDispatcherInterface
                 $_posts[] = static::$_client->post(
                     $_listener,
                     array( 'content-type' => 'application/json' ),
-                    json_encode( $_payload, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT )
+                    json_encode( $_payload, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
                 );
             }
             //  No clue!
@@ -860,79 +841,74 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param string       $eventName
-     * @param string|array $scriptPath One or more scripts to run on this event
-     * @param bool         $fromCache  True if the cache is adding this handler
-     *
-     * @return bool False if no observers added, otherwise how many were added
+     * @param string $eventName
+     * @param string $scriptPath
      */
-    public function addScript( $eventName, $scriptPath, $fromCache = false )
+    public function addScript( $eventName, $scriptPath )
     {
         if ( !isset( $this->_scripts[ $eventName ] ) )
         {
             $this->_scripts[ $eventName ] = array();
         }
 
-        if ( !is_array( $scriptPath ) )
+        if ( !in_array( $scriptPath, $this->_scripts ) )
         {
-            $scriptPath = array( $scriptPath );
+            $this->_scripts[ $eventName ][] = $scriptPath;
         }
-
-        foreach ( $scriptPath as $_script )
-        {
-            if ( !in_array( $_script, $this->_scripts[ $eventName ] ) )
-            {
-                $this->_scripts[ $eventName ][] = $_script;
-            }
-        }
-
-        return count( $scriptPath ) ? : false;
     }
 
     /**
-     * @param EventObserverLike|EventObserverLike[] $observer
-     * @param bool                                  $fromCache True if the cache is adding this handler
-     *
-     * @return bool False if no observers added, otherwise how many were added
+     * @param \DreamFactory\Events\Interfaces\EventObserverLike $observer
      */
-    public function addObserver( $observer, $fromCache = false )
+    public function addObserver( EventObserverLike $observer )
     {
-        if ( !isset( static::$_observers ) )
+        if ( !isset( $this->_observers ) )
         {
-            static::$_observers = array();
+            $this->_observers = array();
         }
 
-        if ( empty( $observer ) )
+        if ( !in_array( $observer, $this->_observers ) )
         {
-            return false;
+            $this->_observers[] = $observer;
+        }
+    }
+
+    /**
+     * @param \Closure|SerializableClosure|string $listener
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     */
+    protected function _sanitizeListener( &$listener )
+    {
+        //  All closures convert to SerializableClosure objects
+        if ( $listener instanceof \Closure )
+        {
+            $listener = new SerializableClosure( $listener );
+
+            return;
         }
 
-        if ( !is_array( $observer ) )
+        //  Strings must be a valid URL
+        if ( !is_string( $listener ) )
         {
-            $observer = array( $observer );
+            throw new BadRequestException( 'Unrecognized listener type: ' . print_r( $listener, true ) );
         }
 
-        $_serializedObserver = serialize( $observer );
-        $_additions = array();
-
-        \array_walk(
-            static::$_observers,
-            function ( $item, $index, $serializedObserver ) use ( $_additions )
-            {
-                if ( $serializedObserver != serialize( $item ) )
-                {
-                    $_additions[] = $index;
-                }
-            },
-            $_serializedObserver
-        );
-
-        if ( !empty( $_additions ) )
+        //  Is this an URL listener?
+        if ( filter_var( $listener, FILTER_VALIDATE_URL ) )
         {
-            static::$_observers = array_merge( static::$_observers, $_additions );
+            return;
         }
 
-        return count( $_additions ) ? : false;
+        //  Assume relative URL, add host and try again...
+        $_test = Pii::request( false )->getSchemeAndHttpHost() . '/' . ltrim( $listener, ' /' );
+        if ( !filter_var( $_test, FILTER_VALIDATE_URL ) )
+        {
+            throw new BadRequestException( 'Unrecognized listener: ' . $listener );
+        }
+
+        //  Set full url as listener
+        $listener = $_test;
     }
 
 }

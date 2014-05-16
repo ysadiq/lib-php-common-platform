@@ -19,27 +19,17 @@
  */
 namespace DreamFactory\Platform\Events\Enums;
 
-use Kisma\Core\Events\Enums\LifeEvents;
-
 /**
  * The base events raised by the app that is the DSP
  */
-class DspEvents extends LifeEvents
+class DspEvents
 {
     /**
-     * @var string Triggered immediately before a request is dispatched to a handler
-     */
-    const BEFORE_REQUEST = 'dsp.before_request';
-    /**
-     * @var string Triggered immediately after the dispatched request handler returns
-     */
-    const AFTER_REQUEST = 'dsp.after_request';
-    /**
-     * @var string Triggered immediately after any plugins have been loaded
+     * @var string Triggered immediately after all plugins have been loaded
      */
     const PLUGINS_LOADED = 'dsp.plugins_loaded';
     /**
-     * @var string Triggered immediately after any plugins have been loaded
+     * @var string Triggered when a local config file is loaded
      */
     const LOCAL_CONFIG_LOADED = 'dsp.local_config_loaded';
 }

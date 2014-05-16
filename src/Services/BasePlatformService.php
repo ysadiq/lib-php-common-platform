@@ -59,6 +59,10 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
      */
     protected $_isActive = false;
     /**
+     * @var bool Indicates that this object is or is not to be treated as a resource
+     */
+    protected $_isResource = false;
+    /**
      * @var string Native format of output of service, null for php, otherwise json, xml, etc.
      */
     protected $_nativeFormat = null;
@@ -355,4 +359,25 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
     {
         return $this->_currentUserId;
     }
+
+    /**
+     * @return boolean
+     */
+    public function isResource()
+    {
+        return $this->_isResource;
+    }
+
+    /**
+     * @param boolean $isResource
+     *
+     * @return BasePlatformService
+     */
+    public function setIsResource( $isResource )
+    {
+        $this->_isResource = $isResource;
+
+        return $this;
+    }
+
 }
