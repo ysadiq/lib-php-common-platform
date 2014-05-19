@@ -19,6 +19,7 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
+use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use Kisma\Core\Interfaces\ConsumerLike;
@@ -74,6 +75,10 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
      * @var int current user ID
      */
     protected $_currentUserId;
+    /**
+     * @var bool Used to indicate whether or not this request has come from within, like a script
+     */
+    protected $_inlineRequest = false;
 
     //*************************************************************************
     //* Methods
@@ -156,13 +161,13 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
      */
     public static function processInlineRequest( $resource, $action = HttpMethod::GET, $outputFormat = false, $appName = null )
     {
-        throw new NotImplementedException();
-//		//	Get the resource and set the app_name
-//		$_resource = ResourceStore::resource( $resource );
-//		$_SERVER['HTTP_X_DREAMFACTORY_APPLICATION_NAME'] = $appName ? : sha1( get_called_class() );
-//
-//		//	Make the call
-//		return $_resource->processInlineRequest( $resource, $action, $outputFormat );
+        //	Get the resource and set the app_name
+        $_SERVER['HTTP_X_DREAMFACTORY_APPLICATION_NAME'] = $appName ? : sha1( get_called_class() );
+
+        /** @var BasePlatformRestResource $_resource */
+        $_resource = ResourceStore::resource( $resource )->setInlineRequest( true );
+
+        return $_resource->processRequest( $resource, $action, $outputFormat, $appName );
     }
 
     /**
@@ -376,6 +381,26 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
     public function setIsResource( $isResource )
     {
         $this->_isResource = $isResource;
+
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function isInlineRequest()
+    {
+        return $this->_inlineRequest;
+    }
+
+    /**
+     * @param boolean $inlineRequest
+     *
+     * @return BasePlatformService
+     */
+    public function setInlineRequest( $inlineRequest )
+    {
+        $this->_inlineRequest = $inlineRequest;
 
         return $this;
     }

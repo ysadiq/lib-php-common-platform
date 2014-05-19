@@ -660,6 +660,12 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected function _triggerActionEvent( &$result, $eventName = null, $event = null )
     {
+        //  Just say no to infinity!
+        if ( $this->_inlineRequest )
+        {
+            return false;
+        }
+
         static $_triggeredEvents = array();
 
         //  Lookup the appropriate event if not specified.

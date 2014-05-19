@@ -24,19 +24,19 @@ use DreamFactory\Platform\Events\Enums\SwaggerEvents;
 use DreamFactory\Platform\Events\Interfaces\EventObserverLike;
 use DreamFactory\Platform\Events\Stores\EventStore;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\NotImplementedException;
+use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Resources\System\Script;
-use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Platform;
-use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
 use Guzzle\Http\Client;
 use Guzzle\Http\Exception\MultiTransferException;
 use Jeremeamia\SuperClosure\SerializableClosure;
 use Kisma\Core\Enums\GlobFlags;
-use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FileSystem;
+use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
@@ -554,37 +554,169 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * Creates a special object that is passed to scripts
+     * Creates a generic, consistent event for scripting and notifications
      *
-     * @param string        $eventName
+     * The returned array is as follows:
+     *
+     *  array(
+     *      //  This contains information about the event itself (READ-ONLY)
+     *      'event' => array(
+     *          'id'                => 'A unique ID assigned to this event',
+     *          'name'              => 'event.name',
+     *          'trigger'           => '{api_name}/{resource}',
+     *          'stop_propagation'  => [true|false],
+     *          'dispatcher'        => array(
+     *              'id'            => 'A unique ID assigned to the dispatcher of this event',
+     *          ),
+     *          //  Information about the triggering request
+     *          'request'           => array(
+     *              'timestamp'     => 'timestamp of the initial request',
+     *              'api_name'      =>'The api_name of the called service',
+     *              'resource'      => 'The name of the resource requested',
+     *              'path'          => '/full/path/that/triggered/event',
+     *          ),
+     *      ),
+     *      //  This contains the static configuration of the entire platform (READ-ONLY)
+     *      'platform' => array(
+     *          'api'               => [wormhole to inline-REST API],
+     *          'config'            => [standard DSP configuration update],
+     *      ),
+     *      //  This contains any additional information the event sender wanted to convey (READ-ONLY)
+     *      'details' => array(),
+     *      //  THE MEAT! This contains the ACTUAL data received from the client, or what's being sent back to the client (READ-WRITE).
+     *      'payload' => array(
+     *          //  See recap above for formats
+     *      ),
+     *  );
+     *
+     * Please note that the format of the payload differs slightly on multi-row result sets. In the v1.0 REST API, if a single row of data
+     * is to be returned from a request, it is merged into the root of the resultant array. If there are multiple rows, they are placed into
+     * n key called 'record'. To make matter worse, if you make a multi-row request via XML, and wrap your input payload in a
+     * <records><record></record>...</records> type wrapper, the resultant array will be placed a level deeper ($payload['records']['record'] = $results).
+     *
+     * Therefore the data exposed by the event system has been "normalized" to provide a reliable and consistent manner in which to process said data.
+     * There should be no need for wasting time trying to determine if your data is "maybe here, or maybe there, or maybe over there even" when received by
+     * your event handlers. If your payload contains record data, you will always receive it in an array container. Even for single rows.
+     *
+     * IMPORTANT: Don't expect this for ALL results. For non-record-like resultant data and/or result sets (i.e. NoSQL, other stuff), the data
+     * may be placed in the payload verbatim.
+     *
+     * IMPORTANTER: The representation of the data will be placed back into the original location/position in the $payload from which it was "normalized".
+     * This means that any client-side handlers will have to deal with the bogus determinations. Just be aware.
+     *
+     * To recap, below is a side-by-side comparison of record data as shown returned to the caller, and sent to an event handler.
+     *
+     *  REST API v1.0                           Event Representation
+     *  -------------                           --------------------
+     *  Single row...                           Add a 'record' key and make it look like a multi-row
+     *
+     *      array(                              array(
+     *          'id' => 1,                          'record' => array(
+     *      )                                           0 => array( 'id' => 1, ),
+     *                                              ),
+     *                                          ),
+     *
+     * Multi-row...                             Stays the same...
+     *
+     *      array(                              array(
+     *          'record' => array(                  'record' =>  array(
+     *              0 => array( 'id' => 1 ),            0 => array( 'id' => 1 ),
+     *              1 => array( 'id' => 2 ),            1 => array( 'id' => 2 ),
+     *              2 => array( 'id' => 3 ),            2 => array( 'id' => 3 ),
+     *          ),                                  ),
+     *      )                                   )
+     *
+     * XML multi-row                            The 'records' key is unwrapped, like regular multi-row
+     *
+     *  array(                                  array(
+     *    'records' => array(                     'record' =>  array(
+     *      'record' => array(                        0 => array( 'id' => 1 ),
+     *        0 => array( 'id' => 1 ),                1 => array( 'id' => 2 ),
+     *        1 => array( 'id' => 2 ),                2 => array( 'id' => 3 ),
+     *        2 => array( 'id' => 3 ),            ),
+     *      ),                                  )
+     *    ),
+     *  )
+     *
+     * @param string        $eventName        The event name
+     * @param PlatformEvent $event            The event
+     * @param bool          $includeDspConfig If true, the current DSP config is added to payload
+     * @param bool          $returnJson       If true, the event will be returned as a JSON string, otherwise an array.
+     *
+     * @param array         $additionalDetails
+     *
+     * @return array|string
+     */
+    protected function _sandboxEvent( $eventName, PlatformEvent $event, $includeDspConfig = true, $returnJson = false, $additionalDetails = array() )
+    {
+        static $_config = null;
+
+        $_config = $_config ? : Config::getCurrentConfig();
+
+        $_event = array(
+            'event'    => array(
+                'id'               => null,
+                'name'             => $eventName,
+                'trigger'          => $this->getPathInfo(),
+                'stop_propagation' => $event->isPropagationStopped(),
+                'dispatcher'       => array(
+                    'id'   => spl_object_hash( $this ),
+                    'type' => Inflector::neutralize( get_class( $this ) ),
+                ),
+            ),
+            'request'  => array_merge(
+                $event->toArray(),
+                array(
+                    'timestamp' => date( 'c', Option::server( 'REQUEST_TIME_FLOAT', Option::server( 'REQUEST_TIME', microtime( true ) ) ) ),
+                    'path'      => $this->getPathInfo( true )
+                )
+            ),
+            'platform' => array(
+                'api'    => function ( $apiName, $resource, $resourceId, $parameters = array(), $payload = array() )
+                {
+                    throw new NotImplementedException( 'This feature is in development.' );
+                },
+                'config' => Config::getCurrentConfig(),
+            ),
+            'details'  => Option::clean( $additionalDetails ),
+            'payload'  => $this->_sandboxEventData( $event ),
+        );
+
+        return $returnJson ? json_encode( $_event, JSON_UNESCAPED_SLASHES ) : $_event;
+    }
+
+    /**
+     * Sandboxes the event data into a normalized fashion
+     *
      * @param PlatformEvent $event
-     * @param bool          $includeDspInfo
      *
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return array
      */
-    protected function _createSandboxEvent( $eventName, PlatformEvent $event, $includeDspInfo = true )
+    protected function _sandboxEventData( PlatformEvent $event )
     {
-        $_dspInfo = ( $includeDspInfo ? array(
-            'dsp' => array(
-                'config'  => ResourceStore::resource( 'config' )->processRequest( 'config', HttpMethod::GET, false ),
-                'session' => Session::generateSessionDataFromUser( Session::getCurrentUserId() ),
-            ),
-        ) : array() );
+        $_data = $event->getData();
 
-        //  Prepare the event we are passing around
-        $event->toArray( array() );
+        //  XML-wrapped
+        if ( false !== ( $_records = Option::getDeep( $_data, 'records', 'record', false ) ) )
+        {
+            return array( 'record' => $_records );
+        }
 
-        return \DreamFactory\Platform\Resources\System\Event::toJson(
-            $event,
-            array(
-                'event_name'       => $eventName,
-                'dispatcher_id'    => spl_object_hash( $this ),
-                'trigger'          => $this->_pathInfo,
-                'stop_propagation' => $event->isPropagationStopped(),
-            ),
-            $_dspInfo
-        );
+        //  Multi-row
+        if ( false !== ( $_records = Option::get( $_data, 'record', false ) ) )
+        {
+            return array( 'record' => $_records );
+        }
+
+        //  Single row, or so we think...
+        if ( is_array( $_data ) && !Pii::isEmpty( $_record = Option::get( $_data, 'record' ) ) && count( $_record ) >= 1 )
+        {
+            return array( 'record' => $_data );
+        }
+
+        //  Something completely different...
+        return $_data;
+
     }
 
     /**
@@ -745,11 +877,23 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @return string The request path sans "/rest"
+     * @param bool $unsullied If true, the actual request path is returned, otherwise it is stripped of "/rest"
+     *
+     * @return string The request path with or without "/rest"
      */
-    public function getPathInfo()
+    public function getPathInfo( $unsullied = false )
     {
-        return $this->_pathInfo = ( $this->_pathInfo ? : preg_replace( '#^\/rest#', null, Pii::request( true )->getPathInfo(), 1 ) );
+        $_path = null;
+
+        //  If the dude wants the business or we haven't set the path yet...
+        if ( !$unsullied || empty( $this->_pathInfo ) )
+        {
+            //  Get the path and clean it up
+            $_path = Pii::request( true )->getPathInfo();
+            $this->_pathInfo = preg_replace( '#^\/rest#', null, $_path, 1 );
+        }
+
+        return $unsullied ? ( $_path ? : Pii::request( true )->getPathInfo() ) : $this->_pathInfo;
     }
 
     /**
@@ -790,12 +934,11 @@ class EventDispatcher implements EventDispatcherInterface
             return true;
         }
 
-        $_event = $this->_createSandboxEvent( $eventName, $event );
+        $_event = $this->_sandboxEvent( $eventName, $event );
 
         foreach ( Option::clean( $_scripts ) as $_script )
         {
-            $_eventData = Option::get( $_event, 'data', array() );
-            $_result = Script::runScript( $_script, $eventName . '.js', $_eventData, $_output );
+            $_result = Script::runScript( $_script, $eventName . '.js', $_event, $_output );
 
             if ( is_array( $_result ) )
             {
@@ -881,7 +1024,7 @@ class EventDispatcher implements EventDispatcherInterface
                  * Because the $event object can be changed by different listeners during the processing loop, it needs to be regen'd each time.
                  * That's not to say it couldn't be done better in another sprint.
                  */
-                $_payload = ApiResponse::create( $this->_createSandboxEvent( $eventName, $event, false ) );
+                $_payload = ApiResponse::create( $this->_sandboxEvent( $eventName, $event, false, true ) );
 
                 $_posts[] = static::$_client->post(
                     $_listener,
