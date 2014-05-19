@@ -7,7 +7,7 @@
  * @package   web-csp
  * @filesource
  */
-namespace DreamFactory\Events\Interfaces;
+namespace DreamFactory\Platform\Events\Interfaces;
 
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
@@ -21,6 +21,25 @@ interface EventObserverLike
     //*************************************************************************
     //	Methods
     //*************************************************************************
+
+    /**
+     * Enables the observer in the eyes of a dispatcher
+     *
+     * @return void
+     */
+    public function enable();
+
+    /**
+     * Disables the observer in the eyes of a dispatcher
+     *
+     * @return void
+     */
+    public function disable();
+
+    /**
+     * @return bool True if this observer is enabled for event handling
+     */
+    public function isEnabled();
 
     /**
      * Process

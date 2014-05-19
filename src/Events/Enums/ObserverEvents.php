@@ -1,8 +1,9 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
+ * This file is part of the DreamFactory Services Platform(tm) (DSP)
  *
- * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
+ * Copyright 2012-2013 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,31 +17,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Events\Interfaces;
-
-use Doctrine\Common\Cache\Cache;
+namespace DreamFactory\Platform\Events\Enums;
 
 /**
- * EventStoreLike
- * Something that acts like an event store
+ * Events triggered by an event observer
+ *
+ * @see DreamFactory\Platform\Events\Interfaces\EventObserverLike
  */
-interface EventStoreLike extends Cache
+class ObserverEvents
 {
     //*************************************************************************
-    //	Methods
+    //	Constants
     //*************************************************************************
 
     /**
-     * Loads current $dispatcher state
-     *
-     * @return bool|void
+     * @var string An observer has been enabled
      */
-    public function loadAll();
-
+    const ENABLED = 'observer.enabled';
     /**
-     * Saves current $dispatcher state
-     *
-     * @return bool|void
+     * @var string An observer has been disabled
      */
-    public function saveAll();
+    const DISABLED = 'observer.disabled';
+    /**
+     * @var string An observer is ready for prime time
+     */
+    const READY = 'observer.ready';
 }

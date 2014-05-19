@@ -54,6 +54,10 @@ class EventStore implements EventStoreLike
      * @type string
      */
     const CACHE_EXTENSION = '.dfec';
+    /**
+     * @type int Event store caches for 5 minutes max!
+     */
+    const CACHE_TTL = 300;
 
     //*************************************************************************
     //	Members
@@ -99,10 +103,11 @@ class EventStore implements EventStoreLike
     {
         $this->_store = new PlatformStore();
         /** @noinspection PhpUndefinedMethodInspection */
-        $this->_store->setNamespace( statidc::CACHE_NAMESPACE );
+        $this->_store->setNamespace( static::DEFAULT_NAMESPACE );
 
         //  Get set up...
-        $this->_store->set(
+        $this->save(
+            $this->_storeId,
             array(
                 'dispatcher.id' => $this->_storeId = hash(
                     'sha256',
@@ -129,7 +134,7 @@ class EventStore implements EventStoreLike
 
         $_mem = System::memory();
 
-        if ( false !== ( $_cacheStats = $this->fetch( static::STATS_CACHE_KEY ) ) )
+        if ( false !== ( $_cacheStats = $this->_store->fetch( static::STATS_CACHE_KEY ) ) )
         {
             Option::set( $this->_cacheStats, Cache::STATS_HITS, Option::get( $_cacheStats, Cache::STATS_HITS, 0 ) );
             Option::set( $this->_cacheStats, Cache::STATS_MISSES, Option::get( $_cacheStats, Cache::STATS_MISSES, 0 ) );
@@ -150,9 +155,9 @@ class EventStore implements EventStoreLike
     /**
      * @return bool|void
      */
-    public function load()
+    public function loadAll()
     {
-        if ( false === ( $_data = parent::fetch( $this->_storeId, array(), false ) ) || empty( $_data ) )
+        if ( false === ( $_data = $this->fetch( $this->_storeId, array(), false ) ) || empty( $_data ) )
         {
             $this->_cacheStats[ Cache::STATS_MISSES ]++;
         }
@@ -197,7 +202,7 @@ class EventStore implements EventStoreLike
     /**
      * @return bool|void
      */
-    public function save()
+    public function saveAll()
     {
         if ( $this->_dispatcher->getLogAllEvents() )
         {
@@ -210,7 +215,7 @@ class EventStore implements EventStoreLike
             'scripts'   => $this->_dispatcher->getScripts(),
         );
 
-        parent::save( $this->_storeId, $_data );
+        $this->save( $this->_storeId, $_data );
     }
 
     /**
@@ -221,7 +226,7 @@ class EventStore implements EventStoreLike
     public function flushAll()
     {
         //  drop a null in for 1 second
-        return parent::save( $this->_storeId, null, 1 );
+        return $this->save( $this->_storeId, null, 1 );
     }
 
     /**
@@ -246,5 +251,56 @@ class EventStore implements EventStoreLike
     function getStats()
     {
         return $this->_cacheStats;
+    }
+
+    /**
+     * Fetches an entry from the cache.
+     *
+     * @param string $id The id of the cache entry to fetch.
+     *
+     * @return mixed The cached data or FALSE, if no cache entry exists for the given id.
+     */
+    function fetch( $id )
+    {
+        return $this->_store->fetch( $id );
+    }
+
+    /**
+     * Tests if an entry exists in the cache.
+     *
+     * @param string $id The cache id of the entry to check for.
+     *
+     * @return boolean TRUE if a cache entry exists for the given cache id, FALSE otherwise.
+     */
+    function contains( $id )
+    {
+        return $this->_store->contains( $id );
+    }
+
+    /**
+     * Deletes a cache entry.
+     *
+     * @param string $id The cache id.
+     *
+     * @return boolean TRUE if the cache entry was successfully deleted, FALSE otherwise.
+     */
+    function delete( $id )
+    {
+        return $this->_store->delete( $id );
+    }
+
+    /**
+     * Puts data into the cache.
+     *
+     * @param string $id       The cache id.
+     * @param mixed  $data     The cache entry/data.
+     * @param int    $lifeTime The cache lifetime.
+     *                         If != 0, sets a specific lifetime for this cache entry (0 => infinite lifeTime).
+     *
+     * @return boolean TRUE if the entry was successfully stored in the cache, FALSE otherwise.
+     */
+    function save( $id, $data, $lifeTime = self::CACHE_TTL )
+    {
+        $this->_store->save( $id, $data, $lifeTime );
     }
 }

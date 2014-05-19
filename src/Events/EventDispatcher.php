@@ -19,23 +19,27 @@
  */
 namespace DreamFactory\Platform\Events;
 
-use DreamFactory\Events\Interfaces\EventObserverLike;
 use DreamFactory\Platform\Components\ApiResponse;
+use DreamFactory\Platform\Events\Enums\SwaggerEvents;
+use DreamFactory\Platform\Events\Interfaces\EventObserverLike;
 use DreamFactory\Platform\Events\Stores\EventStore;
+use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Resources\System\Script;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Services\BasePlatformRestService;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Platform;
+use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
 use Guzzle\Http\Client;
 use Guzzle\Http\Exception\MultiTransferException;
 use Jeremeamia\SuperClosure\SerializableClosure;
 use Kisma\Core\Enums\GlobFlags;
+use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
-use Kisma\Core\utility\Option;
-use Kisma\Core\utility\Scalar;
-use Kisma\Core\Utility\Storage;
+use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Scalar;
 use Symfony\Component\EventDispatcher\Event;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -63,7 +67,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected static $_cachedData = array( 'listeners', 'scripts', 'observers' );
     /**
-     * @var EventObserverLike[]|array
+     * @var EventObserverLike[]
      */
     protected static $_observers = array();
     /**
@@ -148,14 +152,6 @@ class EventDispatcher implements EventDispatcherInterface
         {
             Log::notice( 'Event system unavailable at this time.' );
         }
-
-        $this->addListener(
-            'swagger.cache_rebuilt',
-            function ( $eventName, $event, $dispatcher )
-            {
-                return call_user_func( array( $dispatcher, '_checkMappedScripts' ), $eventName, $event, $dispatcher );
-            }
-        );
     }
 
     /**
@@ -208,10 +204,11 @@ class EventDispatcher implements EventDispatcherInterface
 
         //  If the cache rebuilds, bust our cache and remap scripts
         $this->addListener(
-            'swagger.cache_rebuilt',
+            SwaggerEvents::CACHE_REBUILT,
             function ( $eventName, $event, $dispatcher )
             {
-                return call_user_func( array( $dispatcher, 'checkMappedScripts' ), true, true );
+                /** @var EventDispatcher $dispatcher */
+                $dispatcher->checkMappedScripts( true, true );
             }
         );
 
@@ -234,8 +231,8 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param PlatformEvent|RestServiceEvent $event
-     * @param string                         $eventName
+     * @param PlatformEvent|PlatformServiceEvent $event
+     * @param string                             $eventName
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @throws \Exception
@@ -358,15 +355,13 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @see EventDispatcherInterface::addListener
-     */
-    /**
      * @param string   $eventName
      * @param callable $listener
      * @param int      $priority
-     * @param bool     $fromCache If true, this request came from the EventStore
+     * @param bool     $fromCache True if this is a cached listener
      *
      * @return bool
+     * @see EventDispatcherInterface::addListener
      */
     public function addListener( $eventName, $listener, $priority = 0, $fromCache = false )
     {
@@ -380,13 +375,7 @@ class EventDispatcher implements EventDispatcherInterface
             $this->_listeners[ $eventName ][ $priority ] = array();
         }
 
-        if ( !( $listener instanceof SerializableClosure ) )
-        {
-            if ( ( !is_string( $listener ) && !is_array( $listener ) ) || $listener instanceof \Closure )
-            {
-                $listener = new SerializableClosure( $listener );
-            }
-        }
+        $this->_sanitizeListener( $listener );
 
         $_found = false;
         $_newListener = serialize( $listener );
@@ -429,10 +418,7 @@ class EventDispatcher implements EventDispatcherInterface
             return;
         }
 
-        if ( $listener instanceof \Closure )
-        {
-            $listener = new SerializableClosure( $listener );
-        }
+        $this->_sanitizeListener( $listener );
 
         foreach ( $this->_listeners[ $eventName ] as $_priority => $_listeners )
         {
@@ -446,7 +432,7 @@ class EventDispatcher implements EventDispatcherInterface
     /**
      * @see EventDispatcherInterface::addSubscriber
      */
-    public function addSubscriber( EventSubscriberInterface $subscriber, $fromCache = false )
+    public function addSubscriber( EventSubscriberInterface $subscriber )
     {
         foreach ( $subscriber->getSubscribedEvents() as $_eventName => $_params )
         {
@@ -552,7 +538,7 @@ class EventDispatcher implements EventDispatcherInterface
             return $_store->flushAll();
         }
 
-        return $_store->save();
+        return $_store->saveAll();
     }
 
     /**
@@ -564,17 +550,28 @@ class EventDispatcher implements EventDispatcherInterface
     {
         $_store = new EventStore( $dispatcher );
 
-        return $_store->load();
+        return $_store->loadAll();
     }
 
     /**
+     * Creates a special object that is passed to scripts
+     *
      * @param string        $eventName
      * @param PlatformEvent $event
+     * @param bool          $includeDspInfo
      *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return array
      */
-    protected function _createEventArray( $eventName, PlatformEvent $event )
+    protected function _createSandboxEvent( $eventName, PlatformEvent $event, $includeDspInfo = true )
     {
+        $_dspInfo = ( $includeDspInfo ? array(
+            'dsp' => array(
+                'config'  => ResourceStore::resource( 'config' )->processRequest( 'config', HttpMethod::GET, false ),
+                'session' => Session::generateSessionDataFromUser( Session::getCurrentUserId() ),
+            ),
+        ) : array() );
+
         //  Prepare the event we are passing around
         $event->toArray( array() );
 
@@ -585,7 +582,8 @@ class EventDispatcher implements EventDispatcherInterface
                 'dispatcher_id'    => spl_object_hash( $this ),
                 'trigger'          => $this->_pathInfo,
                 'stop_propagation' => $event->isPropagationStopped(),
-            )
+            ),
+            $_dspInfo
         );
     }
 
@@ -620,7 +618,7 @@ class EventDispatcher implements EventDispatcherInterface
 
                         if ( is_file( $_scriptFile ) && is_readable( $_scriptFile ) )
                         {
-                            if ( !isset( $this->_scripts[ $_eventKey ] ) || !in_array( $_scriptFile, $this->_scripts[ $_eventKey ] ) )
+                            if ( !isset( $this->_scripts[ $_eventKey ] ) || !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] ) )
                             {
                                 $_found[] = str_replace( $_basePath, '.', $_scriptFile );
                                 $this->_scripts[ $_eventKey ][] = $_scriptFile;
@@ -643,7 +641,7 @@ class EventDispatcher implements EventDispatcherInterface
                     $_eventKey = str_ireplace( '.js', null, $_newScript );
                     $_scriptFile = $_basePath . '/' . $_newScript;
 
-                    if ( !array_key_exists( $_eventKey, $this->_scripts ) || !in_array( $_scriptFile, $this->_scripts[ $_eventKey ] ) )
+                    if ( !array_key_exists( $_eventKey, $this->_scripts ) || !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] ) )
                     {
                         $this->_scripts[ $_eventKey ][] = $_scriptFile;
                     }
@@ -652,6 +650,48 @@ class EventDispatcher implements EventDispatcherInterface
         }
     }
 
+    /**
+     * @param \Closure|SerializableClosure|string $listener
+     *
+     * @throws BadRequestException
+     */
+    protected function _sanitizeListener( &$listener )
+    {
+        if ( $listener instanceof SerializableClosure )
+        {
+            return;
+        }
+
+        //  All closures convert to SerializableClosure objects
+        if ( $listener instanceof \Closure )
+        {
+            $listener = new SerializableClosure( $listener );
+
+            return;
+        }
+
+        //  Strings must be a valid URL
+        if ( !is_string( $listener ) )
+        {
+            throw new BadRequestException( 'Unrecognized listener type: ' . print_r( $listener, true ) );
+        }
+
+        //  Is this an URL listener?
+        if ( filter_var( $listener, FILTER_VALIDATE_URL ) )
+        {
+            return;
+        }
+
+        //  Assume relative URL, add host and try again...
+        $_test = Pii::request( false )->getSchemeAndHttpHost() . '/' . ltrim( $listener, ' /' );
+        if ( !filter_var( $_test, FILTER_VALIDATE_URL ) )
+        {
+            throw new BadRequestException( 'Unrecognized listener: ' . $listener );
+        }
+
+        //  Set full url as listener
+        $listener = $_test;
+    }
     //-------------------------------------------------------------------------
     //	Properties
     //-------------------------------------------------------------------------
@@ -677,7 +717,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     public static function getLogEvents()
     {
-        return self::$_logEvents;
+        return static::$_logEvents;
     }
 
     /**
@@ -685,7 +725,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     public static function setLogEvents( $logEvents )
     {
-        self::$_logEvents = $logEvents;
+        static::$_logEvents = $logEvents;
     }
 
     /**
@@ -693,7 +733,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     public static function getLogAllEvents()
     {
-        return self::$_logAllEvents;
+        return static::$_logAllEvents;
     }
 
     /**
@@ -701,7 +741,15 @@ class EventDispatcher implements EventDispatcherInterface
      */
     public static function setLogAllEvents( $logAllEvents )
     {
-        self::$_logAllEvents = $logAllEvents;
+        static::$_logAllEvents = $logAllEvents;
+    }
+
+    /**
+     * @return string The request path sans "/rest"
+     */
+    public function getPathInfo()
+    {
+        return $this->_pathInfo = ( $this->_pathInfo ? : preg_replace( '#^\/rest#', null, Pii::request( true )->getPathInfo(), 1 ) );
     }
 
     /**
@@ -742,7 +790,7 @@ class EventDispatcher implements EventDispatcherInterface
             return true;
         }
 
-        $_event = $this->_createEventArray( $eventName, $event );
+        $_event = $this->_createSandboxEvent( $eventName, $event );
 
         foreach ( Option::clean( $_scripts ) as $_script )
         {
@@ -772,8 +820,8 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
-     * @param string           $eventName The name of the event
-     * @param RestServiceEvent $event     The event
+     * @param string               $eventName The name of the event
+     * @param PlatformServiceEvent $event     The event
      *
      * @throws \Exception
      * @return bool False if propagation has stopped, true otherwise.
@@ -828,12 +876,17 @@ class EventDispatcher implements EventDispatcherInterface
                     static::$_client->setUserAgent( static::DEFAULT_USER_AGENT );
                 }
 
-                $_payload = ApiResponse::create( $this->_createEventArray( $eventName, $event ) );
+                /**
+                 * If you're asking yourself "Great Shatner's Ghost! Why is he doing this every time through the loop!!?", well here is the answer:
+                 * Because the $event object can be changed by different listeners during the processing loop, it needs to be regen'd each time.
+                 * That's not to say it couldn't be done better in another sprint.
+                 */
+                $_payload = ApiResponse::create( $this->_createSandboxEvent( $eventName, $event, false ) );
 
                 $_posts[] = static::$_client->post(
                     $_listener,
                     array( 'content-type' => 'application/json' ),
-                    json_encode( $_payload, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT )
+                    json_encode( $_payload, JSON_UNESCAPED_SLASHES )
                 );
             }
             //  No clue!
@@ -893,9 +946,9 @@ class EventDispatcher implements EventDispatcherInterface
     /**
      * @param string       $eventName
      * @param string|array $scriptPath One or more scripts to run on this event
-     * @param bool         $fromCache  True if the cache is adding this handler
+     * @param bool         $fromCache  True if the cache is adding this handler (ignored by default)
      *
-     * @return bool False if no observers added, otherwise how many were added
+     * @return bool False if no scripts added, otherwise how many were added
      */
     public function addScript( $eventName, $scriptPath, $fromCache = false )
     {
@@ -911,13 +964,14 @@ class EventDispatcher implements EventDispatcherInterface
 
         foreach ( $scriptPath as $_script )
         {
-            if ( !in_array( $_script, $this->_scripts[ $eventName ] ) )
+            if ( !Scalar::contains( $_script, $this->_scripts[ $eventName ] ) )
             {
                 if ( !is_file( $_script ) || !is_readable( $_script ) )
                 {
                     if ( static::$_logAllEvents )
                     {
                         Log::debug( 'Skipping cached non-existent script "' . $_script . '"' );
+                        continue;
                     }
                 }
 
@@ -930,7 +984,7 @@ class EventDispatcher implements EventDispatcherInterface
 
     /**
      * @param EventObserverLike|EventObserverLike[] $observer
-     * @param bool                                  $fromCache True if the cache is adding this handler
+     * @param bool                                  $fromCache True if the cache is adding this handler Ignored by default
      *
      * @return bool False if no observers added, otherwise how many were added
      */
@@ -951,6 +1005,11 @@ class EventDispatcher implements EventDispatcherInterface
             $observer = array( $observer );
         }
 
+        /**
+         * Observers can take many forms, but are 99.666% of the time going to be an object.
+         * So we serialize the $observer before comparing with currently known observers.
+         * This allows $observer to be a string, closure, object, whatever...
+         */
         $_serializedObserver = serialize( $observer );
         $_additions = array();
 
@@ -972,14 +1031,6 @@ class EventDispatcher implements EventDispatcherInterface
         }
 
         return count( $_additions ) ? : false;
-    }
-
-    /**
-     * @return string The request path sans "/rest"
-     */
-    public function getPathInfo()
-    {
-        return $this->_pathInfo = ( $this->_pathInfo ? : preg_replace( '#^\/rest#', null, Pii::request( true )->getPathInfo(), 1 ) );
     }
 
 }
