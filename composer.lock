@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "d36668bfbc51ae4d56818d0770b18405",
+    "hash": "629afd6e4f2e2068644801c22c3d1197",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -273,9 +273,9 @@
             ],
             "authors": [
                 {
-                    "name": "Jason Sykes",
+                    "name": "Sykes, Jason",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Developer, client-side"
+                    "role": "Lead Engineer, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Javascript SDK",
@@ -353,12 +353,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "dcb83b8243c8a99a790ab7d44109d61dea1b6900"
+                "reference": "b1b2d5f1dd197313acf279f5448f5175c1fb0faf"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/dcb83b8243c8a99a790ab7d44109d61dea1b6900",
-                "reference": "dcb83b8243c8a99a790ab7d44109d61dea1b6900",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/b1b2d5f1dd197313acf279f5448f5175c1fb0faf",
+                "reference": "b1b2d5f1dd197313acf279f5448f5175c1fb0faf",
                 "shasum": ""
             },
             "require": {
@@ -397,17 +397,17 @@
                 {
                     "name": "Jason Sykes",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "UX/QA, client-side"
+                    "role": "Lead Engineer, client-side"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Guinea Pig, server-side/client-side"
+                    "role": "Lead Developer, server-side/client-side"
                 },
                 {
                     "name": "Todd Appleton",
                     "email": "toddappleton@dreamfactory.com",
-                    "role": "UX/QA, client-side"
+                    "role": "Lead Engineer, client-side; UX/QA"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Yii Components Library",
@@ -416,7 +416,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-04-19 17:49:19"
+            "time": "2014-05-16 20:51:28"
         },
         {
             "name": "dreamfactory/oasys",
@@ -690,16 +690,16 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.40",
+            "version": "dev-develop",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "c03e0666926ae19693beaef8cfaaadcdbe373b5a"
+                "reference": "e25a5cd221c13b5cef075d316dacb73c220b7d5e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/c03e0666926ae19693beaef8cfaaadcdbe373b5a",
-                "reference": "c03e0666926ae19693beaef8cfaaadcdbe373b5a",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/e25a5cd221c13b5cef075d316dacb73c220b7d5e",
+                "reference": "e25a5cd221c13b5cef075d316dacb73c220b7d5e",
                 "shasum": ""
             },
             "require": {
@@ -744,7 +744,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-05-12 15:45:32"
+            "time": "2014-05-19 17:11:08"
         },
         {
             "name": "monolog/monolog",
@@ -752,12 +752,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
-                "reference": "467e30a9c9fa22395608cc515cd45a60ecc84c4e"
+                "reference": "3030d3da4d3abb18d3c1e3479259af0d88a92488"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/467e30a9c9fa22395608cc515cd45a60ecc84c4e",
-                "reference": "467e30a9c9fa22395608cc515cd45a60ecc84c4e",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/3030d3da4d3abb18d3c1e3479259af0d88a92488",
+                "reference": "3030d3da4d3abb18d3c1e3479259af0d88a92488",
                 "shasum": ""
             },
             "require": {
@@ -812,7 +812,7 @@
                 "logging",
                 "psr-3"
             ],
-            "time": "2014-05-01 15:55:56"
+            "time": "2014-05-19 16:18:53"
         },
         {
             "name": "nikic/php-parser",
@@ -941,10 +941,10 @@
         },
         {
             "name": "pear-pear.php.net/Mail_Mime",
-            "version": "1.8.8",
+            "version": "1.8.9",
             "dist": {
                 "type": "file",
-                "url": "http://pear.php.net/get/Mail_Mime-1.8.8.tgz",
+                "url": "http://pear.php.net/get/Mail_Mime-1.8.9.tgz",
                 "reference": null,
                 "shasum": null
             },
@@ -952,7 +952,7 @@
                 "php": ">=4.3.0.0"
             },
             "replace": {
-                "pear-pear/mail_mime": "== 1.8.8.0"
+                "pear-pear/mail_mime": "== 1.8.9.0"
             },
             "type": "pear-library",
             "autoload": {
@@ -1460,638 +1460,7 @@
             "time": "2014-04-28 17:44:51"
         }
     ],
-    "packages-dev": [
-        {
-            "name": "phpunit/dbunit",
-            "version": "1.3.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/sebastianbergmann/dbunit.git",
-                "reference": "a5891b7a9c4f21587a51f9bc4e8f7042b741b480"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/dbunit/zipball/a5891b7a9c4f21587a51f9bc4e8f7042b741b480",
-                "reference": "a5891b7a9c4f21587a51f9bc4e8f7042b741b480",
-                "shasum": ""
-            },
-            "require": {
-                "ext-pdo": "*",
-                "ext-simplexml": "*",
-                "php": ">=5.3.3",
-                "phpunit/phpunit": ">=3.7.0@stable",
-                "symfony/yaml": ">=2.1.0"
-            },
-            "bin": [
-                "composer/bin/dbunit"
-            ],
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "1.3.x-dev"
-                }
-            },
-            "autoload": {
-                "classmap": [
-                    "PHPUnit/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "include-path": [
-                "",
-                "../../symfony/yaml/"
-            ],
-            "license": [
-                "BSD-3-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Sebastian Bergmann",
-                    "email": "sb@sebastian-bergmann.de",
-                    "role": "lead"
-                }
-            ],
-            "description": "DbUnit port for PHP/PHPUnit to support database interaction testing.",
-            "homepage": "https://github.com/sebastianbergmann/dbunit/",
-            "keywords": [
-                "database",
-                "testing",
-                "xunit"
-            ],
-            "time": "2014-03-26 11:25:06"
-        },
-        {
-            "name": "phpunit/php-code-coverage",
-            "version": "1.2.x-dev",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-                "reference": "6ef2bf3a1c47eca07ea95f0d8a902a6340390b34"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/6ef2bf3a1c47eca07ea95f0d8a902a6340390b34",
-                "reference": "6ef2bf3a1c47eca07ea95f0d8a902a6340390b34",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.3",
-                "phpunit/php-file-iterator": ">=1.3.0@stable",
-                "phpunit/php-text-template": ">=1.2.0@stable",
-                "phpunit/php-token-stream": ">=1.1.3@stable"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "3.7.*@dev"
-            },
-            "suggest": {
-                "ext-dom": "*",
-                "ext-xdebug": ">=2.0.5"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "1.2.x-dev"
-                }
-            },
-            "autoload": {
-                "classmap": [
-                    "PHP/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "include-path": [
-                ""
-            ],
-            "license": [
-                "BSD-3-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Sebastian Bergmann",
-                    "email": "sb@sebastian-bergmann.de",
-                    "role": "lead"
-                }
-            ],
-            "description": "Library that provides collection, processing, and rendering functionality for PHP code coverage information.",
-            "homepage": "https://github.com/sebastianbergmann/php-code-coverage",
-            "keywords": [
-                "coverage",
-                "testing",
-                "xunit"
-            ],
-            "time": "2014-03-28 10:53:45"
-        },
-        {
-            "name": "phpunit/php-file-iterator",
-            "version": "1.3.4",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/sebastianbergmann/php-file-iterator.git",
-                "reference": "acd690379117b042d1c8af1fafd61bde001bf6bb"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-file-iterator/zipball/acd690379117b042d1c8af1fafd61bde001bf6bb",
-                "reference": "acd690379117b042d1c8af1fafd61bde001bf6bb",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.3"
-            },
-            "type": "library",
-            "autoload": {
-                "classmap": [
-                    "File/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "include-path": [
-                ""
-            ],
-            "license": [
-                "BSD-3-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Sebastian Bergmann",
-                    "email": "sb@sebastian-bergmann.de",
-                    "role": "lead"
-                }
-            ],
-            "description": "FilterIterator implementation that filters files based on a list of suffixes.",
-            "homepage": "https://github.com/sebastianbergmann/php-file-iterator/",
-            "keywords": [
-                "filesystem",
-                "iterator"
-            ],
-            "time": "2013-10-10 15:34:57"
-        },
-        {
-            "name": "phpunit/php-invoker",
-            "version": "1.1.3",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/sebastianbergmann/php-invoker.git",
-                "reference": "8696484458cb43eed025ab46260846de5b74655c"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-invoker/zipball/8696484458cb43eed025ab46260846de5b74655c",
-                "reference": "8696484458cb43eed025ab46260846de5b74655c",
-                "shasum": ""
-            },
-            "require": {
-                "ext-pcntl": "*",
-                "php": ">=5.2.7",
-                "phpunit/php-timer": ">=1.0.4,<1.1.0"
-            },
-            "type": "library",
-            "autoload": {
-                "classmap": [
-                    "PHP/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "include-path": [
-                ""
-            ],
-            "license": [
-                "BSD-3-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Sebastian Bergmann",
-                    "email": "sb@sebastian-bergmann.de",
-                    "role": "lead"
-                }
-            ],
-            "description": "Utility class for invoking callables with a timeout.",
-            "homepage": "https://github.com/sebastianbergmann/php-invoker/",
-            "keywords": [
-                "process"
-            ],
-            "time": "2013-07-16 05:20:21"
-        },
-        {
-            "name": "phpunit/php-text-template",
-            "version": "1.2.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/sebastianbergmann/php-text-template.git",
-                "reference": "206dfefc0ffe9cebf65c413e3d0e809c82fbf00a"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-text-template/zipball/206dfefc0ffe9cebf65c413e3d0e809c82fbf00a",
-                "reference": "206dfefc0ffe9cebf65c413e3d0e809c82fbf00a",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.3"
-            },
-            "type": "library",
-            "autoload": {
-                "classmap": [
-                    "Text/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "include-path": [
-                ""
-            ],
-            "license": [
-                "BSD-3-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Sebastian Bergmann",
-                    "email": "sb@sebastian-bergmann.de",
-                    "role": "lead"
-                }
-            ],
-            "description": "Simple template engine.",
-            "homepage": "https://github.com/sebastianbergmann/php-text-template/",
-            "keywords": [
-                "template"
-            ],
-            "time": "2014-01-30 17:20:04"
-        },
-        {
-            "name": "phpunit/php-timer",
-            "version": "1.0.5",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/sebastianbergmann/php-timer.git",
-                "reference": "19689d4354b295ee3d8c54b4f42c3efb69cbc17c"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-timer/zipball/19689d4354b295ee3d8c54b4f42c3efb69cbc17c",
-                "reference": "19689d4354b295ee3d8c54b4f42c3efb69cbc17c",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.3"
-            },
-            "type": "library",
-            "autoload": {
-                "classmap": [
-                    "PHP/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "include-path": [
-                ""
-            ],
-            "license": [
-                "BSD-3-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Sebastian Bergmann",
-                    "email": "sb@sebastian-bergmann.de",
-                    "role": "lead"
-                }
-            ],
-            "description": "Utility class for timing",
-            "homepage": "https://github.com/sebastianbergmann/php-timer/",
-            "keywords": [
-                "timer"
-            ],
-            "time": "2013-08-02 07:42:54"
-        },
-        {
-            "name": "phpunit/php-token-stream",
-            "version": "dev-master",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/sebastianbergmann/php-token-stream.git",
-                "reference": "955c24b708f8bfd6a05f303217a8dac3a443d531"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-token-stream/zipball/955c24b708f8bfd6a05f303217a8dac3a443d531",
-                "reference": "955c24b708f8bfd6a05f303217a8dac3a443d531",
-                "shasum": ""
-            },
-            "require": {
-                "ext-tokenizer": "*",
-                "php": ">=5.3.3"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "1.2-dev"
-                }
-            },
-            "autoload": {
-                "classmap": [
-                    "PHP/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "include-path": [
-                ""
-            ],
-            "license": [
-                "BSD-3-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Sebastian Bergmann",
-                    "email": "sb@sebastian-bergmann.de",
-                    "role": "lead"
-                }
-            ],
-            "description": "Wrapper around PHP's tokenizer extension.",
-            "homepage": "https://github.com/sebastianbergmann/php-token-stream/",
-            "keywords": [
-                "tokenizer"
-            ],
-            "time": "2014-05-12 05:34:42"
-        },
-        {
-            "name": "phpunit/phpunit",
-            "version": "3.7.37",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "ae6cefd7cc84586a5ef27e04bae11ee940ec63dc"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/ae6cefd7cc84586a5ef27e04bae11ee940ec63dc",
-                "reference": "ae6cefd7cc84586a5ef27e04bae11ee940ec63dc",
-                "shasum": ""
-            },
-            "require": {
-                "ext-ctype": "*",
-                "ext-dom": "*",
-                "ext-json": "*",
-                "ext-pcre": "*",
-                "ext-reflection": "*",
-                "ext-spl": "*",
-                "php": ">=5.3.3",
-                "phpunit/php-code-coverage": "~1.2",
-                "phpunit/php-file-iterator": "~1.3",
-                "phpunit/php-text-template": "~1.1",
-                "phpunit/php-timer": "~1.0",
-                "phpunit/phpunit-mock-objects": "~1.2",
-                "symfony/yaml": "~2.0"
-            },
-            "require-dev": {
-                "pear-pear.php.net/pear": "1.9.4"
-            },
-            "suggest": {
-                "phpunit/php-invoker": "~1.1"
-            },
-            "bin": [
-                "composer/bin/phpunit"
-            ],
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "3.7.x-dev"
-                }
-            },
-            "autoload": {
-                "classmap": [
-                    "PHPUnit/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "include-path": [
-                "",
-                "../../symfony/yaml/"
-            ],
-            "license": [
-                "BSD-3-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Sebastian Bergmann",
-                    "email": "sebastian@phpunit.de",
-                    "role": "lead"
-                }
-            ],
-            "description": "The PHP Unit Testing framework.",
-            "homepage": "http://www.phpunit.de/",
-            "keywords": [
-                "phpunit",
-                "testing",
-                "xunit"
-            ],
-            "time": "2014-04-30 12:24:19"
-        },
-        {
-            "name": "phpunit/phpunit-mock-objects",
-            "version": "1.2.x-dev",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/sebastianbergmann/phpunit-mock-objects.git",
-                "reference": "c39c4511c3b007539eb170c32cbc2af49a07351a"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit-mock-objects/zipball/c39c4511c3b007539eb170c32cbc2af49a07351a",
-                "reference": "c39c4511c3b007539eb170c32cbc2af49a07351a",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.3",
-                "phpunit/php-text-template": ">=1.1.1@stable"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "3.7.*@dev"
-            },
-            "suggest": {
-                "ext-soap": "*"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "1.2.x-dev"
-                }
-            },
-            "autoload": {
-                "classmap": [
-                    "PHPUnit/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "include-path": [
-                ""
-            ],
-            "license": [
-                "BSD-3-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Sebastian Bergmann",
-                    "email": "sb@sebastian-bergmann.de",
-                    "role": "lead"
-                }
-            ],
-            "description": "Mock Object library for PHPUnit",
-            "homepage": "https://github.com/sebastianbergmann/phpunit-mock-objects/",
-            "keywords": [
-                "mock",
-                "xunit"
-            ],
-            "time": "2014-02-16 12:43:56"
-        },
-        {
-            "name": "phpunit/phpunit-selenium",
-            "version": "1.3.3",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/sebastianbergmann/phpunit-selenium.git",
-                "reference": "e89bfa1080dce9617c9b3e7760d50752974bfbd2"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit-selenium/zipball/e89bfa1080dce9617c9b3e7760d50752974bfbd2",
-                "reference": "e89bfa1080dce9617c9b3e7760d50752974bfbd2",
-                "shasum": ""
-            },
-            "require": {
-                "ext-curl": "*",
-                "ext-dom": "*",
-                "php": ">=5.3.3",
-                "phpunit/phpunit": ">=3.7.0@stable"
-            },
-            "type": "library",
-            "autoload": {
-                "classmap": [
-                    "PHPUnit/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "include-path": [
-                ""
-            ],
-            "license": [
-                "BSD-3-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Sebastian Bergmann",
-                    "email": "sb@sebastian-bergmann.de",
-                    "role": "lead"
-                },
-                {
-                    "name": "Giorgio Sironi",
-                    "email": "info@giorgiosironi.com",
-                    "role": "developer"
-                }
-            ],
-            "description": "Selenium Server integration for PHPUnit",
-            "homepage": "http://www.phpunit.de/",
-            "keywords": [
-                "selenium",
-                "testing",
-                "xunit"
-            ],
-            "time": "2013-11-22 08:54:11"
-        },
-        {
-            "name": "phpunit/phpunit-story",
-            "version": "1.0.2",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/sebastianbergmann/phpunit-story.git",
-                "reference": "b8579ada6ede4fd2f4b49e8549a8a176606cae68"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit-story/zipball/b8579ada6ede4fd2f4b49e8549a8a176606cae68",
-                "reference": "b8579ada6ede4fd2f4b49e8549a8a176606cae68",
-                "shasum": ""
-            },
-            "require": {
-                "ext-spl": "*",
-                "php": ">=5.2.7",
-                "phpunit/phpunit": ">=3.6.0RC1@stable"
-            },
-            "type": "library",
-            "autoload": {
-                "classmap": [
-                    "PHPUnit/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "include-path": [
-                ""
-            ],
-            "license": [
-                "BSD-3-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Sebastian Bergmann",
-                    "email": "sb@sebastian-bergmann.de",
-                    "role": "lead"
-                }
-            ],
-            "description": "Story extension for PHPUnit to facilitate Behaviour-Driven Development.",
-            "homepage": "http://www.phpunit.de/",
-            "keywords": [
-                "BDD",
-                "TDD",
-                "xunit"
-            ],
-            "time": "2013-04-02 16:07:28"
-        },
-        {
-            "name": "symfony/yaml",
-            "version": "dev-master",
-            "target-dir": "Symfony/Component/Yaml",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/symfony/Yaml.git",
-                "reference": "e9525fc511a51e7bfa214c6c420515c580fda35a"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Yaml/zipball/e9525fc511a51e7bfa214c6c420515c580fda35a",
-                "reference": "e9525fc511a51e7bfa214c6c420515c580fda35a",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.3"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "2.5-dev"
-                }
-            },
-            "autoload": {
-                "psr-0": {
-                    "Symfony\\Component\\Yaml\\": ""
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Fabien Potencier",
-                    "email": "fabien@symfony.com",
-                    "homepage": "http://fabien.potencier.org",
-                    "role": "Lead Developer"
-                },
-                {
-                    "name": "Symfony Community",
-                    "homepage": "http://symfony.com/contributors"
-                }
-            ],
-            "description": "Symfony Yaml Component",
-            "homepage": "http://symfony.com",
-            "time": "2014-04-18 20:40:13"
-        }
-    ],
+    "packages-dev": null,
     "aliases": [
         {
             "alias": "dev-master",
@@ -2102,7 +1471,6 @@
     ],
     "minimum-stability": "dev",
     "stability-flags": {
-        "kisma/kisma": 0,
         "swiftmailer/swiftmailer": 0,
         "aws/aws-sdk-php": 0,
         "rackspace/php-opencloud": 0,
