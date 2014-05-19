@@ -19,19 +19,20 @@
  */
 namespace DreamFactory\Platform\Events\Stores;
 
+use Doctrine\Common\Cache\Cache;
 use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Events\EventDispatcher;
-use DreamFactory\Platform\Events\EventStoreLike;
-use Kisma\Core\Enums\CacheTypes;
+use DreamFactory\Platform\Events\Interfaces\EventStoreLike;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\System;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * A store for the platform event system
  */
-class EventStore extends PlatformStore implements EventStoreLike
+class EventStore implements EventStoreLike
 {
     //*************************************************************************
     //	Constants
@@ -40,7 +41,11 @@ class EventStore extends PlatformStore implements EventStoreLike
     /**
      * @type string
      */
-    const CACHE_NAMESPACE = 'dsp.event_store';
+    const DEFAULT_NAMESPACE = 'dsp.event_store';
+    /**
+     * @type string
+     */
+    const STATS_CACHE_KEY = 'stats';
     /**
      * @type string
      */
@@ -59,9 +64,17 @@ class EventStore extends PlatformStore implements EventStoreLike
      */
     protected $_storeId = null;
     /**
+     * @var EventStoreLike
+     */
+    protected $_store = null;
+    /**
      * @var EventDispatcher
      */
     protected $_dispatcher = null;
+    /**
+     * @var array Statistics for the cache
+     */
+    protected $_cacheStats = null;
 
     //*************************************************************************
     //	Methods
@@ -74,12 +87,64 @@ class EventStore extends PlatformStore implements EventStoreLike
      */
     public function __construct( EventDispatcherInterface $dispatcher )
     {
-        parent::__construct( CacheTypes::FILE_SYSTEM );
-        $this->setNamespace( static::CACHE_NAMESPACE );
+        $this->_dispatcher = $dispatcher;
+
+        $this->_initializeStore();
+    }
+
+    /**
+     * Initialize the store
+     */
+    protected function _initializeStore()
+    {
+        $this->_store = new PlatformStore();
+        /** @noinspection PhpUndefinedMethodInspection */
+        $this->_store->setNamespace( statidc::CACHE_NAMESPACE );
 
         //  Get set up...
-        $this->_storeId = hash( 'sha256', Inflector::neutralize( get_class( $dispatcher ) ) );
-        $this->_dispatcher = $dispatcher;
+        $this->_store->set(
+            array(
+                'dispatcher.id' => $this->_storeId = hash(
+                    'sha256',
+                    Inflector::neutralize( get_class( $this->_dispatcher ) )
+                ),
+            )
+        );
+
+        $this->_initializeStatistics();
+    }
+
+    /**
+     * Initialize the statistics for the cache
+     */
+    protected function _initializeStatistics()
+    {
+        $this->_cacheStats = array(
+            Cache::STATS_HITS             => 0,
+            Cache::STATS_MISSES           => 0,
+            Cache::STATS_UPTIME           => microtime( true ),
+            Cache::STATS_MEMORY_USAGE     => 0,
+            Cache::STATS_MEMORY_AVAILABLE => 0,
+        );
+
+        $_mem = System::memory();
+
+        if ( false !== ( $_cacheStats = $this->fetch( static::STATS_CACHE_KEY ) ) )
+        {
+            Option::set( $this->_cacheStats, Cache::STATS_HITS, Option::get( $_cacheStats, Cache::STATS_HITS, 0 ) );
+            Option::set( $this->_cacheStats, Cache::STATS_MISSES, Option::get( $_cacheStats, Cache::STATS_MISSES, 0 ) );
+
+            $this->_cacheStats[ Cache::STATS_UPTIME ] = $_mem[ Cache::STATS_UPTIME ];
+            $this->_cacheStats[ Cache::STATS_MEMORY_USAGE ] = $_mem[ Cache::STATS_MEMORY_USAGE ];
+            $this->_cacheStats[ Cache::STATS_MEMORY_AVAILABLE ] = $_mem[ Cache::STATS_MEMORY_AVAILABLE ];
+            $this->_cacheStats['memory_pct_available'] = $_mem['memory_pct_free'];
+            $this->_cacheStats['memory_total'] = $_mem['memory_total'];
+            $this->_cacheStats['php_memory_limit'] = ini_get( 'memory_limit' );
+        }
+
+        $this->_store->save( 'event_store.stats', $this->_cacheStats );
+
+        return $this->_cacheStats;
     }
 
     /**
@@ -87,7 +152,10 @@ class EventStore extends PlatformStore implements EventStoreLike
      */
     public function load()
     {
-        $_data = parent::fetch( $this->_storeId, array(), false );
+        if ( false === ( $_data = parent::fetch( $this->_storeId, array(), false ) ) || empty( $_data ) )
+        {
+            $this->_cacheStats[ Cache::STATS_MISSES ]++;
+        }
 
         if ( $this->_dispatcher->getLogAllEvents() )
         {
@@ -107,18 +175,21 @@ class EventStore extends PlatformStore implements EventStoreLike
                 foreach ( $_listeners as $_listener )
                 {
                     $this->_dispatcher->addListener( $_eventName, $_listener, $_priority, true );
+                    $this->_cacheStats[ Cache::STATS_HITS ]++;
                 }
             }
         }
 
         //  Scripts
-        foreach ( Option::get( $_data, 'scripts', array() ) as $_eventName => $_scripts )
+        foreach ( ( $_scripts = Option::get( $_data, 'scripts', array() ) ) as $_eventName => $_scripts )
         {
             $this->_dispatcher->addScript( $_eventName, $_scripts, true );
+            $this->_cacheStats[ Cache::STATS_HITS ] += is_string( $_scripts ) ? 1 : count( $_scripts );
         }
 
         //  Observers
-        $this->_dispatcher->addObserver( Option::get( $_data, 'observers', array() ), true );
+        $this->_dispatcher->addObserver( $_observers = Option::get( $_data, 'observers', array() ), true );
+        $this->_cacheStats[ Cache::STATS_HITS ] += is_string( $_observers ) ? 1 : count( $_observers );
 
         return true;
     }
@@ -163,5 +234,17 @@ class EventStore extends PlatformStore implements EventStoreLike
     protected function _obscureKey( $id )
     {
         return hash( 'sha256', parent::_obscureKey( $id ) );
+    }
+
+    /**
+     * Retrieves cached information from the data store.
+     *
+     * @since 2.2
+     *
+     * @return array|null An associative array with server's statistics if available, NULL otherwise.
+     */
+    function getStats()
+    {
+        return $this->_cacheStats;
     }
 }

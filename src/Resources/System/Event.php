@@ -33,6 +33,7 @@ use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -420,4 +421,22 @@ class Event extends BaseSystemRestResource
         return $eventName = $_tag;
     }
 
+    /**
+     * Converts the current event to an array merging $additions
+     *
+     * @param \DreamFactory\Platform\Events\PlatformEvent $event
+     * @param array                                       $additions An additional data to merge
+     *
+     * @return array
+     */
+    public static function toJson( PlatformEvent $event, array $additions = array() )
+    {
+        return json_encode(
+            array_merge(
+                $event->toArray(),
+                $additions
+            ),
+            JSON_UNESCAPED_SLASHES
+        );
+    }
 }

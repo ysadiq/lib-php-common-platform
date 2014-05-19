@@ -395,7 +395,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                         $_config = array_merge( $_config, $_data );
 
                         $this->trigger(
-                            PlatformEvents::LOCAL_CONFIG_LOADED,
+                            DspEvents::LOCAL_CONFIG_LOADED,
                             new PlatformEvent(
                                 array(
                                     'file' => $_file,
