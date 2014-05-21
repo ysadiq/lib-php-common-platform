@@ -17,30 +17,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Components;
+namespace DreamFactory\Platform\Scripting;
 
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\DateTime;
+use Kisma\Core\Seed;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
- * Wrapper around V8Js which sets up some basic things for dispatching events
+ * Acts as a proxy between a DSP PHP $event and a server-side script
  */
-class ScriptEngine extends \V8Js
+class ScriptEvent extends Seed
 {
     //*************************************************************************
     //	Constants
     //*************************************************************************
-
-    /**
-     * @type string The name of the object which exposes PHP
-     */
-    const EXPOSED_OBJECT_NAME = 'DSP';
-    /**
-     * @type string The template for all module loading
-     */
-    const MODULE_LOADER_TEMPLATE = 'require("{module}");';
 
     //*************************************************************************
     //	Members

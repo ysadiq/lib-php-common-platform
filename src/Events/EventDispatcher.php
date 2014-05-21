@@ -652,7 +652,7 @@ class EventDispatcher implements EventDispatcherInterface
         static $_config = null;
 
         $_config = $_config ? : Config::getCurrentConfig();
-
+        
         $_event = array(
             'event'    => array(
                 'id'               => null,

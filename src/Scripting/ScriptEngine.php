@@ -17,8 +17,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Components;
+namespace DreamFactory\Platform\Scripting;
 
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\DateTime;
 use Kisma\Core\Utility\Log;
@@ -81,6 +82,7 @@ class ScriptEngine extends \V8Js
      * @param bool   $reportUncaughtExceptions
      * @param bool   $passFullEvent
      *
+     * @return static
      * @throws RestException
      */
     public static function create( $libraryScriptPath = null, array $variables = null, array $extensions = null, $reportUncaughtExceptions = true, $passFullEvent = false )
@@ -138,6 +140,8 @@ class ScriptEngine extends \V8Js
                 return str_replace( '{module}', $_script, static::MODULE_LOADER_TEMPLATE );
             }
         );
+
+        return $_engine;
     }
 
     /**
@@ -164,6 +168,8 @@ class ScriptEngine extends \V8Js
         static::$_supportedScriptPaths = array(
             //  This is ONLY the root of the app store 
             'app'      => Platform::getApplicationsPath(),
+            //  This is the user's private scripting area used by the admin console
+            'storage'  => Platform::getPrivatePath( '/scripts' ),
             //  Scripts here override library scripts 
             'platform' => $_platformConfigPath . '/scripts',
             //  Now check library distribution 
