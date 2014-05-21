@@ -2251,7 +2251,9 @@ class SqlDbSvc extends BaseDbSvc
                         $_idName = Option::get( $_info, 'name' );
                         if ( Option::getBool( $_info, 'auto_increment' ) )
                         {
-                            $id[$_idName] = (int)$this->_dbConn->lastInsertID;
+                            $_schema = $this->_dbConn->schema->getTable($this->_transactionTable);
+                            $_sequenceName = $_schema->sequenceName;
+                            $id[$_idName] = (int)$this->_dbConn->getLastInsertID($_sequenceName);
                         }
                         else
                         {
