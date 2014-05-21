@@ -164,6 +164,11 @@ $_session['models'] = array(
 				'type'     => 'string',
 				'required' => true,
 			),
+            'duration' => array(
+                'type'        => 'integer',
+                'format'      => 'int32',
+                'description' => 'Duration of the session, Defaults to 0, which means until browser is closed.',
+            ),
 		),
 	),
 	'SessionApp' => array(

@@ -79,7 +79,7 @@ class Register extends BasePlatformRestResource
     protected function _handlePost()
     {
         $_data = RestData::getPostedData( false, true );
-        $_login = FilterInput::request( 'login', true, FILTER_VALIDATE_BOOLEAN );
+        $_login = Option::get( $data, 'login', FilterInput::request( 'login', true, FILTER_VALIDATE_BOOLEAN ) );
         $_result = $this->userRegister( $_data, $_login, $_login );
 
         return $_result;

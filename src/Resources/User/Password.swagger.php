@@ -40,6 +40,14 @@ $_password['apis'] = array(
                         'required'      => false,
                     ),
                     array(
+                        'name'          => 'login',
+                        'description'   => 'Login and create a session upon successful password reset.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
                         'name'          => 'body',
                         'description'   => 'Data containing name-value pairs for password change.',
                         'allowMultiple' => false,
