@@ -51,7 +51,7 @@ class SchemaSvc extends BasePlatformRestService
     /**
      * @var \CDbConnection
      */
-    protected $_sqlConn;
+    protected $_dbConn;
     /**
      * @var bool
      */
@@ -95,7 +95,7 @@ class SchemaSvc extends BasePlatformRestService
 
         if ( false !== ( $this->_isNative = $native ) )
         {
-            $this->_sqlConn = Pii::db();
+            $this->_dbConn = Pii::db();
         }
         else
         {
@@ -117,13 +117,13 @@ class SchemaSvc extends BasePlatformRestService
             }
 
             // 	Create pdo connection, activate later
-            $this->_sqlConn = new \CDbConnection( $dsn, $user, $password );
+            $this->_dbConn = new \CDbConnection( $dsn, $user, $password );
         }
 
-        switch ( $this->_driverType = SqlDbUtilities::getDbDriverType( $this->_sqlConn ) )
+        switch ( $this->_driverType = SqlDbUtilities::getDbDriverType( $this->_dbConn ) )
         {
             case SqlDbUtilities::DRV_MYSQL:
-                $this->_sqlConn->setAttribute( \PDO::ATTR_EMULATE_PREPARES, true );
+                $this->_dbConn->setAttribute( \PDO::ATTR_EMULATE_PREPARES, true );
 //				$this->_sqlConn->setAttribute( 'charset', 'utf8' );
                 break;
 
@@ -131,11 +131,11 @@ class SchemaSvc extends BasePlatformRestService
 //				$this->_sqlConn->setAttribute( \PDO::SQLSRV_ATTR_DIRECT_QUERY, true );
 //				$this->_sqlConn->setAttribute( 'MultipleActiveResultSets', false );
 //				$this->_sqlConn->setAttribute( 'ReturnDatesAsStrings', true );
-                $this->_sqlConn->setAttribute( 'CharacterSet', 'UTF-8' );
+                $this->_dbConn->setAttribute( 'CharacterSet', 'UTF-8' );
                 break;
 
             case SqlDbUtilities::DRV_DBLIB:
-                $this->_sqlConn->setAttribute( \PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION );
+                $this->_dbConn->setAttribute( \PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION );
                 break;
         }
 
@@ -143,7 +143,7 @@ class SchemaSvc extends BasePlatformRestService
 
         if ( !empty( $_attributes ) )
         {
-            $this->_sqlConn->setAttributes( $_attributes );
+            $this->_dbConn->setAttributes( $_attributes );
         }
     }
 
@@ -154,7 +154,7 @@ class SchemaSvc extends BasePlatformRestService
     {
         if ( !$this->_isNative )
         {
-            unset( $this->_sqlConn );
+            unset( $this->_dbConn );
         }
     }
 
@@ -331,7 +331,7 @@ class SchemaSvc extends BasePlatformRestService
 
         try
         {
-            $_result = SqlDbUtilities::describeDatabase( $this->_sqlConn, null, $_exclude );
+            $_result = SqlDbUtilities::describeDatabase( $this->_dbConn, null, $_exclude );
 
             $_resources = array();
             foreach ( $_result as $_table )
@@ -386,7 +386,7 @@ class SchemaSvc extends BasePlatformRestService
 
         try
         {
-            $_result = SqlDbUtilities::describeTables( $this->_sqlConn, $_tables );
+            $_result = SqlDbUtilities::describeTables( $this->_dbConn, $_tables );
             $_resources = array();
             foreach ( $_result as $_table )
             {
@@ -437,7 +437,7 @@ class SchemaSvc extends BasePlatformRestService
 
         try
         {
-            $_result = SqlDbUtilities::describeTable( $this->_sqlConn, $table );
+            $_result = SqlDbUtilities::describeTable( $this->_dbConn, $table );
             $_result['access'] = $this->getPermissions( $table );
 
             return $_result;
@@ -477,7 +477,7 @@ class SchemaSvc extends BasePlatformRestService
 
         try
         {
-            return SqlDbUtilities::describeField( $this->_sqlConn, $table, $field );
+            return SqlDbUtilities::describeField( $this->_dbConn, $table, $field );
         }
         catch ( RestException $ex )
         {
@@ -539,7 +539,7 @@ class SchemaSvc extends BasePlatformRestService
             }
         }
 
-        return SqlDbUtilities::createTables( $this->_sqlConn, $tables, $allow_merge );
+        return SqlDbUtilities::createTables( $this->_dbConn, $tables, $allow_merge );
     }
 
     /**
@@ -586,9 +586,9 @@ class SchemaSvc extends BasePlatformRestService
 
         try
         {
-            $names = SqlDbUtilities::createFields( $this->_sqlConn, $table, $fields );
+            $names = SqlDbUtilities::createFields( $this->_dbConn, $table, $fields );
 
-            return SqlDbUtilities::describeFields( $this->_sqlConn, $table, $names );
+            return SqlDbUtilities::describeFields( $this->_dbConn, $table, $names );
         }
         catch ( RestException $ex )
         {
@@ -651,7 +651,7 @@ class SchemaSvc extends BasePlatformRestService
             }
         }
 
-        return SqlDbUtilities::createTables( $this->_sqlConn, $tables, true );
+        return SqlDbUtilities::createTables( $this->_dbConn, $tables, true );
     }
 
     /**
@@ -698,9 +698,9 @@ class SchemaSvc extends BasePlatformRestService
 
         try
         {
-            $names = SqlDbUtilities::createFields( $this->_sqlConn, $table, $fields, true );
+            $names = SqlDbUtilities::createFields( $this->_dbConn, $table, $fields, true );
 
-            return SqlDbUtilities::describeFields( $this->_sqlConn, $table, $names );
+            return SqlDbUtilities::describeFields( $this->_dbConn, $table, $names );
         }
         catch ( RestException $ex )
         {
@@ -752,7 +752,7 @@ class SchemaSvc extends BasePlatformRestService
             }
         }
 
-        SqlDbUtilities::dropTable( $this->_sqlConn, $table );
+        SqlDbUtilities::dropTable( $this->_dbConn, $table );
     }
 
     /**
@@ -778,7 +778,7 @@ class SchemaSvc extends BasePlatformRestService
             }
         }
 
-        SqlDbUtilities::dropField( $this->_sqlConn, $table, $field );
+        SqlDbUtilities::dropField( $this->_dbConn, $table, $field );
     }
 
     /**
@@ -842,13 +842,13 @@ class SchemaSvc extends BasePlatformRestService
     }
 
     /**
-     * @param \CDbConnection $sqlConn
+     * @param \CDbConnection $db_conn
      *
      * @return SchemaSvc
      */
-    public function setSqlConn( $sqlConn )
+    public function setDbConn( $db_conn )
     {
-        $this->_sqlConn = $sqlConn;
+        $this->_dbConn = $db_conn;
 
         return $this;
     }
@@ -856,9 +856,9 @@ class SchemaSvc extends BasePlatformRestService
     /**
      * @return \CDbConnection
      */
-    public function getSqlConn()
+    public function getDbConn()
     {
-        return $this->_sqlConn;
+        return $this->_dbConn;
     }
 
     /**

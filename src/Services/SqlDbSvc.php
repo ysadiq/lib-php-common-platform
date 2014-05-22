@@ -142,7 +142,8 @@ class SqlDbSvc extends BaseDbSvc
                     'enableProfiling'       => defined( YII_DEBUG ),
                     'enableParamLogging'    => defined( YII_DEBUG ),
                     'schemaCachingDuration' => 3600,
-                    'schemaCacheID'         => ( !$this->_isNative && static::ENABLE_REMOTE_CACHE ) ? static::REMOTE_CACHE_ID : 'cache',
+                    'schemaCacheID'         => ( !$this->_isNative && static::ENABLE_REMOTE_CACHE )
+                            ? static::REMOTE_CACHE_ID : 'cache',
                 )
             );
 
@@ -230,6 +231,22 @@ class SqlDbSvc extends BaseDbSvc
                 error_log( "Failed to disconnect from database.\n{$_ex->getMessage()}" );
             }
         }
+    }
+
+    /**
+     * @return int
+     */
+    public function getDriverType()
+    {
+        return $this->_driverType;
+    }
+
+    /**
+     * @return \CDbConnection
+     */
+    public function getDbConn()
+    {
+        return $this->_dbConn;
     }
 
     /**
@@ -1017,7 +1034,7 @@ class SqlDbSvc extends BaseDbSvc
                             case SqlDbUtilities::DRV_SQLSRV:
                                 $_parsed[$_name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
                                 break;
-                            case SqlDbUtilities::DRV_MYSQL:
+                            default:
                                 $_parsed[$_name] = new \CDbExpression( '(NOW())' );
                                 break;
                         }
@@ -1030,7 +1047,7 @@ class SqlDbSvc extends BaseDbSvc
                         case SqlDbUtilities::DRV_SQLSRV:
                             $_parsed[$_name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
                             break;
-                        case SqlDbUtilities::DRV_MYSQL:
+                        default:
                             $_parsed[$_name] = new \CDbExpression( '(NOW())' );
                             break;
                     }
@@ -1464,7 +1481,15 @@ class SqlDbSvc extends BaseDbSvc
                             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
                             $_where = array( 'in', $relatedField, $relatedIds );
-                            return $this->_recordQuery( $relatedTable, $_fields, $_where, $_params, $_bindings, $extras );
+
+                            return $this->_recordQuery(
+                                $relatedTable,
+                                $_fields,
+                                $_where,
+                                $_params,
+                                $_bindings,
+                                $extras
+                            );
                         }
                     }
                 }
@@ -1757,7 +1782,7 @@ class SqlDbSvc extends BaseDbSvc
             $pkOneField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $oneFields );
             $manyFields = $this->getFieldsInfo( $many_table );
             $pkManyField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $manyFields );
-			$mapFields = $this->getFieldsInfo( $map_table );
+            $mapFields = $this->getFieldsInfo( $map_table );
 //			$pkMapField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $mapFields );
 
             $_result = $this->parseFieldsForSqlSelect( $many_field, $mapFields );
@@ -1765,8 +1790,8 @@ class SqlDbSvc extends BaseDbSvc
             $_fields = Option::get( $_result, 'fields' );
             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
             $_params[":f_$one_field"] = $one_id;
-            $maps = $this->_recordQuery($map_table, $_fields, "$one_field = :f_$one_field", $_params, $_bindings, null );
-            unset($maps['meta']);
+            $maps = $this->_recordQuery( $map_table, $_fields, "$one_field = :f_$one_field", $_params, $_bindings, null );
+            unset( $maps['meta'] );
 
             $createMap = array(); // map records to create
             $deleteMap = array(); // ids of 'many' records to delete from maps
@@ -2120,14 +2145,6 @@ class SqlDbSvc extends BaseDbSvc
         }
     }
 
-    /**
-     * @return int
-     */
-    public function getDriverType()
-    {
-        return $this->_driverType;
-    }
-
     protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
         $_idsInfo = array();
@@ -2251,9 +2268,9 @@ class SqlDbSvc extends BaseDbSvc
                         $_idName = Option::get( $_info, 'name' );
                         if ( Option::getBool( $_info, 'auto_increment' ) )
                         {
-                            $_schema = $this->_dbConn->schema->getTable($this->_transactionTable);
+                            $_schema = $this->_dbConn->schema->getTable( $this->_transactionTable );
                             $_sequenceName = $_schema->sequenceName;
-                            $id[$_idName] = (int)$this->_dbConn->getLastInsertID($_sequenceName);
+                            $id[$_idName] = (int)$this->_dbConn->getLastInsertID( $_sequenceName );
                         }
                         else
                         {
@@ -2264,7 +2281,13 @@ class SqlDbSvc extends BaseDbSvc
                 }
                 if ( !empty( $_relatedInfo ) )
                 {
-                    $this->updateRelations( $this->_transactionTable, $record, $id, $_relatedInfo, $_allowRelatedDelete );
+                    $this->updateRelations(
+                        $this->_transactionTable,
+                        $record,
+                        $id,
+                        $_relatedInfo,
+                        $_allowRelatedDelete
+                    );
                 }
 
                 $_idName = ( isset( $_idsInfo, $_idsInfo[0], $_idsInfo[0]['name'] ) ) ? $_idsInfo[0]['name'] : null;
@@ -2305,7 +2328,14 @@ class SqlDbSvc extends BaseDbSvc
                         $_fields = Option::get( $_result, 'fields' );
                         $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                        $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                        $_result = $this->_recordQuery(
+                            $this->_transactionTable,
+                            $_fields,
+                            $_where,
+                            $_params,
+                            $_bindings,
+                            $extras
+                        );
                         if ( empty( $_result ) )
                         {
                             throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
@@ -2315,7 +2345,13 @@ class SqlDbSvc extends BaseDbSvc
 
                 if ( !empty( $_relatedInfo ) )
                 {
-                    $this->updateRelations( $this->_transactionTable, $record, $id, $_relatedInfo, $_allowRelatedDelete );
+                    $this->updateRelations(
+                        $this->_transactionTable,
+                        $record,
+                        $id,
+                        $_relatedInfo,
+                        $_allowRelatedDelete
+                    );
                 }
 
                 $_idName = ( isset( $_idsInfo, $_idsInfo[0], $_idsInfo[0]['name'] ) ) ? $_idsInfo[0]['name'] : null;
@@ -2343,7 +2379,14 @@ class SqlDbSvc extends BaseDbSvc
                     $_fields = Option::get( $_result, 'fields' );
                     $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                    $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                    $_result = $this->_recordQuery(
+                        $this->_transactionTable,
+                        $_fields,
+                        $_where,
+                        $_params,
+                        $_bindings,
+                        $extras
+                    );
                     if ( empty( $_result ) )
                     {
                         throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
@@ -2364,7 +2407,14 @@ class SqlDbSvc extends BaseDbSvc
                         $_fields = Option::get( $_result, 'fields' );
                         $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                        $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                        $_result = $this->_recordQuery(
+                            $this->_transactionTable,
+                            $_fields,
+                            $_where,
+                            $_params,
+                            $_bindings,
+                            $extras
+                        );
                         if ( empty( $_result ) )
                         {
                             throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
@@ -2537,7 +2587,13 @@ class SqlDbSvc extends BaseDbSvc
                         {
                             if ( !empty( $_relatedInfo ) )
                             {
-                                $this->updateRelations( $this->_transactionTable, $_updates, $_id, $_relatedInfo, $_allowRelatedDelete );
+                                $this->updateRelations(
+                                    $this->_transactionTable,
+                                    $_updates,
+                                    $_id,
+                                    $_relatedInfo,
+                                    $_allowRelatedDelete
+                                );
                             }
                         }
 
@@ -2549,7 +2605,14 @@ class SqlDbSvc extends BaseDbSvc
                             $_fields = Option::get( $_result, 'fields' );
                             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                            $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                            $_result = $this->_recordQuery(
+                                $this->_transactionTable,
+                                $_fields,
+                                $_where,
+                                $_params,
+                                $_bindings,
+                                $extras
+                            );
                             if ( empty( $_result ) )
                             {
                                 throw new NotFoundException( 'No records were found using the given identifiers.' );
@@ -2569,7 +2632,14 @@ class SqlDbSvc extends BaseDbSvc
                         $_fields = Option::get( $_result, 'fields' );
                         $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                        $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                        $_result = $this->_recordQuery(
+                            $this->_transactionTable,
+                            $_fields,
+                            $_where,
+                            $_params,
+                            $_bindings,
+                            $extras
+                        );
                         if ( count( $this->_batchIds ) !== count( $_result ) )
                         {
                             $_errors = array();
@@ -2591,7 +2661,8 @@ class SqlDbSvc extends BaseDbSvc
                                 if ( !$_found )
                                 {
                                     $_errors[] = $_index;
-                                    $_out[$_index] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
+                                    $_out[$_index] =
+                                        "Record with identifier '" . print_r( $_id, true ) . "' not found.";
                                 }
                             }
                         }
@@ -2615,7 +2686,14 @@ class SqlDbSvc extends BaseDbSvc
                     $_fields = Option::get( $_result, 'fields' );
                     $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                    $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                    $_result = $this->_recordQuery(
+                        $this->_transactionTable,
+                        $_fields,
+                        $_where,
+                        $_params,
+                        $_bindings,
+                        $extras
+                    );
                     if ( empty( $_result ) )
                     {
                         throw new NotFoundException( 'No records were found using the given identifiers.' );
