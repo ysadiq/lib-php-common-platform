@@ -316,12 +316,14 @@ class Script extends BaseSystemRestResource
 
         try
         {
-            $_runnerShell = static::enrobeScript( $_script, $data );
+            $_runnerShell = ScriptEngine::enrobeScript( $_script, $data );
+
+            $_engine = static::getScriptEngine();
 
             //  Don't show output
             ob_start();
 
-            $_result = static::getScriptEngine()->executeString( $_runnerShell, $scriptId, \V8Js::FLAG_FORCE_ARRAY );
+            $_result = $_engine->executeString( $_runnerShell, $scriptId, \V8Js::FLAG_FORCE_ARRAY );
 
             $output = ob_get_clean();
 
@@ -393,7 +395,7 @@ class Script extends BaseSystemRestResource
     public static function enrobeScript( $script, $event = array() )
     {
         $_event = json_encode( $event, JSON_UNESCAPED_SLASHES );
-        $_eventData = json_encode( Option::get( $event, 'data', array() ), JSON_UNESCAPED_SLASHES );
+        $_eventData = json_encode( Option::get( $event, 'payload', array() ), JSON_UNESCAPED_SLASHES );
 
         if ( static::getScriptEngine()->getPassFullEvent() )
         {

@@ -19,214 +19,245 @@
  */
 namespace DreamFactory\Platform\Scripting;
 
-use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Enums\DateTime;
-use Kisma\Core\Seed;
-use Kisma\Core\Utility\Log;
+use DreamFactory\Platform\Events\EventDispatcher;
+use DreamFactory\Platform\Events\PlatformEvent;
+use DreamFactory\Platform\Exceptions\NotImplementedException;
+use DreamFactory\Platform\Resources\System\Config;
+use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
 
 /**
  * Acts as a proxy between a DSP PHP $event and a server-side script
  */
-class ScriptEvent extends Seed
+class ScriptEvent
 {
-    //*************************************************************************
-    //	Constants
-    //*************************************************************************
-
-    //*************************************************************************
-    //	Members
-    //*************************************************************************
-
-    /**
-     * @var string One path to rule them all
-     */
-    protected static $_libraryScriptPath;
-    /**
-     * @var array The modules we current support in our library script path
-     */
-    protected static $_libraryModules = array(
-        'lodash'     => 'lodash.min.js',
-        'underscore' => 'underscore-min.js',
-    );
-    /**
-     * @var array A list of paths that will be searched for unknown scripts
-     */
-    protected static $_supportedScriptPaths;
-    /**
-     * @var bool If true, the complete event is passed to scripts, otherwise,
-     * they just get the data object. This setting is to help migrate 1.5.x users
-     * to the new event structure.
-     */
-    protected $_passFullEvent = false;
-
     //*************************************************************************
     //	Methods
     //*************************************************************************
 
     /**
-     * Registers various available extensions to the v8 instance...
+     * Creates a generic, consistent event for scripting and notifications
      *
-     * @param string $libraryScriptPath
-     * @param array  $variables
-     * @param array  $extensions
-     * @param bool   $reportUncaughtExceptions
-     * @param bool   $passFullEvent
+     * The returned array is as follows:
      *
-     * @throws RestException
+     *  array(
+     *      //  This contains information about the event itself (READ-ONLY)
+     *      'event' => array(
+     *          'id'                => 'A unique ID assigned to this event',
+     *          'name'              => 'event.name',
+     *          'trigger'           => '{api_name}/{resource}',
+     *          'stop_propagation'  => [true|false],
+     *          'dispatcher'        => array(
+     *              'id'            => 'A unique ID assigned to the dispatcher of this event',
+     *          ),
+     *          //  Information about the triggering request
+     *          'request'           => array(
+     *              'timestamp'     => 'timestamp of the initial request',
+     *              'api_name'      =>'The api_name of the called service',
+     *              'resource'      => 'The name of the resource requested',
+     *              'path'          => '/full/path/that/triggered/event',
+     *          ),
+     *      ),
+     *      //  This contains the static configuration of the entire platform (READ-ONLY)
+     *      'platform' => array(
+     *          'api'               => [wormhole to inline-REST API],
+     *          'config'            => [standard DSP configuration update],
+     *      ),
+     *      //  This contains any additional information the event sender wanted to convey (READ-ONLY)
+     *      'details' => array(),
+     *      //  THE MEAT! This contains the ACTUAL data received from the client, or what's being sent back to the client (READ-WRITE).
+     *      'payload' => array(
+     *          //  See recap above for formats
+     *      ),
+     *  );
+     *
+     * Please note that the format of the payload differs slightly on multi-row result sets. In the v1.0 REST API, if a single row of data
+     * is to be returned from a request, it is merged into the root of the resultant array. If there are multiple rows, they are placed into
+     * n key called 'record'. To make matter worse, if you make a multi-row request via XML, and wrap your input payload in a
+     * <records><record></record>...</records> type wrapper, the resultant array will be placed a level deeper ($payload['records']['record'] = $results).
+     *
+     * Therefore the data exposed by the event system has been "normalized" to provide a reliable and consistent manner in which to process said data.
+     * There should be no need for wasting time trying to determine if your data is "maybe here, or maybe there, or maybe over there even" when received by
+     * your event handlers. If your payload contains record data, you will always receive it in an array container. Even for single rows.
+     *
+     * IMPORTANT: Don't expect this for ALL results. For non-record-like resultant data and/or result sets (i.e. NoSQL, other stuff), the data
+     * may be placed in the payload verbatim.
+     *
+     * IMPORTANTER: The representation of the data will be placed back into the original location/position in the $payload from which it was "normalized".
+     * This means that any client-side handlers will have to deal with the bogus determinations. Just be aware.
+     *
+     * To recap, below is a side-by-side comparison of record data as shown returned to the caller, and sent to an event handler.
+     *
+     *  REST API v1.0                           Event Representation
+     *  -------------                           --------------------
+     *  Single row...                           Add a 'record' key and make it look like a multi-row
+     *
+     *      array(                              array(
+     *          'id' => 1,                          'record' => array(
+     *      )                                           0 => array( 'id' => 1, ),
+     *                                              ),
+     *                                          ),
+     *
+     * Multi-row...                             Stays the same...
+     *
+     *      array(                              array(
+     *          'record' => array(                  'record' =>  array(
+     *              0 => array( 'id' => 1 ),            0 => array( 'id' => 1 ),
+     *              1 => array( 'id' => 2 ),            1 => array( 'id' => 2 ),
+     *              2 => array( 'id' => 3 ),            2 => array( 'id' => 3 ),
+     *          ),                                  ),
+     *      )                                   )
+     *
+     * XML multi-row                            The 'records' key is unwrapped, like regular multi-row
+     *
+     *  array(                                  array(
+     *    'records' => array(                     'record' =>  array(
+     *      'record' => array(                        0 => array( 'id' => 1 ),
+     *        0 => array( 'id' => 1 ),                1 => array( 'id' => 2 ),
+     *        1 => array( 'id' => 2 ),                2 => array( 'id' => 3 ),
+     *        2 => array( 'id' => 3 ),            ),
+     *      ),                                  )
+     *    ),
+     *  )
+     *
+     * @param string          $eventName         The event name
+     * @param PlatformEvent   $event             The event
+     * @param EventDispatcher $dispatcher        The dispatcher of the event
+     * @param array           $additionalDetails Any additional data to put into the event structure
+     * @param bool            $includeDspConfig  If true, the current DSP config is added to payload
+     * @param bool            $returnJson        If true, the event will be returned as a JSON string, otherwise an array.
+     *
+     * @return array|string
      */
-    public static function create( $libraryScriptPath = null, array $variables = null, array $extensions = null, $reportUncaughtExceptions = true, $passFullEvent = false )
+    public static function normalizeEvent( $eventName, PlatformEvent $event, $dispatcher, $additionalDetails = array(), $includeDspConfig = true, $returnJson = false )
     {
-        //  Set up our script mappings for require()
-        static::_initializeScriptPaths( $libraryScriptPath );
+        static $_config = null;
 
-        //  Register any extensions
-        static::_registerExtensions();
+        $_config = $includeDspConfig ? ( $_config ? : Config::getCurrentConfig() ) : false;
 
-        //  Create the engine
-        $_engine = new static( static::EXPOSED_OBJECT_NAME, $variables, $extensions, $reportUncaughtExceptions );
-        $_engine->setPassFullEvent( Pii::getParam( 'dsp.pass_full_event', $passFullEvent ) );
-
-        /**
-         * This is the callback for the exposed "require()" function in the sandbox
-         */
-        /** @noinspection PhpUndefinedMethodInspection */
-        $_engine->setModuleLoader(
-            function ( $module )
-            {
-                Log::debug( 'ModuleLoader: ' . $module . ' requested.' );
-
-                $_fullScriptPath = false;
-
-                //  Remove any quotes from this passed in module
-                $module = trim( str_replace( array( "'", '"' ), null, $module ), ' /' );
-
-                //  Check the configured script paths
-                if ( null === ( $_script = Option::get( static::$_libraryModules, $module ) ) )
+        $_event = array(
+            'event'    => array(
+                'id'               => $event->getEventId(),
+                'name'             => $eventName,
+                'trigger'          => $dispatcher->getPathInfo(),
+                'stop_propagation' => $event->isPropagationStopped(),
+                'dispatcher'       => array(
+                    'id'   => spl_object_hash( $dispatcher ),
+                    'type' => Inflector::neutralize( get_class( $dispatcher ) ),
+                ),
+            ),
+            'request'  => array_merge(
+                $event->toArray(),
+                array(
+                    'timestamp' => date( 'c', Option::server( 'REQUEST_TIME_FLOAT', Option::server( 'REQUEST_TIME', microtime( true ) ) ) ),
+                    'path'      => $dispatcher->getPathInfo( true )
+                )
+            ),
+            'platform' => array(
+                'api'    => function ( $apiName, $resource, $resourceId, $parameters = array(), $payload = array() )
                 {
-                    foreach ( static::$_supportedScriptPaths as $_key => $_path )
-                    {
-                        $_checkScriptPath = $_path . '/' . $module;
-
-                        if ( is_file( $_checkScriptPath ) && is_readable( $_checkScriptPath ) )
-                        {
-                            $_script = $module;
-                            $_fullScriptPath = $_checkScriptPath;
-                            Log::debug( '  * Found user script "' . $module . '" in "' . $_checkScriptPath . '"' );
-                            break;
-                        }
-
-                        Log::debug( '  * "' . $module . '" not found in "' . $_checkScriptPath . '" . ' );
-                    }
-                }
-
-                //  Me no likey
-                if ( !$_script || !$_fullScriptPath )
-                {
-                    throw new InternalServerErrorException( 'The module "' . $module . '" could not be found in any known locations . ' );
-                }
-
-                //  Return the full path to the script in the template
-                return str_replace( '{module}', $_script, static::MODULE_LOADER_TEMPLATE );
-            }
+                    throw new NotImplementedException( 'This feature is in development.' );
+                },
+                'config' => $_config,
+            ),
+            'details'  => Option::clean( $additionalDetails ),
+            'payload'  => static::normalizeEventData( $event ),
         );
+
+        return $returnJson ? json_encode( $_event, JSON_UNESCAPED_SLASHES ) : $_event;
     }
 
     /**
-     * @param string $libraryScriptPath
+     * Sandboxes the event data into a normalized fashion
      *
-     * @throws RestException
+     * @param PlatformEvent $event
+     *
+     * @return array
      */
-    protected static function _initializeScriptPaths( $libraryScriptPath = null )
+    public static function normalizeEventData( PlatformEvent $event )
     {
-        //  Set up
-        $_platformConfigPath = Platform::getPlatformConfigPath();
+        $_data = $event->getData();
 
-        //  Get our script path
-        static::$_libraryScriptPath = $libraryScriptPath ? : $_platformConfigPath . '/scripts';
-
-        if ( empty( static::$_libraryScriptPath ) || !is_dir( static::$_libraryScriptPath ) || !is_writable( static::$_libraryScriptPath ) )
+        //  XML-wrapped
+        if ( false !== ( $_records = Option::getDeep( $_data, 'records', 'record', false ) ) )
         {
-            throw new RestException(
-                HttpResponse::ServiceUnavailable, 'This service is not available . Storage path and/or required libraries not available . '
+            return array( 'record' => $_records );
+        }
+
+        //  Multi-row
+        if ( false !== ( $_records = Option::get( $_data, 'record', false ) ) )
+        {
+            return array( 'record' => $_records );
+        }
+
+        //  Single row, or so we think...
+        if ( is_array( $_data ) && !Pii::isEmpty( $_record = Option::get( $_data, 'record' ) ) && count( $_record ) >= 1 )
+        {
+            return array( 'record' => $_data );
+        }
+
+        //  Something completely different...
+        return $_data;
+    }
+
+    /**
+     * Determines and returns the data back into the location from whence it came
+     *
+     * @param PlatformEvent $event
+     * @param array         $newData
+     *
+     * @return array|mixed
+     */
+    public static function denormalizeEventData( PlatformEvent $event, array $newData = array() )
+    {
+        $_currentData = $event->getData();
+
+        //  XML-wrapped
+        if ( false !== ( $_records = Option::getDeep( $_currentData, 'records', 'record', false ) ) )
+        {
+            //  Re-gift
+            return array(
+                'records' => array(
+                    'record' => array(
+                        $newData
+                    )
+                )
             );
         }
 
-        //  All the paths that we will check for scripts
-        static::$_supportedScriptPaths = array(
-            //  This is ONLY the root of the app store 
-            'app'      => Platform::getApplicationsPath(),
-            //  Scripts here override library scripts 
-            'platform' => $_platformConfigPath . '/scripts',
-            //  Now check library distribution 
-            'library'  => Platform::getLibraryConfigPath( '/scripts' ),
-        );
-    }
-
-    /**
-     * Registers all distribution library modules as extensions.
-     * These can be accessed from scripts like this:
-     *
-     * require("lodash");
-     *
-     * var a = [ 'one', 'two', 'three' ];
-     *
-     * _.each( a, function( element ) {
-     *      print( "Found " + element + " in array\n" );
-     * });
-     *
-     * @return void
-     */
-    protected static function _registerExtensions()
-    {
-        foreach ( static::$_libraryModules as $_module => $_path )
+        //  Multi-row
+        if ( false !== ( $_records = Option::get( $_currentData, 'record', false ) ) )
         {
-            /** @noinspection PhpUndefinedMethodInspection */
-            static::registerExtension( 'lodash', str_replace( '{module}', 'lodash', static::MODULE_LOADER_TEMPLATE ), array(), false );
+            return array( 'record' => $newData );
         }
+
+        //  Single row, or so we think...
+        if ( is_array( $_currentData ) && !Pii::isEmpty( $_record = Option::get( $_currentData, 'record' ) ) && count( $_record ) >= 1 )
+        {
+            return array( 'record' => $newData );
+        }
+
+        //  A single row or something else...
+        return $newData;
     }
 
     /**
-     * @return boolean
-     */
-    public function getPassFullEvent()
-    {
-        return $this->_passFullEvent;
-    }
-
-    /**
-     * @param boolean $passFullEvent
+     * Give a normalized event, put any changed data from the payload back into the event
      *
-     * @return ScriptEngine
+     * @param PlatformEvent $event
+     * @param array         $data
+     *
+     * @return $this
      */
-    public function setPassFullEvent( $passFullEvent )
+    public static function updateEventFromHandler( PlatformEvent &$event, array $data = array() )
     {
-        $this->_passFullEvent = $passFullEvent;
+        //  Did propagation stop?
+        if ( Option::getDeep( $data, 'event', 'stop_propagation', false ) )
+        {
+            $event->stopPropagation();
+        }
 
-        return $this;
+        return $event->setData( static::denormalizeEventData( $event, empty( $data ) ? $event->getData() : $data ) );
     }
 
-    /**
-     * @return string
-     */
-    public static function getLibraryScriptPath()
-    {
-        return static::$_libraryScriptPath;
-    }
-
-    /**
-     * @return array
-     */
-    public static function getScriptPaths()
-    {
-        return static::$_supportedScriptPaths;
-    }
-
-    /**
-     * @return array
-     */
-    public static function getLibraryModules()
-    {
-        return static::$_libraryModules;
-    }
 }
