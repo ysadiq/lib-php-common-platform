@@ -19,8 +19,11 @@
  */
 namespace DreamFactory\Platform\Scripting;
 
+use DreamFactory\Platform\Events\EventDispatcher;
+use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\RestException;
+use DreamFactory\Platform\Interfaces\ScriptingEngineLike;
 use DreamFactory\Platform\Utility\Platform;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Log;
@@ -31,7 +34,7 @@ use Kisma\Core\Utility\Option;
  * @method mixed executeString( string $script, string $identifier = "V8Js::executeString()", int $flags = \V8Js::FLAG_NONE )
  * @method array getExtensions()
  */
-class ScriptEngine
+class V8Js implements ScriptingEngineLike
 {
 	//*************************************************************************
 	//	Constants
@@ -94,29 +97,6 @@ class ScriptEngine
 		//  Create the engine
 		if ( !static::$_engine )
 		{
-			//	Find out if we have support for "require()"
-			$_mirror = new \ReflectionClass( '\\V8Js' );
-
-			/** @noinspection PhpUndefinedMethodInspection */
-			if ( false !== ( static::$_moduleLoaderAvailable = $_mirror->hasMethod( 'setModuleLoader' ) ) )
-			{
-				//  Register any extensions
-				static::_registerExtensions();
-
-				/** @noinspection PhpUndefinedMethodInspection */
-//				$_loadedExtensions = static::$_engine->getExtensions();
-//				Log::debug( '  * engine created with the following extensions: ' .
-//					( !empty( $_loadedExtensions ) ? implode( ', ', array_keys( $_loadedExtensions ) ) : '**NONE**' ) );
-			}
-			else
-			{
-				//	Remove underscore from module list so "lodash" will auto-load
-//				Log::debug( '  * no "require()" support in V8 library v' . \V8Js::V8_VERSION );
-			}
-
-			//  Set up our script mappings for module loading
-			static::_initializeScriptPaths( $libraryScriptPath );
-			static::$_engine = new \V8Js( static::EXPOSED_OBJECT_NAME, $variables, $extensions, $reportUncaughtExceptions );
 		}
 
 		/**
@@ -244,7 +224,12 @@ class ScriptEngine
 
 		foreach ( static::$_libraryModules as $_module => $_path )
 		{
-			\V8Js::registerExtension( $_module, str_replace( '{module}', $_module, static::MODULE_LOADER_TEMPLATE ), array(), true );
+			\V8Js::registerExtension( $_module,
+				str_replace( '{module}', $_module, static::MODULE_LOADER_TEMPLATE ),
+				array(),
+				//	Auto-enable "lodash" when no module loader available
+				true );
+
 //			Log::debug( '  * registered extension "' . $_module . '"' );
 		}
 
@@ -346,5 +331,69 @@ JS;
 	public static function getLibraryModules()
 	{
 		return static::$_libraryModules;
+	}
+
+	/**
+	 * Handle setup for global/all instances of engine
+	 *
+	 * @param array $options
+	 *
+	 * @return mixed
+	 */
+	public static function startup( $options = null )
+	{
+		$_libraryScriptPath = Option::get( $options, 'library_script_path' );
+		$_variables = Option::get( $options, 'variables', array() );
+		$_extensions = Option::get( $options, 'extensions', array() );
+		$_reportUncaughtExceptions = Option::get( $options, 'report_uncaught_exceptions', true );
+
+		//	Find out if we have support for "require()"
+		$_mirror = new \ReflectionClass( '\\V8Js' );
+
+		/** @noinspection PhpUndefinedMethodInspection */
+		if ( false !== ( static::$_moduleLoaderAvailable = $_mirror->hasMethod( 'setModuleLoader' ) ) )
+		{
+			//  Register any extensions
+			static::_registerExtensions();
+
+			/** @noinspection PhpUndefinedMethodInspection */
+			$_loadedExtensions = static::$_engine->getExtensions();
+//				Log::debug( '  * engine created with the following extensions: ' .
+//					( !empty( $_loadedExtensions ) ? implode( ', ', array_keys( $_loadedExtensions ) ) : '**NONE**' ) );
+		}
+		else
+		{
+			//	Remove underscore from module list so "lodash" will auto-load
+//				Log::debug( '  * no "require()" support in V8 library v' . \V8Js::V8_VERSION );
+		}
+
+		//  Set up our script mappings for module loading
+		static::_initializeScriptPaths( $_libraryScriptPath );
+		static::$_engine = new \V8Js( static::EXPOSED_OBJECT_NAME, $_variables, $_extensions, $_reportUncaughtExceptions );
+	}
+
+	/**
+	 * Process a single script
+	 *
+	 * @param string          $script
+	 * @param string          $eventName
+	 * @param PlatformEvent   $event
+	 * @param EventDispatcher $dispatcher
+	 *
+	 * @return mixed
+	 */
+	public function process( $script, $eventName, $event, $dispatcher )
+	{
+		// TODO: Implement process() method.
+	}
+
+	/**
+	 * Handle cleanup for global/all instances of engine
+	 *
+	 * @return mixed
+	 */
+	public static function shutdown()
+	{
+		static::$_engine = null;
 	}
 }

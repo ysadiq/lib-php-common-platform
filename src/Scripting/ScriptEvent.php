@@ -23,6 +23,9 @@ use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Resources\System\Config;
+use DreamFactory\Platform\Resources\System\User;
+use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
 
@@ -50,6 +53,10 @@ class ScriptEvent
 	 *          'dispatcher'        => array(
 	 *              'id'            => 'A unique ID assigned to the dispatcher of this event',
 	 *          ),
+	 *      //  THE MEAT! This contains the ACTUAL data received from the client, or what's being sent back to the client (READ-WRITE).
+	 *      'record' => array(
+	 *          //  See recap above for formats
+	 *      ),
 	 *          //  Information about the triggering request
 	 *          'request'           => array(
 	 *              'timestamp'     => 'timestamp of the initial request',
@@ -65,10 +72,6 @@ class ScriptEvent
 	 *      ),
 	 *      //  This contains any additional information the event sender wanted to convey (READ-ONLY)
 	 *      'details' => array(),
-	 *      //  THE MEAT! This contains the ACTUAL data received from the client, or what's being sent back to the client (READ-WRITE).
-	 *      'record' => array(
-	 *          //  See recap above for formats
-	 *      ),
 	 *  );
 	 *
 	 * Please note that the format of the "record" differs slightly on multi-row result sets. In the v1.0 REST API, if a single row of data
@@ -158,11 +161,12 @@ class ScriptEvent
 			'request'          => $_eventExtras,
 			//	Access to the platform api
 			'platform'         => array(
-				'api'    => function ( $apiName, $resource, $resourceId, $parameters = array(), $payload = array() )
+				'api'     => function ( $apiName, $resource, $resourceId, $parameters = array(), $payload = array() )
 				{
 					throw new NotImplementedException( 'This feature is in development.' );
 				},
-				'config' => $_config,
+				'config'  => $_config,
+				'session' => Pii::guest() ? false : Session::generateSessionDataFromUser( Session::getCurrentUserId() ),
 			),
 			//	Extra information passed by caller
 			'extra'            => Option::clean( $extra ),
