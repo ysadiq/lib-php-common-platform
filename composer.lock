@@ -694,12 +694,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "cc0c6ef57961b62ad3202d6230d0af43530bbe0b"
+                "reference": "9be505730b5648564e858a412d1c36a15fe3a5cf"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/cc0c6ef57961b62ad3202d6230d0af43530bbe0b",
-                "reference": "cc0c6ef57961b62ad3202d6230d0af43530bbe0b",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/9be505730b5648564e858a412d1c36a15fe3a5cf",
+                "reference": "9be505730b5648564e858a412d1c36a15fe3a5cf",
                 "shasum": ""
             },
             "require": {
@@ -744,7 +744,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-05-21 19:42:40"
+            "time": "2014-05-22 21:02:30"
         },
         {
             "name": "monolog/monolog",
@@ -752,12 +752,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
-                "reference": "3030d3da4d3abb18d3c1e3479259af0d88a92488"
+                "reference": "6171a062686b4c34789b869d8056091b286c0607"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/3030d3da4d3abb18d3c1e3479259af0d88a92488",
-                "reference": "3030d3da4d3abb18d3c1e3479259af0d88a92488",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/6171a062686b4c34789b869d8056091b286c0607",
+                "reference": "6171a062686b4c34789b869d8056091b286c0607",
                 "shasum": ""
             },
             "require": {
@@ -812,7 +812,7 @@
                 "logging",
                 "psr-3"
             ],
-            "time": "2014-05-19 16:18:53"
+            "time": "2014-05-22 17:19:06"
         },
         {
             "name": "nikic/php-parser",
@@ -1411,12 +1411,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/HttpFoundation.git",
-                "reference": "8fa350478681c3ee707106afbe04be80add2b3ff"
+                "reference": "232e811bfd4e7bbb61ea655de78432f8c4f4d85a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/8fa350478681c3ee707106afbe04be80add2b3ff",
-                "reference": "8fa350478681c3ee707106afbe04be80add2b3ff",
+                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/232e811bfd4e7bbb61ea655de78432f8c4f4d85a",
+                "reference": "232e811bfd4e7bbb61ea655de78432f8c4f4d85a",
                 "shasum": ""
             },
             "require": {
@@ -1457,7 +1457,7 @@
             ],
             "description": "Symfony HttpFoundation Component",
             "homepage": "http://symfony.com",
-            "time": "2014-04-28 17:44:51"
+            "time": "2014-05-22 16:22:20"
         }
     ],
     "packages-dev": [
