@@ -297,16 +297,16 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common.git",
-                "reference": "bbd935d3dd228790343b5c6b00f044929c435fcc"
+                "reference": "589585acb735f601182e80e5ded91d53953eb6f4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/bbd935d3dd228790343b5c6b00f044929c435fcc",
-                "reference": "bbd935d3dd228790343b5c6b00f044929c435fcc",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/589585acb735f601182e80e5ded91d53953eb6f4",
+                "reference": "589585acb735f601182e80e5ded91d53953eb6f4",
                 "shasum": ""
             },
             "require": {
-                "kisma/kisma": "~0.2.37@stable",
+                "kisma/kisma": "~0.2.44@stable",
                 "php": ">=5.3.18"
             },
             "require-dev": {
@@ -331,7 +331,7 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer"
+                    "role": "Lead Developer, server-side/client-side"
                 },
                 {
                     "name": "Lee Hicks",
@@ -345,7 +345,7 @@
                 "dsp",
                 "dsp-core"
             ],
-            "time": "2014-04-19 17:45:06"
+            "time": "2014-05-23 00:05:34"
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
