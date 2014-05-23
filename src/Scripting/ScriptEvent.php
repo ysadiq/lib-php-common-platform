@@ -25,8 +25,10 @@ use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Resources\System\User;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -34,6 +36,24 @@ use Kisma\Core\Utility\Option;
  */
 class ScriptEvent
 {
+	//*************************************************************************
+	//	Constants
+	//*************************************************************************
+
+	/**
+	 * @type string The name of the script event schema file
+	 */
+	const SCRIPT_EVENT_SCHEMA = 'script_event_schema.json';
+
+	//*************************************************************************
+	//	Members
+	//*************************************************************************
+
+	/**
+	 * @var string The event schema for scripting events
+	 */
+	static protected $_eventTemplate = false;
+
 	//*************************************************************************
 	//	Methods
 	//*************************************************************************
@@ -273,4 +293,60 @@ class ScriptEvent
 		return $event->setData( static::denormalizeEventData( $event, $_record ) );
 	}
 
+	/**
+	 * @param string $template The name of the template to use for events. These are JSON files and reside in [library]/config/schema
+	 *
+	 * @return bool
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 */
+	public static function initialize( $template = self::SCRIPT_EVENT_SCHEMA )
+	{
+		if ( false === ( $_eventTemplate = Platform::storeGet( 'scripting.event_schema', false ) ) )
+		{
+			$_path = Platform::getLibraryConfigPath( '/schema' ) . '/' . trim( $template, ' /' );
+
+			if ( !is_file( $_path ) || !is_readable( $_path ) )
+			{
+				Log::notice( 'Scripting unavailable. Unable to load scripting event schema: ' . $_path );
+
+			}
+			else if ( false !== ( $_eventTemplate = file_get_contents( $_path ) ) )
+			{
+				Platform::storeSet( 'scripting.event_schema', $_eventTemplate, 86400 );
+			}
+			else
+			{
+				Log::notice( 'Scripting unavailable. Unable to load scripting event schema: ' . $_path );
+			}
+		}
+
+		return $_eventTemplate ? static::$_eventTemplate = $_eventTemplate : false;
+
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function getEventTemplate()
+	{
+		if ( empty( static::$_eventTemplate ) )
+		{
+			static::initialize();
+		}
+
+		return static::$_eventTemplate;
+	}
+
+	/**
+	 * @param string $eventTemplate
+	 */
+	public static function setEventTemplate( $eventTemplate )
+	{
+		static::$_eventTemplate = $eventTemplate;
+	}
+
 }
+
+//	Initialize the event template
+ScriptEvent::initialize();
+

@@ -41,6 +41,15 @@ interface ScriptingEngineLike
 	public static function startup( $options = null );
 
 	/**
+	 * Registers various available extensions to the v8 instance...
+	 *
+	 * @param array $options Options will vary by script engine
+	 *
+	 * @return ScriptingEngineLike
+	 */
+	public static function create( array $options = array() );
+
+	/**
 	 * Process a single script
 	 *
 	 * @param string          $script
