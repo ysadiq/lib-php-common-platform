@@ -17,17 +17,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Interfaces;
+namespace DreamFactory\Platform\Scripting\Engines;
+
+use DreamFactory\Platform\Interfaces\ScriptingEngineLike;
+use Kisma\Core\Enums\HttpResponse;
+use Kisma\Core\Exceptions\FileSystemException;
+use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 
 /**
- * Something that can execute scripts
+ * Wrapper around the lua extension
  */
-interface ScriptingEngineLike
+class Lua implements ScriptingEngineLike
 {
-    //*************************************************************************
-    //	Methods
-    //*************************************************************************
-
     /**
      * Handle setup for global/all instances of engine
      *
@@ -35,7 +37,10 @@ interface ScriptingEngineLike
      *
      * @return mixed
      */
-    public static function startup( $options = null );
+    public static function startup( $options = null )
+    {
+        // TODO: Implement startup() method.
+    }
 
     /**
      * Process a single script
@@ -50,7 +55,10 @@ interface ScriptingEngineLike
      * @internal param \DreamFactory\Platform\Events\EventDispatcher $dispatcher
      * @return mixed
      */
-    public function executeString( $script, $scriptId, $eventInfo, array $engineArguments = array() );
+    public function executeString( $script, $scriptId, $eventInfo, array $engineArguments = array() )
+    {
+        // TODO: Implement executeString() method.
+    }
 
     /**
      * Process a single script
@@ -62,12 +70,18 @@ interface ScriptingEngineLike
      *
      * @return mixed
      */
-    public function executeScript( $script, $scriptId, $eventInfo, array $engineArguments = array() );
+    public function executeScript( $script, $scriptId, $eventInfo, array $engineArguments = array() )
+    {
+        // TODO: Implement executeScript() method.
+    }
 
     /**
      * Handle cleanup for global/all instances of engine
      *
      * @return mixed
      */
-    public static function shutdown();
+    public static function shutdown()
+    {
+        // TODO: Implement shutdown() method.
+    }
 }
