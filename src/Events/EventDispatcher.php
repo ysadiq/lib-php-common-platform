@@ -710,17 +710,15 @@ class EventDispatcher implements EventDispatcherInterface
 	 */
 	public function getPathInfo( $unsullied = false )
 	{
-		$_path = null;
+		$_path = Pii::request( true )->getPathInfo();
 
-		//  If the dude wants the business or we haven't set the path yet...
-		if ( !$unsullied || empty( $this->_pathInfo ) )
+		if ( $unsullied )
 		{
-			//  Get the path and clean it up
-			$_path = Pii::request( true )->getPathInfo();
-			$this->_pathInfo = preg_replace( '#^\/rest#', null, $_path, 1 );
+			return $_path;
 		}
 
-		return $unsullied ? ( $_path ? : Pii::request( true )->getPathInfo() ) : $this->_pathInfo;
+		//  Get the path and clean it up
+		return $this->_pathInfo = preg_replace( '#^\/rest#', null, $_path, 1 );
 	}
 
 	/**

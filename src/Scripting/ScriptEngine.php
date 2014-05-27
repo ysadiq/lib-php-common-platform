@@ -23,13 +23,14 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\Platform;
 use Kisma\Core\Enums\HttpResponse;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
  * Wrapper around V8Js which sets up some basic things for dispatching events
  * @method mixed executeString( string $script, string $identifier = "V8Js::executeString()", int $flags = \V8Js::FLAG_NONE )
  * @method array getExtensions()
+ *
+ * @property array $event
  */
 class ScriptEngine
 {
@@ -257,24 +258,17 @@ class ScriptEngine
 	 *
 	 * @return string
 	 */
-	public static function enrobeScript( $script, array $normalizedEvent )
+	public static function enrobeScript( $script, array $normalizedEvent = array() )
 	{
-		if ( empty( static::$_engine ) )
-		{
-			throw new \LogicException( 'You must create the engine before you can wrap scripts.' );
-		}
-
-		$_event = json_encode( $normalizedEvent, JSON_UNESCAPED_SLASHES );
-
 		$_enrobedScript
 			= <<<JS
 
 _result = (function() {
 	//	The event information
 	//noinspection JSUnresolvedVariable
-	var _event = {$_event};
+	var _event = DSP.event;
 
-	return (function(event) {
+	return (function() {
 		var _scriptResult = (function(event) {
 			//noinspection BadExpressionStatementJS,JSUnresolvedVariable
 			{$script};
@@ -285,7 +279,7 @@ _result = (function() {
 		}
 
 		return _event;
-	})(_event);
+	})();
 })();
 
 JS;

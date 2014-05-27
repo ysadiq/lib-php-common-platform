@@ -26,6 +26,7 @@ use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Resources\System\User;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Platform;
+use DreamFactory\Platform\Yii\Models\App;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
@@ -81,7 +82,7 @@ class ScriptEvent
 		//	Not cached, get it...
 		$_path = Platform::getLibraryConfigPath( '/schema' ) . '/' . trim( $template, ' /' );
 
-		if ( is_file( $_path ) && !is_readable( $_path ) && ( false !== ( $_eventTemplate = file_get_contents( $_path ) ) ) )
+		if ( is_file( $_path ) && is_readable( $_path ) && ( false !== ( $_eventTemplate = file_get_contents( $_path ) ) ) )
 		{
 			if ( false !== ( $_eventTemplate = json_decode( $_eventTemplate, true ) ) && JSON_ERROR_NONE == json_last_error() )
 			{
@@ -200,23 +201,27 @@ class ScriptEvent
 		$_eventExtras = array_merge( $event->toArray( array( 'data' ) ),
 			array(
 				'timestamp' => date( 'c', Option::server( 'REQUEST_TIME_FLOAT', Option::server( 'REQUEST_TIME', microtime( true ) ) ) ),
-				'path'      => $dispatcher->getPathInfo( true )
+				'path'      => $_path = $dispatcher->getPathInfo( true )
 			) );
 
+		//	Clean up the trigger
+		$_trigger
+			= false !== strpos( $_path, 'rest', 0 ) || false !== strpos( $_path, '/rest', 0 ) ? str_replace( array( '/rest', 'rest' ), null, $_path ) : $_path;
+
+		//	Build the array
 		$_event = array(
 			//	Basics
-			'id'                 => $event->getEventId(),
+			'id'                 => Option::get( $_eventExtras, 'event_id', null, true ),
 			'name'               => $eventName,
-			'trigger'            => $dispatcher->getPathInfo(),
-			'stop_propagation'   => $event->isPropagationStopped(),
+			'trigger'            => $_trigger,
+			'stop_propagation'   => Option::get( $_eventExtras, 'stop_propagation', false, true ),
+			//	Dispatcher information
 			'dispatcher'         => array(
 				'id'   => spl_object_hash( $dispatcher ),
 				'type' => Inflector::neutralize( get_class( $dispatcher ) ),
 			),
 			//	Normalized payload
 			static::$_payloadKey => static::normalizeEventData( $event, false ),
-			//	The parsed request information
-			'request'            => $_eventExtras,
 			//	Access to the platform api
 			'platform'           => array(
 				'api'     => function ( $apiName, $resource, $resourceId, $parameters = array(), $payload = array() )
@@ -224,13 +229,42 @@ class ScriptEvent
 					throw new NotImplementedException( 'This feature is in development.' );
 				},
 				'config'  => $_config,
-				'session' => Pii::guest() ? false : Session::generateSessionDataFromUser( Session::getCurrentUserId() ),
+				'session' => Pii::guest() ? false : static::_getCleanedSession(),
 			),
+			//	The parsed request information
+			'request'            => $_eventExtras,
 			//	Extra information passed by caller
 			'extra'              => Option::clean( $extra ),
 		);
 
 		return $returnJson ? json_encode( $_event, JSON_UNESCAPED_SLASHES ) : $_event;
+	}
+
+	/**
+	 * Cleans up the session data to send along with an event
+	 *
+	 * @return array
+	 * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
+	 * @throws \DreamFactory\Platform\Exceptions\UnauthorizedException
+	 */
+	protected static function _getCleanedSession()
+	{
+		$_session = Session::generateSessionDataFromUser( Session::getCurrentUserId() );
+
+		if ( isset( $_session, $_session['allowed_apps'] ) )
+		{
+			$_apps = array();
+
+			/** @var App $_app */
+			foreach ( $_session['allowed_apps'] as $_app )
+			{
+				$_apps[$_app->api_name] = $_app->getAttributes();
+			}
+
+			$_session['allowed_apps'] = $_apps;
+		}
+
+		return $_session;
 	}
 
 	/**
@@ -326,9 +360,9 @@ class ScriptEvent
 			$event->stopPropagation();
 		}
 
-		$_record = Option::get( $normalizedEvent, static::$_payloadKey, array(), false );
+		$_payload = Option::get( $normalizedEvent, static::$_payloadKey, array(), false );
 
-		return $event->setData( static::denormalizeEventData( $event, $_record ) );
+		return $event->setData( static::denormalizeEventData( $event, $_payload ) );
 	}
 
 	/**

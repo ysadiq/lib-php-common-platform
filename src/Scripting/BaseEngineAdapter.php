@@ -69,7 +69,7 @@ abstract class BaseEngineAdapter
      *
      * @return string
      */
-    abstract protected function _wrapScript( $script, array $normalizedEvent );
+    abstract protected function _wrapScript( $script, array $normalizedEvent = array() );
 
     /**
      * Handle setup for global/all instances of engine
