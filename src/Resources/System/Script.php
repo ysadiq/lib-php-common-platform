@@ -22,12 +22,14 @@ namespace DreamFactory\Platform\Resources\System;
 use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Scripting\ScriptEngine;
 use DreamFactory\Platform\Services\SwaggerManager;
+use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\RestData;
 use Kisma\Core\Enums\GlobFlags;
@@ -58,10 +60,6 @@ class Script extends BaseSystemRestResource
 	 * @var string The path to script storage area
 	 */
 	protected $_scriptPath = null;
-	/**
-	 * @var string The path where global distribution scripts live
-	 */
-	protected $_globalScriptPath;
 	/**
 	 * @var int The maximum time (in ms) to allow scripts to run
 	 */
@@ -101,15 +99,56 @@ class Script extends BaseSystemRestResource
 
 		parent::__construct( $consumer, $_config, $resources );
 
+		$this->checkAvailability();
+	}
+
+	/**
+	 * Checks to make sure all our ducks are in a row...
+	 *
+	 * @return bool
+	 * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
+	 * @throws \DreamFactory\Platform\Exceptions\RestException
+	 */
+	public function checkAvailability()
+	{
+		$_message = false;
+
+		if ( Fabric::fabricHosted() )
+		{
+			throw new ForbiddenException( 'This resource is not available on a free-hosted DSP.' );
+		}
+
 		//  User scripts are stored here
 		$this->_scriptPath = Platform::getPrivatePath( static::DEFAULT_SCRIPT_PATH );
 
-		if ( empty( $this->_scriptPath ) || !is_dir( $this->_scriptPath ) || !is_writable( $this->_scriptPath ) )
+		if ( empty( $this->_scriptPath ) )
 		{
-			throw new RestException( HttpResponse::ServiceUnavailable, 'This service is not available. Storage path and/or required libraries not available.' );
+			$_message = 'Empty script path';
+		}
+		else
+		{
+			if ( !is_dir( $this->_scriptPath ) )
+			{
+				if ( false === @mkdir( $this->_scriptPath, 0777, true ) )
+				{
+					$_message = 'File system error creating scripts path: ' . $this->_scriptPath;
+				}
+			}
+			else if ( !is_writable( $this->_scriptPath ) )
+			{
+				$_message = 'Scripts path not writeable: ' . $this->_scriptPath;
+			}
 		}
 
-		$this->_initializeEngine( $this->_globalScriptPath );
+		if ( $_message )
+		{
+			Log::error( $_message );
+
+			throw new RestException( HttpResponse::ServiceUnavailable,
+				'This service is not available. Storage path, area, and/or required libraries are missing.' );
+		}
+
+		return true;
 	}
 
 	/**
@@ -390,16 +429,6 @@ class Script extends BaseSystemRestResource
 	protected function _getScriptPath( $scriptName = null )
 	{
 		return $this->_scriptPath . '/' . trim( $scriptName ? : $this->_resourceId, '/ ' ) . '.js';
-	}
-
-	/**
-	 * @param string $scriptName
-	 *
-	 * @return string
-	 */
-	protected function _getUserScriptPath( $scriptName = null )
-	{
-		return $this->_globalScriptPath . '/' . trim( $scriptName ? : $this->_resourceId, '/ ' ) . '.js';
 	}
 
 	/**
