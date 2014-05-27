@@ -13,16 +13,22 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 namespace DreamFactory\Platform\Scripting;
 
+use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\Platform;
+use DreamFactory\Platform\Utility\RestResponse;
+use DreamFactory\Platform\Utility\ServiceHandler;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -30,7 +36,10 @@ use Kisma\Core\Utility\Option;
  * @method mixed executeString( string $script, string $identifier = "V8Js::executeString()", int $flags = \V8Js::FLAG_NONE )
  * @method array getExtensions()
  *
- * @property array $event
+ * @property array  $event
+ * @property object $platform
+ * @property array  $request
+ * @property array  $extra
  */
 class ScriptEngine
 {
@@ -266,13 +275,14 @@ class ScriptEngine
 _result = (function() {
 	//	The event information
 	//noinspection JSUnresolvedVariable
-	var _event = DSP.event;
+	var _event = DSP.event, _platform = DSP.platform, _request = DSP.request, _extra = DSP.extra;
+
 
 	return (function() {
-		var _scriptResult = (function(event) {
+		var _scriptResult = (function(event, platform, request, extra) {
 			//noinspection BadExpressionStatementJS,JSUnresolvedVariable
 			{$script};
-		})(_event);
+		})(_event, _platform, _request, _extra);
 
 		if ( _event ) {
 			_event.script_result = _scriptResult;
@@ -291,6 +301,62 @@ JS;
 		}
 
 		return $_enrobedScript;
+	}
+
+	/**
+	 * @param string $method
+	 * @param string $nickname
+	 * @param string $path
+	 * @param array  $payload
+	 *
+	 * @return array
+	 */
+	public static function inlineRequest( $method, $nickname, $path, $payload )
+	{
+		//	Does nothing right now...
+		Log::debug( '  * Inline request received from script: ' . $method . ' ' . $nickname . ' path: ' . $path );
+
+		$_result = null;
+
+		if ( false === ( $_pos = strpos( $path, '/' ) ) )
+		{
+			$_serviceId = $path;
+			$_resource = null;
+		}
+		else
+		{
+			$_serviceId = substr( $path, 0, $_pos );
+			$_resource = substr( $path, $_pos + 1 );
+
+			//	Fix removal of trailing slashes from resource
+			if ( !empty( $_resource ) )
+			{
+				$_requestUri = Pii::request( false )->getRequestUri();
+
+				if ( ( false === strpos( $_requestUri, '?' ) && '/' === substr( $_requestUri, strlen( $_requestUri ) - 1, 1 ) ) ||
+					( '/' === substr( $_requestUri, strpos( $_requestUri, '?' ) - 1, 1 ) )
+				)
+				{
+					$_resource .= '/';
+				}
+			}
+		}
+
+		if ( empty( $_serviceId ) )
+		{
+			return null;
+		}
+
+		try
+		{
+			$_service = ServiceHandler::getService( $_serviceId );
+
+			return $_service->processRequest( $_resource, $method, false );
+		}
+		catch ( \Exception $_ex )
+		{
+			return RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false );
+		}
 	}
 
 	/**

@@ -21,7 +21,6 @@ namespace DreamFactory\Platform\Scripting;
 
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
-use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Resources\System\User;
 use DreamFactory\Platform\Resources\User\Session;
@@ -104,18 +103,17 @@ class ScriptEvent
 	 *
 	 *  array(
 	 *      //  This contains information about the event itself (READ-ONLY)
-	 *      'event' => array(
+	 *      array(
 	 *          'id'                => 'A unique ID assigned to this event',
 	 *          'name'              => 'event.name',
 	 *          'trigger'           => '{api_name}/{resource}',
 	 *          'stop_propagation'  => [true|false],
 	 *          'dispatcher'        => array(
 	 *              'id'            => 'A unique ID assigned to the dispatcher of this event',
-	 *          ),
-	 *      //  THE MEAT! This contains the ACTUAL data received from the client, or what's being sent back to the client (READ-WRITE).
-	 *      '[payload_key]' => array(
+	 *              'type'          => 'The class name of the dispatcher',
+	 *        //  THE MEAT! This contains the ACTUAL data received from the client, or what's being sent back to the client (READ-WRITE).
+	 *        '[payload_key]' => array(
 	 *          //  See recap above for formats
-	 *      ),
 	 *          //  Information about the triggering request
 	 *          'request'           => array(
 	 *              'timestamp'     => 'timestamp of the initial request',
@@ -123,14 +121,14 @@ class ScriptEvent
 	 *              'resource'      => 'The name of the resource requested',
 	 *              'path'          => '/full/path/that/triggered/event',
 	 *          ),
+	 *        //  This contains the static configuration of the entire platform (READ-ONLY)
+	 *        'platform' => array(
+	 *            'api'               => [wormhole to inline-REST API],
+	 *            'config'            => [standard DSP configuration update],
+	 *        ),
+	 *        //  This contains any additional information the event sender wanted to convey (READ-ONLY)
+	 *        'details' => array(),
 	 *      ),
-	 *      //  This contains the static configuration of the entire platform (READ-ONLY)
-	 *      'platform' => array(
-	 *          'api'               => [wormhole to inline-REST API],
-	 *          'config'            => [standard DSP configuration update],
-	 *      ),
-	 *      //  This contains any additional information the event sender wanted to convey (READ-ONLY)
-	 *      'details' => array(),
 	 *  );
 	 *
 	 * Please note that the format of the "record" differs slightly on multi-row result sets. In the v1.0 REST API, if a single row of data
@@ -197,6 +195,8 @@ class ScriptEvent
 
 		$_config = $includeDspConfig ? ( $_config ? : Config::getCurrentConfig() ) : false;
 
+		$_parser = new SwaggerParser();
+
 		//	Clean up the event extras, remove data portion
 		$_eventExtras = array_merge( $event->toArray( array( 'data' ) ),
 			array(
@@ -224,10 +224,7 @@ class ScriptEvent
 			static::$_payloadKey => static::normalizeEventData( $event, false ),
 			//	Access to the platform api
 			'platform'           => array(
-				'api'     => function ( $apiName, $resource, $resourceId, $parameters = array(), $payload = array() )
-				{
-					throw new NotImplementedException( 'This feature is in development.' );
-				},
+				'api'     => $_parser->buildApi( true ),
 				'config'  => $_config,
 				'session' => Pii::guest() ? false : static::_getCleanedSession(),
 			),

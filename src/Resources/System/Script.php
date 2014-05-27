@@ -36,6 +36,7 @@ use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Interfaces\HttpResponse;
 use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 
 /**
  * Script.php
@@ -348,8 +349,7 @@ class Script extends BaseSystemRestResource
 		try
 		{
 			//	Create the engine then wrap the script
-			$_engine = static::getScriptEngine();
-			$_engine->event = $data;
+			$_engine = static::getScriptEngine( $data );
 
 			$_runnerShell = ScriptEngine::enrobeScript( $_script );
 
@@ -407,13 +407,24 @@ class Script extends BaseSystemRestResource
 	}
 
 	/**
+	 * @param array $data
+	 *
 	 * @return ScriptEngine
 	 */
-	protected static function getScriptEngine()
+	protected static function getScriptEngine( array &$data = array() )
 	{
 		if ( null === static::$_scriptEngine )
 		{
 			static::$_scriptEngine = ScriptEngine::create();
+		}
+
+		//	Set variables
+		if ( !empty( $data ) )
+		{
+			static::$_scriptEngine->platform = Option::get( $data, 'platform', null, true );
+			static::$_scriptEngine->request = Option::get( $data, 'request', null, true );
+			static::$_scriptEngine->extra = Option::get( $data, 'extra', null, true );
+			static::$_scriptEngine->event = $data;
 		}
 
 		return static::$_scriptEngine;
