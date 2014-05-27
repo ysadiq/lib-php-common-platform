@@ -317,7 +317,7 @@ class Script extends BaseSystemRestResource
 
             $_result = $_engine->executeString( $_runnerShell, $scriptId, \V8Js::FLAG_FORCE_ARRAY );
 
-            $output = str_replace( array( '\\r', '\\n' ), array( null, PHP_EOL ), ob_get_clean() );
+			$output = ob_get_clean();
 
             if ( is_array( $_result ) )
             {

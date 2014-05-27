@@ -25,8 +25,10 @@ use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Resources\System\User;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -35,8 +37,64 @@ use Kisma\Core\Utility\Option;
 class ScriptEvent
 {
 	//*************************************************************************
+	//	Constants
+	//*************************************************************************
+
+	/**
+	 * @type string The name of the script event schema file
+	 */
+	const SCRIPT_EVENT_SCHEMA = 'script_event_schema.json';
+	/**
+	 * @type string The name of the key within the event structure that contains the payload
+	 */
+	const DEFAULT_PAYLOAD_KEY = 'record';
+
+	//*************************************************************************
+	//	Members
+	//*************************************************************************
+
+	/**
+	 * @var string The event schema for scripting events
+	 */
+	static protected $_eventTemplate = false;
+	static protected $_payloadKey = self::DEFAULT_PAYLOAD_KEY;
+
+	//*************************************************************************
 	//	Methods
 	//*************************************************************************
+
+	/**
+	 * @param string $template The name of the template to use for events. These are JSON files and reside in [library]/config/schema
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @return bool|array The schema in array form, FALSE on failure.
+	 */
+	public static function initialize( $template = self::SCRIPT_EVENT_SCHEMA )
+	{
+		static::$_payloadKey = Pii::getParam( 'scripting.payload_key', static::DEFAULT_PAYLOAD_KEY );
+
+		if ( false !== ( $_eventTemplate = Platform::storeGet( 'scripting.event_schema', false ) ) )
+		{
+			return $_eventTemplate;
+		}
+
+		//	Not cached, get it...
+		$_path = Platform::getLibraryConfigPath( '/schema' ) . '/' . trim( $template, ' /' );
+
+		if ( is_file( $_path ) && !is_readable( $_path ) && ( false !== ( $_eventTemplate = file_get_contents( $_path ) ) ) )
+		{
+			if ( false !== ( $_eventTemplate = json_decode( $_eventTemplate, true ) ) && JSON_ERROR_NONE == json_last_error() )
+			{
+				Platform::storeSet( 'scripting.event_schema', $_eventTemplate, 86400 );
+
+				return $_eventTemplate;
+			}
+		}
+
+		Log::notice( 'Scripting unavailable. Unable to load scripting event schema: ' . $_path );
+
+		return false;
+	}
 
 	/**
 	 * Creates a generic, consistent event for scripting and notifications
@@ -54,7 +112,7 @@ class ScriptEvent
 	 *              'id'            => 'A unique ID assigned to the dispatcher of this event',
 	 *          ),
 	 *      //  THE MEAT! This contains the ACTUAL data received from the client, or what's being sent back to the client (READ-WRITE).
-	 *      'record' => array(
+	 *      '[payload_key]' => array(
 	 *          //  See recap above for formats
 	 *      ),
 	 *          //  Information about the triggering request
@@ -147,20 +205,20 @@ class ScriptEvent
 
 		$_event = array(
 			//	Basics
-			'id'               => $event->getEventId(),
-			'name'             => $eventName,
-			'trigger'          => $dispatcher->getPathInfo(),
-			'stop_propagation' => $event->isPropagationStopped(),
-			'dispatcher'       => array(
+			'id'                 => $event->getEventId(),
+			'name'               => $eventName,
+			'trigger'            => $dispatcher->getPathInfo(),
+			'stop_propagation'   => $event->isPropagationStopped(),
+			'dispatcher'         => array(
 				'id'   => spl_object_hash( $dispatcher ),
 				'type' => Inflector::neutralize( get_class( $dispatcher ) ),
 			),
 			//	Normalized payload
-			'record'           => static::normalizeEventData( $event, false ),
+			static::$_payloadKey => static::normalizeEventData( $event, false ),
 			//	The parsed request information
-			'request'          => $_eventExtras,
+			'request'            => $_eventExtras,
 			//	Access to the platform api
-			'platform'         => array(
+			'platform'           => array(
 				'api'     => function ( $apiName, $resource, $resourceId, $parameters = array(), $payload = array() )
 				{
 					throw new NotImplementedException( 'This feature is in development.' );
@@ -169,7 +227,7 @@ class ScriptEvent
 				'session' => Pii::guest() ? false : Session::generateSessionDataFromUser( Session::getCurrentUserId() ),
 			),
 			//	Extra information passed by caller
-			'extra'            => Option::clean( $extra ),
+			'extra'              => Option::clean( $extra ),
 		);
 
 		return $returnJson ? json_encode( $_event, JSON_UNESCAPED_SLASHES ) : $_event;
@@ -179,7 +237,7 @@ class ScriptEvent
 	 * Sandboxes the event data into a normalized fashion
 	 *
 	 * @param PlatformEvent $event   The event source
-	 * @param bool          $wrapped If true (default), the returned array has a single key of 'record'
+	 * @param bool          $wrapped If true (default), the returned array has a single key of '[payload_key]'
 	 *                               which contains the normalized payload. If false, the returned array
 	 *                               is not wrapped but just the array of the payload
 	 *
@@ -192,19 +250,19 @@ class ScriptEvent
 		//  XML-wrapped
 		if ( false !== ( $_records = Option::getDeep( $_data, 'records', 'record', false ) ) )
 		{
-			return $wrapped ? array( 'record' => $_records ) : $_records;
+			return $wrapped ? array( static::$_payloadKey => $_records ) : $_records;
 		}
 
 		//  Multi-row
 		if ( false !== ( $_records = Option::get( $_data, 'record', false ) ) )
 		{
-			return $wrapped ? array( 'record' => $_records ) : $_records;
+			return $wrapped ? array( static::$_payloadKey => $_records ) : $_records;
 		}
 
 		//  Single row, or so we think...
 		if ( is_array( $_data ) && !Pii::isEmpty( $_record = Option::get( $_data, 'record' ) ) && count( $_record ) >= 1 )
 		{
-			return $wrapped ? array( 'record' => $_data ) : $_data;
+			return $wrapped ? array( static::$_payloadKey => $_data ) : $_data;
 		}
 
 		//  Something completely different...
@@ -216,7 +274,7 @@ class ScriptEvent
 	 *
 	 * @param PlatformEvent $event
 	 * @param array         $newData
-	 * @param bool          $wrapped If true (default), the returned array has a single key of 'record'
+	 * @param bool          $wrapped If true (default), the returned array has a single key of '[payload_key]'
 	 *                               which contains the normalized payload. If false, the returned array
 	 *                               is not wrapped but just the array of the payload
 	 *
@@ -268,9 +326,34 @@ class ScriptEvent
 			$event->stopPropagation();
 		}
 
-		$_record = Option::get( $normalizedEvent, 'record', array(), false );
+		$_record = Option::get( $normalizedEvent, static::$_payloadKey, array(), false );
 
 		return $event->setData( static::denormalizeEventData( $event, $_record ) );
 	}
 
+	/**
+	 * @return string
+	 */
+	public static function getEventTemplate()
+	{
+		if ( empty( static::$_eventTemplate ) )
+		{
+			static::initialize();
+		}
+
+		return static::$_eventTemplate;
+	}
+
+	/**
+	 * @param string $eventTemplate
+	 */
+	public static function setEventTemplate( $eventTemplate )
+	{
+		static::$_eventTemplate = $eventTemplate;
+	}
+
 }
+
+//	Initialize the event template
+ScriptEvent::initialize();
+
