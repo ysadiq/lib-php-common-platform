@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Scripting\Engines;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Interfaces\ScriptingEngineLike;
+use DreamFactory\Platform\Scripting\BaseEngineAdapter;
 use DreamFactory\Platform\Utility\Platform;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Exceptions\FileSystemException;
@@ -29,10 +30,9 @@ use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
- * Wrapper around V8Js which sets up some basic things for dispatching events
- * @method array getExtensions()
+ * Plugin for the php-v8js extension which exposes the V8 Javascript engine
  */
-class V8Js implements ScriptingEngineLike
+class V8Js extends BaseEngineAdapter implements ScriptingEngineLike
 {
     //*************************************************************************
     //	Constants
@@ -54,21 +54,9 @@ class V8Js implements ScriptingEngineLike
     /**
      * @var array The module(s) we add to the scripting context
      */
-    protected static $_libraryModules = array(
+    protected static $_systemModules = array(
         'lodash' => 'lodash.min.js',
     );
-    /**
-     * @var string One path to rule them all
-     */
-    protected static $_libraryScriptPath;
-    /**
-     * @var array A list of paths that will be searched for unknown scripts
-     */
-    protected static $_supportedScriptPaths;
-    /**
-     * @var \V8Js
-     */
-    protected static $_engine;
     /**
      * @var bool True if system version of V8Js supports module loading
      */
@@ -79,6 +67,36 @@ class V8Js implements ScriptingEngineLike
     //*************************************************************************
 
     /**
+     * @param string $exposedObjectName
+     * @param array  $variables
+     * @param array  $exceptions
+     * @param bool   $reportUncaughtExceptions
+     *
+     * @internal param array $options
+     */
+    public function __construct( $exposedObjectName = self::EXPOSED_OBJECT_NAME, array $variables = array(), $exceptions = array(), $reportUncaughtExceptions = false )
+    {
+        parent::__construct();
+
+        //  Set up our script mappings for module loading
+        $this->_engine = new \V8Js( $exposedObjectName, $variables, $exceptions, $reportUncaughtExceptions );
+
+        /**
+         * This is the callback for the exposed "require()" function in the sandbox
+         */
+        if ( static::$_moduleLoaderAvailable )
+        {
+            /** @noinspection PhpUndefinedMethodInspection */
+            $this->_engine->setModuleLoader(
+                function ( $module )
+                {
+                    return static::loadScriptingModule( $module );
+                }
+            );
+        }
+    }
+
+    /**
      * Handle setup for global/all instances of engine
      *
      * @param array $options
@@ -87,10 +105,7 @@ class V8Js implements ScriptingEngineLike
      */
     public static function startup( $options = null )
     {
-        $_libraryScriptPath = Option::get( $options, 'library_script_path' );
-        $_variables = Option::get( $options, 'variables', array() );
-        $_extensions = Option::get( $options, 'extensions', array() );
-        $_reportUncaughtExceptions = Option::get( $options, 'report_uncaught_exceptions', true );
+        parent::startup( $options );
 
         //	Find out if we have support for "require()"
         $_mirror = new \ReflectionClass( '\\V8Js' );
@@ -100,31 +115,56 @@ class V8Js implements ScriptingEngineLike
         {
             //  Register any extensions
             static::_registerExtensions();
-
-            /** @noinspection PhpUndefinedMethodInspection */
-            //$_loadedExtensions = static::$_engine->getExtensions();
-//				Log::debug( '  * engine created with the following extensions: ' .
-//					( !empty( $_loadedExtensions ) ? implode( ', ', array_keys( $_loadedExtensions ) ) : '**NONE**' ) );
         }
-        else
-        {
-            //	Remove underscore from module list so "lodash" will auto-load
-//				Log::debug( '  * no "require()" support in V8 library v' . \V8Js::V8_VERSION );
-        }
-
-        //  Set up our script mappings for module loading
-        static::_initializeScriptPaths( $_libraryScriptPath );
-        static::$_engine = new \V8Js( static::EXPOSED_OBJECT_NAME, $_variables, $_extensions, $_reportUncaughtExceptions );
     }
 
     /**
-     * Handle cleanup for global/all instances of engine
+     * Called before script is executed so you can wrap the script and add injections
      *
-     * @return mixed
+     * @param string $script
+     * @param array  $normalizedEvent
+     *
+     * @return string
      */
-    public static function shutdown()
+    protected function _wrapScript( $script, array $normalizedEvent )
     {
-        static::$_engine = null;
+        if ( empty( $this->_engine ) )
+        {
+            throw new \LogicException( 'No script engine available.' );
+        }
+
+        $_event = json_encode( $normalizedEvent, JSON_UNESCAPED_SLASHES );
+
+        $_wrappedScript = <<<JS
+
+_result = (function() {
+	//	The event information
+	//noinspection JSUnresolvedVariable
+	var _event = {$_event};
+
+	return (function(event) {
+		var _scriptResult = (function(event) {
+			//noinspection BadExpressionStatementJS,JSUnresolvedVariable
+			{$script};
+		})(_event);
+
+		if ( _event ) {
+			_event.script_result = _scriptResult;
+		}
+
+		return _event;
+	})(_event);
+})();
+
+JS;
+
+        if ( !static::$_moduleLoaderAvailable )
+        {
+            $_wrappedScript =
+                Platform::storeGet( 'scripting.module.lodash', static::loadScriptingModule( 'lodash', false ), false, 3600 ) . ';' . $_wrappedScript;
+        }
+
+        return $_wrappedScript;
     }
 
     /**
@@ -142,8 +182,8 @@ class V8Js implements ScriptingEngineLike
      */
     public function executeString( $script, $scriptId, $eventInfo, array $engineArguments = array() )
     {
-        /** @noinspection PhpUndefinedMethodInspection */
-        return static::$_engine->executeString( $script, $scriptId, $flags = \V8Js::FLAG_NONE );
+        $_wrapped = $this->_wrapScript( $script, $eventInfo );
+
     }
 
     /**
@@ -158,43 +198,7 @@ class V8Js implements ScriptingEngineLike
      */
     public function executeScript( $script, $scriptId, $eventInfo, array $engineArguments = array() )
     {
-        return $this->executeString( $script, $scriptId, $eventInfo, $engineArguments );
-    }
-
-    /**
-     * Registers various available extensions to the v8 instance...
-     *
-     * @param string $libraryScriptPath
-     * @param array  $variables
-     * @param array  $extensions
-     * @param bool   $reportUncaughtExceptions
-     *
-     * @return static
-     * @throws RestException
-     */
-    public static function create( $libraryScriptPath = null, array $variables = array(), array $extensions = array(), $reportUncaughtExceptions = true )
-    {
-        //  Create the engine
-        if ( !static::$_engine )
-        {
-            static::startup();
-        }
-
-        /**
-         * This is the callback for the exposed "require()" function in the sandbox
-         */
-        if ( static::$_moduleLoaderAvailable )
-        {
-            /** @noinspection PhpUndefinedMethodInspection */
-            static::$_engine->setModuleLoader(
-                function ( $module )
-                {
-                    return static::loadScriptingModule( $module );
-                }
-            );
-        }
-
-        return static::$_engine;
+        return $this->executeString( static::loadScript( $scriptId, $script, true ), $scriptId, $eventInfo, $engineArguments );
     }
 
     /**
@@ -205,45 +209,21 @@ class V8Js implements ScriptingEngineLike
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return mixed
      */
-    public static function loadScriptingModule( $module, $useTemplate = true, array $engineArguments = array() )
+    public static function loadScriptingModule( $module, $useTemplate = true )
     {
-//		Log::debug( '  * loading module: ' . $module );
-
-        $_fullScriptPath = false;
-
         //  Remove any quotes from this passed in module
         $module = trim( str_replace( array( "'", '"' ), null, $module ), ' /' );
 
         //  Check the configured script paths
-        if ( null === ( $_script = Option::get( static::$_libraryModules, $module ) ) )
+        if ( null === ( $_script = static::loadScript( $module, $module ) ) )
         {
-            $_script = $module;
-        }
-
-        foreach ( static::$_supportedScriptPaths as $_key => $_path )
-        {
-            $_checkScriptPath = $_path . '/' . $_script;
-//			Log::debug( '  * Checking: ' . $_checkScriptPath );
-
-            if ( is_file( $_checkScriptPath ) && is_readable( $_checkScriptPath ) )
-            {
-                $_fullScriptPath = $_checkScriptPath;
-//				Log::debug( '    * Found module "' . $module . '" in "' . $_checkScriptPath . '"' );
-                break;
-            }
-
-//			Log::debug( '  * "' . $module . '" not found in "' . $_checkScriptPath . '" . ' );
-        }
-
-        //  Me no likey
-        if ( !$_script || !$_fullScriptPath )
-        {
+            //  Me no likey
             throw new InternalServerErrorException( 'The module "' . $module . '" could not be found in any known locations . ' );
         }
 
         if ( !$useTemplate )
         {
-            return file_get_contents( $_fullScriptPath );
+            return file_get_contents( $_script );
         }
 
         //  Return the full path to the script in the template
@@ -358,14 +338,9 @@ class V8Js implements ScriptingEngineLike
      */
     public static function enrobeScript( $script, array $normalizedEvent )
     {
-        if ( empty( static::$_engine ) )
-        {
-            throw new \LogicException( 'You must create the engine before you can wrap scripts.' );
-        }
-
         $_event = json_encode( $normalizedEvent, JSON_UNESCAPED_SLASHES );
 
-        $_enrobedScript = <<<JS
+        $_wrappedScript = <<<JS
 
 _result = (function() {
 	//	The event information
@@ -390,11 +365,11 @@ JS;
 
         if ( !static::$_moduleLoaderAvailable )
         {
-            $_enrobedScript =
-                Platform::storeGet( 'scripting.module.lodash', static::loadScriptingModule( 'lodash', false ), false, 3600 ) . ';' . $_enrobedScript;
+            $_wrappedScript =
+                Platform::storeGet( 'scripting.module.lodash', static::loadScriptingModule( 'lodash', false ), false, 3600 ) . ';' . $_wrappedScript;
         }
 
-        return $_enrobedScript;
+        return $_wrappedScript;
     }
 
     /**
@@ -405,9 +380,9 @@ JS;
      */
     public function __call( $name, $arguments )
     {
-        if ( static::$_engine )
+        if ( $this->_engine )
         {
-            return call_user_func_array( array( static::$_engine, $name ), $arguments );
+            return call_user_func_array( array( $this->_engine, $name ), $arguments );
         }
     }
 
