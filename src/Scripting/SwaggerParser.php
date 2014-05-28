@@ -31,117 +31,207 @@ use Kisma\Core\Utility\Option;
  */
 class SwaggerParser
 {
-	//*************************************************************************
-	//	Members
-	//*************************************************************************
+    //*************************************************************************
+    //	Members
+    //*************************************************************************
 
-	/**
-	 * @var string The Swagger cache
-	 */
-	protected $_cachePath;
-	/**
-	 * @var string The Swagger custom cache
-	 */
-	protected $_customPath;
+    /**
+     * @var string The Swagger cache
+     */
+    protected $_cachePath;
 
-	/**
-	 * @param string $swaggerPath If specified, used as Swagger base path
-	 */
-	public function __construct( $swaggerPath = null )
-	{
-		$swaggerPath = $swaggerPath ? : Platform::getSwaggerPath();
+    /**
+     * @param string $swaggerPath If specified, used as Swagger base path
+     */
+    public function __construct( $swaggerPath = null )
+    {
+        $swaggerPath = $swaggerPath ? : Platform::getSwaggerPath();
 
-		$this->_cachePath = $swaggerPath . '/cache';
-		$this->_customPath = $swaggerPath . '/custom';
-		$_me = $this;
+        $this->_cachePath = $swaggerPath . '/cache';
+        $_me = $this;
 
-		//	Rebuild our cache when Swagger cache is cleared
-		Platform::on( 'swagger.cache_cleared',
-			function ( $eventName, $event, $dispatcher ) use ( $_me )
-			{
-				Log::debug( '  * Rebuilding scripting API because Swagger cache cleared' );
-				$_me->buildApi( true );
-			} );
-	}
+        //	Rebuild our cache when Swagger cache is cleared
+        Platform::on(
+            'swagger.cache_cleared',
+            function ( $eventName, $event, $dispatcher ) use ( $_me )
+            {
+                Log::debug( '  * Rebuilding scripting API because Swagger cache cleared' );
+                $_me->buildApi( true );
+            }
+        );
+    }
 
-	/**
-	 * Reads the Swagger configuration and rebuilds the server-side scripting API
-	 *
-	 * @param bool $force If true, rebuild regardless of cached state
-	 *
-	 * @return \stdClass
-	 */
-	public function buildApi( $force = false )
-	{
-		$_apiObject = Platform::storeGet( 'scripting.swagger_api' );
+    /**
+     * Builds a tree of the API in HTML
+     *
+     * @param bool $returnHtml
+     *
+     * @return array|string
+     */
+    public static function apiTree( $returnHtml = true )
+    {
+        $_apiObject = json_decode( json_encode( static::getApiObject(), JSON_UNESCAPED_SLASHES ), true );
 
-		if ( !$force && !empty( $_apiObject ) )
-		{
-			return $_apiObject;
-		}
+        if ( !$returnHtml )
+        {
+            return $_apiObject;
+        }
 
-		if ( false === ( $_base = $this->_loadCacheFile() ) )
-		{
-			return false;
-		}
+        $_html = null;
 
-		$_apiObject = new \stdClass();
+        ksort( $_apiObject );
 
-		foreach ( $_base['apis'] as $_baseApi )
-		{
-			$_path = str_replace( '/', null, $_baseApi['path'] );
+        foreach ( $_apiObject as $_service => $_operations )
+        {
+            ksort( $_operations );
 
-			if ( false === ( $_cacheFile = $this->_loadCacheFile( $_path ) ) )
-			{
-				continue;
-			}
+            $_html .= '<li class="list-header">' . $_service . '</li><ul>';
 
-			if ( false !== ( strpos( $_resourcePath = Option::get( $_cacheFile, 'resourcePath', $_path ), '/', 0 ) ) )
-			{
-				$_resourcePath = ltrim( $_resourcePath, '/' );
-			}
+            foreach ( array_keys( $_operations ) as $_operation )
+            {
+                $_html .= '<li>' . $_service . '.' . $_operation . '</li>';
+            }
 
-			$_service = new \stdClass();
+            $_html .= '</ul>';
+        }
 
-			foreach ( $_cacheFile['apis'] as $_serviceApi )
-			{
-				foreach ( $_serviceApi['operations'] as $_operation )
-				{
-					$_service->{$_operation['nickname']} = new SerializableClosure( function ( $payload = null ) use ( $_operation, $_serviceApi )
-					{
-						return ScriptEngine::inlineRequest( $_operation['method'], $_operation['nickname'], ltrim( $_serviceApi['path'], '/' ), $payload );
-					} );
-				}
-			}
+        $_html = '<ul>' . $_html . '</ul>';
 
-			$_apiObject->{$_resourcePath} = $_service;
-			unset( $_service, $_cacheFile );
-		}
+        return $_html;
+    }
 
-		//	Store it
-		Platform::storeSet( 'scripting.swagger_api', $_apiObject );
+    /**
+     * Convenience method to instantiate and return an API object
+     *
+     * @param bool $force If true, bust cache and rebuild
+     *
+     * @return \stdClass
+     */
+    public static function getApiObject( $force = false )
+    {
+        $_parser = new static();
 
-		return $_apiObject;
-	}
+        return $_parser->buildApi( $force );
+    }
 
-	/**
-	 * Loads and returns the Swagger cache
-	 *
-	 * @param string $cacheFile The name of the cache to load, or null for the base
-	 *
-	 * @return bool
-	 */
-	protected function _loadCacheFile( $cacheFile = null )
-	{
-		$_cache = json_decode( file_get_contents( $this->_cachePath . '/' . ( $cacheFile ? : '_' ) . '.json' ), true );
+    /**
+     * Reads the Swagger configuration and rebuilds the server-side scripting API
+     *
+     * @param bool $force If true, rebuild regardless of cached state
+     *
+     * @return \stdClass
+     */
+    public function buildApi( $force = false )
+    {
+        $_apiObject = Platform::storeGet( 'scripting.swagger_api' );
 
-		if ( empty( $_cache ) || JSON_ERROR_NONE !== json_last_error() )
-		{
-			Log::error( 'No Swagger cache or invalid JSON detected.' );
+        if ( !$force && !empty( $_apiObject ) )
+        {
+            return $_apiObject;
+        }
 
-			return false;
-		}
+        if ( false === ( $_base = $this->_loadCacheFile() ) )
+        {
+            return false;
+        }
 
-		return $_cache;
-	}
+        $_apiObject = new \stdClass();
+
+        foreach ( $_base['apis'] as $_service )
+        {
+            $_apiObject->{$_resourcePath} = $this->_buildServiceApi( $_service, $_resourcePath );
+        }
+
+        //	Store it
+        Platform::storeSet( 'scripting.swagger_api', $_apiObject );
+
+        return $_apiObject;
+    }
+
+    /**
+     * @param array  $service
+     * @param string $resourcePath Will return the resource_path of the parsed service
+     *
+     * @return \stdClass
+     */
+    protected function _buildServiceApi( $service, &$resourcePath )
+    {
+        $_path = str_replace( '/', null, $service['path'] );
+
+        if ( false === ( $_cacheFile = $this->_loadCacheFile( $_path ) ) )
+        {
+            return false;
+        }
+
+        if ( false !== ( strpos( $resourcePath = Option::get( $_cacheFile, 'resourcePath', $_path ), '/', 0 ) ) )
+        {
+            $resourcePath = ltrim( $resourcePath, '/' );
+        }
+
+        return $this->_buildServiceOperationsApi( $_cacheFile['apis'] );
+    }
+
+    /**
+     * Parses the operations of a service
+     *
+     * @param array $serviceApis The list of APIs with operations to parse
+     *
+     * @return \stdClass
+     */
+    protected function _buildServiceOperationsApi( array $serviceApis = array() )
+    {
+        $_service = new \stdClass();
+
+        foreach ( $serviceApis as $_api )
+        {
+            if ( !isset( $_api['operations'] ) )
+            {
+                continue;
+            }
+
+            foreach ( $_api['operations'] as $_operation )
+            {
+                if ( !isset( $_operation['nickname'] ) )
+                {
+                    continue;
+                }
+
+                $_service->{$_operation['nickname']} = new SerializableClosure(
+                    function ( $payload = null ) use ( $_operation, $_api )
+                    {
+                        return ScriptEngine::inlineRequest(
+                            $_operation['method'],
+                            $_operation['nickname'],
+                            ltrim( $_api['path'], '/' ),
+                            $payload
+                        );
+                    }
+                );
+            }
+        }
+
+        return $_service;
+    }
+
+    /**
+     * Loads and returns the Swagger cache
+     *
+     * @param string $cacheFile The name of the cache to load, or null for the base
+     *
+     * @return bool
+     */
+    protected function _loadCacheFile( $cacheFile = null )
+    {
+        $_cache = json_decode( file_get_contents( $this->_cachePath . '/' . ( $cacheFile ? : '_' ) . '.json' ), true );
+
+        if ( empty( $_cache ) || JSON_ERROR_NONE !== json_last_error() )
+        {
+            Log::error( 'No Swagger cache or invalid JSON detected.' );
+
+            return false;
+        }
+
+        return $_cache;
+    }
+
 }
