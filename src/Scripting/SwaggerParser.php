@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Scripting;
 
 use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Resources\System\User;
+use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Platform;
 use Jeremeamia\SuperClosure\SerializableClosure;
 use Kisma\Core\Utility\Log;
@@ -48,17 +49,6 @@ class SwaggerParser
         $swaggerPath = $swaggerPath ? : Platform::getSwaggerPath();
 
         $this->_cachePath = $swaggerPath . '/cache';
-        $_me = $this;
-
-        //	Rebuild our cache when Swagger cache is cleared
-        Platform::on(
-            'swagger.cache_cleared',
-            function ( $eventName, $event, $dispatcher ) use ( $_me )
-            {
-                Log::debug( '  * Rebuilding scripting API because Swagger cache cleared' );
-                $_me->buildApi( true );
-            }
-        );
     }
 
     /**
@@ -123,7 +113,7 @@ class SwaggerParser
      */
     public function buildApi( $force = false )
     {
-        $_apiObject = Platform::storeGet( 'scripting.swagger_api' );
+        $_apiObject = Platform::storeGet( 'scripting.swagger_api', null, false, 60 );
 
         if ( !$force && !empty( $_apiObject ) )
         {
@@ -137,13 +127,20 @@ class SwaggerParser
 
         $_apiObject = new \stdClass();
 
-        foreach ( $_base['apis'] as $_service )
+        if ( isset( $_base['apis'] ) )
         {
-            $_apiObject->{$_resourcePath} = $this->_buildServiceApi( $_service, $_resourcePath );
+            foreach ( $_base['apis'] as $_service )
+            {
+                $_apiObject->{$_resourcePath} = $this->_buildServiceApi( $_service, $_resourcePath );
+            }
+        }
+        else
+        {
+            Log::error( 'Error parsing swagger, no APIs defined: ' . print_r( $_base, true ) );
         }
 
         //	Store it
-        Platform::storeSet( 'scripting.swagger_api', $_apiObject );
+        Platform::storeSet( 'scripting.swagger_api', $_apiObject, 60 );
 
         return $_apiObject;
     }
@@ -168,7 +165,7 @@ class SwaggerParser
             $resourcePath = ltrim( $resourcePath, '/' );
         }
 
-        return $this->_buildServiceOperationsApi( $_cacheFile['apis'] );
+        return $this->_buildServiceOperations( $_cacheFile['apis'] );
     }
 
     /**
@@ -178,7 +175,7 @@ class SwaggerParser
      *
      * @return \stdClass
      */
-    protected function _buildServiceOperationsApi( array $serviceApis = array() )
+    protected function _buildServiceOperations( array $serviceApis = array() )
     {
         $_service = new \stdClass();
 
@@ -222,7 +219,20 @@ class SwaggerParser
      */
     protected function _loadCacheFile( $cacheFile = null )
     {
-        $_cache = json_decode( file_get_contents( $this->_cachePath . '/' . ( $cacheFile ? : '_' ) . '.json' ), true );
+        $_json = null;
+        $_file = $this->_cachePath . ( '/' . $cacheFile . '.json' ? : SwaggerManager::SWAGGER_CACHE_FILE );
+
+        if ( !file_exists( $_file ) )
+        {
+            SwaggerManager::getSwagger();
+        }
+
+        if ( false === ( $_json = @file_get_contents( $_file ) || empty( $_json ) ) )
+        {
+            Log::error( 'Unable to open Swagger cache file: ' . $_file );
+        }
+
+        $_cache = json_decode( $_json, true );
 
         if ( empty( $_cache ) || JSON_ERROR_NONE !== json_last_error() )
         {
