@@ -273,9 +273,9 @@
             ],
             "authors": [
                 {
-                    "name": "Jason Sykes",
+                    "name": "Sykes, Jason",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Developer, client-side"
+                    "role": "Lead Engineer, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Javascript SDK",
@@ -297,12 +297,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common.git",
-                "reference": "589585acb735f601182e80e5ded91d53953eb6f4"
+                "reference": "7790b6c875730033d2ab86a1426fd6b36798bc8f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/589585acb735f601182e80e5ded91d53953eb6f4",
-                "reference": "589585acb735f601182e80e5ded91d53953eb6f4",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common/zipball/7790b6c875730033d2ab86a1426fd6b36798bc8f",
+                "reference": "7790b6c875730033d2ab86a1426fd6b36798bc8f",
                 "shasum": ""
             },
             "require": {
@@ -345,7 +345,7 @@
                 "dsp",
                 "dsp-core"
             ],
-            "time": "2014-05-23 00:05:34"
+            "time": "2014-05-29 19:07:40"
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
@@ -353,18 +353,18 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "41afddc1da864d9e8b8e88666886e1f00d696691"
+                "reference": "99c86bbc65d6acfdf487ef1e7342657962aa33ae"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/41afddc1da864d9e8b8e88666886e1f00d696691",
-                "reference": "41afddc1da864d9e8b8e88666886e1f00d696691",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/99c86bbc65d6acfdf487ef1e7342657962aa33ae",
+                "reference": "99c86bbc65d6acfdf487ef1e7342657962aa33ae",
                 "shasum": ""
             },
             "require": {
-                "dreamfactory/lib-php-common": "~1.4@dev",
+                "dreamfactory/lib-php-common": "~1.5.12@dev",
                 "dreamfactory/yii": "1.1.13",
-                "kisma/kisma": "~0.2@stable",
+                "kisma/kisma": "~0.2@dev",
                 "php": ">=5.3.18"
             },
             "require-dev": {
@@ -416,7 +416,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-05-20 00:37:24"
+            "time": "2014-05-23 00:04:49"
         },
         {
             "name": "dreamfactory/oasys",
@@ -752,12 +752,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
-                "reference": "6171a062686b4c34789b869d8056091b286c0607"
+                "reference": "016423a804140a33814b8fad4240dbfa49a884da"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/6171a062686b4c34789b869d8056091b286c0607",
-                "reference": "6171a062686b4c34789b869d8056091b286c0607",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/016423a804140a33814b8fad4240dbfa49a884da",
+                "reference": "016423a804140a33814b8fad4240dbfa49a884da",
                 "shasum": ""
             },
             "require": {
@@ -812,7 +812,7 @@
                 "logging",
                 "psr-3"
             ],
-            "time": "2014-05-22 17:19:06"
+            "time": "2014-05-29 15:04:35"
         },
         {
             "name": "nikic/php-parser",
@@ -1352,12 +1352,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/EventDispatcher.git",
-                "reference": "cb62ec8dd05893fc8e4f0e6e21e326e1fc731fe8"
+                "reference": "7a4f4b42886f8c2e35acb1071f157a0b8eb1bd39"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/cb62ec8dd05893fc8e4f0e6e21e326e1fc731fe8",
-                "reference": "cb62ec8dd05893fc8e4f0e6e21e326e1fc731fe8",
+                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/7a4f4b42886f8c2e35acb1071f157a0b8eb1bd39",
+                "reference": "7a4f4b42886f8c2e35acb1071f157a0b8eb1bd39",
                 "shasum": ""
             },
             "require": {
@@ -1376,7 +1376,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "2.5-dev"
+                    "dev-master": "2.6-dev"
                 }
             },
             "autoload": {
@@ -1402,7 +1402,7 @@
             ],
             "description": "Symfony EventDispatcher Component",
             "homepage": "http://symfony.com",
-            "time": "2014-04-29 10:13:57"
+            "time": "2014-05-23 14:36:49"
         },
         {
             "name": "symfony/http-foundation",
@@ -1411,12 +1411,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/HttpFoundation.git",
-                "reference": "232e811bfd4e7bbb61ea655de78432f8c4f4d85a"
+                "reference": "d17938f07e168c4e5bb35c209d3c289ccff15d80"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/232e811bfd4e7bbb61ea655de78432f8c4f4d85a",
-                "reference": "232e811bfd4e7bbb61ea655de78432f8c4f4d85a",
+                "url": "https://api.github.com/repos/symfony/HttpFoundation/zipball/d17938f07e168c4e5bb35c209d3c289ccff15d80",
+                "reference": "d17938f07e168c4e5bb35c209d3c289ccff15d80",
                 "shasum": ""
             },
             "require": {
@@ -1428,7 +1428,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "2.5-dev"
+                    "dev-master": "2.6-dev"
                 }
             },
             "autoload": {
@@ -1457,7 +1457,7 @@
             ],
             "description": "Symfony HttpFoundation Component",
             "homepage": "http://symfony.com",
-            "time": "2014-05-22 16:22:20"
+            "time": "2014-05-26 19:02:51"
         }
     ],
     "packages-dev": [
@@ -2049,12 +2049,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Yaml.git",
-                "reference": "2158ca824145bd01877f58c987aff828bccddefa"
+                "reference": "d151f00d4fae107ea0d70ade6b0d2d3e81f45ecd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Yaml/zipball/2158ca824145bd01877f58c987aff828bccddefa",
-                "reference": "2158ca824145bd01877f58c987aff828bccddefa",
+                "url": "https://api.github.com/repos/symfony/Yaml/zipball/d151f00d4fae107ea0d70ade6b0d2d3e81f45ecd",
+                "reference": "d151f00d4fae107ea0d70ade6b0d2d3e81f45ecd",
                 "shasum": ""
             },
             "require": {
@@ -2063,7 +2063,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "2.5-dev"
+                    "dev-master": "2.6-dev"
                 }
             },
             "autoload": {
@@ -2089,7 +2089,7 @@
             ],
             "description": "Symfony Yaml Component",
             "homepage": "http://symfony.com",
-            "time": "2014-05-16 14:25:18"
+            "time": "2014-05-23 14:36:49"
         }
     ],
     "aliases": [
