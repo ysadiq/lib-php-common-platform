@@ -27,8 +27,9 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
+use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Scripting\Api;
 use DreamFactory\Platform\Scripting\ScriptEngine;
-use DreamFactory\Platform\Scripting\SwaggerParser;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\Platform;
@@ -298,10 +299,14 @@ class Script extends BaseSystemRestResource
 			throw new RestException( HttpResponse::ServiceUnavailable, 'This DSP cannot run server-side javascript scripts. The "v8js" is not available.' );
 		}
 
-		$_api = array( 'api' => SwaggerParser::getScriptingObject() );
+		$_api = array(
+			'api'     => Api::getScriptingObject(),
+			'config'  => Config::getCurrentConfig(),
+			'session' => Session::generateSessionDataFromUser( Session::getCurrentUserId() )
+		);
 
 		return ScriptEngine::runScript( $this->_getScriptPath(),
-			$this->_resourceId,
+			$this->_resource . '.' . $this->_resourceId,
 			$this->_requestPayload,
 			$_api );
 	}

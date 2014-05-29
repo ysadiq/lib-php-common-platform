@@ -24,7 +24,6 @@ use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\Interfaces\EventStoreLike;
 use Kisma\Core\Utility\Inflector;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\System;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -162,11 +161,6 @@ class EventStore implements EventStoreLike
             $this->_cacheStats[ Cache::STATS_MISSES ]++;
         }
 
-        if ( $this->_dispatcher->getLogAllEvents() )
-        {
-            Log::debug( 'EventStore: Loading dispatcher state' );
-        }
-
         //  Listeners
         foreach ( Option::get( $_data, 'listeners', array() ) as $_eventName => $_callables )
         {
@@ -204,11 +198,6 @@ class EventStore implements EventStoreLike
      */
     public function saveAll()
     {
-        if ( $this->_dispatcher->getLogAllEvents() )
-        {
-            Log::debug( 'EventStore: Saving dispatcher state', array( 'name' => 'EventStore' ) );
-        }
-
         $_data = array(
             'listeners' => $this->_dispatcher->getAllListeners(),
             'observers' => $this->_dispatcher->getObservers(),
