@@ -309,7 +309,7 @@ class RestResponse extends HttpResponse
         }
 
         // send it out
-        echo $result;
+        echo is_scalar( $result ) ? $result : print_r( $result, true );
 
         // flush output and destroy buffer
         ob_end_flush();

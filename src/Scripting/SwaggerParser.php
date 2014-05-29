@@ -23,7 +23,9 @@ use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Resources\System\User;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Platform;
+use DreamFactory\Yii\Utility\Pii;
 use Jeremeamia\SuperClosure\SerializableClosure;
+use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
@@ -52,6 +54,20 @@ class SwaggerParser
     }
 
     /**
+     * Convenience method to instantiate and return an API object
+     *
+     * @param bool $force If true, bust cache and rebuild
+     *
+     * @return \stdClass
+     */
+    public static function getScriptingObject( $force = false )
+    {
+        $_parser = new static();
+
+        return $_parser->buildApi( $force );
+    }
+
+    /**
      * Builds a tree of the API in HTML
      *
      * @param bool $returnHtml
@@ -60,7 +76,7 @@ class SwaggerParser
      */
     public static function apiTree( $returnHtml = true )
     {
-        $_apiObject = json_decode( json_encode( static::getApiObject(), JSON_UNESCAPED_SLASHES ), true );
+        $_apiObject = json_decode( json_encode( static::getScriptingObject(), JSON_UNESCAPED_SLASHES ), true );
 
         if ( !$returnHtml )
         {
@@ -91,20 +107,6 @@ class SwaggerParser
     }
 
     /**
-     * Convenience method to instantiate and return an API object
-     *
-     * @param bool $force If true, bust cache and rebuild
-     *
-     * @return \stdClass
-     */
-    public static function getApiObject( $force = false )
-    {
-        $_parser = new static();
-
-        return $_parser->buildApi( $force );
-    }
-
-    /**
      * Reads the Swagger configuration and rebuilds the server-side scripting API
      *
      * @param bool $force If true, rebuild regardless of cached state
@@ -113,9 +115,9 @@ class SwaggerParser
      */
     public function buildApi( $force = false )
     {
-        $_apiObject = Platform::storeGet( 'scripting.swagger_api', null, false, 60 );
+        $_apiObject = null; //Platform::storeGet( 'scripting.swagger_api', null, false, 60 );
 
-        if ( !$force && !empty( $_apiObject ) )
+        if ( !$force && count( (array)$_apiObject ) )
         {
             return $_apiObject;
         }
@@ -132,6 +134,7 @@ class SwaggerParser
             foreach ( $_base['apis'] as $_service )
             {
                 $_apiObject->{$_resourcePath} = $this->_buildServiceApi( $_service, $_resourcePath );
+                unset( $_service );
             }
         }
         else
@@ -165,17 +168,34 @@ class SwaggerParser
             $resourcePath = ltrim( $resourcePath, '/' );
         }
 
-        return $this->_buildServiceOperations( $_cacheFile['apis'] );
+        if ( 'db' == $resourcePath )
+        {
+            $_tables = $this->_getLocalTables();
+            $_services = new \stdClass();
+
+            if ( $_tables )
+            {
+                foreach ( Option::get( $_tables, 'resource', array() ) as $_table )
+                {
+                    $_services->{$_table['name']} = $this->_buildServiceOperations( $_cacheFile['apis'], 'db/' . $_table['name'] );
+                }
+            }
+
+            return $_services;
+        }
+
+        return $this->_buildServiceOperations( $_cacheFile['apis'], $resourcePath );
     }
 
     /**
      * Parses the operations of a service
      *
-     * @param array $serviceApis The list of APIs with operations to parse
+     * @param array  $serviceApis The list of APIs with operations to parse
+     * @param string $resourcePath
      *
      * @return \stdClass
      */
-    protected function _buildServiceOperations( array $serviceApis = array() )
+    protected function _buildServiceOperations( array $serviceApis = array(), $resourcePath )
     {
         $_service = new \stdClass();
 
@@ -188,7 +208,7 @@ class SwaggerParser
 
             foreach ( $_api['operations'] as $_operation )
             {
-                if ( !isset( $_operation['nickname'] ) )
+                if ( !isset( $_operation['nickname'] ) || !isset( $_operation['method'] ) || !isset( $_api['path'] ) )
                 {
                     continue;
                 }
@@ -204,7 +224,11 @@ class SwaggerParser
                         );
                     }
                 );
+
+                unset( $_operation );
             }
+
+            unset( $_api );
         }
 
         return $_service;
@@ -220,14 +244,14 @@ class SwaggerParser
     protected function _loadCacheFile( $cacheFile = null )
     {
         $_json = null;
-        $_file = $this->_cachePath . ( '/' . $cacheFile . '.json' ? : SwaggerManager::SWAGGER_CACHE_FILE );
+        $_file = $this->_cachePath . ( $cacheFile ? '/' . $cacheFile . '.json' : SwaggerManager::SWAGGER_CACHE_FILE );
 
         if ( !file_exists( $_file ) )
         {
             SwaggerManager::getSwagger();
         }
 
-        if ( false === ( $_json = @file_get_contents( $_file ) || empty( $_json ) ) )
+        if ( false === ( $_json = file_get_contents( $_file ) ) || empty( $_json ) )
         {
             Log::error( 'Unable to open Swagger cache file: ' . $_file );
         }
@@ -244,4 +268,26 @@ class SwaggerParser
         return $_cache;
     }
 
+    /**
+     * @return array
+     */
+    protected function _getLocalTables()
+    {
+        if ( Pii::guest() )
+        {
+            return false;
+        }
+
+        try
+        {
+            return ScriptEngine::inlineRequest( HttpMethod::GET, 'getTables', 'db', array() );
+        }
+        catch ( \Exception $_ex )
+        {
+
+            Log::error( 'Unable to get list of tables in local database: ' . $_ex->getMessage() );
+
+            return false;
+        }
+    }
 }

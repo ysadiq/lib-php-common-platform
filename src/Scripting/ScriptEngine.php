@@ -30,6 +30,7 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Wrapper around V8Js which sets up some basic things for dispatching events
@@ -43,246 +44,246 @@ use Kisma\Core\Utility\Option;
  */
 class ScriptEngine
 {
-	//*************************************************************************
-	//	Constants
-	//*************************************************************************
+    //*************************************************************************
+    //	Constants
+    //*************************************************************************
 
-	/**
-	 * @type string The name of the object which exposes PHP
-	 */
-	const EXPOSED_OBJECT_NAME = 'DSP';
-	/**
-	 * @type string The template for all module loading
-	 */
-	const MODULE_LOADER_TEMPLATE = 'require("{module}");';
+    /**
+     * @type string The name of the object which exposes PHP
+     */
+    const EXPOSED_OBJECT_NAME = 'DSP';
+    /**
+     * @type string The template for all module loading
+     */
+    const MODULE_LOADER_TEMPLATE = 'require("{module}");';
 
-	//*************************************************************************
-	//	Members
-	//*************************************************************************
+    //*************************************************************************
+    //	Members
+    //*************************************************************************
 
-	/**
-	 * @var array The module(s) we add to the scripting context
-	 */
-	protected static $_libraryModules
-		= array(
-			'lodash' => 'lodash.min.js',
-		);
-	/**
-	 * @var string One path to rule them all
-	 */
-	protected static $_libraryScriptPath;
-	/**
-	 * @var array A list of paths that will be searched for unknown scripts
-	 */
-	protected static $_supportedScriptPaths;
-	/**
-	 * @var \V8Js
-	 */
-	protected static $_engine;
-	/**
-	 * @var bool True if system version of V8Js supports module loading
-	 */
-	protected static $_moduleLoaderAvailable = false;
+    /**
+     * @var array The module(s) we add to the scripting context
+     */
+    protected static $_libraryModules = array(
+        'lodash' => 'lodash.min.js',
+    );
+    /**
+     * @var string One path to rule them all
+     */
+    protected static $_libraryScriptPath;
+    /**
+     * @var array A list of paths that will be searched for unknown scripts
+     */
+    protected static $_supportedScriptPaths;
+    /**
+     * @var \V8Js
+     */
+    protected static $_engine;
+    /**
+     * @var bool True if system version of V8Js supports module loading
+     */
+    protected static $_moduleLoaderAvailable = false;
 
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * Registers various available extensions to the v8 instance...
-	 *
-	 * @param string $libraryScriptPath
-	 * @param array  $variables
-	 * @param array  $extensions
-	 * @param bool   $reportUncaughtExceptions
-	 *
-	 * @return static
-	 * @throws RestException
-	 */
-	public static function create( $libraryScriptPath = null, array $variables = array(), array $extensions = array(), $reportUncaughtExceptions = true )
-	{
-		//  Create the engine
-		if ( !static::$_engine )
-		{
-			//	Find out if we have support for "require()"
-			$_mirror = new \ReflectionClass( '\\V8Js' );
+    /**
+     * Registers various available extensions to the v8 instance...
+     *
+     * @param string $libraryScriptPath
+     * @param array  $variables
+     * @param array  $extensions
+     * @param bool   $reportUncaughtExceptions
+     *
+     * @return static
+     * @throws RestException
+     */
+    public static function create( $libraryScriptPath = null, array $variables = array(), array $extensions = array(), $reportUncaughtExceptions = true )
+    {
+        //  Create the engine
+        if ( !static::$_engine )
+        {
+            //	Find out if we have support for "require()"
+            $_mirror = new \ReflectionClass( '\\V8Js' );
 
-			/** @noinspection PhpUndefinedMethodInspection */
-			if ( false !== ( static::$_moduleLoaderAvailable = $_mirror->hasMethod( 'setModuleLoader' ) ) )
-			{
-				//  Register any extensions
-				static::_registerExtensions();
+            /** @noinspection PhpUndefinedMethodInspection */
+            if ( false !== ( static::$_moduleLoaderAvailable = $_mirror->hasMethod( 'setModuleLoader' ) ) )
+            {
+                //  Register any extensions
+                static::_registerExtensions();
 
-				/** @noinspection PhpUndefinedMethodInspection */
+                /** @noinspection PhpUndefinedMethodInspection */
 //				$_loadedExtensions = static::$_engine->getExtensions();
 //				Log::debug( '  * engine created with the following extensions: ' .
 //					( !empty( $_loadedExtensions ) ? implode( ', ', array_keys( $_loadedExtensions ) ) : '**NONE**' ) );
-			}
-			else
-			{
-				//	Remove underscore from module list so "lodash" will auto-load
+            }
+            else
+            {
+                //	Remove underscore from module list so "lodash" will auto-load
 //				Log::debug( '  * no "require()" support in V8 library v' . \V8Js::V8_VERSION );
-			}
+            }
 
-			//  Set up our script mappings for module loading
-			static::_initializeScriptPaths( $libraryScriptPath );
-			static::$_engine = new \V8Js( static::EXPOSED_OBJECT_NAME, $variables, $extensions, $reportUncaughtExceptions );
-		}
+            //  Set up our script mappings for module loading
+            static::_initializeScriptPaths( $libraryScriptPath );
+            static::$_engine = new \V8Js( static::EXPOSED_OBJECT_NAME, $variables, $extensions, $reportUncaughtExceptions );
+        }
 
-		/**
-		 * This is the callback for the exposed "require()" function in the sandbox
-		 */
-		if ( static::$_moduleLoaderAvailable )
-		{
-			/** @noinspection PhpUndefinedMethodInspection */
-			static::$_engine->setModuleLoader( function ( $module )
-			{
-				return static::loadScriptingModule( $module );
-			} );
-		}
+        /**
+         * This is the callback for the exposed "require()" function in the sandbox
+         */
+        if ( static::$_moduleLoaderAvailable )
+        {
+            /** @noinspection PhpUndefinedMethodInspection */
+            static::$_engine->setModuleLoader(
+                function ( $module )
+                {
+                    return static::loadScriptingModule( $module );
+                }
+            );
+        }
 
-		return static::$_engine;
-	}
+        return static::$_engine;
+    }
 
-	/**
-	 * @param string $module      The name of the module to load
-	 * @param bool   $useTemplate If true, the module source will use the template format, otherwise the raw string is returned
-	 *
-	 * @throws InternalServerErrorException
-	 *
-	 * @return mixed
-	 */
-	public static function loadScriptingModule( $module, $useTemplate = true )
-	{
+    /**
+     * @param string $module      The name of the module to load
+     * @param bool   $useTemplate If true, the module source will use the template format, otherwise the raw string is returned
+     *
+     * @throws InternalServerErrorException
+     *
+     * @return mixed
+     */
+    public static function loadScriptingModule( $module, $useTemplate = true )
+    {
 //		Log::debug( '  * loading module: ' . $module );
 
-		$_fullScriptPath = false;
+        $_fullScriptPath = false;
 
-		//  Remove any quotes from this passed in module
-		$module = trim( str_replace( array( "'", '"' ), null, $module ), ' /' );
+        //  Remove any quotes from this passed in module
+        $module = trim( str_replace( array( "'", '"' ), null, $module ), ' /' );
 
-		//  Check the configured script paths
-		if ( null === ( $_script = Option::get( static::$_libraryModules, $module ) ) )
-		{
-			$_script = $module;
-		}
+        //  Check the configured script paths
+        if ( null === ( $_script = Option::get( static::$_libraryModules, $module ) ) )
+        {
+            $_script = $module;
+        }
 
-		foreach ( static::$_supportedScriptPaths as $_key => $_path )
-		{
-			$_checkScriptPath = $_path . '/' . $_script;
+        foreach ( static::$_supportedScriptPaths as $_key => $_path )
+        {
+            $_checkScriptPath = $_path . '/' . $_script;
 //			Log::debug( '  * Checking: ' . $_checkScriptPath );
 
-			if ( is_file( $_checkScriptPath ) && is_readable( $_checkScriptPath ) )
-			{
-				$_fullScriptPath = $_checkScriptPath;
+            if ( is_file( $_checkScriptPath ) && is_readable( $_checkScriptPath ) )
+            {
+                $_fullScriptPath = $_checkScriptPath;
 //				Log::debug( '    * Found module "' . $module . '" in "' . $_checkScriptPath . '"' );
-				break;
-			}
+                break;
+            }
 
 //			Log::debug( '  * "' . $module . '" not found in "' . $_checkScriptPath . '" . ' );
-		}
+        }
 
-		//  Me no likey
-		if ( !$_script || !$_fullScriptPath )
-		{
-			throw new InternalServerErrorException( 'The module "' . $module . '" could not be found in any known locations . ' );
-		}
+        //  Me no likey
+        if ( !$_script || !$_fullScriptPath )
+        {
+            throw new InternalServerErrorException( 'The module "' . $module . '" could not be found in any known locations . ' );
+        }
 
-		if ( !$useTemplate )
-		{
-			return file_get_contents( $_fullScriptPath );
-		}
+        if ( !$useTemplate )
+        {
+            return file_get_contents( $_fullScriptPath );
+        }
 
-		//  Return the full path to the script in the template
-		return str_replace( '{module}', $_script, static::MODULE_LOADER_TEMPLATE );
-	}
+        //  Return the full path to the script in the template
+        return str_replace( '{module}', $_script, static::MODULE_LOADER_TEMPLATE );
+    }
 
-	/**
-	 * @param string $libraryScriptPath
-	 *
-	 * @throws RestException
-	 */
-	protected static function _initializeScriptPaths( $libraryScriptPath = null )
-	{
-		//  Set up
-		$_platformConfigPath = Platform::getPlatformConfigPath();
+    /**
+     * @param string $libraryScriptPath
+     *
+     * @throws RestException
+     */
+    protected static function _initializeScriptPaths( $libraryScriptPath = null )
+    {
+        //  Set up
+        $_platformConfigPath = Platform::getPlatformConfigPath();
 
-		//  Get our script path
-		static::$_libraryScriptPath = $libraryScriptPath ? : Platform::getLibraryConfigPath( '/scripts' );
+        //  Get our script path
+        static::$_libraryScriptPath = $libraryScriptPath ? : Platform::getLibraryConfigPath( '/scripts' );
 
-		if ( empty( static::$_libraryScriptPath ) || !is_dir( static::$_libraryScriptPath ) )
-		{
-			throw new RestException( HttpResponse::ServiceUnavailable,
-				'This service is not available . Storage path and/or required libraries not available . ' );
-		}
+        if ( empty( static::$_libraryScriptPath ) || !is_dir( static::$_libraryScriptPath ) )
+        {
+            throw new RestException(
+                HttpResponse::ServiceUnavailable, 'This service is not available . Storage path and/or required libraries not available . '
+            );
+        }
 
-		//  All the paths that we will check for scripts
-		static::$_supportedScriptPaths = array(
-			//  This is ONLY the root of the app store
-			'app'      => Platform::getApplicationsPath(),
-			//  This is the user's private scripting area used by the admin console
-			'storage'  => Platform::getPrivatePath( '/scripts' ),
-			//  Scripts here override library scripts
-			'platform' => $_platformConfigPath . '/scripts',
-			//  Now check library distribution
-			'library'  => static::$_libraryScriptPath,
-		);
-	}
+        //  All the paths that we will check for scripts
+        static::$_supportedScriptPaths = array(
+            //  This is ONLY the root of the app store
+            'app'      => Platform::getApplicationsPath(),
+            //  This is the user's private scripting area used by the admin console
+            'storage'  => Platform::getPrivatePath( '/scripts' ),
+            //  Scripts here override library scripts
+            'platform' => $_platformConfigPath . '/scripts',
+            //  Now check library distribution
+            'library'  => static::$_libraryScriptPath,
+        );
+    }
 
-	/**
-	 * Registers all distribution library modules as extensions.
-	 * These can be accessed from scripts like this:
-	 *
-	 * require("lodash");
-	 *
-	 * var a = [ 'one', 'two', 'three' ];
-	 *
-	 * _.each( a, function( element ) {
-	 *      print( "Found " + element + " in array\n" );
-	 * });
-	 *
-	 * Please note that this requires a version of the V8 library above any that are currently
-	 * distributed with popular distributions. As such, if this feature is not available
-	 * (module loading), the "lodash" library will be automatically registered and injected
-	 * into all script contexts.
-	 *
-	 * @return array|bool
-	 */
-	protected static function _registerExtensions()
-	{
-		$_registered = array();
+    /**
+     * Registers all distribution library modules as extensions.
+     * These can be accessed from scripts like this:
+     *
+     * require("lodash");
+     *
+     * var a = [ 'one', 'two', 'three' ];
+     *
+     * _.each( a, function( element ) {
+     *      print( "Found " + element + " in array\n" );
+     * });
+     *
+     * Please note that this requires a version of the V8 library above any that are currently
+     * distributed with popular distributions. As such, if this feature is not available
+     * (module loading), the "lodash" library will be automatically registered and injected
+     * into all script contexts.
+     *
+     * @return array|bool
+     */
+    protected static function _registerExtensions()
+    {
+        $_registered = array();
 
-		foreach ( static::$_libraryModules as $_module => $_path )
-		{
-			\V8Js::registerExtension( $_module, str_replace( '{module}', $_module, static::MODULE_LOADER_TEMPLATE ), array(), true );
+        foreach ( static::$_libraryModules as $_module => $_path )
+        {
+            \V8Js::registerExtension( $_module, str_replace( '{module}', $_module, static::MODULE_LOADER_TEMPLATE ), array(), true );
 //			Log::debug( '  * registered extension "' . $_module . '"' );
-		}
+        }
 
-		return empty( $_registered ) ? false : $_registered;
-	}
+        return empty( $_registered ) ? false : $_registered;
+    }
 
-	/**
-	 * @param string $script
-	 * @param array  $normalizedEvent
-	 *
-	 * @return string
-	 */
-	public static function enrobeScript( $script, array $normalizedEvent = array() )
-	{
-		$_enrobedScript
-			= <<<JS
+    /**
+     * @param string $script
+     * @param array  $normalizedEvent
+     *
+     * @return string
+     */
+    public static function enrobeScript( $script, array $normalizedEvent = array() )
+    {
+        $_enrobedScript = <<<JS
 
 _result = (function() {
 	//	The event information
-	//noinspection JSUnresolvedVariable
-	var _event = DSP.event, _platform = DSP.platform, _request = DSP.request, _extra = DSP.extra;
+	var _event = DSP.event, _platform = DSP.platform;
 
 
 	return (function() {
-		var _scriptResult = (function(event, platform, request, extra) {
+		var _scriptResult = (function(event, platform) {
 			//noinspection BadExpressionStatementJS,JSUnresolvedVariable
 			{$script};
-		})(_event, _platform, _request, _extra);
+		})(_event, _platform);
 
 		if ( _event ) {
 			_event.script_result = _scriptResult;
@@ -294,117 +295,128 @@ _result = (function() {
 
 JS;
 
-		if ( !static::$_moduleLoaderAvailable )
-		{
-			$_enrobedScript
-				= Platform::storeGet( 'scripting.module.lodash', static::loadScriptingModule( 'lodash', false ), false, 3600 ) . ';' . $_enrobedScript;
-		}
+        if ( !static::$_moduleLoaderAvailable )
+        {
+            $_enrobedScript =
+                Platform::storeGet( 'scripting.module.lodash', static::loadScriptingModule( 'lodash', false ), false, 3600 ) . ';' . $_enrobedScript;
+        }
 
-		return $_enrobedScript;
-	}
+        return $_enrobedScript;
+    }
 
-	/**
-	 * @param string $method
-	 * @param string $nickname
-	 * @param string $path
-	 * @param array  $payload
-	 *
-	 * @return array
-	 */
-	public static function inlineRequest( $method, $nickname, $path, $payload )
-	{
-		//	Does nothing right now...
-		Log::debug( '  * Inline request received from script: ' . $method . ' ' . $nickname . ' path: ' . $path );
+    /**
+     * @param string $method
+     * @param string $nickname
+     * @param string $path
+     * @param array  $payload
+     *
+     * @return array
+     */
+    public static function inlineRequest( $method, $nickname, $path, $payload )
+    {
+        //	Does nothing right now...
+        Log::debug( '  * Inline request received from script: ' . $method . ' ' . $nickname . ' path: ' . $path );
 
-		$_result = null;
+        $_result = null;
 
-		if ( false === ( $_pos = strpos( $path, '/' ) ) )
-		{
-			$_serviceId = $path;
-			$_resource = null;
-		}
-		else
-		{
-			$_serviceId = substr( $path, 0, $_pos );
-			$_resource = substr( $path, $_pos + 1 );
+        if ( false === ( $_pos = strpos( $path, '/' ) ) )
+        {
+            $_serviceId = $path;
+            $_resource = null;
+        }
+        else
+        {
+            $_serviceId = substr( $path, 0, $_pos );
+            $_resource = substr( $path, $_pos + 1 );
 
-			//	Fix removal of trailing slashes from resource
-			if ( !empty( $_resource ) )
-			{
-				$_requestUri = Pii::request( false )->getRequestUri();
+            //	Fix removal of trailing slashes from resource
+            if ( !empty( $_resource ) )
+            {
+                $_requestUri = Pii::request( false )->getRequestUri();
 
-				if ( ( false === strpos( $_requestUri, '?' ) && '/' === substr( $_requestUri, strlen( $_requestUri ) - 1, 1 ) ) ||
-					( '/' === substr( $_requestUri, strpos( $_requestUri, '?' ) - 1, 1 ) )
-				)
-				{
-					$_resource .= '/';
-				}
-			}
-		}
+                if ( ( false === strpos( $_requestUri, '?' ) && '/' === substr( $_requestUri, strlen( $_requestUri ) - 1, 1 ) ) ||
+                     ( '/' === substr( $_requestUri, strpos( $_requestUri, '?' ) - 1, 1 ) )
+                )
+                {
+                    $_resource .= '/';
+                }
+            }
+        }
 
-		if ( empty( $_serviceId ) )
-		{
-			return null;
-		}
+        if ( empty( $_serviceId ) )
+        {
+            return null;
+        }
 
-		try
-		{
-			$_service = ServiceHandler::getService( $_serviceId );
+        try
+        {
+            $_request = Pii::request( false );
+            $_request->setMethod( $method );
+            $_request->query->set( 'app_name', 'dsp.scripting' );
+            $_request->query->set( 'path', $path );
+            $_request->overrideGlobals();
 
-			return $_service->processRequest( $_resource, $method, false );
-		}
-		catch ( \Exception $_ex )
-		{
-			return RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false );
-		}
-	}
+            $_service = ServiceHandler::getService( $_serviceId );
+            $_service->setRequestPayload( $payload );
 
-	/**
-	 * @param string $name
-	 * @param array  $arguments
-	 *
-	 * @return mixed
-	 */
-	public function __call( $name, $arguments )
-	{
-		if ( static::$_engine )
-		{
-			return call_user_func_array( array( static::$_engine, $name ), $arguments );
-		}
-	}
+            return $_service->processRequest( $_resource, $method, false );
+        }
+        catch ( \Exception $_ex )
+        {
+            $_response = RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false );
 
-	/**
-	 * @param string $name
-	 * @param array  $arguments
-	 *
-	 * @return mixed
-	 */
-	public static function __callStatic( $name, $arguments )
-	{
-		return call_user_func_array( array( '\\V8Js', $name ), $arguments );
-	}
+            Log::error( 'Exception: ' . $_ex->getMessage(), array(), array( 'response' => $_response ) );
 
-	/**
-	 * @return string
-	 */
-	public static function getLibraryScriptPath()
-	{
-		return static::$_libraryScriptPath;
-	}
+            return null;
+        }
+    }
 
-	/**
-	 * @return array
-	 */
-	public static function getScriptPaths()
-	{
-		return static::$_supportedScriptPaths;
-	}
+    /**
+     * @param string $name
+     * @param array  $arguments
+     *
+     * @return mixed
+     */
+    public function __call( $name, $arguments )
+    {
+        if ( static::$_engine )
+        {
+            return call_user_func_array( array( static::$_engine, $name ), $arguments );
+        }
+    }
 
-	/**
-	 * @return array
-	 */
-	public static function getLibraryModules()
-	{
-		return static::$_libraryModules;
-	}
+    /**
+     * @param string $name
+     * @param array  $arguments
+     *
+     * @return mixed
+     */
+    public static function __callStatic( $name, $arguments )
+    {
+        return call_user_func_array( array( '\\V8Js', $name ), $arguments );
+    }
+
+    /**
+     * @return string
+     */
+    public static function getLibraryScriptPath()
+    {
+        return static::$_libraryScriptPath;
+    }
+
+    /**
+     * @return array
+     */
+    public static function getScriptPaths()
+    {
+        return static::$_supportedScriptPaths;
+    }
+
+    /**
+     * @return array
+     */
+    public static function getLibraryModules()
+    {
+        return static::$_libraryModules;
+    }
 }
