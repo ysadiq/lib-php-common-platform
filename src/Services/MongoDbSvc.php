@@ -166,18 +166,6 @@ class MongoDbSvc extends NoSqlDbSvc
         return $_coll;
     }
 
-    /**
-     * @param null|array $post_data
-     *
-     * @return array
-     */
-    protected function _gatherExtrasFromRequest( &$post_data = null )
-    {
-        $_extras = parent::_gatherExtrasFromRequest( $post_data );
-
-        return $_extras;
-    }
-
     // REST service implementation
 
     /**

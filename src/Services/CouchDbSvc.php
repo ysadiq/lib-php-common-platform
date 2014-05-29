@@ -23,7 +23,6 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\User\Session;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -130,19 +129,6 @@ class CouchDbSvc extends NoSqlDbSvc
         $this->_dbConn->useDatabase( $name );
 
         return $name;
-    }
-
-    /**
-     * @param null $post_data
-     *
-     * @return array
-     */
-    protected function _gatherExtrasFromRequest( &$post_data = null )
-    {
-        $_extras = parent::_gatherExtrasFromRequest( $post_data );
-        $_extras[static::REV_FIELD] = FilterInput::request( static::REV_FIELD, Option::get( $post_data, static::REV_FIELD ) );
-
-        return $_extras;
     }
 
     // REST service implementation

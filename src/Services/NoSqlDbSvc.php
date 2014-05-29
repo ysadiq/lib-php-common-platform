@@ -19,8 +19,6 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use Kisma\Core\Utility\FilterInput;
-use Kisma\Core\Utility\Option;
 
 /**
  * NoSqlDbSvc.php
@@ -32,35 +30,6 @@ abstract class NoSqlDbSvc extends BaseDbSvc
     //*************************************************************************
     //	Methods
     //*************************************************************************
-
-    /**
-     * @param null|array $post_data
-     *
-     * @return array
-     */
-    protected function _gatherExtrasFromRequest( &$post_data = null )
-    {
-        $_extras = parent::_gatherExtrasFromRequest( $post_data );
-
-        if ( static::POST == $this->_action )
-        {
-            // allow system to create psuedo-random identifiers, applicable
-            $_extras['create_id'] = FilterInput::request(
-                'create_id',
-                Option::getBool( $post_data, 'create_id' ),
-                FILTER_VALIDATE_BOOLEAN
-            );
-        }
-
-        // allow batching of record requests, if applicable
-        $_extras['batch'] = FilterInput::request(
-            'batch',
-            Option::getBool( $post_data, 'batch' ),
-            FILTER_VALIDATE_BOOLEAN
-        );
-
-        return $_extras;
-    }
 
     /**
      * General method for creating a pseudo-random identifier

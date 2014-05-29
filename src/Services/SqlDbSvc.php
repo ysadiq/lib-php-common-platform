@@ -26,7 +26,6 @@ use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
@@ -318,53 +317,30 @@ class SqlDbSvc extends BaseDbSvc
     }
 
     /**
-     * @param null|array $post_data
-     *
-     * @return array
+     * {@InheritDoc}
      */
-    protected function _gatherExtrasFromRequest( &$post_data = null )
+    protected function _detectResourceMembers( $resourcePath = null )
     {
-        $_extras = parent::_gatherExtrasFromRequest( $post_data );
+        parent::_detectResourceMembers( $resourcePath );
 
         // All calls can request related data to be returned
-        $_relations = array();
-        $_related = FilterInput::request( 'related', Option::get( $post_data, 'related' ) );
-        if ( !empty( $_related ) )
+        $_related = Option::get( $this->_requestData, 'related' );
+        if ( !empty( $_related ) && is_string( $_related ) && ( '*' !== $_related ) )
         {
-            if ( '*' == $_related )
+            $_relations = array();
+            if ( !is_array( $_related ) )
             {
-                $_relations = '*';
+                $_related = array_map( 'trim', explode( ',', $_related ) );
             }
-            else
+            foreach ( $_related as $_relative )
             {
-                if ( !is_array( $_related ) )
-                {
-                    $_related = array_map( 'trim', explode( ',', $_related ) );
-                }
-                foreach ( $_related as $_relative )
-                {
-                    $_extraFields = FilterInput::request( $_relative . '_fields', '*' );
-                    $_extraOrder = FilterInput::request( $_relative . '_order', '' );
-                    $_relations[] = array( 'name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder );
-                }
+                $_extraFields = Option::get( $this->_requestData, $_relative . '_fields', '*' );
+                $_extraOrder = Option::get( $this->_requestData, $_relative . '_order', '' );
+                $_relations[] = array( 'name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder );
             }
+
+            $this->_requestData['related'] = $_relations;
         }
-        $_extras['related'] = $_relations;
-
-        $_extras['include_schema'] = FilterInput::request(
-            'include_schema',
-            Option::getBool( $post_data, 'include_schema' ),
-            FILTER_VALIDATE_BOOLEAN
-        );
-
-        // allow deleting related records in update requests, if applicable
-        $_extras['allow_related_delete'] = FilterInput::request(
-            'allow_related_delete',
-            Option::getBool( $post_data, 'allow_related_delete' ),
-            FILTER_VALIDATE_BOOLEAN
-        );
-
-        return $_extras;
     }
 
     // REST service implementation
@@ -1093,7 +1069,12 @@ class SqlDbSvc extends BaseDbSvc
     protected function updateRelations( $table, $record, $id, $avail_relations, $allow_delete = false )
     {
         // update currently only supports one id field
-        $id = ( is_array( $id ) ) ? @current( reset( $id ) ) : $id;
+        if ( is_array( $id ) )
+        {
+            reset( $id );
+            $id = @current( $id );
+        }
+
         $keys = array_keys( $record );
         $values = array_values( $record );
         foreach ( $avail_relations as $relationInfo )
@@ -1359,7 +1340,7 @@ class SqlDbSvc extends BaseDbSvc
         }
 
         $_relatedData = array();
-        $_relatedExtras = array( 'limit' => static::DB_MAX_RECORDS_RETURNED, 'fields' => '*' );
+        $_relatedExtras = array( 'limit' => static::MAX_RECORDS_RETURNED, 'fields' => '*' );
         if ( '*' == $requests )
         {
             foreach ( $relations as $_name => $_relation )

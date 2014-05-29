@@ -23,7 +23,6 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\User\Session;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 use WindowsAzure\Common\ServiceException;
 use WindowsAzure\Common\ServicesBuilder;
@@ -169,19 +168,16 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param null $post_data
-     *
-     * @return array
+     * {@InheritDoc}
      */
-    protected function _gatherExtrasFromRequest( &$post_data = null )
+    protected function _detectResourceMembers( $resourcePath = null )
     {
-        $_extras = parent::_gatherExtrasFromRequest( $post_data );
-        $_extras[static::PARTITION_KEY] = FilterInput::request(
-            static::PARTITION_KEY,
-            Option::get( $post_data, static::PARTITION_KEY, $this->_defaultPartitionKey )
-        );
+        parent::_detectResourceMembers( $resourcePath );
 
-        return $_extras;
+        if ( !isset( $this->_requestData[static::PARTITION_KEY] ) )
+        {
+            $this->_requestData[static::PARTITION_KEY] = $this->_defaultPartitionKey;
+        }
     }
 
     protected function _getTablesAsArray()

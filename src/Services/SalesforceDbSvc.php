@@ -28,7 +28,6 @@ use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Guzzle\Http\Client as GuzzleClient;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 use Phpforce\SoapClient as SoapClient;
 
@@ -135,38 +134,11 @@ class SalesforceDbSvc extends BaseDbSvc
     {
     }
 
-    /**
-     * @param null|array $post_data
-     *
-     * @return array
-     */
-    protected function _gatherExtrasFromRequest( &$post_data = null )
-    {
-        $_extras = parent::_gatherExtrasFromRequest( $post_data );
-
-        // get possible paging parameter for large requests
-        $_next = FilterInput::request( 'next' );
-        if ( empty( $_next ) && !empty( $post_data ) )
-        {
-            $_next = Option::get( $post_data, 'next' );
-        }
-        $_extras['next'] = $_next;
-
-        // continue batch processing if an error occurs, if applicable
-        $_continue = FilterInput::request( 'continue', false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
-        if ( empty( $_continue ) && !empty( $post_data ) )
-        {
-            $_continue = Option::getBool( $post_data, 'continue' );
-        }
-        $_extras['continue'] = $_continue;
-
-        return $_extras;
-    }
-
     // REST service implementation
 
     /**
-     * @throws \Exception
+     * @param bool $list_only
+     *
      * @return array
      */
     protected function _getSObjectsArray( $list_only = false )

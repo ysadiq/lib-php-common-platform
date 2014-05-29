@@ -98,11 +98,6 @@ class RestData
                 {
                     // text/csv
                     $_data = DataFormat::csvToArray( $_postData );
-                    // expected record array format is wrapped with 'record'
-                    if ( !empty( $_data ) )
-                    {
-                        $_data = array( 'record' => $_data );
-                    }
                 }
             }
 
