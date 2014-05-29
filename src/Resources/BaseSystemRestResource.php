@@ -255,9 +255,10 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             $this->_triggerActionEvent( $_payload );
         }
 
-        //	Multiple resources by ID
+        //	Multiple resources by identifiers only
         $ids = Option::get( $_payload, 'ids' );
-        $records = Option::get( $_payload, 'record', Option::getDeep( $_payload, 'records', 'record' ) );
+        //	Multiple resources by record
+        $records = Option::get( $_payload, 'record' );
 
         return $_payload;
     }

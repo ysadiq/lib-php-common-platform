@@ -43,11 +43,11 @@ class ScriptEvent
     /**
      * @type string The name of the script event schema file
      */
-    const SCRIPT_EVENT_SCHEMA = 'script_event_schema.json';
+        const SCRIPT_EVENT_SCHEMA = 'script_event_schema.json';
     /**
      * @type string The name of the key within the event structure that contains the payload
      */
-    const DEFAULT_PAYLOAD_KEY = 'record';
+        const DEFAULT_PAYLOAD_KEY = 'record';
 
     //*************************************************************************
     //	Members
@@ -56,7 +56,7 @@ class ScriptEvent
     /**
      * @var string The event schema for scripting events
      */
-    static protected $_eventTemplate = false;
+        static protected $_eventTemplate = false;
     static protected $_payloadKey = self::DEFAULT_PAYLOAD_KEY;
 
     //*************************************************************************
@@ -69,32 +69,32 @@ class ScriptEvent
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return bool|array The schema in array form, FALSE on failure.
      */
-    public static function initialize( $template = self::SCRIPT_EVENT_SCHEMA )
-    {
-        static::$_payloadKey = Pii::getParam( 'scripting.payload_key', static::DEFAULT_PAYLOAD_KEY );
-
-        if ( false !== ( $_eventTemplate = Platform::storeGet( 'scripting.event_schema', false ) ) )
+        public static function initialize( $template = self::SCRIPT_EVENT_SCHEMA )
         {
-            return $_eventTemplate;
-        }
+            static::$_payloadKey = Pii::getParam( 'scripting.payload_key', static::DEFAULT_PAYLOAD_KEY );
 
-        //	Not cached, get it...
-        $_path = Platform::getLibraryConfigPath( '/schema' ) . '/' . trim( $template, ' /' );
-
-        if ( is_file( $_path ) && is_readable( $_path ) && ( false !== ( $_eventTemplate = file_get_contents( $_path ) ) ) )
-        {
-            if ( false !== ( $_eventTemplate = json_decode( $_eventTemplate, true ) ) && JSON_ERROR_NONE == json_last_error() )
+            if ( false !== ( $_eventTemplate = Platform::storeGet( 'scripting.event_schema', false ) ) )
             {
-                Platform::storeSet( 'scripting.event_schema', $_eventTemplate, 86400 );
-
                 return $_eventTemplate;
             }
+
+            //	Not cached, get it...
+            $_path = Platform::getLibraryConfigPath( '/schema' ) . '/' . trim( $template, ' /' );
+
+            if ( is_file( $_path ) && is_readable( $_path ) && ( false !== ( $_eventTemplate = file_get_contents( $_path ) ) ) )
+            {
+                if ( false !== ( $_eventTemplate = json_decode( $_eventTemplate, true ) ) && JSON_ERROR_NONE == json_last_error() )
+                {
+                    Platform::storeSet( 'scripting.event_schema', $_eventTemplate, 86400 );
+
+                    return $_eventTemplate;
+                }
+            }
+
+            Log::notice( 'Scripting unavailable. Unable to load scripting event schema: ' . $_path );
+
+            return false;
         }
-
-        Log::notice( 'Scripting unavailable. Unable to load scripting event schema: ' . $_path );
-
-        return false;
-    }
 
     /**
      * Creates a generic, consistent event for scripting and notifications
@@ -412,7 +412,6 @@ class ScriptEvent
     {
         return static::$_payloadKey;
     }
-
 }
 
 //	Initialize the event template

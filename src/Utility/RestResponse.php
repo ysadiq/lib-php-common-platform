@@ -273,7 +273,7 @@ class RestResponse extends HttpResponse
             case OutputFormats::XML:
             case 'xml':
                 $_contentType = 'application/xml';
-                $result = '<?xml version="1.0" ?>' . "<dfapi>$result</dfapi>";
+                $result = '<?xml version="1.0" ?>' . "<dfapi>\n$result</dfapi>";
                 break;
 
             case 'csv':
