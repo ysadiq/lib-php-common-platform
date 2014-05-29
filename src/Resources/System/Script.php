@@ -28,7 +28,7 @@ use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Scripting\ScriptEngine;
-use DreamFactory\Platform\Scripting\ScriptEvent;
+use DreamFactory\Platform\Scripting\SwaggerParser;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\Platform;
@@ -37,7 +37,6 @@ use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Interfaces\HttpResponse;
 use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
-use Kisma\Core\Utility\Option;
 
 /**
  * Script.php
@@ -45,439 +44,345 @@ use Kisma\Core\Utility\Option;
  */
 class Script extends BaseSystemRestResource
 {
-    //*************************************************************************
-    //	Constants
-    //*************************************************************************
-
-    /** @type string */
-    const DEFAULT_SCRIPT_PATH = '/scripts';
-    /** @type string */
-    const DEFAULT_SCRIPT_PATTERN = '/*.js';
-
-    //*************************************************************************
-    //	Members
-    //*************************************************************************
-
-    /**
-     * @var string The path to script storage area
-     */
-    protected $_scriptPath = null;
-    /**
-     * @var int The maximum time (in ms) to allow scripts to run
-     */
-    protected static $_scriptTimeout = 60000;
-    /**
-     * @var ScriptEngine
-     */
-    protected static $_scriptEngine = null;
-
-    //*************************************************************************
-    //	Methods
-    //*************************************************************************
-
-    /**
-     * @param \DreamFactory\Platform\Interfaces\RestResourceLike|\DreamFactory\Platform\Interfaces\RestServiceLike $consumer
-     * @param array                                                                                                $resources
-     *
-     * @throws \Kisma\Core\Exceptions\FileSystemException
-     * @throws \InvalidArgumentException
-     * @throws \DreamFactory\Platform\Exceptions\RestException
-     * @internal param array $settings
-     *
-     */
-    public function __construct( $consumer, $resources = array() )
-    {
-        //	Pull out our settings before calling daddy
-        $_config = array(
-            'name'          => 'Script',
-            'description'   => 'A sandboxed script manager endpoint',
-            'api_name'      => 'script',
-            'service_name'  => 'system',
-            'type'          => 'System',
-            'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
-            'is_active'     => true,
-            'native_format' => DataFormats::NATIVE,
-        );
-
-        parent::__construct( $consumer, $_config, $resources );
-
-        $this->checkAvailability();
-    }
-
-    /**
-     * Checks to make sure all our ducks are in a row...
-     *
-     * @return bool
-     * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
-     * @throws \DreamFactory\Platform\Exceptions\RestException
-     */
-    public function checkAvailability()
-    {
-        $_message = false;
-
-        if ( Fabric::fabricHosted() )
-        {
-            throw new ForbiddenException( 'This resource is not available on a free-hosted DSP.' );
-        }
-
-        //  User scripts are stored here
-        $this->_scriptPath = Platform::getPrivatePath( static::DEFAULT_SCRIPT_PATH );
-
-        if ( empty( $this->_scriptPath ) )
-        {
-            $_message = 'Empty script path';
-        }
-        else
-        {
-            if ( !is_dir( $this->_scriptPath ) )
-            {
-                if ( false === @mkdir( $this->_scriptPath, 0777, true ) )
-                {
-                    $_message = 'File system error creating scripts path: ' . $this->_scriptPath;
-                }
-            }
-            else if ( !is_writable( $this->_scriptPath ) )
-            {
-                $_message = 'Scripts path not writeable: ' . $this->_scriptPath;
-            }
-        }
-
-        if ( $_message )
-        {
-            Log::error( $_message );
-
-            throw new RestException(
-                HttpResponse::ServiceUnavailable, 'This service is not available. Storage path, area, and/or required libraries are missing.'
-            );
-        }
-
-        return true;
-    }
-
-    /**
-     * LIST all scripts
-     *
-     * @return array|bool
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     */
-    protected function _listResources()
-    {
-        $_scripts = FileSystem::glob( $this->_scriptPath . static::DEFAULT_SCRIPT_PATTERN, GlobFlags::GLOB_NODOTS );
-        $_response = array();
-
-        if ( !empty( $_scripts ) )
-        {
-            foreach ( $_scripts as $_script )
-            {
-                $_resource = array(
-                    'event_name' => str_ireplace( '.js', null, $_script ),
-                    'script'     => $_script,
-                );
-
-                $_response[] = $_resource;
-                unset( $_resource );
-            }
-        }
-
-        return array( 'resource' => $_response );
-    }
-
-    /**
-     * GET a script
-     *
-     * @return array|bool
-     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     */
-    protected function _handleGet()
-    {
-        if ( empty( $this->_resourceId ) )
-        {
-            return $this->_listResources();
-        }
-
-        $_path = $this->_getScriptPath();
-
-        if ( !file_exists( $_path ) )
-        {
-            throw new NotFoundException( '"' . $this->_resourceId . '" was not found.' );
-        }
-
-        $_body = @file_get_contents( $_path );
-
-        return array( 'script_id' => $this->_resourceId, 'script_body' => $_body );
-    }
-
-    /**
-     * WRITE a script
-     *
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @throws \LogicException
-     * @throws \InvalidArgumentException
-     * @throws \Exception
-     * @return array|bool
-     */
-    protected function _handlePut()
-    {
-        if ( empty( $this->_resourceId ) )
-        {
-            throw new BadRequestException( 'No resource id specified.' );
-        }
-
-        $_path = $this->_scriptPath . '/' . trim( $this->_resourceId, '/ ' ) . '.js';
-        $_scriptBody = RestData::getPostedData();
-
-        if ( empty( $_scriptBody ) )
-        {
-            throw new BadRequestException( 'You must supply a "script_body".' );
-        }
-
-        if ( false === $_bytes = @file_put_contents( $_path, $_scriptBody ) )
-        {
-            throw new InternalServerErrorException( 'Error writing file to storage area.' );
-        }
-
-        //  Clear the swagger cache...
-        SwaggerManager::clearCache();
-
-        return array( 'script_id' => $this->_resourceId, 'script_body' => $_scriptBody, 'bytes_written' => $_bytes );
-    }
-
-    /**
-     * DELETE an existing script
-     * This is a permanent/destructive action.
-     *
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @throws \Exception
-     * @return bool|void
-     */
-    protected function _handleDelete()
-    {
-        if ( empty( $this->_resourceId ) )
-        {
-            throw new BadRequestException( 'No script ID specified.' );
-        }
-
-        $_path = $this->_scriptPath . '/' . trim( $this->_resourceId, '/ ' ) . '.js';
-
-        if ( !file_exists( $_path ) )
-        {
-            throw new NotFoundException();
-        }
-
-        $_body = @file_get_contents( $_path );
-
-        if ( false === @unlink( $_path ) )
-        {
-            throw new InternalServerErrorException( 'Unable to delete script ID "' . $this->_resourceId . '"' );
-        }
-
-        //  Clear the swagger cache...
-        SwaggerManager::clearCache();
-
-        return array( 'script_id' => $this->_resourceId, 'script_body' => $_body );
-    }
-
-    /**
-     * RUN a script
-     *
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @throws \DreamFactory\Platform\Exceptions\RestException
-     * @return array
-     */
-    protected function _handlePost()
-    {
-        if ( empty( $this->_resourceId ) )
-        {
-            throw new BadRequestException();
-        }
-
-        if ( !extension_loaded( 'v8js' ) )
-        {
-            throw new RestException( HttpResponse::ServiceUnavailable, 'This DSP cannot run server-side javascript scripts. The "v8js" is not available.' );
-        }
-
-        return static::runScript( $this->_getScriptPath() );
-    }
-
-    /**
-     * @param string $eventName
-     *
-     * @return bool
-     */
-    public static function existsForEvent( $eventName )
-    {
-        $_scripts = FileSystem::glob( Platform::getPrivatePath( static::DEFAULT_SCRIPT_PATH ) . static::DEFAULT_SCRIPT_PATTERN, GlobFlags::GLOB_NODOTS );
-
-        foreach ( $_scripts as $_script )
-        {
-            if ( $eventName == str_replace( '.js', null, $_script ) )
-            {
-                return $_script;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @param string $scriptName The absolute path to the script to be run
-     * @param string $scriptId   The name of this script
-     * @param array  $data       Bi-directional data to/from function
-     * @param string $output     Any output of the script
-     *
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-     * @return array
-     */
-    public static function runScript( $scriptName, $scriptId = null, array &$data = array(), &$output = null )
-    {
-        $scriptId = $scriptId ? : $scriptName;
-
-        if ( !is_file( $scriptName ) || !is_readable( $scriptName ) )
-        {
-            throw new InternalServerErrorException( 'The script ID "' . $scriptId . '" is not valid or unreadable.' );
-        }
-
-        if ( false === ( $_script = @file_get_contents( $scriptName ) ) )
-        {
-            throw new InternalServerErrorException( 'The script ID "' . $scriptId . '" cannot be retrieved at this time.' );
-        }
-
-        Log::debug( 'Running script: ' . $scriptId );
-
-        try
-        {
-            //	Create the engine then wrap the script
-            $_engine = static::getScriptEngine( $data );
-
-            //	Expose variables
-            if ( !empty( $data ) )
-            {
-                //  The normalized event is exposed 
-                static::$_scriptEngine->event = Option::get( $data, '_meta' );
-                static::$_scriptEngine->platform = Option::get( $data, 'platform' );
-                static::$_scriptEngine->event[ $_key ] = Option::get( $data, $_key = ScriptEvent::getPayloadKey() );
-            }
-
-            $_runnerShell = ScriptEngine::enrobeScript( $_script );
-
-            //  Don't show output
-            ob_start();
-
-            $_result = $_engine->executeString( $_runnerShell, $scriptId, \V8Js::FLAG_FORCE_ARRAY );
-
-            $output = ob_get_clean();
-
-            if ( is_array( $_result ) )
-            {
-                $data = $_result;
-            }
-
-            return $data;
-        }
-        catch ( \V8JsException $_ex )
-        {
-            $output = ob_end_clean();
-
-            /**
-             * @note     V8JsTimeLimitException was released in a later version of the libv8
-             * library than is supported by the current PECL v8js extension. Hence the check below.
-             * @noteDate 2014-04-03
-             */
-            if ( class_exists( '\\V8JsTimeLimitException', false ) && $_ex instanceof \V8JsTimeLimitException )
-            {
-                /** @var \Exception $_ex */
-                Log::error( 'Timeout while running script "' . $scriptId . '": ' . $_ex->getMessage() );
-            }
-            else if ( class_exists( '\\V8JsMemoryLimitException', false ) && $_ex instanceof \V8JsMemoryLimitException )
-            {
-                /** @var \Exception $_ex */
-                Log::error( 'Out of memory while running script "' . $scriptId . '": ' . $_ex->getMessage() );
-            }
-            else
-            {
-                Log::error( 'Exception executing javascript: ' . $_ex->getMessage() );
-            }
-
-            throw new InternalServerErrorException( $_ex->getMessage() );
-        }
-    }
-
-    /**
-     * @param array $payload
-     *
-     * @return \stdClass
-     */
-    protected static function _preparePayload( $payload = array() )
-    {
-        //  Quick and dirty object conversion
-        return json_decode( json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) );
-    }
-
-    /**
-     * @param array $data
-     *
-     * @return ScriptEngine
-     */
-    protected static function getScriptEngine( array &$data = array() )
-    {
-        if ( null === static::$_scriptEngine )
-        {
-            static::$_scriptEngine = ScriptEngine::create();
-        }
-
-        return static::$_scriptEngine;
-    }
-
-    /**
-     * Constructs the full path to a server-side script
-     *
-     * @param string $scriptName The script name or null if $this->_resourceId is to be used
-     *
-     * @return string
-     */
-    protected function _getScriptPath( $scriptName = null )
-    {
-        return $this->_scriptPath . '/' . trim( $scriptName ? : $this->_resourceId, '/ ' ) . '.js';
-    }
-
-    /**
-     * @param int $scriptTimeout
-     */
-    public static function setScriptTimeout( $scriptTimeout )
-    {
-        self::$_scriptTimeout = $scriptTimeout;
-    }
-
-    /**
-     * @return int
-     */
-    public static function getScriptTimeout()
-    {
-        return self::$_scriptTimeout;
-    }
-
-    /**
-     * @param string $scriptPath
-     *
-     * @return Script
-     */
-    public function setScriptPath( $scriptPath )
-    {
-        $this->_scriptPath = $scriptPath;
-
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getScriptPath()
-    {
-        return $this->_scriptPath;
-    }
+	//*************************************************************************
+	//	Constants
+	//*************************************************************************
+
+	/** @type string */
+	const DEFAULT_SCRIPT_PATH = '/scripts';
+	/** @type string */
+	const DEFAULT_SCRIPT_PATTERN = '/*.js';
+
+	//*************************************************************************
+	//	Members
+	//*************************************************************************
+
+	/**
+	 * @var string The path to script storage area
+	 */
+	protected $_scriptPath = null;
+	/**
+	 * @var int The maximum time (in ms) to allow scripts to run
+	 */
+	protected static $_scriptTimeout = 60000;
+	/**
+	 * @var ScriptEngine
+	 */
+	protected static $_scriptEngine = null;
+
+	//*************************************************************************
+	//	Methods
+	//*************************************************************************
+
+	/**
+	 * @param \DreamFactory\Platform\Interfaces\RestResourceLike|\DreamFactory\Platform\Interfaces\RestServiceLike $consumer
+	 * @param array                                                                                                $resources
+	 *
+	 * @throws \Kisma\Core\Exceptions\FileSystemException
+	 * @throws \InvalidArgumentException
+	 * @throws \DreamFactory\Platform\Exceptions\RestException
+	 * @internal param array $settings
+	 *
+	 */
+	public function __construct( $consumer, $resources = array() )
+	{
+		//	Pull out our settings before calling daddy
+		$_config = array(
+			'name'          => 'Script',
+			'description'   => 'A sandboxed script manager endpoint',
+			'api_name'      => 'script',
+			'service_name'  => 'system',
+			'type'          => 'System',
+			'type_id'       => PlatformServiceTypes::SYSTEM_SERVICE,
+			'is_active'     => true,
+			'native_format' => DataFormats::NATIVE,
+		);
+
+		parent::__construct( $consumer, $_config, $resources );
+
+		$this->checkAvailability();
+	}
+
+	/**
+	 * Checks to make sure all our ducks are in a row...
+	 *
+	 * @return bool
+	 * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
+	 * @throws \DreamFactory\Platform\Exceptions\RestException
+	 */
+	public function checkAvailability()
+	{
+		$_message = false;
+
+		if ( Fabric::fabricHosted() )
+		{
+			throw new ForbiddenException( 'This resource is not available on a free-hosted DSP.' );
+		}
+
+		//  User scripts are stored here
+		$this->_scriptPath = Platform::getPrivatePath( static::DEFAULT_SCRIPT_PATH );
+
+		if ( empty( $this->_scriptPath ) )
+		{
+			$_message = 'Empty script path';
+		}
+		else
+		{
+			if ( !is_dir( $this->_scriptPath ) )
+			{
+				if ( false === @mkdir( $this->_scriptPath, 0777, true ) )
+				{
+					$_message = 'File system error creating scripts path: ' . $this->_scriptPath;
+				}
+			}
+			else if ( !is_writable( $this->_scriptPath ) )
+			{
+				$_message = 'Scripts path not writeable: ' . $this->_scriptPath;
+			}
+		}
+
+		if ( $_message )
+		{
+			Log::error( $_message );
+
+			throw new RestException( HttpResponse::ServiceUnavailable,
+				'This service is not available. Storage path, area, and/or required libraries are missing.' );
+		}
+
+		return true;
+	}
+
+	/**
+	 * LIST all scripts
+	 *
+	 * @return array|bool
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 */
+	protected function _listResources()
+	{
+		$_scripts = FileSystem::glob( $this->_scriptPath . static::DEFAULT_SCRIPT_PATTERN, GlobFlags::GLOB_NODOTS );
+		$_response = array();
+
+		if ( !empty( $_scripts ) )
+		{
+			foreach ( $_scripts as $_script )
+			{
+				$_resource = array(
+					'event_name' => str_ireplace( '.js', null, $_script ),
+					'script'     => $_script,
+				);
+
+				$_response[] = $_resource;
+				unset( $_resource );
+			}
+		}
+
+		return array( 'resource' => $_response );
+	}
+
+	/**
+	 * GET a script
+	 *
+	 * @return array|bool
+	 * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 */
+	protected function _handleGet()
+	{
+		if ( empty( $this->_resourceId ) )
+		{
+			return $this->_listResources();
+		}
+
+		$_path = $this->_getScriptPath();
+
+		if ( !file_exists( $_path ) )
+		{
+			throw new NotFoundException( '"' . $this->_resourceId . '" was not found.' );
+		}
+
+		$_body = @file_get_contents( $_path );
+
+		return array( 'script_id' => $this->_resourceId, 'script_body' => $_body );
+	}
+
+	/**
+	 * WRITE a script
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \LogicException
+	 * @throws \InvalidArgumentException
+	 * @throws \Exception
+	 * @return array|bool
+	 */
+	protected function _handlePut()
+	{
+		if ( empty( $this->_resourceId ) )
+		{
+			throw new BadRequestException( 'No resource id specified.' );
+		}
+
+		$_path = $this->_scriptPath . '/' . trim( $this->_resourceId, '/ ' ) . '.js';
+		$_scriptBody = RestData::getPostedData();
+
+		if ( empty( $_scriptBody ) )
+		{
+			throw new BadRequestException( 'You must supply a "script_body".' );
+		}
+
+		if ( false === $_bytes = @file_put_contents( $_path, $_scriptBody ) )
+		{
+			throw new InternalServerErrorException( 'Error writing file to storage area.' );
+		}
+
+		//  Clear the swagger cache...
+		SwaggerManager::clearCache();
+
+		return array( 'script_id' => $this->_resourceId, 'script_body' => $_scriptBody, 'bytes_written' => $_bytes );
+	}
+
+	/**
+	 * DELETE an existing script
+	 * This is a permanent/destructive action.
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \Exception
+	 * @return bool|void
+	 */
+	protected function _handleDelete()
+	{
+		if ( empty( $this->_resourceId ) )
+		{
+			throw new BadRequestException( 'No script ID specified.' );
+		}
+
+		$_path = $this->_scriptPath . '/' . trim( $this->_resourceId, '/ ' ) . '.js';
+
+		if ( !file_exists( $_path ) )
+		{
+			throw new NotFoundException();
+		}
+
+		$_body = @file_get_contents( $_path );
+
+		if ( false === @unlink( $_path ) )
+		{
+			throw new InternalServerErrorException( 'Unable to delete script ID "' . $this->_resourceId . '"' );
+		}
+
+		//  Clear the swagger cache...
+		SwaggerManager::clearCache();
+
+		return array( 'script_id' => $this->_resourceId, 'script_body' => $_body );
+	}
+
+	/**
+	 * RUN a script
+	 *
+	 * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+	 * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+	 * @throws \DreamFactory\Platform\Exceptions\RestException
+	 * @return array
+	 */
+	protected function _handlePost()
+	{
+		if ( empty( $this->_resourceId ) )
+		{
+			throw new BadRequestException();
+		}
+
+		if ( !extension_loaded( 'v8js' ) )
+		{
+			throw new RestException( HttpResponse::ServiceUnavailable, 'This DSP cannot run server-side javascript scripts. The "v8js" is not available.' );
+		}
+
+		$_api = array( 'api' => SwaggerParser::getScriptingObject() );
+
+		return ScriptEngine::runScript( $this->_getScriptPath(),
+			$this->_resourceId,
+			$this->_requestPayload,
+			$_api );
+	}
+
+	/**
+	 * @param string $eventName
+	 *
+	 * @return bool
+	 */
+	public static function existsForEvent( $eventName )
+	{
+		$_scripts = FileSystem::glob( Platform::getPrivatePath( static::DEFAULT_SCRIPT_PATH ) . static::DEFAULT_SCRIPT_PATTERN, GlobFlags::GLOB_NODOTS );
+
+		foreach ( $_scripts as $_script )
+		{
+			if ( $eventName == str_replace( '.js', null, $_script ) )
+			{
+				return $_script;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * @param array $payload
+	 *
+	 * @return \stdClass
+	 */
+	protected static function _preparePayload( $payload = array() )
+	{
+		//  Quick and dirty object conversion
+		return json_decode( json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) );
+	}
+
+	/**
+	 * Constructs the full path to a server-side script
+	 *
+	 * @param string $scriptName The script name or null if $this->_resourceId is to be used
+	 *
+	 * @return string
+	 */
+	protected function _getScriptPath( $scriptName = null )
+	{
+		return $this->_scriptPath . '/' . trim( $scriptName ? : $this->_resourceId, '/ ' ) . '.js';
+	}
+
+	/**
+	 * @param int $scriptTimeout
+	 */
+	public static function setScriptTimeout( $scriptTimeout )
+	{
+		self::$_scriptTimeout = $scriptTimeout;
+	}
+
+	/**
+	 * @return int
+	 */
+	public static function getScriptTimeout()
+	{
+		return self::$_scriptTimeout;
+	}
+
+	/**
+	 * @param string $scriptPath
+	 *
+	 * @return Script
+	 */
+	public function setScriptPath( $scriptPath )
+	{
+		$this->_scriptPath = $scriptPath;
+
+		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getScriptPath()
+	{
+		return $this->_scriptPath;
+	}
 
 }
