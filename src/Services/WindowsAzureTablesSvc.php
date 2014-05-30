@@ -178,8 +178,6 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         {
             $this->_requestData[static::PARTITION_KEY] = $this->_defaultPartitionKey;
         }
-
-        return $this;
     }
 
     protected function _getTablesAsArray()

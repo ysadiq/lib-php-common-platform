@@ -303,7 +303,7 @@ class Packager
         try
         {
             ResourceStore::setResourceName( 'app' );
-            $returnData = ResourceStore::insertOne( $_record, array('fields' => 'id,api_name') );
+            $returnData = ResourceStore::insertOne( $_record, 'id,api_name' );
         }
         catch ( \Exception $ex )
         {
@@ -488,7 +488,7 @@ class Packager
             if ( !empty( $id ) )
             {
                 ResourceStore::setResourceName( 'app' );
-                ResourceStore::deleteById( $id );
+                ResourceStore::delete( array( 'id' => $id ) );
             }
 
             throw $ex;

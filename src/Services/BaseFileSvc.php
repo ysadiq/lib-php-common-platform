@@ -87,8 +87,6 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                 }
             }
         }
-
-        return $this;
     }
 
     /**
