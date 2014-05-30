@@ -482,7 +482,7 @@ class Platform extends SeedUtility
      */
     public static function mcGet( $key, $defaultValue = null, $remove = false )
     {
-        if ( false !== ( $_engine = static::_getMemcache() ) )
+        if ( class_exists( '\\Memcached', false ) && false !== ( $_engine = static::_getMemcache() ) )
         {
             if ( false === ( $_value = $_engine->get( $key ) ) )
             {
@@ -513,7 +513,7 @@ class Platform extends SeedUtility
      */
     public static function mcSet( $key, $value, $flag = 0, $ttl = self::MEMCACHE_TTL )
     {
-        if ( false !== ( $_cache = static::_getMemcache() ) )
+        if ( class_exists( '\\Memcached', false ) && false !== ( $_cache = static::_getMemcache() ) )
         {
             return $_cache->set( $key, $value, $ttl );
         }
@@ -527,7 +527,7 @@ class Platform extends SeedUtility
      */
     protected static function _getMemcache()
     {
-        if ( null === static::$_memcache )
+        if ( class_exists( '\\Memcached', false ) && null === static::$_memcache )
         {
             static::$_memcache = new \Memcached( __CLASS__ );
 
