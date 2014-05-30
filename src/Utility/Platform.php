@@ -486,6 +486,8 @@ class Platform extends SeedUtility
         {
             if ( false === ( $_value = $_engine->get( $key ) ) )
             {
+                static::mcSet( $key, $defaultValue );
+
                 return $defaultValue;
             }
 

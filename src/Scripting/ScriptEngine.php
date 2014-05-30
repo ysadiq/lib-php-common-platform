@@ -28,6 +28,7 @@ use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
+use Kisma\Core\Interfaces\HttpMethod;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
@@ -63,10 +64,9 @@ class ScriptEngine
     /**
      * @var array The module(s) we add to the scripting context
      */
-    protected static $_libraryModules
-        = array(
-            'lodash' => 'lodash.min.js',
-        );
+    protected static $_libraryModules = array(
+        'lodash' => 'lodash.min.js',
+    );
     /**
      * @var string One path to rule them all
      */
@@ -179,6 +179,7 @@ class ScriptEngine
 
         try
         {
+            $exposedPlatform['api'] = static::_getExposedApi();
             $_runnerShell = static::enrobeScript( $_script, $exposedEvent, $exposedPlatform );
 
             //  Don't show output
@@ -193,8 +194,7 @@ class ScriptEngine
         }
         catch ( \V8JsException $_ex )
         {
-            $output
-                = ob_end_clean();
+            $output = ob_end_clean();
 
             /**
              * @note     V8JsTimeLimitException was released in a later version of the libv8
@@ -284,8 +284,7 @@ class ScriptEngine
         if ( empty( static::$_libraryScriptPath ) || !is_dir( static::$_libraryScriptPath ) )
         {
             throw new RestException(
-                HttpResponse::ServiceUnavailable,
-                'This service is not available . Storage path and/or required libraries not available . '
+                HttpResponse::ServiceUnavailable, 'This service is not available . Storage path and/or required libraries not available . '
             );
         }
 
@@ -344,24 +343,23 @@ class ScriptEngine
      */
     public static function enrobeScript( $script, array $exposedEvent = array(), array $exposedPlatform = array() )
     {
-        $_event = json_encode( $exposedEvent );
-        $_platform = json_encode( $exposedPlatform );
+        static::$_engine->event = $exposedEvent;
+        static::$_engine->platform = $exposedPlatform;
 
-        $_enrobedScript
-            = <<<JS
+        $_enrobedScript = <<<JS
 
 _wrapperResult = (function() {
 
-	var _event = {$_event}, _platform = {$_platform};
-
+    var _event = DSP.event;
+    
 	try	{
 		_event.script_result = (function(event, platform) {
 			//noinspection BadExpressionStatementJS,JSUnresolvedVariable
 			{$script};
-		})(_event, _platform);
+		})(_event, DSP.platform);
 	}
 	catch ( _ex ) {
-		event.script_result = {'error':_ex.message};
+		_event.script_result = {'error':_ex.message};
 	}
 
 	return _event;
@@ -372,8 +370,8 @@ JS;
 
         if ( !static::$_moduleLoaderAvailable )
         {
-            $_enrobedScript
-                = Platform::storeGet( 'scripting.modules.lodash', static::loadScriptingModule( 'lodash', false ), false, 3600 ) . ';' . $_enrobedScript;
+            $_enrobedScript =
+                Platform::mcGet( 'scripting.modules.lodash', static::loadScriptingModule( 'lodash', false ), false, 3600 ) . ';' . $_enrobedScript;
         }
 
         return $_enrobedScript;
@@ -381,13 +379,12 @@ JS;
 
     /**
      * @param string $method
-     * @param string $nickname
      * @param string $path
      * @param array  $payload
      *
      * @return array
      */
-    public static function inlineRequest( $method, $nickname, $path, $payload = null )
+    public static function inlineRequest( $method, $path, $payload = null )
     {
         $_result = null;
 
@@ -441,6 +438,51 @@ JS;
 
             return $_response;
         }
+    }
+
+    /**
+     * @return \stdClass
+     */
+    protected static function _getExposedApi()
+    {
+        $_api = new \stdClass();
+
+        $_api->_call = function ( $method, $path, $payload = null )
+        {
+            return static::inlineRequest( $method, $path, $payload );
+        };
+
+        $_api->get = function ( $path, $payload = null )
+        {
+            return static::inlineRequest( HttpMethod::GET, $path, $payload );
+        };
+
+        $_api->put = function ( $path, $payload = null )
+        {
+            return static::inlineRequest( HttpMethod::PUT, $path, $payload );
+        };
+
+        $_api->post = function ( $path, $payload = null )
+        {
+            return static::inlineRequest( HttpMethod::POST, $path, $payload );
+        };
+
+        $_api->delete = function ( $path, $payload = null )
+        {
+            return static::inlineRequest( HttpMethod::DELETE, $path, $payload );
+        };
+
+        $_api->merge = function ( $path, $payload = null )
+        {
+            return static::inlineRequest( HttpMethod::MERGE, $path, $payload );
+        };
+
+        $_api->patch = function ( $path, $payload = null )
+        {
+            return static::inlineRequest( HttpMethod::PATCH, $path, $payload );
+        };
+
+        return $_api;
     }
 
     /**

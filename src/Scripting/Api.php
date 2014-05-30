@@ -23,8 +23,6 @@ use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Resources\System\User;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Platform;
-use DreamFactory\Yii\Utility\Pii;
-use Jeremeamia\SuperClosure\SerializableClosure;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -138,27 +136,6 @@ class Api
             $resourcePath = ltrim( $resourcePath, '/' );
         }
 
-        if ( 'db' == $resourcePath )
-        {
-            $_tables = $this->_getLocalTables();
-            $_services = new \stdClass();
-
-            if ( $_tables )
-            {
-                foreach ( Option::get( $_tables, 'resource', array() ) as $_table )
-                {
-                    $_name = $_table['name'];
-                    $_serviceApi = $this->_buildServiceOperations( $_cacheFile['apis'], 'db/' . $_table['name'] );
-                    $_services->{$_name} = $_serviceApi;
-                    unset( $_serviceApi, $_table );
-                }
-
-                unset( $_tables );
-            }
-
-            return $_services;
-        }
-
         return $this->_buildServiceOperations( $_cacheFile['apis'], $resourcePath );
     }
 
@@ -196,24 +173,13 @@ class Api
                 $_nickname = $_operation['nickname'];
 
                 $_arguments = array(
-                    'method'   => $_operation['method'],
-                    'nickname' => $_nickname,
-                    'path'     => ltrim( $_api['path'], '/' ),
+                    'method' => $_operation['method'],
+                    'path'   => ltrim( $_api['path'], '/' ),
                 );
 
-                $_service->{$_nickname} = new SerializableClosure(
-                    function ( $payload = null ) use ( $_arguments )
-                    {
-                        return ScriptEngine::inlineRequest(
-                            $_arguments['method'],
-                            $_arguments['nickname'],
-                            $_arguments['path'],
-                            $payload
-                        );
-                    }
-                );
+                $_service->{$_nickname} = null;
 
-                unset( $_operation );
+                unset( $_operation, $_arguments );
             }
 
             unset( $_api );
@@ -256,34 +222,4 @@ class Api
         return $_cache;
     }
 
-    /**
-     * @return array
-     */
-    protected function _getLocalTables()
-    {
-        if ( Pii::guest() )
-        {
-            return false;
-        }
-
-        if ( null !== ( $_tables = Platform::storeGet( 'scripting.table_cache' ) ) )
-        {
-            return $_tables;
-        }
-
-        try
-        {
-            Platform::storeSet(
-                'scripting.table_cache',
-                $_tables = ScriptEngine::inlineRequest( HttpMethod::GET, 'getTables', 'db', array() )
-            );
-        }
-        catch ( \Exception $_ex )
-        {
-
-            Log::error( 'Unable to get list of tables in local database: ' . $_ex->getMessage() );
-
-            return false;
-        }
-    }
 }
