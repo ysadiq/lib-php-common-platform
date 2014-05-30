@@ -216,7 +216,7 @@ class ScriptEvent
         $_event = array(
             //	Event meta-data
             '_meta'              => array(
-                'id'               => Option::get( $_eventExtras, 'event_id', null, true ),
+                'id'               => $event->getEventId(),
                 'name'             => $eventName,
                 'trigger'          => $_trigger,
                 'stop_propagation' => Option::get( $_eventExtras, 'stop_propagation', false, true ),
@@ -233,6 +233,7 @@ class ScriptEvent
             //	Metadata if any
             'meta'               => Option::get( $_eventExtras, 'meta' ),
             'payload'            => $event->getData(),
+            'payload_changed'    => false,
             //	Access to the platform api
             'platform'           => array(
                 //  The DSP config
@@ -371,6 +372,11 @@ class ScriptEvent
         if ( Option::get( $exposedEvent, 'stop_propagation', false ) )
         {
             $event->stopPropagation();
+        }
+
+        if ( Option::getBool( $exposedEvent, 'payload_changed' ) )
+        {
+            return $event->setData( $exposedEvent['payload'] );
         }
 
         $_data = static::denormalizeEventData( $event, Option::get( $exposedEvent, static::$_payloadKey, array() ) );
