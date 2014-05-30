@@ -341,6 +341,8 @@ class SqlDbSvc extends BaseDbSvc
 
             $this->_requestData['related'] = $_relations;
         }
+
+        return $this;
     }
 
     // REST service implementation

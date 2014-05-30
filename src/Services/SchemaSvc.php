@@ -167,6 +167,8 @@ class SchemaSvc extends BasePlatformRestService
 
         $this->_tableName = Option::get( $this->_resourceArray, 0 );
         $this->_fieldName = Option::get( $this->_resourceArray, 1 );
+
+        return $this;
     }
 
     /**

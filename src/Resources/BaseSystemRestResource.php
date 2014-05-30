@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Resources;
 
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Components\JTablesFormatter;
 use DreamFactory\Platform\Enums\ResponseFormats;
@@ -39,16 +40,20 @@ use Kisma\Core\Utility\Option;
 abstract class BaseSystemRestResource extends BasePlatformRestResource
 {
     //*************************************************************************
-    //* Constants
+    //	Constants
     //*************************************************************************
 
     /**
      * @var string
      */
     const DEFAULT_SERVICE_NAME = 'system';
+    /**
+     * Default record wrapping tag for single or array of records
+     */
+    const RECORD_WRAPPER = 'record';
 
     //*************************************************************************
-    //* Members
+    //	Members
     //*************************************************************************
 
     /**
@@ -56,32 +61,16 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected $_resourceArray;
     /**
-     * @var int
+     * @var int|string
      */
-    protected $_resourceId;
-    /**
-     * @var string
-     */
-    protected $_relatedResource;
+    protected $_resourceId = null;
     /**
      * @var array
      */
-    protected $_fields;
-    /**
-     * @var array
-     */
-    protected $_extras;
-    /**
-     * @var bool
-     */
-    protected $_includeSchema = false;
-    /**
-     * @var bool
-     */
-    protected $_includeCount = false;
+    protected $_requestData = null;
 
     //*************************************************************************
-    //* Methods
+    //	Methods
     //*************************************************************************
 
     /**
@@ -164,6 +153,67 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
         $this->_resourceId = Option::get( $this->_resourceArray, 1 );
 
+        $_posted = Option::clean( RestData::getPostedData( true, true ) );
+        if ( !empty( $this->_resourceId ) )
+        {
+            if ( !empty( $_posted ) )
+            {
+                // single records don't use the record wrapper, so wrap it
+                $_posted = array(static::RECORD_WRAPPER => $_posted);
+            }
+        }
+        elseif ( DataFormat::isArrayNumeric( $_posted ) )
+        {
+            // import from csv, etc doesn't include a wrapper, so wrap it
+            $_posted = array(static::RECORD_WRAPPER => $_posted);
+        }
+
+        // MERGE URL parameters with posted data, posted data takes precedence
+        $this->_requestData = array_merge( $_REQUEST, $_posted );
+
+        // Add server side filtering properties
+        if ( null != $_ssFilters = Session::getServiceFilters( $this->_apiName, $this->_resource ) )
+        {
+            $this->_requestData['ss_filters'] = $_ssFilters;
+        }
+
+        // look for limit, accept top as well as limit
+        if ( !isset( $this->_requestData['limit'] ) && ( $_limit = Option::get( $this->_requestData, 'top' ) ) )
+        {
+            $this->_requestData['limit'] = $_limit;
+        }
+
+        // accept skip as well as offset
+        if ( !isset( $this->_requestData['offset'] ) && ( $_offset = Option::get( $this->_requestData, 'skip' ) ) )
+        {
+            $this->_requestData['offset'] = $_offset;
+        }
+
+        // accept sort as well as order
+        if ( !isset( $this->_requestData['order'] ) && ( $_order = Option::get( $this->_requestData, 'sort' ) ) )
+        {
+            $this->_requestData['order'] = $_order;
+        }
+
+        // All calls can request related data to be returned
+        $_related = Option::get( $this->_requestData, 'related' );
+        if ( !empty( $_related ) && is_string( $_related ) && ( '*' !== $_related ) )
+        {
+            $_relations = array();
+            if ( !is_array( $_related ) )
+            {
+                $_related = array_map( 'trim', explode( ',', $_related ) );
+            }
+            foreach ( $_related as $_relative )
+            {
+                $_extraFields = Option::get( $this->_requestData, $_relative . '_fields', '*' );
+                $_extraOrder = Option::get( $this->_requestData, $_relative . '_order', '' );
+                $_relations[] = array( 'name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder );
+            }
+
+            $this->_requestData['related'] = $_relations;
+        }
+
         return $this;
     }
 
@@ -179,39 +229,13 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         //	Do validation here
         $this->checkPermission( $this->getRequestedAction(), $this->_resource );
 
-        //	Most requests contain 'returned fields' parameter, all by default
-        $this->_extras = array();
-        $this->_fields = Option::get( $_REQUEST, 'fields', '*' );
-        $this->_includeSchema = Option::getBool( $_REQUEST, 'include_schema', false );
-        $this->_includeCount = Option::getBool( $_REQUEST, 'include_count', false );
-
-        $_related = Option::get( $_REQUEST, 'related' );
-
-        if ( !empty( $_related ) )
-        {
-            $_related = array_map( 'trim', explode( ',', $_related ) );
-
-            foreach ( $_related as $_relative )
-            {
-                $this->_extras[] = array(
-                    'name'   => $_relative,
-                    'fields' => Option::get( $_REQUEST, $_relative . '_fields', '*' ),
-                    'order'  => Option::get( $_REQUEST, $_relative . '_order' ),
-                );
-            }
-        }
-
         ResourceStore::reset(
             array(
                 'service'          => $this->_serviceName,
                 'resource_name'    => $this->_apiName,
                 'resource_id'      => $this->_resourceId,
                 'resource_array'   => $this->_resourceArray,
-                'related_resource' => $this->_relatedResource,
-                'fields'           => $this->_fields,
-                'extras'           => $this->_extras,
-                'include_count'    => $this->_includeCount,
-                'include_schema'   => $this->_includeSchema,
+                'payload'          => $this->_requestData,
             )
         );
     }
@@ -231,39 +255,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     }
 
     /**
-     * @param array $ids          IDs returned here
-     * @param array $records      Records returned here
-     * @param bool  $triggerEvent If true, the default, the action event will be triggered with the posted data
-     *
-     * @throws \Exception
-     * @return array The payload operated upon
-     */
-    protected function _determineRequestedResource( &$ids = null, &$records = null, $triggerEvent = true )
-    {
-        //	Which payload do we love?
-        $_payload = RestData::getPostedData( true, true );
-
-        //	Use $_REQUEST instead of POSTed data
-        if ( empty( $_payload ) )
-        {
-            $_payload = $_REQUEST;
-        }
-
-        //  Run the event on the payload before we pull data out...
-        if ( $triggerEvent )
-        {
-            $this->_triggerActionEvent( $_payload );
-        }
-
-        //	Multiple resources by identifiers only
-        $ids = Option::get( $_payload, 'ids' );
-        //	Multiple resources by record
-        $records = Option::get( $_payload, 'record' );
-
-        return $_payload;
-    }
-
-    /**
      * Default GET implementation
      *
      * @throws \DreamFactory\Platform\Exceptions\NotFoundException
@@ -275,8 +266,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected function _handleGet()
     {
-        //  No event here, triggered in handleResource
-        $_payload = $this->_determineRequestedResource( $_ids, $_records, false );
+        // default for GET should be "return all fields"
+        $_fields = Option::get( $this->_requestData, 'fields' );
+        if ( empty( $_fields ) )
+        {
+            $this->_requestData['fields'] = '*';
+        }
 
         //	Single resource by ID
         if ( !empty( $this->_resourceId ) )
@@ -284,13 +279,15 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             return ResourceStore::select( $this->_resourceId, null, array(), true );
         }
 
-        $_singleRow = false;
+        $_ids = Option::get( $this->_requestData, 'ids', null, true );
 
         //	Multiple resources by ID
         if ( !empty( $_ids ) )
         {
             return ResourceStore::bulkSelectById( $_ids );
         }
+
+        $_records = Option::get( $this->_requestData, static::RECORD_WRAPPER, null, true );
 
         if ( !empty( $_records ) )
         {
@@ -315,12 +312,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             $_criteria['select'] = $this->_fields;
         }
 
-        if ( null !== ( $_value = Option::get( $_payload, 'params' ) ) )
+        if ( null !== ( $_value = Option::get( $this->_requestData, 'params' ) ) )
         {
             $_criteria['params'] = $_value;
         }
 
-        if ( null !== ( $_value = Option::get( $_payload, 'filter' ) ) )
+        if ( null !== ( $_value = Option::get( $this->_requestData, 'filter' ) ) )
         {
             $_criteria['condition'] = $_value;
 
@@ -334,17 +331,17 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             }
         }
 
-        if ( null !== ( $_value = Option::get( $_payload, 'limit' ) ) )
+        if ( null !== ( $_value = Option::get( $this->_requestData, 'limit' ) ) )
         {
             $_criteria['limit'] = $_value;
 
-            if ( null !== ( $_value = Option::get( $_payload, 'offset' ) ) )
+            if ( null !== ( $_value = Option::get( $this->_requestData, 'offset' ) ) )
             {
                 $_criteria['offset'] = $_value;
             }
         }
 
-        if ( null !== ( $_value = Option::get( $_payload, 'order' ) ) )
+        if ( null !== ( $_value = Option::get( $this->_requestData, 'order' ) ) )
         {
             $_criteria['order'] = $_value;
         }
@@ -353,10 +350,55 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             null,
             $_criteria,
             array(),
-            $_singleRow,
-            Option::getBool( $_payload, 'include_count' ),
-            Option::getBool( $_payload, 'include_schema' )
+            false,
+            Option::getBool( $this->_requestData, 'include_count' ),
+            Option::getBool( $this->_requestData, 'include_schema' )
         );
+    }
+
+    /**
+     * Default POST implementation
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \Exception
+     * @throws \InvalidArgumentException
+     * @throws \LogicException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
+     * @throws \Exception
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @return array|bool
+     */
+    protected function _handlePost()
+    {
+        $_amnesty = false;
+        $_records = Option::get( $this->_requestData, static::RECORD_WRAPPER, null, true );
+        if ( empty( $_records ) )
+        {
+            // amnesty for the illegals, single records don't use the record wrapper, so wrap it
+            $_records = Option::clean( RestData::getPostedData( true, true ) );
+            if ( empty( $_records ) )
+            {
+                throw new BadRequestException( 'No record(s) detected in request.' );
+            }
+
+            // stuff it back in for event
+            $_amnesty = true;
+            $this->_requestData[static::RECORD_WRAPPER] = $_records;
+        }
+
+        $this->_triggerActionEvent( $this->_requestData );
+
+        if ( !empty( $this->_resourceId ) )
+        {
+            throw new BadRequestException( 'Create record by identifier not currently supported.' );
+        }
+
+        if ( $_amnesty )
+        {
+            return ResourceStore::insertOne( $_records, $this->_requestData );
+        }
+
+        return ResourceStore::insert( $_records, $this->_requestData );
     }
 
     /**
@@ -374,31 +416,42 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected function _handlePut()
     {
-        $_payload = $this->_determineRequestedResource( $_ids, $_records );
-        $_rollback = Option::getBool( $_payload, 'rollback' );
-        $_continue = Option::getBool( $_payload, 'continue' );
+        $_amnesty = false;
+        $_records = Option::get( $this->_requestData, static::RECORD_WRAPPER, null, true );
+        if ( empty( $_records ) )
+        {
+            // amnesty for the illegals, single records don't use the record wrapper, so wrap it
+            $_records = Option::clean( RestData::getPostedData( true, true ) );
+            if ( empty( $_records ) )
+            {
+                throw new BadRequestException( 'No record(s) detected in request.' );
+            }
+
+            // stuff it back in for event
+            $_amnesty = true;
+            $this->_requestData[static::RECORD_WRAPPER] = $_records;
+        }
+
+        $this->_triggerActionEvent( $this->_requestData );
 
         if ( !empty( $this->_resourceId ) )
         {
-            return ResourceStore::bulkUpdateById( $this->_resourceId, $_payload, $_rollback, null, null, true, $_continue );
+            return ResourceStore::updateById( $this->_resourceId, $_records, $this->_requestData );
         }
+
+        $_ids = Option::get( $this->_requestData, 'ids', null, true );
 
         if ( !empty( $_ids ) )
         {
-            return ResourceStore::bulkUpdateById( $_ids, $_payload, $_rollback, null, null, false, $_continue );
+            return ResourceStore::updateByIds( $_ids, $_records, $this->_requestData );
         }
 
-        if ( !empty( $_records ) )
+        if ( $_amnesty )
         {
-            return ResourceStore::bulkUpdate( $_records, $_rollback, null, null, false, $_continue );
+            return ResourceStore::updateOne( $_records, $this->_requestData );
         }
 
-        if ( empty( $_payload ) )
-        {
-            throw new BadRequestException( 'No record in PUT update request.' );
-        }
-
-        return ResourceStore::updateOne( $_payload );
+        return ResourceStore::update( $_records, $this->_requestData );
     }
 
     /**
@@ -424,38 +477,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     }
 
     /**
-     * Default POST implementation
-     *
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @throws \Exception
-     * @throws \InvalidArgumentException
-     * @throws \LogicException
-     * @throws \DreamFactory\Platform\Exceptions\RestException
-     * @throws \Exception
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-     * @return array|bool
-     */
-    protected function _handlePost()
-    {
-        $_payload = $this->_determineRequestedResource( $_ids, $_records );
-
-        if ( !empty( $_records ) )
-        {
-            $_rollback = Option::getBool( $_payload, 'rollback' );
-            $_continue = Option::getBool( $_payload, 'continue' );
-
-            return ResourceStore::insert( $_records, $_rollback, null, null, $_continue );
-        }
-
-        if ( empty( $_payload ) )
-        {
-            throw new BadRequestException( 'No record in POST create request.' );
-        }
-
-        return ResourceStore::insertOne( $_payload );
-    }
-
-    /**
      * Default DELETE implementation
      *
      * @throws \InvalidArgumentException
@@ -470,31 +491,26 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected function _handleDelete()
     {
-        $_payload = $this->_determineRequestedResource( $_ids, $_records );
+        $this->_triggerActionEvent( $this->_requestData );
 
         if ( !empty( $this->_resourceId ) )
         {
-            return ResourceStore::bulkDeleteById( $this->_resourceId, false, null, null, true );
+            return ResourceStore::deleteById( $this->_resourceId, $this->_requestData );
         }
 
-        $_rollback = Option::getBool( $_payload, 'rollback' );
-        $_continue = Option::getBool( $_payload, 'continue' );
+        $_ids = Option::get( $this->_requestData, 'ids', null, true );
         if ( !empty( $_ids ) )
         {
-            return ResourceStore::bulkDeleteById( $_ids, $_rollback, null, null, false, $_continue );
+            return ResourceStore::deleteByIds( $_ids, $this->_requestData );
         }
 
+        $_records = Option::get( $this->_requestData, static::RECORD_WRAPPER, null, true );
         if ( !empty( $_records ) )
         {
-            return ResourceStore::delete( $_records, $_rollback, null, null, $_continue );
+            return ResourceStore::delete( $_records, $this->_requestData );
         }
 
-        if ( empty( $_payload ) )
-        {
-            throw new BadRequestException( "Id list or record containing Id field required to delete $this->_apiName records." );
-        }
-
-        return ResourceStore::deleteOne( $_payload );
+        return ResourceStore::deleteOne( $this->_requestData );
     }
 
     /**
@@ -518,26 +534,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         }
 
         $this->_response = $_data;
-    }
-
-    /**
-     * @param string $relatedResource
-     *
-     * @return BaseSystemRestResource
-     */
-    public function setRelatedResource( $relatedResource )
-    {
-        $this->_relatedResource = $relatedResource;
-
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getRelatedResource()
-    {
-        return $this->_relatedResource;
     }
 
     /**
@@ -581,46 +577,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     }
 
     /**
-     * @param array $extras
-     *
-     * @return BaseSystemRestResource
-     */
-    public function setExtras( $extras )
-    {
-        $this->_extras = $extras;
-
-        return $this;
-    }
-
-    /**
-     * @return array
-     */
-    public function getExtras()
-    {
-        return $this->_extras;
-    }
-
-    /**
-     * @param array $fields
-     *
-     * @return BaseSystemRestResource
-     */
-    public function setFields( $fields )
-    {
-        $this->_fields = $fields;
-
-        return $this;
-    }
-
-    /**
-     * @return array
-     */
-    public function getFields()
-    {
-        return $this->_fields;
-    }
-
-    /**
      * @param int $responseFormat
      *
      * @return BaseSystemRestResource
@@ -638,46 +594,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     public function getResponseFormat()
     {
         return $this->_responseFormat;
-    }
-
-    /**
-     * @param boolean $includeCount
-     *
-     * @return BaseSystemRestResource
-     */
-    public function setIncludeCount( $includeCount )
-    {
-        $this->_includeCount = $includeCount;
-
-        return $this;
-    }
-
-    /**
-     * @return boolean
-     */
-    public function getIncludeCount()
-    {
-        return $this->_includeCount;
-    }
-
-    /**
-     * @param boolean $includeSchema
-     *
-     * @return BaseSystemRestResource
-     */
-    public function setIncludeSchema( $includeSchema )
-    {
-        $this->_includeSchema = $includeSchema;
-
-        return $this;
-    }
-
-    /**
-     * @return boolean
-     */
-    public function getIncludeSchema()
-    {
-        return $this->_includeSchema;
     }
 
     /**
