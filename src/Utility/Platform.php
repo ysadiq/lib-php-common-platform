@@ -48,6 +48,18 @@ class Platform extends SeedUtility
      * @var string The name of the storage container that stores applications
      */
     const APP_STORAGE_CONTAINER = 'applications';
+    /**
+     * @type int Default memcache data expire time (24 mins)...
+     */
+    const MEMCACHE_TTL = 1440;
+    /**
+     * @type string The memcache host
+     */
+    const MEMCACHE_HOST = 'localhost';
+    /**
+     * @type int The memcache port
+     */
+    const MEMCACHE_PORT = 11211;
 
     //*************************************************************************
     //	Members
@@ -57,6 +69,10 @@ class Platform extends SeedUtility
      * @var CacheProvider The persistent store to use for local storage
      */
     protected static $_persistentStore;
+    /**
+     * @var \Memcached A memcached persistent store
+     */
+    protected static $_memcache;
 
     //*************************************************************************
     //	Methods
@@ -457,4 +473,72 @@ class Platform extends SeedUtility
         return $_dispatcher ? : $_dispatcher = Pii::app()->getDispatcher();
     }
 
+    /**
+     * @param string $key
+     * @param mixed  $defaultValue
+     * @param bool   $remove
+     *
+     * @return array|null|string
+     */
+    public static function mcGet( $key, $defaultValue = null, $remove = false )
+    {
+        if ( false !== ( $_engine = static::_getMemcache() ) )
+        {
+            if ( false === ( $_value = $_engine->get( $key ) ) )
+            {
+                return $defaultValue;
+            }
+
+            if ( $remove )
+            {
+                $_engine->delete( $key );
+            }
+
+            return $_value;
+        }
+
+        //  Degrade to platform store
+        return static::storeGet( $key, $defaultValue, $remove );
+    }
+
+    /**
+     * @param string $key
+     * @param mixed  $value
+     * @param int    $flag
+     * @param int    $ttl
+     *
+     * @return bool
+     */
+    public static function mcSet( $key, $value, $flag = 0, $ttl = self::MEMCACHE_TTL )
+    {
+        if ( false !== ( $_cache = static::_getMemcache() ) )
+        {
+            return $_cache->set( $key, $value, $ttl );
+        }
+
+        //  Degrade to platform store
+        return static::storeSet( $key, $value, $ttl );
+    }
+
+    /**
+     * @return \Memcached
+     */
+    protected static function _getMemcache()
+    {
+        if ( null === static::$_memcache )
+        {
+            static::$_memcache = new \Memcached( __CLASS__ );
+
+            if ( !static::$_memcache->addServer( static::MEMCACHE_HOST, static::MEMCACHE_PORT ) )
+            {
+                Log::debug( 'Platform memcache not available.' );
+
+                return static::$_memcache = false;
+            }
+
+            Log::debug( 'Platform memcache enabled.' );
+        }
+
+        return static::$_memcache;
+    }
 }

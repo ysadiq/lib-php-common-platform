@@ -165,7 +165,7 @@ class SwaggerManager extends BasePlatformRestService
             'basePath'       => Pii::request()->getHostInfo() . '/rest',
         );
 
-        // build services from database
+        //  Build services from database
         $_sql = <<<SQL
 SELECT
 	api_name,

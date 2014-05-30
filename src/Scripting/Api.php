@@ -39,9 +39,17 @@ class Api
     //*************************************************************************
 
     /**
+     * @var \stdClass
+     */
+    protected static $_apiObject = null;
+    /**
      * @var string The Swagger cache
      */
     protected $_cachePath;
+
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
     /**
      * @param string $swaggerPath If specified, used as Swagger base path
@@ -51,6 +59,7 @@ class Api
         $swaggerPath = $swaggerPath ? : Platform::getSwaggerPath();
 
         $this->_cachePath = $swaggerPath . '/cache';
+        static::$_apiObject = Platform::mcGet( 'scripting.api_object' );
     }
 
     /**
@@ -64,7 +73,7 @@ class Api
     {
         $_parser = new static();
 
-        return $_parser->buildApi( $force );
+        return $_parser->buildApi( true );
     }
 
     /**
@@ -76,11 +85,9 @@ class Api
      */
     public function buildApi( $force = false )
     {
-        $_apiObject = Platform::storeGet( 'scripting.swagger_api', null, false, 360 );
-
-        if ( !$force && count( (array)$_apiObject ) )
+        if ( !empty( static::$_apiObject ) && !$force )
         {
-            return $_apiObject;
+            return static::$_apiObject;
         }
 
         if ( false === ( $_base = $this->_loadCacheFile() ) )
@@ -104,9 +111,11 @@ class Api
         }
 
         //	Store it
-        Platform::storeSet( 'scripting.swagger_api', $_apiObject, 360 );
+        Platform::mcSet( 'scripting.api_object', static::$_apiObject = $_apiObject );
 
-        return $_apiObject;
+        unset( $_apiObject );
+
+        return static::$_apiObject;
     }
 
     /**
@@ -138,10 +147,13 @@ class Api
             {
                 foreach ( Option::get( $_tables, 'resource', array() ) as $_table )
                 {
-                    $_services->{$_table['name']} = $this->_buildServiceOperations( $_cacheFile['apis'], 'db/' . $_table['name'] );
+                    $_name = $_table['name'];
+                    $_serviceApi = $this->_buildServiceOperations( $_cacheFile['apis'], 'db/' . $_table['name'] );
+                    $_services->{$_name} = $_serviceApi;
+                    unset( $_serviceApi, $_table );
                 }
 
-                $_services->db = $this->_buildServiceOperations( $_cacheFile['apis'], $resourcePath );
+                unset( $_tables );
             }
 
             return $_services;
@@ -171,7 +183,11 @@ class Api
 
             foreach ( $_api['operations'] as $_operation )
             {
-                if ( !isset( $_operation['nickname'] ) || !isset( $_operation['method'] ) || !isset( $_api['path'] ) )
+                if ( !isset( $_operation['nickname'] ) ||
+                     !isset( $_operation['method'] ) ||
+                     !isset( $_api['path'] ) ||
+                     false === strpos( $_api['path'], '{table_name}' )
+                )
                 {
                     continue;
                 }

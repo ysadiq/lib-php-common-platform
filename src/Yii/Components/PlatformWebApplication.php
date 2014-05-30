@@ -1132,5 +1132,4 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
         return $this;
     }
-
 }
