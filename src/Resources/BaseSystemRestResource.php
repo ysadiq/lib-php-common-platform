@@ -132,7 +132,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     {
         return ResourceStore::bulkSelectById(
             $ids,
-            empty( $fields ) ? null : array( 'select' => $fields ),
+            empty( $fields ) ? null : array('select' => $fields),
             $extras,
             $singleRow,
             $includeSchema,
@@ -208,7 +208,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             {
                 $_extraFields = Option::get( $this->_requestData, $_relative . '_fields', '*' );
                 $_extraOrder = Option::get( $this->_requestData, $_relative . '_order', '' );
-                $_relations[] = array( 'name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder );
+                $_relations[] = array('name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder);
             }
 
             $this->_requestData['related'] = $_relations;
@@ -231,11 +231,11 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
         ResourceStore::reset(
             array(
-                'service'          => $this->_serviceName,
-                'resource_name'    => $this->_apiName,
-                'resource_id'      => $this->_resourceId,
-                'resource_array'   => $this->_resourceArray,
-                'payload'          => $this->_requestData,
+                'service'        => $this->_serviceName,
+                'resource_name'  => $this->_apiName,
+                'resource_id'    => $this->_resourceId,
+                'resource_array' => $this->_resourceArray,
+                'payload'        => $this->_requestData,
             )
         );
     }
@@ -271,6 +271,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         if ( empty( $_fields ) )
         {
             $this->_requestData['fields'] = '*';
+            ResourceStore::setPayload($this->_requestData);
         }
 
         //	Single resource by ID
@@ -307,9 +308,9 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             'params' => array(),
         );
 
-        if ( !empty( $this->_fields ) )
+        if ( null !== ( $_value = Option::get( $this->_requestData, 'fields' ) ) )
         {
-            $_criteria['select'] = $this->_fields;
+            $_criteria['select'] = $_value;
         }
 
         if ( null !== ( $_value = Option::get( $this->_requestData, 'params' ) ) )
@@ -346,14 +347,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             $_criteria['order'] = $_value;
         }
 
-        return ResourceStore::select(
-            null,
-            $_criteria,
-            array(),
-            false,
-            Option::getBool( $this->_requestData, 'include_count' ),
-            Option::getBool( $this->_requestData, 'include_schema' )
-        );
+        return ResourceStore::select( null, $_criteria, array(), false );
     }
 
     /**
@@ -529,7 +523,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
                 break;
 
             case ResponseFormats::JTABLE:
-                $_data = JTablesFormatter::format( $_data, array( 'action' => $this->_action ) );
+                $_data = JTablesFormatter::format( $_data, array('action' => $this->_action) );
                 break;
         }
 
