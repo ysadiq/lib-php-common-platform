@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "3c33a9bc4c1ed36091bb57effb52e32a",
+    "hash": "98f5de189a02e271d6d235d6761dc0f4",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -354,16 +354,16 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "99c86bbc65d6acfdf487ef1e7342657962aa33ae"
+                "reference": "45f86d02ad37a06d47dc178ad01b814d79060516"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/99c86bbc65d6acfdf487ef1e7342657962aa33ae",
-                "reference": "99c86bbc65d6acfdf487ef1e7342657962aa33ae",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/45f86d02ad37a06d47dc178ad01b814d79060516",
+                "reference": "45f86d02ad37a06d47dc178ad01b814d79060516",
                 "shasum": ""
             },
             "require": {
-                "dreamfactory/lib-php-common": "~1.5.12@dev",
+                "dreamfactory/lib-php-common": "~1.5.0@dev",
                 "dreamfactory/yii": "1.1.13",
                 "kisma/kisma": "~0.2@dev",
                 "php": ">=5.3.18"
@@ -417,7 +417,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-05-23 00:04:49"
+            "time": "2014-05-29 22:08:51"
         },
         {
             "name": "dreamfactory/oasys",
@@ -859,6 +859,41 @@
                 "php"
             ],
             "time": "2014-04-19 20:26:05"
+        },
+        {
+            "name": "packaged/thrift",
+            "version": "0.9.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/packaged/thrift.git",
+                "reference": "b9a2aa7b3cfef347dddbbad1bc557a748646f0b5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/packaged/thrift/zipball/b9a2aa7b3cfef347dddbbad1bc557a748646f0b5",
+                "reference": "b9a2aa7b3cfef347dddbbad1bc557a748646f0b5",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.0.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Thrift\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Apache-2.0"
+            ],
+            "description": "Apache Thrift",
+            "homepage": "http://thrift.apache.org/",
+            "keywords": [
+                "apache",
+                "thrift"
+            ],
+            "time": "2013-12-16 13:00:19"
         },
         {
             "name": "pear-pear.php.net/Archive_Tar",
@@ -2106,6 +2141,7 @@
         "swiftmailer/swiftmailer": 0,
         "aws/aws-sdk-php": 0,
         "rackspace/php-opencloud": 0,
+        "packaged/thrift": 20,
         "dreamfactory/lib-php-common": 20,
         "dreamfactory/lib-php-common-yii": 20,
         "dreamfactory/oasys": 20,
