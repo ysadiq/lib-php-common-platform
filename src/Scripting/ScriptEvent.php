@@ -230,10 +230,11 @@ class ScriptEvent
             ),
             //	Normalized payload
             static::$_payloadKey => static::normalizeEventData( $event, false ),
+            //	Metadata if any
+            'meta'               => Option::get( $_eventExtras, 'meta' ),
+            'payload'            => $event->getData(),
             //	Access to the platform api
             'platform'           => array(
-                //  An inline API injected at run-time
-                'api'     => null,
                 //  The DSP config
                 'config'  => $_config,
                 //  The current session
@@ -241,8 +242,6 @@ class ScriptEvent
                 //	The parsed request information
                 'request' => $_eventExtras,
             ),
-            //	Metadata if any
-            'meta'               => Option::get( $_eventExtras, 'meta' ),
         );
 
         return $returnJson ? json_encode( $_event, JSON_UNESCAPED_SLASHES ) : $_event;

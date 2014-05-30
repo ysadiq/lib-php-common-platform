@@ -179,7 +179,6 @@ class ScriptEngine
 
         try
         {
-            $exposedPlatform['api'] = static::_getExposedApi();
             $_runnerShell = static::enrobeScript( $_script, $exposedEvent, $exposedPlatform );
 
             //  Don't show output
@@ -343,6 +342,7 @@ class ScriptEngine
      */
     public static function enrobeScript( $script, array $exposedEvent = array(), array $exposedPlatform = array() )
     {
+        $exposedPlatform['api'] = static::_getExposedApi();
         static::$_engine->event = $exposedEvent;
         static::$_engine->platform = $exposedPlatform;
 
