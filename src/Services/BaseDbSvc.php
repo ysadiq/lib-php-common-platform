@@ -112,7 +112,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     {
         parent::_detectResourceMembers( $resourcePath );
 
-        $this->_resourceId = ( isset( $this->_resourceArray, $this->_resourceArray[1] ) ) ? $this->_resourceArray[1] : '';
+        $this->_resourceId = Option::get( $this->_resourceArray, 1 );
 
         $_posted = Option::clean( RestData::getPostedData( true, true ) );
         if ( !empty( $this->_resourceId ) )
@@ -155,6 +155,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         {
             $this->_requestData['order'] = $_order;
         }
+
+        return $this;
     }
 
     /**
@@ -212,84 +214,6 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     }
 
     /**
-     * @return array|bool
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     */
-    protected function _handleAdmin()
-    {
-        $_result = false;
-
-        switch ( $this->_action )
-        {
-            case static::GET:
-                $_ids = Option::get( $this->_requestData, 'names' );
-                if ( empty( $_ids ) )
-                {
-                    return $this->_listResources();
-                }
-
-                $_result = $this->getTables( $_ids );
-                $_result = array('table' => $_result);
-                break;
-
-            case static::POST:
-                $_tables = Option::get( $this->_requestData, 'table' );
-
-                if ( empty( $_tables ) )
-                {
-                    $_result = $this->createTable( $this->_requestData );
-                }
-                else
-                {
-                    $_result = $this->createTables( $_tables );
-                    $_result = array('table' => $_result);
-                }
-                break;
-
-            case static::PUT:
-            case static::PATCH:
-            case static::MERGE:
-                $_tables = Option::get( $this->_requestData, 'table' );
-
-                if ( empty( $_tables ) )
-                {
-                    $_result = $this->updateTable( $this->_requestData );
-                }
-                else
-                {
-                    $_result = $this->updateTables( $_tables );
-                    $_result = array('table' => $_result);
-                }
-                break;
-
-            case static::DELETE:
-                $_ids = Option::get( $this->_requestData, 'names' );
-                if ( !empty( $_ids ) )
-                {
-                    $_result = $this->deleteTables( $_ids );
-                    $_result = array('table' => $_result);
-                }
-                else
-                {
-                    $_tables = Option::get( $this->_requestData, 'table' );
-
-                    if ( empty( $_tables ) )
-                    {
-                        $_result = $this->deleteTable( $this->_requestData );
-                    }
-                    else
-                    {
-                        $_result = $this->deleteTables( $_tables );
-                        $_result = array('table' => $_result);
-                    }
-                }
-                break;
-        }
-
-        return $_result;
-    }
-
-    /**
      * @return array
      */
     protected function _handleGet()
@@ -301,43 +225,42 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             $this->_requestData['fields'] = '*';
         }
 
-        if ( empty( $this->_resourceId ) )
+        //	Single resource by ID
+        if ( !empty( $this->_resourceId ) )
         {
-            $_ids = Option::get( $this->_requestData, 'ids', null, true );
-
-            if ( !empty( $_ids ) )
-            {
-                $_result = $this->retrieveRecordsByIds( $this->_resource, $_ids, $this->_requestData );
-            }
-            else
-            {
-                $_records = Option::get( $this->_requestData, static::RECORD_WRAPPER, null, true );
-
-                if ( !empty( $_records ) )
-                {
-                    // passing records to have them updated with new or more values, id field required
-                    $_result = $this->retrieveRecords( $this->_resource, $_records, $this->_requestData );
-                }
-                else
-                {
-                    $_filter = Option::get( $this->_requestData, 'filter', null, true );
-                    $_params = Option::get( $this->_requestData, 'params', array(), true );
-                    $_result = $this->retrieveRecordsByFilter( $this->_resource, $_filter, $_params, $this->_requestData );
-                }
-            }
-
-            $_meta = Option::get( $_result, 'meta', null, true );
-            $_result = array(static::RECORD_WRAPPER => $_result);
-            if ( !empty( $_meta ) )
-            {
-                $_result['meta'] = $_meta;
-            }
+            return $this->retrieveRecordById( $this->_resource, $this->_resourceId, $this->_requestData );
         }
-        else
-        {
-            // single entity by id
-            $_result = $this->retrieveRecordById( $this->_resource, $this->_resourceId, $this->_requestData );
-        }
+
+		$_ids = Option::get( $this->_requestData, 'ids', null, true );
+
+        //	Multiple resources by ID
+		if ( !empty( $_ids ) )
+		{
+			$_result = $this->retrieveRecordsByIds( $this->_resource, $_ids, $this->_requestData );
+		}
+		else
+		{
+			$_records = Option::get( $this->_requestData, static::RECORD_WRAPPER, null, true );
+
+			if ( !empty( $_records ) )
+			{
+				// passing records to have them updated with new or more values, id field required
+				$_result = $this->retrieveRecords( $this->_resource, $_records, $this->_requestData );
+			}
+			else
+			{
+				$_filter = Option::get( $this->_requestData, 'filter', null, true );
+				$_params = Option::get( $this->_requestData, 'params', array(), true );
+				$_result = $this->retrieveRecordsByFilter( $this->_resource, $_filter, $_params, $this->_requestData );
+			}
+		}
+
+		$_meta = Option::get( $_result, 'meta', null, true );
+		$_result = array(static::RECORD_WRAPPER => $_result);
+		if ( !empty( $_meta ) )
+		{
+			$_result['meta'] = $_meta;
+		}
 
         return $_result;
     }
@@ -366,26 +289,24 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
         $this->_triggerActionEvent( $this->_requestData );
 
-        if ( empty( $this->_resourceId ) )
-        {
-            $_result = $this->createRecords( $this->_resource, $_records, $this->_requestData );
-
-            if ( $_amnesty )
-            {
-                return Option::get( $_result, 0 );
-            }
-
-            $_meta = Option::get( $_result, 'meta', null, true );
-            $_result = array(static::RECORD_WRAPPER => $_result);
-            if ( !empty( $_meta ) )
-            {
-                $_result['meta'] = $_meta;
-            }
-        }
-        else
+        if ( !empty( $this->_resourceId ) )
         {
             throw new BadRequestException( 'Create record by identifier not currently supported.' );
         }
+
+		$_result = $this->createRecords( $this->_resource, $_records, $this->_requestData );
+
+		if ( $_amnesty )
+		{
+			return Option::get( $_result, 0 );
+		}
+
+		$_meta = Option::get( $_result, 'meta', null, true );
+		$_result = array(static::RECORD_WRAPPER => $_result);
+		if ( !empty( $_meta ) )
+		{
+			$_result['meta'] = $_meta;
+		}
 
         return $_result;
     }
@@ -414,43 +335,41 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
         $this->_triggerActionEvent( $this->_requestData );
 
-        if ( empty( $this->_resourceId ) )
+        if ( !empty( $this->_resourceId ) )
         {
-            $_ids = Option::get( $this->_requestData, 'ids', null, true );
-
-            if ( !empty( $_ids ) )
-            {
-                $_result = $this->updateRecordsByIds( $this->_resource, $_records, $_ids, $this->_requestData );
-            }
-            else
-            {
-                $_filter = Option::get( $this->_requestData, 'filter', null, true );
-                if ( !empty( $_filter ) )
-                {
-                    $_params = Option::get( $this->_requestData, 'params', array(), true );
-                    $_result = $this->updateRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $this->_requestData );
-                }
-                else
-                {
-                    $_result = $this->updateRecords( $this->_resource, $_records, $this->_requestData );
-                    if ( $_amnesty )
-                    {
-                        return Option::get( $_result, 0 );
-                    }
-                }
-            }
-
-            $_meta = Option::get( $_result, 'meta', null, true );
-            $_result = array(static::RECORD_WRAPPER => $_result);
-            if ( !empty( $_meta ) )
-            {
-                $_result['meta'] = $_meta;
-            }
+            return $this->updateRecordById( $this->_resource, $_records, $this->_resourceId, $this->_requestData );
         }
-        else
-        {
-            $_result = $this->updateRecordById( $this->_resource, $_records, $this->_resourceId, $this->_requestData );
-        }
+
+		$_ids = Option::get( $this->_requestData, 'ids', null, true );
+
+		if ( !empty( $_ids ) )
+		{
+			$_result = $this->updateRecordsByIds( $this->_resource, $_records, $_ids, $this->_requestData );
+		}
+		else
+		{
+			$_filter = Option::get( $this->_requestData, 'filter', null, true );
+			if ( !empty( $_filter ) )
+			{
+				$_params = Option::get( $this->_requestData, 'params', array(), true );
+				$_result = $this->updateRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $this->_requestData );
+			}
+			else
+			{
+				$_result = $this->updateRecords( $this->_resource, $_records, $this->_requestData );
+				if ( $_amnesty )
+				{
+					return Option::get( $_result, 0 );
+				}
+			}
+		}
+
+		$_meta = Option::get( $_result, 'meta', null, true );
+		$_result = array(static::RECORD_WRAPPER => $_result);
+		if ( !empty( $_meta ) )
+		{
+			$_result['meta'] = $_meta;
+		}
 
         return $_result;
     }
@@ -479,43 +398,41 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
         $this->_triggerActionEvent( $this->_requestData );
 
-        if ( empty( $this->_resourceId ) )
+        if ( !empty( $this->_resourceId ) )
         {
-            $_ids = Option::get( $this->_requestData, 'ids', null, true );
-
-            if ( !empty( $_ids ) )
-            {
-                $_result = $this->mergeRecordsByIds( $this->_resource, $_records, $_ids, $this->_requestData );
-            }
-            else
-            {
-                $_filter = Option::get( $this->_requestData, 'filter', null, true );
-                if ( !empty( $_filter ) )
-                {
-                    $_params = Option::get( $this->_requestData, 'params', array(), true );
-                    $_result = $this->mergeRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $this->_requestData );
-                }
-                else
-                {
-                    $_result = $this->mergeRecords( $this->_resource, $_records, $this->_requestData );
-                    if ( $_amnesty )
-                    {
-                        return Option::get( $_result, 0 );
-                    }
-                }
-            }
-
-            $_meta = Option::get( $_result, 'meta', null, true );
-            $_result = array(static::RECORD_WRAPPER => $_result);
-            if ( !empty( $_meta ) )
-            {
-                $_result['meta'] = $_meta;
-            }
+            return $this->mergeRecordById( $this->_resource, $_records, $this->_resourceId, $this->_requestData );
         }
-        else
-        {
-            $_result = $this->mergeRecordById( $this->_resource, $_records, $this->_resourceId, $this->_requestData );
-        }
+
+		$_ids = Option::get( $this->_requestData, 'ids', null, true );
+
+		if ( !empty( $_ids ) )
+		{
+			$_result = $this->mergeRecordsByIds( $this->_resource, $_records, $_ids, $this->_requestData );
+		}
+		else
+		{
+			$_filter = Option::get( $this->_requestData, 'filter', null, true );
+			if ( !empty( $_filter ) )
+			{
+				$_params = Option::get( $this->_requestData, 'params', array(), true );
+				$_result = $this->mergeRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $this->_requestData );
+			}
+			else
+			{
+				$_result = $this->mergeRecords( $this->_resource, $_records, $this->_requestData );
+				if ( $_amnesty )
+				{
+					return Option::get( $_result, 0 );
+				}
+			}
+		}
+
+		$_meta = Option::get( $_result, 'meta', null, true );
+		$_result = array(static::RECORD_WRAPPER => $_result);
+		if ( !empty( $_meta ) )
+		{
+			$_result['meta'] = $_meta;
+		}
 
         return $_result;
     }
@@ -528,209 +445,51 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     {
         $this->_triggerActionEvent( $this->_requestData );
 
-        if ( empty( $this->_resourceId ) )
+        if ( !empty( $this->_resourceId ) )
         {
-            $_ids = Option::get( $this->_requestData, 'ids' );
-            if ( !empty( $_ids ) )
-            {
-                $_result = $this->deleteRecordsByIds( $this->_resource, $_ids, $this->_requestData );
-            }
-            else
-            {
-                $_records = Option::get( $this->_requestData, static::RECORD_WRAPPER );
-                if ( !empty( $_records ) )
-                {
-                    $_result = $this->deleteRecords( $this->_resource, $_records, $this->_requestData );
-                }
-                else
-                {
-                    $_filter = Option::get( $this->_requestData, 'filter' );
-                    if ( !empty( $_filter ) )
-                    {
-                        $_params = Option::get( $this->_requestData, 'params', array() );
-                        $_result = $this->deleteRecordsByFilter( $this->_resource, $_filter, $_params, $this->_requestData );
-                    }
-                    else
-                    {
-                        if ( !Option::getBool( $this->_requestData, 'force' ) )
-                        {
-                            throw new BadRequestException( 'No filter or records given for delete request.' );
-                        }
-
-                        return $this->truncateTable( $this->_resource, $this->_requestData );
-                    }
-                }
-            }
-
-            $_meta = Option::get( $_result, 'meta', null, true );
-            $_result = array(static::RECORD_WRAPPER => $_result);
-            if ( !empty( $_meta ) )
-            {
-                $_result['meta'] = $_meta;
-            }
+            return $this->deleteRecordById( $this->_resource, $this->_resourceId, $this->_requestData );
         }
-        else
-        {
-            $_result = $this->deleteRecordById( $this->_resource, $this->_resourceId, $this->_requestData );
-        }
+
+		$_ids = Option::get( $this->_requestData, 'ids' );
+		if ( !empty( $_ids ) )
+		{
+			$_result = $this->deleteRecordsByIds( $this->_resource, $_ids, $this->_requestData );
+		}
+		else
+		{
+			$_records = Option::get( $this->_requestData, static::RECORD_WRAPPER );
+			if ( !empty( $_records ) )
+			{
+				$_result = $this->deleteRecords( $this->_resource, $_records, $this->_requestData );
+			}
+			else
+			{
+				$_filter = Option::get( $this->_requestData, 'filter' );
+				if ( !empty( $_filter ) )
+				{
+					$_params = Option::get( $this->_requestData, 'params', array() );
+					$_result = $this->deleteRecordsByFilter( $this->_resource, $_filter, $_params, $this->_requestData );
+				}
+				else
+				{
+					if ( !Option::getBool( $this->_requestData, 'force' ) )
+					{
+						throw new BadRequestException( 'No filter or records given for delete request.' );
+					}
+
+					return $this->truncateTable( $this->_resource, $this->_requestData );
+				}
+			}
+		}
+
+		$_meta = Option::get( $_result, 'meta', null, true );
+		$_result = array(static::RECORD_WRAPPER => $_result);
+		if ( !empty( $_meta ) )
+		{
+			$_result['meta'] = $_meta;
+		}
 
         return $_result;
-    }
-
-    // Handle administrative options, table add, delete, etc
-
-    /**
-     * Get multiple tables and their properties
-     *
-     * @param string | array $tables Table names comma-delimited string or array
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function getTables( $tables = array() )
-    {
-        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
-
-        $_out = array();
-        foreach ( $tables as $_table )
-        {
-            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
-            $this->validateTableAccess( $_name );
-
-            $_out[] = $this->getTable( $_table );
-        }
-
-        return $_out;
-    }
-
-    /**
-     * Get any properties related to the table
-     *
-     * @param string | array $table Table name or defining properties
-     *
-     * @return array
-     * @throws \Exception
-     */
-    abstract public function getTable( $table );
-
-    /**
-     * Create one or more tables by array of table properties
-     *
-     * @param array $tables
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function createTables( $tables = array() )
-    {
-        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
-
-        $_out = array();
-        foreach ( $tables as $_table )
-        {
-            $_out[] = $this->createTable( $_table );
-        }
-
-        return $_out;
-    }
-
-    /**
-     * Create a single table by name and additional properties
-     *
-     * @param array $properties
-     *
-     * @throws \Exception
-     */
-    abstract public function createTable( $properties = array() );
-
-    /**
-     * Update one or more tables by array of table properties
-     *
-     * @param array $tables
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function updateTables( $tables = array() )
-    {
-        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
-
-        $_out = array();
-        foreach ( $tables as $_table )
-        {
-            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
-            $this->validateTableAccess( $_name );
-            $_out[] = $this->updateTable( $_table );
-        }
-
-        return $_out;
-    }
-
-    /**
-     * Update properties related to the table
-     *
-     * @param array $properties
-     *
-     * @return array
-     * @throws \Exception
-     */
-    abstract public function updateTable( $properties = array() );
-
-    /**
-     * Delete multiple tables and all of their contents
-     *
-     * @param array $tables
-     * @param bool  $check_empty
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function deleteTables( $tables = array(), $check_empty = false )
-    {
-        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
-
-        $_out = array();
-        foreach ( $tables as $_table )
-        {
-            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
-            $this->validateTableAccess( $_name );
-            $_out[] = $this->deleteTable( $_table, $check_empty );
-        }
-
-        return $_out;
-    }
-
-    /**
-     * Delete a table and all of its contents by name
-     *
-     * @param string $table
-     * @param bool   $check_empty
-     *
-     * @throws \Exception
-     * @return array
-     */
-    abstract public function deleteTable( $table, $check_empty = false );
-
-    /**
-     * Delete all table entries but keep the table
-     *
-     * @param string $table
-     * @param array  $extras
-     *
-     * @throws \Exception
-     * @return array
-     */
-    public function truncateTable( $table, $extras = array() )
-    {
-        // todo faster way?
-        $_records = $this->retrieveRecordsByFilter( $table, null, null, $extras );
-
-        if ( !empty( $_records ) )
-        {
-            $this->deleteRecords( $table, $_records, $extras );
-        }
-
-        return array('success' => true);
     }
 
     // Handle table record operations
@@ -2958,6 +2717,240 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     public function getResourceId()
     {
         return $this->_resourceId;
+    }
+
+    // Handle administrative options, table add, delete, etc
+
+    /**
+     * @return array|bool
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     */
+    protected function _handleAdmin()
+    {
+        $_result = false;
+
+        switch ( $this->_action )
+        {
+            case static::GET:
+                $_ids = Option::get( $this->_requestData, 'names' );
+                if ( empty( $_ids ) )
+                {
+                    return $this->_listResources();
+                }
+
+                $_result = $this->getTables( $_ids );
+                $_result = array('table' => $_result);
+                break;
+
+            case static::POST:
+                $_tables = Option::get( $this->_requestData, 'table' );
+
+                if ( empty( $_tables ) )
+                {
+                    $_result = $this->createTable( $this->_requestData );
+                }
+                else
+                {
+                    $_result = $this->createTables( $_tables );
+                    $_result = array('table' => $_result);
+                }
+                break;
+
+            case static::PUT:
+            case static::PATCH:
+            case static::MERGE:
+                $_tables = Option::get( $this->_requestData, 'table' );
+
+                if ( empty( $_tables ) )
+                {
+                    $_result = $this->updateTable( $this->_requestData );
+                }
+                else
+                {
+                    $_result = $this->updateTables( $_tables );
+                    $_result = array('table' => $_result);
+                }
+                break;
+
+            case static::DELETE:
+                $_ids = Option::get( $this->_requestData, 'names' );
+                if ( !empty( $_ids ) )
+                {
+                    $_result = $this->deleteTables( $_ids );
+                    $_result = array('table' => $_result);
+                }
+                else
+                {
+                    $_tables = Option::get( $this->_requestData, 'table' );
+
+                    if ( empty( $_tables ) )
+                    {
+                        $_result = $this->deleteTable( $this->_requestData );
+                    }
+                    else
+                    {
+                        $_result = $this->deleteTables( $_tables );
+                        $_result = array('table' => $_result);
+                    }
+                }
+                break;
+        }
+
+        return $_result;
+    }
+
+    /**
+     * Get multiple tables and their properties
+     *
+     * @param string | array $tables Table names comma-delimited string or array
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public function getTables( $tables = array() )
+    {
+        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+
+        $_out = array();
+        foreach ( $tables as $_table )
+        {
+            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
+            $this->validateTableAccess( $_name );
+
+            $_out[] = $this->getTable( $_table );
+        }
+
+        return $_out;
+    }
+
+    /**
+     * Get any properties related to the table
+     *
+     * @param string | array $table Table name or defining properties
+     *
+     * @return array
+     * @throws \Exception
+     */
+    abstract public function getTable( $table );
+
+    /**
+     * Create one or more tables by array of table properties
+     *
+     * @param array $tables
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public function createTables( $tables = array() )
+    {
+        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+
+        $_out = array();
+        foreach ( $tables as $_table )
+        {
+            $_out[] = $this->createTable( $_table );
+        }
+
+        return $_out;
+    }
+
+    /**
+     * Create a single table by name and additional properties
+     *
+     * @param array $properties
+     *
+     * @throws \Exception
+     */
+    abstract public function createTable( $properties = array() );
+
+    /**
+     * Update one or more tables by array of table properties
+     *
+     * @param array $tables
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public function updateTables( $tables = array() )
+    {
+        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+
+        $_out = array();
+        foreach ( $tables as $_table )
+        {
+            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
+            $this->validateTableAccess( $_name );
+            $_out[] = $this->updateTable( $_table );
+        }
+
+        return $_out;
+    }
+
+    /**
+     * Update properties related to the table
+     *
+     * @param array $properties
+     *
+     * @return array
+     * @throws \Exception
+     */
+    abstract public function updateTable( $properties = array() );
+
+    /**
+     * Delete multiple tables and all of their contents
+     *
+     * @param array $tables
+     * @param bool  $check_empty
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public function deleteTables( $tables = array(), $check_empty = false )
+    {
+        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+
+        $_out = array();
+        foreach ( $tables as $_table )
+        {
+            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
+            $this->validateTableAccess( $_name );
+            $_out[] = $this->deleteTable( $_table, $check_empty );
+        }
+
+        return $_out;
+    }
+
+    /**
+     * Delete a table and all of its contents by name
+     *
+     * @param string $table
+     * @param bool   $check_empty
+     *
+     * @throws \Exception
+     * @return array
+     */
+    abstract public function deleteTable( $table, $check_empty = false );
+
+    /**
+     * Delete all table entries but keep the table
+     *
+     * @param string $table
+     * @param array  $extras
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public function truncateTable( $table, $extras = array() )
+    {
+        // todo faster way?
+        $_records = $this->retrieveRecordsByFilter( $table, null, null, $extras );
+
+        if ( !empty( $_records ) )
+        {
+            $this->deleteRecords( $table, $_records, $extras );
+        }
+
+        return array('success' => true);
     }
 
 }
