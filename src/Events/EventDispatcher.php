@@ -776,12 +776,13 @@ class EventDispatcher implements EventDispatcherInterface
                 $_key = ScriptEvent::getPayloadKey();
 
                 //	Expose variables
-                $_exposedEvent = $_event['_meta'];
                 $_exposedEvent = array_merge(
-                    $_exposedEvent,
+                    $_event['_meta'],
                     array(
-                        'meta' => $_event['meta'],
-                        $_key  => $_event[ $_key ],
+                        'meta'            => $_event['meta'],
+                        $_key             => $_event[ $_key ],
+                        'payload'         => $_event['payload'],
+                        'payload_changed' => $_event['payload_changed'],
                     )
                 );
 
