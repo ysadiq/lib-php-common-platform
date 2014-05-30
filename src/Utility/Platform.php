@@ -29,7 +29,6 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\Interfaces\StoreLike;
-use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -38,7 +37,7 @@ use Kisma\Core\Utility\Option;
  * Platform
  * System constants and generic platform helpers
  */
-class Platform extends SeedUtility
+class Platform
 {
     //*************************************************************************
     //	Constants

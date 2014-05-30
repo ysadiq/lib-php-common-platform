@@ -87,8 +87,8 @@ class SwaggerManager extends BasePlatformRestService
      * @var array The core DSP services that are built-in
      */
     protected static $_builtInServices = array(
-        array('api_name' => 'user', 'type_id' => 0, 'description' => 'User Login'),
-        array('api_name' => 'system', 'type_id' => 0, 'description' => 'System Configuration')
+        array( 'api_name' => 'user', 'type_id' => 0, 'description' => 'User Login' ),
+        array( 'api_name' => 'system', 'type_id' => 0, 'description' => 'System Configuration' )
     );
 
     //*************************************************************************
@@ -281,7 +281,7 @@ SQL;
         $_main = $_scanPath . static::SWAGGER_BASE_API_FILE;
         /** @noinspection PhpIncludeInspection */
         $_resourceListing = require( $_main );
-        $_out = array_merge( $_resourceListing, array('apis' => $_services) );
+        $_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
 
         $_filePath = $_cachePath . static::SWAGGER_CACHE_FILE;
 
@@ -324,10 +324,16 @@ SQL;
             //  Trim slashes for use as a file name
             $_scripts = $_events = array();
 
+            if ( null === ( $_path = Option::get( $_api, 'path' ) ) )
+            {
+                Log::notice( '  * Missing "path" in Swagger definition: ' . $apiName );
+                continue;
+            }
+
             $_path = str_replace(
-                array('{api_name}', '/'),
-                array($apiName, '.'),
-                trim( Option::get( $_api, 'path' ), '/' )
+                array( '{api_name}', '/' ),
+                array( $apiName, '.' ),
+                trim( $_path, '/' )
             );
 
             foreach ( Option::get( $_api, 'operations', array() ) as $_ixOps => $_operation )
@@ -355,7 +361,7 @@ SQL;
                     }
                     else if ( !is_array( $_eventNames ) )
                     {
-                        $_eventNames = array($_eventNames);
+                        $_eventNames = array( $_eventNames );
                     }
 
                     //  Set into master record
@@ -396,7 +402,7 @@ SQL;
                 unset( $_operation, $_scripts, $_eventsThrown );
             }
 
-            $_eventMap[ str_ireplace( '{api_name}', $apiName, $_api['path'] ) ] = $_events;
+            $_eventMap[ str_ireplace( '{api_name}', $apiName, $_path ) ] = $_events;
 
             unset( $_scripts, $_events, $_api );
         }
@@ -452,7 +458,7 @@ SQL;
         }
 
         $_response = array();
-        $_eventPattern = '/^' . str_replace( array('.*.js', '.'), array(null, '\\.'), $_scriptPattern ) . '\\.(\w)\\.js$/i';
+        $_eventPattern = '/^' . str_replace( array( '.*.js', '.' ), array( null, '\\.' ), $_scriptPattern ) . '\\.(\w)\\.js$/i';
 
         foreach ( $_scripts as $_script )
         {
@@ -478,7 +484,7 @@ SQL;
 
         $_map = static::getEventMap();
         $_aliases = $service->getVerbAliases();
-        $_methods = array($method);
+        $_methods = array( $method );
 
         foreach ( Option::clean( $_aliases ) as $_action => $_alias )
         {
@@ -570,7 +576,7 @@ SQL;
             $_path = substr( $_path, 0, $_pos );
         }
 
-        $_swaps = array(array(), array());
+        $_swaps = array( array(), array() );
 
         if ( 'db' == $_apiName && 'db' == $_resource )
         {
@@ -779,7 +785,7 @@ SQL;
 
         if ( file_exists( $_swaggerPath ) )
         {
-            $files = array_diff( scandir( $_swaggerPath ), array('.', '..') );
+            $files = array_diff( scandir( $_swaggerPath ), array( '.', '..' ) );
             foreach ( $files as $file )
             {
                 @unlink( $_swaggerPath . '/' . $file );
