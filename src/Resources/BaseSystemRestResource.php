@@ -171,12 +171,14 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         // MERGE URL parameters with posted data, posted data takes precedence
         $this->_requestData = array_merge( $_REQUEST, $_posted );
 
-        // Add server side filtering properties
-        if ( null != $_ssFilters = Session::getServiceFilters( $this->_apiName, $this->_resource ) )
+        if ( 'config' !== $this->_resource )
         {
-            $this->_requestData['ss_filters'] = $_ssFilters;
+            // Add server side filtering properties
+            if ( null != $_ssFilters = Session::getServiceFilters( $this->_apiName, $this->_resource ) )
+            {
+                $this->_requestData['ss_filters'] = $_ssFilters;
+            }
         }
-
         // look for limit, accept top as well as limit
         if ( !isset( $this->_requestData['limit'] ) && ( $_limit = Option::get( $this->_requestData, 'top' ) ) )
         {
@@ -271,7 +273,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         if ( empty( $_fields ) )
         {
             $this->_requestData['fields'] = '*';
-            ResourceStore::setPayload($this->_requestData);
+            ResourceStore::setPayload( $this->_requestData );
         }
 
         //	Single resource by ID

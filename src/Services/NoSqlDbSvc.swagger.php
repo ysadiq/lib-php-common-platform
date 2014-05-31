@@ -22,7 +22,7 @@ use DreamFactory\Platform\Services\SwaggerManager;
 
 $_commonResponses = SwaggerManager::getCommonResponses();
 
-$_additionalDbOps = array(
+$_addDbOps = array(
     array(
         'method'           => 'POST',
         'summary'          => 'createTables() - Create one or more tables.',
@@ -112,5 +112,7 @@ $_additionalDbOps = array(
 );
 
 $_base = require( __DIR__ . '/BaseDbSvc.swagger.php' );
+
+unset( $_addDbOps );
 
 return $_base;

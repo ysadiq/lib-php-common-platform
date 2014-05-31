@@ -23,19 +23,19 @@ use DreamFactory\Platform\Services\SwaggerManager;
 $_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
 $_commonResponses = SwaggerManager::getCommonResponses();
 
-if ( !isset( $_additionalNotes ) )
+if ( !isset( $_addTableNotes ) )
 {
-    $_additionalNotes = '';
+    $_addTableNotes = '';
 }
 
-if ( !isset( $_additionalParameters ) )
+if ( !isset( $_addTableParameters ) )
 {
-    $_additionalParameters = array();
+    $_addTableParameters = array();
 }
 
-if ( !isset( $_additionalApis ) )
+if ( !isset( $_addApis ) )
 {
-    $_additionalApis = array();
+    $_addApis = array();
 }
 
 if ( !isset( $_baseDbOps ) )
@@ -47,8 +47,8 @@ if ( !isset( $_baseDbOps ) )
             'nickname'         => 'getResources',
             'notes'            => 'List the names of the available tables in this storage. ',
             'type'             => 'Resources',
-            'event_name'       => array( '{api_name}.list' ),
-            'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
+            'event_name'       => array('{api_name}.list'),
+            'responseMessages' => SwaggerManager::getCommonResponses( array(400, 401, 500) ),
         ),
         array(
             'method'           => 'GET',
@@ -56,7 +56,7 @@ if ( !isset( $_baseDbOps ) )
             'nickname'         => 'getTables',
             'notes'            => 'List the properties of the given tables in this storage.',
             'type'             => 'Tables',
-            'event_name'       => array( '{api_name}.describe' ),
+            'event_name'       => array('{api_name}.describe'),
             'parameters'       => array(
                 array(
                     'name'          => 'names',
@@ -67,14 +67,14 @@ if ( !isset( $_baseDbOps ) )
                     'required'      => true,
                 ),
             ),
-            'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
+            'responseMessages' => SwaggerManager::getCommonResponses( array(400, 401, 500) ),
         ),
     );
 }
 
-if ( !isset( $_additionalDbOps ) )
+if ( !isset( $_addDbOps ) )
 {
-    $_additionalDbOps = array();
+    $_addDbOps = array();
 }
 
 if ( !isset( $_baseTableOps ) )
@@ -88,11 +88,11 @@ if ( !isset( $_baseTableOps ) )
                 'Use the <b>filter</b> parameter to limit resources that are returned or leave it blank to return all resources up to the max limit.<br/> ' .
                 'Alternatively, to send the <b>filter</b> with or without <b>params</b> as posted data ' .
                 'use the POST request with X-HTTP-METHOD = GET header and post a filter with or without params.<br/>' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'Use the <b>fields</b> parameter to limit properties returned for each resource. ' .
                 'By default, all fields are returned for all resources. ',
             'type'             => 'RecordsResponse',
-            'event_name'       => array( '{api_name}.{table_name}.select', '{api_name}.table_selected', ),
+            'event_name'       => array('{api_name}.{table_name}.select', '{api_name}.table_selected',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -154,7 +154,7 @@ if ( !isset( $_baseTableOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -165,11 +165,11 @@ if ( !isset( $_baseTableOps ) )
             'notes'            =>
                 'Pass the identifying field values as a comma-separated list in the <b>ids</b> parameter.<br/> ' .
                 'Alternatively, to send the <b>ids</b> as posted data use the POST request with X-HTTP-METHOD = GET header and post array of ids.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'Use the <b>fields</b> parameter to limit properties returned for each resource. ' .
                 'By default, all fields are returned for identified resources. ',
             'type'             => 'RecordsResponse',
-            'event_name'       => array( '{api_name}.{table_name}.select', '{api_name}.table_selected', ),
+            'event_name'       => array('{api_name}.{table_name}.select', '{api_name}.table_selected',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -227,7 +227,7 @@ if ( !isset( $_baseTableOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -239,11 +239,11 @@ if ( !isset( $_baseTableOps ) )
                 'Post data should be an array of records wrapped in a <b>record</b> element - including the identifying fields at a minimum, ' .
                 'or a <b>filter</b> in the SQL or other appropriate formats with or without a replacement <b>params</b> array, ' .
                 'or a list of <b>ids</b> in a string list or an array.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'Use the <b>fields</b> parameter to limit properties returned for each resource. ' .
                 'By default, all fields are returned for identified resources. ',
             'type'             => 'RecordsResponse',
-            'event_name'       => array( '{api_name}.{table_name}.select', '{api_name}.table_selected', ),
+            'event_name'       => array('{api_name}.{table_name}.select', '{api_name}.table_selected',),
             'parameters'       => array(
                 array(
                     'name'          => 'table_name',
@@ -302,7 +302,7 @@ if ( !isset( $_baseTableOps ) )
                 array(
                     'name'          => 'X-HTTP-METHOD',
                     'description'   => 'Override request using POST to tunnel other http request, such as GET.',
-                    'enum'          => array( 'GET' ),
+                    'enum'          => array('GET'),
                     'allowMultiple' => false,
                     'type'          => 'string',
                     'paramType'     => 'header',
@@ -319,11 +319,11 @@ if ( !isset( $_baseTableOps ) )
                 'Use the <b>ids</b> or <b>filter</b> parameter to limit resources that are returned.<br/> ' .
                 'Alternatively, to send the <b>ids</b> or a <b>filter</b> with or without <b>params</b> as posted data ' .
                 'use the POST request with X-HTTP-METHOD = GET header and post array of ids or a filter with params.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'Use the <b>fields</b> parameter to limit properties returned for each resource. ' .
                 'By default, all fields are returned for all resources. ',
             'type'             => 'RecordsResponse',
-            'event_name'       => array( '{api_name}.{table_name}.select', '{api_name}.table_selected', ),
+            'event_name'       => array('{api_name}.{table_name}.select', '{api_name}.table_selected',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -431,7 +431,7 @@ if ( !isset( $_baseTableOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -441,11 +441,11 @@ if ( !isset( $_baseTableOps ) )
             'nickname'         => 'createRecords',
             'notes'            =>
                 'Posted data should be an array of records wrapped in a <b>record</b> element.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'By default, only the id property of the record is returned on success. ' .
                 'Use <b>fields</b> parameter to return more info.',
             'type'             => 'RecordsResponse',
-            'event_name'       => array( '{api_name}.{table_name}.insert', '{api_name}.table_inserted', ),
+            'event_name'       => array('{api_name}.{table_name}.insert', '{api_name}.table_inserted',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -515,14 +515,14 @@ if ( !isset( $_baseTableOps ) )
                     array(
                         'name'          => 'X-HTTP-METHOD',
                         'description'   => 'Override request using POST to tunnel other http request, such as DELETE.',
-                        'enum'          => array( 'GET', 'PUT', 'PATCH', 'DELETE' ),
+                        'enum'          => array('GET', 'PUT', 'PATCH', 'DELETE'),
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'header',
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -533,11 +533,11 @@ if ( !isset( $_baseTableOps ) )
             'notes'            =>
                 'Posted body should be a single record with name-value pairs to update wrapped in a <b>record</b> tag.<br/> ' .
                 'Ids can be included via URL parameter or included in the posted body.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'By default, only the id property of the record is returned on success. ' .
                 'Use <b>fields</b> parameter to return more info.',
             'type'             => 'RecordsResponse',
-            'event_name'       => array( '{api_name}.{table_name}.update', '{api_name}.table_updated', ),
+            'event_name'       => array('{api_name}.{table_name}.update', '{api_name}.table_updated',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -613,7 +613,7 @@ if ( !isset( $_baseTableOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -624,11 +624,11 @@ if ( !isset( $_baseTableOps ) )
             'notes'            =>
                 'Posted body should be a single record with name-value pairs to update wrapped in a <b>record</b> tag.<br/> ' .
                 'Filter can be included via URL parameter or included in the posted body.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'By default, only the id property of the record is returned on success. ' .
                 'Use <b>fields</b> parameter to return more info.',
             'type'             => 'RecordsResponse',
-            'event_name'       => array( '{api_name}.{table_name}.update', '{api_name}.table_updated', ),
+            'event_name'       => array('{api_name}.{table_name}.update', '{api_name}.table_updated',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -664,7 +664,7 @@ if ( !isset( $_baseTableOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -674,11 +674,11 @@ if ( !isset( $_baseTableOps ) )
             'nickname'         => 'replaceRecords',
             'notes'            =>
                 'Post data should be an array of records wrapped in a <b>record</b> tag.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'By default, only the id property of the record is returned on success. ' .
                 'Use <b>fields</b> parameter to return more info.',
             'type'             => 'RecordsResponse',
-            'event_name'       => array( '{api_name}.{table_name}.update', '{api_name}.table_updated', ),
+            'event_name'       => array('{api_name}.{table_name}.update', '{api_name}.table_updated',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -746,7 +746,7 @@ if ( !isset( $_baseTableOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -757,11 +757,11 @@ if ( !isset( $_baseTableOps ) )
             'notes'            =>
                 'Posted body should be a single record with name-value pairs to update wrapped in a <b>record</b> tag.<br/> ' .
                 'Ids can be included via URL parameter or included in the posted body.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'By default, only the id property of the record is returned on success. ' .
                 'Use <b>fields</b> parameter to return more info.',
             'type'             => 'RecordsResponse',
-            'event_name'       => array( '{api_name}.{table_name}.update', '{api_name}.table_updated', ),
+            'event_name'       => array('{api_name}.{table_name}.update', '{api_name}.table_updated',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -837,7 +837,7 @@ if ( !isset( $_baseTableOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -848,11 +848,11 @@ if ( !isset( $_baseTableOps ) )
             'notes'            =>
                 'Posted body should be a single record with name-value pairs to update wrapped in a <b>record</b> tag.<br/> ' .
                 'Filter can be included via URL parameter or included in the posted body.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'By default, only the id property of the record is returned on success. ' .
                 'Use <b>fields</b> parameter to return more info.',
             'type'             => 'RecordsResponse',
-            'event_name'       => array( '{api_name}.{table_name}.update', '{api_name}.table_updated', ),
+            'event_name'       => array('{api_name}.{table_name}.update', '{api_name}.table_updated',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -888,7 +888,7 @@ if ( !isset( $_baseTableOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -898,11 +898,11 @@ if ( !isset( $_baseTableOps ) )
             'nickname'         => 'updateRecords',
             'notes'            =>
                 'Post data should be an array of records containing at least the identifying fields for each record.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'By default, only the id property of the record is returned on success. ' .
                 'Use <b>fields</b> parameter to return more info.',
             'type'             => 'RecordsResponse',
-            'event_name'       => array( '{api_name}.{table_name}.update', '{api_name}.table_updated', ),
+            'event_name'       => array('{api_name}.{table_name}.update', '{api_name}.table_updated',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -970,7 +970,7 @@ if ( !isset( $_baseTableOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -982,10 +982,10 @@ if ( !isset( $_baseTableOps ) )
                 'Use <b>ids</b> to delete specific records.<br/> ' .
                 'Alternatively, to delete by records, a complicated filter, or a large list of ids, ' .
                 'use the POST request with X-HTTP-METHOD = DELETE header and post array of records, filter, or ids.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'By default, only the id property of the record is returned on success, use <b>fields</b> to return more info. ',
             'type'             => 'RecordsResponse',
-            'event_name'       => array( '{api_name}.{table_name}.delete', '{api_name}.table_deleted', ),
+            'event_name'       => array('{api_name}.{table_name}.delete', '{api_name}.table_deleted',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -1053,7 +1053,7 @@ if ( !isset( $_baseTableOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -1065,10 +1065,10 @@ if ( !isset( $_baseTableOps ) )
                 'Use <b>filter</b> to delete specific records, otherwise set <b>force</b> to true to clear the table.<br/> ' .
                 'Alternatively, to delete by records, a complicated filter, or a large list of ids, ' .
                 'use the POST request with X-HTTP-METHOD = DELETE header and post array of records, filter, or ids.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'By default, only the id property of the record is returned on success, use <b>fields</b> to return more info. ',
             'type'             => 'RecordsResponse',
-            'event_name'       => array( '{api_name}.{table_name}.delete', '{api_name}.table_deleted', ),
+            'event_name'       => array('{api_name}.{table_name}.delete', '{api_name}.table_deleted',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -1105,7 +1105,7 @@ if ( !isset( $_baseTableOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -1117,10 +1117,10 @@ if ( !isset( $_baseTableOps ) )
                 'Use <b>ids</b> or filter to delete specific records, otherwise set <b>force</b> to true to clear the table.<br/> ' .
                 'Alternatively, to delete by records, a complicated filter, or a large list of ids, ' .
                 'use the POST request with X-HTTP-METHOD = DELETE header and post array of records, filter, or ids.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'By default, only the id property of the record is returned on success, use <b>fields</b> to return more info. ',
             'type'             => 'RecordsResponse',
-            'event_name'       => array( '{api_name}.{table_name}.delete', '{api_name}.table_deleted', ),
+            'event_name'       => array('{api_name}.{table_name}.delete', '{api_name}.table_deleted',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -1197,16 +1197,16 @@ if ( !isset( $_baseTableOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
     );
 }
 
-if ( !isset( $_additionalTableOps ) )
+if ( !isset( $_addTableOps ) )
 {
-    $_additionalTableOps = array();
+    $_addTableOps = array();
 }
 
 if ( !isset( $_baseRecordOps ) )
@@ -1217,11 +1217,9 @@ if ( !isset( $_baseRecordOps ) )
             'summary'          => 'getRecord() - Retrieve one record by identifier.',
             'nickname'         => 'getRecord',
             'notes'            =>
-                $_additionalNotes .
-                'Use the <b>fields</b> parameter to limit properties that are returned. ' .
-                'By default, all fields are returned.',
+                $_addTableNotes . 'Use the <b>fields</b> parameter to limit properties that are returned. ' . 'By default, all fields are returned.',
             'type'             => 'RecordResponse',
-            'event_name'       => array( '{api_name}.{table_name}.select', '{api_name}.table_selected', ),
+            'event_name'       => array('{api_name}.{table_name}.select', '{api_name}.table_selected',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -1269,7 +1267,7 @@ if ( !isset( $_baseRecordOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -1279,10 +1277,10 @@ if ( !isset( $_baseRecordOps ) )
             'nickname'         => 'createRecord',
             'notes'            =>
                 'Post data should be an array of fields for a single record.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'Use the <b>fields</b> parameter to return more properties. By default, the id is returned.',
             'type'             => 'RecordResponse',
-            'event_name'       => array( '{api_name}.{table_name}.create', '{api_name}.table_created', ),
+            'event_name'       => array('{api_name}.{table_name}.create', '{api_name}.table_created',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -1338,7 +1336,7 @@ if ( !isset( $_baseRecordOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -1348,10 +1346,10 @@ if ( !isset( $_baseRecordOps ) )
             'nickname'         => 'replaceRecord',
             'notes'            =>
                 'Post data should be an array of fields for a single record.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'Use the <b>fields</b> parameter to return more properties. By default, the id is returned.',
             'type'             => 'RecordResponse',
-            'event_name'       => array( '{api_name}.{table_name}.update', '{api_name}.table_updated', ),
+            'event_name'       => array('{api_name}.{table_name}.update', '{api_name}.table_updated',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -1407,7 +1405,7 @@ if ( !isset( $_baseRecordOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -1417,10 +1415,10 @@ if ( !isset( $_baseRecordOps ) )
             'nickname'         => 'updateRecord',
             'notes'            =>
                 'Post data should be an array of fields for a single record.<br/> ' .
-                $_additionalNotes .
+                $_addTableNotes .
                 'Use the <b>fields</b> parameter to return more properties. By default, the id is returned.',
             'type'             => 'RecordResponse',
-            'event_name'       => array( '{api_name}.{table_name}.update', '{api_name}.table_updated', ),
+            'event_name'       => array('{api_name}.{table_name}.update', '{api_name}.table_updated',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -1476,7 +1474,7 @@ if ( !isset( $_baseRecordOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
@@ -1484,11 +1482,9 @@ if ( !isset( $_baseRecordOps ) )
             'method'           => 'DELETE',
             'summary'          => 'deleteRecord() - Delete one record by identifier.',
             'nickname'         => 'deleteRecord',
-            'notes'            =>
-                $_additionalNotes .
-                'Use the <b>fields</b> parameter to return more deleted properties. By default, the id is returned.',
+            'notes'            => $_addTableNotes . 'Use the <b>fields</b> parameter to return more deleted properties. By default, the id is returned.',
             'type'             => 'RecordResponse',
-            'event_name'       => array( '{api_name}.{table_name}.delete', '{api_name}.table_deleted', ),
+            'event_name'       => array('{api_name}.{table_name}.delete', '{api_name}.table_deleted',),
             'parameters'       => array_merge(
                 array(
                     array(
@@ -1536,44 +1532,46 @@ if ( !isset( $_baseRecordOps ) )
                         'required'      => false,
                     ),
                 ),
-                $_additionalParameters
+                $_addTableParameters
             ),
             'responseMessages' => $_commonResponses,
         ),
     );
 }
 
-if ( !isset( $_additionalRecordOps ) )
+if ( !isset( $_addRecordOps ) )
 {
-    $_additionalRecordOps = array();
+    $_addRecordOps = array();
 }
 
-$_base['apis'] = array(
+$_base['apis'] = array_merge(
     array(
-        'path'        => '/{api_name}',
-        'operations'  => array_merge(
-            $_baseDbOps,
-            $_additionalDbOps
+        array(
+            'path'        => '/{api_name}',
+            'operations'  => array_merge(
+                $_baseDbOps,
+                $_addDbOps
+            ),
+            'description' => 'Operations available for database tables.',
         ),
-        'description' => 'Operations available for database tables.',
-    ),
-    array(
-        'path'        => '/{api_name}/{table_name}',
-        'operations'  => array_merge(
-            $_baseTableOps,
-            $_additionalTableOps
+        array(
+            'path'        => '/{api_name}/{table_name}',
+            'operations'  => array_merge(
+                $_baseTableOps,
+                $_addTableOps
+            ),
+            'description' => 'Operations for table records administration.',
         ),
-        'description' => 'Operations for table records administration.',
-    ),
-    array(
-        'path'        => '/{api_name}/{table_name}/{id}',
-        'operations'  => array_merge(
-            $_baseRecordOps,
-            $_additionalRecordOps
+        array(
+            'path'        => '/{api_name}/{table_name}/{id}',
+            'operations'  => array_merge(
+                $_baseRecordOps,
+                $_addRecordOps
+            ),
+            'description' => 'Operations for single record administration.',
         ),
-        'description' => 'Operations for single record administration.',
     ),
-//    $_additionalApis,
+    $_addApis
 );
 
 $_commonProperties = array(
@@ -1686,6 +1684,6 @@ $_models = array(
 
 $_base['models'] = array_merge( $_base['models'], $_models );
 
-unset( $_commonProperties, $_commonResponses, $_models, $_additionalParameters, $_additionalNotes, $_additionalApis );
+unset( $_commonProperties, $_commonResponses, $_models, $_baseDbOps, $_baseTableOps, $_baseRecordOps );
 
 return $_base;

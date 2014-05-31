@@ -21,6 +21,7 @@ use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use Kisma\Core\Interfaces\ConsumerLike;
 use Kisma\Core\Interfaces\HttpMethod;

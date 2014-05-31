@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-$_additionalParameters = array(
+$_addTableParameters = array(
     array(
         'name'          => 'related',
         'description'   => 'Comma-delimited list of relationship names to retrieve for each record, or \'*\' to retrieve all.',
@@ -29,10 +29,12 @@ $_additionalParameters = array(
     )
 );
 
-$_additionalNotes =
+$_addTableNotes =
     'Use the <b>related</b> parameter to return related records for each resource. ' .
     'By default, no related records are returned.<br/> ';
 
 $_base = require( __DIR__ . '/BaseDbSvc.swagger.php' );
+
+unset( $_addTableNotes, $_addTableParameters );
 
 return $_base;
