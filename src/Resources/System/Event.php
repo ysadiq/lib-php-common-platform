@@ -190,12 +190,12 @@ class Event extends BaseSystemRestResource
     protected function _handlePost()
     {
         $_dispatcher = Platform::getDispatcher();
-        $_payload = $this->_determineRequestedResource( $_ids, $_records );
+        $_records = Option::get( $this->_requestData, 'record' );
         $_response = array();
 
         if ( empty( $_records ) )
         {
-            $_records = array( $_payload );
+            $_records = array( $this->_requestData );
         }
 
         foreach ( $_records as $_record )
