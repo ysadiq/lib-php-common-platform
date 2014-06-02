@@ -160,6 +160,8 @@ class ScriptEngine
     {
         $scriptId = $scriptId ? : $scriptName;
 
+        Log::debug( 'Running script: ' . $scriptId );
+
         if ( !is_file( $scriptName ) || !is_readable( $scriptName ) )
         {
             throw new InternalServerErrorException( 'The script ID "' . $scriptId . '" is not valid or unreadable.' );
@@ -174,8 +176,6 @@ class ScriptEngine
         {
             static::create();
         }
-
-        Log::debug( 'Running script: ' . $scriptId );
 
         try
         {
