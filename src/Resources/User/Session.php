@@ -575,11 +575,12 @@ class Session extends BasePlatformRestResource
 
     /**
      * @param string $app_name
+     * @param bool   $session_required
      *
-     * @throws ForbiddenException
-     * @throws BadRequestException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
      */
-    public static function checkAppPermission( $app_name = null )
+    public static function checkAppPermission( $app_name = null, $session_required = true )
     {
         if ( empty( $app_name ) )
         {
@@ -587,6 +588,15 @@ class Session extends BasePlatformRestResource
             if ( empty( $app_name ) )
             {
                 throw new BadRequestException( 'A valid application name is required to access services.' );
+            }
+        }
+
+        if ( !$session_required )
+        {
+            // check if the app_name (App.api_name) is in the current list of apps
+            if ( false !== array_search( $app_name, App::availableNames() ) )
+            {
+                return;
             }
         }
 
@@ -950,9 +960,9 @@ class Session extends BasePlatformRestResource
                         // get fields here
                         if ( !empty( $_lookup ) )
                         {
-                            if ( isset( static::$_cache, static::$_cache[ $_lookup ] ) )
+                            if ( isset( static::$_cache, static::$_cache[$_lookup] ) )
                             {
-                                $value = static::$_cache[ $_lookup ];
+                                $value = static::$_cache[$_lookup];
 
                                 return true;
                             }
@@ -963,9 +973,9 @@ class Session extends BasePlatformRestResource
                         // get fields here
                         if ( !empty( $_lookup ) )
                         {
-                            if ( isset( static::$_cache, static::$_cache['role'], static::$_cache['role'][ $_lookup ] ) )
+                            if ( isset( static::$_cache, static::$_cache['role'], static::$_cache['role'][$_lookup] ) )
                             {
-                                $value = static::$_cache['role'][ $_lookup ];
+                                $value = static::$_cache['role'][$_lookup];
 
                                 return true;
                             }
@@ -1011,9 +1021,9 @@ class Session extends BasePlatformRestResource
             }
         }
 
-        if ( isset( static::$_cache, static::$_cache['lookup'], static::$_cache['lookup'][ $lookup ] ) )
+        if ( isset( static::$_cache, static::$_cache['lookup'], static::$_cache['lookup'][$lookup] ) )
         {
-            $value = static::$_cache['lookup'][ $lookup ];
+            $value = static::$_cache['lookup'][$lookup];
 
             return true;
         }
@@ -1179,7 +1189,7 @@ class Session extends BasePlatformRestResource
                 foreach ( $theGroups as $g_key => $group )
                 {
                     $groupId = $group->id;
-                    $groupData = ( isset( $appGroups[ $g_key ] ) ) ? $appGroups[ $g_key ] : $group->getAttributes( array('id', 'name', 'description') );
+                    $groupData = ( isset( $appGroups[$g_key] ) ) ? $appGroups[$g_key] : $group->getAttributes( array('id', 'name', 'description') );
                     foreach ( $tempGroups as $tempGroup )
                     {
                         if ( $tempGroup->id === $groupId )
@@ -1190,7 +1200,7 @@ class Session extends BasePlatformRestResource
                             $groupData['apps'] = $temp;
                         }
                     }
-                    $appGroups[ $g_key ] = $groupData;
+                    $appGroups[$g_key] = $groupData;
                 }
                 if ( !$found )
                 {
@@ -1202,7 +1212,7 @@ class Session extends BasePlatformRestResource
             {
                 if ( !isset( $group['apps'] ) )
                 {
-                    unset( $appGroups[ $g_key ] );
+                    unset( $appGroups[$g_key] );
                 }
             }
             $_data['app_groups'] = array_values( $appGroups ); // reset indexing

@@ -23,6 +23,7 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Events\Enums\SwaggerEvents;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\System\Script;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
@@ -131,8 +132,9 @@ class SwaggerManager extends BasePlatformRestService
             return false;
         }
 
-        // lock down access to API
-        $this->checkPermission( $this->getRequestedAction(), $this->_resource );
+        // lock down access to valid apps only, can't check session permissions
+        // here due to sdk access
+        Session::checkAppPermission( null, false );
 
         if ( empty( $this->_resource ) )
         {
