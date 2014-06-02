@@ -152,26 +152,6 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
     }
 
     /**
-     * @param string          $resource     The name of the resource
-     * @param string          $action       The action to perform
-     * @param int|string|bool $outputFormat The return format. Defaults to native, or PHP array.
-     * @param string          $appName      The optional app_name setting for this call. Defaults to called class name hash
-     *
-     * @throws \DreamFactory\Platform\Exceptions\NotImplementedException
-     * @return mixed
-     */
-    public static function processInlineRequest( $resource, $action = HttpMethod::GET, $outputFormat = false, $appName = null )
-    {
-        //	Get the resource and set the app_name
-        $_SERVER['HTTP_X_DREAMFACTORY_APPLICATION_NAME'] = $appName ? : sha1( get_called_class() );
-
-        /** @var BasePlatformRestResource $_resource */
-        $_resource = ResourceStore::resource( $resource )->setInlineRequest( true );
-
-        return $_resource->processRequest( $resource, $action, $outputFormat, $appName );
-    }
-
-    /**
      * Given an old string-based TYPE, determine new integer identifier
      *
      * @param string $type

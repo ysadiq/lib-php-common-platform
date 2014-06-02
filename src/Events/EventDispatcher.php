@@ -228,6 +228,7 @@ class EventDispatcher implements EventDispatcherInterface
         $this->_doDispatch( $_event, $eventName, $this );
 
         return $_event;
+
     }
 
     /**
@@ -244,7 +245,11 @@ class EventDispatcher implements EventDispatcherInterface
     protected function _doDispatch( &$event, $eventName )
     {
         //  Do nothing if not wanted
-        if ( !static::$_enableRestEvents && !static::$_enablePlatformEvents && !static::$_enableEventScripts && !static::$_enableEventObservers )
+        if ( !static::$_enableRestEvents &&
+             !static::$_enablePlatformEvents &&
+             !static::$_enableEventScripts &&
+             !static::$_enableEventObservers
+        )
         {
             return false;
         }
@@ -326,7 +331,9 @@ class EventDispatcher implements EventDispatcherInterface
 
                     $_hash = spl_object_hash( $_listener );
                     $_name = gettype( $_listener );
-                    $_listener = ( ( $_listener instanceof \Closure || $_listener instanceof SerializableClosure ) ? 'Closure' : $_name ) . 'id#' . $_hash;
+                    $_listener =
+                        ( ( $_listener instanceof \Closure || $_listener instanceof SerializableClosure ) ? 'Closure'
+                            : $_name ) . 'id#' . $_hash;
                 }
             }
 
@@ -384,7 +391,13 @@ class EventDispatcher implements EventDispatcherInterface
             {
                 if ( static::$_logAllEvents && $fromCache )
                 {
-                    Log::debug( '  * Existing listener found and skipped for "' . spl_object_hash( $this ) . '::' . $eventName . '"' );
+                    Log::debug(
+                        '  * Existing listener found and skipped for "' .
+                        spl_object_hash( $this ) .
+                        '::' .
+                        $eventName .
+                        '"'
+                    );
                 }
 
                 $_found = true;
@@ -396,7 +409,15 @@ class EventDispatcher implements EventDispatcherInterface
         {
             if ( static::$_logAllEvents )
             {
-                Log::debug( '  * Added ' . ( $fromCache ? 'cached' : 'new' ) . ' listener for "' . spl_object_hash( $this ) . '::' . $eventName . '"' );
+                Log::debug(
+                    '  * Added ' .
+                    ( $fromCache ? 'cached' : 'new' ) .
+                    ' listener for "' .
+                    spl_object_hash( $this ) .
+                    '::' .
+                    $eventName .
+                    '"'
+                );
             }
 
             $this->_listeners[ $eventName ][ $priority ][] = $listener;
@@ -440,13 +461,21 @@ class EventDispatcher implements EventDispatcherInterface
             }
             elseif ( is_string( $_params[0] ) )
             {
-                $this->addListener( $_eventName, array( $subscriber, $_params[0] ), isset( $_params[1] ) ? $_params[1] : 0 );
+                $this->addListener(
+                    $_eventName,
+                    array( $subscriber, $_params[0] ),
+                    isset( $_params[1] ) ? $_params[1] : 0
+                );
             }
             else
             {
                 foreach ( $_params as $listener )
                 {
-                    $this->addListener( $_eventName, array( $subscriber, $listener[0] ), isset( $listener[1] ) ? $listener[1] : 0 );
+                    $this->addListener(
+                        $_eventName,
+                        array( $subscriber, $listener[0] ),
+                        isset( $listener[1] ) ? $listener[1] : 0
+                    );
                 }
             }
         }
@@ -468,7 +497,10 @@ class EventDispatcher implements EventDispatcherInterface
             }
             else
             {
-                $this->removeListener( $_eventName, array( $subscriber, is_string( $_params ) ? $_params : $_params[0] ) );
+                $this->removeListener(
+                    $_eventName,
+                    array( $subscriber, is_string( $_params ) ? $_params : $_params[0] )
+                );
             }
         }
     }
@@ -492,7 +524,9 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected function isPhpScript( $callable )
     {
-        return is_callable( $callable ) || ( ( false === strpos( $callable, ' ' ) && false !== strpos( $callable, '::' ) ) );
+        return
+            is_callable( $callable ) ||
+            ( ( false === strpos( $callable, ' ' ) && false !== strpos( $callable, '::' ) ) );
     }
 
     /**
@@ -561,13 +595,14 @@ class EventDispatcher implements EventDispatcherInterface
     {
         if ( $flush )
         {
-            return static::_saveToStore( $this, true );
+            static::_saveToStore( $this, true );
         }
 
         $_found = array();
         $_basePath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
+        $_eventMap = SwaggerManager::getEventMap();
 
-        foreach ( SwaggerManager::getEventMap() as $_routes )
+        foreach ( $_eventMap as $_routes )
         {
             foreach ( $_routes as $_routeInfo )
             {
@@ -582,21 +617,40 @@ class EventDispatcher implements EventDispatcherInterface
 
                         if ( is_file( $_scriptFile ) && is_readable( $_scriptFile ) )
                         {
-                            if ( !isset( $this->_scripts[ $_eventKey ] ) || !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] ) )
+                            if ( !isset( $this->_scripts[ $_eventKey ] ) ||
+                                 !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
+                            )
                             {
                                 $_found[] = str_replace( $_basePath, '.', $_scriptFile );
                                 $this->_scripts[ $_eventKey ][] = $_scriptFile;
+                                if ( static::$_logAllEvents )
+                                {
+                                    Log::debug(
+                                        '  * Mapped script "' . $_scriptFile . '" to event "' . $_eventKey . '"'
+                                    );
+                                }
                             }
                         }
+                        else
+                        {
+                            if ( static::$_logAllEvents )
+                            {
+                                Log::debug( '  * No scripts found for event "' . $_eventKey . '"' );
+                            }
+                        }
+
                     }
                 }
             }
         }
 
         //  Check for new
-        if ( $scanForNew && !empty( $_found ) )
+        if ( $scanForNew )
         {
-            $_scripts = FileSystem::glob( $_basePath . '/*.js', GlobFlags::GLOB_NODIR | GlobFlags::GLOB_NODOTS | GlobFlags::GLOB_RECURSE );
+            $_scripts = FileSystem::glob(
+                $_basePath . '/*.js',
+                GlobFlags::GLOB_NODIR | GlobFlags::GLOB_NODOTS | GlobFlags::GLOB_RECURSE
+            );
 
             if ( !empty( $_scripts ) )
             {
@@ -605,13 +659,26 @@ class EventDispatcher implements EventDispatcherInterface
                     $_eventKey = str_ireplace( '.js', null, $_newScript );
                     $_scriptFile = $_basePath . '/' . $_newScript;
 
-                    if ( !array_key_exists( $_eventKey, $this->_scripts ) || !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] ) )
+                    if ( !array_key_exists( $_eventKey, $this->_scripts ) ||
+                         !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
+                    )
                     {
                         $this->_scripts[ $_eventKey ][] = $_scriptFile;
+                        if ( static::$_logAllEvents )
+                        {
+                            Log::debug( '  * Mapped script "' . $_scriptFile . '" to event "' . $_eventKey . '"' );
+                        }
                     }
+                    else if ( static::$_logAllEvents )
+                    {
+                        Log::debug( '  * No event found for script "' . $_scriptFile . '"' );
+                    }
+
                 }
             }
         }
+
+        static::_saveToStore( $this );
     }
 
     /**
@@ -786,7 +853,13 @@ class EventDispatcher implements EventDispatcherInterface
                     )
                 );
 
-                $_result = ScriptEngine::runScript( $_script, $eventName . '.js', $_exposedEvent, $_event['platform'], $_output );
+                $_result = ScriptEngine::runScript(
+                    $_script,
+                    $eventName . '.js',
+                    $_exposedEvent,
+                    $_event['platform'],
+                    $_output
+                );
             }
             catch ( \Exception $_ex )
             {
@@ -844,7 +917,9 @@ class EventDispatcher implements EventDispatcherInterface
 
                 if ( !class_exists( $_className ) )
                 {
-                    Log::warning( 'Class ' . $_className . ' is not auto-loadable. Cannot call ' . $eventName . ' script' );
+                    Log::warning(
+                        'Class ' . $_className . ' is not auto-loadable. Cannot call ' . $eventName . ' script'
+                    );
                     continue;
                 }
 
@@ -860,7 +935,9 @@ class EventDispatcher implements EventDispatcherInterface
                 }
                 catch ( \Exception $_ex )
                 {
-                    Log::error( 'Exception running script "' . $_listener . '" handling the event "' . $eventName . '"' );
+                    Log::error(
+                        'Exception running script "' . $_listener . '" handling the event "' . $eventName . '"'
+                    );
                     throw $_ex;
                 }
             }
@@ -878,7 +955,9 @@ class EventDispatcher implements EventDispatcherInterface
                  * Because the $event object can be changed by different listeners during the processing loop, it needs to be regen'd each time.
                  * That's not to say it couldn't be done better in another sprint.
                  */
-                $_payload = ApiResponse::create( ScriptEvent::normalizeEvent( $eventName, $event, $this, array(), false, true ) );
+                $_payload = ApiResponse::create(
+                    ScriptEvent::normalizeEvent( $eventName, $event, $this, array(), false, true )
+                );
 
                 $_posts[] = static::$_client->post(
                     $_listener,
@@ -922,10 +1001,15 @@ class EventDispatcher implements EventDispatcherInterface
 
             if ( $_dispatched && static::$_logEvents && !static::$_logAllEvents )
             {
-                $_defaultPath = $event instanceof PlatformServiceEvent ? $event->getApiName() . '/' . $event->getResource() : null;
+                $_defaultPath =
+                    $event instanceof PlatformServiceEvent ? $event->getApiName() . '/' . $event->getResource() : null;
 
                 Log::debug(
-                    ( $_dispatched ? 'Dispatcher' : 'Unhandled' ) . ': event "' . $eventName . '" triggered by /' . Option::get( $_GET, 'path', $_defaultPath )
+                    ( $_dispatched ? 'Dispatcher' : 'Unhandled' ) .
+                    ': event "' .
+                    $eventName .
+                    '" triggered by /' .
+                    Option::get( $_GET, 'path', $_defaultPath )
                 );
             }
 

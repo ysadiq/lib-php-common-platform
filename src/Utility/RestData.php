@@ -87,7 +87,19 @@ class RestData
                 if ( false !== stripos( $_contentType, '/json' ) )
                 {
                     // application/json
-                    $_data = DataFormat::jsonToArray( $_postData );
+                    try
+                    {
+                        $_data = DataFormat::jsonToArray( $_postData );
+                    }
+                    catch ( \Exception $_ex )
+                    {
+                        if ( empty( $_postData ) )
+                        {
+                            throw $_ex;
+                        }
+                        
+                        $_data = $_postData;
+                    }
                 }
                 elseif ( false !== stripos( $_contentType, '/xml' ) )
                 {
