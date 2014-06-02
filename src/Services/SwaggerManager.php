@@ -515,7 +515,10 @@ SQL;
             }
         }
 
-        $_hash = sha1( $method . '.' . Pii::request( false )->getRequestUri() );
+        //  Change the request uri for inline calls
+        $_requestUri = Option::server( 'INLINE_REQUEST_URI', Pii::request( false )->getRequestUri() );
+
+        $_hash = sha1( $method . '.' . $_requestUri );
 
         if ( isset( $_cache[ $_hash ] ) )
         {
@@ -567,10 +570,6 @@ SQL;
         if ( empty( $_resource ) )
         {
             $_resource = $_apiName;
-            if ( method_exists( $service, 'getConsumer' ) )
-            {
-                $_apiName = $service->getConsumer()->getApiName();
-            }
         }
         else
         {

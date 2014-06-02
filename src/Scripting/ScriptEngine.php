@@ -126,7 +126,8 @@ class ScriptEngine
 
             //  Set up our script mappings for module loading
             static::_initializeScriptPaths( $libraryScriptPath );
-            static::$_engine = new \V8Js( static::EXPOSED_OBJECT_NAME, $variables, $extensions, $reportUncaughtExceptions );
+            static::$_engine =
+                new \V8Js( static::EXPOSED_OBJECT_NAME, $variables, $extensions, $reportUncaughtExceptions );
         }
 
         /**
@@ -169,7 +170,9 @@ class ScriptEngine
 
         if ( false === ( $_script = @file_get_contents( $scriptName ) ) )
         {
-            throw new InternalServerErrorException( 'The script ID "' . $scriptId . '" cannot be retrieved at this time.' );
+            throw new InternalServerErrorException(
+                'The script ID "' . $scriptId . '" cannot be retrieved at this time.'
+            );
         }
 
         if ( !static::$_engine )
@@ -255,7 +258,9 @@ class ScriptEngine
         //  Me no likey
         if ( !$_script || !$_fullScriptPath )
         {
-            throw new InternalServerErrorException( 'The module "' . $module . '" could not be found in any known locations . ' );
+            throw new InternalServerErrorException(
+                'The module "' . $module . '" could not be found in any known locations . '
+            );
         }
 
         if ( !$useTemplate )
@@ -283,7 +288,8 @@ class ScriptEngine
         if ( empty( static::$_libraryScriptPath ) || !is_dir( static::$_libraryScriptPath ) )
         {
             throw new RestException(
-                HttpResponse::ServiceUnavailable, 'This service is not available . Storage path and/or required libraries not available . '
+                HttpResponse::ServiceUnavailable,
+                'This service is not available . Storage path and/or required libraries not available . '
             );
         }
 
@@ -325,7 +331,12 @@ class ScriptEngine
 
         foreach ( static::$_libraryModules as $_module => $_path )
         {
-            \V8Js::registerExtension( $_module, str_replace( '{module}', $_module, static::MODULE_LOADER_TEMPLATE ), array(), true );
+            \V8Js::registerExtension(
+                $_module,
+                str_replace( '{module}', $_module, static::MODULE_LOADER_TEMPLATE ),
+                array(),
+                true
+            );
         }
 
         return empty( $_registered ) ? false : $_registered;
@@ -370,8 +381,12 @@ JS;
 
         if ( !static::$_moduleLoaderAvailable )
         {
-            $_enrobedScript =
-                Platform::mcGet( 'scripting.modules.lodash', static::loadScriptingModule( 'lodash', false ), false, 3600 ) . ';' . $_enrobedScript;
+            $_enrobedScript = Platform::mcGet(
+                    'scripting.modules.lodash',
+                    static::loadScriptingModule( 'lodash', false ),
+                    false,
+                    3600
+                ) . ';' . $_enrobedScript;
         }
 
         return $_enrobedScript;
@@ -387,6 +402,7 @@ JS;
     public static function inlineRequest( $method, $path, $payload = null )
     {
         $_result = null;
+        $_requestUri = '/rest/' . ltrim( $path, '/' );
 
         if ( false === ( $_pos = strpos( $path, '/' ) ) )
         {
@@ -401,9 +417,8 @@ JS;
             //	Fix removal of trailing slashes from resource
             if ( !empty( $_resource ) )
             {
-                $_requestUri = Pii::request( false )->getRequestUri();
-
-                if ( ( false === strpos( $_requestUri, '?' ) && '/' === substr( $_requestUri, strlen( $_requestUri ) - 1, 1 ) ) ||
+                if ( ( false === strpos( $_requestUri, '?' ) &&
+                       '/' === substr( $_requestUri, strlen( $_requestUri ) - 1, 1 ) ) ||
                      ( '/' === substr( $_requestUri, strpos( $_requestUri, '?' ) - 1, 1 ) )
                 )
                 {
@@ -423,6 +438,7 @@ JS;
             $_request->setMethod( $method );
             $_request->query->set( 'app_name', 'dsp.scripting' );
             $_request->query->set( 'path', $path );
+            $_request->server->set( 'INLINE_REQUEST_URI', $_requestUri );
             $_request->overrideGlobals();
 
             $_service = ServiceHandler::getService( $_serviceId );
