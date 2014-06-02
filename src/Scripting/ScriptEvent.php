@@ -81,9 +81,14 @@ class ScriptEvent
         //	Not cached, get it...
         $_path = Platform::getLibraryConfigPath( '/schema' ) . '/' . trim( $template, ' /' );
 
-        if ( is_file( $_path ) && is_readable( $_path ) && ( false !== ( $_eventTemplate = file_get_contents( $_path ) ) ) )
+        if ( is_file( $_path ) &&
+             is_readable( $_path ) &&
+             ( false !== ( $_eventTemplate = file_get_contents( $_path ) ) )
+        )
         {
-            if ( false !== ( $_eventTemplate = json_decode( $_eventTemplate, true ) ) && JSON_ERROR_NONE == json_last_error() )
+            if ( false !== ( $_eventTemplate = json_decode( $_eventTemplate, true ) ) &&
+                 JSON_ERROR_NONE == json_last_error()
+            )
             {
                 Platform::storeSet( 'scripting.event_schema', $_eventTemplate, 86400 );
 
@@ -200,17 +205,15 @@ class ScriptEvent
         }
 
         //	Clean up the event extras, remove data portion
-        $_eventExtras = array_merge(
-            $event->getData(),
-            array(
-                'timestamp' => date( 'c', Option::server( 'REQUEST_TIME_FLOAT', Option::server( 'REQUEST_TIME', microtime( true ) ) ) ),
-                'path'      => $_path = $dispatcher->getPathInfo( true )
-            )
-        );
+        $_eventExtras = $event->getData();
+        $_path = $dispatcher->getPathInfo( true );
 
         //	Clean up the trigger
-        $_trigger =
-            false !== strpos( $_path, 'rest', 0 ) || false !== strpos( $_path, '/rest', 0 ) ? str_replace( array( '/rest', 'rest' ), null, $_path ) : $_path;
+        $_trigger = false !== strpos( $_path, 'rest', 0 ) || false !== strpos( $_path, '/rest', 0 ) ? str_replace(
+            array( '/rest', 'rest' ),
+            null,
+            $_path
+        ) : $_path;
 
         //	Build the array
         $_event = array(
@@ -219,12 +222,18 @@ class ScriptEvent
                 'id'               => $event->getEventId(),
                 'name'             => $eventName,
                 'trigger'          => $_trigger,
+                'request_path'     => $_path,
                 'stop_propagation' => Option::get( $_eventExtras, 'stop_propagation', false, true ),
-                //	Dispatcher information
-                'dispatcher'       => array(
-                    'id'   => spl_object_hash( $dispatcher ),
-                    'type' => Inflector::neutralize( get_class( $dispatcher ) ),
+                'timestamp'        => date(
+                    'c',
+                    Option::server(
+                        'REQUEST_TIME_FLOAT',
+                        Option::server( 'REQUEST_TIME', microtime( true ) )
+                    )
                 ),
+                //	Dispatcher information
+                'dispatcher_id'    => spl_object_hash( $dispatcher ),
+                'dispatcher_type'  => Inflector::neutralize( get_class( $dispatcher ) ),
                 //	Extra information passed by caller
                 'extra'            => Option::clean( $extra ),
             ),
@@ -240,8 +249,6 @@ class ScriptEvent
                 'config'  => $_config,
                 //  The current session
                 'session' => static::_getCleanedSession(),
-                //	The parsed request information
-                'request' => $_eventExtras,
             ),
         );
 
@@ -307,7 +314,8 @@ class ScriptEvent
         }
 
         //  Single row, or so we think...
-        if ( is_array( $_data ) && !Pii::isEmpty( $_record = Option::get( $_data, 'record' ) ) && count( $_record ) >= 1 )
+        if ( is_array( $_data ) && !Pii::isEmpty( $_record = Option::get( $_data, 'record' ) ) && count( $_record ) >= 1
+        )
         {
             return $wrapped ? array( static::$_payloadKey => $_data ) : $_data;
         }
@@ -349,7 +357,10 @@ class ScriptEvent
         }
 
         //  Single row, or so we think...
-        if ( is_array( $_currentData ) && !Pii::isEmpty( $_record = Option::get( $_currentData, 'record' ) ) && count( $_record ) >= 1 )
+        if ( is_array( $_currentData ) &&
+             !Pii::isEmpty( $_record = Option::get( $_currentData, 'record' ) ) &&
+             count( $_record ) >= 1
+        )
         {
             return $wrapped ? $_innerData : $newData;
         }
