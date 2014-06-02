@@ -930,6 +930,9 @@ SQL;
         {
             if ( static::GET == $this->_action )
             {
+                // lock down access to API listing
+                $this->checkPermission( $this->_action );
+
                 return $this->_listResources();
             }
 

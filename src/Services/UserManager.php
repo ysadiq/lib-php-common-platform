@@ -94,6 +94,9 @@ class UserManager extends BaseSystemRestService
         {
             if ( static::GET == $this->_action )
             {
+                // lock down access to API
+                $this->checkPermission( $this->_action );
+
                 return $this->_listResources();
             }
 

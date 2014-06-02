@@ -131,6 +131,9 @@ class SwaggerManager extends BasePlatformRestService
             return false;
         }
 
+        // lock down access to API
+        $this->checkPermission( $this->getRequestedAction(), $this->_resource );
+
         if ( empty( $this->_resource ) )
         {
             return static::getSwagger();
