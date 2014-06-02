@@ -192,7 +192,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $_message =
                 $this->_action .
                 ' requests' .
-                ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
+                ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"'
+                    : ' without a resource' ) .
                 ' are not currently supported by the "' .
                 $this->_apiName .
                 '" service.';
@@ -242,13 +243,17 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             }
 
             //	Does this action have a handler?
-            if ( false !== ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) ) )
+            if ( false !==
+                 ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) )
+            )
             {
                 $_handler = $this->_extraActions[ $_action ];
 
                 if ( !is_callable( $_handler ) )
                 {
-                    throw new MisconfigurationException( 'The handler specified for extra action "' . $_action . '" is invalid.' );
+                    throw new MisconfigurationException(
+                        'The handler specified for extra action "' . $_action . '" is invalid.'
+                    );
                 }
 
                 //	Added $this as argument because handler *could* be outside this class
@@ -288,7 +293,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         $_methodToCall = false;
 
         //	Check verb aliases, set correct action allowing for closures
-        if ( true === $this->_autoDispatch && null !== ( $_alias = Option::get( $this->_verbAliases, $this->_action ) ) )
+        if ( true === $this->_autoDispatch && null !== ( $_alias = Option::get( $this->_verbAliases, $this->_action ) )
+        )
         {
             //	A closure?
             if ( is_callable( $_alias ) )
@@ -394,7 +400,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         }
 
         //	Native and PHP response types return, not emit...
-        if ( in_array( $this->_outputFormat, array( false, DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE ) ) )
+        if ( in_array(
+            $this->_outputFormat,
+            array( false, DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE )
+        )
+        )
         {
             return $this->_response;
         }
@@ -436,7 +446,13 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         if ( !empty( $this->_outputFormat ) )
         {
             //	No return from here...
-            $_response = RestResponse::sendResults( $_result, $this->_responseCode, $this->_outputFormat, $this->_outputAsFile, false );
+            $_response = RestResponse::sendResults(
+                $_result,
+                $this->_responseCode,
+                $this->_outputFormat,
+                $this->_outputAsFile,
+                false
+            );
         }
 
         //	Native arrays must stay local, just return

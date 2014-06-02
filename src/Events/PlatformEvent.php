@@ -135,4 +135,21 @@ class PlatformEvent extends SeedEvent
 
         return parent::setData( $data );
     }
+
+    /**
+     * Merge an array of data into the $data property
+     *
+     * @param array|object $data
+     *
+     * @return $this
+     */
+    public function mergeData( $data )
+    {
+        foreach ( $data as $_key => $_value )
+        {
+            $this->_data[ $_key ] = $_value;
+        }
+
+        return $this;
+    }
 }
