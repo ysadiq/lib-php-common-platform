@@ -218,9 +218,9 @@ class EmailSvc extends BasePlatformRestService
         }
 
         // do lookup replacement, currently {xxx}
-        static::replaceLookupsInStrings( $_subject );
-        static::replaceLookupsInStrings( $_text );
-        static::replaceLookupsInStrings( $_html );
+        Session::replaceLookupsInStrings( $_subject );
+        Session::replaceLookupsInStrings( $_text );
+        Session::replaceLookupsInStrings( $_html );
 
         // do placeholder replacement, currently {xxx}
         if ( !empty( $data ) )
@@ -258,34 +258,6 @@ class EmailSvc extends BasePlatformRestService
         );
 
         return EmailUtilities::sendMessage( $this->_transport, $_message );
-    }
-
-    public static function replaceLookupsInStrings( &$string )
-    {
-        if ( false !== strpos( $string, '{' ) )
-        {
-            $_search = array();
-            $_replace = array();
-            // brute force, yeah this could be better
-            $_exploded = explode( '{', $string );
-            foreach ( $_exploded as $_word )
-            {
-                $_lookup = strstr( $_word, '}', true );
-                if ( !empty( $_lookup ) )
-                {
-                    if ( Session::getLookupValue( $_lookup, $_value ) )
-                    {
-                        $_search[] = '{'.$_lookup.'}';
-                        $_replace[] = $_value;
-                    }
-                }
-            }
-
-            if ( !empty( $_search ) )
-            {
-                $string = str_replace( $_search, $_replace, $string );
-            }
-        }
     }
 
     /*

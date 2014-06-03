@@ -2663,6 +2663,26 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     }
 
     /**
+     * @param array $record
+     *
+     * @return array
+     */
+    public static function interpretRecordValues( $record )
+    {
+        if ( !is_array( $record ) || empty( $record ) )
+        {
+            return $record;
+        }
+
+        foreach ( $record as $_field => $_value )
+        {
+            $record[$_field] = Session::replaceLookup( $_value );
+        }
+
+        return $record;
+    }
+
+    /**
      * @param array | string $data          Array to check or comma-delimited string to convert
      * @param string | null  $str_delimiter Delimiter to check for string to array mapping, no op if null
      * @param boolean        $check_single  Check if single (associative) needs to be made multiple (numeric)

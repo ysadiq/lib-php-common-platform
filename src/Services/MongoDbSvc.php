@@ -663,7 +663,7 @@ class MongoDbSvc extends NoSqlDbSvc
 
         // Note: order matters, watch '='
         $_sqlOperators = array( '!=', '>=', '<=', '=', '>', '<', ' IN ', ' NIN ', ' ALL ', ' LIKE ' );
-        $_mongoOperators = array( '$ne', '$gte', '$lte', '$eq', '$gt', '$lt', '$in', '$nin', '$all', ' LIKE ' );
+        $_mongoOperators = array( '$ne', '$gte', '$lte', '$eq', '$gt', '$lt', '$in', '$nin', '$all', 'MongoRegex' );
         foreach ( $_sqlOperators as $_key => $_sqlOp )
         {
             $_ops = array_map( 'trim', explode( $_sqlOp, $filter ) );
@@ -776,10 +776,14 @@ class MongoDbSvc extends NoSqlDbSvc
 
     protected static function buildCriteriaArray( $filter, $params = null, $ss_filters = null )
     {
+        // interpret any parameter values as lookups
+        $params = static::interpretRecordValues( $params );
+
         // build filter array if necessary
         $_criteria = $filter;
         if ( !is_array( $filter ) )
         {
+            Session::replaceLookupsInStrings( $filter );
             $_test = json_decode( $filter, true );
             if ( !is_null( $_test ) )
             {
@@ -1107,6 +1111,8 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     protected function parseRecord( $record, $fields_info, $filter_info = null, $for_update = false, $old_record = null )
     {
+        $record = $this->interpretRecordValues( $record );
+
         switch ( $this->getAction() )
         {
             case static::MERGE:

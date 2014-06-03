@@ -336,7 +336,7 @@ class SqlDbSvc extends BaseDbSvc
             {
                 $_extraFields = Option::get( $this->_requestData, $_relative . '_fields', '*' );
                 $_extraOrder = Option::get( $this->_requestData, $_relative . '_order', '' );
-                $_relations[] = array( 'name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder );
+                $_relations[] = array('name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder);
             }
 
             $this->_requestData['related'] = $_relations;
@@ -377,7 +377,7 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
-            return array( 'resource' => $_resources );
+            return array('resource' => $_resources);
         }
         catch ( RestException $_ex )
         {
@@ -385,7 +385,8 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -415,7 +416,8 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -548,7 +550,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_command->truncateTable( $table );
             }
 
-            return array( 'success' => true );
+            return array('success' => true);
         }
         catch ( RestException $_ex )
         {
@@ -830,9 +832,13 @@ class SqlDbSvc extends BaseDbSvc
      */
     protected function _convertFilterToNative( $filter, $params = array(), $ss_filters = array() )
     {
+        // interpret any parameter values as lookups
+        $params = static::interpretRecordValues( $params );
+
         if ( !is_array( $filter ) )
         {
             // todo parse client filter?
+            Session::replaceLookupsInStrings( $filter );
             $_filterString = $filter;
             $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true );
             if ( !empty( $_serverFilter ) )
@@ -848,7 +854,7 @@ class SqlDbSvc extends BaseDbSvc
                 $params = array_merge( $params, $_serverFilter['params'] );
             }
 
-            return array( 'where' => $_filterString, 'params' => $params );
+            return array('where' => $_filterString, 'params' => $params);
         }
         else
         {
@@ -863,12 +869,12 @@ class SqlDbSvc extends BaseDbSvc
                 }
                 else
                 {
-                    $_filterArray = array( 'AND', $_filterArray, $_serverFilter['filter'] );
+                    $_filterArray = array('AND', $_filterArray, $_serverFilter['filter']);
                 }
                 $params = array_merge( $params, $_serverFilter['params'] );
             }
 
-            return array( 'where' => $_filterArray, 'params' => $params );
+            return array('where' => $_filterArray, 'params' => $params);
         }
     }
 
@@ -884,6 +890,8 @@ class SqlDbSvc extends BaseDbSvc
      */
     protected function parseRecord( $record, $fields_info, $filter_info = null, $for_update = false, $old_record = null )
     {
+        $record = $this->interpretRecordValues( $record );
+
         $_parsed = array();
 //        $record = DataFormat::arrayKeyLower( $record );
         $_keys = array_keys( $record );
@@ -1286,7 +1294,7 @@ class SqlDbSvc extends BaseDbSvc
             $outArray[] = $out;
         }
 
-        return array( 'fields' => $outArray, 'bindings' => $bindArray );
+        return array('fields' => $outArray, 'bindings' => $bindArray);
     }
 
     /**
@@ -1342,7 +1350,7 @@ class SqlDbSvc extends BaseDbSvc
         }
 
         $_relatedData = array();
-        $_relatedExtras = array( 'limit' => static::MAX_RECORDS_RETURNED, 'fields' => '*' );
+        $_relatedExtras = array('limit' => static::MAX_RECORDS_RETURNED, 'fields' => '*');
         if ( '*' == $requests )
         {
             foreach ( $relations as $_name => $_relation )
@@ -1405,7 +1413,8 @@ class SqlDbSvc extends BaseDbSvc
                 $_where = Option::get( $_criteria, 'where' );
                 $_params = Option::get( $_criteria, 'params', array() );
 
-                $relatedRecords = $this->_recordQuery( $relatedTable, $_fields, $_where, $_params, $_bindings, $extras );
+                $relatedRecords =
+                    $this->_recordQuery( $relatedTable, $_fields, $_where, $_params, $_bindings, $extras );
                 if ( !empty( $relatedRecords ) )
                 {
                     return Option::get( $relatedRecords, 0 );
@@ -1463,7 +1472,7 @@ class SqlDbSvc extends BaseDbSvc
                             $_fields = Option::get( $_result, 'fields' );
                             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                            $_where = array( 'in', $relatedField, $relatedIds );
+                            $_where = array('in', $relatedField, $relatedIds);
 
                             return $this->_recordQuery(
                                 $relatedTable,
@@ -1594,7 +1603,7 @@ class SqlDbSvc extends BaseDbSvc
                 $this->validateTableAccess( $many_table, static::DELETE );
                 $_where = array();
                 $_params = array();
-                $_where[] = array( 'in', $_pkField, $_deleteMany );
+                $_where[] = array('in', $_pkField, $_deleteMany);
                 $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
                 if ( !empty( $_serverFilter ) )
                 {
@@ -1668,7 +1677,7 @@ class SqlDbSvc extends BaseDbSvc
                     // adopt/relate/link unlinked children
                     $_where = array();
                     $_params = array();
-                    $_where[] = array( 'in', $_pkField, $_relateMany );
+                    $_where[] = array('in', $_pkField, $_relateMany);
                     $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
                     if ( !empty( $_serverFilter ) )
                     {
@@ -1685,7 +1694,7 @@ class SqlDbSvc extends BaseDbSvc
                         $_where = $_where[0];
                     }
 
-                    $_updates = array( $many_field => $one_id );
+                    $_updates = array($many_field => $one_id);
                     $_parsed = $this->parseRecord( $_updates, $_manyFields, $_ssFilters, true );
                     if ( !empty( $_parsed ) )
                     {
@@ -1702,7 +1711,7 @@ class SqlDbSvc extends BaseDbSvc
                     // disown/un-relate/unlink linked children
                     $_where = array();
                     $_params = array();
-                    $_where[] = array( 'in', $_pkField, $_disownMany );
+                    $_where[] = array('in', $_pkField, $_disownMany);
                     $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
                     if ( !empty( $_serverFilter ) )
                     {
@@ -1719,7 +1728,7 @@ class SqlDbSvc extends BaseDbSvc
                         $_where = $_where[0];
                     }
 
-                    $_updates = array( $many_field => null );
+                    $_updates = array($many_field => null);
                     $_parsed = $this->parseRecord( $_updates, $_manyFields, $_ssFilters, true );
                     if ( !empty( $_parsed ) )
                     {
@@ -1773,7 +1782,8 @@ class SqlDbSvc extends BaseDbSvc
             $_fields = Option::get( $_result, 'fields' );
             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
             $_params[":f_$one_field"] = $one_id;
-            $maps = $this->_recordQuery( $map_table, $_fields, "$one_field = :f_$one_field", $_params, $_bindings, null );
+            $maps =
+                $this->_recordQuery( $map_table, $_fields, "$one_field = :f_$one_field", $_params, $_bindings, null );
             unset( $maps['meta'] );
 
             $createMap = array(); // map records to create
@@ -1817,7 +1827,7 @@ class SqlDbSvc extends BaseDbSvc
                         }
                     }
 
-                    $createMap[] = array( $many_field => $id, $one_field => $one_id );
+                    $createMap[] = array($many_field => $id, $one_field => $one_id);
                 }
             }
 
@@ -1846,7 +1856,7 @@ class SqlDbSvc extends BaseDbSvc
                     $_manyId = (int)$this->_dbConn->lastInsertID;
                     if ( !empty( $_manyId ) )
                     {
-                        $createMap[] = array( $many_field => $_manyId, $one_field => $one_id );
+                        $createMap[] = array($many_field => $_manyId, $one_field => $one_id);
                     }
 
                 }
@@ -1922,7 +1932,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_where = array();
                 $_params = array();
                 $_where[] = "$one_field = '$one_id'";
-                $_where[] = array( 'in', $many_field, $deleteMap );
+                $_where[] = array('in', $many_field, $deleteMap);
                 $_serverFilter = $this->buildQueryStringFromData( $_ssMapFilters, true );
                 if ( !empty( $_serverFilter ) )
                 {
@@ -1948,7 +1958,8 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update many to one map assignment.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to update many to one map assignment.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -1999,7 +2010,7 @@ class SqlDbSvc extends BaseDbSvc
             $_sql .= "$_name $_op $_value";
         }
 
-        return array( 'filter' => $_sql, 'params' => $_params );
+        return array('filter' => $_sql, 'params' => $_params);
     }
 
     /**
@@ -2274,7 +2285,7 @@ class SqlDbSvc extends BaseDbSvc
                 }
 
                 $_idName = ( isset( $_idsInfo, $_idsInfo[0], $_idsInfo[0]['name'] ) ) ? $_idsInfo[0]['name'] : null;
-                $_out = ( is_array( $id ) ) ? $id : array( $_idName => $id );
+                $_out = ( is_array( $id ) ) ? $id : array($_idName => $id);
 
                 // add via record, so batch processing can retrieve extras
                 if ( $_requireMore )
@@ -2321,7 +2332,9 @@ class SqlDbSvc extends BaseDbSvc
                         );
                         if ( empty( $_result ) )
                         {
-                            throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
+                            throw new NotFoundException( "Record with identifier '" .
+                                                         print_r( $id, true ) .
+                                                         "' not found." );
                         }
                     }
                 }
@@ -2338,7 +2351,7 @@ class SqlDbSvc extends BaseDbSvc
                 }
 
                 $_idName = ( isset( $_idsInfo, $_idsInfo[0], $_idsInfo[0]['name'] ) ) ? $_idsInfo[0]['name'] : null;
-                $_out = ( is_array( $id ) ) ? $id : array( $_idName => $id );
+                $_out = ( is_array( $id ) ) ? $id : array($_idName => $id);
 
                 // add via record, so batch processing can retrieve extras
                 if ( $_requireMore )
@@ -2372,7 +2385,9 @@ class SqlDbSvc extends BaseDbSvc
                     );
                     if ( empty( $_result ) )
                     {
-                        throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
+                        throw new NotFoundException( "Record with identifier '" .
+                                                     print_r( $id, true ) .
+                                                     "' not found." );
                     }
 
                     $_out = $_result[0];
@@ -2400,7 +2415,9 @@ class SqlDbSvc extends BaseDbSvc
                         );
                         if ( empty( $_result ) )
                         {
-                            throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
+                            throw new NotFoundException( "Record with identifier '" .
+                                                         print_r( $id, true ) .
+                                                         "' not found." );
                         }
                     }
                 }
@@ -2408,7 +2425,7 @@ class SqlDbSvc extends BaseDbSvc
                 if ( empty( $_out ) )
                 {
                     $_idName = ( isset( $_idsInfo, $_idsInfo[0], $_idsInfo[0]['name'] ) ) ? $_idsInfo[0]['name'] : null;
-                    $_out = ( is_array( $id ) ) ? $id : array( $_idName => $id );
+                    $_out = ( is_array( $id ) ) ? $id : array($_idName => $id);
                 }
                 break;
 
@@ -2424,7 +2441,8 @@ class SqlDbSvc extends BaseDbSvc
                 $_fields = Option::get( $_result, 'fields' );
                 $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                $_result =
+                    $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
                 if ( empty( $_result ) )
                 {
                     throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
@@ -2482,16 +2500,16 @@ class SqlDbSvc extends BaseDbSvc
                     $_temp[] = Option::get( $_record, $_idName );
                 }
 
-                $_where[] = array( 'in', $_idName, $_temp );
+                $_where[] = array('in', $_idName, $_temp);
             }
             else
             {
-                $_where[] = array( 'in', $_idName, $this->_batchRecords );
+                $_where[] = array('in', $_idName, $this->_batchRecords);
             }
         }
         else
         {
-            $_where[] = array( 'in', $_idName, $this->_batchIds );
+            $_where[] = array('in', $_idName, $this->_batchIds);
         }
 
         $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
@@ -2524,7 +2542,8 @@ class SqlDbSvc extends BaseDbSvc
                 $_fields = Option::get( $_result, 'fields' );
                 $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                $_result =
+                    $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
                 if ( empty( $_result ) )
                 {
                     throw new NotFoundException( 'No records were found using the given identifiers.' );
@@ -2706,7 +2725,7 @@ class SqlDbSvc extends BaseDbSvc
 
                         if ( !empty( $_errors ) )
                         {
-                            $_context = array( 'error' => $_errors, 'record' => $_out );
+                            $_context = array('error' => $_errors, 'record' => $_out);
                             throw new NotFoundException( 'Batch Error: Not all records could be retrieved.', null, null, $_context );
                         }
                     }
@@ -2723,7 +2742,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_out = array();
                 foreach ( $this->_batchIds as $_id )
                 {
-                    $_out[] = array( $_idName => $_id );
+                    $_out[] = array($_idName => $_id);
                 }
             }
 

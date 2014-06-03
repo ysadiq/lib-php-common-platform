@@ -1049,6 +1049,34 @@ class Session extends BasePlatformRestResource
         return $lookup;
     }
 
+    public static function replaceLookupsInStrings( &$string )
+    {
+        if ( false !== strpos( $string, '{' ) )
+        {
+            $_search = array();
+            $_replace = array();
+            // brute force, yeah this could be better
+            $_exploded = explode( '{', $string );
+            foreach ( $_exploded as $_word )
+            {
+                $_lookup = strstr( $_word, '}', true );
+                if ( !empty( $_lookup ) )
+                {
+                    if ( Session::getLookupValue( $_lookup, $_value ) )
+                    {
+                        $_search[] = '{'.$_lookup.'}';
+                        $_replace[] = $_value;
+                    }
+                }
+            }
+
+            if ( !empty( $_search ) )
+            {
+                $string = str_replace( $_search, $_replace, $string );
+            }
+        }
+    }
+
     /**
      * @param int $userId
      *
