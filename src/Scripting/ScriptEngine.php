@@ -374,8 +374,6 @@ _wrapperResult = (function() {
 		_event.script_result = {'error':_ex.message};
 	}
 
-    var_dump(_event.record);
-
 	return _event;
 
 })();
