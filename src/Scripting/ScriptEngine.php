@@ -356,13 +356,14 @@ class ScriptEngine
         $exposedPlatform['api'] = static::_getExposedApi();
         static::$_engine->event = $exposedEvent;
         static::$_engine->platform = $exposedPlatform;
+        $_jsonEvent = json_encode( $exposedEvent, JSON_UNESCAPED_SLASHES );
 
         $_enrobedScript = <<<JS
 
 _wrapperResult = (function() {
 
-    var _event = DSP.event;
-    
+    var _event = {$_jsonEvent};
+
 	try	{
 		_event.script_result = (function(event, platform) {
 			//noinspection BadExpressionStatementJS,JSUnresolvedVariable
@@ -372,6 +373,8 @@ _wrapperResult = (function() {
 	catch ( _ex ) {
 		_event.script_result = {'error':_ex.message};
 	}
+
+    var_dump(_event.record);
 
 	return _event;
 
