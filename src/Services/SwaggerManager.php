@@ -615,64 +615,68 @@ SQL;
 
         $_swaps = array( array(), array() );
 
-        if ( 'db' == $_apiName && 'db' == $_resource )
+        switch ( $service->getTypeId() )
         {
-            $_swaps = array(
-                array(
-                    $_savedResource,
-                ),
-                array(
-                    '{table_name}',
-                ),
-            );
+            case PlatformServiceTypes::LOCAL_SQL_DB:
+            case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
+                $_swaps = array(
+                    array(
+                        $_savedResource,
+                    ),
+                    array(
+                        '{table_name}',
+                    ),
+                );
 
-            $_path = str_ireplace( $_swaps[0], $_swaps[1], $_path );
-        }
-        else if ( $service instanceof BaseFileSvc )
-        {
-            $_swaps = array(
-                array(
-                    $service->getContainerId(),
-                    $_folderPath = $service->getFolderPath(),
-                    $_filePath = $service->getFilePath(),
-                    //  This one removes any slashes from the final event name...
-                    null,
-                ),
-                array(
-                    '{container}',
-                    '{folder_path}',
-                    '{file_path}',
-                    //  This one removes any slashes from the final event name...
-                    '/',
-                ),
-            );
+                $_path = str_ireplace( $_swaps[0], $_swaps[1], $_path );
+                break;
 
-            //  Add in optional trailing slashes
-            if ( $_folderPath )
-            {
-                $_swaps[0][] = $_folderPath[ strlen( $_folderPath ) - 1 ] != '/'
-                    ? $_folderPath . '/'
-                    : substr(
-                        $_folderPath,
-                        0,
-                        strlen( $_folderPath ) - 1
-                    );
-                $_swaps[1][] = '{folder_path}';
-            }
+            case PlatformServiceTypes::LOCAL_FILE_STORAGE:
+            case PlatformServiceTypes::REMOTE_FILE_STORAGE:
+                $_swaps = array(
+                    array(
+                        $service->getContainerId(),
+                        $_folderPath = $service->getFolderPath(),
+                        $_filePath = $service->getFilePath(),
+                        //  This one removes any slashes from the final event name...
+                        null,
+                    ),
+                    array(
+                        '{container}',
+                        '{folder_path}',
+                        '{file_path}',
+                        //  This one removes any slashes from the final event name...
+                        '/',
+                    ),
+                );
 
-            if ( $_filePath )
-            {
-                $_swaps[0][] = $_filePath[ strlen( $_filePath ) - 1 ] != '/'
-                    ? $_filePath . '/'
-                    : substr(
-                        $_filePath,
-                        0,
-                        strlen( $_filePath ) - 1
-                    );
-                $_swaps[1][] = '{file_path}';
-            }
+                //  Add in optional trailing slashes
+                if ( $_folderPath )
+                {
+                    $_swaps[0][] = $_folderPath[ strlen( $_folderPath ) - 1 ] != '/'
+                        ? $_folderPath . '/'
+                        : substr(
+                            $_folderPath,
+                            0,
+                            strlen( $_folderPath ) - 1
+                        );
+                    $_swaps[1][] = '{folder_path}';
+                }
 
-            $_path = str_ireplace( $_swaps[0], $_swaps[1], $_path );
+                if ( $_filePath )
+                {
+                    $_swaps[0][] = $_filePath[ strlen( $_filePath ) - 1 ] != '/'
+                        ? $_filePath . '/'
+                        : substr(
+                            $_filePath,
+                            0,
+                            strlen( $_filePath ) - 1
+                        );
+                    $_swaps[1][] = '{file_path}';
+                }
+
+                $_path = str_ireplace( $_swaps[0], $_swaps[1], $_path );
+                break;
         }
 
         if ( empty( $_path ) )
