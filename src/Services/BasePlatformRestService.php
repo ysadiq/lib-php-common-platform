@@ -683,8 +683,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         $_eventNames = is_array( $_eventNames ) ? $_eventNames : array( $_eventNames );
 
         $_result = array();
+        $_pathInfo = trim( str_replace( '/rest', null, Option::server( 'INLINE_REQUEST_URI', Pii::request( false )->getPathInfo() ) ), '/' );
 
         $_values = array(
+            'action'          => strtolower( $this->_action ),
             'api_name'        => $this->_apiName,
             'service_id'      => $this->_serviceId,
             'request_payload' => $this->_requestPayload,
@@ -692,7 +694,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             'container'       => $this->_resource,
             'folder_path'     => Option::get( $this->_resourceArray, 1 ),
             'file_path'       => Option::get( $this->_resourceArray, 2 ),
-            'request_uri'     => explode( '/', Pii::request( true )->getPathInfo() ),
+            'request_uri'     => explode( '/', $_pathInfo ),
         );
 
         if ( 'rest' !== ( $_part = array_shift( $_values['request_uri'] ) ) )
