@@ -73,17 +73,6 @@ class EmailSvc extends BasePlatformRestService
      * @return array
      * @throws BadRequestException
      */
-    protected function _handleGet()
-    {
-
-        // no resources currently
-        return array();
-    }
-
-    /**
-     * @return array
-     * @throws BadRequestException
-     */
     protected function _handlePost()
     {
         $_data = RestData::getPostedData( false, true );

@@ -460,7 +460,7 @@ class User extends BasePlatformSystemModel
                 foreach ( $this->role->role_service_accesses as $_perm )
                 {
                     $_permServiceId = $_perm->service_id;
-                    $_temp = $_perm->getAttributes( $columns ? : array( 'service_id', 'component', 'access', 'filters' ) );
+                    $_temp = $_perm->getAttributes( $columns ? : array( 'service_id', 'component', 'verbs', 'filters' ) );
 
                     if ( $this->role->services )
                     {
@@ -485,7 +485,7 @@ class User extends BasePlatformSystemModel
                 /** @var RoleServiceAccess $_perm */
                 foreach ( $this->role->role_system_accesses as $_perm )
                 {
-                    $_temp = $_perm->getAttributes( $columns ? : array( 'component', 'access', 'filters' ) );
+                    $_temp = $_perm->getAttributes( $columns ? : array( 'component', 'verbs', 'filters' ) );
                     $_temp['service'] = 'system';
                     $_perms[] = $_temp;
                 }

@@ -54,9 +54,9 @@ class Profile extends BasePlatformRestResource
 				'is_active'      => true,
 				'resource_array' => $resources,
 				'verb_aliases'   => array(
-					static::Put   => static::Post,
-					static::Patch => static::Post,
-					static::Merge => static::Post,
+					static::PUT   => static::POST,
+					static::PATCH => static::POST,
+					static::MERGE => static::POST,
 				)
 			)
 		);

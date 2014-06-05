@@ -359,7 +359,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    public function patchRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 

@@ -98,7 +98,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         {
             //	Default verb aliases
             $settings['verb_aliases'] = array(
-                static::PATCH => static::MERGE,
+                static::MERGE => static::PATCH,
             );
         }
 
@@ -133,7 +133,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         $this->_requestData = array_merge( $_REQUEST, $_posted );
 
         // Add server side filtering properties
-        if ( null != $_ssFilters = Session::getServiceFilters( $this->_apiName, $this->_resource ) )
+        if ( null != $_ssFilters = Session::getServiceFilters( $this->_action, $this->_apiName, $this->_resource ) )
         {
             $this->_requestData['ss_filters'] = $_ssFilters;
         }
@@ -172,7 +172,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             throw new BadRequestException( 'Table name can not be empty.' );
         }
 
-        $_action = ( empty( $action ) ) ? $this->getRequestedAction() : $action;
+        $_action = ( empty( $action ) ) ? $this->_action : $action;
 
         // finally check that the current user has privileges to access this table
         $this->checkPermission( $_action, $table );
@@ -193,9 +193,9 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         else
         {
             // listing and getting table properties are checked by table
-            if ( static::GET != $_action = $this->getRequestedAction() )
+            if ( static::GET != $this->_action )
             {
-                $this->checkPermission( $_action );
+                $this->checkPermission( $this->_action );
             }
         }
     }
@@ -378,7 +378,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @return array
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      */
-    protected function _handleMerge()
+    protected function _handlePatch()
     {
         $_amnesty = false;
         $_records = Option::get( $this->_requestData, static::RECORD_WRAPPER, null, true );
@@ -400,14 +400,14 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
         if ( !empty( $this->_resourceId ) )
         {
-            return $this->mergeRecordById( $this->_resource, $_records, $this->_resourceId, $this->_requestData );
+            return $this->patchRecordById( $this->_resource, $_records, $this->_resourceId, $this->_requestData );
         }
 
 		$_ids = Option::get( $this->_requestData, 'ids', null, true );
 
 		if ( !empty( $_ids ) )
 		{
-			$_result = $this->mergeRecordsByIds( $this->_resource, $_records, $_ids, $this->_requestData );
+			$_result = $this->patchRecordsByIds( $this->_resource, $_records, $_ids, $this->_requestData );
 		}
 		else
 		{
@@ -415,11 +415,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 			if ( !empty( $_filter ) )
 			{
 				$_params = Option::get( $this->_requestData, 'params', array(), true );
-				$_result = $this->mergeRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $this->_requestData );
+				$_result = $this->patchRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $this->_requestData );
 			}
 			else
 			{
-				$_result = $this->mergeRecords( $this->_resource, $_records, $this->_requestData );
+				$_result = $this->patchRecords( $this->_resource, $_records, $this->_requestData );
 				if ( $_amnesty )
 				{
 					return Option::get( $_result, 0 );
@@ -952,7 +952,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @throws \Exception
      * @return array
      */
-    public function mergeRecords( $table, $records, $extras = array() )
+    public function patchRecords( $table, $records, $extras = array() )
     {
         $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
 
@@ -1070,11 +1070,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @throws \Exception
      * @return array
      */
-    public function mergeRecord( $table, $record, $extras = array() )
+    public function patchRecord( $table, $record, $extras = array() )
     {
         $_records = static::validateAsArray( $record, null, true, 'The request contains no valid record fields.' );
 
-        $_results = $this->mergeRecords( $table, $_records, $extras );
+        $_results = $this->patchRecords( $table, $_records, $extras );
 
         return Option::get( $_results, 0, array() );
     }
@@ -1089,7 +1089,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @throws \Exception
      * @return array
      */
-    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    public function patchRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
@@ -1112,7 +1112,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         $_ids = static::recordsAsIds( $_records, $_idsInfo );
         $extras['fields'] = $_fields;
 
-        return $this->mergeRecordsByIds( $table, $record, $_ids, $extras );
+        return $this->patchRecordsByIds( $table, $record, $_ids, $extras );
     }
 
     /**
@@ -1124,7 +1124,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @throws \Exception
      * @return array
      */
-    public function mergeRecordsByIds( $table, $record, $ids, $extras = array() )
+    public function patchRecordsByIds( $table, $record, $ids, $extras = array() )
     {
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
         $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
@@ -1247,11 +1247,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @throws \Exception
      * @return array
      */
-    public function mergeRecordById( $table, $record, $id, $extras = array() )
+    public function patchRecordById( $table, $record, $id, $extras = array() )
     {
         $record = static::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
 
-        $_results = $this->mergeRecordsByIds( $table, $record, $id, $extras );
+        $_results = $this->patchRecordsByIds( $table, $record, $id, $extras );
 
         return Option::get( $_results, 0, array() );
     }

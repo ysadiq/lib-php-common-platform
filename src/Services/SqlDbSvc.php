@@ -520,7 +520,7 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    public function patchRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
         // currently the same as update here
         return $this->updateRecordsByFilter( $table, $record, $filter, $params, $extras );
@@ -1514,7 +1514,6 @@ class SqlDbSvc extends BaseDbSvc
 
         try
         {
-            $_ssFilters = Session::getServiceFilters( $this->_apiName, $many_table );
             $_manyFields = $this->getFieldsInfo( $many_table );
             $_pkField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $_manyFields );
             $_fieldInfo = SqlDbUtilities::getFieldFromDescribe( $many_field, $_manyFields );
@@ -1580,6 +1579,7 @@ class SqlDbSvc extends BaseDbSvc
                 // create new children
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::POST );
+                $_ssFilters = Session::getServiceFilters( static::POST, $this->_apiName, $many_table );
                 foreach ( $_createMany as $_record )
                 {
                     $_parsed = $this->parseRecord( $_record, $_manyFields, $_ssFilters );
@@ -1601,6 +1601,7 @@ class SqlDbSvc extends BaseDbSvc
                 // destroy linked children that can't stand alone - sounds sinister
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::DELETE );
+                $_ssFilters = Session::getServiceFilters( static::DELETE, $this->_apiName, $many_table );
                 $_where = array();
                 $_params = array();
                 $_where[] = array('in', $_pkField, $_deleteMany);
@@ -1631,6 +1632,7 @@ class SqlDbSvc extends BaseDbSvc
             {
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::PUT );
+                $_ssFilters = Session::getServiceFilters( static::PUT, $this->_apiName, $many_table );
 
                 if ( !empty( $_updateMany ) )
                 {
@@ -1766,10 +1768,9 @@ class SqlDbSvc extends BaseDbSvc
         {
             throw new BadRequestException( "The $one_table id can not be empty." );
         }
+
         try
         {
-            $_ssManyFilters = Session::getServiceFilters( $this->_apiName, $many_table );
-            $_ssMapFilters = Session::getServiceFilters( $this->_apiName, $map_table );
             $oneFields = $this->getFieldsInfo( $one_table );
             $pkOneField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $oneFields );
             $manyFields = $this->getFieldsInfo( $many_table );
@@ -1838,6 +1839,7 @@ class SqlDbSvc extends BaseDbSvc
             {
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::POST );
+                $_ssManyFilters = Session::getServiceFilters( static::POST, $this->_apiName, $many_table );
                 // create new many records
                 foreach ( $createMany as $_record )
                 {
@@ -1867,6 +1869,7 @@ class SqlDbSvc extends BaseDbSvc
                 // update existing many records
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::PUT );
+                $_ssManyFilters = Session::getServiceFilters( static::PUT, $this->_apiName, $many_table );
 
                 $_where = array();
                 $_params = array();
@@ -1909,6 +1912,7 @@ class SqlDbSvc extends BaseDbSvc
             {
                 // do we have permission to do so?
                 $this->validateTableAccess( $map_table, static::POST );
+                $_ssMapFilters = Session::getServiceFilters( static::POST, $this->_apiName, $map_table );
                 foreach ( $createMap as $_record )
                 {
                     $_parsed = $this->parseRecord( $_record, $mapFields, $_ssMapFilters );
@@ -1929,6 +1933,7 @@ class SqlDbSvc extends BaseDbSvc
             {
                 // do we have permission to do so?
                 $this->validateTableAccess( $map_table, static::DELETE );
+                $_ssMapFilters = Session::getServiceFilters( static::DELETE, $this->_apiName, $map_table );
                 $_where = array();
                 $_params = array();
                 $_where[] = "$one_field = '$one_id'";
