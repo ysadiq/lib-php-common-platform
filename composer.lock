@@ -1,10 +1,9 @@
 {
     "_readme": [
         "This file locks the dependencies of your project to a known state",
-        "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
-        "This file is @generated automatically"
+        "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "f01c5f21fdd84f29b3a9686f52adb5b9",
+    "hash": "4d7d02afaf5514f41cc9615af246dcc4",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -115,7 +114,7 @@
             ],
             "authors": [
                 {
-                    "name": "Jonathan Wage",
+                    "name": "Jonathan H. Wage",
                     "email": "jonwage@gmail.com",
                     "homepage": "http://www.jwage.com/",
                     "role": "Creator"
@@ -134,9 +133,9 @@
                     "email": "kontakt@beberlei.de"
                 },
                 {
-                    "name": "Johannes M. Schmitt",
+                    "name": "Johannes Schmitt",
                     "email": "schmittjoh@gmail.com",
-                    "homepage": "https://github.com/schmittjoh",
+                    "homepage": "http://jmsyst.com",
                     "role": "Developer of wrapped JMSSerializerBundle"
                 }
             ],
@@ -274,9 +273,9 @@
             ],
             "authors": [
                 {
-                    "name": "Jason Sykes",
+                    "name": "Sykes, Jason",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Developer, client-side"
+                    "role": "Lead Engineer, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Javascript SDK",
@@ -354,18 +353,18 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "45f86d02ad37a06d47dc178ad01b814d79060516"
+                "reference": "a0effbe7ce79833384c1cb13941f83ceacf14cd7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/45f86d02ad37a06d47dc178ad01b814d79060516",
-                "reference": "45f86d02ad37a06d47dc178ad01b814d79060516",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/a0effbe7ce79833384c1cb13941f83ceacf14cd7",
+                "reference": "a0effbe7ce79833384c1cb13941f83ceacf14cd7",
                 "shasum": ""
             },
             "require": {
                 "dreamfactory/lib-php-common": "~1.5.0@dev",
-                "dreamfactory/yii": "1.1.13",
-                "kisma/kisma": "~0.2@dev",
+                "dreamfactory/yii": "~1.1.13.1",
+                "kisma/kisma": "~0.2.44@stable",
                 "php": ">=5.3.18"
             },
             "require-dev": {
@@ -417,7 +416,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-05-29 22:08:51"
+            "time": "2014-06-05 16:03:47"
         },
         {
             "name": "dreamfactory/oasys",
@@ -471,16 +470,16 @@
         },
         {
             "name": "dreamfactory/yii",
-            "version": "1.1.13",
+            "version": "1.1.13.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/yii.git",
-                "reference": "af4b63409222cbf5e23c9c18ca21fdd67afe76b6"
+                "reference": "6c0dabc38eee78fe9d018add20ce8e1efc066195"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/af4b63409222cbf5e23c9c18ca21fdd67afe76b6",
-                "reference": "af4b63409222cbf5e23c9c18ca21fdd67afe76b6",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/6c0dabc38eee78fe9d018add20ce8e1efc066195",
+                "reference": "6c0dabc38eee78fe9d018add20ce8e1efc066195",
                 "shasum": ""
             },
             "require": {
@@ -533,12 +532,12 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Exterminator"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Exterminator"
                 }
             ],
             "description": "Yii Web Programming Framework",
@@ -547,7 +546,7 @@
                 "framework",
                 "yii"
             ],
-            "time": "2014-02-24 17:33:55"
+            "time": "2014-06-05 15:21:23"
         },
         {
             "name": "guzzle/guzzle",
@@ -555,12 +554,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/guzzle3.git",
-                "reference": "92d9934f2fca1da15178c91239576ae26e505e60"
+                "reference": "49104c619b663038e636a819718adce3b27ba6f2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle3/zipball/92d9934f2fca1da15178c91239576ae26e505e60",
-                "reference": "92d9934f2fca1da15178c91239576ae26e505e60",
+                "url": "https://api.github.com/repos/guzzle/guzzle3/zipball/49104c619b663038e636a819718adce3b27ba6f2",
+                "reference": "49104c619b663038e636a819718adce3b27ba6f2",
                 "shasum": ""
             },
             "require": {
@@ -639,7 +638,7 @@
                 "rest",
                 "web service"
             ],
-            "time": "2014-05-07 17:04:22"
+            "time": "2014-06-04 19:49:37"
         },
         {
             "name": "jeremeamia/SuperClosure",
@@ -753,12 +752,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
-                "reference": "016423a804140a33814b8fad4240dbfa49a884da"
+                "reference": "25b16e801979098cb2f120e697bfce454b18bf23"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/016423a804140a33814b8fad4240dbfa49a884da",
-                "reference": "016423a804140a33814b8fad4240dbfa49a884da",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/25b16e801979098cb2f120e697bfce454b18bf23",
+                "reference": "25b16e801979098cb2f120e697bfce454b18bf23",
                 "shasum": ""
             },
             "require": {
@@ -786,7 +785,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "1.9.x-dev"
+                    "dev-master": "1.10.x-dev"
                 }
             },
             "autoload": {
@@ -813,7 +812,7 @@
                 "logging",
                 "psr-3"
             ],
-            "time": "2014-05-29 15:04:35"
+            "time": "2014-06-04 16:30:04"
         },
         {
             "name": "nikic/php-parser",
@@ -1284,8 +1283,7 @@
                 },
                 {
                     "name": "Jamie Hannaford",
-                    "email": "jamie.hannaford@rackspace.com",
-                    "homepage": "https://github.com/jamiehannaford"
+                    "email": "jamie@limetree.org"
                 }
             ],
             "description": "Rackspace open cloud php library",
@@ -1330,9 +1328,7 @@
             "authors": [
                 {
                     "name": "Fabien Potencier",
-                    "email": "fabien@symfony.com",
-                    "homepage": "http://fabien.potencier.org",
-                    "role": "Lead Developer"
+                    "email": "fabien@symfony.com"
                 },
                 {
                     "name": "Chris Corbyn"
@@ -2050,12 +2046,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Yaml.git",
-                "reference": "d151f00d4fae107ea0d70ade6b0d2d3e81f45ecd"
+                "reference": "b01d366060f33e18fd98b0008c41a01b0d25c95c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Yaml/zipball/d151f00d4fae107ea0d70ade6b0d2d3e81f45ecd",
-                "reference": "d151f00d4fae107ea0d70ade6b0d2d3e81f45ecd",
+                "url": "https://api.github.com/repos/symfony/Yaml/zipball/b01d366060f33e18fd98b0008c41a01b0d25c95c",
+                "reference": "b01d366060f33e18fd98b0008c41a01b0d25c95c",
                 "shasum": ""
             },
             "require": {
@@ -2090,7 +2086,7 @@
             ],
             "description": "Symfony Yaml Component",
             "homepage": "http://symfony.com",
-            "time": "2014-05-23 14:36:49"
+            "time": "2014-06-04 06:43:44"
         }
     ],
     "aliases": [
@@ -2120,7 +2116,5 @@
     "platform": {
         "php": ">=5.3.18"
     },
-    "platform-dev": [
-
-    ]
+    "platform-dev": []
 }
