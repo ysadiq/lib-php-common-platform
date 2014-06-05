@@ -325,7 +325,7 @@ class Event extends BaseSystemRestResource
      */
     public static function normalizeEventName( $event, &$eventName, $values = null, $addRequestValues = false )
     {
-        static $_requestValues = array(), $_replacements = array();
+        $_requestValues = $_replacements = array();
 
         if ( false === strpos( $eventName, '{' ) )
         {

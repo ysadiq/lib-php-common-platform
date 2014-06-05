@@ -293,8 +293,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         $_methodToCall = false;
 
         //	Check verb aliases, set correct action allowing for closures
-        if ( true === $this->_autoDispatch && null !== ( $_alias = Option::get( $this->_verbAliases, $this->_action ) )
-        )
+        if ( true === $this->_autoDispatch && null !== ( $_alias = Option::get( $this->_verbAliases, $this->_action ) ) )
         {
             //	A closure?
             if ( is_callable( $_alias ) )
@@ -368,7 +367,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     {
         if ( $this instanceof BasePlatformRestResource || $this instanceof ServiceOnlyResourceLike )
         {
-            $this->_triggerActionEvent( $this->_requestPayload, PlatformServiceEvents::PRE_PROCESS );
+            $this->_triggerActionEvent(
+                method_exists( $this, 'getRequestData' ) ? $this->getRequestData() : $this->_requestPayload,
+                PlatformServiceEvents::PRE_PROCESS
+            );
         }
     }
 

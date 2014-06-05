@@ -845,6 +845,7 @@ class EventDispatcher implements EventDispatcherInterface
             }
 
             //  The script runner should return an array
+
             if ( is_array( $_result ) )
             {
                 ScriptEvent::updateEventFromHandler( $event, $_result );

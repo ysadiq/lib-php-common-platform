@@ -19,6 +19,9 @@
  */
 namespace DreamFactory\Platform\Components;
 
+use DreamFactory\Yii\Utility\Pii;
+use Symfony\Component\HttpFoundation\Request;
+
 /**
  * A simple state stack
  */
@@ -60,12 +63,14 @@ class StateStack
     public static function current()
     {
         $_state = array(
-            'GET'     => isset( $_GET ) ? $_GET : null,
-            'POST'    => isset( $_POST ) ? $_POST : null,
-            'REQUEST' => isset( $_REQUEST ) ? $_REQUEST : null,
-            'FILES'   => isset( $_FILES ) ? $_FILES : null,
-            'COOKIE'  => isset( $_COOKIE ) ? $_COOKIE : null,
-            'SERVER'  => isset( $_SERVER ) ? $_SERVER : null,
+            'GET'             => isset( $_GET ) ? $_GET : null,
+            'POST'            => isset( $_POST ) ? $_POST : null,
+            'REQUEST'         => isset( $_REQUEST ) ? $_REQUEST : null,
+            'FILES'           => isset( $_FILES ) ? $_FILES : null,
+            'COOKIE'          => isset( $_COOKIE ) ? $_COOKIE : null,
+            'SERVER'          => isset( $_SERVER ) ? $_SERVER : null,
+            //  Store request object
+            '_REQUEST_OBJECT' => Pii::requestObject(),
         );
 
         return $_state;
@@ -86,7 +91,12 @@ class StateStack
 
             foreach ( $_state as $_key => $_value )
             {
-                if ( null !== $_value )
+                if ( '_REQUEST_OBJECT' == $_key )
+                {
+                    //  Restore request object
+                    Pii::app()->setRequestObject( $_value );
+                }
+                elseif ( null !== $_value )
                 {
                     $GLOBALS[ '_' . $_key ] = $_value;
                 }

@@ -27,6 +27,7 @@ use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Utility\ServiceHandler;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Interfaces\HttpMethod;
 use Kisma\Core\Utility\Log;
@@ -432,34 +433,43 @@ JS;
             return null;
         }
 
+        StateStack::push();
+
         try
         {
-            StateStack::push();
+            $_request =
+                new Request(
+                    array(),
+                    array(),
+                    array(),
+                    array(),
+                    array(),
+                    array(),
+                    !is_string( $payload ) ? json_encode( $payload, JSON_UNESCAPED_SLASHES ) : $payload
+                );
 
-            $_request = new Request();
-            $_request->setMethod( $method );
             $_request->query->set( 'app_name', 'dsp.scripting' );
             $_request->query->set( 'path', $path );
+            $_request->server->set( 'REQUEST_METHOD', $method );
             $_request->server->set( 'INLINE_REQUEST_URI', $_requestUri );
             $_request->overrideGlobals();
 
+            //  Now set the request object and go...
+            Pii::app()->setRequestObject( $_request );
+
             $_service = ServiceHandler::getService( $_serviceId );
-            $_service->setRequestPayload( $payload );
-
             $_result = $_service->processRequest( $_resource, $method, false );
-
-            StateStack::pop();
-
-            return $_result;
         }
         catch ( \Exception $_ex )
         {
-            $_response = RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false );
+            $_result = RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false );
 
-            Log::error( 'Exception: ' . $_ex->getMessage(), array(), array( 'response' => $_response ) );
-
-            return $_response;
+            Log::error( 'Exception: ' . $_ex->getMessage(), array(), array( 'response' => $_result ) );
         }
+
+        StateStack::pop();
+
+        return $_result;
     }
 
     /**
