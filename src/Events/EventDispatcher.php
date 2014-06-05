@@ -207,6 +207,7 @@ class EventDispatcher implements EventDispatcherInterface
             SwaggerEvents::CACHE_REBUILT,
             function ( $eventName, $event, $dispatcher )
             {
+                Log::debug( '  * Swagger-triggered script re-map started.' );
                 /** @var EventDispatcher $dispatcher */
                 $dispatcher->checkMappedScripts( true, true );
             }
@@ -623,22 +624,8 @@ class EventDispatcher implements EventDispatcherInterface
                             {
                                 $_found[] = str_replace( $_basePath, '.', $_scriptFile );
                                 $this->_scripts[ $_eventKey ][] = $_scriptFile;
-                                if ( static::$_logAllEvents )
-                                {
-                                    Log::debug(
-                                        '  * Mapped script "' . $_scriptFile . '" to event "' . $_eventKey . '"'
-                                    );
-                                }
                             }
                         }
-                        else
-                        {
-                            if ( static::$_logAllEvents )
-                            {
-                                Log::debug( '  * No scripts found for event "' . $_eventKey . '"' );
-                            }
-                        }
-
                     }
                 }
             }
@@ -664,14 +651,6 @@ class EventDispatcher implements EventDispatcherInterface
                     )
                     {
                         $this->_scripts[ $_eventKey ][] = $_scriptFile;
-                        if ( static::$_logAllEvents )
-                        {
-                            Log::debug( '  * Mapped script "' . $_scriptFile . '" to event "' . $_eventKey . '"' );
-                        }
-                    }
-                    else if ( static::$_logAllEvents )
-                    {
-                        Log::debug( '  * No event found for script "' . $_scriptFile . '"' );
                     }
 
                 }
@@ -715,6 +694,7 @@ class EventDispatcher implements EventDispatcherInterface
 
         //  Assume relative URL, add host and try again...
         $_test = Pii::request( false )->getSchemeAndHttpHost() . '/' . ltrim( $listener, ' /' );
+
         if ( !filter_var( $_test, FILTER_VALIDATE_URL ) )
         {
             throw new BadRequestException( 'Unrecognized listener: ' . $listener );
@@ -723,9 +703,6 @@ class EventDispatcher implements EventDispatcherInterface
         //  Set full url as listener
         $listener = $_test;
     }
-    //-------------------------------------------------------------------------
-    //	Properties
-    //-------------------------------------------------------------------------
 
     /**
      * @return array

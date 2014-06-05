@@ -20,17 +20,18 @@
  */
 namespace DreamFactory\Platform\Scripting;
 
+use DreamFactory\Platform\Components\StateStack;
 use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Utility\ServiceHandler;
-use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Interfaces\HttpMethod;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Wrapper around V8Js which sets up some basic things for dispatching events
@@ -160,8 +161,6 @@ class ScriptEngine
     public static function runScript( $scriptName, $scriptId = null, array &$exposedEvent = array(), array &$exposedPlatform = array(), &$output = null )
     {
         $scriptId = $scriptId ? : $scriptName;
-
-        Log::debug( 'Running script: ' . $scriptId );
 
         if ( !is_file( $scriptName ) || !is_readable( $scriptName ) )
         {
@@ -435,7 +434,9 @@ JS;
 
         try
         {
-            $_request = Pii::request( false );
+            StateStack::push();
+
+            $_request = new Request();
             $_request->setMethod( $method );
             $_request->query->set( 'app_name', 'dsp.scripting' );
             $_request->query->set( 'path', $path );
@@ -445,7 +446,11 @@ JS;
             $_service = ServiceHandler::getService( $_serviceId );
             $_service->setRequestPayload( $payload );
 
-            return $_service->processRequest( $_resource, $method, false );
+            $_result = $_service->processRequest( $_resource, $method, false );
+
+            StateStack::pop();
+
+            return $_result;
         }
         catch ( \Exception $_ex )
         {

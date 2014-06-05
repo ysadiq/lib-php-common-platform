@@ -1,6 +1,6 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
  * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
@@ -17,23 +17,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Events;
+namespace DreamFactory\Platform\Events\Observers;
 
 use DreamFactory\Platform\Events\Enums\ObserverEvents;
 use DreamFactory\Platform\Events\Interfaces\EventObserverLike;
-use DreamFactory\Platform\Utility\Platform;
+use DreamFactory\Platform\Events\ObserverEvent;
+use DreamFactory\Platform\Resources\System\Config;
 
 /**
- * A convenience base for event observers
+ * A base event observer class
  */
-abstract class BaseObserver implements EventObserverLike
+abstract class EventObserver implements EventObserverLike
 {
     //*************************************************************************
     //	Members
     //*************************************************************************
 
     /**
-     * @var bool
+     * @var bool Indicates if this observer is currently enabled or disabled
      */
     protected $_enabled = true;
 
@@ -50,6 +51,8 @@ abstract class BaseObserver implements EventObserverLike
     {
         $this->_enabled = true;
         Platform::trigger( ObserverEvents::ENABLED, new ObserverEvent( $this ) );
+
+        return $this;
     }
 
     /**
@@ -61,6 +64,8 @@ abstract class BaseObserver implements EventObserverLike
     {
         $this->_enabled = false;
         Platform::trigger( ObserverEvents::DISABLED, new ObserverEvent( $this ) );
+
+        return $this;
     }
 
     /**
@@ -68,6 +73,6 @@ abstract class BaseObserver implements EventObserverLike
      */
     public function isEnabled()
     {
-        return $this->_enabled;
+        return false !== $this->_enabled;
     }
 }
