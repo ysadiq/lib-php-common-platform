@@ -428,7 +428,7 @@ class Platform
      */
     public static function trigger( $eventName, $event = null )
     {
-        return Pii::trigger( $eventName, $event );
+        return static::getDispatcher()->dispatch( $eventName, $event );
     }
 
     /**
@@ -443,7 +443,7 @@ class Platform
      */
     public static function on( $eventName, $listener, $priority = 0 )
     {
-        Pii::on( $eventName, $listener, $priority );
+        static::getDispatcher()->addListener( $eventName, $listener, $priority );
     }
 
     /**
@@ -456,7 +456,7 @@ class Platform
      */
     public static function off( $eventName, $listener )
     {
-        Pii::off( $eventName, $listener );
+        static::getDispatcher()->removeListener( $eventName, $listener );
     }
 
     /**

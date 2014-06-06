@@ -314,10 +314,9 @@ class ScriptEvent
         }
 
         //  Single row, or so we think...
-        if ( is_array( $_data ) && !Pii::isEmpty( $_record = Option::get( $_data, 'record' ) ) && count( $_record ) >= 1
-        )
+        if ( is_array( $_data ) && !isset( $_data[ static::$_payloadKey ] ) )
         {
-            return $wrapped ? array( static::$_payloadKey => $_data ) : $_data;
+            return $wrapped ? array( static::$_payloadKey => $_data ) : array( $_data );
         }
 
         //  Something completely different...

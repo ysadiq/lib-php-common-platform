@@ -30,6 +30,7 @@ use DreamFactory\Platform\Utility\ServiceHandler;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Interfaces\HttpMethod;
+use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\Request;
@@ -396,12 +397,40 @@ JS;
     /**
      * @param string $method
      * @param string $path
+     * @param mixed  $payload
+     *
+     * @return \stdClass|string
+     */
+    protected static function _externalRequest( $method, $path, $payload = null )
+    {
+        try
+        {
+            return Curl::request( $method, $path, $payload );
+        }
+        catch ( \Exception $_ex )
+        {
+            $_result = RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false );
+
+            Log::error( 'Exception: ' . $_ex->getMessage(), array(), array( 'response' => $_result ) );
+        }
+    }
+
+    /**
+     * @param string $method
+     * @param string $path
      * @param array  $payload
      *
      * @return array
      */
     public static function inlineRequest( $method, $path, $payload = null )
     {
+        $_protocol = substr( $path, 0, 7 );
+
+        if ( 'https:/' == $_protocol || 'http://' == $_protocol )
+        {
+            return static::_externalRequest( $method, $path, $payload );
+        }
+
         $_result = null;
         $_requestUri = '/rest/' . ltrim( $path, '/' );
 
@@ -442,9 +471,9 @@ JS;
                     array(),
                     array(),
                     array(),
-                    array(),
-                    array(),
-                    array(),
+                    $_COOKIE,
+                    $_FILES,
+                    $_SERVER,
                     !is_string( $payload ) ? json_encode( $payload, JSON_UNESCAPED_SLASHES ) : $payload
                 );
 
