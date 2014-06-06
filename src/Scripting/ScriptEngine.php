@@ -434,15 +434,6 @@ JS;
             return null;
         }
 
-        $_server = array();
-        foreach ( $_SERVER as $_key => $_value )
-        {
-            if ( 'HTTP_' == substr( $_key, 0, 5 ) )
-            {
-                $_server[ $_key ] = $_value;
-            }
-        }
-
         StateStack::push();
 
         try
@@ -452,9 +443,9 @@ JS;
                     array(),
                     array(),
                     array(),
-                    array(),
-                    array(),
-                    $_server,
+                    $_COOKIE,
+                    $_FILES,
+                    $_SERVER,
                     !is_string( $payload ) ? json_encode( $payload, JSON_UNESCAPED_SLASHES ) : $payload
                 );
 

@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Components;
 
 use DreamFactory\Yii\Utility\Pii;
-use Symfony\Component\HttpFoundation\Request;
 
 /**
  * A simple state stack
@@ -106,7 +105,7 @@ class StateStack
         return $_state;
     }
 
-    public static function clear()
+    public static function clear( $keepServerStuff = true )
     {
         if ( isset( $GLOBALS['_GET'] ) )
         {
@@ -135,7 +134,20 @@ class StateStack
 
         if ( isset( $GLOBALS['_SERVER'] ) )
         {
-            $GLOBALS['_SERVER'] = array();
+            $_server = array();
+
+            if ( $keepServerStuff )
+            {
+                foreach ( $_SERVER as $_key => $_value )
+                {
+                    if ( 'HTTP_' == substr( $_key, 0, 5 ) )
+                    {
+                        $_server[ $_key ] = $_value;
+                    }
+                }
+            }
+
+            $GLOBALS['_SERVER'] = $_server;
         }
     }
 }

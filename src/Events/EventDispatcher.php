@@ -207,7 +207,6 @@ class EventDispatcher implements EventDispatcherInterface
             SwaggerEvents::CACHE_REBUILT,
             function ( $eventName, $event, $dispatcher )
             {
-                Log::debug( '  * Swagger-triggered script re-map started.' );
                 /** @var EventDispatcher $dispatcher */
                 $dispatcher->checkMappedScripts( true, true );
             }
@@ -390,17 +389,6 @@ class EventDispatcher implements EventDispatcherInterface
         {
             if ( $_newListener === serialize( $_liveListener ) )
             {
-                if ( static::$_logAllEvents && $fromCache )
-                {
-                    Log::debug(
-                        '  * Existing listener found and skipped for "' .
-                        spl_object_hash( $this ) .
-                        '::' .
-                        $eventName .
-                        '"'
-                    );
-                }
-
                 $_found = true;
                 continue;
             }
@@ -408,19 +396,6 @@ class EventDispatcher implements EventDispatcherInterface
 
         if ( !$_found )
         {
-            if ( static::$_logAllEvents )
-            {
-                Log::debug(
-                    '  * Added ' .
-                    ( $fromCache ? 'cached' : 'new' ) .
-                    ' listener for "' .
-                    spl_object_hash( $this ) .
-                    '::' .
-                    $eventName .
-                    '"'
-                );
-            }
-
             $this->_listeners[ $eventName ][ $priority ][] = $listener;
             unset( $this->_sorted[ $eventName ] );
         }
@@ -853,7 +828,7 @@ class EventDispatcher implements EventDispatcherInterface
 
             if ( !empty( $_output ) )
             {
-                Log::debug( '  * Script "' . $eventName . '.js" output: ' . $_output );
+                Log::info( '  * Script "' . $eventName . '.js" output:' . PHP_EOL . $_output . PHP_EOL );
             }
 
             if ( $event->isPropagationStopped() )
@@ -1025,11 +1000,7 @@ class EventDispatcher implements EventDispatcherInterface
             {
                 if ( !is_file( $_script ) || !is_readable( $_script ) )
                 {
-                    if ( static::$_logAllEvents )
-                    {
-                        Log::debug( 'Skipping cached non-existent script "' . $_script . '"' );
-                        continue;
-                    }
+                    continue;
                 }
 
                 $this->_scripts[ $eventName ][] = $_script;
