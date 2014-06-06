@@ -37,6 +37,7 @@ use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Resources\System\Event;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
@@ -247,13 +248,15 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
                  ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) )
             )
             {
-                $_handler = $this->_extraActions[$_action];
+                $_handler = $this->_extraActions[ $_action ];
 
                 if ( !is_callable( $_handler ) )
                 {
-                    throw new MisconfigurationException( 'The handler specified for extra action "' .
-                                                         $_action .
-                                                         '" is invalid.' );
+                    throw new MisconfigurationException(
+                        'The handler specified for extra action "' .
+                        $_action .
+                        '" is invalid.'
+                    );
                 }
 
                 //	Added $this as argument because handler *could* be outside this class
@@ -312,7 +315,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
             if ( $this->_autoDispatch && method_exists( $this, $_method ) )
             {
-                $_methodToCall = array($this, $_method);
+                $_methodToCall = array( $this, $_method );
             }
         }
 
@@ -402,7 +405,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         //	Native and PHP response types return, not emit...
         if ( in_array(
             $this->_outputFormat,
-            array(false, DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE)
+            array( false, DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE )
         )
         )
         {
@@ -648,8 +651,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
         return Platform::trigger(
             str_ireplace(
-                array('{api_name}', '{action}'),
-                array($this->_apiName == 'system' ? $this->_resource : $this->_apiName, strtolower( $this->_action )),
+                array( '{api_name}', '{action}' ),
+                array( $this->_apiName == 'system' ? $this->_resource : $this->_apiName, strtolower( $this->_action ) ),
                 $eventName
             ),
             $event ? : new PlatformServiceEvent( $this->_apiName, $this->_resource, $this->_response ),
@@ -680,7 +683,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
         //  Lookup the appropriate event if not specified.
         $_eventNames = $eventName ? : SwaggerManager::findEvent( $this, $this->_action );
-        $_eventNames = is_array( $_eventNames ) ? $_eventNames : array($_eventNames);
+        $_eventNames = is_array( $_eventNames ) ? $_eventNames : array( $_eventNames );
 
         $_result = array();
         $_pathInfo =
@@ -719,6 +722,16 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             }
 
             //  Construct an event if necessary
+            if ( empty( $result ) )
+            {
+                $_eventData = Option::clean( RestData::getPostedData( true, true ) );
+
+                if ( !empty( $_eventData ) )
+                {
+                    $result = $_eventData;
+                }
+            }
+
             $_service = $this->_apiName;
             $_event = $event ? : new PlatformServiceEvent( $_service, $this->_resource, $result );
 
@@ -726,7 +739,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $_eventName = Event::normalizeEventName( $_event, $_eventName, $_values );
 
             //  Already triggered?
-            if ( isset( $_triggeredEvents[$_eventName] ) )
+            if ( isset( $_triggeredEvents[ $_eventName ] ) )
             {
                 continue;
             }
@@ -748,7 +761,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             }
 
             //  Cache and bail
-            $_triggeredEvents[$_eventName] = true;
+            $_triggeredEvents[ $_eventName ] = true;
             $_result[] = $_event;
         }
 
@@ -958,7 +971,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         }
         else
         {
-            unset( $this->_verbAliases[$verb] );
+            unset( $this->_verbAliases[ $verb ] );
         }
 
         return $this;
@@ -1027,7 +1040,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $this->_extraActions = array();
         }
 
-        $this->_extraActions[$action] = $handler;
+        $this->_extraActions[ $action ] = $handler;
 
         return $this;
     }
