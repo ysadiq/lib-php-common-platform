@@ -685,6 +685,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         $_eventNames = $eventName ? : SwaggerManager::findEvent( $this, $this->_action );
         $_eventNames = is_array( $_eventNames ) ? $_eventNames : array( $_eventNames );
 
+        $_inboundData = false;
         $_result = array();
         $_pathInfo =
             trim(
@@ -728,6 +729,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
                 if ( !empty( $_eventData ) )
                 {
+                    $_inboundData = true;
                     $result = $_eventData;
                 }
             }
@@ -752,9 +754,25 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             {
                 $_eventData = $_event->getData();
 
-                if ( $result !== $_eventData )
+                $result = $_eventData;
+
+                //  Stick it back into the request for processing...
+                if ( $_inboundData )
                 {
-                    $result = $_event->getData();
+                    $_request = Pii::requestObject();
+
+                    //  Reinitialize with new content...
+                    $_request->initialize(
+                        $_request->query->all(),
+                        $_request->request->all(),
+                        $_request->attributes->all(),
+                        $_request->cookies->all(),
+                        $_request->files->all(),
+                        $_request->server->all(),
+                        is_string( $result ) ? $result : json_encode( $result, JSON_UNESCAPED_SLASHES )
+                    );
+
+                    Pii::app()->setRequestObject( $_request );
                 }
 
                 unset( $_eventData );
