@@ -402,6 +402,7 @@ JS;
      */
     public static function inlineRequest( $method, $path, $payload = null )
     {
+
         $_result = null;
         $_requestUri = '/rest/' . ltrim( $path, '/' );
 
@@ -433,6 +434,15 @@ JS;
             return null;
         }
 
+        $_server = array();
+        foreach ( $_SERVER as $_key => $_value )
+        {
+            if ( 'HTTP_' == substr( $_key, 0, 5 ) )
+            {
+                $_server[ $_key ] = $_value;
+            }
+        }
+
         StateStack::push();
 
         try
@@ -444,7 +454,7 @@ JS;
                     array(),
                     array(),
                     array(),
-                    array(),
+                    $_server,
                     !is_string( $payload ) ? json_encode( $payload, JSON_UNESCAPED_SLASHES ) : $payload
                 );
 
