@@ -258,7 +258,7 @@ class SalesforceDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function mergeRecords( $table, $records, $extras = array() )
+    public function patchRecords( $table, $records, $extras = array() )
     {
         // currently the same as update here
         return $this->updateRecords( $table, $records, $extras );
@@ -267,16 +267,16 @@ class SalesforceDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    public function patchRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
         // currently the same as update here
-        return $this->updateRecordsByFilter( $table, $record, $filter, $extras );
+        return $this->updateRecordsByFilter( $table, $record, $filter, $params, $extras );
     }
 
     /**
      * {@inheritdoc}
      */
-    public function mergeRecordsByIds( $table, $record, $ids, $extras = array() )
+    public function patchRecordsByIds( $table, $record, $ids, $extras = array() )
     {
         // currently the same as update here
         return $this->updateRecordsByIds( $table, $record, $ids, $extras );

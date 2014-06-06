@@ -94,8 +94,8 @@ class Config extends BaseSystemRestResource
                 'is_active'      => true,
                 'resource_array' => $resourceArray,
                 'verb_aliases'   => array(
-                    static::PATCH => static::POST,
-                    static::MERGE => static::POST,
+                    static::PATCH => static::PUT,
+                    static::MERGE => static::PUT,
                 )
             )
         );
@@ -126,7 +126,7 @@ class Config extends BaseSystemRestResource
     /**
      * {@InheritDoc}
      */
-    protected function _handleUpdatingExtras()
+    protected function _handlePut()
     {
         // changing config, bust caches
         if ( false === Platform::storeDelete( static::OPEN_REG_CACHE_KEY ) )
@@ -171,14 +171,6 @@ class Config extends BaseSystemRestResource
         {
             // do nothing
         }
-    }
-
-    /**
-     * {@InheritDoc}
-     */
-    protected function _handlePut()
-    {
-        $this->_handleUpdatingExtras();
 
         return parent::_handlePut();
     }
@@ -188,11 +180,13 @@ class Config extends BaseSystemRestResource
      */
     protected function _handlePost()
     {
-        $this->_handleUpdatingExtras();
-
-        return parent::_handlePost();
+        // should never create new config
+        throw new BadRequestException();
     }
 
+    /**
+     * {@InheritDoc}
+     */
     protected function _handleDelete()
     {
         // should never delete config

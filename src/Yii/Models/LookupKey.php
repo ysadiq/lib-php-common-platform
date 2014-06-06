@@ -234,41 +234,35 @@ class LookupKey extends BasePlatformSystemModel
             static::$_internal = true;
             $_oldLookups = static::model()->findAll( $_where, $_params );
             $_toDelete = array();
-            $_toUpdate = array();
             foreach ( $_oldLookups as $_old )
             {
-                $_oldName = $_old->name;
-                $_id = $_old->id;
                 $_found = false;
                 foreach ( $lookups as $_key => $_item )
                 {
                     $_assignName = Option::get( $_item, 'name', '' );
-                    if ( $_assignName == $_oldName )
+                    if ( $_assignName == $_old->name )
                     {
                         // found it, make sure nothing needs to be updated
-                        $_oldValue = $_old->value;
                         $_assignValue = Option::get( $_item, 'value' );
-                        $_oldPrivate = $_old->private;
                         $_assignPrivate = Option::getBool( $_item, 'private' );
-                        $_oldAllow = $_old->allow_user_update;
                         $_assignAllow = Option::getBool( $_item, 'allow_user_update' );
-                        if ( $_oldPrivate && !$_assignPrivate )
+                        if ( $_old->private && !$_assignPrivate )
                         {
                             throw new BadRequestException( 'Private lookups can not be made not private.' );
                         }
 
                         $_needUpdate = false;
-                        if ( !( $_oldPrivate && ( '********' === $_assignValue ) ) && ( $_oldValue != $_assignValue ) )
+                        if ( !( $_old->private && ( '********' === $_assignValue ) ) && ( $_old->value != $_assignValue ) )
                         {
                             $_old->value = is_array( $_assignValue ) ? json_encode( $_assignValue ) : $_assignValue;
                             $_needUpdate = true;
                         }
-                        if ( $_oldPrivate != $_assignPrivate )
+                        if ( $_old->private != $_assignPrivate )
                         {
                             $_old->private = $_assignPrivate;
                             $_needUpdate = true;
                         }
-                        if ( $_oldAllow != $_assignAllow )
+                        if ( $_old->allow_user_update != $_assignAllow )
                         {
                             $_old->allow_user_update = $_assignAllow;
                             $_needUpdate = true;
@@ -276,7 +270,11 @@ class LookupKey extends BasePlatformSystemModel
 
                         if ( $_needUpdate )
                         {
-                            $_toUpdate[] = $_old;
+                            // simple update request
+                            if ( !$_old->save() )
+                            {
+                                throw new \Exception( "Record update failed." );
+                            }
                         }
 
                         // otherwise throw it out
@@ -287,7 +285,7 @@ class LookupKey extends BasePlatformSystemModel
                 }
                 if ( !$_found )
                 {
-                    $_toDelete[] = $_id;
+                    $_toDelete[] = $_old->id;
                     continue;
                 }
             }
