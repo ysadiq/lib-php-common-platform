@@ -107,12 +107,14 @@ class SqlDbUtilities implements SqlDbDriverTypes
         $_tables = is_array( $db ) ? $db : static::_getCachedTables( $db );
 
         //	Make search case insensitive
-        if ( false === ( $_key = array_search( strtolower( $name ), is_array( $db ) ? $_tables : static::$_tableNameCache ) ) )
+        if ( false ===
+             ( $_key = array_search( strtolower( $name ), is_array( $db ) ? $_tables : static::$_tableNameCache ) )
+        )
         {
             return false;
         }
 
-        return $returnName ? $_tables[ $_key ] : true;
+        return $returnName ? $_tables[$_key] : true;
     }
 
     /**
@@ -197,7 +199,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
             $_names = $temp;
             natcasesort( $_names );
             $labels = static::getLabels(
-                array( 'and', "field=''", array( 'in', 'table', $_names ) ),
+                array('and', "field=''", array('in', 'table', $_names)),
                 array(),
                 'table,label,plural'
             );
@@ -226,7 +228,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
                     $plural = Inflector::pluralize( $label );
                 }
 
-                $tables[] = array( 'name' => $name, 'label' => $label, 'plural' => $plural );
+                $tables[] = array('name' => $name, 'label' => $label, 'plural' => $plural);
             }
 
             return $tables;
@@ -278,7 +280,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
             $_driverType = static::getDbDriverType( $db );
             $localdb = Pii::db();
             $query = $localdb->quoteColumnName( 'table' ) . ' = :tn';
-            $labels = static::getLabels( $query, array( ':tn' => $name ) );
+            $labels = static::getLabels( $query, array(':tn' => $name) );
             $labels = static::reformatFieldLabelArray( $labels );
             $labelInfo = Option::get( $labels, '', array() );
 
@@ -361,7 +363,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
             {
                 $localdb = Pii::db();
                 $query = $localdb->quoteColumnName( 'table' ) . ' = :tn';
-                $labels = static::getLabels( $query, array( ':tn' => $name ) );
+                $labels = static::getLabels( $query, array(':tn' => $name) );
                 $labels = static::reformatFieldLabelArray( $labels );
             }
             $fields = array();
@@ -407,8 +409,12 @@ class SqlDbUtilities implements SqlDbDriverTypes
                     continue;
                 }
                 $localdb = Pii::db();
-                $query = $localdb->quoteColumnName( 'table' ) . ' = :tn and ' . $localdb->quoteColumnName( 'field' ) . ' = :fn';
-                $labels = static::getLabels( $query, array( ':tn' => $table_name, ':fn' => $column->name ) );
+                $query =
+                    $localdb->quoteColumnName( 'table' ) .
+                    ' = :tn and ' .
+                    $localdb->quoteColumnName( 'field' ) .
+                    ' = :fn';
+                $labels = static::getLabels( $query, array(':tn' => $table_name, ':fn' => $column->name) );
                 $labelInfo = Option::get( $labels, 0, array() );
                 $field[] = static::describeFieldInternal( $column, $table->foreignKeys, $labelInfo );
                 break;
@@ -453,8 +459,12 @@ class SqlDbUtilities implements SqlDbDriverTypes
                     continue;
                 }
                 $localdb = Pii::db();
-                $query = $localdb->quoteColumnName( 'table' ) . ' = :tn and ' . $localdb->quoteColumnName( 'field' ) . ' = :fn';
-                $labels = static::getLabels( $query, array( ':tn' => $table_name, ':fn' => $field_name ) );
+                $query =
+                    $localdb->quoteColumnName( 'table' ) .
+                    ' = :tn and ' .
+                    $localdb->quoteColumnName( 'field' ) .
+                    ' = :fn';
+                $labels = static::getLabels( $query, array(':tn' => $table_name, ':fn' => $field_name) );
                 $labelInfo = Option::get( $labels, 0, array() );
                 $field = static::describeFieldInternal( $column, $table->foreignKeys, $labelInfo );
                 break;
@@ -616,7 +626,8 @@ class SqlDbUtilities implements SqlDbDriverTypes
 
                 if ( isset( $label_info['user_id_on_update'] ) )
                 {
-                    return 'user_id_on_' . ( Option::getBool( $label_info, 'user_id_on_update' ) ? 'update' : 'create' );
+                    return
+                        'user_id_on_' . ( Option::getBool( $label_info, 'user_id_on_update' ) ? 'update' : 'create' );
                 }
 
                 if ( null !== Option::get( $label_info, 'user_id' ) )
@@ -634,16 +645,21 @@ class SqlDbUtilities implements SqlDbDriverTypes
             case 'timestamp':
                 if ( isset( $label_info['timestamp_on_update'] ) )
                 {
-                    return 'timestamp_on_' . ( Option::getBool( $label_info, 'timestamp_on_update' ) ? 'update' : 'create' );
+                    return
+                        'timestamp_on_' .
+                        ( Option::getBool( $label_info, 'timestamp_on_update' ) ? 'update' : 'create' );
                 }
                 break;
         }
 
-        if ( ( 0 == strcasecmp( $column->dbType, 'datetimeoffset' ) ) || ( 0 == strcasecmp( $column->dbType, 'timestamp' ) ) )
+        if ( ( 0 == strcasecmp( $column->dbType, 'datetimeoffset' ) ) ||
+             ( 0 == strcasecmp( $column->dbType, 'timestamp' ) )
+        )
         {
             if ( isset( $label_info['timestamp_on_update'] ) )
             {
-                return 'timestamp_on_' . ( Option::getBool( $label_info, 'timestamp_on_update' ) ? 'update' : 'create' );
+                return
+                    'timestamp_on_' . ( Option::getBool( $label_info, 'timestamp_on_update' ) ? 'update' : 'create' );
             }
         }
 
@@ -1222,7 +1238,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
         }
         if ( !isset( $fields[0] ) )
         {
-            $fields = array( $fields );
+            $fields = array($fields);
         }
         foreach ( $fields as $field )
         {
@@ -1659,7 +1675,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 
         if ( !isset( $fields[0] ) )
         {
-            $fields = array( $fields );
+            $fields = array($fields);
         }
 
         try
@@ -1696,7 +1712,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 
             static::createFieldExtras( $db, $results );
 
-            return array( 'name' => $table_name );
+            return array('name' => $table_name);
         }
         catch ( \Exception $ex )
         {
@@ -1784,7 +1800,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
                 );
             }
 
-            $results = array( 'references' => $references, 'indexes' => $indexes, 'labels' => $labels );
+            $results = array('references' => $references, 'indexes' => $indexes, 'labels' => $labels);
             if ( $return_labels_refs )
             {
                 return $results;
@@ -1792,7 +1808,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 
             static::createFieldExtras( $db, $results );
 
-            return array( 'name' => $table_name );
+            return array('name' => $table_name);
         }
         catch ( \Exception $ex )
         {
@@ -1822,7 +1838,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 
         if ( !isset( $tables[0] ) )
         {
-            $tables = array( $tables );
+            $tables = array($tables);
             $_singleTable = true;
         }
 
@@ -1870,7 +1886,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
                     $_labels = array_merge( $_labels, Option::get( $_results, 'labels', array() ) );
                     $_references = array_merge( $_references, Option::get( $_results, 'references', array() ) );
                     $_indexes = array_merge( $_indexes, Option::get( $_results, 'indexes', array() ) );
-                    $_out[$_count] = array( 'name' => $_tableName );
+                    $_out[$_count] = array('name' => $_tableName);
                 }
             }
             catch ( \Exception $ex )
@@ -1898,7 +1914,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 
         if ( !$_singleTable )
         {
-            $_results = array( 'references' => $_references, 'indexes' => $_indexes, 'labels' => $_labels );
+            $_results = array('references' => $_references, 'indexes' => $_indexes, 'labels' => $_labels);
 
             static::createFieldExtras( $db, $_results );
         }
@@ -1933,7 +1949,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
             $command->dropTable( $table_name );
 
             $_column = Pii::db()->quoteColumnName( 'table' );
-            static::removeLabels( $_column . ' = :table_name', array( ':table_name' => $table_name ) );
+            static::removeLabels( $_column . ' = :table_name', array(':table_name' => $table_name) );
 
             //  Refresh the schema that we just added
             $db->schema->refresh();
@@ -1973,7 +1989,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
             $_dbLocal = Pii::db();
             $where = $_dbLocal->quoteColumnName( 'table' ) . ' = :tn';
             $where .= ' and ' . $_dbLocal->quoteColumnName( 'field' ) . ' = :fn';
-            static::removeLabels( $where, array( ':tn' => $table_name, ':fn' => $field_name ) );
+            static::removeLabels( $where, array(':tn' => $table_name, ':fn' => $field_name) );
 
             // refresh the schema that we just added
             $db->schema->refresh();
@@ -2091,7 +2107,7 @@ SQL;
                     foreach ( $_updates as $_id => $_update )
                     {
                         $_command->reset();
-                        $_command->update( 'df_sys_schema_extras', $_update, 'id = :id', array( ':id' => $_id ) );
+                        $_command->update( 'df_sys_schema_extras', $_update, 'id = :id', array(':id' => $_id) );
                     }
                 }
 
@@ -2160,6 +2176,7 @@ SQL;
         {
             case 'bit':
             case 'bool':
+            case 'boolean':
                 return 'boolean';
 
             case 'decimal':
@@ -2170,6 +2187,8 @@ SQL;
 
             case 'double':
             case 'float':
+            case 'real':
+            case 'double precision':
                 return 'float';
 
             case 'tinyint':
@@ -2201,10 +2220,12 @@ SQL;
             //	String types
             case 'string':
             case 'char':
+            case 'character':
             case 'text':
             case 'mediumtext':
             case 'longtext':
             case 'varchar':
+            case 'character varying':
             case 'nchar':
             case 'nvarchar':
             default:
