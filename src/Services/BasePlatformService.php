@@ -16,15 +16,16 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Common\Utility\DataFormat;
+use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
-use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Resources\User\Session;
-use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\ServiceHandler;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Interfaces\ConsumerLike;
-use Kisma\Core\Interfaces\HttpMethod;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
@@ -36,6 +37,15 @@ use Kisma\Core\Utility\Option;
  */
 abstract class BasePlatformService extends Seed implements PlatformServiceLike, ConsumerLike
 {
+    //*************************************************************************
+    //	Constants
+    //*************************************************************************
+
+    /**
+     * Default record wrapping tag for single or array of records
+     */
+    const RECORD_WRAPPER = 'record';
+
     //*************************************************************************
     //* Members
     //*************************************************************************
@@ -80,6 +90,23 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
      * @var bool Used to indicate whether or not this request has come from within, like a script
      */
     protected $_inlineRequest = false;
+    /**
+     * @var array The data that came in on the request
+     */
+    protected $_requestPayload = null;
+    /**
+     * @var array
+     */
+    protected $_requestData = null;
+    /**
+     * @var int The inner payload response format, used for table formatting, etc.
+     */
+    protected $_responseFormat = DataFormats::NATIVE;
+    /**
+     * @var string Default output format, either null (native), 'json' or 'xml'.
+     * NOTE: Output format is different from RESPONSE format (inner payload format vs. envelope)
+     */
+    protected $_outputFormat = DataFormats::JSON;
 
     //*************************************************************************
     //* Methods
@@ -152,6 +179,86 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
     }
 
     /**
+     * @param bool $wrapContent If true, inbound request data is wrapped in an array with static::RECORD_WRAPPER as key
+     *
+     * @return array
+     */
+    protected function _buildRequestData( $wrapContent = false )
+    {
+        $_payload = RestData::getPostedData( true, true );
+
+        // import from csv, etc doesn't include a wrapper, so wrap it
+        if ( ( $wrapContent && !empty( $_payload ) ) || DataFormat::isArrayNumeric( $_payload ) )
+        {
+            $_payload = array( static::RECORD_WRAPPER => $_payload );
+        }
+
+        // MERGE URL parameters with posted data, posted data takes precedence
+        $_payload = array_merge( $_REQUEST, $_payload );
+
+        //  look for limit, accept top as well as limit
+        $this->_checkPayloadParameter( $_payload, 'limit', 'top' );
+        $this->_checkPayloadParameter( $_payload, 'offset', 'skip' );
+        $this->_checkPayloadParameter( $_payload, 'order', 'sort' );
+
+        // All calls can request related data to be returned
+        $_related = Option::get( $_payload, 'related' );
+
+        if ( !empty( $_related ) && '*' !== $_related && ( is_string( $_related ) || is_array( $_related ) ) )
+        {
+            $_relations = array();
+
+            if ( !is_array( $_related ) )
+            {
+                $_related = array_map( 'trim', explode( ',', $_related ) );
+            }
+
+            foreach ( $_related as $_relative )
+            {
+                $_extraFields = Option::get( $_payload, $_relative . '_fields', '*' );
+                $_extraOrder = Option::get( $_payload, $_relative . '_order' );
+
+                $_relations[] = array( 'name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder );
+
+                unset( $_relative, $_extraFields, $_extraOrder );
+            }
+
+            $_payload['related'] = $_relations;
+
+            unset( $_relations );
+        }
+
+        return Option::clean( $_payload );
+    }
+
+    /**
+     * Checks the payload for $key, defaulting to $alternateKey (if given) if empty
+     *
+     * @param array  $payload
+     * @param string $key
+     * @param string $alternateKey
+     *
+     * @return bool
+     */
+    protected function _checkPayloadParameter( &$payload, $key, $alternateKey = null )
+    {
+        $_value = Option::get(
+            $payload,
+            $key,
+            $alternateKey ? Option::get( $payload, $alternateKey ) : null
+        );
+
+        if ( !empty( $_value ) )
+        {
+            $payload[ $key ] = $_value;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Given an old string-based TYPE, determine new integer identifier
      *
      * @param string $type
@@ -184,6 +291,78 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
             Log::error( ' * Unknown service type ID request for "' . $type . '" . ' );
 
             return false;
+        }
+    }
+
+    /**
+     * Determine the app_name/API key of this request
+     *
+     * @return mixed
+     */
+    protected function _detectAppName()
+    {
+        if ( !SystemManager::getCurrentAppName() )
+        {
+            $_request = Pii::requestObject();
+
+            // 	Determine application if any
+            $_appName = $_request->get(
+                'app_name',
+                //	No app_name, look for headers...
+                Option::server(
+                    'HTTP_X_DREAMFACTORY_APPLICATION_NAME',
+                    Option::server( 'HTTP_X_APPLICATION_NAME' )
+                ),
+                FILTER_SANITIZE_STRING
+            );
+
+            //	Still empty?
+            if ( empty( $_appName ) )
+            {
+                //	We give portal requests a break, as well as inbound OAuth redirects
+                if ( false !== stripos( Option::server( 'REQUEST_URI' ), '/rest/portal', 0 ) )
+                {
+                    $_appName = 'portal';
+                }
+                elseif ( isset( $_REQUEST, $_REQUEST['code'], $_REQUEST['state'], $_REQUEST['oasys'] ) )
+                {
+                    $_appName = 'auth_redirect';
+                }
+                else
+                {
+                    RestResponse::sendErrors( new BadRequestException( 'No application name header or parameter value in request.' ) );
+
+                    return false;
+                }
+            }
+
+            // assign to global for system usage
+            SystemManager::setCurrentAppName( $_appName );
+        }
+
+        return true;
+    }
+
+    /**
+     * @param string $output_format
+     */
+    protected function _detectResponseMembers( $output_format = null )
+    {
+        //	Determine output format, inner and outer formatting if necessary
+        $this->_outputFormat = RestResponse::detectResponseFormat( $output_format, $this->_responseFormat );
+
+        //	Determine if output as file is enabled
+        $_file = FilterInput::request( 'file', null, FILTER_SANITIZE_STRING );
+
+        if ( !empty( $_file ) )
+        {
+            if ( DataFormat::boolval( $_file ) )
+            {
+                $_file = $this->getApiName();
+                $_file .= '.' . $this->_outputFormat;
+            }
+
+            $this->_outputAsFile = $_file;
         }
     }
 
@@ -384,6 +563,86 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
         $this->_inlineRequest = $inlineRequest;
 
         return $this;
+    }
+
+    /**
+     * @param array $requestData
+     *
+     * @return BasePlatformService
+     */
+    public function setRequestData( $requestData )
+    {
+        $this->_requestData = $requestData;
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getRequestData()
+    {
+        return $this->_requestData;
+    }
+
+    /**
+     * @return string
+     */
+    public function getOutputFormat()
+    {
+        return $this->_outputFormat;
+    }
+
+    /**
+     * @param string $outputFormat
+     *
+     * @return BasePlatformService
+     */
+    public function setOutputFormat( $outputFormat )
+    {
+        $this->_outputFormat = $outputFormat;
+
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getResponseFormat()
+    {
+        return $this->_responseFormat;
+    }
+
+    /**
+     * @param int $responseFormat
+     *
+     * @return BasePlatformService
+     */
+    public function setResponseFormat( $responseFormat )
+    {
+        $this->_responseFormat = $responseFormat;
+
+        return $this;
+    }
+
+    /**
+     * @param array $requestPayload
+     *
+     * @return BasePlatformRestService
+     */
+    public function setRequestPayload( $requestPayload )
+    {
+        $this->_requestPayload = $requestPayload;
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getRequestPayload()
+    {
+        return $this->_requestPayload;
     }
 
 }

@@ -23,7 +23,6 @@ use DreamFactory\Common\Enums\OutputFormats;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\DataFormats;
-use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Events\Enums\PlatformServiceEvents;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Events\PlatformServiceEvent;
@@ -42,7 +41,6 @@ use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -122,10 +120,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected $_extraActions = null;
     /**
-     * @var array The data that came in on the request
-     */
-    protected $_requestPayload = null;
-    /**
      * @var mixed The response to the request
      */
     protected $_response = null;
@@ -133,15 +127,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      * @var int The HTTP response code returned for this request
      */
     protected $_responseCode = RestResponse::Ok;
-    /**
-     * @var int The inner payload response format, used for table formatting, etc.
-     */
-    protected $_responseFormat = ResponseFormats::RAW;
-    /**
-     * @var string Default output format, either null (native), 'json' or 'xml'.
-     * NOTE: Output format is different from RESPONSE format (inner payload format vs. envelope)
-     */
-    protected $_outputFormat = DataFormats::JSON;
     /**
      * @var string If set, prompt browser to download response as a file.
      */
@@ -368,10 +353,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     {
         if ( $this instanceof BasePlatformRestResource || $this instanceof ServiceOnlyResourceLike )
         {
-            $this->_triggerActionEvent(
-                method_exists( $this, 'getRequestData' ) ? $this->getRequestData() : $this->_requestPayload,
-                PlatformServiceEvents::PRE_PROCESS
-            );
+            $this->_triggerActionEvent( $this->_requestData, PlatformServiceEvents::PRE_PROCESS );
         }
     }
 
@@ -438,18 +420,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
         }
 
-        /**
-         * @todo This should be in the resource class itself really...
-         */
-        if ( $this->isResource() )
-        {
-            $this->trigger( PlatformServiceEvents::AFTER_DATA_FORMAT, $_result );
-        }
-
         if ( !empty( $this->_outputFormat ) )
         {
             //	No return from here...
-            $_response = RestResponse::sendResults(
+            $_result = RestResponse::sendResults(
                 $_result,
                 $this->_responseCode,
                 $this->_outputFormat,
@@ -462,73 +436,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         $_responded = true;
 
         return $_result;
-    }
-
-    /**
-     * Determine the app_name/API key of this request
-     *
-     * @return mixed
-     */
-    protected function _detectAppName()
-    {
-        $_request = Pii::requestObject();
-
-        // 	Determine application if any
-        $_appName = $_request->get(
-            'app_name',
-            //	No app_name, look for headers...
-            Option::server(
-                'HTTP_X_DREAMFACTORY_APPLICATION_NAME',
-                Option::server( 'HTTP_X_APPLICATION_NAME' )
-            ),
-            FILTER_SANITIZE_STRING
-        );
-
-        //	Still empty?
-        if ( empty( $_appName ) )
-        {
-            //	We give portal requests a break, as well as inbound OAuth redirects
-            if ( false !== stripos( Option::server( 'REQUEST_URI' ), '/rest/portal', 0 ) )
-            {
-                $_appName = 'portal';
-            }
-            elseif ( isset( $_REQUEST, $_REQUEST['code'], $_REQUEST['state'], $_REQUEST['oasys'] ) )
-            {
-                $_appName = 'auth_redirect';
-            }
-            else
-            {
-                RestResponse::sendErrors(
-                    new BadRequestException( 'No application name header or parameter value in request.' )
-                );
-            }
-        }
-
-        // assign to global for system usage
-        SystemManager::setCurrentAppName( $_appName );
-    }
-
-    /**
-     * @param string $output_format
-     */
-    protected function _detectResponseMembers( $output_format = null )
-    {
-        //	Determine output format, inner and outer formatting if necessary
-        $this->_outputFormat = RestResponse::detectResponseFormat( $output_format, $this->_responseFormat );
-
-        //	Determine if output as file is enabled
-        $_file = FilterInput::request( 'file', null, FILTER_SANITIZE_STRING );
-
-        if ( !empty( $_file ) )
-        {
-            if ( DataFormat::boolval( $_file ) )
-            {
-                $_file = $this->getApiName();
-                $_file .= '.' . $this->_outputFormat;
-            }
-
-            $this->_outputAsFile = $_file;
-        }
     }
 
     /**
@@ -698,15 +605,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             );
 
         $_values = array(
-            'action'          => strtolower( $this->_action ),
-            'api_name'        => $this->_apiName,
-            'service_id'      => $this->_serviceId,
-            'request_payload' => $this->_requestPayload,
-            'table_name'      => $this->_resource,
-            'container'       => $this->_resource,
-            'folder_path'     => Option::get( $this->_resourceArray, 1 ),
-            'file_path'       => Option::get( $this->_resourceArray, 2 ),
-            'request_uri'     => explode( '/', $_pathInfo ),
+            'action'      => strtolower( $this->_action ),
+            'api_name'    => $this->_apiName,
+            'service_id'  => $this->_serviceId,
+            'table_name'  => $this->_resource,
+            'container'   => $this->_resource,
+            'folder_path' => Option::get( $this->_resourceArray, 1 ),
+            'file_path'   => Option::get( $this->_resourceArray, 2 ),
+            'request_uri' => explode( '/', $_pathInfo ),
         );
 
         if ( 'rest' !== ( $_part = array_shift( $_values['request_uri'] ) ) )
@@ -1064,26 +970,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     }
 
     /**
-     * @param array $requestPayload
-     *
-     * @return BasePlatformRestService
-     */
-    public function setRequestPayload( $requestPayload )
-    {
-        $this->_requestPayload = $requestPayload;
-
-        return $this;
-    }
-
-    /**
-     * @return array
-     */
-    public function getRequestPayload()
-    {
-        return $this->_requestPayload;
-    }
-
-    /**
      * @param array $responseCode
      *
      * @return $this
@@ -1101,46 +987,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     public function getResponseCode()
     {
         return $this->_responseCode;
-    }
-
-    /**
-     * @param string $outputFormat
-     *
-     * @return $this
-     */
-    public function setOutputFormat( $outputFormat )
-    {
-        $this->_outputFormat = $outputFormat;
-
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getOutputFormat()
-    {
-        return $this->_outputFormat;
-    }
-
-    /**
-     * @param int $responseFormat
-     *
-     * @return BasePlatformRestService
-     */
-    public function setResponseFormat( $responseFormat )
-    {
-        $this->_responseFormat = $responseFormat;
-
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getResponseFormat()
-    {
-        return $this->_responseFormat;
     }
 
     /**

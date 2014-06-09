@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Resources;
 
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Components\JTablesFormatter;
 use DreamFactory\Platform\Enums\ResponseFormats;
@@ -47,10 +46,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      * @var string
      */
     const DEFAULT_SERVICE_NAME = 'system';
-    /**
-     * Default record wrapping tag for single or array of records
-     */
-    const RECORD_WRAPPER = 'record';
 
     //*************************************************************************
     //	Members
@@ -64,10 +59,6 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      * @var int|string
      */
     protected $_resourceId = null;
-    /**
-     * @var array
-     */
-    protected $_requestData = null;
 
     //*************************************************************************
     //	Methods
@@ -132,7 +123,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     {
         return ResourceStore::bulkSelectById(
             $ids,
-            empty( $fields ) ? null : array('select' => $fields),
+            empty( $fields ) ? null : array( 'select' => $fields ),
             $extras,
             $singleRow,
             $includeSchema,
@@ -152,68 +143,12 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         parent::_detectResourceMembers( $resourcePath );
 
         $this->_resourceId = Option::get( $this->_resourceArray, 1 );
+        $this->_requestData = $this->_buildRequestData( !empty( $this->_resourceId ) );
 
-        $_posted = Option::clean( RestData::getPostedData( true, true ) );
-        if ( !empty( $this->_resourceId ) )
-        {
-            if ( !empty( $_posted ) )
-            {
-                // single records don't use the record wrapper, so wrap it
-                $_posted = array(static::RECORD_WRAPPER => $_posted);
-            }
-        }
-        elseif ( DataFormat::isArrayNumeric( $_posted ) )
-        {
-            // import from csv, etc doesn't include a wrapper, so wrap it
-            $_posted = array(static::RECORD_WRAPPER => $_posted);
-        }
-
-        // MERGE URL parameters with posted data, posted data takes precedence
-        $this->_requestData = array_merge( $_REQUEST, $_posted );
-
-        if ( 'config' !== $this->_resource )
+        if ( 'config' !== $this->_resource && null != $_ssFilters = Session::getServiceFilters( $this->_action, $this->_apiName, $this->_resource ) )
         {
             // Add server side filtering properties
-            if ( null != $_ssFilters = Session::getServiceFilters( $this->_action, $this->_apiName, $this->_resource ) )
-            {
-                $this->_requestData['ss_filters'] = $_ssFilters;
-            }
-        }
-        // look for limit, accept top as well as limit
-        if ( !isset( $this->_requestData['limit'] ) && ( $_limit = Option::get( $this->_requestData, 'top' ) ) )
-        {
-            $this->_requestData['limit'] = $_limit;
-        }
-
-        // accept skip as well as offset
-        if ( !isset( $this->_requestData['offset'] ) && ( $_offset = Option::get( $this->_requestData, 'skip' ) ) )
-        {
-            $this->_requestData['offset'] = $_offset;
-        }
-
-        // accept sort as well as order
-        if ( !isset( $this->_requestData['order'] ) && ( $_order = Option::get( $this->_requestData, 'sort' ) ) )
-        {
-            $this->_requestData['order'] = $_order;
-        }
-
-        // All calls can request related data to be returned
-        $_related = Option::get( $this->_requestData, 'related' );
-        if ( !empty( $_related ) && is_string( $_related ) && ( '*' !== $_related ) )
-        {
-            $_relations = array();
-            if ( !is_array( $_related ) )
-            {
-                $_related = array_map( 'trim', explode( ',', $_related ) );
-            }
-            foreach ( $_related as $_relative )
-            {
-                $_extraFields = Option::get( $this->_requestData, $_relative . '_fields', '*' );
-                $_extraOrder = Option::get( $this->_requestData, $_relative . '_order', '' );
-                $_relations[] = array('name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder);
-            }
-
-            $this->_requestData['related'] = $_relations;
+            $this->_requestData['ss_filters'] = $_ssFilters;
         }
 
         return $this;
@@ -270,6 +205,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
     {
         // default for GET should be "return all fields"
         $_fields = Option::get( $this->_requestData, 'fields' );
+
         if ( empty( $_fields ) )
         {
             $this->_requestData['fields'] = '*';
@@ -379,7 +315,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
             // stuff it back in for event
             $_amnesty = true;
-            $this->_requestData[static::RECORD_WRAPPER] = $_records;
+            $this->_requestData[ static::RECORD_WRAPPER ] = $_records;
         }
 
         $this->_triggerActionEvent( $this->_requestData );
@@ -425,7 +361,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
 
             // stuff it back in for event
             $_amnesty = true;
-            $this->_requestData[static::RECORD_WRAPPER] = $_records;
+            $this->_requestData[ static::RECORD_WRAPPER ] = $_records;
         }
 
         $this->_triggerActionEvent( $this->_requestData );
@@ -525,7 +461,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
                 break;
 
             case ResponseFormats::JTABLE:
-                $_data = JTablesFormatter::format( $_data, array('action' => $this->_action) );
+                $_data = JTablesFormatter::format( $_data, array( 'action' => $this->_action ) );
                 break;
         }
 

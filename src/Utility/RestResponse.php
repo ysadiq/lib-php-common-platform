@@ -240,9 +240,7 @@ class RestResponse extends HttpResponse
         //	Some REST services may handle the response, they just return null
         if ( is_null( $result ) && headers_sent() )
         {
-            Pii::end();
-
-            return;
+            return Pii::end();
         }
 
         switch ( $format )
@@ -273,7 +271,12 @@ class RestResponse extends HttpResponse
             case OutputFormats::XML:
             case 'xml':
                 $_contentType = 'application/xml';
-                $result = '<?xml version="1.0" ?>' . "<dfapi>\n$result</dfapi>";
+                $result = <<<XML
+<?xml version="1.0" ?>
+<dfapi>
+    {$result}
+</dfapi>
+XML;
                 break;
 
             case 'csv':
@@ -294,10 +297,15 @@ class RestResponse extends HttpResponse
             // headers
             $code = static::getHttpStatusCode( $code );
             $_title = static::getHttpStatusCodeTitle( $code );
+
             header( "HTTP/1.1 $code $_title" );
             header( "Content-Type: $_contentType", true );
+
             //	IE 9 requires hoop for session cookies in iframes
-            header( 'P3P:CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"', true );
+            if ( false !== stripos( $_agent = Option::server( 'USER_AGENT' ), 'MSIE' ) )
+            {
+                header( 'P3P:CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"', true );
+            }
 
             if ( !empty( $as_file ) )
             {
@@ -348,14 +356,13 @@ class RestResponse extends HttpResponse
 
         $_response = Response::create( '', $code );
 
-        $_response->headers->replace(
-            array_merge(
-                $_sentHeaders,
-                array(
-                    'P3P' => 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'
-                )
-            )
-        );
+        //	IE 9 requires hoop for session cookies in iframes
+        if ( false !== stripos( $_agent = Option::server( 'USER_AGENT' ), 'MSIE' ) )
+        {
+            $_sentHeaders['P3P'] = 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"';
+        }
+
+        $_response->headers->replace( $_sentHeaders );
 
         $_content = null;
         $_contentType = 'application/json';
