@@ -201,7 +201,8 @@ SQL;
             $_content = null;
             $_apiName = Option::get( $_service, 'api_name' );
             $_typeId = (int)Option::get( $_service, 'type_id', PlatformServiceTypes::SYSTEM_SERVICE );
-            $_fileName = PlatformServiceTypes::getFileName( $_typeId, $_apiName );
+            $_storageTypeId = (int)Option::get( $_service, 'storage_type_id' );
+            $_fileName = PlatformServiceTypes::getFileName( $_typeId, $_storageTypeId, $_apiName );
 
             $_filePath = $_scanPath . '/' . $_fileName . '.swagger.php';
 

@@ -124,21 +124,30 @@ class PlatformServiceTypes extends SeedEnum
     //*************************************************************************
 
     /**
-     * @param int    $value       enumerated type value
-     * @param string $serviceName given name of the service, also returned as default
+     * @param int    $type         enumerated type value
+     * @param int    $storage_type enumerated storage type value
+     * @param string $service_name given name of the service, also returned as default
      *
      * @return string - associated file name of native service
      */
-    public static function getFileName( $value, $serviceName )
+    public static function getFileName( $type, $storage_type, $service_name )
     {
-        $_serviceName = $serviceName ? : null;
+        $_serviceName = $service_name ? : null;
 
-        if ( null !== ( $_fileName = Option::get( static::$_classMap, $value ) ) )
+        if ( !empty( $storage_type ) )
+        {
+            if ( null !== ( $_fileName = PlatformStorageTypes::getFileName( $storage_type, null ) ) )
+            {
+                return $_fileName;
+            }
+        }
+
+        if ( null !== ( $_fileName = Option::get( static::$_classMap, $type ) ) )
         {
             return $_fileName;
         }
 
-        if ( static::SYSTEM_SERVICE == $value && !empty( $_serviceName ) )
+        if ( static::SYSTEM_SERVICE == $type && !empty( $_serviceName ) )
         {
             if ( null !== ( $_fileName = Option::get( static::$_classMap, strtolower( $_serviceName ) ) ) )
             {
