@@ -57,6 +57,9 @@ class ScriptEvent
      * @var string The event schema for scripting events
      */
     static protected $_eventTemplate = false;
+    /**
+     * @var string The event schema for scripting events
+     */
     static protected $_payloadKey = self::DEFAULT_PAYLOAD_KEY;
 
     //*************************************************************************
@@ -215,10 +218,13 @@ class ScriptEvent
             $_path
         ) : $_path;
 
+        $_request = static::_buildEventRequestArray( $event );
+        $_response = static::normalizeEventData( $event );
+
         //	Build the array
         $_event = array(
             //	Event meta-data
-            '_meta'              => array(
+            '_meta'    => array(
                 'id'               => $event->getEventId(),
                 'name'             => $eventName,
                 'trigger'          => $_trigger,
@@ -237,20 +243,27 @@ class ScriptEvent
                 //	Extra information passed by caller
                 'extra'            => Option::clean( $extra ),
             ),
-            //	Normalized payload
-            static::$_payloadKey => static::normalizeEventData( $event, false ),
+            'request'  => $_request,
+            'response' => $_response,
             //	Metadata if any
-            'meta'               => Option::get( $_eventExtras, 'meta' ),
-            'payload'            => $event->getData(),
-            'payload_changed'    => false,
             //	Access to the platform api
-            'platform'           => array(
+            'platform' => array(
                 //  The DSP config
                 'config'  => $_config,
                 //  The current session
                 'session' => static::_getCleanedSession(),
             ),
         );
+
+        if ( isset( $_response, $_response['record'] ) )
+        {
+            $_event[ static::$_payloadKey ] = $_response['record'];
+        }
+
+        if ( isset( $_response, $_response['meta'] ) )
+        {
+            $_event['meta'] = $_response['meta'];
+        }
 
         return $returnJson ? json_encode( $_event, JSON_UNESCAPED_SLASHES ) : $_event;
     }
@@ -300,23 +313,24 @@ class ScriptEvent
     public static function normalizeEventData( PlatformEvent $event, $wrapped = true )
     {
         $_data = $event->getData();
+        $_meta = isset( $_data['meta'] ) ? $_data['meta'] : null;
 
         //  XML-wrapped
         if ( false !== ( $_records = Option::getDeep( $_data, 'records', 'record', false ) ) )
         {
-            return $wrapped ? array( static::$_payloadKey => $_records ) : $_records;
+            return $wrapped ? array( static::$_payloadKey => $_records, 'meta' => $_meta ) : $_records;
         }
 
         //  Multi-row
         if ( false !== ( $_records = Option::get( $_data, 'record', false ) ) )
         {
-            return $wrapped ? array( static::$_payloadKey => $_records ) : $_records;
+            return $wrapped ? array( static::$_payloadKey => $_records, 'meta' => $_meta ) : $_records;
         }
 
         //  Single row, or so we think...
         if ( is_array( $_data ) && !isset( $_data[ static::$_payloadKey ] ) )
         {
-            return $wrapped ? array( static::$_payloadKey => $_data ) : array( $_data );
+            return $wrapped ? array( static::$_payloadKey => $_data, 'meta' => $_meta ) : array( $_data );
         }
 
         //  Something completely different...
@@ -391,9 +405,14 @@ class ScriptEvent
 
         $_data = static::denormalizeEventData( $event, Option::get( $exposedEvent, static::$_payloadKey, array() ) );
 
-        if ( null !== $exposedEvent['meta'] )
+        if ( null === ( $_meta = Option::getDeep( $exposedEvent, 'request', 'meta' ) ) )
         {
-            $_data['meta'] = $exposedEvent['meta'];
+            $_meta = Option::getDeep( $exposedEvent, 'response', 'meta' );
+        }
+
+        if ( !empty( $_meta ) )
+        {
+            $_data['meta'] = $_meta;
         }
 
         return $event->setData( $_data );
@@ -426,6 +445,37 @@ class ScriptEvent
     public static function getPayloadKey()
     {
         return static::$_payloadKey;
+    }
+
+    /**
+     * @param PlatformEvent $event
+     *
+     * @return array
+     */
+    protected static function _buildEventRequestArray( $event = null )
+    {
+        $_data = $event->getData();
+        $_reqObj = Pii::request( false );
+
+        $_request = array(
+            'method'     => strtoupper( $_reqObj->getMethod() ),
+            'query'      => $_reqObj->query->all(),
+            'headers'    => $_reqObj->headers->all(),
+            'request'    => $_reqObj->request->all(),
+            'cookies'    => $_reqObj->cookies->all(),
+            'attributes' => $_reqObj->attributes->all(),
+            'content'    => $_reqObj->getContent(),
+            'files'      => $_reqObj->files->all(),
+        );
+
+        if ( null === ( $_meta = Option::get( $_data, 'meta' ) ) )
+        {
+            $_meta = Option::getDeep( $_data, 'record', 'meta' );
+        }
+
+        $_request['meta'] = $_meta;
+
+        return $_request;
     }
 }
 

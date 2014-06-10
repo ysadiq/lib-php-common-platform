@@ -791,17 +791,14 @@ class EventDispatcher implements EventDispatcherInterface
 
             try
             {
-                //  The normalized event is exposed
-                $_key = ScriptEvent::getPayloadKey();
-
                 //	Expose variables
                 $_exposedEvent = array_merge(
                     $_event['_meta'],
                     array(
-                        'meta'            => $_event['meta'],
-                        $_key             => $_event[ $_key ],
-                        'payload'         => $_event['payload'],
-                        'payload_changed' => $_event['payload_changed'],
+                        ScriptEvent::getPayloadKey() => Option::get( $_event, 'record' ),
+                        'meta'                       => Option::get( $_event, 'meta' ),
+                        'request'                    => $_event['request'],
+                        'response'                   => $_event['response'],
                     )
                 );
 
