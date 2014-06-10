@@ -33,11 +33,11 @@ use DreamFactory\Platform\Scripting\ScriptEngine;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\Platform;
-use DreamFactory\Platform\Utility\RestData;
 use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Interfaces\HttpResponse;
 use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
 
 /**
  * Script.php
@@ -227,7 +227,8 @@ class Script extends BaseSystemRestResource
         }
 
         $_path = $this->_scriptPath . '/' . trim( $this->_resourceId, '/ ' ) . '.js';
-        $_scriptBody = RestData::getPostedData();
+
+        $_scriptBody = Option::get( $this->_requestData, 'record' );
 
         if ( is_array( $_scriptBody ) )
         {

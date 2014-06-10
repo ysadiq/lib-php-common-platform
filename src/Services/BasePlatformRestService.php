@@ -253,9 +253,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
                 if ( !is_callable( $_handler ) )
                 {
                     throw new MisconfigurationException(
-                        'The handler specified for extra action "' .
-                        $_action .
-                        '" is invalid.'
+                        'The handler specified for extra action "' . $_action . '" is invalid.'
                     );
                 }
 
@@ -296,8 +294,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         $_methodToCall = false;
 
         //	Check verb aliases as closures
-        if ( true === $this->_autoDispatch &&
-             null !== ( $_alias = Option::get( $this->_verbAliases, $this->_action ) )
+        if ( true === $this->_autoDispatch && null !== ( $_alias = Option::get( $this->_verbAliases, $this->_action ) )
         )
         {
             //	A closure?
@@ -368,10 +365,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     {
         if ( $this instanceof BasePlatformRestResource || $this instanceof ServiceOnlyResourceLike )
         {
-            $this->_triggerActionEvent(
-                method_exists( $this, 'getRequestData' ) ? $this->getRequestData() : $this->_requestPayload,
-                PlatformServiceEvents::PRE_PROCESS
-            );
+            $_data = method_exists( $this, 'getRequestData' ) ? $this->getRequestData() : $this->_requestPayload;
+            $this->_triggerActionEvent( $_data, PlatformServiceEvents::PRE_PROCESS );
         }
     }
 
@@ -687,15 +682,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
         $_inboundData = false;
         $_result = array();
-        $_pathInfo =
-            trim(
-                str_replace(
-                    '/rest',
-                    null,
-                    Option::server( 'INLINE_REQUEST_URI', Pii::request( false )->getPathInfo() )
-                ),
-                '/'
-            );
+        $_pathInfo = trim(
+            str_replace(
+                '/rest',
+                null,
+                Option::server( 'INLINE_REQUEST_URI', Pii::request( false )->getPathInfo() )
+            ),
+            '/'
+        );
 
         $_values = array(
             'action'          => strtolower( $this->_action ),

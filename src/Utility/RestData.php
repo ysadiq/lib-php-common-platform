@@ -123,7 +123,6 @@ class RestData
             // get rid of xml wrapper if present
             $_data = Option::get( $_data, 'dfapi', $_data );
         }
-        Log::debug( 'daata ' . print_r( $_data, true ) );
 
         return $_data;
     }
