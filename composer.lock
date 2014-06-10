@@ -1,8 +1,7 @@
 {
     "_readme": [
         "This file locks the dependencies of your project to a known state",
-        "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
-        "This file is @generated automatically"
+        "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
     "hash": "4d7d02afaf5514f41cc9615af246dcc4",
     "packages": [
@@ -115,7 +114,7 @@
             ],
             "authors": [
                 {
-                    "name": "Jonathan Wage",
+                    "name": "Jonathan H. Wage",
                     "email": "jonwage@gmail.com",
                     "homepage": "http://www.jwage.com/",
                     "role": "Creator"
@@ -134,9 +133,9 @@
                     "email": "kontakt@beberlei.de"
                 },
                 {
-                    "name": "Johannes M. Schmitt",
+                    "name": "Johannes Schmitt",
                     "email": "schmittjoh@gmail.com",
-                    "homepage": "https://github.com/schmittjoh",
+                    "homepage": "http://jmsyst.com",
                     "role": "Developer of wrapped JMSSerializerBundle"
                 }
             ],
@@ -354,12 +353,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "a0effbe7ce79833384c1cb13941f83ceacf14cd7"
+                "reference": "592c1ecc50c47cc620470cb804c3fcd292e63283"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/a0effbe7ce79833384c1cb13941f83ceacf14cd7",
-                "reference": "a0effbe7ce79833384c1cb13941f83ceacf14cd7",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/592c1ecc50c47cc620470cb804c3fcd292e63283",
+                "reference": "592c1ecc50c47cc620470cb804c3fcd292e63283",
                 "shasum": ""
             },
             "require": {
@@ -417,7 +416,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-06-05 16:03:47"
+            "time": "2014-06-10 19:39:52"
         },
         {
             "name": "dreamfactory/oasys",
@@ -1284,8 +1283,7 @@
                 },
                 {
                     "name": "Jamie Hannaford",
-                    "email": "jamie.hannaford@rackspace.com",
-                    "homepage": "https://github.com/jamiehannaford"
+                    "email": "jamie@limetree.org"
                 }
             ],
             "description": "Rackspace open cloud php library",
@@ -1330,9 +1328,7 @@
             "authors": [
                 {
                     "name": "Fabien Potencier",
-                    "email": "fabien@symfony.com",
-                    "homepage": "http://fabien.potencier.org",
-                    "role": "Lead Developer"
+                    "email": "fabien@symfony.com"
                 },
                 {
                     "name": "Chris Corbyn"
@@ -2120,7 +2116,5 @@
     "platform": {
         "php": ">=5.3.18"
     },
-    "platform-dev": [
-
-    ]
+    "platform-dev": []
 }
