@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Utility;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
+use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -97,7 +98,7 @@ class RestData
                         {
                             throw $_ex;
                         }
-                        
+
                         $_data = $_postData;
                     }
                 }
@@ -122,6 +123,7 @@ class RestData
             // get rid of xml wrapper if present
             $_data = Option::get( $_data, 'dfapi', $_data );
         }
+        Log::debug( 'daata ' . print_r( $_data, true ) );
 
         return $_data;
     }

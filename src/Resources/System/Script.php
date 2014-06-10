@@ -227,7 +227,12 @@ class Script extends BaseSystemRestResource
         }
 
         $_path = $this->_scriptPath . '/' . trim( $this->_resourceId, '/ ' ) . '.js';
-        $_scriptBody = Pii::request(false)->getContent();
+        $_scriptBody = RestData::getPostedData();
+
+        if ( is_array( $_scriptBody ) )
+        {
+            $_scriptBody = current( $_scriptBody );
+        }
 
         if ( empty( $_scriptBody ) )
         {
