@@ -537,30 +537,29 @@ class Session extends BasePlatformRestResource
      */
     public static function validateSession()
     {
-        if ( !Pii::guest() && !Pii::getState( 'df_authenticated', false ) )
-        {
-            return Pii::user()->getId();
-        }
-
         // helper for non-browser-managed sessions
         $_sessionId = FilterInput::server( 'HTTP_X_DREAMFACTORY_SESSION_TOKEN' );
 
-        if ( !empty( $_sessionId ) )
+        $_oldSessionId = session_id();
+        if ( !empty( $_sessionId ) && $_sessionId !== $_oldSessionId )
         {
-            session_write_close();
+            if ( !empty( $_oldSessionId ) )
+            {
+                @session_unset();
+                @session_destroy();
+            }
+
             session_id( $_sessionId );
 
-            if ( session_start() )
-            {
-                if ( !Pii::guest() && false === Pii::getState( 'df_authenticated', false ) )
-                {
-                    return Pii::user()->getId();
-                }
-            }
-            else
+            if ( !session_start() )
             {
                 Log::error( 'Failed to start session "' . $_sessionId . '" from header: ' . print_r( $_SERVER, true ) );
             }
+        }
+
+        if ( !Pii::guest() && !Pii::getState( 'df_authenticated', false ) )
+        {
+            return Pii::user()->getId();
         }
 
         throw new UnauthorizedException( "There is no valid session for the current request." );
