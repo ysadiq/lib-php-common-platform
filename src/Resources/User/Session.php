@@ -450,7 +450,7 @@ class Session extends BasePlatformRestResource
         }
 
         $_public['dsp_name'] = Pii::getParam( 'dsp_name' );
-        $_cached['lookup'] = LookupKey::getForSession( $_roleId, $_user->id );
+        $_cached = array_merge( $_cached, LookupKey::getForSession( $_roleId, $_user->id ) );
 
         return array(
             'cached'         => $_cached,
@@ -521,7 +521,7 @@ class Session extends BasePlatformRestResource
         $_roleData['services'] = $_role->getRoleServicePermissions();
 
         $_cached['role'] = $_roleData;
-        $_cached['lookup'] = LookupKey::getForSession( $_role->id );
+        $_cached = array_merge( $_cached, LookupKey::getForSession( $_role->id ) );
 
         return array(
             'cached'         => $_cached,
@@ -905,10 +905,11 @@ class Session extends BasePlatformRestResource
     /**
      * @param string $lookup
      * @param string $value
+     * @param bool   $use_private
      *
      * @returns bool
      */
-    public static function getLookupValue( $lookup, &$value )
+    public static function getLookupValue( $lookup, &$value, $use_private = false )
     {
         if ( empty( $lookup ) )
         {
@@ -1006,9 +1007,11 @@ class Session extends BasePlatformRestResource
             }
         }
 
-        if ( isset( static::$_cache, static::$_cache['lookup'], static::$_cache['lookup'][$lookup] ) )
+        $_control = $use_private ? 'secret' : 'lookup';
+
+        if ( isset( static::$_cache, static::$_cache[$_control], static::$_cache[$_control][$lookup] ) )
         {
-            $value = static::$_cache['lookup'][$lookup];
+            $value = static::$_cache[$_control][$lookup];
 
             return true;
         }
@@ -1016,7 +1019,7 @@ class Session extends BasePlatformRestResource
         return false;
     }
 
-    public static function replaceLookup( $lookup )
+    public static function replaceLookup( $lookup, $use_private = false )
     {
         // filter string values should be wrapped in curly braces
         if ( is_string( $lookup ) )
@@ -1024,7 +1027,7 @@ class Session extends BasePlatformRestResource
             $_end = strlen( $lookup ) - 1;
             if ( ( 0 === strpos( $lookup, '{' ) ) && ( $_end === strrpos( $lookup, '}' ) ) )
             {
-                if ( static::getLookupValue( substr( $lookup, 1, $_end - 1 ), $_value ) )
+                if ( static::getLookupValue( substr( $lookup, 1, $_end - 1 ), $_value, $use_private ) )
                 {
                     return $_value;
                 }
@@ -1034,7 +1037,7 @@ class Session extends BasePlatformRestResource
         return $lookup;
     }
 
-    public static function replaceLookupsInStrings( &$string )
+    public static function replaceLookupsInStrings( &$string, $use_private = false )
     {
         if ( false !== strpos( $string, '{' ) )
         {
@@ -1047,7 +1050,7 @@ class Session extends BasePlatformRestResource
                 $_lookup = strstr( $_word, '}', true );
                 if ( !empty( $_lookup ) )
                 {
-                    if ( Session::getLookupValue( $_lookup, $_value ) )
+                    if ( Session::getLookupValue( $_lookup, $_value, $use_private ) )
                     {
                         $_search[] = '{' . $_lookup . '}';
                         $_replace[] = $_value;

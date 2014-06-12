@@ -76,17 +76,17 @@ class WindowsAzureBlobSvc extends RemoteFileSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ) );
-        $_connectionString = Session::replaceLookup( Option::get( $_credentials, 'connection_string' ) );
+        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
+        $_connectionString = Session::replaceLookup( Option::get( $_credentials, 'connection_string' ), true );
         if ( empty( $_connectionString ) )
         {
-            $_name = Session::replaceLookup( Option::get( $_credentials, 'account_name', Option::get( $_credentials, 'AccountName' ) ) );
+            $_name = Session::replaceLookup( Option::get( $_credentials, 'account_name', Option::get( $_credentials, 'AccountName' ) ), true );
             if ( empty( $_name ) )
             {
                 throw new \InvalidArgumentException( 'WindowsAzure account name can not be empty.' );
             }
 
-            $_key = Session::replaceLookup( Option::get( $_credentials, 'account_key', Option::get( $_credentials, 'AccountKey' ) ) );
+            $_key = Session::replaceLookup( Option::get( $_credentials, 'account_key', Option::get( $_credentials, 'AccountKey' ) ), true );
             if ( empty( $_key ) )
             {
                 throw new \InvalidArgumentException( 'WindowsAzure account key can not be empty.' );

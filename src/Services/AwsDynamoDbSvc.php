@@ -94,12 +94,12 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ) );
+        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
         $_parameters = Option::get( $config, 'parameters' );
 
         // old way
-        $_accessKey = Session::replaceLookup( Option::get( $_credentials, 'access_key' ) );
-        $_secretKey = Session::replaceLookup( Option::get( $_credentials, 'secret_key' ) );
+        $_accessKey = Session::replaceLookup( Option::get( $_credentials, 'access_key' ), true );
+        $_secretKey = Session::replaceLookup( Option::get( $_credentials, 'secret_key' ), true );
         if ( !empty( $_accessKey ) )
         {
             // old way, replace with 'key'
@@ -120,9 +120,11 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         }
 
         // set up a default table schema
-        if ( null !== ( $_table = Option::get( $_parameters, 'default_create_table' ) ) )
+        if ( null !==
+             ( $_table = Session::replaceLookup( Option::get( $_parameters, 'default_create_table' ), true ) )
+        )
         {
-            $this->_defaultCreateTable = Session::replaceLookup( $_table );
+            $this->_defaultCreateTable = $_table;
         }
 
         try
@@ -207,15 +209,16 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                 $_access = $this->getPermissions( $_table );
                 if ( !empty( $_access ) )
                 {
-                    $_resources[] = array( 'name' => $_table, 'access' => $_access, static::TABLE_INDICATOR => $_table );
+                    $_resources[] = array('name' => $_table, 'access' => $_access, static::TABLE_INDICATOR => $_table);
                 }
             }
 
-            return array( 'resource' => $_resources );
+            return array('resource' => $_resources);
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -233,7 +236,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
             $_existing = $this->_getTablesAsArray();
         }
 
-        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name', Option::get( $table, static::TABLE_INDICATOR ) ) : $table;
+        $_name =
+            ( is_array( $table ) ) ? Option::get( $table, 'name', Option::get( $table, static::TABLE_INDICATOR ) )
+                : $table;
         if ( empty( $_name ) )
         {
             throw new BadRequestException( 'Table name can not be empty.' );
@@ -246,7 +251,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
         try
         {
-            $_result = $this->_dbConn->describeTable( array( static::TABLE_INDICATOR => $_name ) );
+            $_result = $this->_dbConn->describeTable( array(static::TABLE_INDICATOR => $_name) );
 
             // The result of an operation can be used like an array
             $_out = $_result['Table'];
@@ -257,7 +262,8 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -275,16 +281,16 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         try
         {
             $_properties = array_merge(
-                array( static::TABLE_INDICATOR => $_name ),
+                array(static::TABLE_INDICATOR => $_name),
                 $this->_defaultCreateTable,
                 $properties
             );
             $_result = $this->_dbConn->createTable( $_properties );
 
             // Wait until the table is created and active
-            $this->_dbConn->waitUntilTableExists( array( static::TABLE_INDICATOR => $_name ) );
+            $this->_dbConn->waitUntilTableExists( array(static::TABLE_INDICATOR => $_name) );
 
-            $_out = array_merge( array( 'name' => $_name ), $_result['TableDescription'] );
+            $_out = array_merge( array('name' => $_name), $_result['TableDescription'] );
 
             return $_out;
         }
@@ -309,15 +315,15 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         {
             // Update the provisioned throughput capacity of the table
             $_properties = array_merge(
-                array( static::TABLE_INDICATOR => $_name ),
+                array(static::TABLE_INDICATOR => $_name),
                 $properties
             );
             $_result = $this->_dbConn->updateTable( $_properties );
 
             // Wait until the table is active again after updating
-            $this->_dbConn->waitUntilTableExists( array( static::TABLE_INDICATOR => $_name ) );
+            $this->_dbConn->waitUntilTableExists( array(static::TABLE_INDICATOR => $_name) );
 
-            return array_merge( array( 'name' => $_name ), $_result['TableDescription'] );
+            return array_merge( array('name' => $_name), $_result['TableDescription'] );
         }
         catch ( \Exception $_ex )
         {
@@ -330,7 +336,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
      */
     public function deleteTable( $table, $check_empty = false )
     {
-        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name', Option::get( $table, static::TABLE_INDICATOR ) ) : $table;
+        $_name =
+            ( is_array( $table ) ) ? Option::get( $table, 'name', Option::get( $table, static::TABLE_INDICATOR ) )
+                : $table;
         if ( empty( $_name ) )
         {
             throw new BadRequestException( 'Table name can not be empty.' );
@@ -338,12 +346,12 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
         try
         {
-            $_result = $this->_dbConn->deleteTable( array( static::TABLE_INDICATOR => $_name ) );
+            $_result = $this->_dbConn->deleteTable( array(static::TABLE_INDICATOR => $_name) );
 
             // Wait until the table is truly gone
-            $this->_dbConn->waitUntilTableNotExists( array( static::TABLE_INDICATOR => $_name ) );
+            $this->_dbConn->waitUntilTableNotExists( array(static::TABLE_INDICATOR => $_name) );
 
-            return array_merge( array( 'name' => $_name ), $_result['TableDescription'] );
+            return array_merge( array('name' => $_name), $_result['TableDescription'] );
         }
         catch ( \Exception $_ex )
         {
@@ -364,7 +372,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
-        $_scanProperties = array( static::TABLE_INDICATOR => $table );
+        $_scanProperties = array(static::TABLE_INDICATOR => $table);
 
         $_fields = static::_buildAttributesToGet( $_fields );
         if ( !empty( $_fields ) )
@@ -614,7 +622,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
             }
 
             $requested_fields[] = $_name;
-            $_fields[] = array( 'name' => $_name, 'key_type' => $_keyType, 'type' => $_type, 'required' => true );
+            $_fields[] = array('name' => $_name, 'key_type' => $_keyType, 'type' => $_type, 'required' => true);
         }
 
         return $_fields;
@@ -636,10 +644,10 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
             switch ( $_type )
             {
                 case Type::N:
-                    $_value = array( Type::N => strval( $_value ) );
+                    $_value = array(Type::N => strval( $_value ));
                     break;
                 default:
-                    $_value = array( Type::S => $_value );
+                    $_value = array(Type::S => $_value);
             }
             $_keys[$_name] = $_value;
         }
@@ -654,7 +662,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
         if ( !empty( $_serverCriteria ) )
         {
-            $_criteria = ( !empty( $_criteria ) ) ? array( $_criteria, $_serverCriteria ) : $_serverCriteria;
+            $_criteria = ( !empty( $_criteria ) ) ? array($_criteria, $_serverCriteria) : $_serverCriteria;
         }
 
         return $_criteria;
@@ -702,7 +710,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
             case 'AND':
                 return $_criteria;
             case 'OR':
-                return array( 'split' => $_criteria );
+                return array('split' => $_criteria);
             default:
                 // log and bail
                 throw new InternalServerErrorException( 'Invalid server-side filter configuration detected.' );
@@ -728,8 +736,8 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
             return $filter; // assume they know what they are doing
         }
 
-        $_search = array( ' or ', ' and ', ' nor ' );
-        $_replace = array( ' || ', ' && ', ' NOR ' );
+        $_search = array(' or ', ' and ', ' nor ');
+        $_replace = array(' || ', ' && ', ' NOR ');
         $filter = trim( str_ireplace( $_search, $_replace, $filter ) );
 
         // handle logical operators first
@@ -889,7 +897,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                             {
                                 return array(
                                     $_ops[0] => array(
-                                        'AttributeValueList' => array( $_type => trim( $_val, '%' ) ),
+                                        'AttributeValueList' => array($_type => trim( $_val, '%' )),
                                         'ComparisonOperator' => ComparisonOperator::CONTAINS
                                     )
                                 );
@@ -905,7 +913,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                             {
                                 return array(
                                     $_ops[0] => array(
-                                        'AttributeValueList' => array( $_type => trim( $_val, '%' ) ),
+                                        'AttributeValueList' => array($_type => trim( $_val, '%' )),
                                         'ComparisonOperator' => ComparisonOperator::BEGINS_WITH
                                     )
                                 );
@@ -914,7 +922,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                             {
                                 return array(
                                     $_ops[0] => array(
-                                        'AttributeValueList' => array( $_type => trim( $_val, '%' ) ),
+                                        'AttributeValueList' => array($_type => trim( $_val, '%' )),
                                         'ComparisonOperator' => ComparisonOperator::CONTAINS
                                     )
                                 );
@@ -954,24 +962,24 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
         if ( trim( $value, "'\"" ) !== $value )
         {
-            return array( array( Type::S => trim( $value, "'\"" ) ) ); // meant to be a string
+            return array(array(Type::S => trim( $value, "'\"" ))); // meant to be a string
         }
 
         if ( is_numeric( $value ) )
         {
             $value = ( $value == strval( intval( $value ) ) ) ? intval( $value ) : floatval( $value );
 
-            return array( array( Type::N => $value ) );
+            return array(array(Type::N => $value));
         }
 
         if ( 0 == strcasecmp( $value, 'true' ) )
         {
-            return array( array( Type::N => 1 ) );
+            return array(array(Type::N => 1));
         }
 
         if ( 0 == strcasecmp( $value, 'false' ) )
         {
-            return array( array( Type::N => 0 ) );
+            return array(array(Type::N => 0));
         }
 
         return $value;
@@ -1014,7 +1022,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                     array(
                         static::TABLE_INDICATOR => $this->_transactionTable,
                         'Item'                  => $_native,
-                        'Expected'              => array( $_idFields[0] => array( 'Exists' => false ) )
+                        'Expected'              => array($_idFields[0] => array('Exists' => false))
                     )
                 );
 
@@ -1120,7 +1128,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                     return parent::addToTransaction( null, $id );
                 }
 
-                $_record = array( $_idFields[0] => $id );
+                $_record = array($_idFields[0] => $id);
                 $_key = static::_buildKey( $_idsInfo, $_record );
 
                 $_result = $this->_dbConn->deleteItem(
@@ -1143,7 +1151,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                 break;
 
             case static::GET:
-                $_record = array( $_idFields[0] => $id );
+                $_record = array($_idFields[0] => $id);
                 $_key = static::_buildKey( $_idsInfo, $_record );
                 $_scanProperties = array(
                     static::TABLE_INDICATOR => $this->_transactionTable,
@@ -1192,11 +1200,13 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                 $_requests = array();
                 foreach ( $this->_batchRecords as $_item )
                 {
-                    $_requests[] = array( 'PutRequest' => array( 'Item' => $_item ) );
+                    $_requests[] = array('PutRequest' => array('Item' => $_item));
                 }
 
                 /*$_result = */
-                $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $this->_transactionTable => $_requests ) ) );
+                $this->_dbConn->batchWriteItem(
+                    array('RequestItems' => array($this->_transactionTable => $_requests))
+                );
 
                 // todo check $_result['UnprocessedItems'] for 'PutRequest'
 
@@ -1210,11 +1220,13 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                 $_requests = array();
                 foreach ( $this->_batchRecords as $_item )
                 {
-                    $_requests[] = array( 'PutRequest' => array( 'Item' => $_item ) );
+                    $_requests[] = array('PutRequest' => array('Item' => $_item));
                 }
 
                 /*$_result = */
-                $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $this->_transactionTable => $_requests ) ) );
+                $this->_dbConn->batchWriteItem(
+                    array('RequestItems' => array($this->_transactionTable => $_requests))
+                );
 
                 // todo check $_result['UnprocessedItems'] for 'PutRequest'
 
@@ -1233,10 +1245,10 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                 $_requests = array();
                 foreach ( $this->_batchIds as $_id )
                 {
-                    $_record = array( $_idFields[0] => $_id );
+                    $_record = array($_idFields[0] => $_id);
                     $_out[] = $_record;
                     $_key = static::_buildKey( $_idsInfo, $_record );
-                    $_requests[] = array( 'DeleteRequest' => array( 'Key' => $_key ) );
+                    $_requests[] = array('DeleteRequest' => array('Key' => $_key));
                 }
                 if ( $_requireMore )
                 {
@@ -1269,7 +1281,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                 }
 
                 /*$_result = */
-                $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $this->_transactionTable => $_requests ) ) );
+                $this->_dbConn->batchWriteItem(
+                    array('RequestItems' => array($this->_transactionTable => $_requests))
+                );
 
                 // todo check $_result['UnprocessedItems'] for 'DeleteRequest'
                 break;
@@ -1278,7 +1292,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                 $_keys = array();
                 foreach ( $this->_batchIds as $_id )
                 {
-                    $_record = array( $_idFields[0] => $_id );
+                    $_record = array($_idFields[0] => $_id);
                     $_key = static::_buildKey( $_idsInfo, $_record );
                     $_keys[] = $_key;
                 }
@@ -1340,11 +1354,13 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                     $_requests = array();
                     foreach ( $this->_rollbackRecords as $_item )
                     {
-                        $_requests[] = array( 'DeleteRequest' => array( 'Key' => $_item ) );
+                        $_requests[] = array('DeleteRequest' => array('Key' => $_item));
                     }
 
                     /* $_result = */
-                    $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $this->_transactionTable => $_requests ) ) );
+                    $this->_dbConn->batchWriteItem(
+                        array('RequestItems' => array($this->_transactionTable => $_requests))
+                    );
 
                     // todo check $_result['UnprocessedItems'] for 'DeleteRequest'
                     break;
@@ -1356,11 +1372,13 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
                     $_requests = array();
                     foreach ( $this->_rollbackRecords as $_item )
                     {
-                        $_requests[] = array( 'PutRequest' => array( 'Item' => $_item ) );
+                        $_requests[] = array('PutRequest' => array('Item' => $_item));
                     }
 
                     /* $_result = */
-                    $this->_dbConn->batchWriteItem( array( 'RequestItems' => array( $this->_transactionTable => $_requests ) ) );
+                    $this->_dbConn->batchWriteItem(
+                        array('RequestItems' => array($this->_transactionTable => $_requests))
+                    );
 
                     // todo check $_result['UnprocessedItems'] for 'PutRequest'
                     break;

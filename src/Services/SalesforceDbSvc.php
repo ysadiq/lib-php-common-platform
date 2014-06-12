@@ -101,11 +101,11 @@ class SalesforceDbSvc extends BaseDbSvc
 
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ) );
+        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
 
-        $this->_username = Session::replaceLookup( Option::get( $_credentials, 'username' ) );
-        $this->_password = Session::replaceLookup( Option::get( $_credentials, 'password' ) );
-        $this->_securityToken = Session::replaceLookup( Option::get( $_credentials, 'security_token' ) );
+        $this->_username = Session::replaceLookup( Option::get( $_credentials, 'username' ), true );
+        $this->_password = Session::replaceLookup( Option::get( $_credentials, 'password' ), true );
+        $this->_securityToken = Session::replaceLookup( Option::get( $_credentials, 'security_token' ), true );
         if ( empty( $this->_securityToken ) )
         {
             $this->_securityToken = ''; // gets appended to password
@@ -176,11 +176,11 @@ class SalesforceDbSvc extends BaseDbSvc
                 $_access = $this->getPermissions( $_name );
                 if ( !empty( $_access ) )
                 {
-                    $_resources[] = array_merge( $_table, array( 'access' => $_access ) );
+                    $_resources[] = array_merge( $_table, array('access' => $_access) );
                 }
             }
 
-            return array( 'resource' => $_resources );
+            return array('resource' => $_resources);
         }
         catch ( \Exception $_ex )
         {
@@ -324,7 +324,7 @@ class SalesforceDbSvc extends BaseDbSvc
                 $_query .= ' LIMIT ' . $_limit;
             }
 
-            $_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
+            $_result = $this->callGuzzle( 'GET', 'query', array('q' => $_query) );
         }
 
         $_data = Option::get( $_result, 'records', array() );
@@ -401,10 +401,10 @@ class SalesforceDbSvc extends BaseDbSvc
     /**
      * Perform call to Salesforce REST API
      *
-     * @param string       $method
-     * @param string       $uri
-     * @param array        $parameters
-     * @param mixed        $body
+     * @param string $method
+     * @param string $uri
+     * @param array $parameters
+     * @param mixed $body
      * @param GuzzleClient $client
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
@@ -533,9 +533,9 @@ class SalesforceDbSvc extends BaseDbSvc
         $requested_fields = static::DEFAULT_ID_FIELD; // can only be this
 
         $_type = Option::get( Option::clean( $requested_types ), 0 );
-        $_type = (empty($_type)) ? 'string' : $_type;
+        $_type = ( empty( $_type ) ) ? 'string' : $_type;
 
-        return array( array( 'name' => static::DEFAULT_ID_FIELD, 'type' => $_type, 'required' => false ) );
+        return array(array('name' => static::DEFAULT_ID_FIELD, 'type' => $_type, 'required' => false));
     }
 
     /**
@@ -651,17 +651,19 @@ class SalesforceDbSvc extends BaseDbSvc
                 }
 
                 $_native = json_encode( $_parsed );
-                $_result = $this->callGuzzle( 'POST', 'sobjects/' . $this->_transactionTable . '/', null, $_native, $_client );
+                $_result =
+                    $this->callGuzzle( 'POST', 'sobjects/' . $this->_transactionTable . '/', null, $_native, $_client );
                 if ( !Option::getBool( $_result, 'success', false ) )
                 {
                     $_msg = json_encode( Option::get( $_result, 'errors' ) );
-                    throw new InternalServerErrorException( "Record insert failed for table '$this->_transactionTable'.\n" . $_msg );
+                    throw new InternalServerErrorException( "Record insert failed for table '$this->_transactionTable'.\n" .
+                                                            $_msg );
                 }
 
                 $id = Option::get( $_result, 'id' );
 
                 // add via record, so batch processing can retrieve extras
-                return ( $_requireMore ) ? parent::addToTransaction( $id ) : array( $_idFields => $id );
+                return ( $_requireMore ) ? parent::addToTransaction( $id ) : array($_idFields => $id);
 
             case static::PUT:
             case static::MERGE:
@@ -677,29 +679,45 @@ class SalesforceDbSvc extends BaseDbSvc
                     throw new BadRequestException( 'No valid fields were found in record.' );
                 }
 
-                static::removeIds($_parsed, $_idFields);
+                static::removeIds( $_parsed, $_idFields );
                 $_native = json_encode( $_parsed );
 
-                $_result = $this->callGuzzle( 'PATCH', 'sobjects/' . $this->_transactionTable . '/' . $id, null, $_native, $_client );
+                $_result =
+                    $this->callGuzzle(
+                        'PATCH',
+                        'sobjects/' . $this->_transactionTable . '/' . $id,
+                        null,
+                        $_native,
+                        $_client
+                    );
                 if ( $_result && !Option::getBool( $_result, 'success', false ) )
                 {
                     $msg = Option::get( $_result, 'errors' );
-                    throw new InternalServerErrorException( "Record update failed for table '$this->_transactionTable'.\n" . $msg );
+                    throw new InternalServerErrorException( "Record update failed for table '$this->_transactionTable'.\n" .
+                                                            $msg );
                 }
 
                 // add via record, so batch processing can retrieve extras
-                return ( $_requireMore ) ? parent::addToTransaction( $id ) : array( $_idFields => $id );
+                return ( $_requireMore ) ? parent::addToTransaction( $id ) : array($_idFields => $id);
 
             case static::DELETE:
-                $_result = $this->callGuzzle( 'DELETE', 'sobjects/' . $this->_transactionTable . '/' . $id, null, null, $_client );
+                $_result =
+                    $this->callGuzzle(
+                        'DELETE',
+                        'sobjects/' . $this->_transactionTable . '/' . $id,
+                        null,
+                        null,
+                        $_client
+                    );
                 if ( $_result && !Option::getBool( $_result, 'success', false ) )
                 {
                     $msg = Option::get( $_result, 'errors' );
-                    throw new InternalServerErrorException( "Record delete failed for table '$this->_transactionTable'.\n" . $msg );
+                    throw new InternalServerErrorException( "Record delete failed for table '$this->_transactionTable'.\n" .
+                                                            $msg );
                 }
 
                 // add via record, so batch processing can retrieve extras
-                return ( $_requireMore ) ? parent::addToTransaction( $id ) : array( $_idFields => $id );
+                return ( $_requireMore ) ? parent::addToTransaction( $id ) : array($_idFields => $id);
 
             case static::GET:
                 if ( !$_needToIterate )
@@ -709,7 +727,12 @@ class SalesforceDbSvc extends BaseDbSvc
 
                 $_fields = $this->_buildFieldList( $this->_transactionTable, $_fields, $_idFields );
 
-                $_result = $this->callGuzzle( 'GET', 'sobjects/' . $this->_transactionTable . '/' . $id, array( 'fields' => $_fields ) );
+                $_result =
+                    $this->callGuzzle(
+                        'GET',
+                        'sobjects/' . $this->_transactionTable . '/' . $id,
+                        array('fields' => $_fields)
+                    );
                 if ( empty( $_result ) )
                 {
                     throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
@@ -752,9 +775,17 @@ class SalesforceDbSvc extends BaseDbSvc
                 $_fields = $this->_buildFieldList( $this->_transactionTable, $_fields, $_idFields );
 
                 $_idList = "('" . implode( "','", $this->_batchRecords ) . "')";
-                $_query = 'SELECT ' . $_fields . ' FROM ' . $this->_transactionTable . ' WHERE ' . $_idFields . ' IN ' . $_idList;
+                $_query =
+                    'SELECT ' .
+                    $_fields .
+                    ' FROM ' .
+                    $this->_transactionTable .
+                    ' WHERE ' .
+                    $_idFields .
+                    ' IN ' .
+                    $_idList;
 
-                $_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
+                $_result = $this->callGuzzle( 'GET', 'query', array('q' => $_query) );
 
                 $_out = Option::get( $_result, 'records', array() );
                 if ( empty( $_out ) )
@@ -785,9 +816,17 @@ class SalesforceDbSvc extends BaseDbSvc
                     $_fields = $this->_buildFieldList( $this->_transactionTable, $_fields, $_idFields );
 
                     $_idList = "('" . implode( "','", $this->_batchIds ) . "')";
-                    $_query = 'SELECT ' . $_fields . ' FROM ' . $this->_transactionTable . ' WHERE ' . $_idFields . ' IN ' . $_idList;
+                    $_query =
+                        'SELECT ' .
+                        $_fields .
+                        ' FROM ' .
+                        $this->_transactionTable .
+                        ' WHERE ' .
+                        $_idFields .
+                        ' IN ' .
+                        $_idList;
 
-                    $_result = $this->callGuzzle( 'GET', 'query', array( 'q' => $_query ) );
+                    $_result = $this->callGuzzle( 'GET', 'query', array('q' => $_query) );
 
                     $_out = Option::get( $_result, 'records', array() );
                     if ( empty( $_out ) )

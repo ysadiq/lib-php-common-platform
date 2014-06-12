@@ -113,19 +113,19 @@ class SqlDbSvc extends BaseDbSvc
         }
         else
         {
-            $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ) );
+            $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
 
-            if ( null === ( $dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn' ) ) ) )
+            if ( null === ( $dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn' ), true ) ) )
             {
                 throw new InternalServerErrorException( 'DB connection string (DSN) can not be empty.' );
             }
 
-            if ( null === ( $user = Session::replaceLookup( Option::get( $_credentials, 'user' ) ) ) )
+            if ( null === ( $user = Session::replaceLookup( Option::get( $_credentials, 'user' ), true ) ) )
             {
                 throw new InternalServerErrorException( 'DB admin name can not be empty.' );
             }
 
-            if ( null === ( $password = Session::replaceLookup( Option::get( $_credentials, 'pwd' ) ) ) )
+            if ( null === ( $password = Session::replaceLookup( Option::get( $_credentials, 'pwd' ), true ) ) )
             {
                 throw new InternalServerErrorException( 'DB admin password can not be empty.' );
             }

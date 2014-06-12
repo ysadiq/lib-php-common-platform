@@ -73,11 +73,11 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ));
+        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
 
         // old way
-        $_accessKey = Session::replaceLookup( Option::get( $_credentials, 'access_key' ));
-        $_secretKey = Session::replaceLookup( Option::get( $_credentials, 'secret_key' ));
+        $_accessKey = Session::replaceLookup( Option::get( $_credentials, 'access_key' ), true );
+        $_secretKey = Session::replaceLookup( Option::get( $_credentials, 'secret_key' ), true );
         if ( !empty( $_accessKey ) )
         {
             // old way, replace with 'key'
@@ -185,15 +185,16 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                 $_access = $this->getPermissions( $_table );
                 if ( !empty( $_access ) )
                 {
-                    $_resources[] = array( 'name' => $_table, 'access' => $_access, static::TABLE_INDICATOR => $_table );
+                    $_resources[] = array('name' => $_table, 'access' => $_access, static::TABLE_INDICATOR => $_table);
                 }
             }
 
-            return array( 'resource' => $_resources );
+            return array('resource' => $_resources);
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -211,7 +212,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
             $_existing = $this->_getTablesAsArray();
         }
 
-        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name', Option::get( $table, static::TABLE_INDICATOR ) ) : $table;
+        $_name =
+            ( is_array( $table ) ) ? Option::get( $table, 'name', Option::get( $table, static::TABLE_INDICATOR ) )
+                : $table;
         if ( empty( $_name ) )
         {
             throw new BadRequestException( 'Table name can not be empty.' );
@@ -240,7 +243,8 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -258,12 +262,12 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         try
         {
             $_properties = array_merge(
-                array( static::TABLE_INDICATOR => $_name ),
+                array(static::TABLE_INDICATOR => $_name),
                 $properties
             );
             $_result = $this->_dbConn->createDomain( $_properties );
 
-            $_out = array_merge( array( 'name' => $_name, static::TABLE_INDICATOR => $_name ), $_result->toArray() );
+            $_out = array_merge( array('name' => $_name, static::TABLE_INDICATOR => $_name), $_result->toArray() );
 
             return $_out;
         }
@@ -292,7 +296,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
      */
     public function deleteTable( $table, $check_empty = false )
     {
-        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name', Option::get( $table, static::TABLE_INDICATOR ) ) : $table;
+        $_name =
+            ( is_array( $table ) ) ? Option::get( $table, 'name', Option::get( $table, static::TABLE_INDICATOR ) )
+                : $table;
         if ( empty( $_name ) )
         {
             throw new BadRequestException( 'Table name can not be empty.' );
@@ -306,7 +312,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                 )
             );
 
-            return array_merge( array( 'name' => $_name, static::TABLE_INDICATOR => $_name ), $_result->toArray() );
+            return array_merge( array('name' => $_name, static::TABLE_INDICATOR => $_name), $_result->toArray() );
         }
         catch ( \Exception $_ex )
         {
@@ -354,7 +360,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 
         try
         {
-            $_result = $this->_dbConn->select( array( 'SelectExpression' => $_select, 'ConsistentRead' => true ) );
+            $_result = $this->_dbConn->select( array('SelectExpression' => $_select, 'ConsistentRead' => true) );
             $_items = Option::clean( $_result['Items'] );
 
             $_out = array();
@@ -364,7 +370,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                 $_name = Option::get( $_item, $_idField );
                 $_out[] = array_merge(
                     static::_unformatAttributes( $_attributes ),
-                    array( $_idField => $_name )
+                    array($_idField => $_name)
                 );
             }
 
@@ -380,15 +386,15 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     {
         if ( empty( $requested_fields ) )
         {
-            $requested_fields = array( static::DEFAULT_ID_FIELD ); // can only be this
+            $requested_fields = array(static::DEFAULT_ID_FIELD); // can only be this
             $_ids = array(
-                array( 'name' => static::DEFAULT_ID_FIELD, 'type' => 'string', 'required' => true ),
+                array('name' => static::DEFAULT_ID_FIELD, 'type' => 'string', 'required' => true),
             );
         }
         else
         {
             $_ids = array(
-                array( 'name' => $requested_fields, 'type' => 'string', 'required' => true ),
+                array('name' => $requested_fields, 'type' => 'string', 'required' => true),
             );
         }
 
@@ -553,11 +559,11 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                         $_part = static::_formatValue( $_part );
                         if ( 0 == $_key )
                         {
-                            $_out[] = array( 'Name' => $_name, 'Value' => $_part, 'Replace' => $replace );
+                            $_out[] = array('Name' => $_name, 'Value' => $_part, 'Replace' => $replace);
                         }
                         else
                         {
-                            $_out[] = array( 'Name' => $_name, 'Value' => $_part );
+                            $_out[] = array('Name' => $_name, 'Value' => $_part);
                         }
                     }
 
@@ -565,7 +571,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                 else
                 {
                     $_value = static::_formatValue( $_value );
-                    $_out[] = array( 'Name' => $_name, 'Value' => $_value, 'Replace' => $replace );
+                    $_out[] = array('Name' => $_name, 'Value' => $_value, 'Replace' => $replace);
                 }
             }
         }
@@ -602,7 +608,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                     }
                     else
                     {
-                        $_value = array( $_temp, static::_unformatValue( $_value ) );
+                        $_value = array($_temp, static::_unformatValue( $_value ));
                     }
                 }
                 else
@@ -651,7 +657,8 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
         if ( !empty( $_serverCriteria ) )
         {
-            $_criteria = ( !empty( $_criteria ) ) ? '(' . $_serverCriteria . ') AND (' . $_criteria . ')' : $_serverCriteria;
+            $_criteria =
+                ( !empty( $_criteria ) ) ? '(' . $_serverCriteria . ') AND (' . $_criteria . ')' : $_serverCriteria;
         }
 
         return $_criteria;
@@ -727,13 +734,13 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         }
 
         // handle logical operators first
-        $_search = array( ' || ', ' && ' );
-        $_replace = array( ' or ', ' and ' );
+        $_search = array(' || ', ' && ');
+        $_replace = array(' or ', ' and ');
         $filter = trim( str_ireplace( $_search, $_replace, $filter ) );
 
         // the rest should be comparison operators
-        $_search = array( ' eq ', ' ne ', ' gte ', ' lte ', ' gt ', ' lt ' );
-        $_replace = array( ' = ', ' != ', ' >= ', ' <= ', ' > ', ' < ' );
+        $_search = array(' eq ', ' ne ', ' gte ', ' lte ', ' gt ', ' lt ');
+        $_replace = array(' = ', ' != ', ' >= ', ' <= ', ' > ', ' < ');
         $filter = trim( str_ireplace( $_search, $_replace, $filter ) );
 
         // check for x = null
@@ -782,7 +789,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                         static::TABLE_INDICATOR => $this->_transactionTable,
                         'ItemName'              => $id,
                         'Attributes'            => $_native,
-                        'Expected'              => array( $_idFields[0] => array( 'Exists' => false ) )
+                        'Expected'              => array($_idFields[0] => array('Exists' => false))
                     )
                 );
 
@@ -812,7 +819,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 
                 if ( !$continue && !$rollback )
                 {
-                    $_batched = array( 'Name' => $id, 'Attributes' => $_native );
+                    $_batched = array('Name' => $id, 'Attributes' => $_native);
 
                     return parent::addToTransaction( $_batched, $id );
                 }
@@ -908,7 +915,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 
                 $_out = array_merge(
                     static::_unformatAttributes( $_result['Attributes'] ),
-                    array( $_idFields[0] => $id )
+                    array($_idFields[0] => $id)
                 );
                 break;
             default:
@@ -980,7 +987,8 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                         $_select .= ' where ' . $_parsedFilter;
                     }
 
-                    $_result = $this->_dbConn->select( array( 'SelectExpression' => $_select, 'ConsistentRead' => true ) );
+                    $_result =
+                        $this->_dbConn->select( array('SelectExpression' => $_select, 'ConsistentRead' => true) );
                     $_items = Option::clean( $_result['Items'] );
 
                     $_out = array();
@@ -990,7 +998,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                         $_name = Option::get( $_item, static::DEFAULT_ID_FIELD );
                         $_out[] = array_merge(
                             static::_unformatAttributes( $_attributes ),
-                            array( $_idFields[0] => $_name )
+                            array($_idFields[0] => $_name)
                         );
                     }
                 }
@@ -1000,9 +1008,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                 }
 
                 $_items = array();
-                foreach ($this->_batchIds as $_id)
+                foreach ( $this->_batchIds as $_id )
                 {
-                    $_items[] = array( 'Name' => $_id );
+                    $_items[] = array('Name' => $_id);
                 }
                 /*$_result = */
                 $this->_dbConn->batchDeleteAttributes(
@@ -1029,7 +1037,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                     $_select .= ' where ' . $_parsedFilter;
                 }
 
-                $_result = $this->_dbConn->select( array( 'SelectExpression' => $_select, 'ConsistentRead' => true ) );
+                $_result = $this->_dbConn->select( array('SelectExpression' => $_select, 'ConsistentRead' => true) );
                 $_items = Option::clean( $_result['Items'] );
 
                 $_out = array();
@@ -1039,7 +1047,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                     $_name = Option::get( $_item, 'Name' );
                     $_out[] = array_merge(
                         static::_unformatAttributes( $_attributes ),
-                        array( $_idFields[0] => $_name )
+                        array($_idFields[0] => $_name)
                     );
                 }
                 break;
@@ -1087,7 +1095,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
                     $_requests = array();
                     foreach ( $this->_rollbackRecords as $_item )
                     {
-                        $_requests[] = array( 'PutRequest' => array( 'Item' => $_item ) );
+                        $_requests[] = array('PutRequest' => array('Item' => $_item));
                     }
 
                     $this->_dbConn->batchPutAttributes(

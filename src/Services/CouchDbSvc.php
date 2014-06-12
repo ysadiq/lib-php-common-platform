@@ -75,8 +75,8 @@ class CouchDbSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ) );
-        $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn' ) );
+        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
+        $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn' ), true );
         if ( empty( $_dsn ) )
         {
             $_dsn = 'http://localhost:5984';
@@ -159,7 +159,8 @@ class CouchDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -199,7 +200,8 @@ class CouchDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -326,7 +328,7 @@ class CouchDbSvc extends NoSqlDbSvc
             }
             else
             {
-                if (!$_includeDocs)
+                if ( !$_includeDocs )
                 {
                     $_includeDocs = static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD );
                     Option::sins( $extras, 'include_docs', $_includeDocs );
@@ -362,7 +364,7 @@ class CouchDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param array $record
+     * @param array        $record
      * @param string|array $include List of keys to include in the output record
      *
      * @return array
@@ -656,10 +658,9 @@ class CouchDbSvc extends NoSqlDbSvc
                 $_out = array();
                 if ( $_requireMore )
                 {
-                    $_result =
-                        $this->_dbConn->setQueryParameters( $extras )->asArray()->include_docs( true )->keys(
-                                $this->_batchIds
-                            )->getAllDocs();
+                    $_result = $this->_dbConn->setQueryParameters( $extras )->asArray()->include_docs( true )->keys(
+                        $this->_batchIds
+                    )->getAllDocs();
                     $_rows = Option::get( $_result, 'rows' );
                     $_out = static::cleanRecords( $_rows, $_fields, true );
                 }

@@ -89,11 +89,11 @@ class LookupKey extends BasePlatformSystemModel
     public function rules()
     {
         return array(
-            array( 'name', 'required' ),
-            array( 'role_id, user_id', 'numerical', 'integerOnly' => true ),
-            array( 'name', 'length', 'max' => 64 ),
-            array( 'private, allow_user_update', 'boolean', 'allowEmpty' => false ),
-            array( 'value', 'safe' ),
+            array('name', 'required'),
+            array('role_id, user_id', 'numerical', 'integerOnly' => true),
+            array('name', 'length', 'max' => 64),
+            array('private, allow_user_update', 'boolean', 'allowEmpty' => false),
+            array('value', 'safe'),
         );
     }
 
@@ -103,8 +103,8 @@ class LookupKey extends BasePlatformSystemModel
     public function relations()
     {
         return array(
-            'role' => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'role_id' ),
-            'user' => array( self::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id' ),
+            'role' => array(self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'role_id'),
+            'user' => array(self::BELONGS_TO, __NAMESPACE__ . '\\User', 'user_id'),
         );
     }
 
@@ -252,7 +252,9 @@ class LookupKey extends BasePlatformSystemModel
                         }
 
                         $_needUpdate = false;
-                        if ( !( $_old->private && ( '********' === $_assignValue ) ) && ( $_old->value != $_assignValue ) )
+                        if ( !( $_old->private && ( '********' === $_assignValue ) ) &&
+                             ( $_old->value != $_assignValue )
+                        )
                         {
                             $_old->value = is_array( $_assignValue ) ? json_encode( $_assignValue ) : $_assignValue;
                             $_needUpdate = true;
@@ -469,17 +471,21 @@ class LookupKey extends BasePlatformSystemModel
                 }
             }
 
-            array_walk(
-                $_flattened,
-                function ( &$lookup )
+            $_plain = array();
+            $_secret = array();
+            foreach ( $_flattened as $_key => $_lookup )
+            {
+                if ( Option::getBool( $_lookup, 'private' ) )
                 {
-                    $lookup = $lookup['value'];
-
-                    return $lookup;
+                    $_secret[$_key] = $_lookup['value'];
                 }
-            );
+                else
+                {
+                    $_plain[$_key] = $_lookup['value'];
+                }
+            }
 
-            return $_flattened;
+            return array('lookup' => $_plain, 'secret' => $_secret);
         }
         catch ( \Exception $ex )
         {
