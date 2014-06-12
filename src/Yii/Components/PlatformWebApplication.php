@@ -27,6 +27,7 @@ use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Utility\Platform;
+use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Enums\GlobFlags;
@@ -153,9 +154,17 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected $_requestObject;
     /**
+     * @var array Normalized array of inbound request body
+     */
+    protected $_requestBody;
+    /**
      * @var  Response
      */
     protected $_responseObject;
+    /**
+     * @var array Normalized array of outbound response content
+     */
+    protected $_responseBody;
     /**
      * @var bool If true, headers will be added to the response object instance of this run
      */
@@ -315,6 +324,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->startProfiler( 'app.request' );
 
         $this->_requestObject = Request::createFromGlobals();
+        $this->_requestBody = BabelFish::getRequestContent();
+        //getPostedData( true, true );
 
         //	Answer an options call...
         switch ( FilterInput::server( 'REQUEST_METHOD' ) )
@@ -767,7 +778,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     protected function _normalizeUri( $parts )
     {
         return !is_array( $parts )
-            ? $parts :
+            ? $parts
+            :
             ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null );
     }
 
@@ -1131,5 +1143,21 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->_useResponseObject = $useResponseObject;
 
         return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getRequestBody()
+    {
+        return $this->_requestBody;
+    }
+
+    /**
+     * @return array
+     */
+    public function getResponseBody()
+    {
+        return $this->_responseBody;
     }
 }

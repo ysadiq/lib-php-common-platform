@@ -23,8 +23,6 @@ use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\ContentTypes;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Exceptions\FileSystemException;
-use Kisma\Core\Utility\FilterInput;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -80,38 +78,43 @@ class BabelFish
             return $_data;
         }
 
+        $_result = $_data;
+
         if ( $as_array )
         {
-            $_postData = $_data;
-            $_data = array();
+            $_result = array();
 
             switch ( ContentTypes::fromMimeType( $_contentType ) )
             {
                 case ContentTypes::JSON:
-                    $_data = static::_toJson( $_postData );
+                    $_result = static::_toJson( $_data );
                     break;
 
                 case ContentTypes::XML:
-                    $_data = DataFormat::xmlToArray( $_postData );
+                    $_result = DataFormat::xmlToArray( $_data );
                     break;
 
                 case ContentTypes::CSV:
-                    $_data = DataFormat::csvToArray( $_postData );
+                    $_result = DataFormat::csvToArray( $_data );
                     break;
 
                 default:
-                    if ( empty( $_data ) )
+                    if ( empty( $_result ) )
                     {
-                        $_data = static::_toJson( $_postData );
+                        //  See if we can kajigger the $_data into an array...
+                        $_result = static::_toJson( $_data );
                     }
-
-                    //  get rid of xml wrapper if present
-                    $_data = Option::get( $_data, 'dfapi', $_data );
                     break;
+            }
+
+            //  Unwrap any XML cling-ons
+            if ( !is_string( $_result ) && null !== ( $_dfapi = Option::get( $_result, 'dfapi' ) ) )
+            {
+                $_result = $_dfapi;
             }
         }
 
-        return $_data;
+        return $_result;
     }
 
     /**
