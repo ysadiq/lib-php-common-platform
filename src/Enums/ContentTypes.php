@@ -21,7 +21,6 @@ namespace DreamFactory\Platform\Enums;
 
 use Kisma\Core\Enums\SeedEnum;
 use Kisma\Core\Exceptions\NotImplementedException;
-use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Various HTTP content types
@@ -84,6 +83,10 @@ class ContentTypes extends SeedEnum
      * @var int RSS
      */
     const RSS = 13;
+    /**
+     * @var int application/x-www-form-urlencoded
+     */
+    const WWW = 14;
 
     //*************************************************************************
     //* Members
@@ -105,6 +108,7 @@ class ContentTypes extends SeedEnum
         'rdf'  => self::RDF,
         'pdf'  => self::PDF,
         'js'   => self::JAVASCRIPT,
+        'www'  => self::WWW,
     );
 
     //*************************************************************************
@@ -117,7 +121,7 @@ class ContentTypes extends SeedEnum
      * @throws \Kisma\Core\Exceptions\NotImplementedException
      * @return string
      */
-    public static function toNumeric( $contentType )
+    public static function toNumeric( $contentType = 'txt' )
     {
         if ( !is_string( $contentType ) )
         {
@@ -138,7 +142,7 @@ class ContentTypes extends SeedEnum
      * @throws \Kisma\Core\Exceptions\NotImplementedException
      * @return string
      */
-    public static function toString( $numericLevel )
+    public static function toString( $numericLevel = self::TEXT )
     {
         if ( !is_numeric( $numericLevel ) )
         {

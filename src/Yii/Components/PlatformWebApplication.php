@@ -21,13 +21,14 @@ namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
 use DreamFactory\Platform\Components\Profiler;
+use DreamFactory\Platform\Enums\NamespaceTypes;
 use DreamFactory\Platform\Events\Enums\DspEvents;
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Scripting\ScriptEvent;
 use DreamFactory\Platform\Utility\Platform;
-use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
 use Kisma\Core\Enums\GlobFlags;
@@ -99,18 +100,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @var string The default path (sub-path) of installed plug-ins
      */
     const DEFAULT_PLUGINS_PATH = '/storage/plugins';
-    /**
-     * @const int The services namespace map index
-     */
-    const NS_SERVICES = 0;
-    /**
-     * @const int The resources namespace map index
-     */
-    const NS_RESOURCES = 1;
-    /**
-     * @const int The models namespace map index
-     */
-    const NS_MODELS = 2;
 
     //*************************************************************************
     //	Members
@@ -127,7 +116,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @var array[] The namespaces in use by this system. Used by the routing engine
      */
-    protected static $_namespaceMap = array( self::NS_MODELS => array(), self::NS_SERVICES => array(), self::NS_RESOURCES => array() );
+    protected static $_namespaceMap = array( NamespaceTypes::MODELS => array(), NamespaceTypes::SERVICES => array(), NamespaceTypes::RESOURCES => array() );
     /**
      * @var array An indexed array of white-listed hosts (ajax.example.com or foo.bar.com or just bar.com)
      */
@@ -161,10 +150,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @var  Response
      */
     protected $_responseObject;
-    /**
-     * @var array Normalized array of outbound response content
-     */
-    protected $_responseBody;
     /**
      * @var bool If true, headers will be added to the response object instance of this run
      */
@@ -324,8 +309,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->startProfiler( 'app.request' );
 
         $this->_requestObject = Request::createFromGlobals();
-        $this->_requestBody = BabelFish::getRequestContent();
-        //getPostedData( true, true );
+
+        //  A pristine copy of the request
+        $this->_requestBody = ScriptEvent::buildRequestArray();
 
         //	Answer an options call...
         switch ( FilterInput::server( 'REQUEST_METHOD' ) )
@@ -336,8 +322,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 header( 'content-type: text/plain' );
 
                 $this->addCorsHeaders();
-                Pii::end();
-                break;
+
+                return Pii::end();
 
             case HttpMethod::TRACE:
                 Log::error(
@@ -778,8 +764,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     protected function _normalizeUri( $parts )
     {
         return !is_array( $parts )
-            ? $parts
-            :
+            ? $parts :
             ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null );
     }
 
@@ -988,7 +973,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function setResourceNamespaces( $resourceNamespaces )
     {
-        static::$_namespaceMap[ static::NS_RESOURCES ] = $resourceNamespaces;
+        static::$_namespaceMap[ NamespaceTypes::RESOURCES ] = $resourceNamespaces;
 
         return $this;
     }
@@ -998,7 +983,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function getResourceNamespaces()
     {
-        return static::$_namespaceMap[ static::NS_RESOURCES ];
+        return static::$_namespaceMap[ NamespaceTypes::RESOURCES ];
     }
 
     /**
@@ -1010,7 +995,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function addResourceNamespace( $namespace, $path, $prepend = false )
     {
-        static::_mapNamespace( static::NS_RESOURCES, $namespace, $path, $prepend );
+        static::_mapNamespace( NamespaceTypes::RESOURCES, $namespace, $path, $prepend );
         array_unshift( $this->_modelNamespaces, $_entry );
 
         return $this;
@@ -1023,7 +1008,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function setModelNamespaces( $modelNamespaces )
     {
-        static::$_namespaceMap[ static::NS_MODELS ] = $modelNamespaces;
+        static::$_namespaceMap[ NamespaceTypes::MODELS ] = $modelNamespaces;
 
         return $this;
     }
@@ -1033,7 +1018,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function getModelNamespaces()
     {
-        return static::$_namespaceMap[ static::NS_MODELS ];
+        return static::$_namespaceMap[ NamespaceTypes::MODELS ];
     }
 
     /**
@@ -1045,7 +1030,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function addModelNamespace( $namespace, $path, $prepend = false )
     {
-        static::_mapNamespace( static::NS_MODELS, $namespace, $path, $prepend );
+        static::_mapNamespace( NamespaceTypes::MODELS, $namespace, $path, $prepend );
 
         return $this;
     }
@@ -1151,13 +1136,5 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     public function getRequestBody()
     {
         return $this->_requestBody;
-    }
-
-    /**
-     * @return array
-     */
-    public function getResponseBody()
-    {
-        return $this->_responseBody;
     }
 }

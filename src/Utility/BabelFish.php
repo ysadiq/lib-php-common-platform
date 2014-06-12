@@ -50,7 +50,7 @@ class BabelFish
     {
         $_request = Pii::request( false );
 
-        if ( 'null' == ( $_data = $_request->getContent() ) )
+        if ( 'null' == ( $_data = $_request->getContent() ) || empty( $_data ) )
         {
             $_data = null;
         }
@@ -62,7 +62,15 @@ class BabelFish
 
         $_contentType = $_request->getContentType();
 
-        if ( $from_file && empty( $_data ) )
+        if ( empty( $_contentType ) && !empty( $_data ) )
+        {
+            if ( $_request->request->count() )
+            {
+                $_data = $_request->request->all();
+                $_contentType = 'www';
+            }
+        }
+        elseif ( $from_file && empty( $_data ) )
         {
             if ( false === ( $_data = static::_getPostedFileData( $_fileContentType ) ) )
             {
@@ -84,7 +92,7 @@ class BabelFish
         {
             $_result = array();
 
-            switch ( ContentTypes::fromMimeType( $_contentType ) )
+            switch ( ContentTypes::toNumeric( $_contentType ) )
             {
                 case ContentTypes::JSON:
                     $_result = static::_toJson( $_data );
@@ -96,6 +104,10 @@ class BabelFish
 
                 case ContentTypes::CSV:
                     $_result = DataFormat::csvToArray( $_data );
+                    break;
+
+                case ContentTypes::WWW:
+                    $_result = $_data;
                     break;
 
                 default:
@@ -162,14 +174,9 @@ class BabelFish
      */
     protected static function _toJson( $postData )
     {
-        if ( empty( $postData ) )
-        {
-            return null;
-        }
-
         try
         {
-            $_data = DataFormat::jsonToArray( $postData );
+            return empty( $postData ) ? null : DataFormat::jsonToArray( $postData );
         }
         catch ( \Exception $_ex )
         {

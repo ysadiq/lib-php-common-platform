@@ -24,8 +24,8 @@ use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Resources\System\User;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\BabelFish;
 use DreamFactory\Platform\Utility\Platform;
-use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\App;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
@@ -85,13 +85,10 @@ class ScriptEvent
         //	Not cached, get it...
         $_path = Platform::getLibraryConfigPath( '/schema' ) . '/' . trim( $template, ' /' );
 
-        if ( is_file( $_path ) &&
-             is_readable( $_path ) &&
-             ( false !== ( $_eventTemplate = file_get_contents( $_path ) ) )
+        if ( is_file( $_path ) && is_readable( $_path ) && ( false !== ( $_eventTemplate = file_get_contents( $_path ) ) )
         )
         {
-            if ( false !== ( $_eventTemplate = json_decode( $_eventTemplate, true ) ) &&
-                 JSON_ERROR_NONE == json_last_error()
+            if ( false !== ( $_eventTemplate = json_decode( $_eventTemplate, true ) ) && JSON_ERROR_NONE == json_last_error()
             )
             {
                 Platform::storeSet( 'scripting.event_schema', $_eventTemplate, 86400 );
@@ -219,8 +216,8 @@ class ScriptEvent
             $_path
         ) : $_path;
 
-        $_request = static::_buildEventRequestArray( $event );
-        $_response = static::normalizeEventData( $event );
+        $_request = static::buildRequestArray( $event, true );
+        $_response = false === strpos( $eventName, '.post_process' ) ? null : $event->getData();
 
         //	Build the array
         $_event = array(
@@ -365,9 +362,7 @@ class ScriptEvent
         }
 
         //  Single row, or so we think...
-        if ( is_array( $_currentData ) &&
-             !Pii::isEmpty( $_record = Option::get( $_currentData, 'record' ) ) &&
-             count( $_record ) >= 1
+        if ( is_array( $_currentData ) && !Pii::isEmpty( $_record = Option::get( $_currentData, 'record' ) ) && count( $_record ) >= 1
         )
         {
             return $wrapped ? $_innerData : $newData;
@@ -443,13 +438,14 @@ class ScriptEvent
     }
 
     /**
-     * @param PlatformEvent $event
+     * @param PlatformEvent|array $event
+     * @param bool                $normalizeBody If true, request['body'] will be normalized into "record":[] format
      *
      * @return array
      */
-    protected static function _buildEventRequestArray( $event = null )
+    public static function buildRequestArray( $event = null, $normalizeBody = false )
     {
-        $_data = $event->getData();
+        $_data = $event ? ( is_array( $event ) ? $event : $event->getData() ) : null;
         $_reqObj = Pii::request( false );
 
         $_request = array(
@@ -457,7 +453,7 @@ class ScriptEvent
             'headers' => $_reqObj->headers->all(),
             'cookies' => $_reqObj->cookies->all(),
             'query'   => $_reqObj->query->all(),
-            'body'    => RestData::getPostedData( true, true ),
+            'body'    => $normalizeBody ? static::normalizeEventData( $event ) : BabelFish::getRequestData( true, true ),
             'files'   => false,
         );
 

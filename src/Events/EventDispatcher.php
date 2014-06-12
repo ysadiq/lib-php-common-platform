@@ -223,7 +223,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     public function dispatch( $eventName, Event $event = null )
     {
-        $_event = $event ? : new PlatformEvent( $eventName );
+        $_event = $event ?: new PlatformEvent( $eventName );
 
         $this->_doDispatch( $_event, $eventName, $this );
 
@@ -245,10 +245,7 @@ class EventDispatcher implements EventDispatcherInterface
     protected function _doDispatch( &$event, $eventName )
     {
         //  Do nothing if not wanted
-        if ( !static::$_enableRestEvents &&
-             !static::$_enablePlatformEvents &&
-             !static::$_enableEventScripts &&
-             !static::$_enableEventObservers
+        if ( !static::$_enableRestEvents && !static::$_enablePlatformEvents && !static::$_enableEventScripts && !static::$_enableEventObservers
         )
         {
             return false;
@@ -331,9 +328,7 @@ class EventDispatcher implements EventDispatcherInterface
 
                     $_hash = spl_object_hash( $_listener );
                     $_name = gettype( $_listener );
-                    $_listener =
-                        ( ( $_listener instanceof \Closure || $_listener instanceof SerializableClosure ) ? 'Closure'
-                            : $_name ) . 'id#' . $_hash;
+                    $_listener = ( ( $_listener instanceof \Closure || $_listener instanceof SerializableClosure ) ? 'Closure' : $_name ) . 'id#' . $_hash;
                 }
             }
 
@@ -500,9 +495,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected function isPhpScript( $callable )
     {
-        return
-            is_callable( $callable ) ||
-            ( ( false === strpos( $callable, ' ' ) && false !== strpos( $callable, '::' ) ) );
+        return is_callable( $callable ) || ( ( false === strpos( $callable, ' ' ) && false !== strpos( $callable, '::' ) ) );
     }
 
     /**
@@ -593,8 +586,7 @@ class EventDispatcher implements EventDispatcherInterface
 
                         if ( is_file( $_scriptFile ) && is_readable( $_scriptFile ) )
                         {
-                            if ( !isset( $this->_scripts[ $_eventKey ] ) ||
-                                 !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
+                            if ( !isset( $this->_scripts[ $_eventKey ] ) || !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
                             )
                             {
                                 $_found[] = str_replace( $_basePath, '.', $_scriptFile );
@@ -621,8 +613,7 @@ class EventDispatcher implements EventDispatcherInterface
                     $_eventKey = str_ireplace( '.js', null, $_newScript );
                     $_scriptFile = $_basePath . '/' . $_newScript;
 
-                    if ( !array_key_exists( $_eventKey, $this->_scripts ) ||
-                         !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
+                    if ( !array_key_exists( $_eventKey, $this->_scripts ) || !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
                     )
                     {
                         $this->_scripts[ $_eventKey ][] = $_scriptFile;
@@ -783,7 +774,7 @@ class EventDispatcher implements EventDispatcherInterface
             return true;
         }
 
-        $_exposedEvent = $_event = ScriptEvent::normalizeEvent( $eventName, $event, $this, array() );
+        $_exposedEvent = $_event = ScriptEvent::normalizeEvent( $eventName, $event, $this );
 
         foreach ( Option::clean( $_scripts ) as $_script )
         {
@@ -885,7 +876,7 @@ class EventDispatcher implements EventDispatcherInterface
             {
                 if ( !static::$_client )
                 {
-                    static::$_client = static::$_client ? : new Client();
+                    static::$_client = static::$_client ?: new Client();
                     static::$_client->setUserAgent( static::DEFAULT_USER_AGENT );
                 }
 
@@ -940,15 +931,10 @@ class EventDispatcher implements EventDispatcherInterface
 
             if ( $_dispatched && static::$_logEvents && !static::$_logAllEvents )
             {
-                $_defaultPath =
-                    $event instanceof PlatformServiceEvent ? $event->getApiName() . '/' . $event->getResource() : null;
+                $_defaultPath = $event instanceof PlatformServiceEvent ? $event->getApiName() . '/' . $event->getResource() : null;
 
                 Log::debug(
-                    ( $_dispatched ? 'Dispatcher' : 'Unhandled' ) .
-                    ': event "' .
-                    $eventName .
-                    '" triggered by /' .
-                    Option::get( $_GET, 'path', $_defaultPath )
+                    ( $_dispatched ? 'Dispatcher' : 'Unhandled' ) . ': event "' . $eventName . '" triggered by /' . Option::get( $_GET, 'path', $_defaultPath )
                 );
             }
 
@@ -993,7 +979,7 @@ class EventDispatcher implements EventDispatcherInterface
             }
         }
 
-        return count( $scriptPath ) ? : false;
+        return count( $scriptPath ) ?: false;
     }
 
     /**
@@ -1044,7 +1030,7 @@ class EventDispatcher implements EventDispatcherInterface
             static::$_observers = array_merge( static::$_observers, $_additions );
         }
 
-        return count( $_additions ) ? : false;
+        return count( $_additions ) ?: false;
     }
 
 }

@@ -193,8 +193,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $_message =
                 $this->_action .
                 ' requests' .
-                ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"'
-                    : ' without a resource' ) .
+                ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
                 ' are not currently supported by the "' .
                 $this->_apiName .
                 '" service.';
@@ -244,8 +243,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             }
 
             //	Does this action have a handler?
-            if ( false !==
-                 ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) )
+            if ( false !== ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) )
             )
             {
                 $_handler = $this->_extraActions[ $_action ];
@@ -401,8 +399,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         if ( in_array(
             $this->_outputFormat,
             array( false, DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE )
-        )
-        )
+        ) )
         {
             return $this->_response;
         }
@@ -650,7 +647,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
                 array( $this->_apiName == 'system' ? $this->_resource : $this->_apiName, strtolower( $this->_action ) ),
                 $eventName
             ),
-            $event ? : new PlatformServiceEvent( $this->_apiName, $this->_resource, $this->_response ),
+            $event ?: new PlatformServiceEvent( $this->_apiName, $this->_resource, $this->_response ),
             $priority
         );
     }
@@ -677,7 +674,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         static $_triggeredEvents = array();
 
         //  Lookup the appropriate event if not specified.
-        $_eventNames = $eventName ? : SwaggerManager::findEvent( $this, $this->_action );
+        $_eventNames = $eventName ?: SwaggerManager::findEvent( $this, $this->_action );
         $_eventNames = is_array( $_eventNames ) ? $_eventNames : array( $_eventNames );
 
         $_inboundData = false;
@@ -729,7 +726,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             }
 
             $_service = $this->_apiName;
-            $_event = $event ? : new PlatformServiceEvent( $_service, $this->_resource, $result );
+            $_event = $event ?: new PlatformServiceEvent( $_service, $this->_resource, $result );
 
             //  Normalize the event name
             $_eventName = Event::normalizeEventName( $_event, $_eventName, $_values );
@@ -1002,7 +999,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     public function getRequestedAction()
     {
-        return $this->_originalAction ? : $this->_action;
+        return $this->_originalAction ?: $this->_action;
     }
 
     /**
