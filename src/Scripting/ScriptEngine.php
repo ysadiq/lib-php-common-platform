@@ -424,15 +424,19 @@ JS;
      */
     public static function inlineRequest( $method, $path, $payload = null )
     {
-        $_protocol = substr( $path, 0, 7 );
+        if ( null === $payload || 'null' == $payload )
+        {
+            $payload = array();
+        }
 
-        if ( 'https:/' == $_protocol || 'http://' == $_protocol )
+        if ( 'https:/' == ( $_protocol = substr( $path, 0, 7 ) ) || 'http://' == $_protocol )
         {
             return static::_externalRequest( $method, $path, $payload );
         }
 
         $_result = null;
         $_requestUri = '/rest/' . ltrim( $path, '/' );
+        $_contentType = 'application/json';
 
         if ( false === ( $_pos = strpos( $path, '/' ) ) )
         {
@@ -462,25 +466,29 @@ JS;
             return null;
         }
 
+        if ( false === ( $_payload = json_encode( $payload, JSON_UNESCAPED_SLASHES ) ) ||
+             JSON_ERROR_NONE != json_last_error()
+        )
+        {
+            $_contentType = 'text/plain';
+            $_payload = $payload;
+        }
+
         StateStack::push();
 
         try
         {
-            $_request =
-                new Request(
-                    array(),
-                    array(),
-                    array(),
-                    $_COOKIE,
-                    $_FILES,
-                    $_SERVER,
-                    !is_string( $payload ) ? json_encode( $payload, JSON_UNESCAPED_SLASHES ) : $payload
-                );
-
+            $_request = new Request( array(), array(), array(), $_COOKIE, $_FILES, $_SERVER, $_payload );
             $_request->query->set( 'app_name', 'dsp.scripting' );
             $_request->query->set( 'path', $path );
             $_request->server->set( 'REQUEST_METHOD', $method );
             $_request->server->set( 'INLINE_REQUEST_URI', $_requestUri );
+
+            if ( $_contentType )
+            {
+                $_request->headers->set( 'CONTENT_TYPE', $_contentType );
+            }
+
             $_request->overrideGlobals();
 
             //  Now set the request object and go...
