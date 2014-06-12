@@ -783,7 +783,7 @@ class EventDispatcher implements EventDispatcherInterface
             return true;
         }
 
-        $_event = ScriptEvent::normalizeEvent( $eventName, $event, $this, array() );
+        $_exposedEvent = $_event = ScriptEvent::normalizeEvent( $eventName, $event, $this, array() );
 
         foreach ( Option::clean( $_scripts ) as $_script )
         {
@@ -791,17 +791,6 @@ class EventDispatcher implements EventDispatcherInterface
 
             try
             {
-                //	Expose variables
-                $_exposedEvent = array_merge(
-                    $_event['_meta'],
-                    array(
-                        ScriptEvent::getPayloadKey() => Option::get( $_event, 'record' ),
-                        'meta'                       => Option::get( $_event, 'meta' ),
-                        'request'                    => $_event['request'],
-                        'response'                   => $_event['response'],
-                    )
-                );
-
                 $_result = ScriptEngine::runScript(
                     $_script,
                     $eventName . '.js',

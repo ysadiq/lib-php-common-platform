@@ -25,6 +25,7 @@ use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Resources\System\User;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Platform;
+use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Yii\Models\App;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Inflector;
@@ -198,7 +199,7 @@ class ScriptEvent
      *
      * @return array|string
      */
-    public static function normalizeEvent( $eventName, PlatformEvent $event, $dispatcher, $extra = array(), $includeDspConfig = true, $returnJson = false )
+    public static function normalizeEvent( $eventName, PlatformEvent $event, $dispatcher, array $extra = array(), $includeDspConfig = true, $returnJson = false )
     {
         static $_config = null;
 
@@ -224,30 +225,28 @@ class ScriptEvent
         //	Build the array
         $_event = array(
             //	Event meta-data
-            '_meta'    => array(
-                'id'               => $event->getEventId(),
-                'name'             => $eventName,
-                'trigger'          => $_trigger,
-                'request_path'     => $_path,
-                'stop_propagation' => Option::get( $_eventExtras, 'stop_propagation', false, true ),
-                'timestamp'        => date(
-                    'c',
-                    Option::server(
-                        'REQUEST_TIME_FLOAT',
-                        Option::server( 'REQUEST_TIME', microtime( true ) )
-                    )
-                ),
-                //	Dispatcher information
-                'dispatcher_id'    => spl_object_hash( $dispatcher ),
-                'dispatcher_type'  => Inflector::neutralize( get_class( $dispatcher ) ),
-                //	Extra information passed by caller
-                'extra'            => Option::clean( $extra ),
+            'id'               => $event->getEventId(),
+            'name'             => $eventName,
+            'trigger'          => $_trigger,
+            'request_path'     => $_path,
+            'stop_propagation' => Option::get( $_eventExtras, 'stop_propagation', false, true ),
+            'timestamp'        => date(
+                'c',
+                Option::server(
+                    'REQUEST_TIME_FLOAT',
+                    Option::server( 'REQUEST_TIME', microtime( true ) )
+                )
             ),
-            'request'  => $_request,
-            'response' => $_response,
+            //	Dispatcher information
+            'dispatcher_id'    => spl_object_hash( $dispatcher ),
+            'dispatcher_type'  => Inflector::neutralize( get_class( $dispatcher ) ),
+            //	Extra information passed by caller
+            'extra'            => $extra,
+            'request'          => $_request,
+            'response'         => $_response,
             //	Metadata if any
             //	Access to the platform api
-            'platform' => array(
+            'platform'         => array(
                 //  The DSP config
                 'config'  => $_config,
                 //  The current session
@@ -255,14 +254,10 @@ class ScriptEvent
             ),
         );
 
-        if ( isset( $_response, $_response['record'] ) )
-        {
-            $_event[ static::$_payloadKey ] = $_response['record'];
-        }
-
         if ( isset( $_response, $_response['meta'] ) )
         {
-            $_event['meta'] = $_response['meta'];
+            $_event['response']['meta'] = $_response['meta'];
+            unset( $_response['meta'] );
         }
 
         return $returnJson ? json_encode( $_event, JSON_UNESCAPED_SLASHES ) : $_event;
@@ -458,19 +453,24 @@ class ScriptEvent
         $_reqObj = Pii::request( false );
 
         $_request = array(
-            'method'     => strtoupper( $_reqObj->getMethod() ),
-            'query'      => $_reqObj->query->all(),
-            'headers'    => $_reqObj->headers->all(),
-            'request'    => $_reqObj->request->all(),
-            'cookies'    => $_reqObj->cookies->all(),
-            'attributes' => $_reqObj->attributes->all(),
-            'content'    => $_reqObj->getContent(),
-            'files'      => $_reqObj->files->all(),
+            'method'  => strtoupper( $_reqObj->getMethod() ),
+            'headers' => $_reqObj->headers->all(),
+            'cookies' => $_reqObj->cookies->all(),
+            'query'   => $_reqObj->query->all(),
+            'body'    => RestData::getPostedData( true, true ),
+            'files'   => false,
         );
+
+        $_files = $_reqObj->files->all();
+
+        if ( !empty( $_files ) )
+        {
+            $_request['files'] = $_files;
+        }
 
         if ( null === ( $_meta = Option::get( $_data, 'meta' ) ) )
         {
-            $_meta = Option::getDeep( $_data, 'record', 'meta' );
+            $_meta = Option::getDeep( $_data, 'record', 'meta', false );
         }
 
         $_request['meta'] = $_meta;

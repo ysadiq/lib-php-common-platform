@@ -72,9 +72,9 @@ class MongoDbSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ));
-        $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn', '' ));
-        $_db = Session::replaceLookup( Option::get( $_credentials, 'db' ));
+        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ) );
+        $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn', '' ) );
+        $_db = Session::replaceLookup( Option::get( $_credentials, 'db' ) );
         if ( empty( $_dsn ) )
         {
             $_dsn = 'mongodb://localhost:27017';
@@ -191,7 +191,9 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException(
+                "Failed to list resources for this service.\n{$_ex->getMessage()}"
+            );
         }
     }
 
@@ -231,7 +233,9 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException(
+                "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}"
+            );
         }
     }
 
@@ -527,9 +531,8 @@ class MongoDbSvc extends NoSqlDbSvc
     protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
         $requested_fields = static::DEFAULT_ID_FIELD; // can only be this
-
-        $_type = Option::get( Option::clean( $requested_types ), 0 );
-        $_type = (empty($_type)) ? 'string' : $_type;
+        $requested_types = Option::clean( $requested_types );
+        $_type = Option::get( $requested_types, 0, 'string' );
 
         return array( array( 'name' => static::DEFAULT_ID_FIELD, 'type' => $_type, 'required' => false ) );
     }
@@ -583,7 +586,7 @@ class MongoDbSvc extends NoSqlDbSvc
         $_out = array();
         foreach ( $include as $key )
         {
-            $_out[$key] = true;
+            $_out[ $key ] = true;
         }
 
         return $_out;
@@ -657,7 +660,8 @@ class MongoDbSvc extends NoSqlDbSvc
         }
 
         // the rest should be comparison operators
-        $_search = array( ' eq ', ' ne ', ' gte ', ' lte ', ' gt ', ' lt ', ' in ', ' nin ', ' all ', ' like ', ' <> ' );
+        $_search =
+            array( ' eq ', ' ne ', ' gte ', ' lte ', ' gt ', ' lt ', ' in ', ' nin ', ' all ', ' like ', ' <> ' );
         $_replace = array( '=', '!=', '>=', '<=', '>', '<', ' IN ', ' NIN ', ' ALL ', ' LIKE ', '!=' );
         $filter = trim( str_ireplace( $_search, $_replace, $filter ) );
 
@@ -671,7 +675,7 @@ class MongoDbSvc extends NoSqlDbSvc
             {
                 $_field = $_ops[0];
                 $_val = static::_determineValue( $_ops[1], $_field, $params );
-                $_mongoOp = $_mongoOperators[$_key];
+                $_mongoOp = $_mongoOperators[ $_key ];
                 switch ( $_mongoOp )
                 {
                     case '$eq':
@@ -682,7 +686,7 @@ class MongoDbSvc extends NoSqlDbSvc
                         // todo check for list of mongoIds
                         $_val = array_map( 'trim', explode( ',', trim( trim( $_val, '(,)' ), ',' ) ) );
                         $_valArray = array();
-                        foreach ($_val as $_item)
+                        foreach ( $_val as $_item )
                         {
                             $_valArray[] = static::_determineValue( $_item, $_field, $params );
                         }
@@ -694,7 +698,7 @@ class MongoDbSvc extends NoSqlDbSvc
 //			WHERE name LIKE "Joe%"	(array("name" => new MongoRegex("/^Joe/")));
 //			WHERE name LIKE "%Joe"	(array("name" => new MongoRegex("/Joe$/")));
                         $_val = static::_determineValue( $_ops[1], $_field, $params );
-                        if ( '%' == $_val[strlen( $_val ) - 1] )
+                        if ( '%' == $_val[ strlen( $_val ) - 1 ] )
                         {
                             if ( '%' == $_val[0] )
                             {
@@ -740,9 +744,9 @@ class MongoDbSvc extends NoSqlDbSvc
         // process parameter replacements
         if ( is_string( $value ) && !empty( $value ) && ( ':' == $value[0] ) )
         {
-            if ( isset( $replacements, $replacements[$value] ) )
+            if ( isset( $replacements, $replacements[ $value ] ) )
             {
-                $value = $replacements[$value];
+                $value = $replacements[ $value ];
             }
         }
 
@@ -800,7 +804,8 @@ class MongoDbSvc extends NoSqlDbSvc
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
         if ( !empty( $_serverCriteria ) )
         {
-            $_criteria = ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
+            $_criteria =
+                ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
         }
 
         return $_criteria;
@@ -902,7 +907,7 @@ class MongoDbSvc extends NoSqlDbSvc
             }
             if ( !empty( $_field ) )
             {
-                $_out[$_field] = $_dir;
+                $_out[ $_field ] = $_dir;
             }
         }
 
@@ -966,7 +971,7 @@ class MongoDbSvc extends NoSqlDbSvc
     {
         foreach ( $records as $key => $_record )
         {
-            $records[$key] = static::mongoIdToId( $_record, $id_field );
+            $records[ $key ] = static::mongoIdToId( $_record, $id_field );
         }
 
         return $records;
@@ -1001,7 +1006,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 /** $_id \MongoId */
                 $_id = (string)$_id;
             }
-            $record[$id_field] = $_id;
+            $record[ $id_field ] = $_id;
         }
 
         return $record;
@@ -1068,7 +1073,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 {
                     $_id = static::_determineValue( $_id );
                 }
-                $record[$id_field] = $_id;
+                $record[ $id_field ] = $_id;
             }
         }
 
@@ -1093,7 +1098,7 @@ class MongoDbSvc extends NoSqlDbSvc
 
         foreach ( $records as $key => $_record )
         {
-            $records[$key] = static::idToMongoId( $_record, $_determineValue, $id_field );
+            $records[ $key ] = static::idToMongoId( $_record, $_determineValue, $id_field );
         }
 
         return $records;
@@ -1151,14 +1156,14 @@ class MongoDbSvc extends NoSqlDbSvc
 
                     if ( !static::validateFieldValue( $_name, $_fieldVal, $_validations, $for_update, $_fieldInfo ) )
                     {
-                        unset( $_keys[$_pos] );
-                        unset( $_values[$_pos] );
+                        unset( $_keys[ $_pos ] );
+                        unset( $_values[ $_pos ] );
                         continue;
                     }
 
-                    $_parsed[$_name] = $_fieldVal;
-                    unset( $_keys[$_pos] );
-                    unset( $_values[$_pos] );
+                    $_parsed[ $_name ] = $_fieldVal;
+                    unset( $_keys[ $_pos ] );
+                    unset( $_values[ $_pos ] );
                 }
 
                 // add or override for specific fields
@@ -1167,11 +1172,11 @@ class MongoDbSvc extends NoSqlDbSvc
                     case 'timestamp_on_create':
                         if ( !$for_update )
                         {
-                            $_parsed[$_name] = new \MongoDate();
+                            $_parsed[ $_name ] = new \MongoDate();
                         }
                         break;
                     case 'timestamp_on_update':
-                        $_parsed[$_name] = new \MongoDate();
+                        $_parsed[ $_name ] = new \MongoDate();
                         break;
                     case 'user_id_on_create':
                         if ( !$for_update )
@@ -1179,7 +1184,7 @@ class MongoDbSvc extends NoSqlDbSvc
                             $userId = Session::getCurrentUserId();
                             if ( isset( $userId ) )
                             {
-                                $_parsed[$_name] = $userId;
+                                $_parsed[ $_name ] = $userId;
                             }
                         }
                         break;
@@ -1187,7 +1192,7 @@ class MongoDbSvc extends NoSqlDbSvc
                         $userId = Session::getCurrentUserId();
                         if ( isset( $userId ) )
                         {
-                            $_parsed[$_name] = $userId;
+                            $_parsed[ $_name ] = $userId;
                         }
                         break;
                 }
@@ -1312,7 +1317,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 else
                 {
                     $record = $_updates;
-                    $record[static::DEFAULT_ID_FIELD] = $id;
+                    $record[ static::DEFAULT_ID_FIELD ] = $id;
                     $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
                 }
 
@@ -1400,7 +1405,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 break;
 
             case static::DELETE:
-                if ( !$continue && !$rollback && !$single)
+                if ( !$continue && !$rollback && !$single )
                 {
                     return parent::addToTransaction( null, $id );
                 }
@@ -1568,7 +1573,7 @@ class MongoDbSvc extends NoSqlDbSvc
                             {
                                 if ( $_id == Option::get( $_record, static::DEFAULT_ID_FIELD ) )
                                 {
-                                    $_out[$_index] = $_record;
+                                    $_out[ $_index ] = $_record;
                                     $_found = true;
                                     continue;
                                 }
@@ -1576,7 +1581,7 @@ class MongoDbSvc extends NoSqlDbSvc
                             if ( !$_found )
                             {
                                 $_errors[] = $_index;
-                                $_out[$_index] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
+                                $_out[ $_index ] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
                             }
                         }
                     }
@@ -1626,7 +1631,7 @@ class MongoDbSvc extends NoSqlDbSvc
                         {
                             if ( $_id == Option::get( $_record, static::DEFAULT_ID_FIELD ) )
                             {
-                                $_out[$_index] = $_record;
+                                $_out[ $_index ] = $_record;
                                 $_found = true;
                                 continue;
                             }
@@ -1634,14 +1639,16 @@ class MongoDbSvc extends NoSqlDbSvc
                         if ( !$_found )
                         {
                             $_errors[] = $_index;
-                            $_out[$_index] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
+                            $_out[ $_index ] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
                         }
                     }
 
                     if ( !empty( $_errors ) )
                     {
                         $_context = array( 'error' => $_errors, 'record' => $_out );
-                        throw new NotFoundException( 'Batch Error: Not all records could be retrieved.', null, null, $_context );
+                        throw new NotFoundException(
+                            'Batch Error: Not all records could be retrieved.', null, null, $_context
+                        );
                     }
                 }
 

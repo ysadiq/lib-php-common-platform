@@ -28,9 +28,9 @@ use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
- * REST Request Utilities
+ * A universal translator
  */
-class RestData
+class BabelFish
 {
     //*************************************************************************
     //	Methods
@@ -48,11 +48,11 @@ class RestData
      * @throws \Exception
      * @return string|array
      */
-    public static function getPostedData( $from_file = false, $as_array = false, $raw = false )
+    public static function getRequestData( $from_file = false, $as_array = false, $raw = false )
     {
         $_request = Pii::request( false );
 
-        if ( 'null' === ( $_data = $_request->getContent() ) )
+        if ( 'null' == ( $_data = $_request->getContent() ) )
         {
             $_data = null;
         }
@@ -85,9 +85,7 @@ class RestData
             $_postData = $_data;
             $_data = array();
 
-            $_contentType = ContentTypes::fromMimeType( $_contentType );
-
-            switch ( $_contentType )
+            switch ( ContentTypes::fromMimeType( $_contentType ) )
             {
                 case ContentTypes::JSON:
                     $_data = static::_toJson( $_postData );

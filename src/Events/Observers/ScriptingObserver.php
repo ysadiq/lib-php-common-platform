@@ -69,7 +69,7 @@ class ScriptingObserver extends EventObserver
             return true;
         }
 
-        $_event = ScriptEvent::normalizeEvent( $eventName, $event, $dispatcher, array() );
+        $_exposedEvent = $_event = ScriptEvent::normalizeEvent( $eventName, $event, $dispatcher, array() );
 
         foreach ( Option::clean( $_scripts ) as $_script )
         {
@@ -77,20 +77,6 @@ class ScriptingObserver extends EventObserver
 
             try
             {
-                //  The normalized event is exposed
-                $_key = ScriptEvent::getPayloadKey();
-
-                //	Expose variables
-                $_exposedEvent = array_merge(
-                    $_event['_meta'],
-                    array(
-                        'meta'            => $_event['meta'],
-                        $_key             => $_event[ $_key ],
-                        'payload'         => $_event['payload'],
-                        'payload_changed' => $_event['payload_changed'],
-                    )
-                );
-
                 $_result = ScriptEngine::runScript(
                     $_script,
                     $eventName . '.js',
