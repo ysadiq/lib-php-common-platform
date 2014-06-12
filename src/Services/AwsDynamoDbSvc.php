@@ -120,8 +120,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         }
 
         // set up a default table schema
-        if ( null !==
-             ( $_table = Session::replaceLookup( Option::get( $_parameters, 'default_create_table' ), true ) )
+        if ( null !== ( $_table = Session::replaceLookup( Option::get( $_parameters, 'default_create_table' ), true ) )
         )
         {
             $this->_defaultCreateTable = $_table;
@@ -657,8 +656,19 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
 
     protected static function buildCriteriaArray( $filter, $params = null, $ss_filters = null )
     {
+        // interpret any parameter values as lookups
+        $params = static::interpretRecordValues( $params );
+
         // build filter array if necessary, add server-side filters if necessary
-        $_criteria = ( !is_array( $filter ) ) ? static::buildFilterArray( $filter, $params ) : $filter;
+        if ( !is_array( $filter ) )
+        {
+            Session::replaceLookupsInStrings( $filter );
+            $_criteria = static::buildFilterArray( $filter, $params );
+        }
+        else
+        {
+            $_criteria = $filter;
+        }
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
         if ( !empty( $_serverCriteria ) )
         {

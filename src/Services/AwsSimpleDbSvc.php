@@ -652,6 +652,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
 
     protected static function buildCriteriaArray( $filter, $params = null, $ss_filters = null )
     {
+        // interpret any parameter values as lookups
+        $params = static::interpretRecordValues( $params );
+
         // build filter array if necessary, add server-side filters if necessary
         $_criteria = static::_parseFilter( $filter, $params );
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
@@ -732,6 +735,8 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         {
             throw new BadRequestException( 'Filtering in array format is not currently supported on SimpleDb.' );
         }
+
+        Session::replaceLookupsInStrings( $filter );
 
         // handle logical operators first
         $_search = array(' || ', ' && ');

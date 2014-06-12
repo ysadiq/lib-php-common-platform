@@ -108,21 +108,19 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         $_connectionString = Session::replaceLookup( Option::get( $_credentials, 'connection_string' ), true );
         if ( empty( $_connectionString ) )
         {
-            $_name =
-                Session::replaceLookup(
-                    Option::get( $_credentials, 'account_name', Option::get( $_credentials, 'AccountName' ) ),
-                    true
-                );
+            $_name = Session::replaceLookup(
+                Option::get( $_credentials, 'account_name', Option::get( $_credentials, 'AccountName' ) ),
+                true
+            );
             if ( empty( $_name ) )
             {
                 throw new \InvalidArgumentException( 'WindowsAzure account name can not be empty.' );
             }
 
-            $_key =
-                Session::replaceLookup(
-                    Option::get( $_credentials, 'account_key', Option::get( $_credentials, 'AccountKey' ) ),
-                    true
-                );
+            $_key = Session::replaceLookup(
+                Option::get( $_credentials, 'account_key', Option::get( $_credentials, 'AccountKey' ) ),
+                true
+            );
             if ( empty( $_key ) )
             {
                 throw new \InvalidArgumentException( 'WindowsAzure account key can not be empty.' );
@@ -746,8 +744,19 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 
     protected static function buildCriteriaArray( $filter, $params = null, $ss_filters = null )
     {
+        // interpret any parameter values as lookups
+        $params = static::interpretRecordValues( $params );
+
         // build filter array if necessary, add server-side filters if necessary
-        $_criteria = ( !is_array( $filter ) ) ? static::parseFilter( $filter, $params ) : $filter;
+        if ( !is_array( $filter ) )
+        {
+            Session::replaceLookupsInStrings( $filter );
+            $_criteria = static::parseFilter( $filter, $params );
+        }
+        else
+        {
+            $_criteria = $filter;
+        }
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
         if ( !empty( $_serverCriteria ) )
         {
@@ -835,23 +844,22 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         // supported comparison operators are eq, ne, gt, ge, lt, le
         $_search =
             array('!=', '>=', '<=', '>', '<', '=', ' EQ ', ' NE ', ' LT ', ' LTE ', ' LE ', ' GT ', ' GTE', ' GE ');
-        $_replace =
-            array(
-                ' ne ',
-                ' ge ',
-                ' le ',
-                ' gt ',
-                ' lt ',
-                ' eq ',
-                ' eq ',
-                ' ne ',
-                ' lt ',
-                ' le ',
-                ' le ',
-                ' gt ',
-                ' ge ',
-                ' ge '
-            );
+        $_replace = array(
+            ' ne ',
+            ' ge ',
+            ' le ',
+            ' gt ',
+            ' lt ',
+            ' eq ',
+            ' eq ',
+            ' ne ',
+            ' lt ',
+            ' le ',
+            ' le ',
+            ' gt ',
+            ' ge ',
+            ' ge '
+        );
         $filter = trim( str_ireplace( $_search, $_replace, $filter ) );
 
 //			WHERE name LIKE "%Joe%"	not supported
@@ -1139,12 +1147,11 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 
                 if ( $rollback )
                 {
-                    $_old =
-                        $this->_dbConn->getEntity(
-                            $this->_transactionTable,
-                            $_entity->getRowKey(),
-                            $_entity->getPartitionKey()
-                        );
+                    $_old = $this->_dbConn->getEntity(
+                        $this->_transactionTable,
+                        $_entity->getRowKey(),
+                        $_entity->getPartitionKey()
+                    );
                     $this->addToRollback( $_old );
                 }
 
@@ -1176,11 +1183,10 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
                     }
                     if ( $_requireMore )
                     {
-                        $_out =
-                            array_merge(
-                                static::parseEntityToRecord( $_old, $_fields ),
-                                static::parseEntityToRecord( $_entity, $_fields )
-                            );
+                        $_out = array_merge(
+                            static::parseEntityToRecord( $_old, $_fields ),
+                            static::parseEntityToRecord( $_entity, $_fields )
+                        );
                     }
                 }
 
