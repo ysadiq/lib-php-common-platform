@@ -351,7 +351,7 @@ class Packager
                         if ( !empty( $tables ) )
                         {
                             /** @var $db SchemaSvc */
-                            $result = $db->createTables( $tables, true );
+                            $result = $db->updateTables( $tables, true );
                             if ( isset( $result[0]['error'] ) )
                             {
                                 $msg = $result[0]['error']['message'];
@@ -373,7 +373,7 @@ class Packager
                         }
                         /** @var $db SchemaSvc */
                         $db = ServiceHandler::getServiceObject( $serviceName );
-                        $result = $db->createTables( $tables, true );
+                        $result = $db->updateTables( $tables, true );
                         if ( isset( $result[0]['error'] ) )
                         {
                             $msg = $result[0]['error']['message'];
@@ -389,7 +389,7 @@ class Packager
                             $serviceName = 'schema';
                             /** @var $db SchemaSvc */
                             $db = ServiceHandler::getServiceObject( $serviceName );
-                            $result = $db->createTables( $_data, true );
+                            $result = $db->updateTables( $_data, true );
                             if ( isset( $result['error'] ) )
                             {
                                 $msg = $result['error']['message'];

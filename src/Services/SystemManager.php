@@ -223,7 +223,7 @@ class SystemManager extends BaseSystemRestService
 
             Log::debug( 'Checking database schema' );
 
-            SqlDbUtilities::createTables( $_db, $_tables, true, false );
+            SqlDbUtilities::updateTables( $_db, $_tables, true );
 
             try
             {
@@ -289,7 +289,7 @@ class SystemManager extends BaseSystemRestService
             // create system tables
             Log::debug( 'Analyzing current schema for migration.' );
 
-            SqlDbUtilities::createTables( $_db, $_tables, true, false );
+            SqlDbUtilities::updateTables( $_db, $_tables, true );
 
             if ( !empty( $_currentVersion ) )
             {

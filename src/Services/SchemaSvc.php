@@ -178,21 +178,13 @@ class SchemaSvc extends BasePlatformRestService
     {
         parent::_preProcess();
 
-        $this->_payload = RestData::getPostedData( false, true );
-        $this->_tables = Option::get(
-            $this->_payload,
-            'table',
-            Option::getDeep( $this->_payload, 'tables', 'table' )
-        );
+        $this->_payload = RestData::getPostedData( true, true );
+        $this->_tables = Option::get( $this->_payload, 'table' );
 
         //	Create fields in existing table
         if ( !empty( $this->_tableName ) )
         {
-            $this->_fields = Option::get(
-                $this->_payload,
-                'field',
-                Option::getDeep( $this->_payload, 'fields', 'field' )
-            );
+            $this->_fields = Option::get( $this->_payload, 'field' );
 
             $this->checkPermission( $this->_action, $this->_tableName );
         }
@@ -233,10 +225,10 @@ class SchemaSvc extends BasePlatformRestService
         {
             if ( empty( $this->_tables ) )
             {
-                return array( 'resource' => $this->describeDatabase() );
+                return array('resource' => $this->describeDatabase());
             }
 
-            return array( 'table' => $this->describeTables( $this->_tables ) );
+            return array('table' => $this->describeTables( $this->_tables ));
         }
 
         if ( empty( $this->_fieldName ) )
@@ -256,10 +248,10 @@ class SchemaSvc extends BasePlatformRestService
         {
             if ( empty( $this->_tables ) )
             {
-                return $this->createTable( $this->_payload );
+                return $this->updateTable( $this->_payload );
             }
 
-            return array( 'table' => $this->createTables( $this->_tables ) );
+            return array('table' => $this->updateTables( $this->_tables ));
         }
 
         if ( empty( $this->_fields ) )
@@ -267,7 +259,7 @@ class SchemaSvc extends BasePlatformRestService
             return $this->createField( $this->_tableName, $this->_payload );
         }
 
-        return array( 'field' => $this->createFields( $this->_tableName, $this->_fields ) );
+        return array('field' => $this->updateFields( $this->_tableName, $this->_fields ));
     }
 
     /**
@@ -279,10 +271,44 @@ class SchemaSvc extends BasePlatformRestService
         {
             if ( empty( $this->_tables ) )
             {
-                return $this->updateTable( $this->_payload );
+                return $this->updateTable( $this->_payload, true, true );
             }
 
-            return array( 'table' => $this->updateTables( $this->_tables ) );
+            return array('table' => $this->updateTables( $this->_tables, true, true ));
+        }
+
+        if ( empty( $this->_fieldName ) )
+        {
+            if ( empty( $this->_fields ) )
+            {
+                return $this->updateField( $this->_tableName, null, $this->_payload, true );
+            }
+
+            return array('field' => $this->updateFields( $this->_tableName, $this->_fields, true, true ));
+        }
+
+        //	Create new field in existing table
+        if ( empty( $this->_payload ) )
+        {
+            throw new BadRequestException( 'No data in schema update request.' );
+        }
+
+        return $this->updateField( $this->_tableName, $this->_fieldName, $this->_payload, true );
+    }
+
+    /**
+     * @return bool
+     */
+    protected function _handlePatch()
+    {
+        if ( empty( $this->_tableName ) )
+        {
+            if ( empty( $this->_tables ) )
+            {
+                return $this->updateTable( $this->_payload, true );
+            }
+
+            return array('table' => $this->updateTables( $this->_tables, true ));
         }
 
         if ( empty( $this->_fieldName ) )
@@ -292,7 +318,7 @@ class SchemaSvc extends BasePlatformRestService
                 return $this->updateField( $this->_tableName, null, $this->_payload );
             }
 
-            return array( 'field' => $this->updateFields( $this->_tableName, $this->_fields ) );
+            return array('field' => $this->updateFields( $this->_tableName, $this->_fields, true ));
         }
 
         //	Create new field in existing table
@@ -314,12 +340,12 @@ class SchemaSvc extends BasePlatformRestService
         {
             $this->deleteTable( $this->_tableName );
 
-            return array( 'table' => $this->_tableName );
+            return array('table' => $this->_tableName);
         }
 
         $this->deleteField( $this->_tableName, $this->_fieldName );
 
-        return array( 'field' => $this->_fieldName );
+        return array('field' => $this->_fieldName);
     }
 
     /**
@@ -357,7 +383,8 @@ class SchemaSvc extends BasePlatformRestService
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException( "Error describing database tables.\n{$ex->getMessage()}", $ex->getCode() );
+            throw new InternalServerErrorException( "Error describing database tables.\n" .
+                                                    $ex->getMessage(), $ex->getCode() );
         }
     }
 
@@ -411,7 +438,8 @@ class SchemaSvc extends BasePlatformRestService
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException( "Error describing database tables '$table_list'.\n{$ex->getMessage()}", $ex->getCode() );
+            throw new InternalServerErrorException( "Error describing database tables '$table_list'.\n" .
+                                                    $ex->getMessage(), $ex->getCode() );
         }
     }
 
@@ -431,7 +459,13 @@ class SchemaSvc extends BasePlatformRestService
         if ( $this->_isNative )
         {
             // check for system tables and deny
-            if ( 0 === substr_compare( $table, SystemManager::SYSTEM_TABLE_PREFIX, 0, strlen( SystemManager::SYSTEM_TABLE_PREFIX ) ) )
+            if ( 0 === substr_compare(
+                    $table,
+                    SystemManager::SYSTEM_TABLE_PREFIX,
+                    0,
+                    strlen( SystemManager::SYSTEM_TABLE_PREFIX )
+                )
+            )
             {
                 throw new NotFoundException( "Table '$table' not found." );
             }
@@ -450,7 +484,8 @@ class SchemaSvc extends BasePlatformRestService
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException( "Error describing database table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
+            throw new InternalServerErrorException( "Error describing database table '$table'.\n" .
+                                                    $ex->getMessage(), $ex->getCode() );
         }
     }
 
@@ -471,7 +506,13 @@ class SchemaSvc extends BasePlatformRestService
         if ( $this->_isNative )
         {
             // check for system tables and deny
-            if ( 0 === substr_compare( $table, SystemManager::SYSTEM_TABLE_PREFIX, 0, strlen( SystemManager::SYSTEM_TABLE_PREFIX ) ) )
+            if ( 0 === substr_compare(
+                    $table,
+                    SystemManager::SYSTEM_TABLE_PREFIX,
+                    0,
+                    strlen( SystemManager::SYSTEM_TABLE_PREFIX )
+                )
+            )
             {
                 throw new NotFoundException( "Table '$table' not found." );
             }
@@ -487,23 +528,22 @@ class SchemaSvc extends BasePlatformRestService
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException( "Error describing database table '$table' field '$field'.\n{$ex->getMessage()}", $ex->getCode() );
+            throw new InternalServerErrorException( "Error describing database table '$table' field '$field'.\n" .
+                                                    $ex->getMessage(), $ex->getCode() );
         }
     }
 
     /**
-     * @param      $tables
-     * @param bool $allow_merge
+     * @param array $tables
+     * @param bool  $allow_merge
+     * @param bool  $allow_delete
      *
-     * @throws \Exception
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return array
      */
-    public function createTables( $tables, $allow_merge = false )
+    public function updateTables( $tables, $allow_merge = false, $allow_delete = false )
     {
-        if ( !isset( $tables ) || empty( $tables ) )
-        {
-            throw new BadRequestException( 'There are no table sets in the request.' );
-        }
+        $tables = static::validateAsArray( $tables, null, true, 'There are no table sets in the request.' );
 
         $_sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
         $_length = strlen( SystemManager::SYSTEM_TABLE_PREFIX );
@@ -511,25 +551,9 @@ class SchemaSvc extends BasePlatformRestService
         if ( $this->_isNative )
         {
             // check for system tables and deny
-            if ( isset( $tables[0] ) )
+            foreach ( $tables as $_table )
             {
-                foreach ( $tables as $_table )
-                {
-                    if ( null === ( $_name = Option::get( $_table, 'name' ) ) )
-                    {
-                        throw new BadRequestException( "Table schema received does not have a valid name." );
-                    }
-
-                    if ( 0 === substr_compare( $_name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
-                    {
-                        throw new BadRequestException( "Tables can not use the prefix '$_sysPrefix'. '$_name' can not be created." );
-                    }
-                }
-            }
-            else
-            {
-                //	single table
-                if ( null === ( $_name = Option::get( $tables, 'name' ) ) )
+                if ( null === ( $_name = Option::get( $_table, 'name' ) ) )
                 {
                     throw new BadRequestException( "Table schema received does not have a valid name." );
                 }
@@ -541,7 +565,7 @@ class SchemaSvc extends BasePlatformRestService
             }
         }
 
-        return SqlDbUtilities::createTables( $this->_dbConn, $tables, $allow_merge );
+        return SqlDbUtilities::updateTables( $this->_dbConn, $tables, $allow_merge, $allow_delete );
     }
 
     /**
@@ -550,16 +574,13 @@ class SchemaSvc extends BasePlatformRestService
      * @return array
      * @throws \Exception
      */
-    public function createTable( $table )
+    public function updateTable( $table, $allow_merge = false, $allow_delete = false )
     {
-        if ( null != Option::get( $table, 0 ) )
-        {
-            throw new BadRequestException( 'Bad request format.' );
-        }
+        $_tables = static::validateAsArray( $table, null, true, 'Bad data format in request.' );
 
-        $result = $this->createTables( $table );
+        $_result = $this->updateTables( $_tables, $allow_merge, $allow_delete );
 
-        return Option::get( $result, 0, array() );
+        return Option::get( $_result, 0, array() );
     }
 
     /**
@@ -569,7 +590,7 @@ class SchemaSvc extends BasePlatformRestService
      * @throws \Exception
      * @return array
      */
-    public function createFields( $table, $fields )
+    public function updateFields( $table, $fields, $allow_merge = false, $allow_delete = false )
     {
         if ( empty( $table ) )
         {
@@ -588,7 +609,7 @@ class SchemaSvc extends BasePlatformRestService
 
         try
         {
-            $names = SqlDbUtilities::createFields( $this->_dbConn, $table, $fields );
+            $names = SqlDbUtilities::updateFields( $this->_dbConn, $table, $fields, $allow_merge, $allow_delete );
 
             return SqlDbUtilities::describeFields( $this->_dbConn, $table, $names );
         }
@@ -598,137 +619,42 @@ class SchemaSvc extends BasePlatformRestService
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException( "Error creating database fields for table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
+            throw new InternalServerErrorException( "Error creating database fields for table '$table'.\n" .
+                                                    $ex->getMessage(), $ex->getCode() );
         }
     }
 
     /**
-     * @param $table
-     * @param $_data
+     * @param string $table
+     * @param array  $data
      *
      * @throws \Exception
      * @return array
      */
-    public function createField( $table, $_data )
+    public function createField( $table, $data )
     {
-        $result = $this->createFields( $table, $_data );
+        $_fields = static::validateAsArray( $data, null, true, 'Bad data format in request.' );
+
+        $result = $this->updateFields( $table, $_fields );
 
         return Option::get( $result, 0, array() );
     }
 
     /**
-     * @param $tables
-     *
-     * @return mixed
-     * @throws \Exception
-     */
-    public function updateTables( $tables )
-    {
-        if ( !isset( $tables ) || empty( $tables ) )
-        {
-            throw new BadRequestException( 'There are no table sets in the request.' );
-        }
-        if ( $this->_isNative )
-        {
-            // check for system tables and deny
-            $sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
-            if ( isset( $tables[0] ) )
-            {
-                foreach ( $tables as $table )
-                {
-                    $name = Option::get( $table, 'name', '' );
-                    if ( 0 === substr_compare( $name, $sysPrefix, 0, strlen( $sysPrefix ) ) )
-                    {
-                        throw new BadRequestException( "Tables can not use the prefix '$sysPrefix'. '$name' can not be created." );
-                    }
-                }
-            }
-            else
-            { // single table
-                $name = Option::get( $tables, 'name', '' );
-                if ( 0 === substr_compare( $name, $sysPrefix, 0, strlen( $sysPrefix ) ) )
-                {
-                    throw new BadRequestException( "Tables can not use the prefix '$sysPrefix'. '$name' can not be created." );
-                }
-            }
-        }
-
-        return SqlDbUtilities::createTables( $this->_dbConn, $tables, true );
-    }
-
-    /**
-     * @param $table
+     * @param string $table
+     * @param string $field
+     * @param array  $_data
+     * @param bool   $allow_delete
      *
      * @return array
-     * @throws \Exception
      */
-    public function updateTable( $table )
-    {
-        if ( null != Option::get( $table, 0 ) )
-        {
-            throw new BadRequestException( 'Bad request format.' );
-        }
-
-        $result = $this->updateTables( $table );
-
-        return Option::get( $result, 0, array() );
-    }
-
-    /**
-     * @param $table
-     * @param $fields
-     *
-     * @throws \Exception
-     * @return array
-     */
-    public function updateFields( $table, $fields )
-    {
-        if ( empty( $table ) )
-        {
-            throw new BadRequestException( 'Table name can not be empty.' );
-        }
-
-        if ( $this->_isNative )
-        {
-            // check for system tables and deny
-            $sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
-            if ( 0 === substr_compare( $table, $sysPrefix, 0, strlen( $sysPrefix ) ) )
-            {
-                throw new NotFoundException( "Table '$table' not found." );
-            }
-        }
-
-        try
-        {
-            $names = SqlDbUtilities::createFields( $this->_dbConn, $table, $fields, true );
-
-            return SqlDbUtilities::describeFields( $this->_dbConn, $table, $names );
-        }
-        catch ( RestException $ex )
-        {
-            throw $ex;
-        }
-        catch ( \Exception $ex )
-        {
-            throw new InternalServerErrorException( "Error updating database table '$table'.\n{$ex->getMessage()}", $ex->getCode() );
-        }
-    }
-
-    /**
-     * @param $table
-     * @param $field
-     * @param $_data
-     *
-     * @throws \Exception
-     * @return array
-     */
-    public function updateField( $table, $field, $_data )
+    public function updateField( $table, $field, $_data, $allow_delete = false )
     {
         if ( !empty( $field ) )
         {
             $_data['name'] = $field;
         }
-        $result = $this->updateFields( $table, $_data );
+        $result = $this->updateFields( $table, $_data, true, $allow_delete );
 
         return Option::get( $result, 0, array() );
     }
@@ -781,6 +707,45 @@ class SchemaSvc extends BasePlatformRestService
         }
 
         SqlDbUtilities::dropField( $this->_dbConn, $table, $field );
+    }
+
+    /**
+     * @param array | string $data          Array to check or comma-delimited string to convert
+     * @param string | null  $str_delimiter Delimiter to check for string to array mapping, no op if null
+     * @param boolean        $check_single  Check if single (associative) needs to be made multiple (numeric)
+     * @param string | null  $on_fail       Error string to deliver in thrown exception
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array | boolean If requirements not met then throws exception if
+     * $on_fail string given, or returns false. Otherwise returns valid array
+     */
+    public static function validateAsArray( $data, $str_delimiter = null, $check_single = false, $on_fail = null )
+    {
+        if ( !empty( $data ) && !is_array( $data ) && ( is_string( $str_delimiter ) && !empty( $str_delimiter ) ) )
+        {
+            $data = array_map( 'trim', explode( $str_delimiter, trim( $data, $str_delimiter ) ) );
+        }
+
+        if ( !is_array( $data ) || empty( $data ) )
+        {
+            if ( !is_string( $on_fail ) || empty( $on_fail ) )
+            {
+                return false;
+            }
+
+            throw new BadRequestException( $on_fail );
+        }
+
+        if ( $check_single )
+        {
+            if ( !isset( $data[0] ) )
+            {
+                // single record possibly passed in without wrapper array
+                $data = array($data);
+            }
+        }
+
+        return $data;
     }
 
     /**

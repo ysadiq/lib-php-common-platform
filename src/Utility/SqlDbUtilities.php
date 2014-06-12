@@ -22,7 +22,6 @@ namespace DreamFactory\Platform\Utility;
 use DreamFactory\Platform\Enums\PlatformStorageDrivers;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Platform\Exceptions\InvalidJsonException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Interfaces\SqlDbDriverTypes;
@@ -1212,13 +1211,14 @@ class SqlDbUtilities implements SqlDbDriverTypes
      * @param \CDbConnection       $db
      * @param string               $table_name
      * @param array                $fields
-     * @param bool                 $allow_update
      * @param null|\CDbTableSchema $schema
+     * @param bool                 $allow_update
+     * @param bool                 $allow_delete
      *
      * @throws \Exception
      * @return string
      */
-    protected static function buildTableFields( $db, $table_name, $fields, $allow_update = true, $schema = null )
+    protected static function buildTableFields( $db, $table_name, $fields, $schema = null, $allow_update = false, $allow_delete = false )
     {
         if ( empty( $fields ) )
         {
@@ -1239,6 +1239,28 @@ class SqlDbUtilities implements SqlDbDriverTypes
         if ( !isset( $fields[0] ) )
         {
             $fields = array($fields);
+        }
+
+        $drop_columns = array();
+        if ( $allow_delete )
+        {
+            foreach ( $schema->columnNames as $_oldName )
+            {
+                $_found = false;
+                foreach ( $fields as $field )
+                {
+                    $_name = strval( Option::get( $field, 'name' ) );
+                    if ( 0 === strcasecmp( $_name, $_oldName ) )
+                    {
+                        $_found = true;
+                        break;
+                    }
+                }
+                if ( !$_found )
+                {
+                    $drop_columns[] = $_oldName;
+                }
+            }
         }
         foreach ( $fields as $field )
         {
@@ -1485,6 +1507,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
         return array(
             'columns'       => $columns,
             'alter_columns' => $alter_columns,
+            'drop_columns'  => $drop_columns,
             'references'    => $references,
             'indexes'       => $indexes,
             'labels'        => $labels
@@ -1582,11 +1605,12 @@ class SqlDbUtilities implements SqlDbDriverTypes
      * @param string         $table_name
      * @param array          $fields
      * @param bool           $allow_update
+     * @param bool           $allow_delete
      *
      * @return array
      * @throws \Exception
      */
-    public static function createFields( $db, $table_name, $fields, $allow_update = true )
+    public static function updateFields( $db, $table_name, $fields, $allow_update = false, $allow_delete = false )
     {
         if ( empty( $table_name ) )
         {
@@ -1606,7 +1630,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
         try
         {
             $names = array();
-            $results = static::buildTableFields( $db, $table_name, $fields, $allow_update, $schema );
+            $results = static::buildTableFields( $db, $table_name, $fields, $schema, $allow_update, $allow_delete );
             $command = $db->createCommand();
             $columns = Utilities::getArrayValue( 'columns', $results, array() );
             foreach ( $columns as $name => $definition )
@@ -1620,6 +1644,13 @@ class SqlDbUtilities implements SqlDbDriverTypes
             {
                 $command->reset();
                 $command->alterColumn( $table_name, $name, $definition );
+                $names[] = $name;
+            }
+            $columns = Utilities::getArrayValue( 'drop_columns', $results, array() );
+            foreach ( $columns as $name )
+            {
+                $command->reset();
+                $command->dropColumn( $table_name, $name );
                 $names[] = $name;
             }
             static::createFieldExtras( $db, $results );
@@ -1726,11 +1757,12 @@ class SqlDbUtilities implements SqlDbDriverTypes
      * @param string         $table_name
      * @param array          $data
      * @param bool           $return_labels_refs
+     * @param bool           $allow_delete
      *
      * @throws \Exception
      * @return array
      */
-    public static function updateTable( $db, $table_name, $data, $return_labels_refs = false )
+    public static function updateTable( $db, $table_name, $data, $return_labels_refs = false, $allow_delete = false )
     {
         if ( empty( $table_name ) )
         {
@@ -1769,7 +1801,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
                 {
                     throw new NotFoundException( "Table '$table_name' does not exist in the database." );
                 }
-                $results = static::buildTableFields( $db, $table_name, $fields, true, $schema );
+                $results = static::buildTableFields( $db, $table_name, $fields, $schema, true, $allow_delete );
                 $columns = Option::get( $results, 'columns', array() );
                 foreach ( $columns as $name => $definition )
                 {
@@ -1781,6 +1813,12 @@ class SqlDbUtilities implements SqlDbDriverTypes
                 {
                     $command->reset();
                     $command->alterColumn( $table_name, $name, $definition );
+                }
+                $columns = Utilities::getArrayValue( 'drop_columns', $results, array() );
+                foreach ( $columns as $name )
+                {
+                    $command->reset();
+                    $command->dropColumn( $table_name, $name );
                 }
 
                 $labels = Utilities::getArrayValue( 'labels', $results, array() );
@@ -1821,12 +1859,13 @@ class SqlDbUtilities implements SqlDbDriverTypes
      * @param \CDbConnection $db
      * @param array          $tables
      * @param bool           $allow_merge
+     * @param bool           $allow_delete
      * @param bool           $rollback
      *
      * @throws \Exception
      * @return array
      */
-    public static function createTables( $db, $tables, $allow_merge = false, $rollback = false )
+    public static function updateTables( $db, $tables, $allow_merge = false, $allow_delete = false, $rollback = false )
     {
         //  Refresh the schema so we have the latest
         $db->schema->refresh();
@@ -1848,7 +1887,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
             {
                 if ( null === ( $_tableName = Option::get( $_table, 'name' ) ) )
                 {
-                    throw new InvalidJsonException( 'Table name missing from schema.' );
+                    throw new BadRequestException( 'Table name missing from schema.' );
                 }
 
                 //	Does it already exist
@@ -1856,14 +1895,12 @@ class SqlDbUtilities implements SqlDbDriverTypes
                 {
                     if ( !$allow_merge )
                     {
-                        throw new BadRequestException( 'A table with name "' .
-                                                       $_tableName .
-                                                       '" already exist in the database.' );
+                        throw new BadRequestException( "A table with name '$_tableName' already exist in the database." );
                     }
 
                     Log::debug( 'Schema update: ' . $_tableName );
 
-                    $_results = static::updateTable( $db, $_tableName, $_table, true );
+                    $_results = static::updateTable( $db, $_tableName, $_table, true, $allow_delete );
                 }
                 else
                 {
