@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Scripting;
 
 use DreamFactory\Platform\Components\StateStack;
 use DreamFactory\Platform\Enums\DataFormats;
+use DreamFactory\Platform\Events\Exceptions\ScriptException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\Platform;
@@ -162,7 +163,7 @@ class ScriptEngine
      */
     public static function runScript( $scriptName, $scriptId = null, array &$exposedEvent = array(), array &$exposedPlatform = array(), &$output = null )
     {
-        $scriptId = $scriptId ? : $scriptName;
+        $scriptId = $scriptId ?: $scriptName;
 
         if ( !is_file( $scriptName ) || !is_readable( $scriptName ) )
         {
@@ -207,20 +208,22 @@ class ScriptEngine
             if ( class_exists( '\\V8JsTimeLimitException', false ) && $_ex instanceof \V8JsTimeLimitException )
             {
                 /** @var \Exception $_ex */
-                Log::error( 'Timeout while running script "' . $scriptId . '": ' . $_ex->getMessage() );
+                Log::error( $_message = 'Timeout while running script "' . $scriptId . '": ' . $_ex->getMessage() );
             }
 
             else if ( class_exists( '\\V8JsMemoryLimitException', false ) && $_ex instanceof \V8JsMemoryLimitException )
             {
                 /** @var \Exception $_ex */
-                Log::error( 'Out of memory while running script "' . $scriptId . '": ' . $_ex->getMessage() );
+                Log::error(
+                    $_message = 'Out of memory while running script "' . $scriptId . '": ' . $_ex->getMessage()
+                );
             }
             else
             {
-                Log::error( 'Exception executing javascript: ' . $_ex->getMessage() );
+                Log::error( $_message = 'Exception executing javascript: ' . $_ex->getMessage() );
             }
 
-            throw new InternalServerErrorException( $_ex->getMessage() );
+            throw new ScriptException( $_message );
         }
     }
 
@@ -284,7 +287,7 @@ class ScriptEngine
         $_platformConfigPath = Platform::getPlatformConfigPath();
 
         //  Get our script path
-        static::$_libraryScriptPath = $libraryScriptPath ? : Platform::getLibraryConfigPath( '/scripts' );
+        static::$_libraryScriptPath = $libraryScriptPath ?: Platform::getLibraryConfigPath( '/scripts' );
 
         if ( empty( static::$_libraryScriptPath ) || !is_dir( static::$_libraryScriptPath ) )
         {
@@ -373,6 +376,7 @@ _wrapperResult = (function() {
 	}
 	catch ( _ex ) {
 		_event.script_result = {'error':_ex.message};
+		_event.exception = _ex;
 	}
 
 	return _event;

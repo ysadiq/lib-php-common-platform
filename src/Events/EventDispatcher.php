@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Events;
 
 use DreamFactory\Platform\Components\ApiResponse;
 use DreamFactory\Platform\Events\Enums\SwaggerEvents;
+use DreamFactory\Platform\Events\Exceptions\ScriptException;
 use DreamFactory\Platform\Events\Interfaces\EventObserverLike;
 use DreamFactory\Platform\Events\Stores\EventStore;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -245,7 +246,10 @@ class EventDispatcher implements EventDispatcherInterface
     protected function _doDispatch( &$event, $eventName )
     {
         //  Do nothing if not wanted
-        if ( !static::$_enableRestEvents && !static::$_enablePlatformEvents && !static::$_enableEventScripts && !static::$_enableEventObservers
+        if ( !static::$_enableRestEvents &&
+             !static::$_enablePlatformEvents &&
+             !static::$_enableEventScripts &&
+             !static::$_enableEventObservers
         )
         {
             return false;
@@ -328,7 +332,9 @@ class EventDispatcher implements EventDispatcherInterface
 
                     $_hash = spl_object_hash( $_listener );
                     $_name = gettype( $_listener );
-                    $_listener = ( ( $_listener instanceof \Closure || $_listener instanceof SerializableClosure ) ? 'Closure' : $_name ) . 'id#' . $_hash;
+                    $_listener =
+                        ( ( $_listener instanceof \Closure || $_listener instanceof SerializableClosure ) ? 'Closure'
+                            : $_name ) . 'id#' . $_hash;
                 }
             }
 
@@ -495,7 +501,9 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected function isPhpScript( $callable )
     {
-        return is_callable( $callable ) || ( ( false === strpos( $callable, ' ' ) && false !== strpos( $callable, '::' ) ) );
+        return
+            is_callable( $callable ) ||
+            ( ( false === strpos( $callable, ' ' ) && false !== strpos( $callable, '::' ) ) );
     }
 
     /**
@@ -586,7 +594,8 @@ class EventDispatcher implements EventDispatcherInterface
 
                         if ( is_file( $_scriptFile ) && is_readable( $_scriptFile ) )
                         {
-                            if ( !isset( $this->_scripts[ $_eventKey ] ) || !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
+                            if ( !isset( $this->_scripts[ $_eventKey ] ) ||
+                                 !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
                             )
                             {
                                 $_found[] = str_replace( $_basePath, '.', $_scriptFile );
@@ -613,7 +622,8 @@ class EventDispatcher implements EventDispatcherInterface
                     $_eventKey = str_ireplace( '.js', null, $_newScript );
                     $_scriptFile = $_basePath . '/' . $_newScript;
 
-                    if ( !array_key_exists( $_eventKey, $this->_scripts ) || !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
+                    if ( !array_key_exists( $_eventKey, $this->_scripts ) ||
+                         !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
                     )
                     {
                         $this->_scripts[ $_eventKey ][] = $_scriptFile;
@@ -789,15 +799,23 @@ class EventDispatcher implements EventDispatcherInterface
                     $_event['platform'],
                     $_output
                 );
+
+                //  Bail on errors...
+                if ( is_array( $_result ) && ( isset( $_result['error'] ) || isset( $_result['exception'] ) ) )
+                {
+                    throw new ScriptException( Option::get( $_result, 'exception', Option::get( $_result, 'error' ) ) );
+                }
             }
-            catch ( \Exception $_ex )
+            catch ( ScriptException $_ex )
             {
-                Log::error( 'Exception running script: ' . $_ex->getMessage() );
-                continue;
+                throw $_ex;
+            }
+            catch ( Exception $_ex )
+            {
+                Log::error( 'Scripting Error: ' . $_ex->getMessage() );
             }
 
             //  The script runner should return an array
-
             if ( is_array( $_result ) )
             {
                 ScriptEvent::updateEventFromHandler( $event, $_result );
@@ -931,10 +949,15 @@ class EventDispatcher implements EventDispatcherInterface
 
             if ( $_dispatched && static::$_logEvents && !static::$_logAllEvents )
             {
-                $_defaultPath = $event instanceof PlatformServiceEvent ? $event->getApiName() . '/' . $event->getResource() : null;
+                $_defaultPath =
+                    $event instanceof PlatformServiceEvent ? $event->getApiName() . '/' . $event->getResource() : null;
 
                 Log::debug(
-                    ( $_dispatched ? 'Dispatcher' : 'Unhandled' ) . ': event "' . $eventName . '" triggered by /' . Option::get( $_GET, 'path', $_defaultPath )
+                    ( $_dispatched ? 'Dispatcher' : 'Unhandled' ) .
+                    ': event "' .
+                    $eventName .
+                    '" triggered by /' .
+                    Option::get( $_GET, 'path', $_defaultPath )
                 );
             }
 
