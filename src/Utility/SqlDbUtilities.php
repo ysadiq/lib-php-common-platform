@@ -1867,19 +1867,15 @@ class SqlDbUtilities implements SqlDbDriverTypes
      */
     public static function updateTables( $db, $tables, $allow_merge = false, $allow_delete = false, $rollback = false )
     {
+        $tables = static::validateAsArray( $tables, null, true, 'There are no table sets in the request.' );
+
         //  Refresh the schema so we have the latest
         $db->schema->refresh();
         static::_getCachedTables( $db, true );
 
         $_created = $_references = $_indexes = $_labels = $_out = array();
         $_count = 0;
-        $_singleTable = false;
-
-        if ( !isset( $tables[0] ) )
-        {
-            $tables = array($tables);
-            $_singleTable = true;
-        }
+        $_singleTable = ( 1 == count( $tables ) );
 
         foreach ( $tables as $_table )
         {
@@ -2361,5 +2357,44 @@ SQL;
         }
 
         return static::$_tableCache;
+    }
+
+    /**
+     * @param array | string $data          Array to check or comma-delimited string to convert
+     * @param string | null  $str_delimiter Delimiter to check for string to array mapping, no op if null
+     * @param boolean        $check_single  Check if single (associative) needs to be made multiple (numeric)
+     * @param string | null  $on_fail       Error string to deliver in thrown exception
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return array | boolean If requirements not met then throws exception if
+     * $on_fail string given, or returns false. Otherwise returns valid array
+     */
+    public static function validateAsArray( $data, $str_delimiter = null, $check_single = false, $on_fail = null )
+    {
+        if ( !empty( $data ) && !is_array( $data ) && ( is_string( $str_delimiter ) && !empty( $str_delimiter ) ) )
+        {
+            $data = array_map( 'trim', explode( $str_delimiter, trim( $data, $str_delimiter ) ) );
+        }
+
+        if ( !is_array( $data ) || empty( $data ) )
+        {
+            if ( !is_string( $on_fail ) || empty( $on_fail ) )
+            {
+                return false;
+            }
+
+            throw new BadRequestException( $on_fail );
+        }
+
+        if ( $check_single )
+        {
+            if ( !isset( $data[0] ) )
+            {
+                // single record possibly passed in without wrapper array
+                $data = array($data);
+            }
+        }
+
+        return $data;
     }
 }
