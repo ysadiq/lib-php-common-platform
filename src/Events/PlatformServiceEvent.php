@@ -70,5 +70,4 @@ class PlatformServiceEvent extends PlatformEvent
     {
         return $this->_resource;
     }
-
 }

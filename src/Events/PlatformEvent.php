@@ -57,18 +57,14 @@ class PlatformEvent extends SeedEvent
      * @var bool Indicates that a listener in the chain has changed the data
      */
     protected $_dirty = false;
+    /**
+     * @var bool If true, this is a post-process type event
+     */
+    protected $_postProcessScript = false;
 
     //**************************************************************************
     //* Methods
     //**************************************************************************
-
-    /**
-     * @param array $data
-     */
-    public function __construct( $data = array() )
-    {
-        parent::__construct( $data );
-    }
 
     /**
      * "preventDefault" flag for jQuery compatibility.
@@ -152,4 +148,25 @@ class PlatformEvent extends SeedEvent
 
         return $this;
     }
+
+    /**
+     * @return boolean
+     */
+    public function isPostProcessScript()
+    {
+        return $this->_postProcessScript;
+    }
+
+    /**
+     * @param boolean $postProcessScript
+     *
+     * @return PlatformEvent
+     */
+    public function setPostProcessScript( $postProcessScript )
+    {
+        $this->_postProcessScript = $postProcessScript;
+
+        return $this;
+    }
+
 }

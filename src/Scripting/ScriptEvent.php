@@ -24,7 +24,6 @@ use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Resources\System\User;
 use DreamFactory\Platform\Resources\User\Session;
-use DreamFactory\Platform\Utility\BabelFish;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Yii\Models\App;
 use DreamFactory\Yii\Utility\Pii;
@@ -85,10 +84,13 @@ class ScriptEvent
         //	Not cached, get it...
         $_path = Platform::getLibraryConfigPath( '/schema' ) . '/' . trim( $template, ' /' );
 
-        if ( is_file( $_path ) && is_readable( $_path ) && ( false !== ( $_eventTemplate = file_get_contents( $_path ) ) )
+        if ( is_file( $_path ) &&
+             is_readable( $_path ) &&
+             ( false !== ( $_eventTemplate = file_get_contents( $_path ) ) )
         )
         {
-            if ( false !== ( $_eventTemplate = json_decode( $_eventTemplate, true ) ) && JSON_ERROR_NONE == json_last_error()
+            if ( false !== ( $_eventTemplate = json_decode( $_eventTemplate, true ) ) &&
+                 JSON_ERROR_NONE == json_last_error()
             )
             {
                 Platform::storeSet( 'scripting.event_schema', $_eventTemplate, 86400 );
@@ -216,8 +218,8 @@ class ScriptEvent
             $_path
         ) : $_path;
 
-        $_request = static::buildRequestArray( $event, true );
-        $_response = false === strpos( $eventName, '.post_process' ) ? null : $event->getData();
+        $_request = static::buildRequestArray( $event );
+        $_response = $event->getData();
 
         //	Build the array
         $_event = array(
@@ -362,7 +364,9 @@ class ScriptEvent
         }
 
         //  Single row, or so we think...
-        if ( is_array( $_currentData ) && !Pii::isEmpty( $_record = Option::get( $_currentData, 'record' ) ) && count( $_record ) >= 1
+        if ( is_array( $_currentData ) &&
+             !Pii::isEmpty( $_record = Option::get( $_currentData, 'record' ) ) &&
+             count( $_record ) >= 1
         )
         {
             return $wrapped ? $_innerData : $newData;
@@ -388,22 +392,13 @@ class ScriptEvent
             $event->stopPropagation();
         }
 
-        if ( Option::getBool( $exposedEvent, 'payload_changed' ) )
-        {
-            return $event->setData( $exposedEvent['payload'] );
-        }
-
-        $_data = static::denormalizeEventData( $event, Option::get( $exposedEvent, static::$_payloadKey, array() ) );
-
-        if ( null === ( $_meta = Option::getDeep( $exposedEvent, 'request', 'meta' ) ) )
-        {
-            $_meta = Option::getDeep( $exposedEvent, 'response', 'meta' );
-        }
-
-        if ( !empty( $_meta ) )
-        {
-            $_data['meta'] = $_meta;
-        }
+        $_data = ( $event->isPostProcessScript()
+            ? Option::get( $exposedEvent, 'response' )
+            : Option::getDeep(
+                $exposedEvent,
+                'request',
+                'body'
+            ) );
 
         return $event->setData( $_data );
     }
@@ -453,7 +448,7 @@ class ScriptEvent
             'headers' => $_reqObj->headers->all(),
             'cookies' => $_reqObj->cookies->all(),
             'query'   => $_reqObj->query->all(),
-            'body'    => $normalizeBody ? static::normalizeEventData( $event ) : BabelFish::getRequestData( true, true ),
+            'body'    => $normalizeBody ? static::normalizeEventData( $event ) : $event->getData(),
             'files'   => false,
         );
 
@@ -463,13 +458,6 @@ class ScriptEvent
         {
             $_request['files'] = $_files;
         }
-
-        if ( null === ( $_meta = Option::get( $_data, 'meta' ) ) )
-        {
-            $_meta = Option::getDeep( $_data, 'record', 'meta', false );
-        }
-
-        $_request['meta'] = $_meta;
 
         return $_request;
     }

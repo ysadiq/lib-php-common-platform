@@ -37,7 +37,6 @@ use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Resources\System\Event;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
-use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
@@ -193,7 +192,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $_message =
                 $this->_action .
                 ' requests' .
-                ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
+                ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"'
+                    : ' without a resource' ) .
                 ' are not currently supported by the "' .
                 $this->_apiName .
                 '" service.';
@@ -243,7 +243,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             }
 
             //	Does this action have a handler?
-            if ( false !== ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) )
+            if ( false !==
+                 ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) )
             )
             {
                 $_handler = $this->_extraActions[ $_action ];
@@ -378,7 +379,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     {
         if ( $this instanceof BasePlatformRestResource || $this instanceof ServiceOnlyResourceLike )
         {
-            $this->_triggerActionEvent( $this->_response, PlatformServiceEvents::POST_PROCESS );
+            $this->_triggerActionEvent( $this->_response, PlatformServiceEvents::POST_PROCESS, null, true );
         }
     }
 
@@ -428,14 +429,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         if ( DataFormats::JSON !== $this->_outputFormat )
         {
             $_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
-        }
-
-        /**
-         * @todo This should be in the resource class itself really...
-         */
-        if ( $this->isResource() )
-        {
-            $this->trigger( PlatformServiceEvents::AFTER_DATA_FORMAT, $_result );
         }
 
         if ( !empty( $this->_outputFormat ) )
@@ -663,13 +656,15 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      *
      * These events will only trigger a single time per request.
      *
-     * @param mixed                $result    The result of the call
-     * @param string               $eventName The event to trigger. If not supplied, one will looked up based on the context
+     * @param mixed                $result        The result of the call
+     * @param string               $eventName     The event to trigger. If not supplied, one will looked up based on the context
      * @param PlatformServiceEvent $event
+     * @param bool                 $isPostProcess Will be true if this is a "post-process" type event
      *
+     * @throws \Exception
      * @return bool
      */
-    protected function _triggerActionEvent( &$result, $eventName = null, $event = null )
+    protected function _triggerActionEvent( &$result, $eventName = null, $event = null, $isPostProcess = false )
     {
         static $_triggeredEvents = array();
 
@@ -713,7 +708,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
                 continue;
             }
 
-            //  Construct an event if necessary
+            //  Get event data if necessary
             if ( empty( $result ) )
             {
                 $_eventData = Option::clean( RestData::getPostedData( true, true ) );
@@ -727,6 +722,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
             $_service = $this->_apiName;
             $_event = $event ?: new PlatformServiceEvent( $_service, $this->_resource, $result );
+            $_event->setPostProcessScript( $isPostProcess );
 
             //  Normalize the event name
             $_eventName = Event::normalizeEventName( $_event, $_eventName, $_values );

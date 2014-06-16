@@ -810,7 +810,7 @@ class EventDispatcher implements EventDispatcherInterface
             {
                 throw $_ex;
             }
-            catch ( Exception $_ex )
+            catch ( \Exception $_ex )
             {
                 Log::error( 'Scripting Error: ' . $_ex->getMessage() );
             }
