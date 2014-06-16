@@ -158,7 +158,7 @@ class AwsS3Svc extends RemoteFileSvc
     }
 
     /**
-     * @param array $container
+     * @param array $properties
      * @param array $metadata
      *
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
@@ -166,7 +166,7 @@ class AwsS3Svc extends RemoteFileSvc
      * @internal param array $properties
      * @return array
      */
-    public function createContainer( $container, $metadata = array() )
+    public function createContainer( $properties, $metadata = array() )
     {
         $_name = Option::get( $properties, 'name', Option::get( $properties, 'path' ) );
         if ( empty( $_name ) )
