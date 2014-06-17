@@ -219,7 +219,7 @@ class ScriptEvent
         ) : $_path;
 
         $_request = static::buildRequestArray( $event );
-        $_response = $event->getData();
+        $_response = $event->getResponseData();
 
         //	Build the array
         $_event = array(
@@ -392,15 +392,26 @@ class ScriptEvent
             $event->stopPropagation();
         }
 
-        $_data = ( $event->isPostProcessScript()
-            ? Option::get( $exposedEvent, 'response' )
-            : Option::getDeep(
-                $exposedEvent,
-                'request',
-                'body'
-            ) );
+        $_request = Option::get( $exposedEvent, 'request', 'body' );
+        $_response = Option::get( $exposedEvent, 'response', false );
 
-        return $event->setData( $_data );
+        if ( $_request )
+        {
+            if ( !$event->isPostProcessScript() )
+            {
+                $event->setData( $_request );
+            }
+
+            $event->setRequestData( $_request );
+        }
+
+        if ( $_response )
+        {
+            $event->setData( $_response );
+            $event->setResponseData( $_response );
+        }
+
+        return $event;
     }
 
     /**
@@ -448,10 +459,10 @@ class ScriptEvent
             'headers' => $_reqObj->headers->all(),
             'cookies' => $_reqObj->cookies->all(),
             'query'   => $_reqObj->query->all(),
+            'files'   => false,
             'body'    => $normalizeBody
                 ? static::normalizeEventData( $event ) : ( $event instanceof PlatformEvent
-                    ? $event->getData() : $event ),
-            'files'   => false,
+                    ? $event->getRequestData() : $event ),
         );
 
         $_files = $_reqObj->files->all();
