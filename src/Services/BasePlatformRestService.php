@@ -37,6 +37,7 @@ use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Resources\System\Event;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
@@ -739,9 +740,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             //  Merge back the results
             if ( $_event instanceOf PlatformEvent )
             {
-                $_eventData = $_event->getData();
-
-                $result = $_eventData;
+                $result = $_eventData = $_event->getData();
 
                 //  Stick it back into the request for processing...
                 if ( $_inboundData )
@@ -758,6 +757,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
                         $_request->server->all(),
                         is_string( $result ) ? $result : json_encode( $result, JSON_UNESCAPED_SLASHES )
                     );
+
+                    $this->_requestPayload = $result;
 
                     Pii::app()->setRequestObject( $_request );
                 }

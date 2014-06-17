@@ -41,6 +41,18 @@ class PlatformEvent extends SeedEvent
     //*************************************************************************
 
     /**
+     * @var int
+     */
+    const EVENT_DATA = 0;
+    /**
+     * @var int
+     */
+    const REQUEST_DATA = 1;
+    /**
+     * @var int
+     */
+    const RESPONSE_DATA = 2;
+    /**
      * @type string The default DSP namespace
      */
     const EVENT_NAMESPACE = 'dsp';
@@ -61,6 +73,14 @@ class PlatformEvent extends SeedEvent
      * @var bool If true, this is a post-process type event
      */
     protected $_postProcessScript = false;
+    /**
+     * @var array|mixed
+     */
+    protected $_requestData = null;
+    /**
+     * @var array|mixed
+     */
+    protected $_responseData = null;
 
     //**************************************************************************
     //* Methods
@@ -125,25 +145,54 @@ class PlatformEvent extends SeedEvent
     /**
      * {@InheritDoc}
      */
-    public function setData( $data )
+    public function setData( $data, $type = self::EVENT_DATA )
     {
         $this->_dirty = true;
 
-        return parent::setData( $data );
+        //  Return a specific data set if requested
+        switch ( $type )
+        {
+            case static::REQUEST_DATA:
+                $this->_requestData = $data;
+                break;
+
+            case static::RESPONSE_DATA:
+                $this->_responseData = $data;
+                break;
+
+            default:
+                return parent::setData( $data );
+        }
+
+        return $this;
     }
 
     /**
      * Merge an array of data into the $data property
      *
      * @param array|object $data
+     * @param int          $type
      *
      * @return $this
      */
-    public function mergeData( $data )
+    public function mergeData( $data, $type = self::EVENT_DATA )
     {
         foreach ( $data as $_key => $_value )
         {
-            $this->_data[ $_key ] = $_value;
+            switch ( $type )
+            {
+                case static::REQUEST_DATA:
+                    $this->_requestData[ $_key ] = $_value;
+                    break;
+
+                case static::RESPONSE_DATA:
+                    $this->_responseData[ $_key ] = $_value;
+                    break;
+
+                default:
+                    $this->_data[ $_key ] = $_value;
+                    break;
+            }
         }
 
         return $this;
@@ -169,4 +218,66 @@ class PlatformEvent extends SeedEvent
         return $this;
     }
 
+    /**
+     * @return array|mixed
+     */
+    public function getRequestData()
+    {
+        return $this->_requestData;
+    }
+
+    /**
+     * @param array|mixed $requestData
+     *
+     * @return PlatformEvent
+     */
+    public function setRequestData( $requestData )
+    {
+        $this->_requestData = $requestData;
+
+        return $this;
+    }
+
+    /**
+     * @return array|mixed
+     */
+    public function getResponseData()
+    {
+        return $this->_responseData;
+    }
+
+    /**
+     * @param array|mixed $responseData
+     *
+     * @return PlatformEvent
+     */
+    public function setResponseData( $responseData )
+    {
+        $this->_responseData = $responseData;
+
+        return $this;
+    }
+
+    /**
+     * Souped-up event data storage. Allows for general event data (current way it works),
+     * request data ($service->_requestPayload), and response data ($service->_response)
+     *
+     * @param int $which
+     *
+     * @return array|mixed
+     */
+    public function getData( $which = self::EVENT_DATA )
+    {
+        //  Return a specific data set if requested
+        switch ( $which )
+        {
+            case static::REQUEST_DATA:
+                return $this->_requestData;
+
+            case static::RESPONSE_DATA:
+                return $this->_responseData;
+        }
+
+        return parent::getData();
+    }
 }

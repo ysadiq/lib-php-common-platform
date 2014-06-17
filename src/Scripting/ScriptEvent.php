@@ -448,7 +448,9 @@ class ScriptEvent
             'headers' => $_reqObj->headers->all(),
             'cookies' => $_reqObj->cookies->all(),
             'query'   => $_reqObj->query->all(),
-            'body'    => $normalizeBody ? static::normalizeEventData( $event ) : $event->getData(),
+            'body'    => $normalizeBody
+                ? static::normalizeEventData( $event ) : ( $event instanceof PlatformEvent
+                    ? $event->getData() : $event ),
             'files'   => false,
         );
 
