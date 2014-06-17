@@ -190,12 +190,12 @@ class Event extends BaseSystemRestResource
     protected function _handlePost()
     {
         $_dispatcher = Platform::getDispatcher();
-        $_records = Option::get( $this->_requestData, 'record' );
+        $_records = Option::get( $this->_requestPayload, 'record' );
         $_response = array();
 
         if ( empty( $_records ) )
         {
-            $_records = array( $this->_requestData );
+            $_records = array( $this->_requestPayload );
         }
 
         foreach ( $_records as $_record )
@@ -237,12 +237,12 @@ class Event extends BaseSystemRestResource
     protected function _handleDelete()
     {
         $_dispatcher = Platform::getDispatcher();
-        $_records = Option::get( $this->_requestData, 'record' );
+        $_records = Option::get( $this->_requestPayload, 'record' );
         $_response = array();
 
         if ( empty( $_records ) )
         {
-            $_records = array( $this->_requestData );
+            $_records = array( $this->_requestPayload );
         }
 
         foreach ( $_records as $_record )

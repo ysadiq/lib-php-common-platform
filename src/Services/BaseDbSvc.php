@@ -61,10 +61,6 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected $_resourceId = null;
     /**
-     * @var array
-     */
-    protected $_requestData = null;
-    /**
      * @var boolean
      */
     protected $_useBlendFormat = true;
@@ -84,6 +80,13 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @var array
      */
     protected $_rollbackRecords = array();
+    /**
+     * This is a check for clients passing single records not wrapped with 'record'
+     * but passed to request handlers that expect it. Remove in 2.0.
+     *
+     * @var boolean
+     */
+    protected $_singleRecordAmnesty = false;
 
     //*************************************************************************
     //	Methods
@@ -113,14 +116,31 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         parent::_detectResourceMembers( $resourcePath );
 
         $this->_resourceId = Option::get( $this->_resourceArray, 1 );
+    }
 
+    /**
+     * {@InheritDoc}
+     */
+    protected function _detectRequestMembers()
+    {
+        // override - don't call parent class here
         $_posted = Option::clean( RestData::getPostedData( true, true ) );
+
+        if ( empty( $this->_resource ) )
+        {
+            // admin/schema requests
+            // MERGE URL parameters with posted data, posted data takes precedence
+            $this->_requestPayload = array_merge( $_REQUEST, $_posted );
+
+            return $this;
+        }
+
         if ( !empty( $this->_resourceId ) )
         {
             if ( !empty( $_posted ) )
             {
                 // single records don't use the record wrapper, so wrap it
-                $_posted = array(static::RECORD_WRAPPER => $_posted);
+                $_posted = array(static::RECORD_WRAPPER => array($_posted));
             }
         }
         elseif ( DataFormat::isArrayNumeric( $_posted ) )
@@ -128,32 +148,64 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             // import from csv, etc doesn't include a wrapper, so wrap it
             $_posted = array(static::RECORD_WRAPPER => $_posted);
         }
+        else
+        {
+            switch ( $this->_action )
+            {
+                case static::POST:
+                case static::PUT:
+                case static::PATCH:
+                case static::MERGE:
+                    // fix wrapper on posted single record
+                    if ( !isset( $_posted[static::RECORD_WRAPPER] ) )
+                    {
+                        $this->_singleRecordAmnesty = true;
+                        if ( !empty( $_posted ) )
+                        {
+                            // stuff it back in for event
+                            $_posted[static::RECORD_WRAPPER] = array($_posted);
+                        }
+                    }
+                    break;
+            }
+        }
 
         // MERGE URL parameters with posted data, posted data takes precedence
-        $this->_requestData = array_merge( $_REQUEST, $_posted );
+        $this->_requestPayload = array_merge( $_REQUEST, $_posted );
+
+        if ( static::GET == $this->_action )
+        {
+            // default for GET should be "return all fields"
+            if ( !isset( $this->_requestPayload['fields'] ) )
+            {
+                $this->_requestPayload['fields'] = '*';
+            }
+        }
 
         // Add server side filtering properties
         if ( null != $_ssFilters = Session::getServiceFilters( $this->_action, $this->_apiName, $this->_resource ) )
         {
-            $this->_requestData['ss_filters'] = $_ssFilters;
+            $this->_requestPayload['ss_filters'] = $_ssFilters;
         }
 
         // look for limit, accept top as well as limit
-        if ( !isset( $this->_requestData['limit'] ) && ( $_limit = Option::get( $this->_requestData, 'top' ) ) )
+        if ( !isset( $this->_requestPayload['limit'] ) && ( $_limit = Option::get( $this->_requestPayload, 'top' ) ) )
         {
-            $this->_requestData['limit'] = $_limit;
+            $this->_requestPayload['limit'] = $_limit;
         }
 
         // accept skip as well as offset
-        if ( !isset( $this->_requestData['offset'] ) && ( $_offset = Option::get( $this->_requestData, 'skip' ) ) )
+        if ( !isset( $this->_requestPayload['offset'] ) &&
+             ( $_offset = Option::get( $this->_requestPayload, 'skip' ) )
+        )
         {
-            $this->_requestData['offset'] = $_offset;
+            $this->_requestPayload['offset'] = $_offset;
         }
 
         // accept sort as well as order
-        if ( !isset( $this->_requestData['order'] ) && ( $_order = Option::get( $this->_requestData, 'sort' ) ) )
+        if ( !isset( $this->_requestPayload['order'] ) && ( $_order = Option::get( $this->_requestPayload, 'sort' ) ) )
         {
-            $this->_requestData['order'] = $_order;
+            $this->_requestPayload['order'] = $_order;
         }
 
         return $this;
@@ -218,40 +270,34 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected function _handleGet()
     {
-        // default for GET should be "return all fields"
-        $_fields = Option::get( $this->_requestData, 'fields' );
-        if ( empty( $_fields ) )
-        {
-            $this->_requestData['fields'] = '*';
-        }
-
         //	Single resource by ID
         if ( !empty( $this->_resourceId ) )
         {
-            return $this->retrieveRecordById( $this->_resource, $this->_resourceId, $this->_requestData );
+            return $this->retrieveRecordById( $this->_resource, $this->_resourceId, $this->_requestPayload );
         }
 
-        $_ids = Option::get( $this->_requestData, 'ids', null, true );
+        $_ids = Option::get( $this->_requestPayload, 'ids', null, true );
 
         //	Multiple resources by ID
         if ( !empty( $_ids ) )
         {
-            $_result = $this->retrieveRecordsByIds( $this->_resource, $_ids, $this->_requestData );
+            $_result = $this->retrieveRecordsByIds( $this->_resource, $_ids, $this->_requestPayload );
         }
         else
         {
-            $_records = Option::get( $this->_requestData, static::RECORD_WRAPPER, null, true );
+            $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER, null, true );
 
             if ( !empty( $_records ) )
             {
                 // passing records to have them updated with new or more values, id field required
-                $_result = $this->retrieveRecords( $this->_resource, $_records, $this->_requestData );
+                $_result = $this->retrieveRecords( $this->_resource, $_records, $this->_requestPayload );
             }
             else
             {
-                $_filter = Option::get( $this->_requestData, 'filter', null, true );
-                $_params = Option::get( $this->_requestData, 'params', array(), true );
-                $_result = $this->retrieveRecordsByFilter( $this->_resource, $_filter, $_params, $this->_requestData );
+                $_filter = Option::get( $this->_requestPayload, 'filter', null, true );
+                $_params = Option::get( $this->_requestPayload, 'params', array(), true );
+                $_result =
+                    $this->retrieveRecordsByFilter( $this->_resource, $_filter, $_params, $this->_requestPayload );
             }
         }
 
@@ -271,34 +317,20 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected function _handlePost()
     {
-        $_amnesty = false;
-        $_records = Option::get( $this->_requestData, static::RECORD_WRAPPER, null, true );
-        if ( empty( $_records ) )
-        {
-            // amnesty for the illegals, single records don't use the record wrapper, so wrap it
-            $_records = Option::clean( RestData::getPostedData( true, true ) );
-            if ( empty( $_records ) )
-            {
-                throw new BadRequestException( 'No record(s) detected in request.' );
-            }
+        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER, null, true );
 
-            // stuff it back in for event
-            $_amnesty = true;
-            $this->_requestData[static::RECORD_WRAPPER] = $_records;
-        }
-
-        $this->_triggerActionEvent( $this->_requestData );
+        $this->_triggerActionEvent( $this->_requestPayload );
 
         if ( !empty( $this->_resourceId ) )
         {
             throw new BadRequestException( 'Create record by identifier not currently supported.' );
         }
 
-        $_result = $this->createRecords( $this->_resource, $_records, $this->_requestData );
+        $_result = $this->createRecords( $this->_resource, $_records, $this->_requestPayload );
 
-        if ( $_amnesty )
+        if ( $this->_singleRecordAmnesty )
         {
-            return Option::get( $_result, 0 );
+            return Option::get( $_result, 0, $_result );
         }
 
         $_meta = Option::get( $_result, 'meta', null, true );
@@ -317,54 +349,44 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected function _handlePut()
     {
-        $_amnesty = false;
-        $_records = Option::get( $this->_requestData, static::RECORD_WRAPPER, null, true );
-        if ( empty( $_records ) )
-        {
-            // amnesty for the illegals, single records don't use the record wrapper, so wrap it
-            $_records = Option::clean( RestData::getPostedData( true, true ) );
-            if ( empty( $_records ) )
-            {
-                throw new BadRequestException( 'No record(s) detected in request.' );
-            }
+        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER, null, true );
 
-            // stuff it back in for event
-            $_amnesty = true;
-            $this->_requestData[static::RECORD_WRAPPER] = $_records;
-        }
-
-        $this->_triggerActionEvent( $this->_requestData );
+        $this->_triggerActionEvent( $this->_requestPayload );
 
         if ( !empty( $this->_resourceId ) )
         {
-            return $this->updateRecordById( $this->_resource, $_records, $this->_resourceId, $this->_requestData );
+            $_record = Option::get( $_records, 0, $_records );
+
+            return $this->updateRecordById( $this->_resource, $_record, $this->_resourceId, $this->_requestPayload );
         }
 
-        $_ids = Option::get( $this->_requestData, 'ids', null, true );
+        $_ids = Option::get( $this->_requestPayload, 'ids', null, true );
 
         if ( !empty( $_ids ) )
         {
-            $_result = $this->updateRecordsByIds( $this->_resource, $_records, $_ids, $this->_requestData );
+            $_record = Option::get( $_records, 0, $_records );
+
+            $_result = $this->updateRecordsByIds( $this->_resource, $_record, $_ids, $this->_requestPayload );
         }
         else
         {
-            $_filter = Option::get( $this->_requestData, 'filter', null, true );
+            $_filter = Option::get( $this->_requestPayload, 'filter', null, true );
             if ( !empty( $_filter ) )
             {
-                $_params = Option::get( $this->_requestData, 'params', array(), true );
-                $_result =
-                    $this->updateRecordsByFilter(
-                        $this->_resource,
-                        $_records,
-                        $_filter,
-                        $_params,
-                        $this->_requestData
-                    );
+                $_record = Option::get( $_records, 0, $_records );
+                $_params = Option::get( $this->_requestPayload, 'params', array(), true );
+                $_result = $this->updateRecordsByFilter(
+                    $this->_resource,
+                    $_record,
+                    $_filter,
+                    $_params,
+                    $this->_requestPayload
+                );
             }
             else
             {
-                $_result = $this->updateRecords( $this->_resource, $_records, $this->_requestData );
-                if ( $_amnesty )
+                $_result = $this->updateRecords( $this->_resource, $_records, $this->_requestPayload );
+                if ( $this->_singleRecordAmnesty )
                 {
                     return Option::get( $_result, 0 );
                 }
@@ -387,48 +409,43 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected function _handlePatch()
     {
-        $_amnesty = false;
-        $_records = Option::get( $this->_requestData, static::RECORD_WRAPPER, null, true );
-        if ( empty( $_records ) )
-        {
-            // amnesty for the illegals, single records don't use the record wrapper, so wrap it
-            $_records = Option::clean( RestData::getPostedData( true, true ) );
-            if ( empty( $_records ) )
-            {
-                throw new BadRequestException( 'No record(s) detected in request.' );
-            }
+        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER, null, true );
 
-            // stuff it back in for event
-            $_amnesty = true;
-            $this->_requestData[static::RECORD_WRAPPER] = $_records;
-        }
-
-        $this->_triggerActionEvent( $this->_requestData );
+        $this->_triggerActionEvent( $this->_requestPayload );
 
         if ( !empty( $this->_resourceId ) )
         {
-            return $this->patchRecordById( $this->_resource, $_records, $this->_resourceId, $this->_requestData );
+            $_record = Option::get( $_records, 0, $_records );
+
+            return $this->patchRecordById( $this->_resource, $_record, $this->_resourceId, $this->_requestPayload );
         }
 
-        $_ids = Option::get( $this->_requestData, 'ids', null, true );
+        $_ids = Option::get( $this->_requestPayload, 'ids', null, true );
 
         if ( !empty( $_ids ) )
         {
-            $_result = $this->patchRecordsByIds( $this->_resource, $_records, $_ids, $this->_requestData );
+            $_record = Option::get( $_records, 0, $_records );
+            $_result = $this->patchRecordsByIds( $this->_resource, $_record, $_ids, $this->_requestPayload );
         }
         else
         {
-            $_filter = Option::get( $this->_requestData, 'filter', null, true );
+            $_filter = Option::get( $this->_requestPayload, 'filter', null, true );
             if ( !empty( $_filter ) )
             {
-                $_params = Option::get( $this->_requestData, 'params', array(), true );
-                $_result =
-                    $this->patchRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $this->_requestData );
+                $_record = Option::get( $_records, 0, $_records );
+                $_params = Option::get( $this->_requestPayload, 'params', array(), true );
+                $_result = $this->patchRecordsByFilter(
+                    $this->_resource,
+                    $_record,
+                    $_filter,
+                    $_params,
+                    $this->_requestPayload
+                );
             }
             else
             {
-                $_result = $this->patchRecords( $this->_resource, $_records, $this->_requestData );
-                if ( $_amnesty )
+                $_result = $this->patchRecords( $this->_resource, $_records, $this->_requestPayload );
+                if ( $this->_singleRecordAmnesty )
                 {
                     return Option::get( $_result, 0 );
                 }
@@ -451,42 +468,42 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected function _handleDelete()
     {
-        $this->_triggerActionEvent( $this->_requestData );
+        $this->_triggerActionEvent( $this->_requestPayload );
 
         if ( !empty( $this->_resourceId ) )
         {
-            return $this->deleteRecordById( $this->_resource, $this->_resourceId, $this->_requestData );
+            return $this->deleteRecordById( $this->_resource, $this->_resourceId, $this->_requestPayload );
         }
 
-        $_ids = Option::get( $this->_requestData, 'ids' );
+        $_ids = Option::get( $this->_requestPayload, 'ids' );
         if ( !empty( $_ids ) )
         {
-            $_result = $this->deleteRecordsByIds( $this->_resource, $_ids, $this->_requestData );
+            $_result = $this->deleteRecordsByIds( $this->_resource, $_ids, $this->_requestPayload );
         }
         else
         {
-            $_records = Option::get( $this->_requestData, static::RECORD_WRAPPER );
+            $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
             if ( !empty( $_records ) )
             {
-                $_result = $this->deleteRecords( $this->_resource, $_records, $this->_requestData );
+                $_result = $this->deleteRecords( $this->_resource, $_records, $this->_requestPayload );
             }
             else
             {
-                $_filter = Option::get( $this->_requestData, 'filter' );
+                $_filter = Option::get( $this->_requestPayload, 'filter' );
                 if ( !empty( $_filter ) )
                 {
-                    $_params = Option::get( $this->_requestData, 'params', array() );
+                    $_params = Option::get( $this->_requestPayload, 'params', array() );
                     $_result =
-                        $this->deleteRecordsByFilter( $this->_resource, $_filter, $_params, $this->_requestData );
+                        $this->deleteRecordsByFilter( $this->_resource, $_filter, $_params, $this->_requestPayload );
                 }
                 else
                 {
-                    if ( !Option::getBool( $this->_requestData, 'force' ) )
+                    if ( !Option::getBool( $this->_requestPayload, 'force' ) )
                     {
                         throw new BadRequestException( 'No filter or records given for delete request.' );
                     }
 
-                    return $this->truncateTable( $this->_resource, $this->_requestData );
+                    return $this->truncateTable( $this->_resource, $this->_requestPayload );
                 }
             }
         }
@@ -2776,7 +2793,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         switch ( $this->_action )
         {
             case static::GET:
-                $_ids = Option::get( $this->_requestData, 'names' );
+                $_ids = Option::get( $this->_requestPayload, 'names' );
                 if ( empty( $_ids ) )
                 {
                     return $this->_listResources();
@@ -2787,11 +2804,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 break;
 
             case static::POST:
-                $_tables = Option::get( $this->_requestData, 'table' );
+                $_tables = Option::get( $this->_requestPayload, 'table' );
 
                 if ( empty( $_tables ) )
                 {
-                    $_result = $this->createTable( $this->_requestData );
+                    $_result = $this->createTable( $this->_requestPayload );
                 }
                 else
                 {
@@ -2803,11 +2820,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             case static::PUT:
             case static::PATCH:
             case static::MERGE:
-                $_tables = Option::get( $this->_requestData, 'table' );
+                $_tables = Option::get( $this->_requestPayload, 'table' );
 
                 if ( empty( $_tables ) )
                 {
-                    $_result = $this->updateTable( $this->_requestData );
+                    $_result = $this->updateTable( $this->_requestPayload );
                 }
                 else
                 {
@@ -2817,7 +2834,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 break;
 
             case static::DELETE:
-                $_ids = Option::get( $this->_requestData, 'names' );
+                $_ids = Option::get( $this->_requestPayload, 'names' );
                 if ( !empty( $_ids ) )
                 {
                     $_result = $this->deleteTables( $_ids );
@@ -2825,11 +2842,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 }
                 else
                 {
-                    $_tables = Option::get( $this->_requestData, 'table' );
+                    $_tables = Option::get( $this->_requestPayload, 'table' );
 
                     if ( empty( $_tables ) )
                     {
-                        $_result = $this->deleteTable( $this->_requestData );
+                        $_result = $this->deleteTable( $this->_requestPayload );
                     }
                     else
                     {

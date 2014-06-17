@@ -228,7 +228,7 @@ class Script extends BaseSystemRestResource
 
         $_path = $this->_scriptPath . '/' . trim( $this->_resourceId, '/ ' ) . '.js';
 
-        $_scriptBody = Option::get( $this->_requestData, 'record' );
+        $_scriptBody = Option::get( $this->_requestPayload, 'record' );
 
         if ( is_array( $_scriptBody ) )
         {

@@ -319,12 +319,12 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * {@InheritDoc}
      */
-    protected function _detectResourceMembers( $resourcePath = null )
+    protected function _detectRequestMembers()
     {
-        parent::_detectResourceMembers( $resourcePath );
+        parent::_detectRequestMembers();
 
         // All calls can request related data to be returned
-        $_related = Option::get( $this->_requestData, 'related' );
+        $_related = Option::get( $this->_requestPayload, 'related' );
         if ( !empty( $_related ) && is_string( $_related ) && ( '*' !== $_related ) )
         {
             $_relations = array();
@@ -334,12 +334,12 @@ class SqlDbSvc extends BaseDbSvc
             }
             foreach ( $_related as $_relative )
             {
-                $_extraFields = Option::get( $this->_requestData, $_relative . '_fields', '*' );
-                $_extraOrder = Option::get( $this->_requestData, $_relative . '_order', '' );
+                $_extraFields = Option::get( $this->_requestPayload, $_relative . '_fields', '*' );
+                $_extraOrder = Option::get( $this->_requestPayload, $_relative . '_order', '' );
                 $_relations[] = array('name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder);
             }
 
-            $this->_requestData['related'] = $_relations;
+            $this->_requestPayload['related'] = $_relations;
         }
 
         return $this;

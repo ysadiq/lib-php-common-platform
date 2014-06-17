@@ -176,13 +176,13 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     /**
      * {@InheritDoc}
      */
-    protected function _detectResourceMembers( $resourcePath = null )
+    protected function _detectRequestMembers()
     {
-        parent::_detectResourceMembers( $resourcePath );
+        parent::_detectRequestMembers();
 
-        if ( !isset( $this->_requestData[static::PARTITION_KEY] ) )
+        if ( !isset( $this->_requestPayload[static::PARTITION_KEY] ) )
         {
-            $this->_requestData[static::PARTITION_KEY] = $this->_defaultPartitionKey;
+            $this->_requestPayload[static::PARTITION_KEY] = $this->_defaultPartitionKey;
         }
 
         return $this;
