@@ -44,10 +44,6 @@ class ScriptEvent
      * @type string The name of the script event schema file
      */
     const SCRIPT_EVENT_SCHEMA = 'script_event_schema.json';
-    /**
-     * @type string The name of the key within the event structure that contains the payload
-     */
-    const DEFAULT_PAYLOAD_KEY = 'record';
 
     //*************************************************************************
     //	Members
@@ -57,10 +53,6 @@ class ScriptEvent
      * @var string The event schema for scripting events
      */
     static protected $_eventTemplate = false;
-    /**
-     * @var string The event schema for scripting events
-     */
-    static protected $_payloadKey = self::DEFAULT_PAYLOAD_KEY;
 
     //*************************************************************************
     //	Methods
@@ -74,8 +66,6 @@ class ScriptEvent
      */
     public static function initialize( $template = self::SCRIPT_EVENT_SCHEMA )
     {
-        static::$_payloadKey = Pii::getParam( 'scripting.payload_key', static::DEFAULT_PAYLOAD_KEY );
-
         if ( false !== ( $_eventTemplate = Platform::storeGet( 'scripting.event_schema', false ) ) )
         {
             return $_eventTemplate;
@@ -119,15 +109,16 @@ class ScriptEvent
      *      'id'            => 'A unique ID assigned to the dispatcher of this event',
      *      'type'          => 'The class name of the dispatcher',
      *  ),
-     *  //  THE MEAT! This contains the ACTUAL data received from the client, or what's being sent back to the client (READ-WRITE).
-     *  '[payload_key]' => array(),
      *  //  Information about the triggering request
      *  'request'           => array(
      *      'timestamp'     => 'timestamp of the initial request',
      *      'path'          => '/full/path/that/triggered/event',
      *      'api_name'      =>'The api_name of the called service',
      *      'resource'      => 'The name of the resource requested',
+     *      'body'          => 'The body posted as part of the request (possibly normalized by the service)',
      *  ),
+     *  //  Information about the outgoing response.
+     *  'response' => 'The response body returned to the calling service and eventually to the requesting client.',
      *  //    Access to the platform api
      *  'platform'      => array(
      *      'api'       => [wormhole to inline-REST API],
@@ -137,57 +128,16 @@ class ScriptEvent
      *  'extra' => [Extra information passed by caller],
      * )
      *
-     * Note that this structure is not passed to the script verbatim. Portions are extracted
-     * and exposed by the Script resource as it sees fit.
+     * Note that this structure is not passed to the script verbatim. Portions are extracted and exposed by the
+     * Script resource as it sees fit.
      *
-     * Please note that the format of the "record" differs slightly on multi-row result sets. In the v1.0 REST API, if a single row of data
-     * is to be returned from a request, it is merged into the root of the resultant array. If there are multiple rows, they are placed into
-     * n key called 'record'. To make matter worse, if you make a multi-row request via XML, and wrap your input "record" in a
-     * <records><record></record>...</records> type wrapper, the resultant array will be placed a level deeper ($payload['records']['record'] = $results).
+     * Please note that the format of the request and response bodies may differ slightly from the format passed in or
+     * sent back to the client. Some service handlers normalize the data for convenience, i.e. see BaseDbSvc::_determineRequestMembers().
      *
      * Therefore the data exposed by the event system has been "normalized" to provide a reliable and consistent manner in which to process said data.
      * There should be no need for wasting time trying to determine if your data is "maybe here, or maybe there, or maybe over there even" when received by
-     * your event handlers. If your payload contains record data, you will always receive it in an array container. Even for single rows.
+     * your event handlers.
      *
-     * IMPORTANT: Don't expect this for ALL results. For non-record-like resultant data and/or result sets (i.e. NoSQL, other stuff), the data
-     * may be placed in the payload verbatim.
-     *
-     * IMPORTANTER: The representation of the data will be placed back into the original location/position in the $record from which it was "normalized".
-     * This means that any client-side handlers will have to deal with the bogus determinations. Just be aware.
-     *
-     * To recap, below is a side-by-side comparison of record data as shown returned to the caller, and sent to an event handler.
-     *
-     *  REST API v1.0                           Event Representation
-     *  -------------                           --------------------
-     *  Single row...                           Add a 'record' key and make it look like a multi-row
-     *
-     *      array(                              array(
-     *          'id' => 1,                          'record' => array(
-     *      )                                           0 => array( 'id' => 1, ),
-     *                                              ),
-     *                                          ),
-     *
-     * Multi-row...                             Stays the same...
-     *
-     *      array(                              array(
-     *          'record' => array(                  'record' =>  array(
-     *              0 => array( 'id' => 1 ),            0 => array( 'id' => 1 ),
-     *              1 => array( 'id' => 2 ),            1 => array( 'id' => 2 ),
-     *              2 => array( 'id' => 3 ),            2 => array( 'id' => 3 ),
-     *          ),                                  ),
-     *      )                                   )
-     *
-     * XML multi-row                            The 'records' key is unwrapped, like regular multi-row
-     *
-     *  array(                                  array(
-     *    'records' => array(                     'record' =>  array(
-     *      'record' => array(                        0 => array( 'id' => 1 ),
-     *        0 => array( 'id' => 1 ),                1 => array( 'id' => 2 ),
-     *        1 => array( 'id' => 2 ),                2 => array( 'id' => 3 ),
-     *        2 => array( 'id' => 3 ),            ),
-     *      ),                                  )
-     *    ),
-     *  )
      *
      * @param string          $eventName        The event name
      * @param PlatformEvent   $event            The event
@@ -352,14 +302,14 @@ class ScriptEvent
     }
 
     /**
-     * @param PlatformEvent $event
+     * @param PlatformEvent|array $event
      *
      * @return array
      */
-    public static function buildRequestArray( PlatformEvent $event = null )
+    public static function buildRequestArray( $event = null )
     {
         $_reqObj = Pii::request( false );
-        $_data = ( $event ?: $event->getRequestData() );
+        $_data = $event ? ( is_array( $event ) ? $event : $event->getRequestData() ) : null;
 
         $_request = array(
             'method'  => strtoupper( $_reqObj->getMethod() ),

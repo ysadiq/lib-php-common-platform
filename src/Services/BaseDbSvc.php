@@ -120,6 +120,41 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
     /**
      * {@InheritDoc}
+     *
+     * IMPORTANT: The representation of the data will be placed back into the original location/position in the $record from which it was "normalized".
+     * This means that any client-side handlers will have to deal with the bogus determinations. Just be aware.
+     *
+     * Below is a side-by-side comparison of record data as shown sent by or returned to the caller, and sent to an event handler.
+     *
+     *  REST API v1.0                           Event Representation
+     *  -------------                           --------------------
+     *  Single row...                           Add a 'record' key and make it look like a multi-row
+     *
+     *      array(                              array(
+     *          'id' => 1,                          'record' => array(
+     *      )                                           0 => array( 'id' => 1, ),
+     *                                              ),
+     *                                          ),
+     *
+     * Multi-row...                             Stays the same...or gets wrapped by adding a 'record' key
+     *
+     *      array(                              array(
+     *          'record' => array(                  'record' =>  array(
+     *              0 => array( 'id' => 1 ),            0 => array( 'id' => 1 ),
+     *              1 => array( 'id' => 2 ),            1 => array( 'id' => 2 ),
+     *              2 => array( 'id' => 3 ),            2 => array( 'id' => 3 ),
+     *          ),                                  ),
+     *      )                                   )
+     *
+     * or...
+     *
+     *      array(                              array(
+     *          0 => array( 'id' => 1 ),            'record' =>  array(
+     *          1 => array( 'id' => 2 ),                0 => array( 'id' => 1 ),
+     *          2 => array( 'id' => 3 ),                1 => array( 'id' => 2 ),
+     *      ),                                          2 => array( 'id' => 3 ),
+     *                                              ),
+     *                                          )
      */
     protected function _detectRequestMembers()
     {
@@ -276,7 +311,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             return $this->retrieveRecordById( $this->_resource, $this->_resourceId, $this->_requestPayload );
         }
 
-        $_ids = Option::get( $this->_requestPayload, 'ids', null, true );
+        $_ids = Option::get( $this->_requestPayload, 'ids' );
 
         //	Multiple resources by ID
         if ( !empty( $_ids ) )
@@ -285,7 +320,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         }
         else
         {
-            $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER, null, true );
+            $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
 
             if ( !empty( $_records ) )
             {
@@ -294,8 +329,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             }
             else
             {
-                $_filter = Option::get( $this->_requestPayload, 'filter', null, true );
-                $_params = Option::get( $this->_requestPayload, 'params', array(), true );
+                $_filter = Option::get( $this->_requestPayload, 'filter' );
+                $_params = Option::get( $this->_requestPayload, 'params', array() );
                 $_result =
                     $this->retrieveRecordsByFilter( $this->_resource, $_filter, $_params, $this->_requestPayload );
             }
@@ -317,14 +352,18 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected function _handlePost()
     {
-        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER, null, true );
-
-        $this->_triggerActionEvent( $this->_requestPayload );
-
         if ( !empty( $this->_resourceId ) )
         {
             throw new BadRequestException( 'Create record by identifier not currently supported.' );
         }
+
+        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
+        if ( empty( $_records ) )
+        {
+            throw new BadRequestException( 'No record(s) detected in request.' );
+        }
+
+        $this->_triggerActionEvent( $this->_response );
 
         $_result = $this->createRecords( $this->_resource, $_records, $this->_requestPayload );
 
@@ -349,9 +388,13 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected function _handlePut()
     {
-        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER, null, true );
+        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
+        if ( empty( $_records ) )
+        {
+            throw new BadRequestException( 'No record(s) detected in request.' );
+        }
 
-        $this->_triggerActionEvent( $this->_requestPayload );
+        $this->_triggerActionEvent( $this->_response );
 
         if ( !empty( $this->_resourceId ) )
         {
@@ -360,7 +403,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             return $this->updateRecordById( $this->_resource, $_record, $this->_resourceId, $this->_requestPayload );
         }
 
-        $_ids = Option::get( $this->_requestPayload, 'ids', null, true );
+        $_ids = Option::get( $this->_requestPayload, 'ids' );
 
         if ( !empty( $_ids ) )
         {
@@ -370,11 +413,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         }
         else
         {
-            $_filter = Option::get( $this->_requestPayload, 'filter', null, true );
+            $_filter = Option::get( $this->_requestPayload, 'filter' );
             if ( !empty( $_filter ) )
             {
                 $_record = Option::get( $_records, 0, $_records );
-                $_params = Option::get( $this->_requestPayload, 'params', array(), true );
+                $_params = Option::get( $this->_requestPayload, 'params', array() );
                 $_result = $this->updateRecordsByFilter(
                     $this->_resource,
                     $_record,
@@ -409,9 +452,13 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected function _handlePatch()
     {
-        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER, null, true );
+        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
+        if ( empty( $_records ) )
+        {
+            throw new BadRequestException( 'No record(s) detected in request.' );
+        }
 
-        $this->_triggerActionEvent( $this->_requestPayload );
+        $this->_triggerActionEvent( $this->_response );
 
         if ( !empty( $this->_resourceId ) )
         {
@@ -420,7 +467,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             return $this->patchRecordById( $this->_resource, $_record, $this->_resourceId, $this->_requestPayload );
         }
 
-        $_ids = Option::get( $this->_requestPayload, 'ids', null, true );
+        $_ids = Option::get( $this->_requestPayload, 'ids' );
 
         if ( !empty( $_ids ) )
         {
@@ -429,11 +476,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         }
         else
         {
-            $_filter = Option::get( $this->_requestPayload, 'filter', null, true );
+            $_filter = Option::get( $this->_requestPayload, 'filter' );
             if ( !empty( $_filter ) )
             {
                 $_record = Option::get( $_records, 0, $_records );
-                $_params = Option::get( $this->_requestPayload, 'params', array(), true );
+                $_params = Option::get( $this->_requestPayload, 'params', array() );
                 $_result = $this->patchRecordsByFilter(
                     $this->_resource,
                     $_record,
@@ -468,7 +515,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected function _handleDelete()
     {
-        $this->_triggerActionEvent( $this->_requestPayload );
+        $this->_triggerActionEvent( $this->_response );
 
         if ( !empty( $this->_resourceId ) )
         {

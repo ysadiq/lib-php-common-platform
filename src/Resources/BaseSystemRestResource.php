@@ -320,7 +320,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             return ResourceStore::select( $this->_resourceId, null, array(), true );
         }
 
-        $_ids = Option::get( $this->_requestPayload, 'ids', null, true );
+        $_ids = Option::get( $this->_requestPayload, 'ids' );
 
         //	Multiple resources by ID
         if ( !empty( $_ids ) )
@@ -328,7 +328,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             return ResourceStore::bulkSelectById( $_ids );
         }
 
-        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER, null, true );
+        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
 
         if ( !empty( $_records ) )
         {
@@ -404,18 +404,18 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected function _handlePost()
     {
-        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER, null, true );
+        if ( !empty( $this->_resourceId ) )
+        {
+            throw new BadRequestException( 'Create record by identifier not currently supported.' );
+        }
+
+        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
         if ( empty( $_records ) )
         {
             throw new BadRequestException( 'No record(s) detected in request.' );
         }
 
-        $this->_triggerActionEvent( $this->_requestPayload );
-
-        if ( !empty( $this->_resourceId ) )
-        {
-            throw new BadRequestException( 'Create record by identifier not currently supported.' );
-        }
+        $this->_triggerActionEvent( $this->_response );
 
         if ( $this->_singleRecordAmnesty )
         {
@@ -440,13 +440,13 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected function _handlePut()
     {
-        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER, null, true );
+        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
         if ( empty( $_records ) )
         {
             throw new BadRequestException( 'No record(s) detected in request.' );
         }
 
-        $this->_triggerActionEvent( $this->_requestPayload );
+        $this->_triggerActionEvent( $this->_response );
 
         if ( !empty( $this->_resourceId ) )
         {
@@ -455,7 +455,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             return ResourceStore::updateById( $this->_resourceId, $_record, $this->_requestPayload );
         }
 
-        $_ids = Option::get( $this->_requestPayload, 'ids', null, true );
+        $_ids = Option::get( $this->_requestPayload, 'ids' );
 
         if ( !empty( $_ids ) )
         {
@@ -509,20 +509,20 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected function _handleDelete()
     {
-        $this->_triggerActionEvent( $this->_requestPayload );
+        $this->_triggerActionEvent( $this->_response );
 
         if ( !empty( $this->_resourceId ) )
         {
             return ResourceStore::deleteById( $this->_resourceId, $this->_requestPayload );
         }
 
-        $_ids = Option::get( $this->_requestPayload, 'ids', null, true );
+        $_ids = Option::get( $this->_requestPayload, 'ids' );
         if ( !empty( $_ids ) )
         {
             return ResourceStore::deleteByIds( $_ids, $this->_requestPayload );
         }
 
-        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER, null, true );
+        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
         if ( !empty( $_records ) )
         {
             return ResourceStore::delete( $_records, $this->_requestPayload );
