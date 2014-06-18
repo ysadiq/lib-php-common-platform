@@ -295,88 +295,6 @@ class ScriptEvent
     }
 
     /**
-     * Sandboxes the event data into a normalized fashion
-     *
-     * @param PlatformEvent $event   The event source
-     * @param bool          $wrapped If true (default), the returned array has a single key of '[payload_key]'
-     *                               which contains the normalized payload. If false, the returned array
-     *                               is not wrapped but just the array of the payload
-     *
-     * @return array
-     */
-    public static function normalizeEventData( PlatformEvent $event, $wrapped = true )
-    {
-        $_data = $event->getData();
-        $_meta = isset( $_data['meta'] ) ? $_data['meta'] : null;
-
-        //  XML-wrapped
-        if ( false !== ( $_records = Option::getDeep( $_data, 'records', 'record', false ) ) )
-        {
-            return $wrapped ? array( static::$_payloadKey => $_records, 'meta' => $_meta ) : $_records;
-        }
-
-        //  Multi-row
-        if ( false !== ( $_records = Option::get( $_data, 'record', false ) ) )
-        {
-            return $wrapped ? array( static::$_payloadKey => $_records, 'meta' => $_meta ) : $_records;
-        }
-
-        //  Single row, or so we think...
-        if ( is_array( $_data ) && !isset( $_data[ static::$_payloadKey ] ) )
-        {
-            return $wrapped ? array( static::$_payloadKey => $_data, 'meta' => $_meta ) : array( $_data );
-        }
-
-        //  Something completely different...
-        return $_data;
-    }
-
-    /**
-     * Determines and returns the data back into the location from whence it came
-     *
-     * @param PlatformEvent $event
-     * @param array         $newData
-     * @param bool          $wrapped If true (default), the returned array has a single key of '[payload_key]'
-     *                               which contains the normalized payload. If false, the returned array
-     *                               is not wrapped but just the array of the payload
-     *
-     * @return array|mixed
-     */
-    public static function denormalizeEventData( PlatformEvent $event, array $newData = array(), $wrapped = true )
-    {
-        $_currentData = $event->getData();
-
-        $_innerData = array(
-            'record' => $newData,
-        );
-
-        //  XML-wrapped
-        if ( false !== ( $_records = Option::getDeep( $_currentData, 'records', 'record', false ) ) )
-        {
-            //  Re-gift
-            return $wrapped ? array( 'records' => $_innerData ) : $_innerData;
-        }
-
-        //  Multi-row
-        if ( false !== ( $_records = Option::get( $_currentData, 'record', false ) ) )
-        {
-            return $wrapped ? $_innerData : $newData;
-        }
-
-        //  Single row, or so we think...
-        if ( is_array( $_currentData ) &&
-             !Pii::isEmpty( $_record = Option::get( $_currentData, 'record' ) ) &&
-             count( $_record ) >= 1
-        )
-        {
-            return $wrapped ? $_innerData : $newData;
-        }
-
-        //  A single row or something else...
-        return $newData;
-    }
-
-    /**
      * Give a normalized event, put any changed data from the payload back into the event
      *
      * @param PlatformEvent $event
@@ -392,7 +310,7 @@ class ScriptEvent
             $event->stopPropagation();
         }
 
-        $_request = Option::get( $exposedEvent, 'request', 'body' );
+        $_request = Option::getDeep( $exposedEvent, 'request', 'body' );
         $_response = Option::get( $exposedEvent, 'response', false );
 
         if ( $_request )
@@ -407,7 +325,11 @@ class ScriptEvent
 
         if ( $_response )
         {
-            $event->setData( $_response );
+            if ( $event->isPostProcessScript() )
+            {
+                $event->setData( $_response );
+            }
+
             $event->setResponseData( $_response );
         }
 
@@ -444,14 +366,13 @@ class ScriptEvent
     }
 
     /**
-     * @param PlatformEvent|array $event
-     * @param bool                $normalizeBody If true, request['body'] will be normalized into "record":[] format
+     * @param PlatformEvent $event
      *
      * @return array
      */
-    public static function buildRequestArray( $event = null, $normalizeBody = false )
+    public static function buildRequestArray( PlatformEvent $event = null )
     {
-        $_data = $event ? ( is_array( $event ) ? $event : $event->getData() ) : null;
+        $_data = $event ?: ( $event ? $event->getRequestData() : null );
         $_reqObj = Pii::request( false );
 
         $_request = array(
@@ -460,9 +381,7 @@ class ScriptEvent
             'cookies' => $_reqObj->cookies->all(),
             'query'   => $_reqObj->query->all(),
             'files'   => false,
-            'body'    => $normalizeBody
-                ? static::normalizeEventData( $event ) : ( $event instanceof PlatformEvent
-                    ? $event->getRequestData() : $event ),
+            'body'    => $_data,
         );
 
         $_files = $_reqObj->files->all();
@@ -478,4 +397,3 @@ class ScriptEvent
 
 //	Initialize the event template
 ScriptEvent::initialize();
-
