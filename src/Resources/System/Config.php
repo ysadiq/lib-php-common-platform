@@ -141,7 +141,7 @@ class Config extends BaseSystemRestResource
         }
 
         //	Check for CORS changes...
-        if ( null !== ( $_hostList = Option::get( $this->_requestData, 'allowed_hosts', null, true ) ) )
+        if ( null !== ( $_hostList = Option::get( $this->_requestPayload, 'allowed_hosts', null, true ) ) )
         {
             SystemManager::setAllowedHosts( $_hostList );
         }
@@ -150,9 +150,9 @@ class Config extends BaseSystemRestResource
         {
             if ( Session::isSystemAdmin() )
             {
-                if ( isset( $this->_requestData['lookup_keys'] ) )
+                if ( isset( $this->_requestPayload['lookup_keys'] ) )
                 {
-                    LookupKey::assignLookupKeys( $this->_requestData['lookup_keys'] );
+                    LookupKey::assignLookupKeys( $this->_requestPayload['lookup_keys'] );
 
                     // changing config, bust cache
                     if ( false === Platform::storeDelete( static::LOOKUP_CACHE_KEY ) )

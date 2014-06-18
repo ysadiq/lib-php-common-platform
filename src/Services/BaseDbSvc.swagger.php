@@ -85,12 +85,16 @@ if ( !isset( $_baseTableOps ) )
             'summary'          => 'getRecordsByFilter() - Retrieve one or more records by using a filter.',
             'nickname'         => 'getRecordsByFilter',
             'notes'            =>
-                'Use the <b>filter</b> parameter to limit resources that are returned or leave it blank to return all resources up to the max limit.<br/> ' .
-                'Alternatively, to send the <b>filter</b> with or without <b>params</b> as posted data ' .
-                'use the POST request with X-HTTP-METHOD = GET header and post a filter with or without params.<br/>' .
+                'Set the <b>filter</b> parameter to a SQL WHERE clause (optional native filter accepted in some scenarios) ' .
+                'to limit records returned or leave it blank to return all records up to the maximum limit.<br/> ' .
+                'Set the <b>limit</b> parameter with or without a filter to return a specific amount of records.<br/> ' .
+                'Use the <b>offset</b> parameter along with the <b>limit</b> parameter to page through sets of records.<br/> ' .
+                'Set the <b>order</b> parameter to SQL ORDER_BY clause containing field and optional direction (<field_name> [ASC|DESC]) to order the returned records.<br/> ' .
+                'Alternatively, to send the <b>filter</b> with or without <b>params</b> as posted data, ' .
+                'use the getRecordsByPost() POST request and post a filter with or without params.<br/>' .
                 $_addTableNotes .
-                'Use the <b>fields</b> parameter to limit properties returned for each resource. ' .
-                'By default, all fields are returned for all resources. ',
+                'Use the <b>fields</b> parameter to limit properties returned for each record. ' .
+                'By default, all fields are returned for all records. ',
             'type'             => 'RecordsResponse',
             'event_name'       => array('{api_name}.{table_name}.select', '{api_name}.table_selected',),
             'parameters'       => array_merge(
@@ -105,7 +109,7 @@ if ( !isset( $_baseTableOps ) )
                     ),
                     array(
                         'name'          => 'filter',
-                        'description'   => 'SQL-like filter to limit the resources to retrieve.',
+                        'description'   => 'SQL WHERE clause filter to limit the records retrieved.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'query',
@@ -113,7 +117,7 @@ if ( !isset( $_baseTableOps ) )
                     ),
                     array(
                         'name'          => 'limit',
-                        'description'   => 'Set to limit the filter results.',
+                        'description'   => 'Maximum number of records to return.',
                         'allowMultiple' => false,
                         'type'          => 'integer',
                         'format'        => 'int32',
@@ -122,7 +126,7 @@ if ( !isset( $_baseTableOps ) )
                     ),
                     array(
                         'name'          => 'offset',
-                        'description'   => 'Set to offset the filter results to a particular record count.',
+                        'description'   => 'Offset the filter results to a particular record index (may require <b>order</b>> parameter in some scenarios).',
                         'allowMultiple' => false,
                         'type'          => 'integer',
                         'format'        => 'int32',
@@ -131,7 +135,7 @@ if ( !isset( $_baseTableOps ) )
                     ),
                     array(
                         'name'          => 'order',
-                        'description'   => 'SQL-like order containing field and direction for filter results.',
+                        'description'   => 'SQL ORDER_BY clause containing field and direction for filter results.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'query',
@@ -153,6 +157,14 @@ if ( !isset( $_baseTableOps ) )
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
+                    array(
+                        'name'          => 'include_schema',
+                        'description'   => 'Include table properties, including indexes and field details where available, as meta data.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
                 ),
                 $_addTableParameters
             ),
@@ -164,10 +176,11 @@ if ( !isset( $_baseTableOps ) )
             'nickname'         => 'getRecordsByIds',
             'notes'            =>
                 'Pass the identifying field values as a comma-separated list in the <b>ids</b> parameter.<br/> ' .
-                'Alternatively, to send the <b>ids</b> as posted data use the POST request with X-HTTP-METHOD = GET header and post array of ids.<br/> ' .
+                'Use the <b>id_field</b> and <b>id_type</b> parameters to override or specify detail for identifying fields where applicable.<br/> ' .
+                'Alternatively, to send the <b>ids</b> as posted data, use the getRecordsByPost() POST request.<br/> ' .
                 $_addTableNotes .
-                'Use the <b>fields</b> parameter to limit properties returned for each resource. ' .
-                'By default, all fields are returned for identified resources. ',
+                'Use the <b>fields</b> parameter to limit properties returned for each record. ' .
+                'By default, all fields are returned for identified records. ',
             'type'             => 'RecordsResponse',
             'event_name'       => array('{api_name}.{table_name}.select', '{api_name}.table_selected',),
             'parameters'       => array_merge(
@@ -182,7 +195,7 @@ if ( !isset( $_baseTableOps ) )
                     ),
                     array(
                         'name'          => 'ids',
-                        'description'   => 'Comma-delimited list of the identifiers of the resources to retrieve.',
+                        'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
                         'allowMultiple' => true,
                         'type'          => 'string',
                         'paramType'     => 'query',
@@ -240,8 +253,8 @@ if ( !isset( $_baseTableOps ) )
                 'or a <b>filter</b> in the SQL or other appropriate formats with or without a replacement <b>params</b> array, ' .
                 'or a list of <b>ids</b> in a string list or an array.<br/> ' .
                 $_addTableNotes .
-                'Use the <b>fields</b> parameter to limit properties returned for each resource. ' .
-                'By default, all fields are returned for identified resources. ',
+                'Use the <b>fields</b> parameter to limit properties returned for each record. ' .
+                'By default, all fields are returned for identified records. ',
             'type'             => 'RecordsResponse',
             'event_name'       => array('{api_name}.{table_name}.select', '{api_name}.table_selected',),
             'parameters'       => array(
@@ -257,7 +270,7 @@ if ( !isset( $_baseTableOps ) )
                     'name'          => 'body',
                     'description'   => 'Data containing name-value pairs of records to retrieve.',
                     'allowMultiple' => false,
-                    'type'          => 'RecordsRequest',
+                    'type'          => 'GetRecordsRequest',
                     'paramType'     => 'body',
                     'required'      => true,
                 ),
@@ -315,13 +328,7 @@ if ( !isset( $_baseTableOps ) )
             'method'           => 'GET',
             'summary'          => 'getRecords() - Retrieve one or more records.',
             'nickname'         => 'getRecords',
-            'notes'            =>
-                'Use the <b>ids</b> or <b>filter</b> parameter to limit resources that are returned.<br/> ' .
-                'Alternatively, to send the <b>ids</b> or a <b>filter</b> with or without <b>params</b> as posted data ' .
-                'use the POST request with X-HTTP-METHOD = GET header and post array of ids or a filter with params.<br/> ' .
-                $_addTableNotes .
-                'Use the <b>fields</b> parameter to limit properties returned for each resource. ' .
-                'By default, all fields are returned for all resources. ',
+            'notes'            => 'Here for SDK backwards compatibility, see getRecordsByFilter(), getRecordsByIds(), and getRecordsByPost()',
             'type'             => 'RecordsResponse',
             'event_name'       => array('{api_name}.{table_name}.select', '{api_name}.table_selected',),
             'parameters'       => array_merge(
@@ -336,7 +343,7 @@ if ( !isset( $_baseTableOps ) )
                     ),
                     array(
                         'name'          => 'ids',
-                        'description'   => 'Comma-delimited list of the identifiers of the resources to retrieve.',
+                        'description'   => 'Comma-delimited list of the identifiers of the records to retrieve.',
                         'allowMultiple' => true,
                         'type'          => 'string',
                         'paramType'     => 'query',
@@ -344,7 +351,7 @@ if ( !isset( $_baseTableOps ) )
                     ),
                     array(
                         'name'          => 'filter',
-                        'description'   => 'SQL-like filter to limit the resources to retrieve.',
+                        'description'   => 'SQL-like filter to limit the records to retrieve.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'query',
@@ -552,13 +559,13 @@ if ( !isset( $_baseTableOps ) )
                         'name'          => 'body',
                         'description'   => 'Data containing name-value pairs of records to update.',
                         'allowMultiple' => false,
-                        'type'          => 'RecordsRequest',
+                        'type'          => 'IdsRecordRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
                     array(
                         'name'          => 'ids',
-                        'description'   => 'Comma-delimited list of the identifiers of the resources to modify.',
+                        'description'   => 'Comma-delimited list of the identifiers of the records to modify.',
                         'allowMultiple' => true,
                         'type'          => 'string',
                         'paramType'     => 'query',
@@ -643,13 +650,13 @@ if ( !isset( $_baseTableOps ) )
                         'name'          => 'body',
                         'description'   => 'Data containing name-value pairs of records to update.',
                         'allowMultiple' => false,
-                        'type'          => 'RecordsRequest',
+                        'type'          => 'FilterRecordRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
                     array(
                         'name'          => 'filter',
-                        'description'   => 'SQL-like filter to limit the resources to modify.',
+                        'description'   => 'SQL-like filter to limit the records to modify.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'query',
@@ -776,13 +783,13 @@ if ( !isset( $_baseTableOps ) )
                         'name'          => 'body',
                         'description'   => 'A single record containing name-value pairs of fields to update.',
                         'allowMultiple' => false,
-                        'type'          => 'RecordsRequest',
+                        'type'          => 'IdsRecordRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
                     array(
                         'name'          => 'ids',
-                        'description'   => 'Comma-delimited list of the identifiers of the resources to modify.',
+                        'description'   => 'Comma-delimited list of the identifiers of the records to modify.',
                         'allowMultiple' => true,
                         'type'          => 'string',
                         'paramType'     => 'query',
@@ -867,13 +874,13 @@ if ( !isset( $_baseTableOps ) )
                         'name'          => 'body',
                         'description'   => 'Data containing name-value pairs of fields to update.',
                         'allowMultiple' => false,
-                        'type'          => 'RecordsRequest',
+                        'type'          => 'FilterRecordRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
                     array(
                         'name'          => 'filter',
-                        'description'   => 'SQL-like filter to limit the resources to modify.',
+                        'description'   => 'SQL-like filter to limit the records to modify.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'query',
@@ -979,9 +986,8 @@ if ( !isset( $_baseTableOps ) )
             'summary'          => 'deleteRecordsByIds() - Delete one or more records.',
             'nickname'         => 'deleteRecordsByIds',
             'notes'            =>
-                'Use <b>ids</b> to delete specific records.<br/> ' .
-                'Alternatively, to delete by records, a complicated filter, or a large list of ids, ' .
-                'use the POST request with X-HTTP-METHOD = DELETE header and post array of records, filter, or ids.<br/> ' .
+                'Set the <b>ids</b> parameter to a list of record identifying (primary key) values to delete specific records.<br/> ' .
+                'Alternatively, to delete records by a large list of ids, pass the ids in the <b>body</b>.<br/> ' .
                 $_addTableNotes .
                 'By default, only the id property of the record is returned on success, use <b>fields</b> to return more info. ',
             'type'             => 'RecordsResponse',
@@ -998,11 +1004,19 @@ if ( !isset( $_baseTableOps ) )
                     ),
                     array(
                         'name'          => 'ids',
-                        'description'   => 'Comma-delimited list of the identifiers of the resources to delete.',
+                        'description'   => 'Comma-delimited list of the identifiers of the records to delete.',
                         'allowMultiple' => true,
                         'type'          => 'string',
                         'paramType'     => 'query',
-                        'required'      => true,
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'body',
+                        'description'   => 'Data containing ids of records to delete.',
+                        'allowMultiple' => false,
+                        'type'          => 'IdsRequest',
+                        'paramType'     => 'body',
+                        'required'      => false,
                     ),
                     array(
                         'name'          => 'fields',
@@ -1062,9 +1076,9 @@ if ( !isset( $_baseTableOps ) )
             'summary'          => 'deleteRecordsByFilter() - Delete one or more records by using a filter.',
             'nickname'         => 'deleteRecordsByFilter',
             'notes'            =>
-                'Use <b>filter</b> to delete specific records, otherwise set <b>force</b> to true to clear the table.<br/> ' .
-                'Alternatively, to delete by records, a complicated filter, or a large list of ids, ' .
-                'use the POST request with X-HTTP-METHOD = DELETE header and post array of records, filter, or ids.<br/> ' .
+                'Set the <b>filter</b> parameter to a SQL WHERE clause to delete specific records, ' .
+                'otherwise set <b>force</b> to true to clear the table.<br/> ' .
+                'Alternatively, to delete by a complicated filter or to use parameter replacement, pass the filter with or without params as the <b>body</b>.<br/> ' .
                 $_addTableNotes .
                 'By default, only the id property of the record is returned on success, use <b>fields</b> to return more info. ',
             'type'             => 'RecordsResponse',
@@ -1081,15 +1095,23 @@ if ( !isset( $_baseTableOps ) )
                     ),
                     array(
                         'name'          => 'filter',
-                        'description'   => 'SQL-like filter to limit the resources to delete.',
+                        'description'   => 'SQL WHERE clause filter to limit the records deleted.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
                     array(
+                        'name'          => 'body',
+                        'description'   => 'Data containing filter and/or params of records to delete.',
+                        'allowMultiple' => false,
+                        'type'          => 'FilterRequest',
+                        'paramType'     => 'body',
+                        'required'      => false,
+                    ),
+                    array(
                         'name'          => 'force',
-                        'description'   => 'Set force to true to delete all records in this table, otherwise <b>ids</b> parameter is required.',
+                        'description'   => 'Set force to true to delete all records in this table, otherwise <b>filter</b> parameter is required.',
                         'allowMultiple' => false,
                         'type'          => 'boolean',
                         'paramType'     => 'query',
@@ -1114,9 +1136,7 @@ if ( !isset( $_baseTableOps ) )
             'summary'          => 'deleteRecords() - Delete one or more records.',
             'nickname'         => 'deleteRecords',
             'notes'            =>
-                'Use <b>ids</b> or filter to delete specific records, otherwise set <b>force</b> to true to clear the table.<br/> ' .
-                'Alternatively, to delete by records, a complicated filter, or a large list of ids, ' .
-                'use the POST request with X-HTTP-METHOD = DELETE header and post array of records, filter, or ids.<br/> ' .
+                'Set the <b>body</b> to an array of records, minimally including the identifying fields, to delete specific records.<br/> ' .
                 $_addTableNotes .
                 'By default, only the id property of the record is returned on success, use <b>fields</b> to return more info. ',
             'type'             => 'RecordsResponse',
@@ -1133,20 +1153,11 @@ if ( !isset( $_baseTableOps ) )
                     ),
                     array(
                         'name'          => 'body',
-                        'description'   => 'Data containing name-value pairs of records to update.',
+                        'description'   => 'Data containing name-value pairs of records to delete.',
                         'allowMultiple' => false,
                         'type'          => 'RecordsRequest',
                         'paramType'     => 'body',
                         'required'      => true,
-                    ),
-                    array(
-                        'name'          => 'force',
-                        'description'   => 'Set force to true to delete all records in this table, otherwise <b>ids</b> parameter is required.',
-                        'allowMultiple' => false,
-                        'type'          => 'boolean',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                        'default'       => false,
                     ),
                     array(
                         'name'          => 'fields',
@@ -1196,6 +1207,22 @@ if ( !isset( $_baseTableOps ) )
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
+                    array(
+                        'name'          => 'filter',
+                        'description'   => 'For SDK backwards compatibility.',
+                        'allowMultiple' => false,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
+                    array(
+                        'name'          => 'ids',
+                        'description'   => 'For SDK backwards compatibility.',
+                        'allowMultiple' => true,
+                        'type'          => 'string',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
                 ),
                 $_addTableParameters
             ),
@@ -1232,7 +1259,7 @@ if ( !isset( $_baseRecordOps ) )
                     ),
                     array(
                         'name'          => 'id',
-                        'description'   => 'Identifier of the resource to retrieve.',
+                        'description'   => 'Identifier of the record to retrieve.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'path',
@@ -1293,7 +1320,7 @@ if ( !isset( $_baseRecordOps ) )
                     ),
                     array(
                         'name'          => 'id',
-                        'description'   => 'Identifier of the resource to create.',
+                        'description'   => 'Identifier of the record to create.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'path',
@@ -1362,7 +1389,7 @@ if ( !isset( $_baseRecordOps ) )
                     ),
                     array(
                         'name'          => 'id',
-                        'description'   => 'Identifier of the resource to update.',
+                        'description'   => 'Identifier of the record to update.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'path',
@@ -1431,7 +1458,7 @@ if ( !isset( $_baseRecordOps ) )
                     ),
                     array(
                         'name'          => 'id',
-                        'description'   => 'Identifier of the resource to update.',
+                        'description'   => 'Identifier of the record to update.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'path',
@@ -1497,7 +1524,7 @@ if ( !isset( $_baseRecordOps ) )
                     ),
                     array(
                         'name'          => 'id',
-                        'description'   => 'Identifier of the resource to delete.',
+                        'description'   => 'Identifier of the record to delete.',
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'path',
@@ -1620,9 +1647,87 @@ $_models = array(
                     '$ref' => 'RecordRequest',
                 ),
             ),
+        ),
+    ),
+    'IdsRequest'  => array(
+        'id'         => 'IdsRequest',
+        'properties' => array(
             'ids'    => array(
                 'type'        => 'array',
-                'description' => 'Array of record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
+                'description' => 'Array of record identifiers.',
+                'items'       => array(
+                    'type'   => 'integer',
+                    'format' => 'int32',
+                ),
+            ),
+        ),
+    ),
+    'IdsRecordRequest'  => array(
+        'id'         => 'IdsRecordRequest',
+        'properties' => array(
+            'record' => array(
+                'type'        => 'RecordRequest',
+                'description' => 'A single record, array of fields, used to modify existing records.',
+            ),
+            'ids'    => array(
+                'type'        => 'array',
+                'description' => 'Array of record identifiers.',
+                'items'       => array(
+                    'type'   => 'integer',
+                    'format' => 'int32',
+                ),
+            ),
+        ),
+    ),
+    'FilterRequest'  => array(
+        'id'         => 'FilterRequest',
+        'properties' => array(
+            'filter' => array(
+                'type'        => 'string',
+                'description' => 'SQL or native filter to determine records where modifications will be applied.',
+            ),
+            'params' => array(
+                'type'        => 'array',
+                'description' => 'Array of name-value pairs, used for parameter replacement on filters.',
+                'items'       => array(
+                    'type' => 'string',
+                ),
+            ),
+        ),
+    ),
+    'FilterRecordRequest'  => array(
+        'id'         => 'FilterRecordRequest',
+        'properties' => array(
+            'record' => array(
+                'type'        => 'RecordRequest',
+                'description' => 'A single record, array of fields, used to modify existing records.',
+            ),
+            'filter' => array(
+                'type'        => 'string',
+                'description' => 'SQL or native filter to determine records where modifications will be applied.',
+            ),
+            'params' => array(
+                'type'        => 'array',
+                'description' => 'Array of name-value pairs, used for parameter replacement on filters.',
+                'items'       => array(
+                    'type' => 'string',
+                ),
+            ),
+        ),
+    ),
+    'GetRecordsRequest'  => array(
+        'id'         => 'GetRecordsRequest',
+        'properties' => array(
+            'record' => array(
+                'type'        => 'array',
+                'description' => 'Array of records.',
+                'items'       => array(
+                    '$ref' => 'RecordRequest',
+                ),
+            ),
+            'ids'    => array(
+                'type'        => 'array',
+                'description' => 'Array of record identifiers.',
                 'items'       => array(
                     'type'   => 'integer',
                     'format' => 'int32',
@@ -1630,11 +1735,11 @@ $_models = array(
             ),
             'filter' => array(
                 'type'        => 'string',
-                'description' => 'Array of record identifiers, used for batch GET, PUT, PATCH, and DELETE.',
+                'description' => 'SQL or native filter to determine records where modifications will be applied.',
             ),
             'params' => array(
                 'type'        => 'array',
-                'description' => 'Array of name-value pairs, used for parameter replacement on filters in GET, PUT, PATCH, and DELETE.',
+                'description' => 'Array of name-value pairs, used for parameter replacement on filters.',
                 'items'       => array(
                     'type' => 'string',
                 ),

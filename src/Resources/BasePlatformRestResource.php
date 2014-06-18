@@ -114,6 +114,7 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
         //	Require app name for security check
         $this->_detectAppName();
         $this->_detectResourceMembers( $resource );
+        $this->_detectRequestMembers();
         $this->_detectResponseMembers( $output_format );
 
         $this->_preProcess();

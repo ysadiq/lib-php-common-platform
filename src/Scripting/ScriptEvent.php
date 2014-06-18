@@ -253,12 +253,6 @@ class ScriptEvent
             ),
         );
 
-        if ( isset( $_response, $_response['meta'] ) )
-        {
-            $_event['response']['meta'] = $_response['meta'];
-            unset( $_response['meta'] );
-        }
-
         return $returnJson ? json_encode( $_event, JSON_UNESCAPED_SLASHES ) : $_event;
     }
 
@@ -358,30 +352,22 @@ class ScriptEvent
     }
 
     /**
-     * @return string
-     */
-    public static function getPayloadKey()
-    {
-        return static::$_payloadKey;
-    }
-
-    /**
      * @param PlatformEvent $event
      *
      * @return array
      */
     public static function buildRequestArray( PlatformEvent $event = null )
     {
-        $_data = $event ?: ( $event ? $event->getRequestData() : null );
         $_reqObj = Pii::request( false );
+        $_data = ( $event ?: $event->getRequestData() );
 
         $_request = array(
             'method'  => strtoupper( $_reqObj->getMethod() ),
             'headers' => $_reqObj->headers->all(),
             'cookies' => $_reqObj->cookies->all(),
             'query'   => $_reqObj->query->all(),
-            'files'   => false,
             'body'    => $_data,
+            'files'   => false,
         );
 
         $_files = $_reqObj->files->all();

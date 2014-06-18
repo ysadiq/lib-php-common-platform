@@ -253,9 +253,6 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
             }
         }
 
-        //  How about an event?
-        $this->_triggerActionEvent( $result );
-
         return $result;
     }
 
