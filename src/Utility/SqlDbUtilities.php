@@ -219,7 +219,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 
                 if ( empty( $label ) )
                 {
-                    $label = Inflector::camelize( $name );
+                    $label = Inflector::camelize( $name, '_', true );
                 }
 
                 if ( empty( $plural ) )
@@ -315,7 +315,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
                 }
             }
 
-            $label = Option::get( $labelInfo, 'label', Inflector::camelize( $publicName ) );
+            $label = Option::get( $labelInfo, 'label', Inflector::camelize( $publicName, '_', true ) );
             $plural = Option::get( $labelInfo, 'plural', Inflector::pluralize( $label ) );
             $name_field = Option::get( $labelInfo, 'name_field' );
 
@@ -492,7 +492,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
      */
     public static function describeFieldInternal( $column, $foreign_keys, $label_info )
     {
-        $label = Option::get( $label_info, 'label', Inflector::camelize( $column->name ) );
+        $label = Option::get( $label_info, 'label', Inflector::camelize( $column->name, '_', true ) );
         $validation = json_decode( Option::get( $label_info, 'validation' ), true );
         $picklist = Option::get( $label_info, 'picklist' );
         $picklist = ( !empty( $picklist ) ) ? explode( "\r", $picklist ) : array();
