@@ -1896,7 +1896,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
 
                     Log::debug( 'Schema update: ' . $_tableName );
 
-                    $_results = static::updateTable( $db, $_tableName, $_table, true, $allow_delete );
+                    $_results = static::updateTable( $db, $_tableName, $_table, !$_singleTable, $allow_delete );
                 }
                 else
                 {
