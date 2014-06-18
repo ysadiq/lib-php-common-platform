@@ -806,7 +806,7 @@ class Session extends BasePlatformRestResource
 
         if ( Option::getBool( static::$_cache, 'is_sys_admin' ) )
         {
-            return array(static::GET, static::POST, static::PUT, static::PATCH, static::MERGE, static::DELETE);
+            return array();
         }
 
         if ( null === ( $_roleInfo = Option::get( static::$_cache, 'role' ) ) )
