@@ -400,21 +400,21 @@ JS;
 
     /**
      * @param string $method
-     * @param string $path
+     * @param string $url
      * @param mixed  $payload
+     * @param array  $curlOptions
      *
      * @return \stdClass|string
      */
-    protected static function _externalRequest( $method, $path, $payload = null )
+    protected static function _externalRequest( $method, $url, $payload = array(), $curlOptions = array() )
     {
         try
         {
-            return Curl::request( $method, $path, $payload );
+            return Curl::request( $method, $url, $payload, $curlOptions );
         }
         catch ( \Exception $_ex )
         {
             $_result = RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false );
-
             Log::error( 'Exception: ' . $_ex->getMessage(), array(), array( 'response' => $_result ) );
         }
     }
@@ -423,10 +423,11 @@ JS;
      * @param string $method
      * @param string $path
      * @param array  $payload
+     * @param array  $curlOptions Additional CURL options for external requests
      *
      * @return array
      */
-    public static function inlineRequest( $method, $path, $payload = null )
+    public static function inlineRequest( $method, $path, $payload = null, $curlOptions = array() )
     {
         if ( null === $payload || 'null' == $payload )
         {
@@ -435,7 +436,7 @@ JS;
 
         if ( 'https:/' == ( $_protocol = substr( $path, 0, 7 ) ) || 'http://' == $_protocol )
         {
-            return static::_externalRequest( $method, $path, $payload );
+            return static::_externalRequest( $method, $path, $payload ?: array(), $curlOptions );
         }
 
         $_result = null;
@@ -520,39 +521,39 @@ JS;
     {
         $_api = new \stdClass();
 
-        $_api->_call = function ( $method, $path, $payload = null )
+        $_api->_call = function ( $method, $path, $payload = null, $curlOptions = array() )
         {
-            return static::inlineRequest( $method, $path, $payload );
+            return static::inlineRequest( $method, $path, $payload, $curlOptions );
         };
 
-        $_api->get = function ( $path, $payload = null )
+        $_api->get = function ( $path, $payload = null, $curlOptions = array() )
         {
-            return static::inlineRequest( HttpMethod::GET, $path, $payload );
+            return static::inlineRequest( HttpMethod::GET, $path, $payload, $curlOptions );
         };
 
-        $_api->put = function ( $path, $payload = null )
+        $_api->put = function ( $path, $payload = null, $curlOptions = array() )
         {
-            return static::inlineRequest( HttpMethod::PUT, $path, $payload );
+            return static::inlineRequest( HttpMethod::PUT, $path, $payload, $curlOptions );
         };
 
-        $_api->post = function ( $path, $payload = null )
+        $_api->post = function ( $path, $payload = null, $curlOptions = array() )
         {
-            return static::inlineRequest( HttpMethod::POST, $path, $payload );
+            return static::inlineRequest( HttpMethod::POST, $path, $payload, $curlOptions );
         };
 
-        $_api->delete = function ( $path, $payload = null )
+        $_api->delete = function ( $path, $payload = null, $curlOptions )
         {
-            return static::inlineRequest( HttpMethod::DELETE, $path, $payload );
+            return static::inlineRequest( HttpMethod::DELETE, $path, $payload, $curlOptions );
         };
 
-        $_api->merge = function ( $path, $payload = null )
+        $_api->merge = function ( $path, $payload = null, $curlOptions = array() )
         {
-            return static::inlineRequest( HttpMethod::MERGE, $path, $payload );
+            return static::inlineRequest( HttpMethod::MERGE, $path, $payload, $curlOptions );
         };
 
-        $_api->patch = function ( $path, $payload = null )
+        $_api->patch = function ( $path, $payload = null, $curlOptions = array() )
         {
-            return static::inlineRequest( HttpMethod::PATCH, $path, $payload );
+            return static::inlineRequest( HttpMethod::PATCH, $path, $payload, $curlOptions );
         };
 
         return $_api;
