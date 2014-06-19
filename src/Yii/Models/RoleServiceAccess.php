@@ -239,11 +239,17 @@ class RoleServiceAccess extends BasePlatformSystemModel
                     $_verbs2 = Option::clean( Option::get( $_access2, 'verbs' ) );
                     if ( ( $_serviceId == $_serviceId2 ) && ( $_component == $_component2 ) )
                     {
+                        // No access conflicts with any access
+                        if ( ( empty( $_verbs ) && !empty( $_verbs2 ) ) || ( empty( $_verbs2 ) && !empty( $_verbs ) ) )
+                        {
+                            throw new BadRequestException( "Conflicting access for service, component, and access combination '$_serviceId $_component' in role service access." );
+                        }
+
                         // any of the verbs match?
                         $_temp = implode( ',', array_intersect( $_verbs, $_verbs2 ) );
-                        if ( !empty( $_temp ) )
+                        if ( !empty( $_temp ) || ( empty( $_verbs ) && empty( $_verbs2 ) ) )
                         {
-                            throw new BadRequestException( "Duplicated service, component, and verb combination '$_serviceId $_component $_temp' in role service access." );
+                            throw new BadRequestException( "Duplicated service, component, and access combination '$_serviceId $_component $_temp' in role service access." );
                         }
                     }
                 }
@@ -260,7 +266,8 @@ class RoleServiceAccess extends BasePlatformSystemModel
                     $_newComponent = Option::get( $_item, 'component', '' );
                     $_newVerbs = Option::clean( Option::get( $_item, 'verbs' ) );
                     $_oldVerbs = $_map->verbs;
-                    $_verbTest = array_merge(array_diff( $_oldVerbs, $_newVerbs ), array_diff( $_newVerbs, $_oldVerbs ));
+                    $_verbTest =
+                        array_merge( array_diff( $_oldVerbs, $_newVerbs ), array_diff( $_newVerbs, $_oldVerbs ) );
                     if ( ( $_newId == $_map->service_id ) &&
                          ( $_newComponent == $_map->component ) &&
                          empty( $_verbTest )

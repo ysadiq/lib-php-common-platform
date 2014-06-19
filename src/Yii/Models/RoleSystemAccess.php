@@ -222,11 +222,17 @@ class RoleSystemAccess extends BasePlatformSystemModel
                     $_verbs2 = Option::clean( Option::get( $_access2, 'verbs' ) );
                     if ( $_component == $_component2 )
                     {
+                        // No access conflicts with any access
+                        if ( ( empty( $_verbs ) && !empty( $_verbs2 ) ) || ( empty( $_verbs2 ) && !empty( $_verbs ) ) )
+                        {
+                            throw new BadRequestException( "Conflicting access for component and access combination '$_component' in role service access." );
+                        }
+
                         // any of the verbs match?
                         $_temp = implode( ',', array_intersect( $_verbs, $_verbs2 ) );
-                        if ( !empty( $_temp ) )
+                        if ( !empty( $_temp ) || ( empty( $_verbs ) && empty( $_verbs2 ) ) )
                         {
-                            throw new BadRequestException( "Duplicated component, and verb combination '$_component $_temp' in role system access." );
+                            throw new BadRequestException( "Duplicated component and access combination '$_component $_temp' in role system access." );
                         }
                     }
                 }
@@ -242,7 +248,8 @@ class RoleSystemAccess extends BasePlatformSystemModel
                     $_newComponent = Option::get( $_item, 'component', '' );
                     $_newVerbs = Option::clean( Option::get( $_item, 'verbs' ) );
                     $_oldVerbs = $_map->verbs;
-                    $_verbTest = array_merge(array_diff( $_oldVerbs, $_newVerbs ), array_diff( $_newVerbs, $_oldVerbs ));
+                    $_verbTest =
+                        array_merge( array_diff( $_oldVerbs, $_newVerbs ), array_diff( $_newVerbs, $_oldVerbs ) );
                     if ( ( $_newComponent == $_map->component ) && empty( $_verbTest ) )
                     {
                         $_needUpdate = false;
