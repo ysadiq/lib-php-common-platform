@@ -173,12 +173,11 @@ class ScriptEvent
 
         //	Build the array
         $_event = array(
-            //	Event meta-data
+            //  The event id
             'id'               => $event->getEventId(),
+            //  The event name
             'name'             => $eventName,
-            'trigger'          => $_trigger,
-            'request_path'     => $_path,
-            'stop_propagation' => Option::get( $_eventExtras, 'stop_propagation', false, true ),
+            //  The event timestamp
             'timestamp'        => date(
                 'c',
                 Option::server(
@@ -186,21 +185,37 @@ class ScriptEvent
                     Option::server( 'REQUEST_TIME', microtime( true ) )
                 )
             ),
+            //  The resource request that triggered this event
+            'trigger'          => $_trigger,
+            //  A slightly sanitized version of the actual HTTP request URI
+            'request_path'     => $_path,
+            //  Indicator useful to halt propagation of this event, not necessarly because of errors...
+            'stop_propagation' => Option::get( $_eventExtras, 'stop_propagation', false, true ),
             //	Dispatcher information
             'dispatcher_id'    => spl_object_hash( $dispatcher ),
             'dispatcher_type'  => Inflector::neutralize( get_class( $dispatcher ) ),
             //	Extra information passed by caller
             'extra'            => $extra,
-            'request'          => $_request,
-            'response'         => $_response,
-            //	Metadata if any
-            //	Access to the platform api
+            //	An object that contains information about the current session and the configuration of this platform
             'platform'         => array(
                 //  The DSP config
                 'config'  => $_config,
-                //  The current session
+                //  The current user's session
                 'session' => static::_getCleanedSession(),
             ),
+            /**
+             * The inbound request payload as parsed by the handler for the route.
+             * Any changes to this property will be made to the request parameters before the service processes the request.
+             *
+             * For REST events (pre an post process), this data is sourced from BasePlatformService::$requestPayload, Base
+             */
+            'request'          => $_request,
+            /**
+             * The outbound response received from the service after being processed.
+             * Any changes to this property will be made in the response back to the requester.
+             */
+            'response'         => $_response,
+            //	Metadata if any
         );
 
         return $returnJson ? json_encode( $_event, JSON_UNESCAPED_SLASHES ) : $_event;
