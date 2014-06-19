@@ -259,7 +259,8 @@ class RoleServiceAccess extends BasePlatformSystemModel
                     $_newId = Option::get( $_item, 'service_id' );
                     $_newComponent = Option::get( $_item, 'component', '' );
                     $_newVerbs = Option::clean( Option::get( $_item, 'verbs' ) );
-                    $_verbTest = array_diff( $_map->verbs, $_newVerbs );
+                    $_oldVerbs = $_map->verbs;
+                    $_verbTest = array_merge(array_diff( $_oldVerbs, $_newVerbs ), array_diff( $_newVerbs, $_oldVerbs ));
                     if ( ( $_newId == $_map->service_id ) &&
                          ( $_newComponent == $_map->component ) &&
                          empty( $_verbTest )
