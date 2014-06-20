@@ -533,7 +533,7 @@ class MongoDbSvc extends NoSqlDbSvc
         $requested_fields = static::DEFAULT_ID_FIELD; // can only be this
         $requested_types = Option::clean( $requested_types );
         $_type = Option::get( $requested_types, 0, 'string' );
-        $_type = (empty($_type)) ? 'string' : $_type;
+        $_type = ( empty( $_type ) ) ? 'string' : $_type;
 
         return array(array('name' => static::DEFAULT_ID_FIELD, 'type' => $_type, 'required' => false));
     }

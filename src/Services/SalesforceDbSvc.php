@@ -184,7 +184,8 @@ class SalesforceDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -224,7 +225,8 @@ class SalesforceDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -401,10 +403,10 @@ class SalesforceDbSvc extends BaseDbSvc
     /**
      * Perform call to Salesforce REST API
      *
-     * @param string $method
-     * @param string $uri
-     * @param array $parameters
-     * @param mixed $body
+     * @param string       $method
+     * @param string       $uri
+     * @param array        $parameters
+     * @param mixed        $body
      * @param GuzzleClient $client
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
@@ -531,8 +533,8 @@ class SalesforceDbSvc extends BaseDbSvc
     protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
         $requested_fields = static::DEFAULT_ID_FIELD; // can only be this
-
-        $_type = Option::get( Option::clean( $requested_types ), 0 );
+        $requested_types = Option::clean( $requested_types );
+        $_type = Option::get( $requested_types, 0, 'string' );
         $_type = ( empty( $_type ) ) ? 'string' : $_type;
 
         return array(array('name' => static::DEFAULT_ID_FIELD, 'type' => $_type, 'required' => false));
@@ -682,14 +684,13 @@ class SalesforceDbSvc extends BaseDbSvc
                 static::removeIds( $_parsed, $_idFields );
                 $_native = json_encode( $_parsed );
 
-                $_result =
-                    $this->callGuzzle(
-                        'PATCH',
-                        'sobjects/' . $this->_transactionTable . '/' . $id,
-                        null,
-                        $_native,
-                        $_client
-                    );
+                $_result = $this->callGuzzle(
+                    'PATCH',
+                    'sobjects/' . $this->_transactionTable . '/' . $id,
+                    null,
+                    $_native,
+                    $_client
+                );
                 if ( $_result && !Option::getBool( $_result, 'success', false ) )
                 {
                     $msg = Option::get( $_result, 'errors' );
@@ -701,14 +702,13 @@ class SalesforceDbSvc extends BaseDbSvc
                 return ( $_requireMore ) ? parent::addToTransaction( $id ) : array($_idFields => $id);
 
             case static::DELETE:
-                $_result =
-                    $this->callGuzzle(
-                        'DELETE',
-                        'sobjects/' . $this->_transactionTable . '/' . $id,
-                        null,
-                        null,
-                        $_client
-                    );
+                $_result = $this->callGuzzle(
+                    'DELETE',
+                    'sobjects/' . $this->_transactionTable . '/' . $id,
+                    null,
+                    null,
+                    $_client
+                );
                 if ( $_result && !Option::getBool( $_result, 'success', false ) )
                 {
                     $msg = Option::get( $_result, 'errors' );
@@ -727,12 +727,11 @@ class SalesforceDbSvc extends BaseDbSvc
 
                 $_fields = $this->_buildFieldList( $this->_transactionTable, $_fields, $_idFields );
 
-                $_result =
-                    $this->callGuzzle(
-                        'GET',
-                        'sobjects/' . $this->_transactionTable . '/' . $id,
-                        array('fields' => $_fields)
-                    );
+                $_result = $this->callGuzzle(
+                    'GET',
+                    'sobjects/' . $this->_transactionTable . '/' . $id,
+                    array('fields' => $_fields)
+                );
                 if ( empty( $_result ) )
                 {
                     throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
