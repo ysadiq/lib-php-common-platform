@@ -650,7 +650,7 @@ class SqlDbSvc extends BaseDbSvc
 
     // Helper methods
 
-    protected function _recordQuery( $from, $select, $where, $bind_values, $bind_columns, $extras )
+    protected function _recordQuery( $table, $select, $where, $bind_values, $bind_columns, $extras )
     {
         $_order = Option::get( $extras, 'order' );
         $_limit = intval( Option::get( $extras, 'limit', 0 ) );
@@ -661,8 +661,26 @@ class SqlDbSvc extends BaseDbSvc
         // use query builder
         /** @var \CDbCommand $_command */
         $_command = $this->_dbConn->createCommand();
+        if ( is_array( $select ) )
+        {
+            foreach ( $select as $_key => $_value )
+            {
+                if ( false !== strpos( $_value, ' ' ) )
+                {
+                    // yii doesn't handle spaces in column names very well.
+                    $select[$_key] = '(' . $this->_dbConn->quoteColumnName( $_value ) . ')';
+                }
+            }
+        }
         $_command->select( $select );
-        $_command->from( $from );
+
+        $_from = $table;
+        if ( false !== strpos( $_from, ' ' ) )
+        {
+            // yii doesn't handle spaces in tables names very well.
+            $_from = '(' . $this->_dbConn->quoteTableName( $_from ) . ')';
+        }
+        $_command->from( $_from );
 
         if ( !empty( $where ) )
         {
@@ -726,7 +744,7 @@ class SqlDbSvc extends BaseDbSvc
         {
             $_command->reset();
             $_command->select( '(COUNT(*)) as ' . $this->_dbConn->quoteColumnName( 'count' ) );
-            $_command->from( $from );
+            $_command->from( $_from );
             if ( !empty( $where ) )
             {
                 $_command->where( $where );
@@ -750,13 +768,13 @@ class SqlDbSvc extends BaseDbSvc
 
         if ( Option::getBool( $extras, 'include_schema', false ) )
         {
-            $_meta['schema'] = SqlDbUtilities::describeTable( $this->_dbConn, $from );
+            $_meta['schema'] = SqlDbUtilities::describeTable( $this->_dbConn, $table );
         }
 
         $_related = Option::get( $extras, 'related' );
         if ( !empty( $_related ) )
         {
-            $_relations = $this->describeTableRelated( $from );
+            $_relations = $this->describeTableRelated( $table );
             foreach ( $_data as $_key => $_temp )
             {
                 $_data[$_key] = $this->retrieveRelatedRecords( $_temp, $_relations, $_related );
@@ -902,112 +920,7 @@ class SqlDbSvc extends BaseDbSvc
             $_name = Option::get( $_fieldInfo, 'name', '' );
             $_type = Option::get( $_fieldInfo, 'type' );
             $_dbType = Option::get( $_fieldInfo, 'db_type' );
-            $_pos = array_search( $_name, $_keys );
-            if ( false !== $_pos )
-            {
-                $_fieldVal = Option::get( $_values, $_pos );
-                // due to conversion from XML to array, null or empty xml elements have the array value of an empty array
-                if ( is_array( $_fieldVal ) && empty( $_fieldVal ) )
-                {
-                    $_fieldVal = null;
-                }
 
-                // overwrite some undercover fields
-                if ( Option::getBool( $_fieldInfo, 'auto_increment', false ) )
-                {
-                    unset( $_keys[$_pos] );
-                    unset( $_values[$_pos] );
-                    continue; // should I error this?
-                }
-                if ( is_null( $_fieldVal ) && !Option::getBool( $_fieldInfo, 'allow_null' ) )
-                {
-                    throw new BadRequestException( "Field '$_name' can not be NULL." );
-                }
-
-                /** validations **/
-
-                $_validations = Option::get( $_fieldInfo, 'validation' );
-                if ( !is_array( $_validations ) )
-                {
-                    // backwards compatible with old strings
-                    $_validations = array_map( 'trim', explode( ',', $_validations ) );
-                    $_validations = array_flip( $_validations );
-                }
-
-                if ( !static::validateFieldValue( $_name, $_fieldVal, $_validations, $for_update, $_fieldInfo ) )
-                {
-                    unset( $_keys[$_pos] );
-                    unset( $_values[$_pos] );
-                    continue;
-                }
-
-                if ( !is_null( $_fieldVal ) )
-                {
-                    switch ( $this->_driverType )
-                    {
-                        case SqlDbUtilities::DRV_DBLIB:
-                        case SqlDbUtilities::DRV_SQLSRV:
-                            switch ( $_dbType )
-                            {
-                                case 'bit':
-                                    $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
-                                    break;
-                            }
-                            break;
-                        case SqlDbUtilities::DRV_MYSQL:
-                            switch ( $_dbType )
-                            {
-                                case 'tinyint(1)':
-                                    $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
-                                    break;
-                            }
-                            break;
-                    }
-                    switch ( SqlDbUtilities::determinePhpConversionType( $_type, $_dbType ) )
-                    {
-                        case 'int':
-                            if ( !is_int( $_fieldVal ) )
-                            {
-                                if ( ( '' === $_fieldVal ) && Option::getBool( $_fieldInfo, 'allow_null' ) )
-                                {
-                                    $_fieldVal = null;
-                                }
-                                elseif ( !( ctype_digit( $_fieldVal ) ) )
-                                {
-                                    throw new BadRequestException( "Field '$_name' must be a valid integer." );
-                                }
-                                else
-                                {
-                                    $_fieldVal = intval( $_fieldVal );
-                                }
-                            }
-                            break;
-                        default:
-                    }
-                }
-                $_parsed[$_name] = $_fieldVal;
-                unset( $_keys[$_pos] );
-                unset( $_values[$_pos] );
-            }
-            else
-            {
-                // check specific fields
-                switch ( $_type )
-                {
-                    case 'timestamp_on_create':
-                    case 'timestamp_on_update':
-                    case 'user_id_on_create':
-                    case 'user_id_on_update':
-                        break;
-                    default:
-                        // if field is required, kick back error
-                        if ( Option::getBool( $_fieldInfo, 'required' ) && !$for_update )
-                        {
-                            throw new BadRequestException( "Required field '$_name' can not be NULL." );
-                        }
-                        break;
-                }
-            }
             // add or override for specific fields
             switch ( $_type )
             {
@@ -1053,6 +966,111 @@ class SqlDbSvc extends BaseDbSvc
                     if ( isset( $userId ) )
                     {
                         $_parsed[$_name] = $userId;
+                    }
+                    break;
+                default:
+                    $_pos = array_search( $_name, $_keys );
+                    if ( false !== $_pos )
+                    {
+                        $_fieldVal = Option::get( $_values, $_pos );
+                        // due to conversion from XML to array, null or empty xml elements have the array value of an empty array
+                        if ( is_array( $_fieldVal ) && empty( $_fieldVal ) )
+                        {
+                            $_fieldVal = null;
+                        }
+
+                        // overwrite some undercover fields
+                        if ( Option::getBool( $_fieldInfo, 'auto_increment', false ) )
+                        {
+                            unset( $_keys[$_pos] );
+                            unset( $_values[$_pos] );
+                            continue; // should I error this?
+                        }
+                        if ( is_null( $_fieldVal ) && !Option::getBool( $_fieldInfo, 'allow_null' ) )
+                        {
+                            throw new BadRequestException( "Field '$_name' can not be NULL." );
+                        }
+
+                        /** validations **/
+
+                        $_validations = Option::get( $_fieldInfo, 'validation' );
+                        if ( !is_array( $_validations ) )
+                        {
+                            // backwards compatible with old strings
+                            $_validations = array_map( 'trim', explode( ',', $_validations ) );
+                            $_validations = array_flip( $_validations );
+                        }
+
+                        if ( !static::validateFieldValue(
+                            $_name,
+                            $_fieldVal,
+                            $_validations,
+                            $for_update,
+                            $_fieldInfo
+                        )
+                        )
+                        {
+                            unset( $_keys[$_pos] );
+                            unset( $_values[$_pos] );
+                            continue;
+                        }
+
+                        if ( !is_null( $_fieldVal ) )
+                        {
+                            switch ( $this->_driverType )
+                            {
+                                case SqlDbUtilities::DRV_DBLIB:
+                                case SqlDbUtilities::DRV_SQLSRV:
+                                    switch ( $_dbType )
+                                    {
+                                        case 'bit':
+                                            $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
+                                            break;
+                                    }
+                                    break;
+                                case SqlDbUtilities::DRV_MYSQL:
+                                    switch ( $_dbType )
+                                    {
+                                        case 'tinyint(1)':
+                                            $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
+                                            break;
+                                    }
+                                    break;
+                            }
+                            switch ( SqlDbUtilities::determinePhpConversionType( $_type, $_dbType ) )
+                            {
+                                case 'int':
+                                    if ( !is_int( $_fieldVal ) )
+                                    {
+                                        if ( ( '' === $_fieldVal ) && Option::getBool( $_fieldInfo, 'allow_null' ) )
+                                        {
+                                            $_fieldVal = null;
+                                        }
+                                        elseif ( !( ctype_digit( $_fieldVal ) ) )
+                                        {
+                                            throw new BadRequestException( "Field '$_name' must be a valid integer." );
+                                        }
+                                        else
+                                        {
+                                            $_fieldVal = intval( $_fieldVal );
+                                        }
+                                    }
+                                    break;
+                                default:
+                            }
+                        }
+                        $_parsed[$_name] = $_fieldVal;
+                        unset( $_keys[$_pos] );
+                        unset( $_values[$_pos] );
+                    }
+                    else
+                    {
+                        // if field is required, kick back error
+                        if ( Option::getBool( $_fieldInfo, 'required' ) && !$for_update )
+                        {
+                            throw new BadRequestException( "Required field '$_name' can not be NULL." );
+                        }
+                        break;
                     }
                     break;
             }
