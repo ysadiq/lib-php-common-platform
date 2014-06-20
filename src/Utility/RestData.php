@@ -22,7 +22,6 @@ namespace DreamFactory\Platform\Utility;
 use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -88,19 +87,7 @@ class RestData
                 if ( false !== stripos( $_contentType, '/json' ) )
                 {
                     // application/json
-                    try
-                    {
-                        $_data = DataFormat::jsonToArray( $_postData );
-                    }
-                    catch ( \Exception $_ex )
-                    {
-                        if ( empty( $_postData ) )
-                        {
-                            throw $_ex;
-                        }
-
-                        $_data = $_postData;
-                    }
+                    $_data = DataFormat::jsonToArray( $_postData );
                 }
                 elseif ( false !== stripos( $_contentType, '/xml' ) )
                 {
@@ -117,7 +104,14 @@ class RestData
             if ( empty( $_data ) )
             {
                 // last chance, assume it is json
-                $_data = DataFormat::jsonToArray( $_postData );
+                try
+                {
+                    $_data = DataFormat::jsonToArray( $_postData );
+                }
+                catch ( \Exception $_ex )
+                {
+                    // oh well, requested array, but couldn't get any
+                }
             }
 
             // get rid of xml wrapper if present

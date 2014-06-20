@@ -274,7 +274,7 @@ SQL;
             // build main services list
             $_services[] = array(
                 'path'        => '/' . $_apiName,
-                'description' => Option::get( $_service, 'description', 'Service' )
+                'description' => Option::get( $_service, 'description', '' )
             );
 
             //	Parse the events while we get the chance...
