@@ -102,7 +102,12 @@ class Event extends BaseSystemRestResource
     protected function _getAllEvents( $as_cached = false )
     {
         //  Make sure the file exists.
-        $_cacheFile = Platform::getSwaggerPath( SwaggerManager::SWAGGER_CACHE_DIR . SwaggerManager::SWAGGER_EVENT_CACHE_FILE, true, true );
+        $_cacheFile =
+            Platform::getSwaggerPath(
+                SwaggerManager::SWAGGER_CACHE_DIR . SwaggerManager::SWAGGER_EVENT_CACHE_FILE,
+                true,
+                true
+            );
 
         //  If not, rebuild the swagger cache
         if ( !file_exists( $_cacheFile ) )
@@ -156,6 +161,11 @@ class Event extends BaseSystemRestResource
                 {
                     $_path = $this->_fromTemplate( $_pathTemplate, get_defined_vars() );
 
+                    // translate to slashes for client
+                    $_pathName = Option::get( $_path, 'path', '' );
+                    $_pathName = '/' . str_replace( '.', '/', $_pathName );
+                    $_path['path'] = $_pathName;
+
                     foreach ( $_verbs as $_verb => $_event )
                     {
                         $_path['verbs'][] = array(
@@ -174,7 +184,7 @@ class Event extends BaseSystemRestResource
             }
         }
 
-        return array( 'record' => $_rebuild );
+        return array('record' => $_rebuild);
     }
 
     /**
@@ -195,7 +205,7 @@ class Event extends BaseSystemRestResource
 
         if ( empty( $_records ) )
         {
-            $_records = array( $this->_requestPayload );
+            $_records = array($this->_requestPayload);
         }
 
         foreach ( $_records as $_record )
@@ -211,7 +221,7 @@ class Event extends BaseSystemRestResource
 
             if ( !is_array( $_listeners ) )
             {
-                $_listeners = array( $_listeners );
+                $_listeners = array($_listeners);
             }
 
             //  Add the listener
@@ -221,10 +231,10 @@ class Event extends BaseSystemRestResource
             }
 
             //  Add to response
-            $_response[] = array( 'event_name' => $_eventName, 'listeners' => $_dispatcher->getListeners( $_eventName ) );
+            $_response[] = array('event_name' => $_eventName, 'listeners' => $_dispatcher->getListeners( $_eventName ));
         }
 
-        return array( 'record' => $_response );
+        return array('record' => $_response);
     }
 
     /**
@@ -242,7 +252,7 @@ class Event extends BaseSystemRestResource
 
         if ( empty( $_records ) )
         {
-            $_records = array( $this->_requestPayload );
+            $_records = array($this->_requestPayload);
         }
 
         foreach ( $_records as $_record )
@@ -257,7 +267,7 @@ class Event extends BaseSystemRestResource
 
             if ( !is_array( $_listeners ) )
             {
-                $_listeners = array( $_listeners );
+                $_listeners = array($_listeners);
             }
 
             foreach ( $_listeners as $_listener )
@@ -266,10 +276,10 @@ class Event extends BaseSystemRestResource
             }
 
             //  Add to response
-            $_response[] = array( 'event_name' => $_eventName, 'listeners' => $_dispatcher->getListeners( $_eventName ) );
+            $_response[] = array('event_name' => $_eventName, 'listeners' => $_dispatcher->getListeners( $_eventName ));
         }
 
-        return array( 'record' => $_response );
+        return array('record' => $_response);
     }
 
     /**
@@ -367,7 +377,7 @@ class Event extends BaseSystemRestResource
             {
                 if ( is_scalar( $_value ) )
                 {
-                    $_replacements[ '{' . $_key . '}' ] = $_value;
+                    $_replacements['{' . $_key . '}'] = $_value;
                 }
 
                 else if ( $_value instanceof \IteratorAggregate && $_value instanceof \Countable )
@@ -392,7 +402,7 @@ class Event extends BaseSystemRestResource
                             continue;
                         }
 
-                        $_replacements[ '{' . $_key . '.' . $_bagKey . '}' ] = $_bagValue;
+                        $_replacements['{' . $_key . '.' . $_bagKey . '}'] = $_bagValue;
                     }
                 }
             }
