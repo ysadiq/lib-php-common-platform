@@ -1,5 +1,30 @@
 # DreamFactory Services Platform&trade; Change Log
 
+### More information can now be found on the DSP project wiki [CHANGELOG](https://github.com/dreamfactorysoftware/dsp-core/wiki/CHANGELOG)
+
+## v1.6.0 (Release 2014-06-20)
+###New!
+* Server Side Lookups changed so private can only be used by service configuration, and non-private for other things like filtering
+* Server Side Lookups can now be used for database filter parameter replacement.
+* Server Side Lookups can now be used for database record field creation and modification.
+* Role's Service and System Accesses now use REST verb selection instead of access string.
+* Server Side Scripting gets major overhaul and adds detailed request and response handling and call outs to REST API and external HTTP calls.
+* Major Swagger update for db services to expose the various *ByFilter and *ByIds options.
+
+###Fixes, Updates, and Upgrades
+* Changed Swagger output to be locked down by valid application api_name only, no session required because of sdk usage.
+* App import bug fix, also removing default description from swagger service
+* Fix for AWS container creation
+* Schema service changes to support PUT properly, deletes any fields not in posted data.
+* Additional lookup usage in NoSQL DB cases
+* Improvements for CouchDb view support
+* Improvements for Postgresql support
+* Cleanup use of MERGE vs. PATCH, allowing both.
+* Changes to database services to remedy the xml translation and lack of record wrapper problem.
+* Expose auto-login option to swagger for password reset and registration
+* Remove pass by reference use
+
+
 ## v1.5.12 (Release 2014-05-09)
 ### Fixes
 * System Config caching issue
