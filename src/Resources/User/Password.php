@@ -90,6 +90,7 @@ class Password extends BasePlatformRestResource
 			return $this->changePassword( $_userId, $_old, $_new );
 		}
 
+        $_login = Option::get( $data, 'login', FilterInput::request( 'login', true, FILTER_VALIDATE_BOOLEAN ) );
 		$_email = Option::get( $_data, 'email', FilterInput::request( 'email' ) );
 		$_code = Option::get( $_data, 'code', FilterInput::request( 'code' ) );
 		$_answer = Option::get( $_data, 'security_answer' );
@@ -101,12 +102,12 @@ class Password extends BasePlatformRestResource
 
 		if ( !empty( $_code ) )
 		{
-			return $this->changePasswordByCode( $_email, $_code, $_new, true, true );
+			return $this->changePasswordByCode( $_email, $_code, $_new, $_login, true );
 		}
 
 		if ( !empty( $_answer ) )
 		{
-			return $this->changePasswordBySecurityAnswer( $_email, $_answer, $_new, true, true );
+			return $this->changePasswordBySecurityAnswer( $_email, $_answer, $_new, $_login, true );
 		}
 
 		return false;

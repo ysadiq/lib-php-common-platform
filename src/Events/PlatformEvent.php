@@ -36,6 +36,27 @@ use Kisma\Core\Utility\Option;
  */
 class PlatformEvent extends SeedEvent
 {
+    //*************************************************************************
+    //	Constants
+    //*************************************************************************
+
+    /**
+     * @var int
+     */
+    const EVENT_DATA = 0;
+    /**
+     * @var int
+     */
+    const REQUEST_DATA = 1;
+    /**
+     * @var int
+     */
+    const RESPONSE_DATA = 2;
+    /**
+     * @type string The default DSP namespace
+     */
+    const EVENT_NAMESPACE = 'dsp';
+
     //**************************************************************************
     //* Members
     //**************************************************************************
@@ -48,21 +69,26 @@ class PlatformEvent extends SeedEvent
      * @var bool Indicates that a listener in the chain has changed the data
      */
     protected $_dirty = false;
+    /**
+     * @var bool If true, this is a post-process type event
+     */
+    protected $_postProcessScript = false;
+    /**
+     * @var array|mixed
+     */
+    protected $_requestData = null;
+    /**
+     * @var array|mixed
+     */
+    protected $_responseData = null;
 
     //**************************************************************************
     //* Methods
     //**************************************************************************
 
     /**
-     * @param array $data
-     */
-    public function __construct( $data = array() )
-    {
-        parent::__construct( $data );
-    }
-
-    /**
-     * Tells the event manager to prevent the default action from being performed
+     * "preventDefault" flag for jQuery compatibility.
+     * Unused by server but available for client use
      */
     public function preventDefault()
     {
@@ -70,6 +96,9 @@ class PlatformEvent extends SeedEvent
     }
 
     /**
+     * "preventDefault" flag for jQuery compatibility.
+     * Unused by server but available for client use
+     *
      * @return bool
      */
     public function isDefaultPrevented()
@@ -78,6 +107,8 @@ class PlatformEvent extends SeedEvent
     }
 
     /**
+     * Indicates if this event has altered the original state, not including flags
+     *
      * @return boolean
      */
     public function isDirty()
@@ -98,6 +129,7 @@ class PlatformEvent extends SeedEvent
             if ( 'event_id' != $_key )
             {
                 Option::set( $this, $_key, $_value );
+                $this->_dirty = true;
             }
         }
 
@@ -108,5 +140,144 @@ class PlatformEvent extends SeedEvent
         }
 
         return $this;
+    }
+
+    /**
+     * {@InheritDoc}
+     */
+    public function setData( $data, $type = self::EVENT_DATA )
+    {
+        $this->_dirty = true;
+
+        //  Return a specific data set if requested
+        switch ( $type )
+        {
+            case static::REQUEST_DATA:
+                $this->_requestData = $data;
+                break;
+
+            case static::RESPONSE_DATA:
+                $this->_responseData = $data;
+                break;
+
+            default:
+                return parent::setData( $data );
+        }
+
+        return $this;
+    }
+
+    /**
+     * Merge an array of data into the $data property
+     *
+     * @param array|object $data
+     * @param int          $type
+     *
+     * @return $this
+     */
+    public function mergeData( $data, $type = self::EVENT_DATA )
+    {
+        foreach ( $data as $_key => $_value )
+        {
+            switch ( $type )
+            {
+                case static::REQUEST_DATA:
+                    $this->_requestData[ $_key ] = $_value;
+                    break;
+
+                case static::RESPONSE_DATA:
+                    $this->_responseData[ $_key ] = $_value;
+                    break;
+
+                default:
+                    $this->_data[ $_key ] = $_value;
+                    break;
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function isPostProcessScript()
+    {
+        return $this->_postProcessScript;
+    }
+
+    /**
+     * @param boolean $postProcessScript
+     *
+     * @return PlatformEvent
+     */
+    public function setPostProcessScript( $postProcessScript )
+    {
+        $this->_postProcessScript = $postProcessScript;
+
+        return $this;
+    }
+
+    /**
+     * @return array|mixed
+     */
+    public function getRequestData()
+    {
+        return $this->_requestData;
+    }
+
+    /**
+     * @param array|mixed $requestData
+     *
+     * @return PlatformEvent
+     */
+    public function setRequestData( $requestData )
+    {
+        $this->_requestData = $requestData;
+
+        return $this;
+    }
+
+    /**
+     * @return array|mixed
+     */
+    public function getResponseData()
+    {
+        return $this->_responseData;
+    }
+
+    /**
+     * @param array|mixed $responseData
+     *
+     * @return PlatformEvent
+     */
+    public function setResponseData( $responseData )
+    {
+        $this->_responseData = $responseData;
+
+        return $this;
+    }
+
+    /**
+     * Souped-up event data storage. Allows for general event data (current way it works),
+     * request data ($service->_requestPayload), and response data ($service->_response)
+     *
+     * @param int $which
+     *
+     * @return array|mixed
+     */
+    public function getData( $which = self::EVENT_DATA )
+    {
+        //  Return a specific data set if requested
+        switch ( $which )
+        {
+            case static::REQUEST_DATA:
+                return $this->_requestData;
+
+            case static::RESPONSE_DATA:
+                return $this->_responseData;
+        }
+
+        return parent::getData();
     }
 }

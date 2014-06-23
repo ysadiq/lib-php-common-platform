@@ -29,7 +29,6 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\Interfaces\StoreLike;
-use Kisma\Core\SeedUtility;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
@@ -38,7 +37,7 @@ use Kisma\Core\Utility\Option;
  * Platform
  * System constants and generic platform helpers
  */
-class Platform extends SeedUtility
+class Platform
 {
     //*************************************************************************
     //	Constants
@@ -48,6 +47,18 @@ class Platform extends SeedUtility
      * @var string The name of the storage container that stores applications
      */
     const APP_STORAGE_CONTAINER = 'applications';
+    /**
+     * @type int Default memcache data expire time (24 mins)...
+     */
+    const MEMCACHE_TTL = 1440;
+    /**
+     * @type string The memcache host
+     */
+    const MEMCACHE_HOST = 'localhost';
+    /**
+     * @type int The memcache port
+     */
+    const MEMCACHE_PORT = 11211;
 
     //*************************************************************************
     //	Members
@@ -57,6 +68,10 @@ class Platform extends SeedUtility
      * @var CacheProvider The persistent store to use for local storage
      */
     protected static $_persistentStore;
+    /**
+     * @var \Memcached A memcached persistent store
+     */
+    protected static $_memcache;
 
     //*************************************************************************
     //	Methods
@@ -270,8 +285,13 @@ class Platform extends SeedUtility
             hash(
                 'ripemd128',
                 uniqid( '', true ) . ( $_uuid ? : microtime( true ) ) . md5(
-                    $namespace . $_SERVER['REQUEST_TIME'] . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['LOCAL_ADDR'] . $_SERVER['LOCAL_PORT'] .
-                    $_SERVER['REMOTE_ADDR'] . $_SERVER['REMOTE_PORT']
+                    $namespace .
+                    $_SERVER['REQUEST_TIME'] .
+                    $_SERVER['HTTP_USER_AGENT'] .
+                    $_SERVER['LOCAL_ADDR'] .
+                    $_SERVER['LOCAL_PORT'] .
+                    $_SERVER['REMOTE_ADDR'] .
+                    $_SERVER['REMOTE_PORT']
                 )
             )
         );
@@ -354,7 +374,7 @@ class Platform extends SeedUtility
      * $key can be specified as an array of key-value pairs: array( 'alpha' => 'xyz', 'beta' => 'qrs', 'gamma' => 'lmo', ... )
      *
      * @param string|array $key  The cache id or array of key-value pairs
-     * @param mixed        $data     The cache entry/data.
+     * @param mixed        $data The cache entry/data.
      * @param int          $ttl  The cache lifetime. Sets a specific lifetime for this cache entry. Defaults to 0, or "never expire"
      *
      * @return boolean|boolean[] TRUE if the entry was successfully stored in the cache, FALSE otherwise.
@@ -408,7 +428,7 @@ class Platform extends SeedUtility
      */
     public static function trigger( $eventName, $event = null )
     {
-        return Pii::trigger( $eventName, $event );
+        return static::getDispatcher()->dispatch( $eventName, $event );
     }
 
     /**
@@ -423,7 +443,7 @@ class Platform extends SeedUtility
      */
     public static function on( $eventName, $listener, $priority = 0 )
     {
-        Pii::on( $eventName, $listener, $priority );
+        static::getDispatcher()->addListener( $eventName, $listener, $priority );
     }
 
     /**
@@ -436,7 +456,7 @@ class Platform extends SeedUtility
      */
     public static function off( $eventName, $listener )
     {
-        Pii::off( $eventName, $listener );
+        static::getDispatcher()->removeListener( $eventName, $listener );
     }
 
     /**
@@ -446,7 +466,80 @@ class Platform extends SeedUtility
     {
         static $_dispatcher;
 
+        //  This is the only place in the library where we call Pii to get the dispatcher.
+        //  In v2, the source of the dispatcher location will be different, most likely a service
+
         return $_dispatcher ? : $_dispatcher = Pii::app()->getDispatcher();
     }
 
+    /**
+     * @param string $key
+     * @param mixed  $defaultValue
+     * @param bool   $remove
+     *
+     * @return array|null|string
+     */
+    public static function mcGet( $key, $defaultValue = null, $remove = false )
+    {
+        if ( class_exists( '\\Memcached', false ) && false !== ( $_engine = static::_getMemcache() ) )
+        {
+            if ( false === ( $_value = $_engine->get( $key ) ) )
+            {
+                static::mcSet( $key, $defaultValue );
+
+                return $defaultValue;
+            }
+
+            if ( $remove )
+            {
+                $_engine->delete( $key );
+            }
+
+            return $_value;
+        }
+
+        //  Degrade to platform store
+        return static::storeGet( $key, $defaultValue, $remove );
+    }
+
+    /**
+     * @param string $key
+     * @param mixed  $value
+     * @param int    $flag
+     * @param int    $ttl
+     *
+     * @return bool
+     */
+    public static function mcSet( $key, $value, $flag = 0, $ttl = self::MEMCACHE_TTL )
+    {
+        if ( class_exists( '\\Memcached', false ) && false !== ( $_cache = static::_getMemcache() ) )
+        {
+            return $_cache->set( $key, $value, $ttl );
+        }
+
+        //  Degrade to platform store
+        return static::storeSet( $key, $value, $ttl );
+    }
+
+    /**
+     * @return \Memcached
+     */
+    protected static function _getMemcache()
+    {
+        if ( class_exists( '\\Memcached', false ) && null === static::$_memcache )
+        {
+            static::$_memcache = new \Memcached( __CLASS__ );
+
+            if ( !static::$_memcache->addServer( static::MEMCACHE_HOST, static::MEMCACHE_PORT ) )
+            {
+                Log::debug( 'Platform memcache not available.' );
+
+                return static::$_memcache = false;
+            }
+
+            Log::debug( 'Platform memcache enabled.' );
+        }
+
+        return static::$_memcache;
+    }
 }

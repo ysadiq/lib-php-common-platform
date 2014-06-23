@@ -21,12 +21,13 @@ namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
 use DreamFactory\Platform\Components\Profiler;
-use DreamFactory\Platform\Events\DspEvent;
+use DreamFactory\Platform\Enums\NamespaceTypes;
 use DreamFactory\Platform\Events\Enums\DspEvents;
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
+use DreamFactory\Platform\Scripting\ScriptEvent;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
@@ -99,18 +100,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @var string The default path (sub-path) of installed plug-ins
      */
     const DEFAULT_PLUGINS_PATH = '/storage/plugins';
-    /**
-     * @const int The services namespace map index
-     */
-    const NS_SERVICES = 0;
-    /**
-     * @const int The resources namespace map index
-     */
-    const NS_RESOURCES = 1;
-    /**
-     * @const int The models namespace map index
-     */
-    const NS_MODELS = 2;
 
     //*************************************************************************
     //	Members
@@ -127,7 +116,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @var array[] The namespaces in use by this system. Used by the routing engine
      */
-    protected static $_namespaceMap = array(self::NS_MODELS => array(), self::NS_SERVICES => array(), self::NS_RESOURCES => array());
+    protected static $_namespaceMap = array( NamespaceTypes::MODELS => array(), NamespaceTypes::SERVICES => array(), NamespaceTypes::RESOURCES => array() );
     /**
      * @var array An indexed array of white-listed hosts (ajax.example.com or foo.bar.com or just bar.com)
      */
@@ -153,6 +142,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @var Request
      */
     protected $_requestObject;
+    /**
+     * @var array Normalized array of inbound request body
+     */
+    protected $_requestBody;
     /**
      * @var  Response
      */
@@ -186,8 +179,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
 
         //	Setup the request handler and events
-        $this->onBeginRequest = array($this, '_onBeginRequest');
-        $this->onEndRequest = array($this, '_onEndRequest');
+        $this->onBeginRequest = array( $this, '_onBeginRequest' );
+        $this->onEndRequest = array( $this, '_onEndRequest' );
     }
 
     /**
@@ -317,6 +310,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
         $this->_requestObject = Request::createFromGlobals();
 
+        //  A pristine copy of the request
+        $this->_requestBody = ScriptEvent::buildRequestArray();
+
         //	Answer an options call...
         switch ( FilterInput::server( 'REQUEST_METHOD' ) )
         {
@@ -326,8 +322,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 header( 'content-type: text/plain' );
 
                 $this->addCorsHeaders();
-                Pii::end();
-                break;
+
+                return Pii::end();
 
             case HttpMethod::TRACE:
                 Log::error(
@@ -394,7 +390,16 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                     else
                     {
                         $_config = array_merge( $_config, $_data );
-                        Log::debug( 'Loaded local config from "' . $_file . '"' );
+
+                        $this->trigger(
+                            DspEvents::LOCAL_CONFIG_LOADED,
+                            new PlatformEvent(
+                                array(
+                                    'file' => $_file,
+                                    'data' => $_data
+                                )
+                            )
+                        );
                     }
                 }
                 catch ( FileSystemException $_ex )
@@ -968,7 +973,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function setResourceNamespaces( $resourceNamespaces )
     {
-        static::$_namespaceMap[ static::NS_RESOURCES ] = $resourceNamespaces;
+        static::$_namespaceMap[ NamespaceTypes::RESOURCES ] = $resourceNamespaces;
 
         return $this;
     }
@@ -978,7 +983,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function getResourceNamespaces()
     {
-        return static::$_namespaceMap[ static::NS_RESOURCES ];
+        return static::$_namespaceMap[ NamespaceTypes::RESOURCES ];
     }
 
     /**
@@ -990,7 +995,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function addResourceNamespace( $namespace, $path, $prepend = false )
     {
-        static::_mapNamespace( static::NS_RESOURCES, $namespace, $path, $prepend );
+        static::_mapNamespace( NamespaceTypes::RESOURCES, $namespace, $path, $prepend );
         array_unshift( $this->_modelNamespaces, $_entry );
 
         return $this;
@@ -1003,7 +1008,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function setModelNamespaces( $modelNamespaces )
     {
-        static::$_namespaceMap[ static::NS_MODELS ] = $modelNamespaces;
+        static::$_namespaceMap[ NamespaceTypes::MODELS ] = $modelNamespaces;
 
         return $this;
     }
@@ -1013,7 +1018,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function getModelNamespaces()
     {
-        return static::$_namespaceMap[ static::NS_MODELS ];
+        return static::$_namespaceMap[ NamespaceTypes::MODELS ];
     }
 
     /**
@@ -1025,7 +1030,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function addModelNamespace( $namespace, $path, $prepend = false )
     {
-        static::_mapNamespace( static::NS_MODELS, $namespace, $path, $prepend );
+        static::_mapNamespace( NamespaceTypes::MODELS, $namespace, $path, $prepend );
 
         return $this;
     }
@@ -1076,7 +1081,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         if ( $prepend )
         {
-            array_unshift( static::$_namespaceMap[ $which ], array($namespace, $path) );
+            array_unshift( static::$_namespaceMap[ $which ], array( $namespace, $path ) );
         }
         else
         {
@@ -1125,4 +1130,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         return $this;
     }
 
+    /**
+     * @return array
+     */
+    public function getRequestBody()
+    {
+        return $this->_requestBody;
+    }
 }

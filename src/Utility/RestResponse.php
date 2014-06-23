@@ -212,7 +212,7 @@ class RestResponse extends HttpResponse
         $_errorInfo['code'] = $_status;
 
         $_result = array(
-            'error' => array( $_errorInfo )
+            'error' => array($_errorInfo)
         );
 
         $_result = DataFormat::reformatData( $_result, null, $desired_format );
@@ -221,16 +221,16 @@ class RestResponse extends HttpResponse
     }
 
     /**
-     * @param mixed  $result
-     * @param int    $code
-     * @param string $format
-     * @param string $as_file
-     * @param bool   $exitAfterSend
+     * @param mixed      $result
+     * @param int        $code
+     * @param int|string $format
+     * @param string     $as_file
+     * @param bool       $exitAfterSend
      *
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return bool|\Symfony\Component\HttpFoundation\JsonResponse|\Symfony\Component\HttpFoundation\Response
      */
-    public static function sendResults( $result, $code = RestResponse::Ok, $format = 'json', $as_file = null, $exitAfterSend = true )
+    public static function sendResults( $result, $code = RestResponse::Ok, $format = DataFormats::JSON, $as_file = null, $exitAfterSend = true )
     {
         if ( Pii::app()->getUseResponseObject() )
         {
@@ -238,11 +238,11 @@ class RestResponse extends HttpResponse
         }
 
         //	Some REST services may handle the response, they just return null
-        if ( is_null( $result ) )
+        if ( is_null( $result ) && headers_sent() )
         {
             Pii::end();
 
-            return;
+            return null;
         }
 
         switch ( $format )
@@ -255,7 +255,7 @@ class RestResponse extends HttpResponse
                 {
                     $result = DataFormat::arrayToJson( $result );
                 }
-             
+
                 // JSON if no callback
                 if ( isset( $_GET['callback'] ) )
                 {
@@ -273,9 +273,10 @@ class RestResponse extends HttpResponse
             case OutputFormats::XML:
             case 'xml':
                 $_contentType = 'application/xml';
-                $result = '<?xml version="1.0" ?>' . "<dfapi>$result</dfapi>";
+                $result = '<?xml version="1.0" ?>' . "<dfapi>\n$result</dfapi>";
                 break;
 
+            case OutputFormats::CSV:
             case 'csv':
                 $_contentType = 'text/csv';
                 break;
@@ -309,7 +310,7 @@ class RestResponse extends HttpResponse
         }
 
         // send it out
-        echo $result;
+        echo is_scalar( $result ) ? $result : print_r( $result, true );
 
         // flush output and destroy buffer
         ob_end_flush();
@@ -323,15 +324,15 @@ class RestResponse extends HttpResponse
     }
 
     /**
-     * @param mixed  $result
-     * @param int    $code
-     * @param string $format
-     * @param string $as_file
-     * @param bool   $exitAfterSend
+     * @param mixed      $result
+     * @param int        $code
+     * @param int|string $format
+     * @param string     $as_file
+     * @param bool       $exitAfterSend
      *
      * @return bool|JsonResponse|Response
      */
-    protected static function _sendResponseObjectResults( $result, $code = RestResponse::Ok, $format = 'json', $as_file = null, $exitAfterSend = true )
+    protected static function _sendResponseObjectResults( $result, $code = RestResponse::Ok, $format = DataFormats::JSON, $as_file = null, $exitAfterSend = true )
     {
         //  Get the sent headers
         $_sentHeaders = headers_list();
@@ -387,14 +388,17 @@ class RestResponse extends HttpResponse
                 break;
 
             case OutputFormats::CSV:
+            case 'csv':
                 $_contentType = 'text/csv; application/csv;';
                 break;
 
             case OutputFormats::TSV:
+            case 'tsv':
                 $_contentType = 'text/tsv; application/tsv;';
                 break;
 
             case OutputFormats::PSV:
+            case 'psv':
                 $_contentType = 'text/psv; application/psv;';
                 break;
 
@@ -502,6 +506,8 @@ class RestResponse extends HttpResponse
             'false'
         );
 
-        return preg_match( $identifier_syntax, $subject ) && !in_array( mb_strtolower( $subject, 'UTF-8' ), $reserved_words );
+        return
+            preg_match( $identifier_syntax, $subject ) &&
+            !in_array( mb_strtolower( $subject, 'UTF-8' ), $reserved_words );
     }
 }

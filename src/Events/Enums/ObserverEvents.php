@@ -19,19 +19,27 @@
  */
 namespace DreamFactory\Platform\Events\Enums;
 
-use Kisma\Core\Events\Enums\LifeEvents;
-
 /**
- * The base events raised by API controllers
+ * Events triggered by an event observer
+ *
+ * @see DreamFactory\Platform\Events\Interfaces\EventObserverLike
  */
-class ApiEvents extends LifeEvents
+class ObserverEvents
 {
-	/**
-	 * @var string Triggered immediately before a request is dispatched to a handler
-	 */
-	const BEFORE_REQUEST = '{api_name}.{action}.before_request';
-	/**
-	 * @var string Triggered immediately after the dispatched request handler returns
-	 */
-	const AFTER_REQUEST = '{api_name}.{action}.after_request';
+    //*************************************************************************
+    //	Constants
+    //*************************************************************************
+
+    /**
+     * @var string An observer has been enabled
+     */
+    const ENABLED = 'observer.enabled';
+    /**
+     * @var string An observer has been disabled
+     */
+    const DISABLED = 'observer.disabled';
+    /**
+     * @var string An observer is ready for prime time
+     */
+    const READY = 'observer.ready';
 }

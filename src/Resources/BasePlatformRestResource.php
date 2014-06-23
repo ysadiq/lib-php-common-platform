@@ -66,6 +66,10 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
      * @var string The class to pass to from __callStatic()
      */
     protected static $_passthruClass = self::DEFAULT_PASSTHRU_CLASS;
+    /**
+     * @var BasePlatformRestService
+     */
+    protected $_service = null;
 
     //*************************************************************************
     //* Methods
@@ -83,6 +87,7 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
     {
         $this->_consumer = $consumer;
         $this->_serviceName = $this->_serviceName ? : Option::get( $settings, 'service_name', null, true );
+        $this->_service = Option::get( $settings, 'service', $consumer );
 
         if ( empty( $this->_serviceName ) )
         {
@@ -109,6 +114,7 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
         //	Require app name for security check
         $this->_detectAppName();
         $this->_detectResourceMembers( $resource );
+        $this->_detectRequestMembers();
         $this->_detectResponseMembers( $output_format );
 
         $this->_preProcess();
@@ -159,7 +165,7 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
     public static function __callStatic( $name, $arguments )
     {
         //	Passthru to store
-        return call_user_func_array( array(static::$_passthruClass, $name), $arguments );
+        return call_user_func_array( array( static::$_passthruClass, $name ), $arguments );
     }
 
     /**
@@ -237,4 +243,61 @@ abstract class BasePlatformRestResource extends BasePlatformRestService implemen
     {
         return $this->_responseFormat;
     }
+
+    /**
+     * Override to set the response code in the calling service
+     *
+     * @param int $responseCode
+     *
+     * @return $this
+     */
+    public function setResponseCode( $responseCode )
+    {
+        if ( !empty( $this->_service ) )
+        {
+            $this->_service->setResponseCode( $responseCode );
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param BasePlatformRestService $service
+     *
+     * @return BasePlatformRestResource
+     */
+    public function setService( $service )
+    {
+        $this->_service = $service;
+
+        return $this;
+    }
+
+    /**
+     * @return BasePlatformRestService The service that created this resource
+     */
+    public function getService()
+    {
+        return $this->_service;
+    }
+
+    /**
+     * @return bool We are a resource
+     */
+    public function isResource()
+    {
+        return true;
+    }
+
+    /**
+     * @param bool $isResource
+     *
+     * @return \DreamFactory\Platform\Services\BasePlatformService
+     */
+    public function setIsResource( $isResource )
+    {
+        //  We are a resource, so it's true no matter what anyone says
+        return parent::setIsResource( $isResource = true );
+    }
+
 }

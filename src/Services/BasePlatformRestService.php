@@ -24,9 +24,9 @@ use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\ResponseFormats;
-use DreamFactory\Platform\Events\Enums\ResourceServiceEvents;
+use DreamFactory\Platform\Events\Enums\PlatformServiceEvents;
 use DreamFactory\Platform\Events\PlatformEvent;
-use DreamFactory\Platform\Events\RestServiceEvent;
+use DreamFactory\Platform\Events\PlatformServiceEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\MisconfigurationException;
 use DreamFactory\Platform\Exceptions\NoExtraActionsException;
@@ -37,12 +37,14 @@ use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Resources\System\Event;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
+use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Yii\Models\BasePlatformSystemModel;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Scalar;
 
 /**
  * BasePlatformRestService
@@ -137,7 +139,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected $_responseFormat = ResponseFormats::RAW;
     /**
-     * @var string Default output format, either null (native), 'json' or 'xml'.
+     * @var int|null Default output format, either null (native), or DataFormats enum value.
      * NOTE: Output format is different from RESPONSE format (inner payload format vs. envelope)
      */
     protected $_outputFormat = DataFormats::JSON;
@@ -181,6 +183,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         //  Get and validate all the request parameters
         $this->_detectAppName();
         $this->_detectResourceMembers( $resource );
+        $this->_detectRequestMembers();
         $this->_detectResponseMembers( $output_format );
 
         //  Perform any pre-request processing
@@ -192,7 +195,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $_message =
                 $this->_action .
                 ' requests' .
-                ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
+                ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"'
+                    : ' without a resource' ) .
                 ' are not currently supported by the "' .
                 $this->_apiName .
                 '" service.';
@@ -242,13 +246,17 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             }
 
             //	Does this action have a handler?
-            if ( false !== ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) ) )
+            if ( false !==
+                 ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) )
+            )
             {
                 $_handler = $this->_extraActions[ $_action ];
 
                 if ( !is_callable( $_handler ) )
                 {
-                    throw new MisconfigurationException( 'The handler specified for extra action "' . $_action . '" is invalid.' );
+                    throw new MisconfigurationException(
+                        'The handler specified for extra action "' . $_action . '" is invalid.'
+                    );
                 }
 
                 //	Added $this as argument because handler *could* be outside this class
@@ -287,18 +295,15 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
         $_methodToCall = false;
 
-        //	Check verb aliases, set correct action allowing for closures
-        if ( true === $this->_autoDispatch && null !== ( $_alias = Option::get( $this->_verbAliases, $this->_action ) ) )
+        //	Check verb aliases as closures
+        if ( true === $this->_autoDispatch && null !== ( $_alias = Option::get( $this->_verbAliases, $this->_action ) )
+        )
         {
             //	A closure?
             if ( is_callable( $_alias ) )
             {
                 $_methodToCall = $_alias;
             }
-
-            //	Swap 'em and dispatch
-            $this->_originalAction = $this->_action;
-            $this->_action = $_alias;
         }
 
         //  Not an alias, build a dispatch method if needed
@@ -320,7 +325,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             //  Only GETs trigger after the call
             if ( HttpMethod::GET == $this->_action )
             {
-                $this->_triggerActionEvent( $_result );
+                $this->_triggerActionEvent( $_result, null, null, true );
             }
 
             return $_result;
@@ -354,6 +359,19 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     }
 
     /**
+     * Apply the commonly used REST request members to the class
+     *
+     * @return $this
+     */
+    protected function _detectRequestMembers()
+    {
+        // by default, just pull payload off the wire
+        $this->_requestPayload = RestData::getPostedData();
+
+        return $this;
+    }
+
+    /**
      * Source of the PRE_PROCESS event
      *
      * @return mixed
@@ -362,7 +380,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     {
         if ( $this instanceof BasePlatformRestResource || $this instanceof ServiceOnlyResourceLike )
         {
-            $this->_triggerActionEvent( $this->_requestPayload, ResourceServiceEvents::PRE_PROCESS );
+            $this->_triggerActionEvent( $this->_response, PlatformServiceEvents::PRE_PROCESS );
         }
     }
 
@@ -376,7 +394,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     {
         if ( $this instanceof BasePlatformRestResource || $this instanceof ServiceOnlyResourceLike )
         {
-            $this->_triggerActionEvent( $this->_response, ResourceServiceEvents::POST_PROCESS );
+            $this->_triggerActionEvent( $this->_response, PlatformServiceEvents::POST_PROCESS, null, true );
         }
     }
 
@@ -394,7 +412,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         }
 
         //	Native and PHP response types return, not emit...
-        if ( in_array( $this->_outputFormat, array( false, DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE ) ) )
+        if ( in_array(
+            $this->_outputFormat,
+            array( false, null, '', DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE ),
+            true
+        ) )
         {
             return $this->_response;
         }
@@ -403,14 +425,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
         if ( false !== $this->_outputFormat && empty( $this->_outputFormat ) )
         {
+            // safety belt, should not hit here
             $this->_outputFormat = DataFormats::JSON;
-        }
-
-        if ( null === $this->_nativeFormat && DataFormat::CSV == $this->_outputFormat )
-        {
-            // need to strip 'record' wrapper before reformatting to csv
-            //@todo move this logic elsewhere
-            $_result = Option::get( $_result, 'record', $_result );
         }
 
         //	Neutralize the output format
@@ -419,24 +435,29 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $this->_outputFormat = DataFormats::toNumeric( $this->_outputFormat );
         }
 
+        if ( null === $this->_nativeFormat && DataFormats::CSV == $this->_outputFormat )
+        {
+            // need to strip 'record' wrapper before reformatting to csv
+            //@todo move this logic elsewhere
+            $_result = Option::get( $_result, 'record', $_result );
+        }
+
         //	json response formatted by specialized response class (JsonResponse)
         if ( DataFormats::JSON !== $this->_outputFormat )
         {
             $_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
         }
 
-        /**
-         * @todo This needs to move to the resource class but
-         */
-        if ( $this instanceof BasePlatformRestResource )
-        {
-            $this->trigger( ResourceServiceEvents::AFTER_DATA_FORMAT, $_result );
-        }
-
         if ( !empty( $this->_outputFormat ) )
         {
             //	No return from here...
-            $_response = RestResponse::sendResults( $_result, $this->_responseCode, $this->_outputFormat, $this->_outputAsFile, false );
+            $_response = RestResponse::sendResults(
+                $_result,
+                $this->_responseCode,
+                $this->_outputFormat,
+                $this->_outputAsFile,
+                false
+            );
         }
 
         //	Native arrays must stay local, just return
@@ -502,10 +523,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
         if ( !empty( $_file ) )
         {
-            if ( DataFormat::boolval( $_file ) )
+            if ( Scalar::boolval( $_file ) )
             {
-                $_file = $this->getApiName();
-                $_file .= '.' . $this->_outputFormat;
+                $_file = (empty($this->_resource)) ?  $this->getApiName() : $this->_resource;
+                $_file .= '.' . DataFormats::toString($this->_outputFormat);
             }
 
             $this->_outputAsFile = $_file;
@@ -627,7 +648,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     {
         if ( is_array( $event ) )
         {
-            $event = new RestServiceEvent( $this->_apiName, $this->_resource, $event );
+            $event = new PlatformServiceEvent( $this->_apiName, $this->_resource, $event );
         }
 
         return Platform::trigger(
@@ -636,7 +657,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
                 array( $this->_apiName == 'system' ? $this->_resource : $this->_apiName, strtolower( $this->_action ) ),
                 $eventName
             ),
-            $event ? : new RestServiceEvent( $this->_apiName, $this->_resource, $this->_response ),
+            $event ?: new PlatformServiceEvent( $this->_apiName, $this->_resource, $this->_response ),
             $priority
         );
     }
@@ -652,23 +673,34 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      *
      * These events will only trigger a single time per request.
      *
-     * @param mixed            $result    The result of the call
-     * @param string           $eventName The event to trigger. If not supplied, one will looked up based on the context
-     * @param RestServiceEvent $event
+     * @param mixed                $result        The result of the call
+     * @param string               $eventName     The event to trigger. If not supplied, one will looked up based on the context
+     * @param PlatformServiceEvent $event
+     * @param bool                 $isPostProcess Will be true if this is a "post-process" type event
      *
+     * @throws \Exception
      * @return bool
      */
-    protected function _triggerActionEvent( &$result, $eventName = null, $event = null )
+    protected function _triggerActionEvent( &$result, $eventName = null, $event = null, $isPostProcess = false )
     {
         static $_triggeredEvents = array();
 
         //  Lookup the appropriate event if not specified.
-        $_eventNames = $eventName ? : SwaggerManager::findEvent( $this, $this->_action );
+        $_eventNames = $eventName ?: SwaggerManager::findEvent( $this, $this->_action );
         $_eventNames = is_array( $_eventNames ) ? $_eventNames : array( $_eventNames );
 
         $_result = array();
+        $_pathInfo = trim(
+            str_replace(
+                '/rest',
+                null,
+                Option::server( 'INLINE_REQUEST_URI', Pii::request( false )->getPathInfo() )
+            ),
+            '/'
+        );
 
         $_values = array(
+            'action'          => strtolower( $this->_action ),
             'api_name'        => $this->_apiName,
             'service_id'      => $this->_serviceId,
             'request_payload' => $this->_requestPayload,
@@ -676,7 +708,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             'container'       => $this->_resource,
             'folder_path'     => Option::get( $this->_resourceArray, 1 ),
             'file_path'       => Option::get( $this->_resourceArray, 2 ),
-            'request_uri'     => explode( '/', Pii::request( true )->getPathInfo() ),
+            'request_uri'     => explode( '/', $_pathInfo ),
         );
 
         if ( 'rest' !== ( $_part = array_shift( $_values['request_uri'] ) ) )
@@ -692,9 +724,11 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
                 continue;
             }
 
-            //  Construct an event if necessary
             $_service = $this->_apiName;
-            $_event = $event ? : new RestServiceEvent( $_service, $this->_resource, $result );
+            $_event = $event ?: new PlatformServiceEvent( $_service, $this->_resource, $result );
+            $_event->setPostProcessScript( $isPostProcess );
+            $_event->setRequestData( $this->_requestPayload );
+            $_event->setResponseData( $result );
 
             //  Normalize the event name
             $_eventName = Event::normalizeEventName( $_event, $_eventName, $_values );
@@ -711,11 +745,32 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             //  Merge back the results
             if ( $_event instanceOf PlatformEvent )
             {
-                $_eventData = $_event->getData();
+                $result = $_eventData = $_event->getResponseData();
 
-                if ( $result !== $_eventData )
+                //  Stick it back into the request for processing...
+                if ( !$isPostProcess )
                 {
-                    $result = $_event->getData();
+                    $this->_requestPayload = $_event->getRequestData();
+
+                    $_request = Pii::requestObject();
+
+                    //  Reinitialize with new content...
+                    $_request->initialize(
+                        $_request->query->all(),
+                        $_request->request->all(),
+                        $_request->attributes->all(),
+                        $_request->cookies->all(),
+                        $_request->files->all(),
+                        $_request->server->all(),
+                        is_string( $this->_requestPayload )
+                            ? $this->_requestPayload
+                            : json_encode(
+                            $this->_requestPayload,
+                            JSON_UNESCAPED_SLASHES
+                        )
+                    );
+
+                    Pii::app()->setRequestObject( $_request );
                 }
 
                 unset( $_eventData );
@@ -786,6 +841,18 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     protected function _setAction( $action = self::GET )
     {
         $this->_action = trim( strtoupper( $action ) );
+
+        //	Check verb aliases, set correct action allowing for closures
+        if ( null !== ( $_alias = Option::get( $this->_verbAliases, $this->_action ) ) )
+        {
+            //	A closure?
+            if ( !is_callable( $_alias ) )
+            {
+                //	Set original and work with alias
+                $this->_originalAction = $this->_action;
+                $this->_action = $_alias;
+            }
+        }
 
         return $this;
     }
@@ -939,7 +1006,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     public function getRequestedAction()
     {
-        return $this->_originalAction ? : $this->_action;
+        return $this->_originalAction ?: $this->_action;
     }
 
     /**

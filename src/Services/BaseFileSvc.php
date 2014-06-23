@@ -59,6 +59,23 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
     //*************************************************************************
 
     /**
+     * @param array $settings
+     */
+    public function __construct( $settings = array() )
+    {
+        if ( null === Option::get( $settings, 'verb_aliases' ) )
+        {
+            //	Default verb aliases
+            $settings['verb_aliases'] = array(
+                static::PUT   => static::POST,
+                static::MERGE => static::PATCH,
+            );
+        }
+
+        parent::__construct( $settings );
+    }
+
+    /**
      * Setup container and paths
      */
     protected function _detectResourceMembers( $resourcePath = null )
@@ -87,6 +104,8 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                 }
             }
         }
+
+        return $this;
     }
 
     /**
@@ -116,389 +135,417 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
      * @return array
      * @throws \Exception
      */
-    protected function _handleResource()
+    protected function _handleGet()
     {
-        switch ( $this->_action )
+        if ( empty( $this->_container ) )
         {
-            case static::GET:
-                if ( empty( $this->_container ) )
-                {
-                    // no resource
-                    $includeProperties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
-                    if ( !$includeProperties )
-                    {
-                        return $this->_listResources();
-                    }
-                    $result = $this->listContainers( true );
-                    $result = array('container' => $result);
-                }
-                else if ( empty( $this->_folderPath ) )
-                {
-                    // resource is a container
-                    $includeProperties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
-                    $includeFiles = FilterInput::request( 'include_files', true, FILTER_VALIDATE_BOOLEAN );
-                    $includeFolders = FilterInput::request( 'include_folders', true, FILTER_VALIDATE_BOOLEAN );
-                    $fullTree = FilterInput::request( 'full_tree', false, FILTER_VALIDATE_BOOLEAN );
-                    $asZip = FilterInput::request( 'zip', false, FILTER_VALIDATE_BOOLEAN );
+            // no resource
+            $includeProperties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
+            if ( !$includeProperties )
+            {
+                return $this->_listResources();
+            }
+            $result = $this->listContainers( true );
+            $result = array('container' => $result);
+        }
+        else if ( empty( $this->_folderPath ) )
+        {
+            // resource is a container
+            $includeProperties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
+            $includeFiles = FilterInput::request( 'include_files', true, FILTER_VALIDATE_BOOLEAN );
+            $includeFolders = FilterInput::request( 'include_folders', true, FILTER_VALIDATE_BOOLEAN );
+            $fullTree = FilterInput::request( 'full_tree', false, FILTER_VALIDATE_BOOLEAN );
+            $asZip = FilterInput::request( 'zip', false, FILTER_VALIDATE_BOOLEAN );
 
-                    if ( !empty( $asZip ) )
-                    {
-                        $zipFileName = $this->getFolderAsZip( $this->_container, '' );
-                        $fd = fopen( $zipFileName, "r" );
-                        if ( $fd )
-                        {
-                            header( 'Content-Type: application/zip' );
-                            header( 'Content-Disposition: filename=" ' . basename( $zipFileName ) . '"' );
-                            header( 'Content-Length: ' . filesize( $zipFileName ) );
-                            header( 'Cache-Control: private' ); //use this to open files directly
-                            while ( !feof( $fd ) )
-                            {
-                                $buffer = fread( $fd, 2048 );
-                                echo $buffer;
-                            }
-                        }
-                        fclose( $fd );
-                        unlink( $zipFileName );
-                        // output handled by file handler, short the response here
-                        $this->setOutputFormat( null );
-                        $result = null;
-                    }
-                    else
-                    {
-                        $result = $this->getContainer( $this->_container, $includeFiles, $includeFolders, $fullTree, $includeProperties );
-                    }
-                }
-                else if ( empty( $this->_filePath ) )
+            if ( !empty( $asZip ) )
+            {
+                $zipFileName = $this->getFolderAsZip( $this->_container, '' );
+                $fd = fopen( $zipFileName, "r" );
+                if ( $fd )
                 {
-                    // resource is a folder
-                    $includeProperties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
-                    $includeFiles = FilterInput::request( 'include_files', true, FILTER_VALIDATE_BOOLEAN );
-                    $includeFolders = FilterInput::request( 'include_folders', true, FILTER_VALIDATE_BOOLEAN );
-                    $fullTree = FilterInput::request( 'full_tree', false, FILTER_VALIDATE_BOOLEAN );
-                    $asZip = FilterInput::request( 'zip', false, FILTER_VALIDATE_BOOLEAN );
-                    if ( $asZip )
+                    header( 'Content-Type: application/zip' );
+                    header( 'Content-Disposition: filename=" ' . basename( $zipFileName ) . '"' );
+                    header( 'Content-Length: ' . filesize( $zipFileName ) );
+                    header( 'Cache-Control: private' ); //use this to open files directly
+                    while ( !feof( $fd ) )
                     {
-                        $zipFileName = $this->getFolderAsZip( $this->_container, $this->_folderPath );
-                        $fd = fopen( $zipFileName, "r" );
-                        if ( $fd )
-                        {
-                            header( 'Content-Type: application/zip' );
-                            header( 'Content-Disposition: filename=" ' . basename( $zipFileName ) . '"' );
-                            header( 'Content-Length: ' . filesize( $zipFileName ) );
-                            header( 'Cache-Control: private' ); //use this to open files directly
-                            while ( !feof( $fd ) )
-                            {
-                                $buffer = fread( $fd, 2048 );
-                                echo $buffer;
-                            }
-                        }
-                        fclose( $fd );
-                        unlink( $zipFileName );
-                        // output handled by file handler, short the response here
-                        $this->setOutputFormat( null );
-                        $result = null;
-                    }
-                    else
-                    {
-                        $result = $this->getFolder( $this->_container, $this->_folderPath, $includeFiles, $includeFolders, $fullTree, $includeProperties );
+                        $buffer = fread( $fd, 2048 );
+                        echo $buffer;
                     }
                 }
-                else
+                fclose( $fd );
+                unlink( $zipFileName );
+                // output handled by file handler, short the response here
+                $this->setOutputFormat( null );
+                $result = null;
+            }
+            else
+            {
+                $result = $this->getContainer(
+                    $this->_container,
+                    $includeFiles,
+                    $includeFolders,
+                    $fullTree,
+                    $includeProperties
+                );
+            }
+        }
+        else if ( empty( $this->_filePath ) )
+        {
+            // resource is a folder
+            $includeProperties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
+            $includeFiles = FilterInput::request( 'include_files', true, FILTER_VALIDATE_BOOLEAN );
+            $includeFolders = FilterInput::request( 'include_folders', true, FILTER_VALIDATE_BOOLEAN );
+            $fullTree = FilterInput::request( 'full_tree', false, FILTER_VALIDATE_BOOLEAN );
+            $asZip = FilterInput::request( 'zip', false, FILTER_VALIDATE_BOOLEAN );
+            if ( $asZip )
+            {
+                $zipFileName = $this->getFolderAsZip( $this->_container, $this->_folderPath );
+                $fd = fopen( $zipFileName, "r" );
+                if ( $fd )
                 {
-                    // resource is a file
-                    $includeProperties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
-                    if ( $includeProperties )
+                    header( 'Content-Type: application/zip' );
+                    header( 'Content-Disposition: filename=" ' . basename( $zipFileName ) . '"' );
+                    header( 'Content-Length: ' . filesize( $zipFileName ) );
+                    header( 'Cache-Control: private' ); //use this to open files directly
+                    while ( !feof( $fd ) )
                     {
-                        // just properties of the file itself
-                        $content = FilterInput::request( 'content', false, FILTER_VALIDATE_BOOLEAN );
-                        $result = $this->getFileProperties( $this->_container, $this->_filePath, $content );
-                    }
-                    else
-                    {
-                        $download = FilterInput::request( 'download', false, FILTER_VALIDATE_BOOLEAN );
-                        // stream the file, exits processing
-                        $this->streamFile( $this->_container, $this->_filePath, $download );
-                        // output handled by file handler, short the response here
-                        $this->setOutputFormat( null );
-                        $result = null;
+                        $buffer = fread( $fd, 2048 );
+                        echo $buffer;
                     }
                 }
+                fclose( $fd );
+                unlink( $zipFileName );
+                // output handled by file handler, short the response here
+                $this->setOutputFormat( null );
+                $result = null;
+            }
+            else
+            {
+                $result = $this->getFolder(
+                    $this->_container,
+                    $this->_folderPath,
+                    $includeFiles,
+                    $includeFolders,
+                    $fullTree,
+                    $includeProperties
+                );
+            }
+        }
+        else
+        {
+            // resource is a file
+            $includeProperties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
+            if ( $includeProperties )
+            {
+                // just properties of the file itself
+                $content = FilterInput::request( 'content', false, FILTER_VALIDATE_BOOLEAN );
+                $result = $this->getFileProperties( $this->_container, $this->_filePath, $content );
+            }
+            else
+            {
+                $download = FilterInput::request( 'download', false, FILTER_VALIDATE_BOOLEAN );
+                // stream the file, exits processing
+                $this->streamFile( $this->_container, $this->_filePath, $download );
+                // output handled by file handler, short the response here
+                $this->setOutputFormat( null );
+                $result = null;
+            }
+        }
 
-                //  How about an event?
-                $this->_triggerActionEvent( $result );
-                break;
+        return $result;
+    }
 
-            case static::POST:
-            case static::PUT:
-                if ( empty( $this->_container ) )
-                {
-                    // create one or more containers
-                    $checkExist = FilterInput::request( 'check_exist', false, FILTER_VALIDATE_BOOLEAN );
-                    $data = RestData::getPostedData( false, true );
-                    $containers = Option::get( $data, 'container' );
-                    if ( empty( $containers ) )
-                    {
-                        $containers = Option::getDeep( $data, 'containers', 'container' );
-                    }
-                    if ( !empty( $containers ) )
-                    {
-                        $result = $this->createContainers( $containers, $checkExist );
-                        $result = array('container' => $result);
-                    }
-                    else
-                    {
-                        $result = $this->createContainer( $data, $checkExist );
-                    }
-                }
-                else if ( empty( $this->_folderPath ) || empty( $this->_filePath ) )
-                {
-                    // create folders and files
-                    // possible file handling parameters
-                    $extract = FilterInput::request( 'extract', false, FILTER_VALIDATE_BOOLEAN );
-                    $clean = FilterInput::request( 'clean', false, FILTER_VALIDATE_BOOLEAN );
-                    $checkExist = FilterInput::request( 'check_exist', false, FILTER_VALIDATE_BOOLEAN );
-                    $fileNameHeader = FilterInput::server( 'HTTP_X_FILE_NAME' );
-                    $folderNameHeader = FilterInput::server( 'HTTP_X_FOLDER_NAME' );
-                    $fileUrl = FilterInput::request( 'url', '', FILTER_SANITIZE_URL );
-                    if ( !empty( $fileNameHeader ) )
-                    {
-                        // html5 single posting for file create
-                        $content = RestData::getPostedData();
-                        $contentType = FilterInput::server( 'CONTENT_TYPE', '' );
-                        $result = $this->_handleFileContent(
-                            $this->_folderPath,
-                            $fileNameHeader,
-                            $content,
-                            $contentType,
-                            $extract,
-                            $clean,
-                            $checkExist
-                        );
-                    }
-                    elseif ( !empty( $folderNameHeader ) )
-                    {
-                        // html5 single posting for folder create
-                        $fullPathName = $this->_folderPath . $folderNameHeader;
-                        $content = RestData::getPostedData( false, true );
-                        $this->createFolder( $this->_container, $fullPathName, $content );
-                        $result = array('folder' => array(array('name' => $folderNameHeader, 'path' => $this->_container . '/' . $fullPathName)));
-                    }
-                    elseif ( !empty( $fileUrl ) )
-                    {
-                        // upload a file from a url, could be expandable zip
-                        $tmpName = null;
-                        try
-                        {
-                            $tmpName = FileUtilities::importUrlFileToTemp( $fileUrl );
-                            $result = $this->_handleFile(
-                                $this->_folderPath,
-                                '',
-                                $tmpName,
-                                '',
-                                $extract,
-                                $clean,
-                                $checkExist
-                            );
-                            unlink( $tmpName );
-                        }
-                        catch ( \Exception $ex )
-                        {
-                            if ( !empty( $tmpName ) )
-                            {
-                                unlink( $tmpName );
-                            }
-                            throw $ex;
-                        }
-                    }
-                    elseif ( isset( $_FILES['files'] ) && !empty( $_FILES['files'] ) )
-                    {
-                        // older html multi-part/form-data post, single or multiple files
-                        $files = FileUtilities::rearrangePostedFiles( $_FILES['files'] );
-                        $result = $this->_handleFolderContentFromFiles( $files, $extract, $clean, $checkExist );
-                    }
-                    else
-                    {
-                        // possibly xml or json post either of files or folders to create, copy or move
-                        $data = RestData::getPostedData( false, true );
-                        if ( empty( $data ) )
-                        {
-                            // create folder from resource path
-                            $this->createFolder( $this->_container, $this->_folderPath );
-                            $result = array('folder' => array(array('path' => $this->_container . '/' . $this->_folderPath)));
-                        }
-                        else
-                        {
-                            $result = $this->_handleFolderContentFromData( $data, $extract, $clean, $checkExist );
-                        }
-                    }
-                }
-                else
-                {
-                    // create the file
-                    // possible file handling parameters
-                    $extract = FilterInput::request( 'extract', false, FILTER_VALIDATE_BOOLEAN );
-                    $clean = FilterInput::request( 'clean', false, FILTER_VALIDATE_BOOLEAN );
-                    $checkExist = FilterInput::request( 'check_exist', false, FILTER_VALIDATE_BOOLEAN );
-                    $name = basename( $this->_filePath );
-                    $path = dirname( $this->_filePath );
-                    $files = Option::get( $_FILES, 'files' );
-                    if ( empty( $files ) )
-                    {
-                        $contentType = Option::get( $_SERVER, 'CONTENT_TYPE', '' );
-                        // direct load from posted data as content
-                        // or possibly xml or json post of file properties create, copy or move
-                        $content = RestData::getPostedData();
-                        $result = $this->_handleFileContent(
-                            $path,
-                            $name,
-                            $content,
-                            $contentType,
-                            $extract,
-                            $clean,
-                            $checkExist
-                        );
-                    }
-                    else
-                    {
-                        // older html multipart/form-data post, should be single file
-                        $files = FileUtilities::rearrangePostedFiles( $_FILES['files'] );
-                        if ( 1 < count( $files ) )
-                        {
-                            throw new BadRequestException( "Multiple files uploaded to a single REST resource '$name'." );
-                        }
-                        $file = Option::get( $files, 0 );
-                        if ( empty( $file ) )
-                        {
-                            throw new BadRequestException( "No file uploaded to REST resource '$name'." );
-                        }
-                        $error = $file['error'];
-                        if ( UPLOAD_ERR_OK == $error )
-                        {
-                            $tmpName = $file["tmp_name"];
-                            $contentType = $file['type'];
-                            $result = $this->_handleFile(
-                                $path,
-                                $name,
-                                $tmpName,
-                                $contentType,
-                                $extract,
-                                $clean,
-                                $checkExist
-                            );
-                        }
-                        else
-                        {
-                            throw new InternalServerErrorException( "Failed to upload file $name.\n$error" );
-                        }
-                    }
-                }
-                break;
-
-            case static::PATCH:
-            case static::MERGE:
-                if ( empty( $this->_container ) )
-                {
-                    // nothing?
-                    $result = array();
-                }
-                else if ( empty( $this->_folderPath ) )
-                {
-                    // update container properties
-                    $content = RestData::getPostedData( false, true );
-                    $this->updateContainerProperties( $this->_container, $content );
-                    $result = array('container' => array('name' => $this->_container));
-                }
-                else if ( empty( $this->_filePath ) )
-                {
-                    // update folder properties
-                    $content = RestData::getPostedData( false, true );
-                    $this->updateFolderProperties( $this->_container, $this->_folderPath, $content );
-                    $result = array(
-                        'folder' => array(
-                            'name' => basename( $this->_folderPath ),
-                            'path' => $this->_container . '/' . $this->_folderPath
-                        )
-                    );
-                }
-                else
-                {
-                    // update file properties?
-                    $content = RestData::getPostedData( false, true );
-                    $this->updateFileProperties( $this->_container, $this->_filePath, $content );
-                    $result = array(
-                        'file' => array(
-                            'name' => basename( $this->_filePath ),
-                            'path' => $this->_container . '/' . $this->_filePath
-                        )
-                    );
-                }
-                break;
-
-            case static::DELETE:
-                $force = FilterInput::request( 'force', false, FILTER_VALIDATE_BOOLEAN );
+    /**
+     * @return array
+     * @throws \Exception
+     */
+    protected function _handlePost()
+    {
+        if ( empty( $this->_container ) )
+        {
+            // create one or more containers
+            $checkExist = FilterInput::request( 'check_exist', false, FILTER_VALIDATE_BOOLEAN );
+            $data = RestData::getPostedData( false, true );
+            $containers = Option::get( $data, 'container' );
+            if ( empty( $containers ) )
+            {
+                $containers = Option::getDeep( $data, 'containers', 'container' );
+            }
+            if ( !empty( $containers ) )
+            {
+                $result = $this->createContainers( $containers, $checkExist );
+                $result = array('container' => $result);
+            }
+            else
+            {
+                $result = $this->createContainer( $data, $checkExist );
+            }
+        }
+        else if ( empty( $this->_folderPath ) || empty( $this->_filePath ) )
+        {
+            // create folders and files
+            // possible file handling parameters
+            $extract = FilterInput::request( 'extract', false, FILTER_VALIDATE_BOOLEAN );
+            $clean = FilterInput::request( 'clean', false, FILTER_VALIDATE_BOOLEAN );
+            $checkExist = FilterInput::request( 'check_exist', false, FILTER_VALIDATE_BOOLEAN );
+            $fileNameHeader = FilterInput::server( 'HTTP_X_FILE_NAME' );
+            $folderNameHeader = FilterInput::server( 'HTTP_X_FOLDER_NAME' );
+            $fileUrl = FilterInput::request( 'url', '', FILTER_SANITIZE_URL );
+            if ( !empty( $fileNameHeader ) )
+            {
+                // html5 single posting for file create
+                $content = RestData::getPostedData();
+                $contentType = FilterInput::server( 'CONTENT_TYPE', '' );
+                $result = $this->_handleFileContent(
+                    $this->_folderPath,
+                    $fileNameHeader,
+                    $content,
+                    $contentType,
+                    $extract,
+                    $clean,
+                    $checkExist
+                );
+            }
+            elseif ( !empty( $folderNameHeader ) )
+            {
+                // html5 single posting for folder create
+                $fullPathName = $this->_folderPath . $folderNameHeader;
                 $content = RestData::getPostedData( false, true );
-                if ( empty( $this->_container ) )
+                $this->createFolder( $this->_container, $fullPathName, $content );
+                $result = array(
+                    'folder' => array(
+                        array(
+                            'name' => $folderNameHeader,
+                            'path' => $this->_container . '/' . $fullPathName
+                        )
+                    )
+                );
+            }
+            elseif ( !empty( $fileUrl ) )
+            {
+                // upload a file from a url, could be expandable zip
+                $tmpName = null;
+                try
                 {
-                    $containers = Option::get( $content, 'container' );
-                    if ( empty( $containers ) )
-                    {
-                        $containers = Option::getDeep( $content, 'containers', 'container' );
-                    }
-                    if ( !empty( $containers ) )
-                    {
-                        // delete multiple containers
-                        $result = $this->deleteContainers( $containers, $force );
-                        $result = array('container' => $result);
-                    }
-                    else
-                    {
-                        $_name = Option::get( $content, 'name', trim( Option::get( $content, 'path' ), '/' ) );
-                        if ( empty( $_name ) )
-                        {
-                            throw new BadRequestException( 'No name found for container in delete request.' );
-                        }
-                        $this->deleteContainer( $_name, $force );
-                        $result = array('name' => $_name, 'path' => $_name);
-                    }
+                    $tmpName = FileUtilities::importUrlFileToTemp( $fileUrl );
+                    $result = $this->_handleFile(
+                        $this->_folderPath,
+                        '',
+                        $tmpName,
+                        '',
+                        $extract,
+                        $clean,
+                        $checkExist
+                    );
+                    unlink( $tmpName );
                 }
-                else if ( empty( $this->_folderPath ) )
+                catch ( \Exception $ex )
                 {
-                    // delete whole container
-                    // or just folders and files from the container
-                    if ( empty( $content ) )
+                    if ( !empty( $tmpName ) )
                     {
-                        $this->deleteContainer( $this->_container, $force );
-                        $result = array('name' => $this->_container);
+                        unlink( $tmpName );
                     }
-                    else
-                    {
-                        $result = $this->_deleteFolderContent( $content, '', $force );
-                    }
+                    throw $ex;
                 }
-                else if ( empty( $this->_filePath ) )
+            }
+            elseif ( isset( $_FILES['files'] ) && !empty( $_FILES['files'] ) )
+            {
+                // older html multi-part/form-data post, single or multiple files
+                $files = FileUtilities::rearrangePostedFiles( $_FILES['files'] );
+                $result = $this->_handleFolderContentFromFiles( $files, $extract, $clean, $checkExist );
+            }
+            else
+            {
+                // possibly xml or json post either of files or folders to create, copy or move
+                $data = RestData::getPostedData( false, true );
+                if ( empty( $data ) )
                 {
-                    // delete directory of files and the directory itself
-                    // multi-file or folder delete via post data
-                    if ( empty( $content ) )
-                    {
-                        $this->deleteFolder( $this->_container, $this->_folderPath, $force );
-                        $result = array('folder' => array(array('path' => $this->_container . '/' . $this->_folderPath)));
-                    }
-                    else
-                    {
-                        $result = $this->_deleteFolderContent( $content, $this->_folderPath, $force );
-                    }
+                    // create folder from resource path
+                    $this->createFolder( $this->_container, $this->_folderPath );
+                    $result = array('folder' => array(array('path' => $this->_container . '/' . $this->_folderPath)));
                 }
                 else
                 {
-                    // delete file from permanent storage
-                    $this->deleteFile( $this->_container, $this->_filePath );
-                    $result = array('file' => array(array('path' => $this->_container . '/' . $this->_filePath)));
+                    $result = $this->_handleFolderContentFromData( $data, $extract, $clean, $checkExist );
                 }
-                break;
+            }
+        }
+        else
+        {
+            // create the file
+            // possible file handling parameters
+            $extract = FilterInput::request( 'extract', false, FILTER_VALIDATE_BOOLEAN );
+            $clean = FilterInput::request( 'clean', false, FILTER_VALIDATE_BOOLEAN );
+            $checkExist = FilterInput::request( 'check_exist', false, FILTER_VALIDATE_BOOLEAN );
+            $name = basename( $this->_filePath );
+            $path = dirname( $this->_filePath );
+            $files = Option::get( $_FILES, 'files' );
+            if ( empty( $files ) )
+            {
+                $contentType = Option::get( $_SERVER, 'CONTENT_TYPE', '' );
+                // direct load from posted data as content
+                // or possibly xml or json post of file properties create, copy or move
+                $content = RestData::getPostedData();
+                $result = $this->_handleFileContent(
+                    $path,
+                    $name,
+                    $content,
+                    $contentType,
+                    $extract,
+                    $clean,
+                    $checkExist
+                );
+            }
+            else
+            {
+                // older html multipart/form-data post, should be single file
+                $files = FileUtilities::rearrangePostedFiles( $_FILES['files'] );
+                if ( 1 < count( $files ) )
+                {
+                    throw new BadRequestException( "Multiple files uploaded to a single REST resource '$name'." );
+                }
+                $file = Option::get( $files, 0 );
+                if ( empty( $file ) )
+                {
+                    throw new BadRequestException( "No file uploaded to REST resource '$name'." );
+                }
+                $error = $file['error'];
+                if ( UPLOAD_ERR_OK == $error )
+                {
+                    $tmpName = $file["tmp_name"];
+                    $contentType = $file['type'];
+                    $result = $this->_handleFile(
+                        $path,
+                        $name,
+                        $tmpName,
+                        $contentType,
+                        $extract,
+                        $clean,
+                        $checkExist
+                    );
+                }
+                else
+                {
+                    throw new InternalServerErrorException( "Failed to upload file $name.\n$error" );
+                }
+            }
+        }
 
-            default:
-                return false;
+        return $result;
+    }
+
+    /**
+     * @return array
+     * @throws \Exception
+     */
+    protected function _handlePatch()
+    {
+        if ( empty( $this->_container ) )
+        {
+            // nothing?
+            $result = array();
+        }
+        else if ( empty( $this->_folderPath ) )
+        {
+            // update container properties
+            $content = RestData::getPostedData( false, true );
+            $this->updateContainerProperties( $this->_container, $content );
+            $result = array('container' => array('name' => $this->_container));
+        }
+        else if ( empty( $this->_filePath ) )
+        {
+            // update folder properties
+            $content = RestData::getPostedData( false, true );
+            $this->updateFolderProperties( $this->_container, $this->_folderPath, $content );
+            $result = array(
+                'folder' => array(
+                    'name' => basename( $this->_folderPath ),
+                    'path' => $this->_container . '/' . $this->_folderPath
+                )
+            );
+        }
+        else
+        {
+            // update file properties?
+            $content = RestData::getPostedData( false, true );
+            $this->updateFileProperties( $this->_container, $this->_filePath, $content );
+            $result = array(
+                'file' => array(
+                    'name' => basename( $this->_filePath ),
+                    'path' => $this->_container . '/' . $this->_filePath
+                )
+            );
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return array
+     * @throws \Exception
+     */
+    protected function _handleDelete()
+    {
+        $force = FilterInput::request( 'force', false, FILTER_VALIDATE_BOOLEAN );
+        $content = RestData::getPostedData( false, true );
+        if ( empty( $this->_container ) )
+        {
+            $containers = Option::get( $content, 'container' );
+            if ( empty( $containers ) )
+            {
+                $containers = Option::getDeep( $content, 'containers', 'container' );
+            }
+            if ( !empty( $containers ) )
+            {
+                // delete multiple containers
+                $result = $this->deleteContainers( $containers, $force );
+                $result = array('container' => $result);
+            }
+            else
+            {
+                $_name = Option::get( $content, 'name', trim( Option::get( $content, 'path' ), '/' ) );
+                if ( empty( $_name ) )
+                {
+                    throw new BadRequestException( 'No name found for container in delete request.' );
+                }
+                $this->deleteContainer( $_name, $force );
+                $result = array('name' => $_name, 'path' => $_name);
+            }
+        }
+        else if ( empty( $this->_folderPath ) )
+        {
+            // delete whole container
+            // or just folders and files from the container
+            if ( empty( $content ) )
+            {
+                $this->deleteContainer( $this->_container, $force );
+                $result = array('name' => $this->_container);
+            }
+            else
+            {
+                $result = $this->_deleteFolderContent( $content, '', $force );
+            }
+        }
+        else if ( empty( $this->_filePath ) )
+        {
+            // delete directory of files and the directory itself
+            // multi-file or folder delete via post data
+            if ( empty( $content ) )
+            {
+                $this->deleteFolder( $this->_container, $this->_folderPath, $force );
+                $result = array('folder' => array(array('path' => $this->_container . '/' . $this->_folderPath)));
+            }
+            else
+            {
+                $result = $this->_deleteFolderContent( $content, $this->_folderPath, $force );
+            }
+        }
+        else
+        {
+            // delete file from permanent storage
+            $this->deleteFile( $this->_container, $this->_filePath );
+            $result = array('file' => array(array('path' => $this->_container . '/' . $this->_filePath)));
         }
 
         return $result;
@@ -590,7 +637,14 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
             $fullPathName = FileUtilities::fixFolderPath( $dest_path ) . $dest_name;
             $this->writeFile( $this->_container, $fullPathName, $content, false, $check_exist );
 
-            return array('file' => array(array('name' => $dest_name, 'path' => $this->_container . '/' . $fullPathName)));
+            return array(
+                'file' => array(
+                    array(
+                        'name' => $dest_name,
+                        'path' => $this->_container . '/' . $fullPathName
+                    )
+                )
+            );
         }
     }
 
@@ -624,7 +678,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     $clean,
                     $checkExist
                 );
-                $out[ $key ] = ( isset( $tmp['file'] ) ? $tmp['file'] : array() );
+                $out[$key] = ( isset( $tmp['file'] ) ? $tmp['file'] : array() );
             }
             else
             {
@@ -633,7 +687,8 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
         }
         if ( !empty( $err ) )
         {
-            $msg = 'Failed to upload the following files to folder ' . $this->_folderPath . ': ' . implode( ', ', $err );
+            $msg =
+                'Failed to upload the following files to folder ' . $this->_folderPath . ': ' . implode( ', ', $err );
             throw new InternalServerErrorException( $msg );
         }
 
@@ -676,11 +731,11 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                         $name = FileUtilities::getNameFromPath( $srcPath );
                     }
                     $fullPathName = $this->_folderPath . $name . '/';
-                    $out['folder'][ $key ] = array('name' => $name, 'path' => $this->_container . '/' . $fullPathName);
+                    $out['folder'][$key] = array('name' => $name, 'path' => $this->_container . '/' . $fullPathName);
                     try
                     {
                         $this->copyFolder( $this->_container, $fullPathName, $srcContainer, $srcPath, true );
-                        $deleteSource = DataFormat::boolval( Option::get( $folder, 'delete_source', false ) );
+                        $deleteSource = Option::getBool( $folder, 'delete_source' );
                         if ( $deleteSource )
                         {
                             $this->deleteFolder( $this->_container, $srcPath, true );
@@ -688,26 +743,26 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     }
                     catch ( \Exception $ex )
                     {
-                        $out['folder'][ $key ]['error'] = array('message' => $ex->getMessage());
+                        $out['folder'][$key]['error'] = array('message' => $ex->getMessage());
                     }
                 }
                 else
                 {
                     $fullPathName = $this->_folderPath . $name;
                     $content = Option::get( $folder, 'content', '' );
-                    $isBase64 = DataFormat::boolval( Option::get( $folder, 'is_base64', false ) );
+                    $isBase64 = Option::getBool( $folder, 'is_base64' );
                     if ( $isBase64 )
                     {
                         $content = base64_decode( $content );
                     }
-                    $out['folder'][ $key ] = array('name' => $name, 'path' => $this->_container . '/' . $fullPathName);
+                    $out['folder'][$key] = array('name' => $name, 'path' => $this->_container . '/' . $fullPathName);
                     try
                     {
                         $this->createFolder( $this->_container, $fullPathName, true, $content );
                     }
                     catch ( \Exception $ex )
                     {
-                        $out['folder'][ $key ]['error'] = array('message' => $ex->getMessage());
+                        $out['folder'][$key]['error'] = array('message' => $ex->getMessage());
                     }
                 }
             }
@@ -737,11 +792,11 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                         $name = FileUtilities::getNameFromPath( $srcPath );
                     }
                     $fullPathName = $this->_folderPath . $name;
-                    $out['file'][ $key ] = array('name' => $name, 'path' => $this->_container . '/' . $fullPathName);
+                    $out['file'][$key] = array('name' => $name, 'path' => $this->_container . '/' . $fullPathName);
                     try
                     {
                         $this->copyFile( $this->_container, $fullPathName, $srcContainer, $srcPath, true );
-                        $deleteSource = DataFormat::boolval( Option::get( $file, 'delete_source', false ) );
+                        $deleteSource = Option::getBool( $file, 'delete_source' );
                         if ( $deleteSource )
                         {
                             $this->deleteFile( $this->_container, $srcPath );
@@ -749,15 +804,15 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     }
                     catch ( \Exception $ex )
                     {
-                        $out['file'][ $key ]['error'] = array('message' => $ex->getMessage());
+                        $out['file'][$key]['error'] = array('message' => $ex->getMessage());
                     }
                 }
                 elseif ( isset( $file['content'] ) )
                 {
                     $fullPathName = $this->_folderPath . $name;
-                    $out['file'][ $key ] = array('name' => $name, 'path' => $this->_container . '/' . $fullPathName);
+                    $out['file'][$key] = array('name' => $name, 'path' => $this->_container . '/' . $fullPathName);
                     $content = Option::get( $file, 'content', '' );
-                    $isBase64 = DataFormat::boolval( Option::get( $file, 'is_base64', false ) );
+                    $isBase64 = Option::getBool( $file, 'is_base64' );
                     if ( $isBase64 )
                     {
                         $content = base64_decode( $content );
@@ -768,7 +823,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     }
                     catch ( \Exception $ex )
                     {
-                        $out['file'][ $key ]['error'] = array('message' => $ex->getMessage());
+                        $out['file'][$key]['error'] = array('message' => $ex->getMessage());
                     }
                 }
             }

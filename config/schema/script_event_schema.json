@@ -1,0 +1,211 @@
+{
+	"version": "1.0.0",
+
+	"session_application": {
+		"id":          "session_application",
+		"description": "",
+		"properties":  {
+			"id":                      {
+				"type":        "int32",
+				"description": "Id of the application."
+			},
+			"name":                    {
+				"type":        "string",
+				"description": "Displayed name of the application."
+			},
+			"description":             {
+				"type":        "string",
+				"description": "Description of the application."
+			},
+			"is_url_external":         {
+				"type":        "boolean",
+				"description": "Does this application exist on a separate server."
+			},
+			"launch_url":              {
+				"type":        "string",
+				"description": "URL at which this app can be accessed."
+			},
+			"requires_fullscreen":     {
+				"type":        "boolean",
+				"description": "True if the application requires fullscreen to run."
+			},
+			"allow_fullscreen_toggle": {
+				"type":        "boolean",
+				"description": "True allows the fullscreen toggle widget to be displayed."
+			},
+			"toggle_location":         {
+				"type":        "string",
+				"description": "Where the fullscreen toggle widget is to be displayed, defaults to top."
+			},
+			"is_default":              {
+				"type":        "boolean",
+				"description": "True if this app is set to launch by default at sign in."
+			}
+		}
+	},
+
+	"event": {
+		"id":          "event",
+		"description": "The event object schema",
+		"properties":  {
+			"id":               {
+				"type":        "string",
+				"description": "A unique ID assigned to this event by the dispatcher."
+			},
+			"name":             {
+				"type":        "string",
+				"description": "The name of the event"
+			},
+			"trigger":          {
+				"type":        "string",
+				"description": "The normalized route taken by this request"
+
+			},
+			"stop_propagation": {
+				"type":        "boolean",
+				"description": "Used to tell the dispatcher to either continue or kill propagation of this event"
+			},
+			"payload":          {
+				"type":        "array",
+				"description": "The payload as received by the core. For non-GET calls, this will happen after the data has been retrieved. All other calls run their scripts prior to the resource request being handled."
+			},
+			"request":          {
+				"timestamp": {
+					"type":        "string",
+					"description": "The time of this event in ISO-8601 format: YYYY-MM-DDTHH:MI:SS+00:00"
+				},
+				"path":      {
+					"type":        "string",
+					"description": "The full, non-normalized, route taken by this request"
+				}
+			},
+			"platform":         {
+				"api":    {
+					"type":        "callback",
+					"description": "Allows direct access to the DSP API without going through REST"
+				},
+				"config": {
+					"type":        "object",
+					"description": "The DSP configuration as would be returned by a call to /rest/system/config",
+					"properties":  {
+						"open_reg_role_id":           {
+							"type":        "int32",
+							"description": "Default Role Id assigned to newly registered users, set to null to turn off open registration."
+						},
+						"open_reg_email_service_id":  {
+							"type":        "int32",
+							"description": "Set to an email-type service id to require email confirmation of newly registered users."
+						},
+						"open_reg_email_template_id": {
+							"type":        "int32",
+							"description": "Default email template used for open registration email confirmations."
+						},
+						"invite_email_service_id":    {
+							"type":        "int32",
+							"description": "Set to an email-type service id to allow user invites and invite confirmations via email service."
+						},
+						"invite_email_template_id":   {
+							"type":        "int32",
+							"description": "Default email template used for user invitations and confirmations via email service."
+						},
+						"password_email_service_id":  {
+							"type":        "int32",
+							"description": "Set to an email-type service id to require email confirmation to reset passwords, otherwise defaults to security question and answer."
+						},
+						"password_email_template_id": {
+							"type":        "int32",
+							"description": "Default email template used for password reset email confirmations."
+						},
+						"guest_role_id":              {
+							"type":        "int32",
+							"description": "Role Id assigned for all guest sessions, set to null to require authenticated sessions."
+						},
+						"editable_profile_fields":    {
+							"type":        "string",
+							"description": "Comma-delimited list of fields the user is allowed to edit."
+						},
+						"allowed_hosts":              {
+							"type":        "array",
+							"description": "CORS whitelist of allowed remote hosts.",
+							"items":       {
+								"$ref": "HostInfo"
+							}
+						}
+					}
+				}
+			},
+			"session":          {
+				"id":          "session",
+				"type":        "object",
+				"description": "The current users' session object as would be returned by a call to /rest/user/session.",
+				"items":       {
+					"$ref": "CurrentSession"
+				},
+				"properties":  {
+					"id":              {
+						"type":        "string",
+						"description": "Identifier for the current user."
+					},
+					"email":           {
+						"type":        "string",
+						"description": "Email address of the current user."
+					},
+					"first_name":      {
+						"type":        "string",
+						"description": "First name of the current user."
+					},
+					"last_name":       {
+						"type":        "string",
+						"description": "Last name of the current user."
+					},
+					"display_name":    {
+						"type":        "string",
+						"description": "Full display name of the current user."
+					},
+					"is_sys_admin":    {
+						"type":        "boolean",
+						"description": "Is the current user a system administrator."
+					},
+					"role":            {
+						"type":        "string",
+						"description": "Name of the role to which the current user is assigned."
+					},
+					"last_login_date": {
+						"type":        "string",
+						"description": "Date timestamp of the last login for the current user."
+					},
+					"app_groups":      {
+						"type":        "array",
+						"description": "Applications that belong to a group",
+						"items":       {
+							"$ref": "session_application"
+						}
+					},
+					"no_group_apps":   {
+						"type":        "array",
+						"description": "Applications that do not belong to an application group",
+						"items":       {
+							"$ref": "session_application"
+						}
+					},
+					"session_id":      {
+						"type":        "string",
+						"description": "Id for the current session, used in X-DreamFactory-Session-Token header for API requests."
+					},
+					"ticket":          {
+						"type":        "string",
+						"description": "Timed ticket that can be used to start a separate session."
+					},
+					"ticket_expiry":   {
+						"type":        "string",
+						"description": "Expiration time for the given ticket."
+					}
+				}
+			},
+			"extra":            {
+				"type":        "array",
+				"description": "Addition information or data sent by event root to the handlers"
+			}
+		}
+	}
+}

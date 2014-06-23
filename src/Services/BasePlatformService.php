@@ -22,7 +22,6 @@ use DreamFactory\Platform\Interfaces\PlatformServiceLike;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use Kisma\Core\Interfaces\ConsumerLike;
-use Kisma\Core\Interfaces\HttpMethod;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
@@ -59,6 +58,10 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
      */
     protected $_isActive = false;
     /**
+     * @var bool Indicates that this object is or is not to be treated as a resource
+     */
+    protected $_isResource = false;
+    /**
      * @var string Native format of output of service, null for php, otherwise json, xml, etc.
      */
     protected $_nativeFormat = null;
@@ -70,6 +73,10 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
      * @var int current user ID
      */
     protected $_currentUserId;
+    /**
+     * @var bool Used to indicate whether or not this request has come from within, like a script
+     */
+    protected $_inlineRequest = false;
 
     //*************************************************************************
     //* Methods
@@ -142,26 +149,6 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
     }
 
     /**
-     * @param string          $resource     The name of the resource
-     * @param string          $action       The action to perform
-     * @param int|string|bool $outputFormat The return format. Defaults to native, or PHP array.
-     * @param string          $appName      The optional app_name setting for this call. Defaults to called class name hash
-     *
-     * @throws \DreamFactory\Platform\Exceptions\NotImplementedException
-     * @return mixed
-     */
-    public static function processInlineRequest( $resource, $action = HttpMethod::GET, $outputFormat = false, $appName = null )
-    {
-        throw new NotImplementedException();
-//		//	Get the resource and set the app_name
-//		$_resource = ResourceStore::resource( $resource );
-//		$_SERVER['HTTP_X_DREAMFACTORY_APPLICATION_NAME'] = $appName ? : sha1( get_called_class() );
-//
-//		//	Make the call
-//		return $_resource->processInlineRequest( $resource, $action, $outputFormat );
-    }
-
-    /**
      * Given an old string-based TYPE, determine new integer identifier
      *
      * @param string $type
@@ -203,7 +190,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
      *
      * @throws NotImplementedException
      */
-    protected function _checkPermission( $request, $component )
+    protected function _checkPermission( /** @noinspection PhpUnusedParameterInspection */ $request, $component )
     {
         throw new NotImplementedException();
     }
@@ -355,4 +342,45 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
     {
         return $this->_currentUserId;
     }
+
+    /**
+     * @return boolean
+     */
+    public function isResource()
+    {
+        return $this->_isResource;
+    }
+
+    /**
+     * @param boolean $isResource
+     *
+     * @return BasePlatformService
+     */
+    public function setIsResource( $isResource )
+    {
+        $this->_isResource = $isResource;
+
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function isInlineRequest()
+    {
+        return $this->_inlineRequest;
+    }
+
+    /**
+     * @param boolean $inlineRequest
+     *
+     * @return BasePlatformService
+     */
+    public function setInlineRequest( $inlineRequest )
+    {
+        $this->_inlineRequest = $inlineRequest;
+
+        return $this;
+    }
+
 }

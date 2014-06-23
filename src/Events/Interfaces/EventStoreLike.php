@@ -16,39 +16,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Events;
+namespace DreamFactory\Platform\Events\Interfaces;
 
-use DreamFactory\Platform\Interfaces\StreamListenerLike;
+use Doctrine\Common\Cache\Cache;
 
 /**
  * EventStoreLike
  * Something that acts like an event store
  */
-interface EventStoreLike extends StreamListenerLike
+interface EventStoreLike extends Cache
 {
     //*************************************************************************
     //	Methods
     //*************************************************************************
 
     /**
-     * Stores an event at key "$key"
+     * Loads current $dispatcher state
      *
-     * @param string $key  Identifier for this event
-     * @param mixed  $data The event data
-     * @param int    $ttl  The expiration TTL for this key
-     *
-     * @return mixed
+     * @return bool|void
      */
-    public static function set( $key, $data, $ttl = null );
+    public function loadAll();
 
     /**
-     * Gets an event from key "$key"
+     * Saves current $dispatcher state
      *
-     * @param string $key Identifier for this event
-     * @param mixed  $defaultValue
-     * @param bool   $unsetIfFound
-     *
-     * @return mixed
+     * @return bool|void
      */
-    public static function get( $key, $defaultValue = null, $unsetIfFound = false );
+    public function saveAll();
 }

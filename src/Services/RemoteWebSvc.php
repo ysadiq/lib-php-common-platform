@@ -128,7 +128,7 @@ class RemoteWebSvc extends BasePlatformRestService
                     }
                 }
                 $key = Option::get( $param, 'name' );
-                $value = Session::replaceLookup( Option::get( $param, 'value' ) );
+                $value = Session::replaceLookup( Option::get( $param, 'value' ), true );
                 $param_str .= ( !empty( $param_str ) ) ? '&' : '';
                 $param_str .= urlencode( $key );
                 $param_str .= ( empty( $value ) ) ? '' : '=' . urlencode( $value );
@@ -161,7 +161,7 @@ class RemoteWebSvc extends BasePlatformRestService
                 }
 
                 $key = Option::get( $header, 'name' );
-                $value = Session::replaceLookup( Option::get( $header, 'value' ) );
+                $value = Session::replaceLookup( Option::get( $header, 'value' ), true );
 
                 if ( null === Option::get( $options, CURLOPT_HTTPHEADER ) )
                 {
@@ -186,7 +186,10 @@ class RemoteWebSvc extends BasePlatformRestService
 
         $this->_query = $this->buildParameterString( $this->_action );
         $this->_url =
-            rtrim( $this->_baseUrl, '/' ) . ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null ) . '?' . $this->_query;
+            rtrim( $this->_baseUrl, '/' ) .
+            ( !empty( $this->_resourcePath ) ? '/' . ltrim( $this->_resourcePath, '/' ) : null ) .
+            '?' .
+            $this->_query;
 
         //	set additional headers
         $this->_curlOptions = $this->addHeaders( $this->_action, $this->_curlOptions );

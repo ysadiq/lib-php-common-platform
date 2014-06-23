@@ -23,7 +23,6 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\User\Session;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 use WindowsAzure\Common\ServiceException;
 use WindowsAzure\Common\ServicesBuilder;
@@ -105,17 +104,23 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ) );
-        $_connectionString = Session::replaceLookup( Option::get( $_credentials, 'connection_string' ) );
+        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
+        $_connectionString = Session::replaceLookup( Option::get( $_credentials, 'connection_string' ), true );
         if ( empty( $_connectionString ) )
         {
-            $_name = Session::replaceLookup( Option::get( $_credentials, 'account_name', Option::get( $_credentials, 'AccountName' ) ) );
+            $_name = Session::replaceLookup(
+                Option::get( $_credentials, 'account_name', Option::get( $_credentials, 'AccountName' ) ),
+                true
+            );
             if ( empty( $_name ) )
             {
                 throw new \InvalidArgumentException( 'WindowsAzure account name can not be empty.' );
             }
 
-            $_key = Session::replaceLookup( Option::get( $_credentials, 'account_key', Option::get( $_credentials, 'AccountKey' ) ) );
+            $_key = Session::replaceLookup(
+                Option::get( $_credentials, 'account_key', Option::get( $_credentials, 'AccountKey' ) ),
+                true
+            );
             if ( empty( $_key ) )
             {
                 throw new \InvalidArgumentException( 'WindowsAzure account key can not be empty.' );
@@ -169,19 +174,18 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param null $post_data
-     *
-     * @return array
+     * {@InheritDoc}
      */
-    protected function _gatherExtrasFromRequest( &$post_data = null )
+    protected function _detectRequestMembers()
     {
-        $_extras = parent::_gatherExtrasFromRequest( $post_data );
-        $_extras[static::PARTITION_KEY] = FilterInput::request(
-            static::PARTITION_KEY,
-            Option::get( $post_data, static::PARTITION_KEY, $this->_defaultPartitionKey )
-        );
+        parent::_detectRequestMembers();
 
-        return $_extras;
+        if ( !isset( $this->_requestPayload[static::PARTITION_KEY] ) )
+        {
+            $this->_requestPayload[static::PARTITION_KEY] = $this->_defaultPartitionKey;
+        }
+
+        return $this;
     }
 
     protected function _getTablesAsArray()
@@ -212,15 +216,16 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
                 $_access = $this->getPermissions( $_table );
                 if ( !empty( $_access ) )
                 {
-                    $_resources[] = array( 'name' => $_table, 'access' => $_access );
+                    $_resources[] = array('name' => $_table, 'access' => $_access);
                 }
             }
 
-            return array( 'resource' => $_resources );
+            return array('resource' => $_resources);
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -251,14 +256,15 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 
         try
         {
-            $_out = array( 'name' => $_name );
+            $_out = array('name' => $_name);
             $_out['access'] = $this->getPermissions( $_name );
 
             return $_out;
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -276,7 +282,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         try
         {
             $this->_dbConn->createTable( $_name );
-            $_out = array( 'name' => $_name );
+            $_out = array('name' => $_name);
 
             return $_out;
         }
@@ -298,7 +304,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         }
 
 //        throw new InternalServerErrorException( "Failed to update table '$_name'." );
-        return array( 'name' => $_name );
+        return array('name' => $_name);
     }
 
     /**
@@ -316,7 +322,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         {
             $this->_dbConn->deleteTable( $_name );
 
-            return array( 'name' => $_name );
+            return array('name' => $_name);
         }
         catch ( \Exception $_ex )
         {
@@ -361,7 +367,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    public function patchRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
@@ -454,10 +460,10 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 
     protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
-        $requested_fields = array( static::PARTITION_KEY, static::ROW_KEY ); // can only be this
+        $requested_fields = array(static::PARTITION_KEY, static::ROW_KEY); // can only be this
         $_ids = array(
-            array( 'name' => static::PARTITION_KEY, 'type' => 'string', 'required' => true ),
-            array( 'name' => static::ROW_KEY, 'type' => 'string', 'required' => true )
+            array('name' => static::PARTITION_KEY, 'type' => 'string', 'required' => true),
+            array('name' => static::ROW_KEY, 'type' => 'string', 'required' => true)
         );
 
         return $_ids;
@@ -518,7 +524,8 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         }
         catch ( ServiceException $_ex )
         {
-            throw new InternalServerErrorException( "Failed to filter items from '$table' on Windows Azure Tables service.\n" . $_ex->getMessage() );
+            throw new InternalServerErrorException( "Failed to filter items from '$table' on Windows Azure Tables service.\n" .
+                                                    $_ex->getMessage() );
         }
     }
 
@@ -737,8 +744,19 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 
     protected static function buildCriteriaArray( $filter, $params = null, $ss_filters = null )
     {
+        // interpret any parameter values as lookups
+        $params = static::interpretRecordValues( $params );
+
         // build filter array if necessary, add server-side filters if necessary
-        $_criteria = ( !is_array( $filter ) ) ? static::parseFilter( $filter, $params ) : $filter;
+        if ( !is_array( $filter ) )
+        {
+            Session::replaceLookupsInStrings( $filter );
+            $_criteria = static::parseFilter( $filter, $params );
+        }
+        else
+        {
+            $_criteria = $filter;
+        }
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
         if ( !empty( $_serverCriteria ) )
         {
@@ -818,14 +836,30 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 
         // handle logical operators first
         // supported logical operators are or, and, not
-        $_search = array( ' || ', ' && ', ' OR ', ' AND ', ' NOR ', ' NOT ' );
-        $_replace = array( ' or ', ' and ', ' or ', ' and ', ' nor ', ' not ' );
+        $_search = array(' || ', ' && ', ' OR ', ' AND ', ' NOR ', ' NOT ');
+        $_replace = array(' or ', ' and ', ' or ', ' and ', ' nor ', ' not ');
         $filter = trim( str_ireplace( $_search, $_replace, ' ' . $filter ) ); // space added for 'not' case
 
         // the rest should be comparison operators
         // supported comparison operators are eq, ne, gt, ge, lt, le
-        $_search = array( '!=', '>=', '<=', '>', '<', '=', ' EQ ', ' NE ', ' LT ', ' LTE ', ' LE ', ' GT ', ' GTE', ' GE ' );
-        $_replace = array( ' ne ', ' ge ', ' le ', ' gt ', ' lt ', ' eq ', ' eq ', ' ne ', ' lt ', ' le ', ' le ', ' gt ', ' ge ', ' ge ' );
+        $_search =
+            array('!=', '>=', '<=', '>', '<', '=', ' EQ ', ' NE ', ' LT ', ' LTE ', ' LE ', ' GT ', ' GTE', ' GE ');
+        $_replace = array(
+            ' ne ',
+            ' ge ',
+            ' le ',
+            ' gt ',
+            ' lt ',
+            ' eq ',
+            ' eq ',
+            ' ne ',
+            ' lt ',
+            ' le ',
+            ' le ',
+            ' gt ',
+            ' ge ',
+            ' ge '
+        );
         $filter = trim( str_ireplace( $_search, $_replace, $filter ) );
 
 //			WHERE name LIKE "%Joe%"	not supported
@@ -1007,7 +1041,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 
         if ( !is_array( $id ) )
         {
-            $id = array( static::ROW_KEY => $id, static::PARTITION_KEY => $_partitionKey );
+            $id = array(static::ROW_KEY => $id, static::PARTITION_KEY => $_partitionKey);
         }
         if ( !empty( $_partitionKey ) )
         {
@@ -1113,7 +1147,11 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
 
                 if ( $rollback )
                 {
-                    $_old = $this->_dbConn->getEntity( $this->_transactionTable, $_entity->getRowKey(), $_entity->getPartitionKey() );
+                    $_old = $this->_dbConn->getEntity(
+                        $this->_transactionTable,
+                        $_entity->getRowKey(),
+                        $_entity->getPartitionKey()
+                    );
                     $this->addToRollback( $_old );
                 }
 
@@ -1145,7 +1183,10 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
                     }
                     if ( $_requireMore )
                     {
-                        $_out = array_merge( static::parseEntityToRecord( $_old, $_fields ), static::parseEntityToRecord( $_entity, $_fields ) );
+                        $_out = array_merge(
+                            static::parseEntityToRecord( $_old, $_fields ),
+                            static::parseEntityToRecord( $_entity, $_fields )
+                        );
                     }
                 }
 
@@ -1299,7 +1340,11 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         switch ( $this->getAction() )
         {
             case static::POST:
-                $this->_backupOps->addDeleteEntity( $this->_transactionTable, $record->getPartitionKey(), $record->getRowKey() );
+                $this->_backupOps->addDeleteEntity(
+                    $this->_transactionTable,
+                    $record->getPartitionKey(),
+                    $record->getRowKey()
+                );
                 break;
 
             case static::PUT:

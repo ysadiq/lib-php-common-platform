@@ -26,7 +26,6 @@ use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
@@ -114,19 +113,19 @@ class SqlDbSvc extends BaseDbSvc
         }
         else
         {
-            $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ) );
+            $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
 
-            if ( null === ( $dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn' ) ) ) )
+            if ( null === ( $dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn' ), true ) ) )
             {
                 throw new InternalServerErrorException( 'DB connection string (DSN) can not be empty.' );
             }
 
-            if ( null === ( $user = Session::replaceLookup( Option::get( $_credentials, 'user' ) ) ) )
+            if ( null === ( $user = Session::replaceLookup( Option::get( $_credentials, 'user' ), true ) ) )
             {
                 throw new InternalServerErrorException( 'DB admin name can not be empty.' );
             }
 
-            if ( null === ( $password = Session::replaceLookup( Option::get( $_credentials, 'pwd' ) ) ) )
+            if ( null === ( $password = Session::replaceLookup( Option::get( $_credentials, 'pwd' ), true ) ) )
             {
                 throw new InternalServerErrorException( 'DB admin password can not be empty.' );
             }
@@ -142,7 +141,8 @@ class SqlDbSvc extends BaseDbSvc
                     'enableProfiling'       => defined( YII_DEBUG ),
                     'enableParamLogging'    => defined( YII_DEBUG ),
                     'schemaCachingDuration' => 3600,
-                    'schemaCacheID'         => ( !$this->_isNative && static::ENABLE_REMOTE_CACHE ) ? static::REMOTE_CACHE_ID : 'cache',
+                    'schemaCacheID'         => ( !$this->_isNative && static::ENABLE_REMOTE_CACHE )
+                            ? static::REMOTE_CACHE_ID : 'cache',
                 )
             );
 
@@ -233,6 +233,22 @@ class SqlDbSvc extends BaseDbSvc
     }
 
     /**
+     * @return int
+     */
+    public function getDriverType()
+    {
+        return $this->_driverType;
+    }
+
+    /**
+     * @return \CDbConnection
+     */
+    public function getDbConn()
+    {
+        return $this->_dbConn;
+    }
+
+    /**
      * @throws \Exception
      */
     protected function checkConnection()
@@ -301,53 +317,32 @@ class SqlDbSvc extends BaseDbSvc
     }
 
     /**
-     * @param null|array $post_data
-     *
-     * @return array
+     * {@InheritDoc}
      */
-    protected function _gatherExtrasFromRequest( &$post_data = null )
+    protected function _detectRequestMembers()
     {
-        $_extras = parent::_gatherExtrasFromRequest( $post_data );
+        parent::_detectRequestMembers();
 
         // All calls can request related data to be returned
-        $_relations = array();
-        $_related = FilterInput::request( 'related', Option::get( $post_data, 'related' ) );
-        if ( !empty( $_related ) )
+        $_related = Option::get( $this->_requestPayload, 'related' );
+        if ( !empty( $_related ) && is_string( $_related ) && ( '*' !== $_related ) )
         {
-            if ( '*' == $_related )
+            $_relations = array();
+            if ( !is_array( $_related ) )
             {
-                $_relations = '*';
+                $_related = array_map( 'trim', explode( ',', $_related ) );
             }
-            else
+            foreach ( $_related as $_relative )
             {
-                if ( !is_array( $_related ) )
-                {
-                    $_related = array_map( 'trim', explode( ',', $_related ) );
-                }
-                foreach ( $_related as $_relative )
-                {
-                    $_extraFields = FilterInput::request( $_relative . '_fields', '*' );
-                    $_extraOrder = FilterInput::request( $_relative . '_order', '' );
-                    $_relations[] = array( 'name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder );
-                }
+                $_extraFields = Option::get( $this->_requestPayload, $_relative . '_fields', '*' );
+                $_extraOrder = Option::get( $this->_requestPayload, $_relative . '_order', '' );
+                $_relations[] = array('name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder);
             }
+
+            $this->_requestPayload['related'] = $_relations;
         }
-        $_extras['related'] = $_relations;
 
-        $_extras['include_schema'] = FilterInput::request(
-            'include_schema',
-            Option::getBool( $post_data, 'include_schema' ),
-            FILTER_VALIDATE_BOOLEAN
-        );
-
-        // allow deleting related records in update requests, if applicable
-        $_extras['allow_related_delete'] = FilterInput::request(
-            'allow_related_delete',
-            Option::getBool( $post_data, 'allow_related_delete' ),
-            FILTER_VALIDATE_BOOLEAN
-        );
-
-        return $_extras;
+        return $this;
     }
 
     // REST service implementation
@@ -382,7 +377,7 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
-            return array( 'resource' => $_resources );
+            return array('resource' => $_resources);
         }
         catch ( RestException $_ex )
         {
@@ -390,7 +385,8 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -420,7 +416,8 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -523,7 +520,7 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    public function patchRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
         // currently the same as update here
         return $this->updateRecordsByFilter( $table, $record, $filter, $params, $extras );
@@ -553,7 +550,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_command->truncateTable( $table );
             }
 
-            return array( 'success' => true );
+            return array('success' => true);
         }
         catch ( RestException $_ex )
         {
@@ -653,7 +650,7 @@ class SqlDbSvc extends BaseDbSvc
 
     // Helper methods
 
-    protected function _recordQuery( $from, $select, $where, $bind_values, $bind_columns, $extras )
+    protected function _recordQuery( $table, $select, $where, $bind_values, $bind_columns, $extras )
     {
         $_order = Option::get( $extras, 'order' );
         $_limit = intval( Option::get( $extras, 'limit', 0 ) );
@@ -664,8 +661,26 @@ class SqlDbSvc extends BaseDbSvc
         // use query builder
         /** @var \CDbCommand $_command */
         $_command = $this->_dbConn->createCommand();
+        if ( is_array( $select ) )
+        {
+            foreach ( $select as $_key => $_value )
+            {
+                if ( false !== strpos( $_value, ' ' ) )
+                {
+                    // yii doesn't handle spaces in column names very well.
+                    $select[$_key] = '(' . $this->_dbConn->quoteColumnName( $_value ) . ')';
+                }
+            }
+        }
         $_command->select( $select );
-        $_command->from( $from );
+
+        $_from = $table;
+        if ( false !== strpos( $_from, ' ' ) )
+        {
+            // yii doesn't handle spaces in tables names very well.
+            $_from = '(' . $this->_dbConn->quoteTableName( $_from ) . ')';
+        }
+        $_command->from( $_from );
 
         if ( !empty( $where ) )
         {
@@ -729,7 +744,7 @@ class SqlDbSvc extends BaseDbSvc
         {
             $_command->reset();
             $_command->select( '(COUNT(*)) as ' . $this->_dbConn->quoteColumnName( 'count' ) );
-            $_command->from( $from );
+            $_command->from( $_from );
             if ( !empty( $where ) )
             {
                 $_command->where( $where );
@@ -753,13 +768,13 @@ class SqlDbSvc extends BaseDbSvc
 
         if ( Option::getBool( $extras, 'include_schema', false ) )
         {
-            $_meta['schema'] = SqlDbUtilities::describeTable( $this->_dbConn, $from );
+            $_meta['schema'] = SqlDbUtilities::describeTable( $this->_dbConn, $table );
         }
 
         $_related = Option::get( $extras, 'related' );
         if ( !empty( $_related ) )
         {
-            $_relations = $this->describeTableRelated( $from );
+            $_relations = $this->describeTableRelated( $table );
             foreach ( $_data as $_key => $_temp )
             {
                 $_data[$_key] = $this->retrieveRelatedRecords( $_temp, $_relations, $_related );
@@ -835,9 +850,13 @@ class SqlDbSvc extends BaseDbSvc
      */
     protected function _convertFilterToNative( $filter, $params = array(), $ss_filters = array() )
     {
+        // interpret any parameter values as lookups
+        $params = static::interpretRecordValues( $params );
+
         if ( !is_array( $filter ) )
         {
             // todo parse client filter?
+            Session::replaceLookupsInStrings( $filter );
             $_filterString = $filter;
             $_serverFilter = $this->buildQueryStringFromData( $ss_filters, true );
             if ( !empty( $_serverFilter ) )
@@ -853,7 +872,7 @@ class SqlDbSvc extends BaseDbSvc
                 $params = array_merge( $params, $_serverFilter['params'] );
             }
 
-            return array( 'where' => $_filterString, 'params' => $params );
+            return array('where' => $_filterString, 'params' => $params);
         }
         else
         {
@@ -868,12 +887,12 @@ class SqlDbSvc extends BaseDbSvc
                 }
                 else
                 {
-                    $_filterArray = array( 'AND', $_filterArray, $_serverFilter['filter'] );
+                    $_filterArray = array('AND', $_filterArray, $_serverFilter['filter']);
                 }
                 $params = array_merge( $params, $_serverFilter['params'] );
             }
 
-            return array( 'where' => $_filterArray, 'params' => $params );
+            return array('where' => $_filterArray, 'params' => $params);
         }
     }
 
@@ -889,6 +908,8 @@ class SqlDbSvc extends BaseDbSvc
      */
     protected function parseRecord( $record, $fields_info, $filter_info = null, $for_update = false, $old_record = null )
     {
+        $record = $this->interpretRecordValues( $record );
+
         $_parsed = array();
 //        $record = DataFormat::arrayKeyLower( $record );
         $_keys = array_keys( $record );
@@ -899,112 +920,7 @@ class SqlDbSvc extends BaseDbSvc
             $_name = Option::get( $_fieldInfo, 'name', '' );
             $_type = Option::get( $_fieldInfo, 'type' );
             $_dbType = Option::get( $_fieldInfo, 'db_type' );
-            $_pos = array_search( $_name, $_keys );
-            if ( false !== $_pos )
-            {
-                $_fieldVal = Option::get( $_values, $_pos );
-                // due to conversion from XML to array, null or empty xml elements have the array value of an empty array
-                if ( is_array( $_fieldVal ) && empty( $_fieldVal ) )
-                {
-                    $_fieldVal = null;
-                }
 
-                // overwrite some undercover fields
-                if ( Option::getBool( $_fieldInfo, 'auto_increment', false ) )
-                {
-                    unset( $_keys[$_pos] );
-                    unset( $_values[$_pos] );
-                    continue; // should I error this?
-                }
-                if ( is_null( $_fieldVal ) && !Option::getBool( $_fieldInfo, 'allow_null' ) )
-                {
-                    throw new BadRequestException( "Field '$_name' can not be NULL." );
-                }
-
-                /** validations **/
-
-                $_validations = Option::get( $_fieldInfo, 'validation' );
-                if ( !is_array( $_validations ) )
-                {
-                    // backwards compatible with old strings
-                    $_validations = array_map( 'trim', explode( ',', $_validations ) );
-                    $_validations = array_flip( $_validations );
-                }
-
-                if ( !static::validateFieldValue( $_name, $_fieldVal, $_validations, $for_update, $_fieldInfo ) )
-                {
-                    unset( $_keys[$_pos] );
-                    unset( $_values[$_pos] );
-                    continue;
-                }
-
-                if ( !is_null( $_fieldVal ) )
-                {
-                    switch ( $this->_driverType )
-                    {
-                        case SqlDbUtilities::DRV_DBLIB:
-                        case SqlDbUtilities::DRV_SQLSRV:
-                            switch ( $_dbType )
-                            {
-                                case 'bit':
-                                    $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
-                                    break;
-                            }
-                            break;
-                        case SqlDbUtilities::DRV_MYSQL:
-                            switch ( $_dbType )
-                            {
-                                case 'tinyint(1)':
-                                    $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
-                                    break;
-                            }
-                            break;
-                    }
-                    switch ( SqlDbUtilities::determinePhpConversionType( $_type, $_dbType ) )
-                    {
-                        case 'int':
-                            if ( !is_int( $_fieldVal ) )
-                            {
-                                if ( ( '' === $_fieldVal ) && Option::getBool( $_fieldInfo, 'allow_null' ) )
-                                {
-                                    $_fieldVal = null;
-                                }
-                                elseif ( !( ctype_digit( $_fieldVal ) ) )
-                                {
-                                    throw new BadRequestException( "Field '$_name' must be a valid integer." );
-                                }
-                                else
-                                {
-                                    $_fieldVal = intval( $_fieldVal );
-                                }
-                            }
-                            break;
-                        default:
-                    }
-                }
-                $_parsed[$_name] = $_fieldVal;
-                unset( $_keys[$_pos] );
-                unset( $_values[$_pos] );
-            }
-            else
-            {
-                // check specific fields
-                switch ( $_type )
-                {
-                    case 'timestamp_on_create':
-                    case 'timestamp_on_update':
-                    case 'user_id_on_create':
-                    case 'user_id_on_update':
-                        break;
-                    default:
-                        // if field is required, kick back error
-                        if ( Option::getBool( $_fieldInfo, 'required' ) && !$for_update )
-                        {
-                            throw new BadRequestException( "Required field '$_name' can not be NULL." );
-                        }
-                        break;
-                }
-            }
             // add or override for specific fields
             switch ( $_type )
             {
@@ -1017,7 +933,7 @@ class SqlDbSvc extends BaseDbSvc
                             case SqlDbUtilities::DRV_SQLSRV:
                                 $_parsed[$_name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
                                 break;
-                            case SqlDbUtilities::DRV_MYSQL:
+                            default:
                                 $_parsed[$_name] = new \CDbExpression( '(NOW())' );
                                 break;
                         }
@@ -1030,7 +946,7 @@ class SqlDbSvc extends BaseDbSvc
                         case SqlDbUtilities::DRV_SQLSRV:
                             $_parsed[$_name] = new \CDbExpression( '(SYSDATETIMEOFFSET())' );
                             break;
-                        case SqlDbUtilities::DRV_MYSQL:
+                        default:
                             $_parsed[$_name] = new \CDbExpression( '(NOW())' );
                             break;
                     }
@@ -1050,6 +966,111 @@ class SqlDbSvc extends BaseDbSvc
                     if ( isset( $userId ) )
                     {
                         $_parsed[$_name] = $userId;
+                    }
+                    break;
+                default:
+                    $_pos = array_search( $_name, $_keys );
+                    if ( false !== $_pos )
+                    {
+                        $_fieldVal = Option::get( $_values, $_pos );
+                        // due to conversion from XML to array, null or empty xml elements have the array value of an empty array
+                        if ( is_array( $_fieldVal ) && empty( $_fieldVal ) )
+                        {
+                            $_fieldVal = null;
+                        }
+
+                        // overwrite some undercover fields
+                        if ( Option::getBool( $_fieldInfo, 'auto_increment', false ) )
+                        {
+                            unset( $_keys[$_pos] );
+                            unset( $_values[$_pos] );
+                            continue; // should I error this?
+                        }
+                        if ( is_null( $_fieldVal ) && !Option::getBool( $_fieldInfo, 'allow_null' ) )
+                        {
+                            throw new BadRequestException( "Field '$_name' can not be NULL." );
+                        }
+
+                        /** validations **/
+
+                        $_validations = Option::get( $_fieldInfo, 'validation' );
+                        if ( !is_array( $_validations ) )
+                        {
+                            // backwards compatible with old strings
+                            $_validations = array_map( 'trim', explode( ',', $_validations ) );
+                            $_validations = array_flip( $_validations );
+                        }
+
+                        if ( !static::validateFieldValue(
+                            $_name,
+                            $_fieldVal,
+                            $_validations,
+                            $for_update,
+                            $_fieldInfo
+                        )
+                        )
+                        {
+                            unset( $_keys[$_pos] );
+                            unset( $_values[$_pos] );
+                            continue;
+                        }
+
+                        if ( !is_null( $_fieldVal ) )
+                        {
+                            switch ( $this->_driverType )
+                            {
+                                case SqlDbUtilities::DRV_DBLIB:
+                                case SqlDbUtilities::DRV_SQLSRV:
+                                    switch ( $_dbType )
+                                    {
+                                        case 'bit':
+                                            $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
+                                            break;
+                                    }
+                                    break;
+                                case SqlDbUtilities::DRV_MYSQL:
+                                    switch ( $_dbType )
+                                    {
+                                        case 'tinyint(1)':
+                                            $_fieldVal = ( Scalar::boolval( $_fieldVal ) ? 1 : 0 );
+                                            break;
+                                    }
+                                    break;
+                            }
+                            switch ( SqlDbUtilities::determinePhpConversionType( $_type, $_dbType ) )
+                            {
+                                case 'int':
+                                    if ( !is_int( $_fieldVal ) )
+                                    {
+                                        if ( ( '' === $_fieldVal ) && Option::getBool( $_fieldInfo, 'allow_null' ) )
+                                        {
+                                            $_fieldVal = null;
+                                        }
+                                        elseif ( !( ctype_digit( $_fieldVal ) ) )
+                                        {
+                                            throw new BadRequestException( "Field '$_name' must be a valid integer." );
+                                        }
+                                        else
+                                        {
+                                            $_fieldVal = intval( $_fieldVal );
+                                        }
+                                    }
+                                    break;
+                                default:
+                            }
+                        }
+                        $_parsed[$_name] = $_fieldVal;
+                        unset( $_keys[$_pos] );
+                        unset( $_values[$_pos] );
+                    }
+                    else
+                    {
+                        // if field is required, kick back error
+                        if ( Option::getBool( $_fieldInfo, 'required' ) && !$for_update )
+                        {
+                            throw new BadRequestException( "Required field '$_name' can not be NULL." );
+                        }
+                        break;
                     }
                     break;
             }
@@ -1076,7 +1097,12 @@ class SqlDbSvc extends BaseDbSvc
     protected function updateRelations( $table, $record, $id, $avail_relations, $allow_delete = false )
     {
         // update currently only supports one id field
-        $id = ( is_array( $id ) ) ? @current( reset( $id ) ) : $id;
+        if ( is_array( $id ) )
+        {
+            reset( $id );
+            $id = @current( $id );
+        }
+
         $keys = array_keys( $record );
         $values = array_values( $record );
         foreach ( $avail_relations as $relationInfo )
@@ -1286,7 +1312,7 @@ class SqlDbSvc extends BaseDbSvc
             $outArray[] = $out;
         }
 
-        return array( 'fields' => $outArray, 'bindings' => $bindArray );
+        return array('fields' => $outArray, 'bindings' => $bindArray);
     }
 
     /**
@@ -1342,7 +1368,7 @@ class SqlDbSvc extends BaseDbSvc
         }
 
         $_relatedData = array();
-        $_relatedExtras = array( 'limit' => static::DB_MAX_RECORDS_RETURNED, 'fields' => '*' );
+        $_relatedExtras = array('limit' => static::MAX_RECORDS_RETURNED, 'fields' => '*');
         if ( '*' == $requests )
         {
             foreach ( $relations as $_name => $_relation )
@@ -1405,7 +1431,8 @@ class SqlDbSvc extends BaseDbSvc
                 $_where = Option::get( $_criteria, 'where' );
                 $_params = Option::get( $_criteria, 'params', array() );
 
-                $relatedRecords = $this->_recordQuery( $relatedTable, $_fields, $_where, $_params, $_bindings, $extras );
+                $relatedRecords =
+                    $this->_recordQuery( $relatedTable, $_fields, $_where, $_params, $_bindings, $extras );
                 if ( !empty( $relatedRecords ) )
                 {
                     return Option::get( $relatedRecords, 0 );
@@ -1463,8 +1490,16 @@ class SqlDbSvc extends BaseDbSvc
                             $_fields = Option::get( $_result, 'fields' );
                             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                            $_where = array( 'in', $relatedField, $relatedIds );
-                            return $this->_recordQuery( $relatedTable, $_fields, $_where, $_params, $_bindings, $extras );
+                            $_where = array('in', $relatedField, $relatedIds);
+
+                            return $this->_recordQuery(
+                                $relatedTable,
+                                $_fields,
+                                $_where,
+                                $_params,
+                                $_bindings,
+                                $extras
+                            );
                         }
                     }
                 }
@@ -1497,7 +1532,6 @@ class SqlDbSvc extends BaseDbSvc
 
         try
         {
-            $_ssFilters = Session::getServiceFilters( $this->_apiName, $many_table );
             $_manyFields = $this->getFieldsInfo( $many_table );
             $_pkField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $_manyFields );
             $_fieldInfo = SqlDbUtilities::getFieldFromDescribe( $many_field, $_manyFields );
@@ -1563,6 +1597,7 @@ class SqlDbSvc extends BaseDbSvc
                 // create new children
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::POST );
+                $_ssFilters = Session::getServiceFilters( static::POST, $this->_apiName, $many_table );
                 foreach ( $_createMany as $_record )
                 {
                     $_parsed = $this->parseRecord( $_record, $_manyFields, $_ssFilters );
@@ -1584,9 +1619,10 @@ class SqlDbSvc extends BaseDbSvc
                 // destroy linked children that can't stand alone - sounds sinister
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::DELETE );
+                $_ssFilters = Session::getServiceFilters( static::DELETE, $this->_apiName, $many_table );
                 $_where = array();
                 $_params = array();
-                $_where[] = array( 'in', $_pkField, $_deleteMany );
+                $_where[] = array('in', $_pkField, $_deleteMany);
                 $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
                 if ( !empty( $_serverFilter ) )
                 {
@@ -1614,6 +1650,7 @@ class SqlDbSvc extends BaseDbSvc
             {
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::PUT );
+                $_ssFilters = Session::getServiceFilters( static::PUT, $this->_apiName, $many_table );
 
                 if ( !empty( $_updateMany ) )
                 {
@@ -1660,7 +1697,7 @@ class SqlDbSvc extends BaseDbSvc
                     // adopt/relate/link unlinked children
                     $_where = array();
                     $_params = array();
-                    $_where[] = array( 'in', $_pkField, $_relateMany );
+                    $_where[] = array('in', $_pkField, $_relateMany);
                     $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
                     if ( !empty( $_serverFilter ) )
                     {
@@ -1677,7 +1714,7 @@ class SqlDbSvc extends BaseDbSvc
                         $_where = $_where[0];
                     }
 
-                    $_updates = array( $many_field => $one_id );
+                    $_updates = array($many_field => $one_id);
                     $_parsed = $this->parseRecord( $_updates, $_manyFields, $_ssFilters, true );
                     if ( !empty( $_parsed ) )
                     {
@@ -1694,7 +1731,7 @@ class SqlDbSvc extends BaseDbSvc
                     // disown/un-relate/unlink linked children
                     $_where = array();
                     $_params = array();
-                    $_where[] = array( 'in', $_pkField, $_disownMany );
+                    $_where[] = array('in', $_pkField, $_disownMany);
                     $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
                     if ( !empty( $_serverFilter ) )
                     {
@@ -1711,7 +1748,7 @@ class SqlDbSvc extends BaseDbSvc
                         $_where = $_where[0];
                     }
 
-                    $_updates = array( $many_field => null );
+                    $_updates = array($many_field => null);
                     $_parsed = $this->parseRecord( $_updates, $_manyFields, $_ssFilters, true );
                     if ( !empty( $_parsed ) )
                     {
@@ -1749,15 +1786,14 @@ class SqlDbSvc extends BaseDbSvc
         {
             throw new BadRequestException( "The $one_table id can not be empty." );
         }
+
         try
         {
-            $_ssManyFilters = Session::getServiceFilters( $this->_apiName, $many_table );
-            $_ssMapFilters = Session::getServiceFilters( $this->_apiName, $map_table );
             $oneFields = $this->getFieldsInfo( $one_table );
             $pkOneField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $oneFields );
             $manyFields = $this->getFieldsInfo( $many_table );
             $pkManyField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $manyFields );
-			$mapFields = $this->getFieldsInfo( $map_table );
+            $mapFields = $this->getFieldsInfo( $map_table );
 //			$pkMapField = SqlDbUtilities::getPrimaryKeyFieldFromDescribe( $mapFields );
 
             $_result = $this->parseFieldsForSqlSelect( $many_field, $mapFields );
@@ -1765,8 +1801,9 @@ class SqlDbSvc extends BaseDbSvc
             $_fields = Option::get( $_result, 'fields' );
             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
             $_params[":f_$one_field"] = $one_id;
-            $maps = $this->_recordQuery($map_table, $_fields, "$one_field = :f_$one_field", $_params, $_bindings, null );
-            unset($maps['meta']);
+            $maps =
+                $this->_recordQuery( $map_table, $_fields, "$one_field = :f_$one_field", $_params, $_bindings, null );
+            unset( $maps['meta'] );
 
             $createMap = array(); // map records to create
             $deleteMap = array(); // ids of 'many' records to delete from maps
@@ -1809,7 +1846,7 @@ class SqlDbSvc extends BaseDbSvc
                         }
                     }
 
-                    $createMap[] = array( $many_field => $id, $one_field => $one_id );
+                    $createMap[] = array($many_field => $id, $one_field => $one_id);
                 }
             }
 
@@ -1820,6 +1857,7 @@ class SqlDbSvc extends BaseDbSvc
             {
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::POST );
+                $_ssManyFilters = Session::getServiceFilters( static::POST, $this->_apiName, $many_table );
                 // create new many records
                 foreach ( $createMany as $_record )
                 {
@@ -1838,7 +1876,7 @@ class SqlDbSvc extends BaseDbSvc
                     $_manyId = (int)$this->_dbConn->lastInsertID;
                     if ( !empty( $_manyId ) )
                     {
-                        $createMap[] = array( $many_field => $_manyId, $one_field => $one_id );
+                        $createMap[] = array($many_field => $_manyId, $one_field => $one_id);
                     }
 
                 }
@@ -1849,6 +1887,7 @@ class SqlDbSvc extends BaseDbSvc
                 // update existing many records
                 // do we have permission to do so?
                 $this->validateTableAccess( $many_table, static::PUT );
+                $_ssManyFilters = Session::getServiceFilters( static::PUT, $this->_apiName, $many_table );
 
                 $_where = array();
                 $_params = array();
@@ -1891,6 +1930,7 @@ class SqlDbSvc extends BaseDbSvc
             {
                 // do we have permission to do so?
                 $this->validateTableAccess( $map_table, static::POST );
+                $_ssMapFilters = Session::getServiceFilters( static::POST, $this->_apiName, $map_table );
                 foreach ( $createMap as $_record )
                 {
                     $_parsed = $this->parseRecord( $_record, $mapFields, $_ssMapFilters );
@@ -1911,10 +1951,11 @@ class SqlDbSvc extends BaseDbSvc
             {
                 // do we have permission to do so?
                 $this->validateTableAccess( $map_table, static::DELETE );
+                $_ssMapFilters = Session::getServiceFilters( static::DELETE, $this->_apiName, $map_table );
                 $_where = array();
                 $_params = array();
                 $_where[] = "$one_field = '$one_id'";
-                $_where[] = array( 'in', $many_field, $deleteMap );
+                $_where[] = array('in', $many_field, $deleteMap);
                 $_serverFilter = $this->buildQueryStringFromData( $_ssMapFilters, true );
                 if ( !empty( $_serverFilter ) )
                 {
@@ -1940,7 +1981,8 @@ class SqlDbSvc extends BaseDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update many to one map assignment.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to update many to one map assignment.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -1991,7 +2033,7 @@ class SqlDbSvc extends BaseDbSvc
             $_sql .= "$_name $_op $_value";
         }
 
-        return array( 'filter' => $_sql, 'params' => $_params );
+        return array('filter' => $_sql, 'params' => $_params);
     }
 
     /**
@@ -2120,14 +2162,6 @@ class SqlDbSvc extends BaseDbSvc
         }
     }
 
-    /**
-     * @return int
-     */
-    public function getDriverType()
-    {
-        return $this->_driverType;
-    }
-
     protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
         $_idsInfo = array();
@@ -2251,7 +2285,9 @@ class SqlDbSvc extends BaseDbSvc
                         $_idName = Option::get( $_info, 'name' );
                         if ( Option::getBool( $_info, 'auto_increment' ) )
                         {
-                            $id[$_idName] = (int)$this->_dbConn->lastInsertID;
+                            $_schema = $this->_dbConn->schema->getTable( $this->_transactionTable );
+                            $_sequenceName = $_schema->sequenceName;
+                            $id[$_idName] = (int)$this->_dbConn->getLastInsertID( $_sequenceName );
                         }
                         else
                         {
@@ -2262,11 +2298,17 @@ class SqlDbSvc extends BaseDbSvc
                 }
                 if ( !empty( $_relatedInfo ) )
                 {
-                    $this->updateRelations( $this->_transactionTable, $record, $id, $_relatedInfo, $_allowRelatedDelete );
+                    $this->updateRelations(
+                        $this->_transactionTable,
+                        $record,
+                        $id,
+                        $_relatedInfo,
+                        $_allowRelatedDelete
+                    );
                 }
 
                 $_idName = ( isset( $_idsInfo, $_idsInfo[0], $_idsInfo[0]['name'] ) ) ? $_idsInfo[0]['name'] : null;
-                $_out = ( is_array( $id ) ) ? $id : array( $_idName => $id );
+                $_out = ( is_array( $id ) ) ? $id : array($_idName => $id);
 
                 // add via record, so batch processing can retrieve extras
                 if ( $_requireMore )
@@ -2303,21 +2345,36 @@ class SqlDbSvc extends BaseDbSvc
                         $_fields = Option::get( $_result, 'fields' );
                         $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                        $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                        $_result = $this->_recordQuery(
+                            $this->_transactionTable,
+                            $_fields,
+                            $_where,
+                            $_params,
+                            $_bindings,
+                            $extras
+                        );
                         if ( empty( $_result ) )
                         {
-                            throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
+                            throw new NotFoundException( "Record with identifier '" .
+                                                         print_r( $id, true ) .
+                                                         "' not found." );
                         }
                     }
                 }
 
                 if ( !empty( $_relatedInfo ) )
                 {
-                    $this->updateRelations( $this->_transactionTable, $record, $id, $_relatedInfo, $_allowRelatedDelete );
+                    $this->updateRelations(
+                        $this->_transactionTable,
+                        $record,
+                        $id,
+                        $_relatedInfo,
+                        $_allowRelatedDelete
+                    );
                 }
 
                 $_idName = ( isset( $_idsInfo, $_idsInfo[0], $_idsInfo[0]['name'] ) ) ? $_idsInfo[0]['name'] : null;
-                $_out = ( is_array( $id ) ) ? $id : array( $_idName => $id );
+                $_out = ( is_array( $id ) ) ? $id : array($_idName => $id);
 
                 // add via record, so batch processing can retrieve extras
                 if ( $_requireMore )
@@ -2341,10 +2398,19 @@ class SqlDbSvc extends BaseDbSvc
                     $_fields = Option::get( $_result, 'fields' );
                     $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                    $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                    $_result = $this->_recordQuery(
+                        $this->_transactionTable,
+                        $_fields,
+                        $_where,
+                        $_params,
+                        $_bindings,
+                        $extras
+                    );
                     if ( empty( $_result ) )
                     {
-                        throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
+                        throw new NotFoundException( "Record with identifier '" .
+                                                     print_r( $id, true ) .
+                                                     "' not found." );
                     }
 
                     $_out = $_result[0];
@@ -2362,10 +2428,19 @@ class SqlDbSvc extends BaseDbSvc
                         $_fields = Option::get( $_result, 'fields' );
                         $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                        $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                        $_result = $this->_recordQuery(
+                            $this->_transactionTable,
+                            $_fields,
+                            $_where,
+                            $_params,
+                            $_bindings,
+                            $extras
+                        );
                         if ( empty( $_result ) )
                         {
-                            throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
+                            throw new NotFoundException( "Record with identifier '" .
+                                                         print_r( $id, true ) .
+                                                         "' not found." );
                         }
                     }
                 }
@@ -2373,7 +2448,7 @@ class SqlDbSvc extends BaseDbSvc
                 if ( empty( $_out ) )
                 {
                     $_idName = ( isset( $_idsInfo, $_idsInfo[0], $_idsInfo[0]['name'] ) ) ? $_idsInfo[0]['name'] : null;
-                    $_out = ( is_array( $id ) ) ? $id : array( $_idName => $id );
+                    $_out = ( is_array( $id ) ) ? $id : array($_idName => $id);
                 }
                 break;
 
@@ -2389,7 +2464,8 @@ class SqlDbSvc extends BaseDbSvc
                 $_fields = Option::get( $_result, 'fields' );
                 $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                $_result =
+                    $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
                 if ( empty( $_result ) )
                 {
                     throw new NotFoundException( "Record with identifier '" . print_r( $id, true ) . "' not found." );
@@ -2447,16 +2523,16 @@ class SqlDbSvc extends BaseDbSvc
                     $_temp[] = Option::get( $_record, $_idName );
                 }
 
-                $_where[] = array( 'in', $_idName, $_temp );
+                $_where[] = array('in', $_idName, $_temp);
             }
             else
             {
-                $_where[] = array( 'in', $_idName, $this->_batchRecords );
+                $_where[] = array('in', $_idName, $this->_batchRecords);
             }
         }
         else
         {
-            $_where[] = array( 'in', $_idName, $this->_batchIds );
+            $_where[] = array('in', $_idName, $this->_batchIds);
         }
 
         $_serverFilter = $this->buildQueryStringFromData( $_ssFilters, true );
@@ -2489,7 +2565,8 @@ class SqlDbSvc extends BaseDbSvc
                 $_fields = Option::get( $_result, 'fields' );
                 $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                $_result =
+                    $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
                 if ( empty( $_result ) )
                 {
                     throw new NotFoundException( 'No records were found using the given identifiers.' );
@@ -2535,7 +2612,13 @@ class SqlDbSvc extends BaseDbSvc
                         {
                             if ( !empty( $_relatedInfo ) )
                             {
-                                $this->updateRelations( $this->_transactionTable, $_updates, $_id, $_relatedInfo, $_allowRelatedDelete );
+                                $this->updateRelations(
+                                    $this->_transactionTable,
+                                    $_updates,
+                                    $_id,
+                                    $_relatedInfo,
+                                    $_allowRelatedDelete
+                                );
                             }
                         }
 
@@ -2547,7 +2630,14 @@ class SqlDbSvc extends BaseDbSvc
                             $_fields = Option::get( $_result, 'fields' );
                             $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                            $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                            $_result = $this->_recordQuery(
+                                $this->_transactionTable,
+                                $_fields,
+                                $_where,
+                                $_params,
+                                $_bindings,
+                                $extras
+                            );
                             if ( empty( $_result ) )
                             {
                                 throw new NotFoundException( 'No records were found using the given identifiers.' );
@@ -2567,7 +2657,14 @@ class SqlDbSvc extends BaseDbSvc
                         $_fields = Option::get( $_result, 'fields' );
                         $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                        $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                        $_result = $this->_recordQuery(
+                            $this->_transactionTable,
+                            $_fields,
+                            $_where,
+                            $_params,
+                            $_bindings,
+                            $extras
+                        );
                         if ( count( $this->_batchIds ) !== count( $_result ) )
                         {
                             $_errors = array();
@@ -2589,7 +2686,8 @@ class SqlDbSvc extends BaseDbSvc
                                 if ( !$_found )
                                 {
                                     $_errors[] = $_index;
-                                    $_out[$_index] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
+                                    $_out[$_index] =
+                                        "Record with identifier '" . print_r( $_id, true ) . "' not found.";
                                 }
                             }
                         }
@@ -2613,7 +2711,14 @@ class SqlDbSvc extends BaseDbSvc
                     $_fields = Option::get( $_result, 'fields' );
                     $_fields = ( empty( $_fields ) ) ? '*' : $_fields;
 
-                    $_result = $this->_recordQuery( $this->_transactionTable, $_fields, $_where, $_params, $_bindings, $extras );
+                    $_result = $this->_recordQuery(
+                        $this->_transactionTable,
+                        $_fields,
+                        $_where,
+                        $_params,
+                        $_bindings,
+                        $extras
+                    );
                     if ( empty( $_result ) )
                     {
                         throw new NotFoundException( 'No records were found using the given identifiers.' );
@@ -2643,7 +2748,7 @@ class SqlDbSvc extends BaseDbSvc
 
                         if ( !empty( $_errors ) )
                         {
-                            $_context = array( 'error' => $_errors, 'record' => $_out );
+                            $_context = array('error' => $_errors, 'record' => $_out);
                             throw new NotFoundException( 'Batch Error: Not all records could be retrieved.', null, null, $_context );
                         }
                     }
@@ -2660,7 +2765,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_out = array();
                 foreach ( $this->_batchIds as $_id )
                 {
-                    $_out[] = array( $_idName => $_id );
+                    $_out[] = array($_idName => $_id);
                 }
             }
 

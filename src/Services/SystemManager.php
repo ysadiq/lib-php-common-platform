@@ -56,7 +56,7 @@ use Kisma\Core\Utility\Storage;
 class SystemManager extends BaseSystemRestService
 {
     //*************************************************************************
-    //	Constants
+    // Constants
     //*************************************************************************
 
     /**
@@ -93,16 +93,20 @@ class SystemManager extends BaseSystemRestService
     const BOGUS_INSTALL_MESSAGE = 'One or more of this DSP\'s configuration files cannot be loaded. Corrupt installation possible! :(';
 
     //*************************************************************************
-    //* Members
+    // Members
     //*************************************************************************
 
     /**
      * @var string Where the configuration information is stored
      */
     protected static $_configPath = null;
+    /**
+     * @var string The application's API name who made the current REST call
+     */
+    protected static $_currentAppName = null;
 
     //*************************************************************************
-    //	Methods
+    // Methods
     //*************************************************************************
 
     /**
@@ -219,7 +223,7 @@ class SystemManager extends BaseSystemRestService
 
             Log::debug( 'Checking database schema' );
 
-            SqlDbUtilities::createTables( $_db, $_tables, true, false );
+            SqlDbUtilities::updateTables( $_db, $_tables, true );
 
             try
             {
@@ -227,7 +231,7 @@ class SystemManager extends BaseSystemRestService
                 $command->reset();
 
                 // first time is troublesome with session user id
-                $rows = $command->insert( 'df_sys_config', array( 'db_version' => $_schemaVersion ) );
+                $rows = $command->insert( 'df_sys_config', array('db_version' => $_schemaVersion) );
 
                 if ( 0 >= $rows )
                 {
@@ -285,7 +289,7 @@ class SystemManager extends BaseSystemRestService
             // create system tables
             Log::debug( 'Analyzing current schema for migration.' );
 
-            SqlDbUtilities::createTables( $_db, $_tables, true, false );
+            SqlDbUtilities::updateTables( $_db, $_tables, true );
 
             if ( !empty( $_currentVersion ) )
             {
@@ -296,7 +300,7 @@ class SystemManager extends BaseSystemRestService
                     {
                         $command->reset();
 
-                        $serviceId = $command->select( 'id' )->from( 'df_sys_service' )->where( 'api_name = :name', array( ':name' => 'app' ) )->queryScalar();
+                        $serviceId = $command->select( 'id' )->from( 'df_sys_service' )->where( 'api_name = :name', array(':name' => 'app') )->queryScalar();
 
                         if ( false === $serviceId )
                         {
@@ -304,9 +308,9 @@ class SystemManager extends BaseSystemRestService
                         }
 
                         $command->reset();
-                        $attributes = array( 'storage_service_id' => $serviceId, 'storage_container' => 'applications' );
+                        $attributes = array('storage_service_id' => $serviceId, 'storage_container' => 'applications');
                         $condition = 'is_url_external = :external and storage_service_id is null';
-                        $params = array( ':external' => 0 );
+                        $params = array(':external' => 0);
                         $command->update( 'df_sys_app', $attributes, $condition, $params );
                     }
                     catch ( \Exception $_ex )
@@ -339,11 +343,11 @@ SQL;
             {
                 $command->reset();
 
-                $_params = array( ':db_version' => $_schemaVersion );
+                $_params = array(':db_version' => $_schemaVersion);
 
                 if ( 0 >= ( $_count = Sql::execute( $_sql, $_params ) ) && $_currentVersion != $_schemaVersion )
                 {
-                    Log::error( 'Error updating system config db_version.', array( 'from_version' => $_currentVersion, 'to_version' => $_schemaVersion ) );
+                    Log::error( 'Error updating system config db_version.', array('from_version' => $_currentVersion, 'to_version' => $_schemaVersion) );
 
                     throw new \Exception( 'Upsert failed. From v' . $_currentVersion . ' to v' . $_schemaVersion );
                 }
@@ -577,7 +581,7 @@ SQL;
         {
             throw new \Exception( 'Error opening zip file.' );
         }
-        $_skip = array( '.', '..', '.git', '.idea', 'log', 'vendor', 'shared', 'storage' );
+        $_skip = array('.', '..', '.git', '.idea', 'log', 'vendor', 'shared', 'storage');
         try
         {
             FileUtilities::addTreeToZip( $_backupZip, $_upgradeDir, '', $_skip );
@@ -648,7 +652,7 @@ SQL;
 //        {
 //            \Kisma::set( CoreSettings::AUTO_LOADER, $_loader );
 //        }
-        
+
         // clear out swagger cache
         SwaggerManager::clearCache();
     }
@@ -662,7 +666,7 @@ SQL;
             static::VERSION_TAGS_URL,
             array(),
             array(
-                CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' )
+                CURLOPT_HTTPHEADER => array('User-Agent: dreamfactory')
             )
         );
 
@@ -815,7 +819,7 @@ SQL;
         }
 
         $_marker = $_privatePath . Drupal::REGISTRATION_MARKER . '.' . sha1( $_tag );
-        $paths = array( '_privatePath' => $_privatePath, '_marker' => $_marker );
+        $paths = array('_privatePath' => $_privatePath, '_marker' => $_marker);
 
         if ( !file_exists( $_marker ) )
         {
@@ -903,18 +907,18 @@ SQL;
         //@todo Need to supply actual data from service table/config file. Maybe swagger?
         return array(
             'resource' => array(
-                array( 'name' => 'app', 'label' => 'Application' ),
-                array( 'name' => 'app_group', 'label' => 'Application Group' ),
-                array( 'name' => 'config', 'label' => 'Configuration' ),
-                array( 'name' => 'custom', 'label' => 'Custom Settings' ),
-                array( 'name' => 'device', 'label' => 'Device' ),
-                array( 'name' => 'email_template', 'label' => 'Email Template' ),
-                array( 'name' => 'event', 'label' => 'Event' ),
-                array( 'name' => 'provider', 'label' => 'Provider' ),
-                array( 'name' => 'provider_user', 'label' => 'Provider User' ),
-                array( 'name' => 'role', 'label' => 'Role' ),
-                array( 'name' => 'service', 'label' => 'Service' ),
-                array( 'name' => 'user', 'label' => 'User' ),
+                array('name' => 'app', 'label' => 'Application'),
+                array('name' => 'app_group', 'label' => 'Application Group'),
+                array('name' => 'config', 'label' => 'Configuration'),
+                array('name' => 'custom', 'label' => 'Custom Settings'),
+                array('name' => 'device', 'label' => 'Device'),
+                array('name' => 'email_template', 'label' => 'Email Template'),
+                array('name' => 'event', 'label' => 'Event'),
+                array('name' => 'provider', 'label' => 'Provider'),
+                array('name' => 'provider_user', 'label' => 'Provider User'),
+                array('name' => 'role', 'label' => 'Role'),
+                array('name' => 'service', 'label' => 'Service'),
+                array('name' => 'user', 'label' => 'User'),
             )
         );
     }
@@ -930,6 +934,9 @@ SQL;
         {
             if ( static::GET == $this->_action )
             {
+                // lock down access to API listing
+                $this->checkPermission( $this->_action );
+
                 return $this->_listResources();
             }
 
@@ -943,6 +950,7 @@ SQL;
 
         //	Let the resource handle it...
         $_resource = ResourceStore::resource( $_resource, $this->_resourceArray );
+        $_resource->setService( $this );
 
         return $_resource->processRequest( $this->_resourcePath, $this->_action );
     }
@@ -975,18 +983,15 @@ SQL;
      */
     public static function getAppNameFromId( $id )
     {
-        //@todo NULLs please!
-        $_name = '';
-
         if ( !empty( $id ) )
         {
-            if ( null !== ( $_app = App::model()->findByPk( $id, array( 'select' => 'name' ) ) ) )
+            if ( null !== ( $_app = App::model()->findByPk( $id, array('select' => 'api_name') ) ) )
             {
-                $_name = $_app->getAttribute( 'name' );
+                return $_app->getAttribute( 'api_name' );
             }
         }
 
-        return $_name;
+        return null;
     }
 
     /**
@@ -997,18 +1002,15 @@ SQL;
      */
     public static function getAppIdFromName( $name )
     {
-        //@todo NULLs please!
-        $_name = '';
-
         if ( !empty( $name ) )
         {
-            if ( null !== ( $_app = App::model()->byApiName( $name, 'name' )->find() ) )
+            if ( null !== ( $_app = App::model()->byApiName( $name )->find() ) )
             {
-                $_name = $_app->getPrimaryKey();
+                return $_app->getPrimaryKey();
             }
         }
 
-        return $_name;
+        return null;
     }
 
     /**
@@ -1066,7 +1068,7 @@ SQL
             $_user = $user
                 ? : User::model()->find(
                     'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
-                    array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
+                    array(':is_sys_admin' => 1, ':is_deleted' => 0)
                 );
 
             if ( !empty( $_user ) )
@@ -1103,15 +1105,15 @@ SQL
         {
             $_schema = Storage::defrost( $_schema );
 
-            if ( isset( $_schema, $_schema[ $_schemaFilePath ] ) )
+            if ( isset( $_schema, $_schema[$_schemaFilePath] ) )
             {
-                return $_schema[ $_schemaFilePath ];
+                return $_schema[$_schemaFilePath];
             }
         }
 
         if ( empty( $_schema ) )
         {
-            $_schema = array( $_schemaFilePath => null );
+            $_schema = array($_schemaFilePath => null);
         }
 
         if ( false === ( $_jsonSchema = file_get_contents( $_schemaFilePath ) ) )
@@ -1125,11 +1127,11 @@ SQL
             throw new InternalServerErrorException( static::BOGUS_INSTALL_MESSAGE );
         }
 
-        $_schema[ $_schemaFilePath ] = DataFormat::jsonToArray( $_jsonSchema );
+        $_schema[$_schemaFilePath] = DataFormat::jsonToArray( $_jsonSchema );
 
         if ( false !== $checkTables )
         {
-            $_tables = Option::get( $_schema[ $_schemaFilePath ], 'table' );
+            $_tables = Option::get( $_schema[$_schemaFilePath], 'table' );
 
             if ( empty( $_tables ) )
             {
@@ -1142,7 +1144,7 @@ SQL
             Storage::freeze( $_schema )
         );
 
-        return $_schema[ $_schemaFilePath ];
+        return $_schema[$_schemaFilePath];
     }
 
     /**
@@ -1198,7 +1200,7 @@ SQL
         {
             Log::debug(
                 'Database schema upgrade required.',
-                array( 'from_version' => $_currentVersion, 'to_version' => $_schemaVersion )
+                array('from_version' => $_currentVersion, 'to_version' => $_schemaVersion)
             );
 
             return PlatformStates::SCHEMA_REQUIRED;
@@ -1224,7 +1226,7 @@ SQL
 
         foreach ( $data as $_row )
         {
-            $_count = Sql::scalar( $_sql, 0, array( ':' . $uniqueColumn => Option::get( $_row, $uniqueColumn ) ) );
+            $_count = Sql::scalar( $_sql, 0, array(':' . $uniqueColumn => Option::get( $_row, $uniqueColumn )) );
 
             if ( empty( $_count ) )
             {
@@ -1265,13 +1267,11 @@ SQL
                     }
                     catch ( \Exception $_ex )
                     {
-                        throw new InternalServerErrorException(
-                            'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(), array(
-                                'data'          => $data,
-                                'bogus_row'     => $_row,
-                                'unique_column' => $uniqueColumn
-                            )
-                        );
+                        throw new InternalServerErrorException( 'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(), array(
+                            'data'          => $data,
+                            'bogus_row'     => $_row,
+                            'unique_column' => $uniqueColumn
+                        ) );
                     }
                 }
             }
@@ -1301,7 +1301,7 @@ SQL
      */
     public static function setCurrentAppName( $app_name )
     {
-        $GLOBALS['app_name'] = $app_name;
+        static::$_currentAppName = $app_name;
     }
 
     /**
@@ -1309,7 +1309,7 @@ SQL
      */
     public static function getCurrentAppName()
     {
-        return Option::get( $GLOBALS, 'app_name' );
+        return static::$_currentAppName;
     }
 
     /**
@@ -1317,7 +1317,7 @@ SQL
      */
     public static function getCurrentAppId()
     {
-        return static::getAppIdFromName( static::getCurrentAppName() );
+        return static::getAppIdFromName( static::$_currentAppName );
     }
 
 }

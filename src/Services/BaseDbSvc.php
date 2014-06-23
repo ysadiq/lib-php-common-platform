@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\DbFilterOperators;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
@@ -29,8 +30,6 @@ use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
-use Kisma\Core\Utility\FilterInput;
-use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -47,7 +46,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     /**
      * Default maximum records returned on filter request
      */
-    const DB_MAX_RECORDS_RETURNED = 1000;
+    const MAX_RECORDS_RETURNED = 1000;
+    /**
+     * Default record wrapping tag for single or array of records
+     */
+    const RECORD_WRAPPER = 'record';
 
     //*************************************************************************
     //	Members
@@ -57,10 +60,6 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @var int|string
      */
     protected $_resourceId = null;
-    /**
-     * @var array
-     */
-    protected $_requestData = null;
     /**
      * @var boolean
      */
@@ -81,6 +80,13 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @var array
      */
     protected $_rollbackRecords = array();
+    /**
+     * This is a check for clients passing single records not wrapped with 'record'
+     * but passed to request handlers that expect it. Remove in 2.0.
+     *
+     * @var boolean
+     */
+    protected $_singleRecordAmnesty = false;
 
     //*************************************************************************
     //	Methods
@@ -95,7 +101,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         {
             //	Default verb aliases
             $settings['verb_aliases'] = array(
-                static::PATCH => static::MERGE,
+                static::MERGE => static::PATCH,
             );
         }
 
@@ -103,108 +109,141 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     }
 
     /**
-     *
+     * {@InheritDoc}
      */
     protected function _detectResourceMembers( $resourcePath = null )
     {
         parent::_detectResourceMembers( $resourcePath );
 
-        $this->_resourceId = ( isset( $this->_resourceArray, $this->_resourceArray[1] ) ) ? $this->_resourceArray[1] : '';
-        $this->_requestData = RestData::getPostedData( true, true );
+        $this->_resourceId = Option::get( $this->_resourceArray, 1 );
     }
 
     /**
-     * @param null|array $post_data
+     * {@InheritDoc}
      *
-     * @return array
+     * IMPORTANT: The representation of the data will be placed back into the original location/position in the $record from which it was "normalized".
+     * This means that any client-side handlers will have to deal with the bogus determinations. Just be aware.
+     *
+     * Below is a side-by-side comparison of record data as shown sent by or returned to the caller, and sent to an event handler.
+     *
+     *  REST API v1.0                           Event Representation
+     *  -------------                           --------------------
+     *  Single row...                           Add a 'record' key and make it look like a multi-row
+     *
+     *      array(                              array(
+     *          'id' => 1,                          'record' => array(
+     *      )                                           0 => array( 'id' => 1, ),
+     *                                              ),
+     *                                          ),
+     *
+     * Multi-row...                             Stays the same...or gets wrapped by adding a 'record' key
+     *
+     *      array(                              array(
+     *          'record' => array(                  'record' =>  array(
+     *              0 => array( 'id' => 1 ),            0 => array( 'id' => 1 ),
+     *              1 => array( 'id' => 2 ),            1 => array( 'id' => 2 ),
+     *              2 => array( 'id' => 3 ),            2 => array( 'id' => 3 ),
+     *          ),                                  ),
+     *      )                                   )
+     *
+     * or...
+     *
+     *      array(                              array(
+     *          0 => array( 'id' => 1 ),            'record' =>  array(
+     *          1 => array( 'id' => 2 ),                0 => array( 'id' => 1 ),
+     *          2 => array( 'id' => 3 ),                1 => array( 'id' => 2 ),
+     *      ),                                          2 => array( 'id' => 3 ),
+     *                                              ),
+     *                                          )
      */
-    protected function _gatherExtrasFromRequest( &$post_data = null )
+    protected function _detectRequestMembers()
     {
-        // most DBs support the following filter extras from url or posted data
-        $_extras = array();
+        // override - don't call parent class here
+        $_posted = Option::clean( RestData::getPostedData( true, true ) );
 
-        // Most requests contain 'returned fields' parameter
-        $_fields = static::getFromPostedData( $post_data, 'fields', FilterInput::request( 'fields' ) );
-        $_fieldsDefault = ( static::GET == $this->_action ) ? '*' : null;
-        $_extras['fields'] = ( empty( $_fields ) ) ? $_fieldsDefault : $_fields;
-
-        // means to override the default identifier fields for a table
-        // or supply one when there is no default designated
-        $_extras['id_field'] = static::getFromPostedData( $post_data, 'id_field', FilterInput::request( 'id_field' ) );
-
-        // means to override the default identifier type for a table
-        // or supply one when there is no default designated
-        $_extras['id_type'] = static::getFromPostedData( $post_data, 'id_type', FilterInput::request( 'id_type' ) );
-
-        if ( null != $_ssFilters = Session::getServiceFilters( $this->_apiName, $this->_resource ) )
+        if ( empty( $this->_resource ) )
         {
-            $_extras['ss_filters'] = $_ssFilters;
+            // admin/schema requests
+            // MERGE URL parameters with posted data, posted data takes precedence
+            $this->_requestPayload = array_merge( $_REQUEST, $_posted );
+
+            return $this;
         }
 
-        // rollback all db changes in a transaction, if applicable
-        $_extras['rollback'] = FilterInput::request(
-            'rollback',
-            Option::getBool( $post_data, 'rollback' ),
-            FILTER_VALIDATE_BOOLEAN
-        );
+        if ( !empty( $this->_resourceId ) )
+        {
+            if ( !empty( $_posted ) )
+            {
+                // single records don't use the record wrapper, so wrap it
+                $_posted = array(static::RECORD_WRAPPER => array($_posted));
+            }
+        }
+        elseif ( DataFormat::isArrayNumeric( $_posted ) )
+        {
+            // import from csv, etc doesn't include a wrapper, so wrap it
+            $_posted = array(static::RECORD_WRAPPER => $_posted);
+        }
+        else
+        {
+            switch ( $this->_action )
+            {
+                case static::POST:
+                case static::PUT:
+                case static::PATCH:
+                case static::MERGE:
+                    // fix wrapper on posted single record
+                    if ( !isset( $_posted[static::RECORD_WRAPPER] ) )
+                    {
+                        $this->_singleRecordAmnesty = true;
+                        if ( !empty( $_posted ) )
+                        {
+                            // stuff it back in for event
+                            $_posted[static::RECORD_WRAPPER] = array($_posted);
+                        }
+                    }
+                    break;
+            }
+        }
 
-        // continue batch processing if an error occurs, if applicable
-        $_extras['continue'] = FilterInput::request(
-            'continue',
-            Option::getBool( $post_data, 'continue' ),
-            FILTER_VALIDATE_BOOLEAN
-        );
+        // MERGE URL parameters with posted data, posted data takes precedence
+        $this->_requestPayload = array_merge( $_REQUEST, $_posted );
+
+        if ( static::GET == $this->_action )
+        {
+            // default for GET should be "return all fields"
+            if ( !isset( $this->_requestPayload['fields'] ) )
+            {
+                $this->_requestPayload['fields'] = '*';
+            }
+        }
+
+        // Add server side filtering properties
+        if ( null != $_ssFilters = Session::getServiceFilters( $this->_action, $this->_apiName, $this->_resource ) )
+        {
+            $this->_requestPayload['ss_filters'] = $_ssFilters;
+        }
 
         // look for limit, accept top as well as limit
-        $_limit = FilterInput::request(
-            'limit',
-            FilterInput::request(
-                'top',
-                Option::get( $post_data, 'limit', Option::get( $post_data, 'top' ) ),
-                FILTER_VALIDATE_INT
-            ),
-            FILTER_VALIDATE_INT
-        );
-        $_extras['limit'] = $_limit;
-
-        // accept skip as well as offset
-        $_offset = FilterInput::request(
-            'offset',
-            FilterInput::request(
-                'skip',
-                Option::get( $post_data, 'offset', Option::get( $post_data, 'skip' ) ),
-                FILTER_VALIDATE_INT
-            ),
-            FILTER_VALIDATE_INT
-        );
-        $_extras['offset'] = $_offset;
-
-        // accept sort as well as order
-        $_order = FilterInput::request(
-            'order',
-            FilterInput::request(
-                'sort',
-                Option::get( $post_data, 'order', Option::get( $post_data, 'sort' ) )
-            )
-        );
-        $_extras['order'] = $_order;
-
-        // include count in metadata tag
-        $_includeCount = FilterInput::request(
-            'include_count',
-            Option::getBool( $post_data, 'include_count', false ),
-            FILTER_VALIDATE_BOOLEAN
-        );
-
-        $_extras['include_count'] = $_includeCount;
-
-        // trigger action events...should be called somewhere more generic, but this is called by every action here...
-        if ( static::GET != $this->_action )
+        if ( !isset( $this->_requestPayload['limit'] ) && ( $_limit = Option::get( $this->_requestPayload, 'top' ) ) )
         {
-            $this->_triggerActionEvent( $post_data );
+            $this->_requestPayload['limit'] = $_limit;
         }
 
-        return $_extras;
+        // accept skip as well as offset
+        if ( !isset( $this->_requestPayload['offset'] ) &&
+             ( $_offset = Option::get( $this->_requestPayload, 'skip' ) )
+        )
+        {
+            $this->_requestPayload['offset'] = $_offset;
+        }
+
+        // accept sort as well as order
+        if ( !isset( $this->_requestPayload['order'] ) && ( $_order = Option::get( $this->_requestPayload, 'sort' ) ) )
+        {
+            $this->_requestPayload['order'] = $_order;
+        }
+
+        return $this;
     }
 
     /**
@@ -220,7 +259,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             throw new BadRequestException( 'Table name can not be empty.' );
         }
 
-        $_action = ( empty( $action ) ) ? $this->getRequestedAction() : $action;
+        $_action = ( empty( $action ) ) ? $this->_action : $action;
 
         // finally check that the current user has privileges to access this table
         $this->checkPermission( $_action, $table );
@@ -241,9 +280,9 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         else
         {
             // listing and getting table properties are checked by table
-            if ( static::GET != $_action = $this->getRequestedAction() )
+            if ( static::GET != $this->_action )
             {
-                $this->checkPermission( $_action );
+                $this->checkPermission( $this->_action );
             }
         }
     }
@@ -262,139 +301,46 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     }
 
     /**
-     * @return array|bool
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     */
-    protected function _handleAdmin()
-    {
-        $_result = false;
-
-        switch ( $this->_action )
-        {
-            case static::GET:
-                $_ids = static::getFromPostedData( $this->_requestData, 'names', FilterInput::request( 'names' ) );
-                if ( empty( $_ids ) )
-                {
-                    return $this->_listResources();
-                }
-
-                $_result = $this->getTables( $_ids );
-                $_result = array('table' => $_result);
-                break;
-
-            case static::POST:
-                $_tables = static::getFromPostedData( $this->_requestData, 'table' );
-
-                if ( empty( $_tables ) )
-                {
-                    $_result = $this->createTable( $this->_requestData );
-                }
-                else
-                {
-                    $_result = $this->createTables( $_tables );
-                    $_result = array('table' => $_result);
-                }
-                break;
-
-            case static::PUT:
-            case static::PATCH:
-            case static::MERGE:
-                $_tables = static::getFromPostedData( $this->_requestData, 'table' );
-
-                if ( empty( $_tables ) )
-                {
-                    $_result = $this->updateTable( $this->_requestData );
-                }
-                else
-                {
-                    $_result = $this->updateTables( $_tables );
-                    $_result = array('table' => $_result);
-                }
-                break;
-
-            case static::DELETE:
-                $_ids = static::getFromPostedData( $this->_requestData, 'names', FilterInput::request( 'names' ) );
-                if ( !empty( $_ids ) )
-                {
-                    $_result = $this->deleteTables( $_ids );
-                    $_result = array('table' => $_result);
-                }
-                else
-                {
-                    $_tables = static::getFromPostedData( $this->_requestData, 'table' );
-
-                    if ( empty( $_tables ) )
-                    {
-                        $_result = $this->deleteTable( $this->_requestData );
-                    }
-                    else
-                    {
-                        $_result = $this->deleteTables( $_tables );
-                        $_result = array('table' => $_result);
-                    }
-                }
-                break;
-        }
-
-        return $_result;
-    }
-
-    /**
      * @return array
      */
     protected function _handleGet()
     {
-        $_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
-
-        if ( empty( $this->_resourceId ) )
+        //	Single resource by ID
+        if ( !empty( $this->_resourceId ) )
         {
-            $_ids = static::getFromPostedData( $this->_requestData, 'ids', FilterInput::request( 'ids' ) );
+            return $this->retrieveRecordById( $this->_resource, $this->_resourceId, $this->_requestPayload );
+        }
 
-            if ( !empty( $_ids ) )
-            {
-                $_result = $this->retrieveRecordsByIds( $this->_resource, $_ids, $_extras );
-                $_result = array('record' => $_result);
-            }
-            else
-            {
-                $_records = static::getFromPostedData( $this->_requestData, 'record' );
+        $_ids = Option::get( $this->_requestPayload, 'ids' );
 
-                if ( !empty( $_records ) )
-                {
-                    // passing records to have them updated with new or more values, id field required
-                    $_result = $this->retrieveRecords( $this->_resource, $_records, $_extras );
-                    $_result = array('record' => $_result);
-                }
-                else
-                {
-                    $_filter = Option::get( $this->_requestData, 'filter', FilterInput::request( 'filter' ) );
-                    if ( empty( $_filter ) && !empty( $this->_requestData ) )
-                    {
-                        // query by record map
-                        $_result = $this->retrieveRecord( $this->_resource, $this->_requestData, $_extras );
-                    }
-                    else
-                    {
-                        $_params = Option::get( $this->_requestData, 'params', array() );
-                        $_result = $this->retrieveRecordsByFilter( $this->_resource, $_filter, $_params, $_extras );
-                        if ( isset( $_result['meta'] ) )
-                        {
-                            $_meta = $_result['meta'];
-                            unset( $_result['meta'] );
-                            $_result = array('record' => $_result, 'meta' => $_meta);
-                        }
-                        else
-                        {
-                            $_result = array('record' => $_result);
-                        }
-                    }
-                }
-            }
+        //	Multiple resources by ID
+        if ( !empty( $_ids ) )
+        {
+            $_result = $this->retrieveRecordsByIds( $this->_resource, $_ids, $this->_requestPayload );
         }
         else
         {
-            // single entity by id
-            $_result = $this->retrieveRecordById( $this->_resource, $this->_resourceId, $_extras );
+            $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
+
+            if ( !empty( $_records ) )
+            {
+                // passing records to have them updated with new or more values, id field required
+                $_result = $this->retrieveRecords( $this->_resource, $_records, $this->_requestPayload );
+            }
+            else
+            {
+                $_filter = Option::get( $this->_requestPayload, 'filter' );
+                $_params = Option::get( $this->_requestPayload, 'params', array() );
+                $_result =
+                    $this->retrieveRecordsByFilter( $this->_resource, $_filter, $_params, $this->_requestPayload );
+            }
+        }
+
+        $_meta = Option::get( $_result, 'meta', null, true );
+        $_result = array(static::RECORD_WRAPPER => $_result);
+        if ( !empty( $_meta ) )
+        {
+            $_result['meta'] = $_meta;
         }
 
         return $_result;
@@ -406,22 +352,31 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected function _handlePost()
     {
-        if ( empty( $this->_requestData ) )
+        if ( !empty( $this->_resourceId ) )
         {
-            throw new BadRequestException( 'No record(s) in create request.' );
+            throw new BadRequestException( 'Create record by identifier not currently supported.' );
         }
 
-        $_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
-        $_records = static::getFromPostedData( $this->_requestData, 'record' );
-
+        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
         if ( empty( $_records ) )
         {
-            $_result = $this->createRecord( $this->_resource, $this->_requestData, $_extras );
+            throw new BadRequestException( 'No record(s) detected in request.' );
         }
-        else
+
+        $this->_triggerActionEvent( $this->_response );
+
+        $_result = $this->createRecords( $this->_resource, $_records, $this->_requestPayload );
+
+        if ( $this->_singleRecordAmnesty )
         {
-            $_result = $this->createRecords( $this->_resource, $_records, $_extras );
-            $_result = array('record' => $_result);
+            return Option::get( $_result, 0, $_result );
+        }
+
+        $_meta = Option::get( $_result, 'meta', null, true );
+        $_result = array(static::RECORD_WRAPPER => $_result);
+        if ( !empty( $_meta ) )
+        {
+            $_result['meta'] = $_meta;
         }
 
         return $_result;
@@ -433,49 +388,59 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected function _handlePut()
     {
-        if ( empty( $this->_requestData ) )
+        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
+        if ( empty( $_records ) )
         {
-            throw new BadRequestException( 'No record(s) in update request.' );
+            throw new BadRequestException( 'No record(s) detected in request.' );
         }
 
-        $_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
+        $this->_triggerActionEvent( $this->_response );
 
-        if ( empty( $this->_resourceId ) )
+        if ( !empty( $this->_resourceId ) )
         {
-            $_records = static::getFromPostedData( $this->_requestData, 'record' );
-            $_ids = static::getFromPostedData( $this->_requestData, 'ids', FilterInput::request( 'ids' ) );
+            $_record = Option::get( $_records, 0, $_records );
 
-            if ( !empty( $_ids ) )
-            {
-                $_result = $this->updateRecordsByIds( $this->_resource, $_records, $_ids, $_extras );
-                $_result = array('record' => $_result);
-            }
-            else
-            {
-                $_filter = Option::get( $this->_requestData, 'filter', FilterInput::request( 'filter' ) );
-                if ( !empty( $_filter ) )
-                {
-                    $_params = Option::get( $this->_requestData, 'params', array() );
-                    $_result = $this->updateRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $_extras );
-                    $_result = array('record' => $_result);
-                }
-                else
-                {
-                    if ( !empty( $_records ) )
-                    {
-                        $_result = $this->updateRecords( $this->_resource, $_records, $_extras );
-                        $_result = array('record' => $_result);
-                    }
-                    else
-                    {
-                        $_result = $this->updateRecord( $this->_resource, $this->_requestData, $_extras );
-                    }
-                }
-            }
+            return $this->updateRecordById( $this->_resource, $_record, $this->_resourceId, $this->_requestPayload );
+        }
+
+        $_ids = Option::get( $this->_requestPayload, 'ids' );
+
+        if ( !empty( $_ids ) )
+        {
+            $_record = Option::get( $_records, 0, $_records );
+
+            $_result = $this->updateRecordsByIds( $this->_resource, $_record, $_ids, $this->_requestPayload );
         }
         else
         {
-            $_result = $this->updateRecordById( $this->_resource, $this->_requestData, $this->_resourceId, $_extras );
+            $_filter = Option::get( $this->_requestPayload, 'filter' );
+            if ( !empty( $_filter ) )
+            {
+                $_record = Option::get( $_records, 0, $_records );
+                $_params = Option::get( $this->_requestPayload, 'params', array() );
+                $_result = $this->updateRecordsByFilter(
+                    $this->_resource,
+                    $_record,
+                    $_filter,
+                    $_params,
+                    $this->_requestPayload
+                );
+            }
+            else
+            {
+                $_result = $this->updateRecords( $this->_resource, $_records, $this->_requestPayload );
+                if ( $this->_singleRecordAmnesty )
+                {
+                    return Option::get( $_result, 0 );
+                }
+            }
+        }
+
+        $_meta = Option::get( $_result, 'meta', null, true );
+        $_result = array(static::RECORD_WRAPPER => $_result);
+        if ( !empty( $_meta ) )
+        {
+            $_result['meta'] = $_meta;
         }
 
         return $_result;
@@ -485,50 +450,60 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @return array
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      */
-    protected function _handleMerge()
+    protected function _handlePatch()
     {
-        if ( empty( $this->_requestData ) )
+        $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
+        if ( empty( $_records ) )
         {
-            throw new BadRequestException( 'No record(s) in merge request.' );
+            throw new BadRequestException( 'No record(s) detected in request.' );
         }
 
-        $_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
-        if ( empty( $this->_resourceId ) )
-        {
-            $_records = static::getFromPostedData( $this->_requestData, 'record' );
+        $this->_triggerActionEvent( $this->_response );
 
-            $_ids = static::getFromPostedData( $this->_requestData, 'ids', FilterInput::request( 'ids' ) );
-            if ( !empty( $_ids ) )
-            {
-                $_result = $this->mergeRecordsByIds( $this->_resource, $_records, $_ids, $_extras );
-                $_result = array('record' => $_result);
-            }
-            else
-            {
-                $_filter = Option::get( $this->_requestData, 'filter', FilterInput::request( 'filter' ) );
-                if ( !empty( $_filter ) )
-                {
-                    $_params = Option::get( $this->_requestData, 'params', array() );
-                    $_result = $this->mergeRecordsByFilter( $this->_resource, $_records, $_filter, $_params, $_extras );
-                    $_result = array('record' => $_result);
-                }
-                else
-                {
-                    if ( !empty( $_records ) )
-                    {
-                        $_result = $this->mergeRecords( $this->_resource, $_records, $_extras );
-                        $_result = array('record' => $_result);
-                    }
-                    else
-                    {
-                        $_result = $this->mergeRecord( $this->_resource, $this->_requestData, $_extras );
-                    }
-                }
-            }
+        if ( !empty( $this->_resourceId ) )
+        {
+            $_record = Option::get( $_records, 0, $_records );
+
+            return $this->patchRecordById( $this->_resource, $_record, $this->_resourceId, $this->_requestPayload );
+        }
+
+        $_ids = Option::get( $this->_requestPayload, 'ids' );
+
+        if ( !empty( $_ids ) )
+        {
+            $_record = Option::get( $_records, 0, $_records );
+            $_result = $this->patchRecordsByIds( $this->_resource, $_record, $_ids, $this->_requestPayload );
         }
         else
         {
-            $_result = $this->mergeRecordById( $this->_resource, $this->_requestData, $this->_resourceId, $_extras );
+            $_filter = Option::get( $this->_requestPayload, 'filter' );
+            if ( !empty( $_filter ) )
+            {
+                $_record = Option::get( $_records, 0, $_records );
+                $_params = Option::get( $this->_requestPayload, 'params', array() );
+                $_result = $this->patchRecordsByFilter(
+                    $this->_resource,
+                    $_record,
+                    $_filter,
+                    $_params,
+                    $this->_requestPayload
+                );
+            }
+            else
+            {
+                $_result = $this->patchRecords( $this->_resource, $_records, $this->_requestPayload );
+                if ( $this->_singleRecordAmnesty )
+                {
+                    return Option::get( $_result, 0 );
+                }
+            }
+        }
+
+        $_meta = Option::get( $_result, 'meta', null, true );
+        $_result = array(static::RECORD_WRAPPER => $_result);
+        if ( !empty( $_meta ) )
+        {
+            $_result['meta'] = $_meta;
         }
 
         return $_result;
@@ -540,213 +515,54 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected function _handleDelete()
     {
-        $_extras = $this->_gatherExtrasFromRequest( $this->_requestData );
-        if ( empty( $this->_resourceId ) )
-        {
-            $_ids = static::getFromPostedData( $this->_requestData, 'ids', FilterInput::request( 'ids' ) );
-            if ( !empty( $_ids ) )
-            {
-                $_result = $this->deleteRecordsByIds( $this->_resource, $_ids, $_extras );
-                $_result = array('record' => $_result);
-            }
-            else
-            {
-                $_records = static::getFromPostedData( $this->_requestData, 'record' );
-                if ( !empty( $_records ) )
-                {
-                    $_result = $this->deleteRecords( $this->_resource, $_records, $_extras );
-                    $_result = array('record' => $_result);
-                }
-                else
-                {
-                    $_filter = Option::get( $this->_requestData, 'filter', FilterInput::request( 'filter' ) );
-                    if ( !empty( $_filter ) )
-                    {
-                        $_params = Option::get( $this->_requestData, 'params', array() );
-                        $_result = $this->deleteRecordsByFilter( $this->_resource, $_filter, $_params, $_extras );
-                        $_result = array('record' => $_result);
-                    }
-                    else
-                    {
-                        if ( empty( $this->_requestData ) )
-                        {
-                            if ( !FilterInput::request( 'force', false, FILTER_VALIDATE_BOOLEAN ) )
-                            {
-                                throw new BadRequestException( 'No filter or records given for delete request.' );
-                            }
+        $this->_triggerActionEvent( $this->_response );
 
-                            $_result = $this->truncateTable( $this->_resource, $_extras );
-                        }
-                        else
-                        {
-                            $_result = $this->deleteRecord( $this->_resource, $this->_requestData, $_extras );
-                        }
-                    }
-                }
-            }
+        if ( !empty( $this->_resourceId ) )
+        {
+            return $this->deleteRecordById( $this->_resource, $this->_resourceId, $this->_requestPayload );
+        }
+
+        $_ids = Option::get( $this->_requestPayload, 'ids' );
+        if ( !empty( $_ids ) )
+        {
+            $_result = $this->deleteRecordsByIds( $this->_resource, $_ids, $this->_requestPayload );
         }
         else
         {
-            $_result = $this->deleteRecordById( $this->_resource, $this->_resourceId, $_extras );
+            $_records = Option::get( $this->_requestPayload, static::RECORD_WRAPPER );
+            if ( !empty( $_records ) )
+            {
+                $_result = $this->deleteRecords( $this->_resource, $_records, $this->_requestPayload );
+            }
+            else
+            {
+                $_filter = Option::get( $this->_requestPayload, 'filter' );
+                if ( !empty( $_filter ) )
+                {
+                    $_params = Option::get( $this->_requestPayload, 'params', array() );
+                    $_result =
+                        $this->deleteRecordsByFilter( $this->_resource, $_filter, $_params, $this->_requestPayload );
+                }
+                else
+                {
+                    if ( !Option::getBool( $this->_requestPayload, 'force' ) )
+                    {
+                        throw new BadRequestException( 'No filter or records given for delete request.' );
+                    }
+
+                    return $this->truncateTable( $this->_resource, $this->_requestPayload );
+                }
+            }
+        }
+
+        $_meta = Option::get( $_result, 'meta', null, true );
+        $_result = array(static::RECORD_WRAPPER => $_result);
+        if ( !empty( $_meta ) )
+        {
+            $_result['meta'] = $_meta;
         }
 
         return $_result;
-    }
-
-    // Handle administrative options, table add, delete, etc
-
-    /**
-     * Get multiple tables and their properties
-     *
-     * @param string | array $tables Table names comma-delimited string or array
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function getTables( $tables = array() )
-    {
-        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
-
-        $_out = array();
-        foreach ( $tables as $_table )
-        {
-            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
-            $this->validateTableAccess( $_name );
-
-            $_out[] = $this->getTable( $_table );
-        }
-
-        return $_out;
-    }
-
-    /**
-     * Get any properties related to the table
-     *
-     * @param string | array $table Table name or defining properties
-     *
-     * @return array
-     * @throws \Exception
-     */
-    abstract public function getTable( $table );
-
-    /**
-     * Create one or more tables by array of table properties
-     *
-     * @param array $tables
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function createTables( $tables = array() )
-    {
-        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
-
-        $_out = array();
-        foreach ( $tables as $_table )
-        {
-            $_out[] = $this->createTable( $_table );
-        }
-
-        return $_out;
-    }
-
-    /**
-     * Create a single table by name and additional properties
-     *
-     * @param array $properties
-     *
-     * @throws \Exception
-     */
-    abstract public function createTable( $properties = array() );
-
-    /**
-     * Update one or more tables by array of table properties
-     *
-     * @param array $tables
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function updateTables( $tables = array() )
-    {
-        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
-
-        $_out = array();
-        foreach ( $tables as $_table )
-        {
-            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
-            $this->validateTableAccess( $_name );
-            $_out[] = $this->updateTable( $_table );
-        }
-
-        return $_out;
-    }
-
-    /**
-     * Update properties related to the table
-     *
-     * @param array $properties
-     *
-     * @return array
-     * @throws \Exception
-     */
-    abstract public function updateTable( $properties = array() );
-
-    /**
-     * Delete multiple tables and all of their contents
-     *
-     * @param array $tables
-     * @param bool  $check_empty
-     *
-     * @return array
-     * @throws \Exception
-     */
-    public function deleteTables( $tables = array(), $check_empty = false )
-    {
-        $tables = static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
-
-        $_out = array();
-        foreach ( $tables as $_table )
-        {
-            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
-            $this->validateTableAccess( $_name );
-            $_out[] = $this->deleteTable( $_table, $check_empty );
-        }
-
-        return $_out;
-    }
-
-    /**
-     * Delete a table and all of its contents by name
-     *
-     * @param string $table
-     * @param bool   $check_empty
-     *
-     * @throws \Exception
-     * @return array
-     */
-    abstract public function deleteTable( $table, $check_empty = false );
-
-    /**
-     * Delete all table entries but keep the table
-     *
-     * @param string $table
-     * @param array  $extras
-     *
-     * @throws \Exception
-     * @return array
-     */
-    public function truncateTable( $table, $extras = array() )
-    {
-        // todo faster way?
-        $_records = $this->retrieveRecordsByFilter( $table, null, null, $extras );
-
-        if ( !empty( $_records ) )
-        {
-            $this->deleteRecords( $table, $_records, $extras );
-        }
-
-        return array('success' => true);
     }
 
     // Handle table record operations
@@ -798,14 +614,15 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 {
                     if ( false === $_id = $this->checkForIds( $_record, $_idsInfo, $extras, true ) )
                     {
-                        throw new BadRequestException( "Required id field(s) not found in record $_index: " . print_r( $_record, true ) );
+                        throw new BadRequestException( "Required id field(s) not found in record $_index: " .
+                                                       print_r( $_record, true ) );
                     }
 
                     $_result = $this->addToTransaction( $_record, $_id, $extras, $_rollback, $_continue, $_isSingle );
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
-                        $_out[ $_index ] = $_result;
+                        $_out[$_index] = $_result;
                     }
                 }
                 catch ( \Exception $_ex )
@@ -817,7 +634,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                             // first error, don't worry about batch just throw it
                             // mark last error and index for batch results
                             $_errors[] = $_index;
-                            $_out[ $_index ] = $_ex->getMessage();
+                            $_out[$_index] = $_ex->getMessage();
                         }
 
                         throw $_ex;
@@ -825,7 +642,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
-                    $_out[ $_index ] = $_ex->getMessage();
+                    $_out[$_index] = $_ex->getMessage();
                 }
             }
 
@@ -850,7 +667,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             $_context = null;
             if ( !empty( $_errors ) )
             {
-                $_context = array('error' => $_errors, 'record' => $_out);
+                $_context = array('error' => $_errors, static::RECORD_WRAPPER => $_out);
                 $_msg = 'Batch Error: Not all records could be created.';
             }
 
@@ -863,7 +680,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
             if ( $_ex instanceof RestException )
             {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(
+                ), $_context );
             }
 
             throw new InternalServerErrorException( "Failed to create records in '$table'.\n$_msg", null, null, $_context );
@@ -934,14 +752,15 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 {
                     if ( false === $_id = $this->checkForIds( $_record, $_idsInfo, $extras ) )
                     {
-                        throw new BadRequestException( "Required id field(s) not found in record $_index: " . print_r( $_record, true ) );
+                        throw new BadRequestException( "Required id field(s) not found in record $_index: " .
+                                                       print_r( $_record, true ) );
                     }
 
                     $_result = $this->addToTransaction( $_record, $_id, $extras, $_rollback, $_continue, $_isSingle );
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
-                        $_out[ $_index ] = $_result;
+                        $_out[$_index] = $_result;
                     }
                 }
                 catch ( \Exception $_ex )
@@ -953,7 +772,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                             // first error, don't worry about batch just throw it
                             // mark last error and index for batch results
                             $_errors[] = $_index;
-                            $_out[ $_index ] = $_ex->getMessage();
+                            $_out[$_index] = $_ex->getMessage();
                         }
 
                         throw $_ex;
@@ -961,7 +780,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
-                    $_out[ $_index ] = $_ex->getMessage();
+                    $_out[$_index] = $_ex->getMessage();
                 }
             }
 
@@ -985,7 +804,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             $_context = null;
             if ( !empty( $_errors ) )
             {
-                $_context = array('error' => $_errors, 'record' => $_out);
+                $_context = array('error' => $_errors, static::RECORD_WRAPPER => $_out);
                 $_msg = 'Batch Error: Not all records could be updated.';
             }
 
@@ -998,7 +817,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
             if ( $_ex instanceof RestException )
             {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(
+                ), $_context );
             }
 
             throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
@@ -1112,14 +932,15 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 {
                     if ( false === $_id = $this->checkForIds( $_id, $_idsInfo, $extras, true ) )
                     {
-                        throw new BadRequestException( "Required id field(s) not valid in request $_index: " . print_r( $_id, true ) );
+                        throw new BadRequestException( "Required id field(s) not valid in request $_index: " .
+                                                       print_r( $_id, true ) );
                     }
 
                     $_result = $this->addToTransaction( null, $_id, $extras, $_rollback, $_continue, $_isSingle );
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
-                        $_out[ $_index ] = $_result;
+                        $_out[$_index] = $_result;
                     }
                 }
                 catch ( \Exception $_ex )
@@ -1131,7 +952,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                             // first error, don't worry about batch just throw it
                             // mark last error and index for batch results
                             $_errors[] = $_index;
-                            $_out[ $_index ] = $_ex->getMessage();
+                            $_out[$_index] = $_ex->getMessage();
                         }
 
                         throw $_ex;
@@ -1139,7 +960,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
-                    $_out[ $_index ] = $_ex->getMessage();
+                    $_out[$_index] = $_ex->getMessage();
                 }
             }
 
@@ -1163,7 +984,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             $_context = null;
             if ( !empty( $_errors ) )
             {
-                $_context = array('error' => $_errors, 'record' => $_out);
+                $_context = array('error' => $_errors, static::RECORD_WRAPPER => $_out);
                 $_msg = 'Batch Error: Not all records could be updated.';
             }
 
@@ -1176,7 +997,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
             if ( $_ex instanceof RestException )
             {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(
+                ), $_context );
             }
 
             throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
@@ -1209,7 +1031,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @throws \Exception
      * @return array
      */
-    public function mergeRecords( $table, $records, $extras = array() )
+    public function patchRecords( $table, $records, $extras = array() )
     {
         $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
 
@@ -1248,14 +1070,15 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 {
                     if ( false === $_id = $this->checkForIds( $_record, $_idsInfo, $extras ) )
                     {
-                        throw new BadRequestException( "Required id field(s) not found in record $_index: " . print_r( $_record, true ) );
+                        throw new BadRequestException( "Required id field(s) not found in record $_index: " .
+                                                       print_r( $_record, true ) );
                     }
 
                     $_result = $this->addToTransaction( $_record, $_id, $extras, $_rollback, $_continue, $_isSingle );
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
-                        $_out[ $_index ] = $_result;
+                        $_out[$_index] = $_result;
                     }
                 }
                 catch ( \Exception $_ex )
@@ -1267,7 +1090,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                             // first error, don't worry about batch just throw it
                             // mark last error and index for batch results
                             $_errors[] = $_index;
-                            $_out[ $_index ] = $_ex->getMessage();
+                            $_out[$_index] = $_ex->getMessage();
                         }
 
                         throw $_ex;
@@ -1275,7 +1098,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
-                    $_out[ $_index ] = $_ex->getMessage();
+                    $_out[$_index] = $_ex->getMessage();
                 }
             }
 
@@ -1299,7 +1122,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             $_context = null;
             if ( !empty( $_errors ) )
             {
-                $_context = array('error' => $_errors, 'record' => $_out);
+                $_context = array('error' => $_errors, static::RECORD_WRAPPER => $_out);
                 $_msg = 'Batch Error: Not all records could be patched.';
             }
 
@@ -1312,7 +1135,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
             if ( $_ex instanceof RestException )
             {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(
+                ), $_context );
             }
 
             throw new InternalServerErrorException( "Failed to patch records in '$table'.\n$_msg", null, null, $_context );
@@ -1327,11 +1151,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @throws \Exception
      * @return array
      */
-    public function mergeRecord( $table, $record, $extras = array() )
+    public function patchRecord( $table, $record, $extras = array() )
     {
         $_records = static::validateAsArray( $record, null, true, 'The request contains no valid record fields.' );
 
-        $_results = $this->mergeRecords( $table, $_records, $extras );
+        $_results = $this->patchRecords( $table, $_records, $extras );
 
         return Option::get( $_results, 0, array() );
     }
@@ -1346,7 +1170,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @throws \Exception
      * @return array
      */
-    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    public function patchRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
@@ -1369,7 +1193,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         $_ids = static::recordsAsIds( $_records, $_idsInfo );
         $extras['fields'] = $_fields;
 
-        return $this->mergeRecordsByIds( $table, $record, $_ids, $extras );
+        return $this->patchRecordsByIds( $table, $record, $_ids, $extras );
     }
 
     /**
@@ -1381,7 +1205,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @throws \Exception
      * @return array
      */
-    public function mergeRecordsByIds( $table, $record, $ids, $extras = array() )
+    public function patchRecordsByIds( $table, $record, $ids, $extras = array() )
     {
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
         $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
@@ -1424,14 +1248,15 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 {
                     if ( false === $_id = $this->checkForIds( $_id, $_idsInfo, $extras, true ) )
                     {
-                        throw new BadRequestException( "Required id field(s) not valid in request $_index: " . print_r( $_id, true ) );
+                        throw new BadRequestException( "Required id field(s) not valid in request $_index: " .
+                                                       print_r( $_id, true ) );
                     }
 
                     $_result = $this->addToTransaction( null, $_id, $extras, $_rollback, $_continue, $_isSingle );
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
-                        $_out[ $_index ] = $_result;
+                        $_out[$_index] = $_result;
                     }
                 }
                 catch ( \Exception $_ex )
@@ -1443,7 +1268,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                             // first error, don't worry about batch just throw it
                             // mark last error and index for batch results
                             $_errors[] = $_index;
-                            $_out[ $_index ] = $_ex->getMessage();
+                            $_out[$_index] = $_ex->getMessage();
                         }
 
                         throw $_ex;
@@ -1451,7 +1276,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
-                    $_out[ $_index ] = $_ex->getMessage();
+                    $_out[$_index] = $_ex->getMessage();
                 }
             }
 
@@ -1475,7 +1300,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             $_context = null;
             if ( !empty( $_errors ) )
             {
-                $_context = array('error' => $_errors, 'record' => $_out);
+                $_context = array('error' => $_errors, static::RECORD_WRAPPER => $_out);
                 $_msg = 'Batch Error: Not all records could be patched.';
             }
 
@@ -1488,7 +1313,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
             if ( $_ex instanceof RestException )
             {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(
+                ), $_context );
             }
 
             throw new InternalServerErrorException( "Failed to patch records in '$table'.\n$_msg", null, null, $_context );
@@ -1504,11 +1330,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @throws \Exception
      * @return array
      */
-    public function mergeRecordById( $table, $record, $id, $extras = array() )
+    public function patchRecordById( $table, $record, $id, $extras = array() )
     {
         $record = static::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
 
-        $_results = $this->mergeRecordsByIds( $table, $record, $id, $extras );
+        $_results = $this->patchRecordsByIds( $table, $record, $id, $extras );
 
         return Option::get( $_results, 0, array() );
     }
@@ -1640,14 +1466,15 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 {
                     if ( false === $_id = $this->checkForIds( $_id, $_idsInfo, $extras, true ) )
                     {
-                        throw new BadRequestException( "Required id field(s) not valid in request $_index: " . print_r( $_id, true ) );
+                        throw new BadRequestException( "Required id field(s) not valid in request $_index: " .
+                                                       print_r( $_id, true ) );
                     }
 
                     $_result = $this->addToTransaction( null, $_id, $extras, $_rollback, $_continue, $_isSingle );
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
-                        $_out[ $_index ] = $_result;
+                        $_out[$_index] = $_result;
                     }
                 }
                 catch ( \Exception $_ex )
@@ -1659,7 +1486,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                             // first error, don't worry about batch just throw it
                             // mark last error and index for batch results
                             $_errors[] = $_index;
-                            $_out[ $_index ] = $_ex->getMessage();
+                            $_out[$_index] = $_ex->getMessage();
                         }
 
                         throw $_ex;
@@ -1667,7 +1494,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
-                    $_out[ $_index ] = $_ex->getMessage();
+                    $_out[$_index] = $_ex->getMessage();
                 }
             }
 
@@ -1691,7 +1518,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             $_context = null;
             if ( !empty( $_errors ) )
             {
-                $_context = array('error' => $_errors, 'record' => $_out);
+                $_context = array('error' => $_errors, static::RECORD_WRAPPER => $_out);
                 $_msg = 'Batch Error: Not all records could be deleted.';
             }
 
@@ -1704,7 +1531,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
             if ( $_ex instanceof RestException )
             {
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(
+                ), $_context );
             }
 
             throw new InternalServerErrorException( "Failed to delete records from '$table'.\n$_msg", null, null, $_context );
@@ -1828,14 +1656,15 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 {
                     if ( false === $_id = $this->checkForIds( $_id, $_idsInfo, $extras, true ) )
                     {
-                        throw new BadRequestException( "Required id field(s) not valid in request $_index: " . print_r( $_id, true ) );
+                        throw new BadRequestException( "Required id field(s) not valid in request $_index: " .
+                                                       print_r( $_id, true ) );
                     }
 
                     $_result = $this->addToTransaction( null, $_id, $extras, false, $_continue, $_isSingle );
                     if ( isset( $_result ) )
                     {
                         // operation performed, take output
-                        $_out[ $_index ] = $_result;
+                        $_out[$_index] = $_result;
                     }
                 }
                 catch ( \Exception $_ex )
@@ -1847,7 +1676,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                             // first error, don't worry about batch just throw it
                             // mark last error and index for batch results
                             $_errors[] = $_index;
-                            $_out[ $_index ] = $_ex->getMessage();
+                            $_out[$_index] = $_ex->getMessage();
                         }
 
                         throw $_ex;
@@ -1855,7 +1684,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
                     // mark error and index for batch results
                     $_errors[] = $_index;
-                    $_out[ $_index ] = $_ex->getMessage();
+                    $_out[$_index] = $_ex->getMessage();
                 }
             }
 
@@ -1879,7 +1708,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             $_context = null;
             if ( !empty( $_errors ) )
             {
-                $_context = array('error' => $_errors, 'record' => $_out);
+                $_context = array('error' => $_errors, static::RECORD_WRAPPER => $_out);
                 $_msg = 'Batch Error: Not all records could be retrieved.';
             }
 
@@ -1887,7 +1716,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             {
                 $_temp = $_ex->getContext();
                 $_context = ( empty( $_temp ) ) ? $_context : $_temp;
-                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(), $_context );
+                throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(
+                ), $_context );
             }
 
             throw new InternalServerErrorException( "Failed to retrieve records from '$table'.\n$_msg", null, null, $_context );
@@ -2016,7 +1846,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                                 $_value = strval( $_value );
                                 break;
                         }
-                        $_id[ $_name ] = $_value;
+                        $_id[$_name] = $_value;
                     }
                     else
                     {
@@ -2083,14 +1913,14 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
                     if ( !static::validateFieldValue( $_name, $_fieldVal, $_validations, $for_update, $_fieldInfo ) )
                     {
-                        unset( $_keys[ $_pos ] );
-                        unset( $_values[ $_pos ] );
+                        unset( $_keys[$_pos] );
+                        unset( $_values[$_pos] );
                         continue;
                     }
 
-                    $_parsed[ $_name ] = $_fieldVal;
-                    unset( $_keys[ $_pos ] );
-                    unset( $_values[ $_pos ] );
+                    $_parsed[$_name] = $_fieldVal;
+                    unset( $_keys[$_pos] );
+                    unset( $_values[$_pos] );
                 }
 
                 // add or override for specific fields
@@ -2099,11 +1929,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                     case 'timestamp_on_create':
                         if ( !$for_update )
                         {
-                            $_parsed[ $_name ] = time();
+                            $_parsed[$_name] = time();
                         }
                         break;
                     case 'timestamp_on_update':
-                        $_parsed[ $_name ] = time();
+                        $_parsed[$_name] = time();
                         break;
                     case 'user_id_on_create':
                         if ( !$for_update )
@@ -2111,7 +1941,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                             $userId = Session::getCurrentUserId();
                             if ( isset( $userId ) )
                             {
-                                $_parsed[ $_name ] = $userId;
+                                $_parsed[$_name] = $userId;
                             }
                         }
                         break;
@@ -2119,7 +1949,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         $userId = Session::getCurrentUserId();
                         if ( isset( $userId ) )
                         {
-                            $_parsed[ $_name ] = $userId;
+                            $_parsed[$_name] = $userId;
                         }
                         break;
                 }
@@ -2470,7 +2300,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                             $_count = count( $value );
                             if ( $_count < $_min )
                             {
-                                $_msg = ( !empty( $_msg ) ) ? : "Field '$name' value does not contain enough selections.";
+                                $_msg =
+                                    ( !empty( $_msg ) ) ? : "Field '$name' value does not contain enough selections.";
                                 throw new BadRequestException( $_msg );
                             }
                             if ( !empty( $_max ) && ( $_count > $_max ) )
@@ -2505,7 +2336,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected static function getMaxRecordsReturnedLimit()
     {
-        return intval( Pii::getParam( 'dsp.db_max_records_returned', static::DB_MAX_RECORDS_RETURNED ) );
+        return intval( Pii::getParam( 'dsp.db_max_records_returned', static::MAX_RECORDS_RETURNED ) );
     }
 
     /**
@@ -2534,7 +2365,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @throws \DreamFactory\Platform\Exceptions\NotImplementedException
      * @return null|array Array of output fields
      */
-    protected function addToTransaction( $record = null, $id = null, $extras = null, $rollback = false, $continue = false, $single = false )
+    protected function addToTransaction( $record = null, $id = null, /** @noinspection PhpUnusedParameterInspection */
+        $extras = null, /** @noinspection PhpUnusedParameterInspection */
+        $rollback = false, /** @noinspection PhpUnusedParameterInspection */
+        $continue = false, /** @noinspection PhpUnusedParameterInspection */
+        $single = false )
     {
         if ( !empty( $record ) )
         {
@@ -2613,7 +2448,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             $_out = array();
             foreach ( $include as $_key )
             {
-                $_out[ $_key ] = Option::get( $record, $_key );
+                $_out[$_key] = Option::get( $record, $_key );
             }
 
             return $_out;
@@ -2697,7 +2532,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 {
                     throw new BadRequestException( "Identifying field '$_field' can not be empty for record." );
                 }
-                $_ids[ $_field ] = $_id;
+                $_ids[$_field] = $_id;
             }
 
             return $_ids;
@@ -2743,13 +2578,13 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 foreach ( $id_field as $_index => $_field )
                 {
                     $_search = ( $field_included ) ? $_field : $_index;
-                    $_ids[ $_field ] = Option::get( $_id, $_search );
+                    $_ids[$_field] = Option::get( $_id, $_search );
                 }
             }
             else
             {
                 $_field = $id_field[0];
-                $_ids[ $_field ] = $_id;
+                $_ids[$_field] = $_id;
             }
 
             $_out[] = $_ids;
@@ -2774,7 +2609,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
             foreach ( $id_field as $_name )
             {
-                unset( $record[ $_name ] );
+                unset( $record[$_name] );
             }
         }
     }
@@ -2836,7 +2671,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         {
             if ( false !== array_search( $_name, $fields ) )
             {
-                unset( $fields[ $_key ] );
+                unset( $fields[$_key] );
             }
         }
 
@@ -2865,7 +2700,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 $_secondId = Option::get( $_second, $id_field );
                 if ( $_firstId == $_secondId )
                 {
-                    $first_array[ $_key ] = array_merge( $_first, $_second );
+                    $first_array[$_key] = array_merge( $_first, $_second );
                 }
             }
         }
@@ -2916,6 +2751,26 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     }
 
     /**
+     * @param array $record
+     *
+     * @return array
+     */
+    public static function interpretRecordValues( $record )
+    {
+        if ( !is_array( $record ) || empty( $record ) )
+        {
+            return $record;
+        }
+
+        foreach ( $record as $_field => $_value )
+        {
+            $record[$_field] = Session::replaceLookup( $_value );
+        }
+
+        return $record;
+    }
+
+    /**
      * @param array | string $data          Array to check or comma-delimited string to convert
      * @param string | null  $str_delimiter Delimiter to check for string to array mapping, no op if null
      * @param boolean        $check_single  Check if single (associative) needs to be made multiple (numeric)
@@ -2954,18 +2809,6 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         return $data;
     }
 
-    public static function getFromPostedData( $data, $marker, $default = null )
-    {
-        $_found = Option::get( $data, $marker );
-        if ( empty( $_found ) )
-        {
-            // xml to array conversion leaves them in plural wrapper
-            $_found = Option::getDeep( $data, Inflector::pluralize( $marker ), $marker );
-        }
-
-        return ( empty( $_found ) ) ? $default : $_found;
-    }
-
     public static function startsWith( $haystack, $needle )
     {
         return ( substr( $haystack, 0, strlen( $needle ) ) === $needle );
@@ -2982,6 +2825,244 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     public function getResourceId()
     {
         return $this->_resourceId;
+    }
+
+    // Handle administrative options, table add, delete, etc
+
+    /**
+     * @return array|bool
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     */
+    protected function _handleAdmin()
+    {
+        $_result = false;
+
+        switch ( $this->_action )
+        {
+            case static::GET:
+                $_ids = Option::get( $this->_requestPayload, 'names' );
+                if ( empty( $_ids ) )
+                {
+                    return $this->_listResources();
+                }
+
+                $_result = $this->getTables( $_ids );
+                $_result = array('table' => $_result);
+                break;
+
+            case static::POST:
+                $_tables = Option::get( $this->_requestPayload, 'table' );
+
+                if ( empty( $_tables ) )
+                {
+                    $_result = $this->createTable( $this->_requestPayload );
+                }
+                else
+                {
+                    $_result = $this->createTables( $_tables );
+                    $_result = array('table' => $_result);
+                }
+                break;
+
+            case static::PUT:
+            case static::PATCH:
+            case static::MERGE:
+                $_tables = Option::get( $this->_requestPayload, 'table' );
+
+                if ( empty( $_tables ) )
+                {
+                    $_result = $this->updateTable( $this->_requestPayload );
+                }
+                else
+                {
+                    $_result = $this->updateTables( $_tables );
+                    $_result = array('table' => $_result);
+                }
+                break;
+
+            case static::DELETE:
+                $_ids = Option::get( $this->_requestPayload, 'names' );
+                if ( !empty( $_ids ) )
+                {
+                    $_result = $this->deleteTables( $_ids );
+                    $_result = array('table' => $_result);
+                }
+                else
+                {
+                    $_tables = Option::get( $this->_requestPayload, 'table' );
+
+                    if ( empty( $_tables ) )
+                    {
+                        $_result = $this->deleteTable( $this->_requestPayload );
+                    }
+                    else
+                    {
+                        $_result = $this->deleteTables( $_tables );
+                        $_result = array('table' => $_result);
+                    }
+                }
+                break;
+        }
+
+        return $_result;
+    }
+
+    /**
+     * Get multiple tables and their properties
+     *
+     * @param string | array $tables Table names comma-delimited string or array
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public function getTables( $tables = array() )
+    {
+        $tables =
+            static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+
+        $_out = array();
+        foreach ( $tables as $_table )
+        {
+            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
+            $this->validateTableAccess( $_name );
+
+            $_out[] = $this->getTable( $_table );
+        }
+
+        return $_out;
+    }
+
+    /**
+     * Get any properties related to the table
+     *
+     * @param string | array $table Table name or defining properties
+     *
+     * @return array
+     * @throws \Exception
+     */
+    abstract public function getTable( $table );
+
+    /**
+     * Create one or more tables by array of table properties
+     *
+     * @param array $tables
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public function createTables( $tables = array() )
+    {
+        $tables =
+            static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+
+        $_out = array();
+        foreach ( $tables as $_table )
+        {
+            $_out[] = $this->createTable( $_table );
+        }
+
+        return $_out;
+    }
+
+    /**
+     * Create a single table by name and additional properties
+     *
+     * @param array $properties
+     *
+     * @throws \Exception
+     */
+    abstract public function createTable( $properties = array() );
+
+    /**
+     * Update one or more tables by array of table properties
+     *
+     * @param array $tables
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public function updateTables( $tables = array() )
+    {
+        $tables =
+            static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+
+        $_out = array();
+        foreach ( $tables as $_table )
+        {
+            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
+            $this->validateTableAccess( $_name );
+            $_out[] = $this->updateTable( $_table );
+        }
+
+        return $_out;
+    }
+
+    /**
+     * Update properties related to the table
+     *
+     * @param array $properties
+     *
+     * @return array
+     * @throws \Exception
+     */
+    abstract public function updateTable( $properties = array() );
+
+    /**
+     * Delete multiple tables and all of their contents
+     *
+     * @param array $tables
+     * @param bool  $check_empty
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public function deleteTables( $tables = array(), $check_empty = false )
+    {
+        $tables =
+            static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+
+        $_out = array();
+        foreach ( $tables as $_table )
+        {
+            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
+            $this->validateTableAccess( $_name );
+            $_out[] = $this->deleteTable( $_table, $check_empty );
+        }
+
+        return $_out;
+    }
+
+    /**
+     * Delete a table and all of its contents by name
+     *
+     * @param string $table
+     * @param bool   $check_empty
+     *
+     * @throws \Exception
+     * @return array
+     */
+    abstract public function deleteTable( $table, $check_empty = false );
+
+    /**
+     * Delete all table entries but keep the table
+     *
+     * @param string $table
+     * @param array  $extras
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public function truncateTable( $table, $extras = array() )
+    {
+        // todo faster way?
+        $_records = $this->retrieveRecordsByFilter( $table, null, null, $extras );
+
+        if ( !empty( $_records ) )
+        {
+            $this->deleteRecords( $table, $_records, $extras );
+        }
+
+        return array('success' => true);
     }
 
 }

@@ -70,9 +70,9 @@ class User extends BaseSystemRestResource
     {
         switch ( $this->_action )
         {
-            case static::Post:
-            case static::Put:
-            case static::Patch:
+            case static::POST:
+            case static::PUT:
+            case static::PATCH:
                 if ( Option::getBool( $_REQUEST, 'send_invite' ) )
                 {
                     if ( is_array( $this->_response ) )
@@ -85,7 +85,7 @@ class User extends BaseSystemRestResource
                                 if ( $_record )
                                 {
                                     $_id = Option::get( $_record, 'id' );
-                                    static::_sendInvite( $_id, ( static::Post == $this->_action ) );
+                                    static::_sendInvite( $_id, ( static::POST == $this->_action ) );
                                 }
                             }
                             else
@@ -109,7 +109,7 @@ class User extends BaseSystemRestResource
                         {
                             // should be one
                             $_id = Option::get( $this->_response, 'id' );
-                            static::_sendInvite( $_id, ( static::Post == $this->_action ) );
+                            static::_sendInvite( $_id, ( static::POST == $this->_action ) );
                         }
                     }
                 }

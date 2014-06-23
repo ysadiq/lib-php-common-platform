@@ -72,9 +72,9 @@ class MongoDbSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ));
-        $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn', '' ));
-        $_db = Session::replaceLookup( Option::get( $_credentials, 'db' ));
+        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
+        $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn', '' ), true );
+        $_db = Session::replaceLookup( Option::get( $_credentials, 'db' ), true );
         if ( empty( $_dsn ) )
         {
             $_dsn = 'mongodb://localhost:27017';
@@ -105,11 +105,11 @@ class MongoDbSvc extends NoSqlDbSvc
             }
         }
 
-        $_username = Session::replaceLookup( Option::get( $_credentials, 'user' ) );
+        $_username = Session::replaceLookup( Option::get( $_credentials, 'user' ), true );
         if ( !empty( $_username ) )
         {
             $_options['username'] = $_username;
-            $_password = Session::replaceLookup( Option::get( $_credentials, 'pwd' ) );
+            $_password = Session::replaceLookup( Option::get( $_credentials, 'pwd' ), true );
             if ( !empty( $_password ) )
             {
                 $_options['password'] = $_password;
@@ -166,18 +166,6 @@ class MongoDbSvc extends NoSqlDbSvc
         return $_coll;
     }
 
-    /**
-     * @param null|array $post_data
-     *
-     * @return array
-     */
-    protected function _gatherExtrasFromRequest( &$post_data = null )
-    {
-        $_extras = parent::_gatherExtrasFromRequest( $post_data );
-
-        return $_extras;
-    }
-
     // REST service implementation
 
     /**
@@ -195,15 +183,17 @@ class MongoDbSvc extends NoSqlDbSvc
                 $_access = $this->getPermissions( $_table );
                 if ( !empty( $_access ) )
                 {
-                    $_resources[] = array( 'name' => $_table, 'access' => $_access );
+                    $_resources[] = array('name' => $_table, 'access' => $_access);
                 }
             }
 
-            return array( 'resource' => $_resources );
+            return array('resource' => $_resources);
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException(
+                "Failed to list resources for this service.\n{$_ex->getMessage()}"
+            );
         }
     }
 
@@ -235,7 +225,7 @@ class MongoDbSvc extends NoSqlDbSvc
         try
         {
             $_coll = $this->selectTable( $_name );
-            $_out = array( 'name' => $_coll->getName() );
+            $_out = array('name' => $_coll->getName());
             $_out['indexes'] = $_coll->getIndexInfo();
             $_out['access'] = $this->getPermissions( $_name );
 
@@ -243,7 +233,9 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException(
+                "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}"
+            );
         }
     }
 
@@ -261,7 +253,7 @@ class MongoDbSvc extends NoSqlDbSvc
         try
         {
             $_result = $this->_dbConn->createCollection( $_name );
-            $_out = array( 'name' => $_result->getName() );
+            $_out = array('name' => $_result->getName());
             $_out['indexes'] = $_result->getIndexInfo();
 
             return $_out;
@@ -286,7 +278,7 @@ class MongoDbSvc extends NoSqlDbSvc
         $this->selectTable( $_name );
 
 //		throw new InternalServerErrorException( "Failed to update table '$_name'." );
-        return array( 'name' => $_name );
+        return array('name' => $_name);
     }
 
     /**
@@ -304,7 +296,7 @@ class MongoDbSvc extends NoSqlDbSvc
         {
             $this->_dbConn->dropCollection( $_name );
 
-            return array( 'name' => $_name );
+            return array('name' => $_name);
         }
         catch ( \Exception $_ex )
         {
@@ -341,7 +333,7 @@ class MongoDbSvc extends NoSqlDbSvc
 
         try
         {
-            $_result = $_coll->update( $_criteria, $_parsed, array( 'multiple' => true ) );
+            $_result = $_coll->update( $_criteria, $_parsed, array('multiple' => true) );
             $_rows = static::processResult( $_result );
             if ( $_rows > 0 )
             {
@@ -363,7 +355,7 @@ class MongoDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    public function patchRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
         $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
         $_coll = $this->selectTable( $table );
@@ -383,7 +375,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 throw new BadRequestException( 'No valid fields found in request: ' . print_r( $record, true ) );
             }
 
-            $_parsed = array( '$set' => $_parsed );
+            $_parsed = array('$set' => $_parsed);
         }
         else
         {
@@ -399,7 +391,7 @@ class MongoDbSvc extends NoSqlDbSvc
 
         try
         {
-            $_result = $_coll->update( $_criteria, $_parsed, array( 'multiple' => true ) );
+            $_result = $_coll->update( $_criteria, $_parsed, array('multiple' => true) );
             $_rows = static::processResult( $_result );
             if ( $_rows > 0 )
             {
@@ -431,7 +423,7 @@ class MongoDbSvc extends NoSqlDbSvc
             $_criteria = $this->buildCriteriaArray( array(), null, $_ssFilters );
             $_coll->remove( $_criteria );
 
-            return array( 'success' => true );
+            return array('success' => true);
         }
         catch ( RestException $_ex )
         {
@@ -494,7 +486,7 @@ class MongoDbSvc extends NoSqlDbSvc
         $_limit = intval( Option::get( $extras, 'limit', 0 ) );
         $_offset = intval( Option::get( $extras, 'offset', 0 ) );
         $_sort = static::buildSortArray( Option::get( $extras, 'order' ) );
-        $_addCount = Option::get( $extras, 'include_count', false );
+        $_addCount = Option::getBool( $extras, 'include_count', false );
 
         try
         {
@@ -539,11 +531,11 @@ class MongoDbSvc extends NoSqlDbSvc
     protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
         $requested_fields = static::DEFAULT_ID_FIELD; // can only be this
+        $requested_types = Option::clean( $requested_types );
+        $_type = Option::get( $requested_types, 0, 'string' );
+        $_type = ( empty( $_type ) ) ? 'string' : $_type;
 
-        $_type = Option::get( Option::clean( $requested_types ), 0 );
-        $_type = (empty($_type)) ? 'string' : $_type;
-
-        return array( array( 'name' => static::DEFAULT_ID_FIELD, 'type' => $_type, 'required' => false ) );
+        return array(array('name' => static::DEFAULT_ID_FIELD, 'type' => $_type, 'required' => false));
     }
 
     /**
@@ -595,7 +587,7 @@ class MongoDbSvc extends NoSqlDbSvc
         $_out = array();
         foreach ( $include as $key )
         {
-            $_out[$key] = true;
+            $_out[ $key ] = true;
         }
 
         return $_out;
@@ -619,8 +611,8 @@ class MongoDbSvc extends NoSqlDbSvc
             return $filter; // assume they know what they are doing
         }
 
-        $_search = array( ' or ', ' and ', ' nor ' );
-        $_replace = array( ' || ', ' && ', ' NOR ' );
+        $_search = array(' or ', ' and ', ' nor ');
+        $_replace = array(' || ', ' && ', ' NOR ');
         $filter = trim( str_ireplace( $_search, $_replace, $filter ) );
 
         // handle logical operators first
@@ -633,7 +625,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 $_parts[] = static::buildFilterArray( $_op, $params );
             }
 
-            return array( '$or' => $_parts );
+            return array('$or' => $_parts);
         }
 
         $_ops = array_map( 'trim', explode( ' NOR ', $filter ) );
@@ -645,7 +637,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 $_parts[] = static::buildFilterArray( $_op, $params );
             }
 
-            return array( '$nor' => $_parts );
+            return array('$nor' => $_parts);
         }
 
         $_ops = array_map( 'trim', explode( ' && ', $filter ) );
@@ -657,7 +649,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 $_parts[] = static::buildFilterArray( $_op, $params );
             }
 
-            return array( '$and' => $_parts );
+            return array('$and' => $_parts);
         }
 
         // handle negation operator, i.e. starts with NOT?
@@ -665,17 +657,17 @@ class MongoDbSvc extends NoSqlDbSvc
         {
             $_parts = trim( substr( $filter, 4 ) );
 
-            return array( '$not' => $_parts );
+            return array('$not' => $_parts);
         }
 
         // the rest should be comparison operators
-        $_search = array( ' eq ', ' ne ', ' gte ', ' lte ', ' gt ', ' lt ', ' in ', ' nin ', ' all ', ' like ', ' <> ' );
-        $_replace = array( '=', '!=', '>=', '<=', '>', '<', ' IN ', ' NIN ', ' ALL ', ' LIKE ', '!=' );
+        $_search = array(' eq ', ' ne ', ' gte ', ' lte ', ' gt ', ' lt ', ' in ', ' nin ', ' all ', ' like ', ' <> ');
+        $_replace = array('=', '!=', '>=', '<=', '>', '<', ' IN ', ' NIN ', ' ALL ', ' LIKE ', '!=');
         $filter = trim( str_ireplace( $_search, $_replace, $filter ) );
 
         // Note: order matters, watch '='
-        $_sqlOperators = array( '!=', '>=', '<=', '=', '>', '<', ' IN ', ' NIN ', ' ALL ', ' LIKE ' );
-        $_mongoOperators = array( '$ne', '$gte', '$lte', '$eq', '$gt', '$lt', '$in', '$nin', '$all', ' LIKE ' );
+        $_sqlOperators = array('!=', '>=', '<=', '=', '>', '<', ' IN ', ' NIN ', ' ALL ', ' LIKE ');
+        $_mongoOperators = array('$ne', '$gte', '$lte', '$eq', '$gt', '$lt', '$in', '$nin', '$all', 'MongoRegex');
         foreach ( $_sqlOperators as $_key => $_sqlOp )
         {
             $_ops = array_map( 'trim', explode( $_sqlOp, $filter ) );
@@ -683,30 +675,30 @@ class MongoDbSvc extends NoSqlDbSvc
             {
                 $_field = $_ops[0];
                 $_val = static::_determineValue( $_ops[1], $_field, $params );
-                $_mongoOp = $_mongoOperators[$_key];
+                $_mongoOp = $_mongoOperators[ $_key ];
                 switch ( $_mongoOp )
                 {
                     case '$eq':
-                        return array( $_field => $_val );
+                        return array($_field => $_val);
 
                     case '$in':
                     case '$nin':
                         // todo check for list of mongoIds
                         $_val = array_map( 'trim', explode( ',', trim( trim( $_val, '(,)' ), ',' ) ) );
                         $_valArray = array();
-                        foreach ($_val as $_item)
+                        foreach ( $_val as $_item )
                         {
                             $_valArray[] = static::_determineValue( $_item, $_field, $params );
                         }
 
-                        return array( $_field => array( $_mongoOp => $_valArray ) );
+                        return array($_field => array($_mongoOp => $_valArray));
 
                     case 'MongoRegex':
 //			WHERE name LIKE "%Joe%"	(array("name" => new MongoRegex("/Joe/")));
 //			WHERE name LIKE "Joe%"	(array("name" => new MongoRegex("/^Joe/")));
 //			WHERE name LIKE "%Joe"	(array("name" => new MongoRegex("/Joe$/")));
                         $_val = static::_determineValue( $_ops[1], $_field, $params );
-                        if ( '%' == $_val[strlen( $_val ) - 1] )
+                        if ( '%' == $_val[ strlen( $_val ) - 1 ] )
                         {
                             if ( '%' == $_val[0] )
                             {
@@ -729,10 +721,10 @@ class MongoDbSvc extends NoSqlDbSvc
                             }
                         }
 
-                        return array( $_field => new \MongoRegex( $_val ) );
+                        return array($_field => new \MongoRegex( $_val ));
 
                     default:
-                        return array( $_field => array( $_mongoOp => $_val ) );
+                        return array($_field => array($_mongoOp => $_val));
                 }
             }
         }
@@ -752,9 +744,9 @@ class MongoDbSvc extends NoSqlDbSvc
         // process parameter replacements
         if ( is_string( $value ) && !empty( $value ) && ( ':' == $value[0] ) )
         {
-            if ( isset( $replacements, $replacements[$value] ) )
+            if ( isset( $replacements, $replacements[ $value ] ) )
             {
-                $value = $replacements[$value];
+                $value = $replacements[ $value ];
             }
         }
 
@@ -788,10 +780,14 @@ class MongoDbSvc extends NoSqlDbSvc
 
     protected static function buildCriteriaArray( $filter, $params = null, $ss_filters = null )
     {
+        // interpret any parameter values as lookups
+        $params = static::interpretRecordValues( $params );
+
         // build filter array if necessary
         $_criteria = $filter;
         if ( !is_array( $filter ) )
         {
+            Session::replaceLookupsInStrings( $filter );
             $_test = json_decode( $filter, true );
             if ( !is_null( $_test ) )
             {
@@ -808,7 +804,8 @@ class MongoDbSvc extends NoSqlDbSvc
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
         if ( !empty( $_serverCriteria ) )
         {
-            $_criteria = ( !empty( $_criteria ) ) ? array( '$and' => array( $_criteria, $_serverCriteria ) ) : $_serverCriteria;
+            $_criteria =
+                ( !empty( $_criteria ) ) ? array('$and' => array($_criteria, $_serverCriteria)) : $_serverCriteria;
         }
 
         return $_criteria;
@@ -854,11 +851,11 @@ class MongoDbSvc extends NoSqlDbSvc
         switch ( strtoupper( $_combiner ) )
         {
             case 'AND':
-                return array( '$and' => $_criteria );
+                return array('$and' => $_criteria);
             case 'OR':
-                return array( '$or' => $_criteria );
+                return array('$or' => $_criteria);
             case 'NOR':
-                return array( '$nor' => $_criteria );
+                return array('$nor' => $_criteria);
             default:
                 // log and bail
                 throw new InternalServerErrorException( 'Invalid server-side filter configuration detected.' );
@@ -910,7 +907,7 @@ class MongoDbSvc extends NoSqlDbSvc
             }
             if ( !empty( $_field ) )
             {
-                $_out[$_field] = $_dir;
+                $_out[ $_field ] = $_dir;
             }
         }
 
@@ -974,7 +971,7 @@ class MongoDbSvc extends NoSqlDbSvc
     {
         foreach ( $records as $key => $_record )
         {
-            $records[$key] = static::mongoIdToId( $_record, $id_field );
+            $records[ $key ] = static::mongoIdToId( $_record, $id_field );
         }
 
         return $records;
@@ -1009,7 +1006,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 /** $_id \MongoId */
                 $_id = (string)$_id;
             }
-            $record[$id_field] = $_id;
+            $record[ $id_field ] = $_id;
         }
 
         return $record;
@@ -1076,7 +1073,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 {
                     $_id = static::_determineValue( $_id );
                 }
-                $record[$id_field] = $_id;
+                $record[ $id_field ] = $_id;
             }
         }
 
@@ -1101,7 +1098,7 @@ class MongoDbSvc extends NoSqlDbSvc
 
         foreach ( $records as $key => $_record )
         {
-            $records[$key] = static::idToMongoId( $_record, $_determineValue, $id_field );
+            $records[ $key ] = static::idToMongoId( $_record, $_determineValue, $id_field );
         }
 
         return $records;
@@ -1119,6 +1116,8 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     protected function parseRecord( $record, $fields_info, $filter_info = null, $for_update = false, $old_record = null )
     {
+        $record = $this->interpretRecordValues( $record );
+
         switch ( $this->getAction() )
         {
             case static::MERGE:
@@ -1157,14 +1156,14 @@ class MongoDbSvc extends NoSqlDbSvc
 
                     if ( !static::validateFieldValue( $_name, $_fieldVal, $_validations, $for_update, $_fieldInfo ) )
                     {
-                        unset( $_keys[$_pos] );
-                        unset( $_values[$_pos] );
+                        unset( $_keys[ $_pos ] );
+                        unset( $_values[ $_pos ] );
                         continue;
                     }
 
-                    $_parsed[$_name] = $_fieldVal;
-                    unset( $_keys[$_pos] );
-                    unset( $_values[$_pos] );
+                    $_parsed[ $_name ] = $_fieldVal;
+                    unset( $_keys[ $_pos ] );
+                    unset( $_values[ $_pos ] );
                 }
 
                 // add or override for specific fields
@@ -1173,11 +1172,11 @@ class MongoDbSvc extends NoSqlDbSvc
                     case 'timestamp_on_create':
                         if ( !$for_update )
                         {
-                            $_parsed[$_name] = new \MongoDate();
+                            $_parsed[ $_name ] = new \MongoDate();
                         }
                         break;
                     case 'timestamp_on_update':
-                        $_parsed[$_name] = new \MongoDate();
+                        $_parsed[ $_name ] = new \MongoDate();
                         break;
                     case 'user_id_on_create':
                         if ( !$for_update )
@@ -1185,7 +1184,7 @@ class MongoDbSvc extends NoSqlDbSvc
                             $userId = Session::getCurrentUserId();
                             if ( isset( $userId ) )
                             {
-                                $_parsed[$_name] = $userId;
+                                $_parsed[ $_name ] = $userId;
                             }
                         }
                         break;
@@ -1193,7 +1192,7 @@ class MongoDbSvc extends NoSqlDbSvc
                         $userId = Session::getCurrentUserId();
                         if ( isset( $userId ) )
                         {
-                            $_parsed[$_name] = $userId;
+                            $_parsed[ $_name ] = $userId;
                         }
                         break;
                 }
@@ -1308,7 +1307,7 @@ class MongoDbSvc extends NoSqlDbSvc
                     return parent::addToTransaction( null, $id );
                 }
 
-                $_options = array( 'new' => !$rollback );
+                $_options = array('new' => !$rollback);
                 if ( empty( $_updates ) )
                 {
                     $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
@@ -1318,12 +1317,12 @@ class MongoDbSvc extends NoSqlDbSvc
                 else
                 {
                     $record = $_updates;
-                    $record[static::DEFAULT_ID_FIELD] = $id;
+                    $record[ static::DEFAULT_ID_FIELD ] = $id;
                     $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
                 }
 
                 // simple update overwrite existing record
-                $_filter = array( static::DEFAULT_ID_FIELD => $id );
+                $_filter = array(static::DEFAULT_ID_FIELD => $id);
                 $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
                 $_result = $this->_collection->findAndModify( $_criteria, $_updates, $_fieldArray, $_options );
                 if ( empty( $_result ) )
@@ -1365,17 +1364,17 @@ class MongoDbSvc extends NoSqlDbSvc
                     return parent::addToTransaction( null, $id );
                 }
 
-                $_options = array( 'new' => !$rollback );
+                $_options = array('new' => !$rollback);
                 if ( empty( $_updates ) )
                 {
                     static::removeIds( $record, static::DEFAULT_ID_FIELD );
                     $_updates = $record;
                 }
 
-                $_updates = array( '$set' => $_updates );
+                $_updates = array('$set' => $_updates);
 
                 // simple merge with existing record
-                $_filter = array( static::DEFAULT_ID_FIELD => $id );
+                $_filter = array(static::DEFAULT_ID_FIELD => $id);
                 $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
                 $_result = $this->_collection->findAndModify( $_criteria, $_updates, $_fieldArray, $_options );
                 if ( empty( $_result ) )
@@ -1396,7 +1395,7 @@ class MongoDbSvc extends NoSqlDbSvc
                     }
                     else
                     {
-                        $_out = array( static::DEFAULT_ID_FIELD => static::mongoIdToId( $id ) );
+                        $_out = array(static::DEFAULT_ID_FIELD => static::mongoIdToId( $id ));
                     }
                 }
                 else
@@ -1406,15 +1405,15 @@ class MongoDbSvc extends NoSqlDbSvc
                 break;
 
             case static::DELETE:
-                if ( !$continue && !$rollback && !$single)
+                if ( !$continue && !$rollback && !$single )
                 {
                     return parent::addToTransaction( null, $id );
                 }
 
-                $_options = array( 'remove' => true );
+                $_options = array('remove' => true);
 
                 // simple delete existing record
-                $_filter = array( static::DEFAULT_ID_FIELD => $id );
+                $_filter = array(static::DEFAULT_ID_FIELD => $id);
                 $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
                 $_result = $this->_collection->findAndModify( $_criteria, null, $_fieldArray, $_options );
                 if ( empty( $_result ) )
@@ -1439,7 +1438,7 @@ class MongoDbSvc extends NoSqlDbSvc
                     return parent::addToTransaction( null, $id );
                 }
 
-                $_filter = array( static::DEFAULT_ID_FIELD => $id );
+                $_filter = array(static::DEFAULT_ID_FIELD => $id);
                 $_criteria = $this->buildCriteriaArray( $_filter, null, $_ssFilters );
                 $_result = $this->_collection->findOne( $_criteria, $_fieldArray );
                 if ( empty( $_result ) )
@@ -1473,7 +1472,7 @@ class MongoDbSvc extends NoSqlDbSvc
         switch ( $this->getAction() )
         {
             case static::POST:
-                $_result = $this->_collection->batchInsert( $this->_batchRecords, array( 'continueOnError' => false ) );
+                $_result = $this->_collection->batchInsert( $this->_batchRecords, array('continueOnError' => false) );
                 static::processResult( $_result );
 
                 $_out = static::cleanRecords( $this->_batchRecords, $_fields );
@@ -1484,10 +1483,10 @@ class MongoDbSvc extends NoSqlDbSvc
                     throw new BadRequestException( 'Batch operation not supported for update by records.' );
                 }
 
-                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_batchIds ) );
+                $_filter = array(static::DEFAULT_ID_FIELD => array('$in' => $this->_batchIds));
                 $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
 
-                $_result = $this->_collection->update( $_criteria, $_updates, null, array( 'multiple' => true ) );
+                $_result = $this->_collection->update( $_criteria, $_updates, null, array('multiple' => true) );
                 $_rows = static::processResult( $_result );
                 if ( 0 === $_rows )
                 {
@@ -1519,12 +1518,12 @@ class MongoDbSvc extends NoSqlDbSvc
                     throw new BadRequestException( 'Batch operation not supported for patch by records.' );
                 }
 
-                $_updates = array( '$set' => $_updates );
+                $_updates = array('$set' => $_updates);
 
-                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_batchIds ) );
+                $_filter = array(static::DEFAULT_ID_FIELD => array('$in' => $this->_batchIds));
                 $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
 
-                $_result = $this->_collection->update( $_criteria, $_updates, array( 'multiple' => true ) );
+                $_result = $this->_collection->update( $_criteria, $_updates, array('multiple' => true) );
                 $_rows = static::processResult( $_result );
                 if ( 0 === $_rows )
                 {
@@ -1550,7 +1549,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 break;
 
             case static::DELETE:
-                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_batchIds ) );
+                $_filter = array(static::DEFAULT_ID_FIELD => array('$in' => $this->_batchIds));
                 $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
 
                 if ( $_requireMore )
@@ -1574,7 +1573,7 @@ class MongoDbSvc extends NoSqlDbSvc
                             {
                                 if ( $_id == Option::get( $_record, static::DEFAULT_ID_FIELD ) )
                                 {
-                                    $_out[$_index] = $_record;
+                                    $_out[ $_index ] = $_record;
                                     $_found = true;
                                     continue;
                                 }
@@ -1582,7 +1581,7 @@ class MongoDbSvc extends NoSqlDbSvc
                             if ( !$_found )
                             {
                                 $_errors[] = $_index;
-                                $_out[$_index] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
+                                $_out[ $_index ] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
                             }
                         }
                     }
@@ -1610,7 +1609,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 break;
 
             case static::GET:
-                $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_batchIds ) );
+                $_filter = array(static::DEFAULT_ID_FIELD => array('$in' => $this->_batchIds));
                 $_criteria = static::buildCriteriaArray( $_filter, null, $_ssFilters );
                 $_fieldArray = static::buildFieldArray( $_fields );
 
@@ -1632,7 +1631,7 @@ class MongoDbSvc extends NoSqlDbSvc
                         {
                             if ( $_id == Option::get( $_record, static::DEFAULT_ID_FIELD ) )
                             {
-                                $_out[$_index] = $_record;
+                                $_out[ $_index ] = $_record;
                                 $_found = true;
                                 continue;
                             }
@@ -1640,14 +1639,16 @@ class MongoDbSvc extends NoSqlDbSvc
                         if ( !$_found )
                         {
                             $_errors[] = $_index;
-                            $_out[$_index] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
+                            $_out[ $_index ] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
                         }
                     }
 
                     if ( !empty( $_errors ) )
                     {
-                        $_context = array( 'error' => $_errors, 'record' => $_out );
-                        throw new NotFoundException( 'Batch Error: Not all records could be retrieved.', null, null, $_context );
+                        $_context = array('error' => $_errors, 'record' => $_out);
+                        throw new NotFoundException(
+                            'Batch Error: Not all records could be retrieved.', null, null, $_context
+                        );
                     }
                 }
 
@@ -1675,7 +1676,7 @@ class MongoDbSvc extends NoSqlDbSvc
             {
                 case static::POST:
                     // should be ids here from creation
-                    $_filter = array( static::DEFAULT_ID_FIELD => array( '$in' => $this->_rollbackRecords ) );
+                    $_filter = array(static::DEFAULT_ID_FIELD => array('$in' => $this->_rollbackRecords));
                     $this->_collection->remove( $_filter );
                     break;
 

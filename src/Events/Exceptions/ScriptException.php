@@ -17,32 +17,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Events;
+namespace DreamFactory\Platform\Events\Exceptions;
 
-use DreamFactory\Platform\Events\Client\RemoteEvent;
-use DreamFactory\Platform\Interfaces\StreamListenerLike;
+use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 
 /**
- * EchoListener.php
- * A dummy listener that echos output
+ * Thrown when scripts exceptions are thrown
  */
-class EchoListener implements StreamListenerLike
+class ScriptException extends InternalServerErrorException
 {
-    //*************************************************************************
-    //	Methods
-    //*************************************************************************
-
-    /**
-     * @param RemoteEvent     $event
-     * @param string          $eventName
-     * @param EventDispatcher $dispatcher
-     *
-     * @return mixed|void
-     */
-    public function processEvent( $event, $eventName = null, $dispatcher = null )
-    {
-        echo $event->dump();
-        ob_flush();
-        flush();
-    }
 }

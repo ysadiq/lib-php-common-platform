@@ -31,6 +31,14 @@ $_register['apis'] = array(
 				'type'             => 'Success',
 				'event_name'       => '{api_name}.create',
 				'parameters'       => array(
+                    array(
+                        'name'          => 'login',
+                        'description'   => 'Login and create a session upon successful registration.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
 					array(
 						'name'          => 'body',
 						'description'   => 'Data containing name-value pairs for new user registration.',

@@ -20,58 +20,102 @@
 namespace DreamFactory\Platform\Enums;
 
 use Kisma\Core\Enums\SeedEnum;
+use Kisma\Core\Utility\Option;
 
 /**
  * PlatformStorageTypes
  */
 class PlatformStorageTypes extends SeedEnum
 {
-	//*************************************************************************
-	//* Constants
-	//*************************************************************************
+    //*************************************************************************
+    //* Constants
+    //*************************************************************************
 
-	/**
-	 * @var int
-	 */
-	const AWS_S3 = 0;
-	/**
-	 * @var int
-	 */
-	const AWS_DYNAMODB = 1;
-	/**
-	 * @var int
-	 */
-	const AWS_SIMPLEDB = 2;
-	/**
-	 * @var int
-	 */
-	const AZURE_BLOB = 3;
-	/**
-	 * @var int
-	 */
-	const AZURE_TABLES = 4;
-	/**
-	 * @var int
-	 */
-	const COUCHDB = 5;
-	/**
-	 * @var int
-	 */
-	const MONGODB = 6;
-	/**
-	 * @var int
-	 */
-	const MONGOHQ = 9;
-	/**
-	 * @var int
-	 */
-	const OPENSTACK_OBJECT_STORAGE = 7;
-	/**
-	 * @var int
-	 */
-	const RACKSPACE_CLOUDFILES = 8;
-	/**
-	 * @var int
-	 */
-	const EMAIL_TRANSPORT = 10;
+    /**
+     * @var int
+     */
+    const AWS_S3 = 0;
+    /**
+     * @var int
+     */
+    const AWS_DYNAMODB = 1;
+    /**
+     * @var int
+     */
+    const AWS_SIMPLEDB = 2;
+    /**
+     * @var int
+     */
+    const AZURE_BLOB = 3;
+    /**
+     * @var int
+     */
+    const AZURE_TABLES = 4;
+    /**
+     * @var int
+     */
+    const COUCHDB = 5;
+    /**
+     * @var int
+     */
+    const MONGODB = 6;
+    /**
+     * @var int
+     */
+    const MONGOHQ = 9;
+    /**
+     * @var int
+     */
+    const OPENSTACK_OBJECT_STORAGE = 7;
+    /**
+     * @var int
+     */
+    const RACKSPACE_CLOUDFILES = 8;
+    /**
+     * @var int
+     */
+    const EMAIL_TRANSPORT = 10;
+
+    /**
+     * @param int    $value        enumerated type value
+     * @param string $service_name given name of the service, also returned as default
+     *
+     * @var array A map of classes for services
+     */
+    protected static $_classMap = array(
+        self::AWS_S3                   => 'AwsS3Svc',
+        self::AWS_DYNAMODB             => 'AwsDynamoDbSvc',
+        self::AWS_SIMPLEDB             => 'AwsSimpleDbSvc',
+        self::AZURE_BLOB               => 'WindowsAzureBlobSvc',
+        self::AZURE_TABLES             => 'WindowsAzureTablesSvc',
+        self::COUCHDB                  => 'CouchDbSvc',
+        self::MONGODB                  => 'MongoDbSvc',
+        self::MONGOHQ                  => 'MongoDbSvc',
+        self::OPENSTACK_OBJECT_STORAGE => 'OpenStackObjectStoreSvc',
+        self::RACKSPACE_CLOUDFILES     => 'OpenStackObjectStoreSvc',
+        self::EMAIL_TRANSPORT          => 'EmailSvc',
+    );
+
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
+
+    /**
+     * @param int    $storage_type enumerated storage type value
+     * @param string $service_name given name of the service, also returned as default
+     *
+     * @return string - associated file name of native service
+     */
+    public static function getFileName( $storage_type, $service_name )
+    {
+        $_serviceName = $service_name ? : null;
+
+        if ( null !== ( $_fileName = Option::get( static::$_classMap, $storage_type ) ) )
+        {
+            return $_fileName;
+        }
+
+        return $_serviceName;
+    }
+
 }

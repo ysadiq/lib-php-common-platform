@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Resources\User;
 
 use DreamFactory\Common\Components\DataCache;
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -47,6 +46,7 @@ use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Scalar;
 
 /**
  * Session
@@ -383,7 +383,10 @@ class Session extends BasePlatformRestResource
 
         if ( null !== $user_id && $_user->id != $user_id )
         {
-            throw new ForbiddenException( 'Naughty, naughty... Not yours. ' . $_user->id . ' != ' . print_r( $user_id, true ) );
+            throw new ForbiddenException( 'Naughty, naughty... Not yours. ' .
+                                          $_user->id .
+                                          ' != ' .
+                                          print_r( $user_id, true ) );
         }
 
         $_email = $_user->email;
@@ -447,7 +450,7 @@ class Session extends BasePlatformRestResource
         }
 
         $_public['dsp_name'] = Pii::getParam( 'dsp_name' );
-        $_cached['lookup'] = LookupKey::getForSession( $_roleId, $_user->id );
+        $_cached = array_merge( $_cached, LookupKey::getForSession( $_roleId, $_user->id ) );
 
         return array(
             'cached'         => $_cached,
@@ -518,7 +521,7 @@ class Session extends BasePlatformRestResource
         $_roleData['services'] = $_role->getRoleServicePermissions();
 
         $_cached['role'] = $_roleData;
-        $_cached['lookup'] = LookupKey::getForSession( $_role->id );
+        $_cached = array_merge( $_cached, LookupKey::getForSession( $_role->id ) );
 
         return array(
             'cached'         => $_cached,
@@ -534,30 +537,29 @@ class Session extends BasePlatformRestResource
      */
     public static function validateSession()
     {
-        if ( !Pii::guest() && !Pii::getState( 'df_authenticated', false ) )
-        {
-            return Pii::user()->getId();
-        }
-
         // helper for non-browser-managed sessions
         $_sessionId = FilterInput::server( 'HTTP_X_DREAMFACTORY_SESSION_TOKEN' );
 
-        if ( !empty( $_sessionId ) )
+        $_oldSessionId = session_id();
+        if ( !empty( $_sessionId ) && $_sessionId !== $_oldSessionId )
         {
-            session_write_close();
+            if ( !empty( $_oldSessionId ) )
+            {
+                @session_unset();
+                @session_destroy();
+            }
+
             session_id( $_sessionId );
 
-            if ( session_start() )
-            {
-                if ( !Pii::guest() && false === Pii::getState( 'df_authenticated', false ) )
-                {
-                    return Pii::user()->getId();
-                }
-            }
-            else
+            if ( !session_start() )
             {
                 Log::error( 'Failed to start session "' . $_sessionId . '" from header: ' . print_r( $_SERVER, true ) );
             }
+        }
+
+        if ( !Pii::guest() && !Pii::getState( 'df_authenticated', false ) )
+        {
+            return Pii::user()->getId();
         }
 
         throw new UnauthorizedException( "There is no valid session for the current request." );
@@ -575,11 +577,12 @@ class Session extends BasePlatformRestResource
 
     /**
      * @param string $app_name
+     * @param bool   $session_required
      *
-     * @throws ForbiddenException
-     * @throws BadRequestException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
      */
-    public static function checkAppPermission( $app_name = null )
+    public static function checkAppPermission( $app_name = null, $session_required = true )
     {
         if ( empty( $app_name ) )
         {
@@ -587,6 +590,15 @@ class Session extends BasePlatformRestResource
             if ( empty( $app_name ) )
             {
                 throw new BadRequestException( 'A valid application name is required to access services.' );
+            }
+        }
+
+        if ( !$session_required )
+        {
+            // check if the app_name (App.api_name) is in the current list of apps
+            if ( false !== array_search( $app_name, App::availableNames() ) )
+            {
+                return;
             }
         }
 
@@ -626,31 +638,62 @@ class Session extends BasePlatformRestResource
      */
     public static function checkServicePermission( $action, $service, $component = null )
     {
+        $action = static::cleanAction( $action );
+
+        $_permissions = static::getServicePermissions( $service, $component );
+
+        if ( false === array_search( $action, $_permissions ) )
+        {
+            $msg = ucfirst( $action ) . " access to ";
+            if ( !empty( $component ) )
+            {
+                $msg .= "component '$component' of ";
+            }
+
+            $msg .= "service '$service' is not allowed by this user's role.";
+
+            throw new ForbiddenException( $msg );
+        }
+    }
+
+    /**
+     * @param string $service
+     * @param string $component
+     *
+     * @returns array
+     */
+    public static function getServicePermissions( $service, $component = null )
+    {
         static::_checkCache();
 
-        if ( false !== ( $_admin = Option::getBool( static::$_cache, 'is_sys_admin' ) ) )
+        if ( Option::getBool( static::$_cache, 'is_sys_admin' ) )
         {
-            return; // no need to check role
+            return array(static::GET, static::POST, static::PUT, static::PATCH, static::MERGE, static::DELETE);
         }
 
         if ( null === ( $_roleInfo = Option::get( static::$_cache, 'role' ) ) )
         {
-            // no role assigned, if not sys admin, denied service
-            throw new ForbiddenException( "A valid user role or system administrator is required to access services." );
+            // no role assigned
+            return array();
         }
 
         $_services = Option::clean( Option::get( $_roleInfo, 'services' ) );
 
-        $_allAllowed = false;
+        $_allAllowed = array();
         $_allFound = false;
-        $_serviceAllowed = false;
+        $_serviceAllowed = array();
         $_serviceFound = false;
+        $_componentAllowed = array();
+        $_componentFound = false;
 
         foreach ( $_services as $_svcInfo )
         {
-            $_tempService = Option::get( $_svcInfo, 'service', '' );
-            $_tempAccess = Option::get( $_svcInfo, 'access', '' );
-            $_allowedVerbs = static::convertAccessToVerbs( $_tempAccess );
+            $_tempService = Option::get( $_svcInfo, 'service' );
+            if ( null === $_tempVerbs = Option::get( $_svcInfo, 'verbs' ) )
+            {
+                // see if upgrade from access string
+                $_tempVerbs = static::convertAccessToVerbs( Option::get( $_svcInfo, 'access' ) );
+            }
 
             if ( 0 == strcasecmp( $service, $_tempService ) )
             {
@@ -659,18 +702,12 @@ class Session extends BasePlatformRestResource
                 {
                     if ( 0 == strcasecmp( $component, $_tempComponent ) )
                     {
-                        if ( !static::isAllowed( $action, $_allowedVerbs ) )
-                        {
-                            $msg = ucfirst( $action ) . " access to component '$component' of service '$service' ";
-                            $msg .= "is not allowed by this user's role.";
-                            throw new ForbiddenException( $msg );
-                        }
-
-                        return; // component specific found and allowed, so bail
+                        $_componentAllowed = array_merge( $_componentAllowed, array_flip( $_tempVerbs ) );
+                        $_componentFound = true;
                     }
                     elseif ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
                     {
-                        $_serviceAllowed = static::isAllowed( $action, $_allowedVerbs );
+                        $_serviceAllowed = array_merge( $_serviceAllowed, array_flip( $_tempVerbs ) );
                         $_serviceFound = true;
                     }
                 }
@@ -678,172 +715,56 @@ class Session extends BasePlatformRestResource
                 {
                     if ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
                     {
-                        if ( !static::isAllowed( $action, $_allowedVerbs ) )
-                        {
-                            $msg = ucfirst( $action ) . " access to service '$service' ";
-                            $msg .= "is not allowed by this user's role.";
-                            throw new ForbiddenException( $msg );
-                        }
-
-                        return; // service specific found and allowed, so bail
+                        $_serviceAllowed = array_merge( $_serviceAllowed, array_flip( $_tempVerbs ) );
+                        $_serviceFound = true;
                     }
                 }
             }
             elseif ( empty( $_tempService ) || ( '*' == $_tempService ) )
             {
-                $_allAllowed = static::isAllowed( $action, $_allowedVerbs );
+                $_allAllowed = array_merge( $_allAllowed, array_flip( $_tempVerbs ) );
                 $_allFound = true;
             }
         }
 
-        if ( $_serviceFound )
+        if ( $_componentFound )
         {
-            if ( $_serviceAllowed )
-            {
-                return; // service found and allowed, so bail
-            }
+            return array_keys( $_componentAllowed );
+        }
+        elseif ( $_serviceFound )
+        {
+            return array_keys( $_serviceAllowed );
         }
         elseif ( $_allFound )
         {
-            if ( $_allAllowed )
-            {
-                return; // all services found and allowed, so bail
-            }
+            return array_keys( $_allAllowed );
         }
 
-        $msg = ucfirst( $action ) . " access to ";
-        if ( !empty( $component ) )
-        {
-            $msg .= "component '$component' of ";
-        }
-
-        $msg .= "service '$service' is not allowed by this user's role.";
-
-        throw new ForbiddenException( $msg );
+        return array();
     }
 
     /**
-     * @param string $service
-     * @param string $component
+     * @param string $action - requested REST action
      *
-     * @returns boolean | array
+     * @return string
      */
-    public static function getServiceAccess( $service, $component = null )
-    {
-        static::_checkCache();
-
-        if ( Option::getBool( static::$_cache, 'is_sys_admin' ) )
-        {
-            return true; // no need to check role
-        }
-
-        if ( null === ( $_roleInfo = Option::get( static::$_cache, 'role' ) ) )
-        {
-            // no role assigned
-            return false;
-        }
-
-        $_services = Option::clean( Option::get( $_roleInfo, 'services' ) );
-
-        if ( !is_array( $_services ) || empty( $_services ) )
-        {
-            // no service assigned
-            return false;
-        }
-
-        $_allFound = false;
-        $_serviceFound = false;
-
-        foreach ( $_services as $_svcInfo )
-        {
-            $_theService = Option::get( $_svcInfo, 'service', '' );
-
-            if ( 0 == strcasecmp( $service, $_theService ) )
-            {
-                $_theComponent = Option::get( $_svcInfo, 'component' );
-                if ( !empty( $component ) )
-                {
-                    if ( 0 == strcasecmp( $component, $_theComponent ) )
-                    {
-                        // component specific found
-
-                        return $_svcInfo;
-                    }
-
-                    if ( empty( $_theComponent ) || ( '*' == $_theComponent ) )
-                    {
-                        $_serviceFound = $_svcInfo;
-                    }
-                }
-                else
-                {
-                    if ( empty( $_theComponent ) || ( '*' == $_theComponent ) )
-                    {
-                        // service specific found
-
-                        return $_svcInfo;
-                    }
-                }
-            }
-            elseif ( empty( $_theService ) || ( '*' == $_theService ) )
-            {
-                $_allFound = $_svcInfo;
-            }
-        }
-
-        if ( false !== $_serviceFound )
-        {
-            return $_serviceFound;
-        }
-
-        if ( false !== $_allFound )
-        {
-            return $_allFound;
-        }
-
-        return false;
-    }
-
-    /**
-     * @param string $action        - requested REST action
-     * @param array  $allowed_verbs - array of allowed REST verbs
-     *
-     * @return bool
-     */
-    protected static function isAllowed( $action, $allowed_verbs )
+    protected static function cleanAction( $action )
     {
         // check for non-conformists
-        switch ( strtoupper( $action ) )
+        $action = strtoupper( $action );
+        switch ( $action )
         {
-            case static::GET:
             case 'READ':
-                $action = static::GET;
-                break;
+                return static::GET;
 
-            case static::POST:
             case 'CREATE':
-                $action = static::POST;
-                break;
+                return static::POST;
 
-            case static::PUT:
             case 'UPDATE':
-                $action = static::PUT;
-                break;
-
-            case static::PATCH:
-            case static::MERGE:
-                $action = static::PATCH;
-                break;
-
-            case static::DELETE:
-                $action = static::DELETE;
-                break;
-
-            default:
-                return false;
+                return static::PUT;
         }
 
-        return ( false !== array_search( $action, $allowed_verbs ) );
+        return $action;
     }
 
     /**
@@ -863,57 +784,132 @@ class Session extends BasePlatformRestResource
                 return array(static::POST);
             case PermissionTypes::READ_WRITE:
             case 'Read and Write':
-                return array(static::GET, static::POST, static::PUT, static::PATCH);
+                return array(static::GET, static::POST, static::PUT, static::PATCH, static::MERGE);
             case PermissionTypes::FULL_ACCESS:
             case 'Full Access':
-                return array(static::GET, static::POST, static::PUT, static::PATCH, static::DELETE);
+                return array(static::GET, static::POST, static::PUT, static::PATCH, static::MERGE, static::DELETE);
         }
 
         return array();
     }
 
     /**
+     * @param string $action
      * @param string $service
      * @param string $component
      *
      * @returns bool
      */
-    public static function getServiceFilters( $service, $component = null )
+    public static function getServiceFilters( $action, $service, $component = null )
     {
-        $_access = static::getServiceAccess( $service, $component );
-        if ( !is_array( $_access ) )
+        static::_checkCache();
+
+        if ( Option::getBool( static::$_cache, 'is_sys_admin' ) )
         {
+            return array();
+        }
+
+        if ( null === ( $_roleInfo = Option::get( static::$_cache, 'role' ) ) )
+        {
+            // no role assigned
+            return array();
+        }
+
+        $_services = Option::clean( Option::get( $_roleInfo, 'services' ) );
+
+        $_serviceAllowed = null;
+        $_serviceFound = false;
+        $_componentFound = false;
+        $action = static::cleanAction( $action );
+
+        foreach ( $_services as $_svcInfo )
+        {
+            $_tempService = Option::get( $_svcInfo, 'service' );
+            if ( null === $_tempVerbs = Option::get( $_svcInfo, 'verbs' ) )
+            {
+                // see if upgrade from access string
+                $_tempVerbs = static::convertAccessToVerbs( Option::get( $_svcInfo, 'access' ) );
+            }
+            $_tempVerbs = array_flip( $_tempVerbs ); // make search easier
+
+            if ( 0 == strcasecmp( $service, $_tempService ) )
+            {
+                $_serviceFound = true;
+                $_tempComponent = Option::get( $_svcInfo, 'component' );
+                if ( !empty( $component ) )
+                {
+                    if ( 0 == strcasecmp( $component, $_tempComponent ) )
+                    {
+                        $_componentFound = true;
+                        if ( isset( $_tempVerbs[$action] ) )
+                        {
+                            $_filters = Option::get( $_svcInfo, 'filters' );
+                            $_operator = Option::get( $_svcInfo, 'filter_op', 'AND' );
+                            if ( empty( $_filters ) )
+                            {
+                                return null;
+                            }
+
+                            return array('filters' => $_filters, 'filter_op' => $_operator);
+                        }
+                    }
+                    elseif ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
+                    {
+                        if ( isset( $_tempVerbs[$action] ) )
+                        {
+                            $_filters = Option::get( $_svcInfo, 'filters' );
+                            $_operator = Option::get( $_svcInfo, 'filter_op', 'AND' );
+                            if ( empty( $_filters ) )
+                            {
+                                return null;
+                            }
+
+                            $_serviceAllowed = array('filters' => $_filters, 'filter_op' => $_operator);
+                        }
+                    }
+                }
+                else
+                {
+                    if ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
+                    {
+                        if ( isset( $_tempVerbs[$action] ) )
+                        {
+                            $_filters = Option::get( $_svcInfo, 'filters' );
+                            $_operator = Option::get( $_svcInfo, 'filter_op', 'AND' );
+                            if ( empty( $_filters ) )
+                            {
+                                return null;
+                            }
+
+                            $_serviceAllowed = array('filters' => $_filters, 'filter_op' => $_operator);
+                        }
+                    }
+                }
+            }
+        }
+
+        if ( $_componentFound )
+        {
+            // at least one service and component match was found, but not the right verb
+
             return null;
         }
-
-        $_filters = Option::get( $_access, 'filters' );
-        $_operator = Option::get( $_access, 'filter_op', 'AND' );
-        if ( empty( $_filters ) )
+        elseif ( $_serviceFound )
         {
-            return null;
+            return $_serviceAllowed;
         }
 
-        return array('filters' => $_filters, 'filter_op' => $_operator);
-    }
-
-    public static function getServicePermissions( $service, $component = null )
-    {
-        $_access = static::getServiceAccess( $service, $component );
-        if ( true === $_access )
-        {
-            return array(static::GET, static::POST, static::PUT, static::PATCH, static::DELETE);
-        }
-
-        return static::convertAccessToVerbs( Option::get( $_access, 'access' ) );
+        return null;
     }
 
     /**
      * @param string $lookup
      * @param string $value
+     * @param bool   $use_private
      *
      * @returns bool
      */
-    public static function getLookupValue( $lookup, &$value )
+    public static function getLookupValue( $lookup, &$value, $use_private = false )
     {
         if ( empty( $lookup ) )
         {
@@ -950,9 +946,9 @@ class Session extends BasePlatformRestResource
                         // get fields here
                         if ( !empty( $_lookup ) )
                         {
-                            if ( isset( static::$_cache, static::$_cache[ $_lookup ] ) )
+                            if ( isset( static::$_cache, static::$_cache[$_lookup] ) )
                             {
-                                $value = static::$_cache[ $_lookup ];
+                                $value = static::$_cache[$_lookup];
 
                                 return true;
                             }
@@ -963,9 +959,9 @@ class Session extends BasePlatformRestResource
                         // get fields here
                         if ( !empty( $_lookup ) )
                         {
-                            if ( isset( static::$_cache, static::$_cache['role'], static::$_cache['role'][ $_lookup ] ) )
+                            if ( isset( static::$_cache, static::$_cache['role'], static::$_cache['role'][$_lookup] ) )
                             {
-                                $value = static::$_cache['role'][ $_lookup ];
+                                $value = static::$_cache['role'][$_lookup];
 
                                 return true;
                             }
@@ -1011,9 +1007,11 @@ class Session extends BasePlatformRestResource
             }
         }
 
-        if ( isset( static::$_cache, static::$_cache['lookup'], static::$_cache['lookup'][ $lookup ] ) )
+        $_control = $use_private ? 'secret' : 'lookup';
+
+        if ( isset( static::$_cache, static::$_cache[$_control], static::$_cache[$_control][$lookup] ) )
         {
-            $value = static::$_cache['lookup'][ $lookup ];
+            $value = static::$_cache[$_control][$lookup];
 
             return true;
         }
@@ -1021,7 +1019,7 @@ class Session extends BasePlatformRestResource
         return false;
     }
 
-    public static function replaceLookup( $lookup )
+    public static function replaceLookup( $lookup, $use_private = false )
     {
         // filter string values should be wrapped in curly braces
         if ( is_string( $lookup ) )
@@ -1029,7 +1027,7 @@ class Session extends BasePlatformRestResource
             $_end = strlen( $lookup ) - 1;
             if ( ( 0 === strpos( $lookup, '{' ) ) && ( $_end === strrpos( $lookup, '}' ) ) )
             {
-                if ( static::getLookupValue( substr( $lookup, 1, $_end - 1 ), $_value ) )
+                if ( static::getLookupValue( substr( $lookup, 1, $_end - 1 ), $_value, $use_private ) )
                 {
                     return $_value;
                 }
@@ -1037,6 +1035,34 @@ class Session extends BasePlatformRestResource
         }
 
         return $lookup;
+    }
+
+    public static function replaceLookupsInStrings( &$string, $use_private = false )
+    {
+        if ( false !== strpos( $string, '{' ) )
+        {
+            $_search = array();
+            $_replace = array();
+            // brute force, yeah this could be better
+            $_exploded = explode( '{', $string );
+            foreach ( $_exploded as $_word )
+            {
+                $_lookup = strstr( $_word, '}', true );
+                if ( !empty( $_lookup ) )
+                {
+                    if ( Session::getLookupValue( $_lookup, $_value, $use_private ) )
+                    {
+                        $_search[] = '{' . $_lookup . '}';
+                        $_replace[] = $_value;
+                    }
+                }
+            }
+
+            if ( !empty( $_search ) )
+            {
+                $string = str_replace( $_search, $_replace, $string );
+            }
+        }
     }
 
     /**
@@ -1125,7 +1151,7 @@ class Session extends BasePlatformRestResource
                 /** @var Config $_config */
                 if ( !empty( $_config ) )
                 {
-                    if ( DataFormat::boolval( $_config->allow_guest_user ) )
+                    if ( Scalar::boolval( $_config->allow_guest_user ) )
                     {
                         $_result = static::generateSessionDataFromRole( null, $_config->getRelated( 'guest_role' ) );
                         static::$_cache = Option::get( $_result, 'cached' );
@@ -1155,7 +1181,8 @@ class Session extends BasePlatformRestResource
 
         if ( $add_apps )
         {
-            $appFields = 'id,api_name,name,description,is_url_external,launch_url,requires_fullscreen,allow_fullscreen_toggle,toggle_location';
+            $appFields =
+                'id,api_name,name,description,is_url_external,launch_url,requires_fullscreen,allow_fullscreen_toggle,toggle_location';
             /**
              * @var App[] $_apps
              */
@@ -1179,7 +1206,11 @@ class Session extends BasePlatformRestResource
                 foreach ( $theGroups as $g_key => $group )
                 {
                     $groupId = $group->id;
-                    $groupData = ( isset( $appGroups[ $g_key ] ) ) ? $appGroups[ $g_key ] : $group->getAttributes( array('id', 'name', 'description') );
+                    $groupData = ( isset( $appGroups[$g_key] ) )
+                        ? $appGroups[$g_key]
+                        : $group->getAttributes(
+                            array('id', 'name', 'description')
+                        );
                     foreach ( $tempGroups as $tempGroup )
                     {
                         if ( $tempGroup->id === $groupId )
@@ -1190,7 +1221,7 @@ class Session extends BasePlatformRestResource
                             $groupData['apps'] = $temp;
                         }
                     }
-                    $appGroups[ $g_key ] = $groupData;
+                    $appGroups[$g_key] = $groupData;
                 }
                 if ( !$found )
                 {
@@ -1202,7 +1233,7 @@ class Session extends BasePlatformRestResource
             {
                 if ( !isset( $group['apps'] ) )
                 {
-                    unset( $appGroups[ $g_key ] );
+                    unset( $appGroups[$g_key] );
                 }
             }
             $_data['app_groups'] = array_values( $appGroups ); // reset indexing

@@ -193,7 +193,10 @@ class App extends BasePlatformSystemModel
 	 */
 	protected function afterSave()
 	{
-		if ( !$this->is_url_external )
+        //	Bust cache
+        static::availableNames( true );
+
+        if ( !$this->is_url_external )
 		{
 			if ( !empty( $this->storage_service_id ) )
 			{
@@ -237,7 +240,18 @@ class App extends BasePlatformSystemModel
 		return parent::beforeDelete();
 	}
 
-	/**
+    /**
+     * {@InheritDoc}
+     */
+    protected function afterDelete()
+    {
+        //	Bust cache
+        static::availableNames( true );
+
+        parent::afterDelete();
+    }
+
+    /**
 	 * {@InheritDoc}
 	 */
 	public function afterFind()
@@ -302,7 +316,48 @@ class App extends BasePlatformSystemModel
 		);
 	}
 
-	/**
+    /**
+     * Down and dirty app names cache. Clears when saves to apps are made.
+     *
+     * @param bool  $bust If true, bust the cache
+     *
+     * @return array
+     */
+    public static function availableNames( $bust = false )
+    {
+        if ( false !== $bust || null === ( $_appNames = Pii::getState( 'dsp.app_name_list' ) ) )
+        {
+            $_tableName = static::model()->tableName();
+
+            //	List all available services from db
+            $_sql = <<<MYSQL
+SELECT
+	api_name
+FROM
+	{$_tableName}
+ORDER BY
+	api_name
+MYSQL;
+
+            $_pdo = Pii::pdo();
+            $_apps = Sql::query( $_sql, null, $_pdo );
+
+            $_results = $_apps->fetchAll();
+            $_appNames = array();
+            foreach ( $_results as $_app )
+            {
+                $_appNames[] = Option::get( $_app, 'api_name' );
+                unset( $_app );
+            }
+
+
+            Pii::setState( 'dsp.app_name_list', $_appNames );
+        }
+
+        return $_appNames;
+    }
+
+    /**
 	 * @param int   $id The row ID
 	 * @param array $relations
 	 *

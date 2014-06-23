@@ -1,6 +1,6 @@
 <?php
 /**
- * This file is part of the DreamFactory Services Platform(tm) (DSP)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
  * DreamFactory Services Platform(tm) <http://github.com/dreamfactorysoftware/dsp-core>
  * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
@@ -17,19 +17,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Platform\Events;
+namespace DreamFactory\Platform\Enums;
+
+use Kisma\Core\Enums\SeedEnum;
 
 /**
- * Contains additional information about the REST service call being made
+ * Namespace types used for namespace mapping
  */
-class DspEvent extends PlatformEvent
+class NamespaceTypes extends SeedEnum
 {
-	//*************************************************************************
-	//	Constants
-	//*************************************************************************
+    //*************************************************************************
+    //* Constants
+    //*************************************************************************
 
-	/**
-	 * @type string The base of our event tree
-	 */
-	const EVENT_NAMESPACE = 'dsp';
+    /**
+     * @type int The services namespace map index
+     */
+    const SERVICES = 0;
+    /**
+     * @type int The resources namespace map index
+     */
+    const RESOURCES = 1;
+    /**
+     * @type int The models namespace map index
+     */
+    const MODELS = 2;
 }

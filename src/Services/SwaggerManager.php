@@ -23,6 +23,7 @@ use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Events\Enums\SwaggerEvents;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\System\Script;
+use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
@@ -87,8 +88,8 @@ class SwaggerManager extends BasePlatformRestService
      * @var array The core DSP services that are built-in
      */
     protected static $_builtInServices = array(
-        array('api_name' => 'user', 'type_id' => 0, 'description' => 'User Login'),
-        array('api_name' => 'system', 'type_id' => 0, 'description' => 'System Configuration')
+        array( 'api_name' => 'user', 'type_id' => 0, 'description' => 'User Login' ),
+        array( 'api_name' => 'system', 'type_id' => 0, 'description' => 'System Configuration' )
     );
 
     //*************************************************************************
@@ -131,6 +132,10 @@ class SwaggerManager extends BasePlatformRestService
             return false;
         }
 
+        // lock down access to valid apps only, can't check session permissions
+        // here due to sdk access
+        Session::checkAppPermission( null, false );
+
         if ( empty( $this->_resource ) )
         {
             return static::getSwagger();
@@ -165,7 +170,7 @@ class SwaggerManager extends BasePlatformRestService
             'basePath'       => Pii::request()->getHostInfo() . '/rest',
         );
 
-        // build services from database
+        //  Build services from database
         $_sql = <<<SQL
 SELECT
 	api_name,
@@ -196,7 +201,8 @@ SQL;
             $_content = null;
             $_apiName = Option::get( $_service, 'api_name' );
             $_typeId = (int)Option::get( $_service, 'type_id', PlatformServiceTypes::SYSTEM_SERVICE );
-            $_fileName = PlatformServiceTypes::getFileName( $_typeId, $_apiName );
+            $_storageTypeId = (int)Option::get( $_service, 'storage_type_id' );
+            $_fileName = PlatformServiceTypes::getFileName( $_typeId, $_storageTypeId, $_apiName );
 
             $_filePath = $_scanPath . '/' . $_fileName . '.swagger.php';
 
@@ -244,7 +250,10 @@ SQL;
             // replace service type placeholder with api name for this service instance
             $_content = str_replace( '/{api_name}', '/' . $_apiName, $_content );
 
-            if ( !isset( static::$_eventMap[ $_apiName ] ) || !is_array( static::$_eventMap[ $_apiName ] ) || empty( static::$_eventMap[ $_apiName ] ) )
+            if ( !isset( static::$_eventMap[ $_apiName ] ) ||
+                 !is_array( static::$_eventMap[ $_apiName ] ) ||
+                 empty( static::$_eventMap[ $_apiName ] )
+            )
             {
                 static::$_eventMap[ $_apiName ] = array();
             }
@@ -265,7 +274,7 @@ SQL;
             // build main services list
             $_services[] = array(
                 'path'        => '/' . $_apiName,
-                'description' => Option::get( $_service, 'description', 'Service' )
+                'description' => Option::get( $_service, 'description', '' )
             );
 
             //	Parse the events while we get the chance...
@@ -281,7 +290,7 @@ SQL;
         $_main = $_scanPath . static::SWAGGER_BASE_API_FILE;
         /** @noinspection PhpIncludeInspection */
         $_resourceListing = require( $_main );
-        $_out = array_merge( $_resourceListing, array('apis' => $_services) );
+        $_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
 
         $_filePath = $_cachePath . static::SWAGGER_CACHE_FILE;
 
@@ -291,16 +300,26 @@ SQL;
         }
 
         //	Write event cache file
-        if ( false === file_put_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE, json_encode( static::$_eventMap, JSON_UNESCAPED_SLASHES ) )
+        if ( false === file_put_contents(
+                $_cachePath . static::SWAGGER_EVENT_CACHE_FILE,
+                json_encode( static::$_eventMap, JSON_UNESCAPED_SLASHES )
+            )
         )
         {
-            Log::error( '  * File system error writing events cache file: ' . $_cachePath . static::SWAGGER_EVENT_CACHE_FILE );
+            Log::error(
+                '  * File system error writing events cache file: ' . $_cachePath . static::SWAGGER_EVENT_CACHE_FILE
+            );
         }
 
         //	Create example file
-        if ( !file_exists( $_customPath . static::SWAGGER_CUSTOM_EXAMPLE_FILE ) && file_exists( $_templatePath . static::SWAGGER_CUSTOM_EXAMPLE_FILE ) )
+        if ( !file_exists( $_customPath . static::SWAGGER_CUSTOM_EXAMPLE_FILE ) &&
+             file_exists( $_templatePath . static::SWAGGER_CUSTOM_EXAMPLE_FILE )
+        )
         {
-            file_put_contents( $_customPath . static::SWAGGER_CUSTOM_EXAMPLE_FILE, file_get_contents( $_templatePath . static::SWAGGER_CUSTOM_EXAMPLE_FILE ) );
+            file_put_contents(
+                $_customPath . static::SWAGGER_CUSTOM_EXAMPLE_FILE,
+                file_get_contents( $_templatePath . static::SWAGGER_CUSTOM_EXAMPLE_FILE )
+            );
         }
 
         Log::info( 'Swagger cache build process complete' );
@@ -324,10 +343,16 @@ SQL;
             //  Trim slashes for use as a file name
             $_scripts = $_events = array();
 
+            if ( null === ( $_path = Option::get( $_api, 'path' ) ) )
+            {
+                Log::notice( '  * Missing "path" in Swagger definition: ' . $apiName );
+                continue;
+            }
+
             $_path = str_replace(
-                array('{api_name}', '/'),
-                array($apiName, '.'),
-                trim( Option::get( $_api, 'path' ), '/' )
+                array( '{api_name}', '/' ),
+                array( $apiName, '.' ),
+                trim( $_path, '/' )
             );
 
             foreach ( Option::get( $_api, 'operations', array() ) as $_ixOps => $_operation )
@@ -355,7 +380,7 @@ SQL;
                     }
                     else if ( !is_array( $_eventNames ) )
                     {
-                        $_eventNames = array($_eventNames);
+                        $_eventNames = array( $_eventNames );
                     }
 
                     //  Set into master record
@@ -385,6 +410,8 @@ SQL;
 
                         //  Set actual name in swagger file
                         $data['apis'][ $_ixApi ]['operations'][ $_ixOps ]['event_name'][ $_ixEventNames ] = $_eventName;
+
+                        Log::debug( '  * Found event "' . $_eventName . '"' );
                     }
 
                     $_events[ $_method ] = array(
@@ -396,7 +423,7 @@ SQL;
                 unset( $_operation, $_scripts, $_eventsThrown );
             }
 
-            $_eventMap[ str_ireplace( '{api_name}', $apiName, $_api['path'] ) ] = $_events;
+            $_eventMap[ str_ireplace( '{api_name}', $apiName, $_path ) ] = $_events;
 
             unset( $_scripts, $_events, $_api );
         }
@@ -452,7 +479,8 @@ SQL;
         }
 
         $_response = array();
-        $_eventPattern = '/^' . str_replace( array('.*.js', '.'), array(null, '\\.'), $_scriptPattern ) . '\\.(\w)\\.js$/i';
+        $_eventPattern =
+            '/^' . str_replace( array( '.*.js', '.' ), array( null, '\\.' ), $_scriptPattern ) . '\\.(\w)\\.js$/i';
 
         foreach ( $_scripts as $_script )
         {
@@ -478,7 +506,7 @@ SQL;
 
         $_map = static::getEventMap();
         $_aliases = $service->getVerbAliases();
-        $_methods = array($method);
+        $_methods = array( $method );
 
         foreach ( Option::clean( $_aliases ) as $_action => $_alias )
         {
@@ -488,7 +516,10 @@ SQL;
             }
         }
 
-        $_hash = sha1( $method . '.' . Pii::request( false )->getRequestUri() );
+        //  Change the request uri for inline calls
+        $_requestUri = Option::server( 'INLINE_REQUEST_URI', Pii::request( false )->getRequestUri() );
+
+        $_hash = sha1( $method . '.' . $_requestUri );
 
         if ( isset( $_cache[ $_hash ] ) )
         {
@@ -527,7 +558,14 @@ SQL;
 
         $_pathParts = explode(
             '/',
-            ltrim( str_ireplace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) ), '/' )
+            ltrim(
+                str_ireplace(
+                    'rest',
+                    null,
+                    trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' )
+                ),
+                '/'
+            )
         );
 
         if ( empty( $_resource ) )
@@ -553,7 +591,9 @@ SQL;
 
         if ( null === ( $_resources = Option::get( $_map, $_resource ) ) )
         {
-            if ( !method_exists( $service, 'getServiceName' ) || null === ( $_resources = Option::get( $_map, $service->getServiceName() ) ) )
+            if ( !method_exists( $service, 'getServiceName' ) ||
+                 null === ( $_resources = Option::get( $_map, $service->getServiceName() ) )
+            )
             {
                 if ( null === ( $_resources = Option::get( $_map, 'system' ) ) )
                 {
@@ -562,7 +602,11 @@ SQL;
             }
         }
 
-        $_path = str_ireplace( 'rest', null, trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' ) );
+        $_path = str_ireplace(
+            'rest',
+            null,
+            trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' )
+        );
 
         //  Strip off the resource ID if any...
         if ( $_resourceId && false !== ( $_pos = stripos( $_path, '/' . $_resourceId ) ) )
@@ -570,54 +614,70 @@ SQL;
             $_path = substr( $_path, 0, $_pos );
         }
 
-        $_swaps = array(array(), array());
+        $_swaps = array( array(), array() );
 
-        if ( 'db' == $_apiName && 'db' == $_resource )
+        switch ( $service->getTypeId() )
         {
-            $_swaps = array(
-                array(
-                    $_savedResource,
-                ),
-                array(
-                    '{table_name}',
-                ),
-            );
+            case PlatformServiceTypes::LOCAL_SQL_DB:
+            case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
+                $_swaps = array(
+                    array(
+                        $_savedResource,
+                    ),
+                    array(
+                        '{table_name}',
+                    ),
+                );
 
-            $_path = str_ireplace( $_swaps[0], $_swaps[1], $_path );
-        }
-        else if ( $service instanceof BaseFileSvc )
-        {
-            $_swaps = array(
-                array(
-                    $service->getContainerId(),
-                    $_folderPath = $service->getFolderPath(),
-                    $_filePath = $service->getFilePath(),
-                    //  This one removes any slashes from the final event name...
-                    null,
-                ),
-                array(
-                    '{container}',
-                    '{folder_path}',
-                    '{file_path}',
-                    //  This one removes any slashes from the final event name...
-                    '/',
-                ),
-            );
+                $_path = str_ireplace( $_swaps[0], $_swaps[1], $_path );
+                break;
 
-            //  Add in optional trailing slashes
-            if ( $_folderPath )
-            {
-                $_swaps[0][] = $_folderPath[ strlen( $_folderPath ) - 1 ] != '/' ? $_folderPath . '/' : substr( $_folderPath, 0, strlen( $_folderPath ) - 1 );
-                $_swaps[1][] = '{folder_path}';
-            }
+            case PlatformServiceTypes::LOCAL_FILE_STORAGE:
+            case PlatformServiceTypes::REMOTE_FILE_STORAGE:
+                $_swaps = array(
+                    array(
+                        $service->getContainerId(),
+                        $_folderPath = $service->getFolderPath(),
+                        $_filePath = $service->getFilePath(),
+                        //  This one removes any slashes from the final event name...
+                        null,
+                    ),
+                    array(
+                        '{container}',
+                        '{folder_path}',
+                        '{file_path}',
+                        //  This one removes any slashes from the final event name...
+                        '/',
+                    ),
+                );
 
-            if ( $_filePath )
-            {
-                $_swaps[0][] = $_filePath[ strlen( $_filePath ) - 1 ] != '/' ? $_filePath . '/' : substr( $_filePath, 0, strlen( $_filePath ) - 1 );
-                $_swaps[1][] = '{file_path}';
-            }
+                //  Add in optional trailing slashes
+                if ( $_folderPath )
+                {
+                    $_swaps[0][] = $_folderPath[ strlen( $_folderPath ) - 1 ] != '/'
+                        ? $_folderPath . '/'
+                        : substr(
+                            $_folderPath,
+                            0,
+                            strlen( $_folderPath ) - 1
+                        );
+                    $_swaps[1][] = '{folder_path}';
+                }
 
-            $_path = str_ireplace( $_swaps[0], $_swaps[1], $_path );
+                if ( $_filePath )
+                {
+                    $_swaps[0][] = $_filePath[ strlen( $_filePath ) - 1 ] != '/'
+                        ? $_filePath . '/'
+                        : substr(
+                            $_filePath,
+                            0,
+                            strlen( $_filePath ) - 1
+                        );
+                    $_swaps[1][] = '{file_path}';
+                }
+
+                $_path = str_ireplace( $_swaps[0], $_swaps[1], $_path );
+                break;
         }
 
         if ( empty( $_path ) )
@@ -625,20 +685,16 @@ SQL;
             return null;
         }
 
-        $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$@iD';
+        $_path = implode( '.', explode( '/', ltrim( $_path, '/' ) ) );
+
+        $_pattern =
+            '#^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$#';
 
         $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
         if ( empty( $_matches ) )
         {
-            //	See if there is an event with /system at the front...
-            $_pattern = '@^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$@iD';
-            $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
-
-            if ( empty( $_matches ) )
-            {
-                return null;
-            }
+            return null;
         }
 
         foreach ( $_matches as $_match )
@@ -758,7 +814,9 @@ SQL;
 
             if ( !file_exists( $_filePath ) )
             {
-                throw new InternalServerErrorException( 'File system error creating Swagger cache file for "' . $service . '"' );
+                throw new InternalServerErrorException(
+                    'File system error creating Swagger cache file for "' . $service . '"'
+                );
             }
         }
 
@@ -779,7 +837,7 @@ SQL;
 
         if ( file_exists( $_swaggerPath ) )
         {
-            $files = array_diff( scandir( $_swaggerPath ), array('.', '..') );
+            $files = array_diff( scandir( $_swaggerPath ), array( '.', '..' ) );
             foreach ( $files as $file )
             {
                 @unlink( $_swaggerPath . '/' . $file );

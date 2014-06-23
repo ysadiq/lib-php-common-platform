@@ -98,18 +98,20 @@ class RestData
                 {
                     // text/csv
                     $_data = DataFormat::csvToArray( $_postData );
-                    // expected record array format is wrapped with 'record'
-                    if ( !empty( $_data ) )
-                    {
-                        $_data = array( 'record' => $_data );
-                    }
                 }
             }
 
             if ( empty( $_data ) )
             {
                 // last chance, assume it is json
-                $_data = DataFormat::jsonToArray( $_postData );
+                try
+                {
+                    $_data = DataFormat::jsonToArray( $_postData );
+                }
+                catch ( \Exception $_ex )
+                {
+                    // oh well, requested array, but couldn't get any
+                }
             }
 
             // get rid of xml wrapper if present

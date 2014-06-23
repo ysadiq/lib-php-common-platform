@@ -50,6 +50,14 @@ class Config extends BaseSystemRestResource
     //*************************************************************************
 
     /**
+     * @type array The currently cached configuration for this DSP
+     */
+    const CACHE_KEY = 'platform.config';
+    /**
+     * @type array The currently cached configuration for this DSP
+     */
+    const LAST_RESPONSE_CACHE_KEY = 'config.last_response';
+    /**
      * @type int The number of seconds at most to cache these resources
      */
     const CONFIG_CACHE_TTL = PlatformStore::DEFAULT_TTL;
@@ -86,8 +94,8 @@ class Config extends BaseSystemRestResource
                 'is_active'      => true,
                 'resource_array' => $resourceArray,
                 'verb_aliases'   => array(
-                    static::PATCH => static::POST,
-                    static::MERGE => static::POST,
+                    static::PATCH => static::PUT,
+                    static::MERGE => static::PUT,
                 )
             )
         );
@@ -106,7 +114,7 @@ class Config extends BaseSystemRestResource
      */
     public function checkPermission( $operation, $resource = null )
     {
-        // clients use basic GET on global config to startup
+        //  Clients use basic GET on global config to startup
         if ( static::GET == $operation )
         {
             return true;
@@ -118,10 +126,8 @@ class Config extends BaseSystemRestResource
     /**
      * {@InheritDoc}
      */
-    protected function _handleUpdatingExtras()
+    protected function _handlePut()
     {
-        $_payload = $this->_determineRequestedResource( $_ids, $_records );
-
         // changing config, bust caches
         if ( false === Platform::storeDelete( static::OPEN_REG_CACHE_KEY ) )
         {
@@ -135,7 +141,7 @@ class Config extends BaseSystemRestResource
         }
 
         //	Check for CORS changes...
-        if ( null !== ( $_hostList = Option::get( $_payload, 'allowed_hosts', null, true ) ) )
+        if ( null !== ( $_hostList = Option::get( $this->_requestPayload, 'allowed_hosts', null, true ) ) )
         {
             SystemManager::setAllowedHosts( $_hostList );
         }
@@ -144,9 +150,9 @@ class Config extends BaseSystemRestResource
         {
             if ( Session::isSystemAdmin() )
             {
-                if ( isset( $_payload['lookup_keys'] ) )
+                if ( isset( $this->_requestPayload['lookup_keys'] ) )
                 {
-                    LookupKey::assignLookupKeys( $_payload['lookup_keys'] );
+                    LookupKey::assignLookupKeys( $this->_requestPayload['lookup_keys'] );
 
                     // changing config, bust cache
                     if ( false === Platform::storeDelete( static::LOOKUP_CACHE_KEY ) )
@@ -165,14 +171,6 @@ class Config extends BaseSystemRestResource
         {
             // do nothing
         }
-    }
-
-    /**
-     * {@InheritDoc}
-     */
-    protected function _handlePut()
-    {
-        $this->_handleUpdatingExtras();
 
         return parent::_handlePut();
     }
@@ -182,11 +180,13 @@ class Config extends BaseSystemRestResource
      */
     protected function _handlePost()
     {
-        $this->_handleUpdatingExtras();
-
-        return parent::_handlePost();
+        // should never create new config
+        throw new BadRequestException();
     }
 
+    /**
+     * {@InheritDoc}
+     */
     protected function _handleDelete()
     {
         // should never delete config
@@ -195,92 +195,85 @@ class Config extends BaseSystemRestResource
 
     /**
      * {@InheritDoc}
+     * ENSURE THAT NOTHING IN THIS FUNCTION TRIGGERS AN EVENT FOR NOW!
      */
     protected function _postProcess()
     {
-        static $HOSTED_CACHE_KEY = 'platform.fabric_hosted';
-        static $VERSION_CACHE_KEY = 'platform.version_info';
-
-        static $_fabricHosted, $_fabricPrivate;
-
+        //  Indicator to rebuild the config cache if the inbound request was NOT a "GET"
         $_refresh = ( static::GET != $this->_action );
-        $_fabricHosted = $_fabricHosted ? : Platform::storeGet( $HOSTED_CACHE_KEY, Fabric::fabricHosted(), false, static::CONFIG_CACHE_TTL );
-        $_fabricPrivate = $_fabricPrivate ? : Fabric::hostedPrivatePlatform();
-
-        //	Only return a single row, not in an array
-        if ( is_array( $this->_response ) && !Pii::isEmpty( $_record = Option::get( $this->_response, 'record' ) ) && count( $_record ) >= 1 )
-        {
-            $this->_response = current( $_record );
-        }
+        $_config = static::getCurrentConfig( $_refresh );
 
         /**
          * Version and upgrade support
          */
-        if ( $_refresh || null === ( $_versionInfo = Platform::storeGet( $VERSION_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) ) )
+        if ( empty( $_config ) || $_refresh )
         {
-            $_versionInfo = array(
-                'dsp_version'       => $_currentVersion = SystemManager::getCurrentVersion(),
-                'latest_version'    => $_latestVersion = ( $_fabricHosted ? $_currentVersion : SystemManager::getLatestVersion() ),
-                'upgrade_available' => version_compare( $_currentVersion, $_latestVersion, '<' ),
+            $_config = array(
+                //  General settings
+                'allow_admin_remote_logins' => Pii::getParam( 'dsp.allow_admin_remote_logins', false ),
+                'allow_remote_logins'       => ( Pii::getParam( 'dsp.allow_remote_logins', false ) &&
+                                                 Option::getBool( $this->_response, 'allow_open_registration' ) ),
+                'remote_login_providers'    => null,
+                'is_hosted'                 => $_fabricHosted = Pii::getParam( 'dsp.fabric_hosted', false ),
+                'is_private'                => Fabric::hostedPrivatePlatform(),
+                //  DSP version info
+                'dsp_version'               => $_currentVersion = SystemManager::getCurrentVersion(),
+                'latest_version'            => $_latestVersion =
+                    ( $_fabricHosted ? $_currentVersion : SystemManager::getLatestVersion() ),
+                'upgrade_available'         => version_compare( $_currentVersion, $_latestVersion, '<' ),
+                //  CORS Support
+                'allowed_hosts'             => SystemManager::getAllowedHosts(),
             );
 
-            Platform::storeSet( $VERSION_CACHE_KEY, $_versionInfo, static::CONFIG_CACHE_TTL );
-        }
-
-        $this->_response = array_merge( $this->_response, $_versionInfo );
-        unset( $_versionInfo );
-
-        /**
-         * Remote login support
-         */
-        $this->_response['is_guest'] = Pii::guest();
-        $this->_response['is_hosted'] = $_fabricHosted;
-        $this->_response['is_private'] = $_fabricPrivate;
-        $this->_response['allow_admin_remote_logins'] = Pii::getParam( 'dsp.allow_admin_remote_logins', false );
-        $this->_response['allow_remote_logins'] =
-            ( Pii::getParam( 'dsp.allow_remote_logins', false ) && Option::getBool( $this->_response, 'allow_open_registration' ) );
-
-        if ( $this->_response['allow_remote_logins'] )
-        {
-            $_remoteProviders = $this->_getRemoteProviders();
-            $this->_response['remote_login_providers'] = array();
-
-            if ( empty( $_remoteProviders ) )
+            //  Get the login provider array
+            if ( $_config['allow_remote_logins'] )
             {
-                $this->_response['allow_remote_logins'] = false;
+                $_remoteProviders = $this->_getRemoteProviders();
+                $_config['remote_login_providers'] = array();
+                $_config['allow_remote_logins'] =
+                    ( empty( $_remoteProviders ) ? false : array_values( $_remoteProviders ) );
+                unset( $_remoteProviders );
             }
             else
             {
-                $this->_response['remote_login_providers'] = array_values( $_remoteProviders );
+                //	No providers, no admin remote logins
+                $_config['allow_admin_remote_logins'] = false;
             }
 
-            unset( $_remoteProviders );
-        }
-        else
-        {
-            //	No providers, no admin remote logins
-            $this->_response['allow_admin_remote_logins'] = false;
-        }
-
-        /** CORS support **/
-        $this->_response['allowed_hosts'] = SystemManager::getAllowedHosts();
-
-        try
-        {
-            if ( Session::isSystemAdmin() )
+            try
             {
-                $this->_response['lookup_keys'] = $this->_getLookupKeys();
+                if ( Session::isSystemAdmin() )
+                {
+                    $_config['lookup_keys'] = $this->_getLookupKeys( $_refresh );
+                }
+            }
+            catch ( ForbiddenException $_ex )
+            {
+                // do nothing
+            }
+            catch ( UnauthorizedException $_ex )
+            {
+                // do nothing
             }
         }
-        catch ( ForbiddenException $_ex )
+
+        //	Only return a single row, not in an array
+        if ( is_array( $this->_response ) &&
+             !Pii::isEmpty( $_record = Option::get( $this->_response, 'record' ) ) &&
+             count( $_record ) >= 1
+        )
         {
-            // do nothing
-        }
-        catch ( UnauthorizedException $_ex )
-        {
-            // do nothing
+            $this->_response = current( $_record );
         }
 
+        $this->_response = array_merge( $this->_response, $_config );
+        $this->_response['is_guest'] = Pii::guest();
+
+        //	Cache configuration
+        Platform::storeSet( static::CACHE_KEY, $_config, static::CONFIG_CACHE_TTL );
+        Platform::storeSet( static::LAST_RESPONSE_CACHE_KEY, $this->_response, static::CONFIG_CACHE_TTL );
+
+        unset( $_config );
         parent::_postProcess();
     }
 
@@ -292,7 +285,12 @@ class Config extends BaseSystemRestResource
      */
     public static function getOpenRegistration( $flushCache = false )
     {
-        static $COLUMNS = array( 'allow_open_registration', 'open_reg_role_id', 'open_reg_email_service_id', 'open_reg_email_template_id' );
+        static $COLUMNS = array(
+            'allow_open_registration',
+            'open_reg_role_id',
+            'open_reg_email_service_id',
+            'open_reg_email_template_id'
+        );
 
         if ( $flushCache )
         {
@@ -303,7 +301,9 @@ class Config extends BaseSystemRestResource
             }
         }
 
-        if ( null !== ( $_values = Platform::storeGet( static::OPEN_REG_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) ) )
+        if ( null !==
+             ( $_values = Platform::storeGet( static::OPEN_REG_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
+        )
         {
             return $_values;
         }
@@ -346,7 +346,9 @@ class Config extends BaseSystemRestResource
             }
         }
 
-        if ( null !== ( $_lookups = Platform::storeGet( static::LOOKUP_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) ) )
+        if ( null !==
+             ( $_lookups = Platform::storeGet( static::LOOKUP_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
+        )
         {
             return $_lookups;
         }
@@ -357,9 +359,11 @@ class Config extends BaseSystemRestResource
         $_lookups = array();
         if ( !empty( $_models ) )
         {
+            $_template = array( 'name', 'value', 'private' );
+
             foreach ( $_models as $_row )
             {
-                $_lookups[] = $_row->getAttributes( array('name', 'value', 'private') );
+                $_lookups[] = $_row->getAttributes( $_template );
             }
         }
 
@@ -387,7 +391,10 @@ class Config extends BaseSystemRestResource
             }
         }
 
-        if ( null !== ( $_remoteProviders = Platform::storeGet( static::PROVIDERS_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) ) )
+        if ( null !==
+             ( $_remoteProviders =
+                 Platform::storeGet( static::PROVIDERS_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
+        )
         {
             return $_remoteProviders;
         }
@@ -432,7 +439,7 @@ class Config extends BaseSystemRestResource
         //*************************************************************************
 
         /** @var Provider[] $_models */
-        $_models = ResourceStore::model( 'provider' )->findAll( array('order' => 'provider_name') );
+        $_models = ResourceStore::model( 'provider' )->findAll( array( 'order' => 'provider_name' ) );
 
         if ( !empty( $_models ) )
         {
@@ -452,7 +459,7 @@ class Config extends BaseSystemRestResource
                         }
                     }
 
-                    $_remoteProviders[] = array_merge( $_row->getAttributes(), array('config_text' => $_config) );
+                    $_remoteProviders[] = array_merge( $_row->getAttributes(), array( 'config_text' => $_config ) );
                 }
 
                 unset( $_row );
@@ -501,5 +508,15 @@ class Config extends BaseSystemRestResource
         Option::remove( $_config, 'refresh_token' );
 
         return $_config;
+    }
+
+    /**
+     * @param bool $flush If true, key is removed after retrieval. On the subsequent call the cache will be rebuilt before return
+     *
+     * @return array
+     */
+    public static function getCurrentConfig( $flush = false )
+    {
+        return Platform::storeGet( static::CACHE_KEY, null, $flush, static::CONFIG_CACHE_TTL );
     }
 }

@@ -31,6 +31,7 @@ use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Yii\Models\Service;
 use Kisma\Core\Interfaces\HttpMethod;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Scalar;
 
 /**
  * Packager
@@ -133,7 +134,7 @@ class Packager
                         {
                             if ( $include_services )
                             {
-                                if ( !DataFormat::boolval( $_service->getAttribute( 'is_system' ) ) )
+                                if ( !Scalar::boolval( $_service->getAttribute( 'is_system' ) ) )
                                 {
                                     // get service details to restore with app
                                     $_temp = $_service->getAttributes( $_serviceFields );
@@ -303,7 +304,7 @@ class Packager
         try
         {
             ResourceStore::setResourceName( 'app' );
-            $returnData = ResourceStore::insertOne( $_record, 'id,api_name' );
+            $returnData = ResourceStore::insertOne( $_record, array('fields' => 'id,api_name') );
         }
         catch ( \Exception $ex )
         {
@@ -351,7 +352,7 @@ class Packager
                         if ( !empty( $tables ) )
                         {
                             /** @var $db SchemaSvc */
-                            $result = $db->createTables( $tables, true );
+                            $result = $db->updateTables( $tables, true );
                             if ( isset( $result[0]['error'] ) )
                             {
                                 $msg = $result[0]['error']['message'];
@@ -373,7 +374,7 @@ class Packager
                         }
                         /** @var $db SchemaSvc */
                         $db = ServiceHandler::getServiceObject( $serviceName );
-                        $result = $db->createTables( $tables, true );
+                        $result = $db->updateTables( $tables, true );
                         if ( isset( $result[0]['error'] ) )
                         {
                             $msg = $result[0]['error']['message'];
@@ -389,7 +390,7 @@ class Packager
                             $serviceName = 'schema';
                             /** @var $db SchemaSvc */
                             $db = ServiceHandler::getServiceObject( $serviceName );
-                            $result = $db->createTables( $_data, true );
+                            $result = $db->updateTables( $_data, true );
                             if ( isset( $result['error'] ) )
                             {
                                 $msg = $result['error']['message'];
@@ -488,7 +489,7 @@ class Packager
             if ( !empty( $id ) )
             {
                 ResourceStore::setResourceName( 'app' );
-                ResourceStore::delete( array( 'id' => $id ) );
+                ResourceStore::deleteById( $id );
             }
 
             throw $ex;

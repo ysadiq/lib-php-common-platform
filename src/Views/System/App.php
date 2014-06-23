@@ -28,48 +28,28 @@ use DreamFactory\Platform\Resources\BaseSystemRestResource;
  */
 class App extends BaseSystemRestResource
 {
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * Creates a new SystemResource instance
-	 *
-	 *
-	 */
-	public function __construct( $consumer, $resourceArray = array() )
-	{
-		parent::__construct(
-			$consumer,
-			array(
-				'service_name'   => 'system',
-				'name'           => 'Application',
-				'api_name'       => 'app',
-				'type'           => 'System',
-				'description'    => 'System application administration.',
-				'is_active'      => true,
-				'resource_array' => $resourceArray,
-			)
-		);
-	}
-
-	/**
-	 * @throws \Exception
-	 * @return array|bool
-	 */
-	protected function _handleGet()
-	{
-
-		return parent::_handleGet();
-	}
-
-	/**
-	 * @return array|bool
-	 * @throws \Exception
-	 */
-	protected function _handlePost()
-	{
-
-		return parent::_handlePost();
-	}
+    /**
+     * Creates a new SystemResource instance
+     *
+     *
+     */
+    public function __construct( $consumer, $resourceArray = array() )
+    {
+        parent::__construct(
+            $consumer,
+            array(
+                'service_name'   => 'system',
+                'name'           => 'Application',
+                'api_name'       => 'app',
+                'type'           => 'System',
+                'description'    => 'System application administration.',
+                'is_active'      => true,
+                'resource_array' => $resourceArray,
+            )
+        );
+    }
 }

@@ -23,7 +23,6 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\User\Session;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -76,8 +75,8 @@ class CouchDbSvc extends NoSqlDbSvc
     {
         parent::__construct( $config );
 
-        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ));
-        $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn' ));
+        $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
+        $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn' ), true );
         if ( empty( $_dsn ) )
         {
             $_dsn = 'http://localhost:5984';
@@ -132,19 +131,6 @@ class CouchDbSvc extends NoSqlDbSvc
         return $name;
     }
 
-    /**
-     * @param null $post_data
-     *
-     * @return array
-     */
-    protected function _gatherExtrasFromRequest( &$post_data = null )
-    {
-        $_extras = parent::_gatherExtrasFromRequest( $post_data );
-        $_extras[static::REV_FIELD] = FilterInput::request( static::REV_FIELD, Option::get( $post_data, static::REV_FIELD ) );
-
-        return $_extras;
-    }
-
     // REST service implementation
 
     /**
@@ -164,16 +150,17 @@ class CouchDbSvc extends NoSqlDbSvc
                     $_access = $this->getPermissions( $_table );
                     if ( !empty( $_access ) )
                     {
-                        $_resources[] = array( 'name' => $_table, 'access' => $_access );
+                        $_resources[] = array('name' => $_table, 'access' => $_access);
                     }
                 }
             }
 
-            return array( 'resource' => $_resources );
+            return array('resource' => $_resources);
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -213,7 +200,8 @@ class CouchDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
@@ -234,7 +222,7 @@ class CouchDbSvc extends NoSqlDbSvc
             $this->_dbConn->asArray()->createDatabase();
             // $_result['ok'] = true
 
-            $_out = array( 'name' => $_name );
+            $_out = array('name' => $_name);
 
             return $_out;
         }
@@ -258,7 +246,7 @@ class CouchDbSvc extends NoSqlDbSvc
         $this->selectTable( $_name );
 
 //		throw new InternalServerErrorException( "Failed to update table '$_name'." );
-        return array( 'name' => $_name );
+        return array('name' => $_name);
     }
 
     /**
@@ -279,7 +267,7 @@ class CouchDbSvc extends NoSqlDbSvc
 
             // $_result['ok'] = true
 
-            return array( 'name' => $_name );
+            return array('name' => $_name);
         }
         catch ( \Exception $_ex )
         {
@@ -295,84 +283,15 @@ class CouchDbSvc extends NoSqlDbSvc
      */
     public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-        $this->selectTable( $table );
-
-        $_fields = Option::get( $extras, 'fields' );
-
-        // retrieve records to get latest rev and id
-        $_results = $this->_dbConn->asArray()->include_docs( false )->getAllDocs();
-
-        $_updates = array();
-        foreach ( $_results as $_old )
-        {
-            // replace everything but the ids
-            $record[static::DEFAULT_ID_FIELD] = Option::get( $_old, static::DEFAULT_ID_FIELD );
-            $record[static::REV_FIELD] = Option::get( $_old, static::REV_FIELD );
-            $_updates[] = $record;
-        }
-
-        try
-        {
-            // write back the changes
-            $_result = $this->_dbConn->asArray()->storeDocs( $_updates, true );
-
-            if ( static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD ) )
-            {
-                // merge in rev updates
-                $_result = static::recordArrayMerge( $_updates, $_result );
-            }
-
-            $_out = static::cleanRecords( $_result, $_fields );
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to patch records in '$table'.\n{$_ex->getMessage()}" );
-        }
+        throw new BadRequestException( "SQL-like filters are not currently available for CouchDB.\n" );
     }
 
     /**
      * {@inheritdoc}
      */
-    public function mergeRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
+    public function patchRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-        $this->selectTable( $table );
-
-        $_fields = Option::get( $extras, 'fields' );
-        try
-        {
-            // retrieve records to get latest rev and id
-            $_results = $this->_dbConn->asArray()->include_docs( true )->getAllDocs();
-
-            // merge in changes from $records to $_merges
-            unset( $record[static::DEFAULT_ID_FIELD] );
-            unset( $record[static::REV_FIELD] );
-
-            $_updates = array();
-            foreach ( $_results as $_old )
-            {
-                $_updates[] = array_merge( $_old, $record );
-            }
-
-            // write back the changes
-            $_result = $this->_dbConn->asArray()->storeDocs( $_updates, true );
-            if ( static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD ) )
-            {
-                // merge in rev updates
-                $_result = static::recordArrayMerge( $_updates, $_result );
-            }
-
-            $_out = static::cleanRecords( $_result, $_fields );
-
-            return $_out;
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to patch records in '$table'.\n{$_ex->getMessage()}" );
-        }
+        throw new BadRequestException( "SQL-like filters are not currently available for CouchDB.\n" );
     }
 
     /**
@@ -380,23 +299,7 @@ class CouchDbSvc extends NoSqlDbSvc
      */
     public function deleteRecordsByFilter( $table, $filter, $params = array(), $extras = array() )
     {
-        if ( empty( $filter ) )
-        {
-            throw new BadRequestException( "Filter for delete request can not be empty." );
-        }
-
-        $this->selectTable( $table );
-        try
-        {
-            $_records = $this->retrieveRecordsByFilter( $table, $filter, $params, $extras );
-            $this->_dbConn->asArray()->deleteDocs( $_records, true );
-
-            return $_records;
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to delete records from '$table'.\n{$_ex->getMessage()}" );
-        }
+        throw new BadRequestException( "SQL-like filters are not currently available for CouchDB.\n" );
     }
 
     /**
@@ -405,15 +308,42 @@ class CouchDbSvc extends NoSqlDbSvc
     public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
     {
         $this->selectTable( $table );
-        $_fields = Option::get( $extras, 'fields' );
 
-        $_moreFields = static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD );
+        // todo  how to filter here?
+        if ( !empty( $filter ) )
+        {
+            throw new BadRequestException( "SQL-like filters are not currently available for CouchDB.\n" );
+        }
+
+        Option::sins( $extras, 'skip', Option::get( $extras, 'offset' ) ); // support offset
+        $_design = Option::get( $extras, 'design' );
+        $_view = Option::get( $extras, 'view' );
+        $_includeDocs = Option::getBool( $extras, 'include_docs' );
+        $_fields = Option::get( $extras, 'fields' );
         try
         {
-            // todo  how to filter here?
-            $_result = $this->_dbConn->asArray()->include_docs( $_moreFields )->getAllDocs();
+            if ( !empty( $_design ) && !empty( $_view ) )
+            {
+                $_result = $this->_dbConn->setQueryParameters( $extras )->asArray()->getView( $_design, $_view );
+            }
+            else
+            {
+                if ( !$_includeDocs )
+                {
+                    $_includeDocs = static::_requireMoreFields( $_fields, static::DEFAULT_ID_FIELD );
+                    Option::sins( $extras, 'include_docs', $_includeDocs );
+                }
+                $_result = $this->_dbConn->setQueryParameters( $extras )->asArray()->getAllDocs();
+            }
+
             $_rows = Option::get( $_result, 'rows' );
-            $_out = static::cleanRecords( $_rows, $_fields, $_moreFields );
+            $_out = static::cleanRecords( $_rows, $_fields, $_includeDocs );
+            if ( Option::getBool( $extras, 'include_count', false ) ||
+                 ( 0 != intval( Option::get( $_result, 'offset' ) ) )
+            )
+            {
+                $_out['meta']['count'] = intval( Option::get( $_result, 'total_rows' ) );
+            }
 
             return $_out;
         }
@@ -425,9 +355,9 @@ class CouchDbSvc extends NoSqlDbSvc
 
     protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
-        $requested_fields = array( static::ID_FIELD ); // can only be this
+        $requested_fields = array(static::ID_FIELD); // can only be this
         $_ids = array(
-            array( 'name' => static::ID_FIELD, 'type' => 'string', 'required' => true ),
+            array('name' => static::ID_FIELD, 'type' => 'string', 'required' => false),
         );
 
         return $_ids;
@@ -457,7 +387,7 @@ class CouchDbSvc extends NoSqlDbSvc
                     $_rev = Option::getDeep( $record, 'value', 'rev' );
                 }
             }
-            $_out = array( static::DEFAULT_ID_FIELD => $_id, static::REV_FIELD => $_rev );
+            $_out = array(static::DEFAULT_ID_FIELD => $_id, static::REV_FIELD => $_rev);
 
             if ( empty( $include ) )
             {
@@ -523,7 +453,7 @@ class CouchDbSvc extends NoSqlDbSvc
         {
             case static::POST:
                 $record = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters );
-                if ( empty( $_parsed ) )
+                if ( empty( $record ) )
                 {
                     throw new BadRequestException( 'No valid fields were found in record.' );
                 }
@@ -728,7 +658,9 @@ class CouchDbSvc extends NoSqlDbSvc
                 $_out = array();
                 if ( $_requireMore )
                 {
-                    $_result = $this->_dbConn->asArray()->include_docs( true )->keys( $this->_batchIds )->getAllDocs();
+                    $_result = $this->_dbConn->setQueryParameters( $extras )->asArray()->include_docs( true )->keys(
+                        $this->_batchIds
+                    )->getAllDocs();
                     $_rows = Option::get( $_result, 'rows' );
                     $_out = static::cleanRecords( $_rows, $_fields, true );
                 }
@@ -741,7 +673,10 @@ class CouchDbSvc extends NoSqlDbSvc
                 break;
 
             case static::GET:
-                $_result = $this->_dbConn->asArray()->include_docs( $_requireMore )->keys( $this->_batchIds )->getAllDocs();
+                $_result =
+                    $this->_dbConn->setQueryParameters( $extras )->asArray()->include_docs( $_requireMore )->keys(
+                        $this->_batchIds
+                    )->getAllDocs();
                 $_rows = Option::get( $_result, 'rows' );
                 $_out = static::cleanRecords( $_rows, $_fields, true );
 
