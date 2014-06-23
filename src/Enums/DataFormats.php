@@ -129,11 +129,11 @@ class DataFormats extends SeedEnum
             throw new \InvalidArgumentException( 'The data format "' . $numericLevel . '" is not numeric.' );
         }
 
-        if ( !in_array( $numericLevel, array_flip( static::$_strings ) ) )
+        if ( !in_array( $numericLevel, static::$_strings ) )
         {
             throw new \InvalidArgumentException( 'The data format "' . $numericLevel . '" is invalid.' );
         }
 
-        return static::nameOf( $numericLevel );
+        return static::nameOf( $numericLevel, true, false );
     }
 }

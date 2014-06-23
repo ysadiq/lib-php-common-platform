@@ -735,7 +735,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     try
                     {
                         $this->copyFolder( $this->_container, $fullPathName, $srcContainer, $srcPath, true );
-                        $deleteSource = DataFormat::boolval( Option::get( $folder, 'delete_source', false ) );
+                        $deleteSource = Option::getBool( $folder, 'delete_source' );
                         if ( $deleteSource )
                         {
                             $this->deleteFolder( $this->_container, $srcPath, true );
@@ -750,7 +750,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                 {
                     $fullPathName = $this->_folderPath . $name;
                     $content = Option::get( $folder, 'content', '' );
-                    $isBase64 = DataFormat::boolval( Option::get( $folder, 'is_base64', false ) );
+                    $isBase64 = Option::getBool( $folder, 'is_base64' );
                     if ( $isBase64 )
                     {
                         $content = base64_decode( $content );
@@ -796,7 +796,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     try
                     {
                         $this->copyFile( $this->_container, $fullPathName, $srcContainer, $srcPath, true );
-                        $deleteSource = DataFormat::boolval( Option::get( $file, 'delete_source', false ) );
+                        $deleteSource = Option::getBool( $file, 'delete_source' );
                         if ( $deleteSource )
                         {
                             $this->deleteFile( $this->_container, $srcPath );
@@ -812,7 +812,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     $fullPathName = $this->_folderPath . $name;
                     $out['file'][$key] = array('name' => $name, 'path' => $this->_container . '/' . $fullPathName);
                     $content = Option::get( $file, 'content', '' );
-                    $isBase64 = DataFormat::boolval( Option::get( $file, 'is_base64', false ) );
+                    $isBase64 = Option::getBool( $file, 'is_base64' );
                     if ( $isBase64 )
                     {
                         $content = base64_decode( $content );

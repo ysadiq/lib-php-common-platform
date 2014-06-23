@@ -19,12 +19,9 @@ namespace DreamFactory\Platform\Services;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\NotImplementedException;
 use DreamFactory\Platform\Interfaces\PlatformServiceLike;
-use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Resources\User\Session;
-use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use Kisma\Core\Interfaces\ConsumerLike;
-use Kisma\Core\Interfaces\HttpMethod;
 use Kisma\Core\Seed;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
@@ -193,7 +190,7 @@ abstract class BasePlatformService extends Seed implements PlatformServiceLike, 
      *
      * @throws NotImplementedException
      */
-    protected function _checkPermission( $request, $component )
+    protected function _checkPermission( /** @noinspection PhpUnusedParameterInspection */ $request, $component )
     {
         throw new NotImplementedException();
     }

@@ -44,6 +44,7 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Scalar;
 
 /**
  * BasePlatformRestService
@@ -138,7 +139,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
      */
     protected $_responseFormat = ResponseFormats::RAW;
     /**
-     * @var string Default output format, either null (native), 'json' or 'xml'.
+     * @var int|null Default output format, either null (native), or DataFormats enum value.
      * NOTE: Output format is different from RESPONSE format (inner payload format vs. envelope)
      */
     protected $_outputFormat = DataFormats::JSON;
@@ -413,7 +414,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         //	Native and PHP response types return, not emit...
         if ( in_array(
             $this->_outputFormat,
-            array( false, DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE )
+            array( false, null, '', DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE ),
+            true
         ) )
         {
             return $this->_response;
@@ -423,20 +425,21 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
         if ( false !== $this->_outputFormat && empty( $this->_outputFormat ) )
         {
+            // safety belt, should not hit here
             $this->_outputFormat = DataFormats::JSON;
-        }
-
-        if ( null === $this->_nativeFormat && DataFormat::CSV == $this->_outputFormat )
-        {
-            // need to strip 'record' wrapper before reformatting to csv
-            //@todo move this logic elsewhere
-            $_result = Option::get( $_result, 'record', $_result );
         }
 
         //	Neutralize the output format
         if ( !is_numeric( $this->_outputFormat ) )
         {
             $this->_outputFormat = DataFormats::toNumeric( $this->_outputFormat );
+        }
+
+        if ( null === $this->_nativeFormat && DataFormats::CSV == $this->_outputFormat )
+        {
+            // need to strip 'record' wrapper before reformatting to csv
+            //@todo move this logic elsewhere
+            $_result = Option::get( $_result, 'record', $_result );
         }
 
         //	json response formatted by specialized response class (JsonResponse)
@@ -520,10 +523,10 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
         if ( !empty( $_file ) )
         {
-            if ( DataFormat::boolval( $_file ) )
+            if ( Scalar::boolval( $_file ) )
             {
-                $_file = $this->getApiName();
-                $_file .= '.' . $this->_outputFormat;
+                $_file = (empty($this->_resource)) ?  $this->getApiName() : $this->_resource;
+                $_file .= '.' . DataFormats::toString($this->_outputFormat);
             }
 
             $this->_outputAsFile = $_file;

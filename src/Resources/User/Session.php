@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Resources\User;
 
 use DreamFactory\Common\Components\DataCache;
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -47,6 +46,7 @@ use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Hasher;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Scalar;
 
 /**
  * Session
@@ -1151,7 +1151,7 @@ class Session extends BasePlatformRestResource
                 /** @var Config $_config */
                 if ( !empty( $_config ) )
                 {
-                    if ( DataFormat::boolval( $_config->allow_guest_user ) )
+                    if ( Scalar::boolval( $_config->allow_guest_user ) )
                     {
                         $_result = static::generateSessionDataFromRole( null, $_config->getRelated( 'guest_role' ) );
                         static::$_cache = Option::get( $_result, 'cached' );

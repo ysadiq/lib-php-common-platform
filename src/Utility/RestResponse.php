@@ -212,7 +212,7 @@ class RestResponse extends HttpResponse
         $_errorInfo['code'] = $_status;
 
         $_result = array(
-            'error' => array( $_errorInfo )
+            'error' => array($_errorInfo)
         );
 
         $_result = DataFormat::reformatData( $_result, null, $desired_format );
@@ -221,16 +221,16 @@ class RestResponse extends HttpResponse
     }
 
     /**
-     * @param mixed  $result
-     * @param int    $code
-     * @param string $format
-     * @param string $as_file
-     * @param bool   $exitAfterSend
+     * @param mixed      $result
+     * @param int        $code
+     * @param int|string $format
+     * @param string     $as_file
+     * @param bool       $exitAfterSend
      *
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return bool|\Symfony\Component\HttpFoundation\JsonResponse|\Symfony\Component\HttpFoundation\Response
      */
-    public static function sendResults( $result, $code = RestResponse::Ok, $format = 'json', $as_file = null, $exitAfterSend = true )
+    public static function sendResults( $result, $code = RestResponse::Ok, $format = DataFormats::JSON, $as_file = null, $exitAfterSend = true )
     {
         if ( Pii::app()->getUseResponseObject() )
         {
@@ -242,7 +242,7 @@ class RestResponse extends HttpResponse
         {
             Pii::end();
 
-            return;
+            return null;
         }
 
         switch ( $format )
@@ -276,6 +276,7 @@ class RestResponse extends HttpResponse
                 $result = '<?xml version="1.0" ?>' . "<dfapi>\n$result</dfapi>";
                 break;
 
+            case OutputFormats::CSV:
             case 'csv':
                 $_contentType = 'text/csv';
                 break;
@@ -323,15 +324,15 @@ class RestResponse extends HttpResponse
     }
 
     /**
-     * @param mixed  $result
-     * @param int    $code
-     * @param string $format
-     * @param string $as_file
-     * @param bool   $exitAfterSend
+     * @param mixed      $result
+     * @param int        $code
+     * @param int|string $format
+     * @param string     $as_file
+     * @param bool       $exitAfterSend
      *
      * @return bool|JsonResponse|Response
      */
-    protected static function _sendResponseObjectResults( $result, $code = RestResponse::Ok, $format = 'json', $as_file = null, $exitAfterSend = true )
+    protected static function _sendResponseObjectResults( $result, $code = RestResponse::Ok, $format = DataFormats::JSON, $as_file = null, $exitAfterSend = true )
     {
         //  Get the sent headers
         $_sentHeaders = headers_list();
@@ -341,8 +342,8 @@ class RestResponse extends HttpResponse
             foreach ( $_sentHeaders as $_index => $_header )
             {
                 $_parts = explode( ': ', $_header, 1 );
-                unset( $_sentHeaders[ $_index ] );
-                $_sentHeaders[ $_parts[0] ] = Option::get( $_parts, 1, '' );
+                unset( $_sentHeaders[$_index] );
+                $_sentHeaders[$_parts[0]] = Option::get( $_parts, 1, '' );
             }
         }
 
@@ -387,14 +388,17 @@ class RestResponse extends HttpResponse
                 break;
 
             case OutputFormats::CSV:
+            case 'csv':
                 $_contentType = 'text/csv; application/csv;';
                 break;
 
             case OutputFormats::TSV:
+            case 'tsv':
                 $_contentType = 'text/tsv; application/tsv;';
                 break;
 
             case OutputFormats::PSV:
+            case 'psv':
                 $_contentType = 'text/psv; application/psv;';
                 break;
 
@@ -502,6 +506,8 @@ class RestResponse extends HttpResponse
             'false'
         );
 
-        return preg_match( $identifier_syntax, $subject ) && !in_array( mb_strtolower( $subject, 'UTF-8' ), $reserved_words );
+        return
+            preg_match( $identifier_syntax, $subject ) &&
+            !in_array( mb_strtolower( $subject, 'UTF-8' ), $reserved_words );
     }
 }

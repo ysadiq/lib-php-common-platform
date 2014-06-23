@@ -31,6 +31,7 @@ use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Yii\Models\Service;
 use Kisma\Core\Interfaces\HttpMethod;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Scalar;
 
 /**
  * Packager
@@ -133,7 +134,7 @@ class Packager
                         {
                             if ( $include_services )
                             {
-                                if ( !DataFormat::boolval( $_service->getAttribute( 'is_system' ) ) )
+                                if ( !Scalar::boolval( $_service->getAttribute( 'is_system' ) ) )
                                 {
                                     // get service details to restore with app
                                     $_temp = $_service->getAttributes( $_serviceFields );
