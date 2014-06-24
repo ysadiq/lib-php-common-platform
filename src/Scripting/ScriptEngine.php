@@ -28,6 +28,7 @@ use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\RestResponse;
 use DreamFactory\Platform\Utility\ServiceHandler;
+use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpResponse;
 use Kisma\Core\Interfaces\HttpMethod;
@@ -87,6 +88,10 @@ class ScriptEngine
      * @var bool True if system version of V8Js supports module loading
      */
     protected static $_moduleLoaderAvailable = false;
+    /**
+     * @var bool If true, memory usage is output to log after script execution
+     */
+    protected static $_logScriptMemoryUsage = false;
 
     //*************************************************************************
     //	Methods
@@ -194,6 +199,11 @@ class ScriptEngine
 
             $output = ob_get_clean();
 
+            if ( static::$_logScriptMemoryUsage )
+            {
+                Log::debug( 'Engine memory usage: ' . Utilities::resizeBytes( memory_get_usage( true ) ) );
+            }
+
             return $_result;
         }
         catch ( \V8JsException $_ex )
@@ -297,6 +307,8 @@ class ScriptEngine
             );
         }
 
+        static::$_logScriptMemoryUsage = Pii::getParam( 'dsp.log_script_memory_usage' );
+
         //  All the paths that we will check for scripts
         static::$_supportedScriptPaths = array(
             //  This is ONLY the root of the app store
@@ -363,19 +375,18 @@ class ScriptEngine
         $_jsonEvent = json_encode( $exposedEvent, JSON_UNESCAPED_SLASHES );
 
         $_enrobedScript = <<<JS
-
-_wrapperResult = (function() {
+        
+var _wrapperResult = (function() {
 
     var _event = {$_jsonEvent};
 
 	try	{
 		_event.script_result = (function(event, platform) {
-			//noinspection BadExpressionStatementJS,JSUnresolvedVariable
 			{$script};
 		})(_event, DSP.platform);
 	}
 	catch ( _ex ) {
-		_event.script_result = {'error':_ex.message};
+		_event.script_result = {error:_ex.message};
 		_event.exception = _ex;
 	}
 

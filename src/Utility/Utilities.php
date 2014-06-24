@@ -151,7 +151,8 @@ class Utilities
             '/$/'                      => 's'
         );
 
-        $uncountable = array( 'equipment', 'information', 'rice', 'money', 'species', 'series', 'fish', 'sheep', 'deer' );
+        $uncountable =
+            array( 'equipment', 'information', 'rice', 'money', 'species', 'series', 'fish', 'sheep', 'deer' );
 
         $irregular = array(
             'person' => 'people',
@@ -175,7 +176,11 @@ class Utilities
         {
             if ( preg_match( '/(' . $_plural . ')$/i', $word, $arr ) )
             {
-                return preg_replace( '/(' . $_plural . ')$/i', substr( $arr[0], 0, 1 ) . substr( $_singular, 1 ), $word );
+                return preg_replace(
+                    '/(' . $_plural . ')$/i',
+                    substr( $arr[0], 0, 1 ) . substr( $_singular, 1 ),
+                    $word
+                );
             }
         }
 
@@ -262,7 +267,8 @@ class Utilities
      */
     public static function isInList( $list, $find, $delim = ',', $strict = false )
     {
-        return ( false !== array_search( $find, array_map( 'trim', explode( $delim, strtolower( $list ) ) ), $strict ) );
+        return ( false !==
+                 array_search( $find, array_map( 'trim', explode( $delim, strtolower( $list ) ) ), $strict ) );
     }
 
     /**
@@ -434,7 +440,10 @@ class Utilities
      */
     public static function markTimeStop( $tracker )
     {
-        if ( isset( $GLOBALS[ $tracker . '_TIMER' ] ) && isset( $GLOBALS['TRACK_TIME'] ) && isset( $GLOBALS[ $tracker ] ) )
+        if ( isset( $GLOBALS[ $tracker . '_TIMER' ] ) &&
+             isset( $GLOBALS['TRACK_TIME'] ) &&
+             isset( $GLOBALS[ $tracker ] )
+        )
         {
             $GLOBALS[ $tracker ] = $GLOBALS[ $tracker ] + ( microtime( true ) - $GLOBALS[ $tracker . '_TIMER' ] );
             $GLOBALS[ $tracker . '_TIMER' ] = null;
@@ -594,5 +603,22 @@ class Utilities
         }
 
         return false;
+    }
+
+    /**
+     * Converts single bytes into proper form (kb, gb, mb, etc.) with precision 2 (i.e. 102400 > 100.00kb)
+     * Found on php.net's memory_usage page
+     *
+     * @param int $bytes
+     *
+     * @return string
+     */
+    public static function resizeBytes( $bytes )
+    {
+        static $_units = array( 'b', 'kb', 'mb', 'gb', 'tb', 'pb' );
+
+        /** @noinspection PhpIllegalArrayKeyTypeInspection */
+
+        return @round( $bytes / pow( 1024, ( $_i = floor( log( $bytes, 1024 ) ) ) ), 2 ) . $_units[ $_i ];
     }
 }
