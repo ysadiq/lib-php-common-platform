@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\DbFilterOperators;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\ForbiddenException;
@@ -27,6 +26,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Interfaces\ServiceOnlyResourceLike;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\DataFormatter;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
@@ -178,7 +178,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 $_posted = array(static::RECORD_WRAPPER => array($_posted));
             }
         }
-        elseif ( DataFormat::isArrayNumeric( $_posted ) )
+        elseif ( DataFormatter::isArrayNumeric( $_posted ) )
         {
             // import from csv, etc doesn't include a wrapper, so wrap it
             $_posted = array(static::RECORD_WRAPPER => $_posted);

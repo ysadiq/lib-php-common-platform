@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\ContentTypes;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Exceptions\FileSystemException;
@@ -99,11 +98,11 @@ class BabelFish
                     break;
 
                 case ContentTypes::XML:
-                    $_result = DataFormat::xmlToArray( $_data );
+                    $_result = DataFormatter::xmlToArray( $_data );
                     break;
 
                 case ContentTypes::CSV:
-                    $_result = DataFormat::csvToArray( $_data );
+                    $_result = DataFormatter::csvToArray( $_data );
                     break;
 
                 case ContentTypes::WWW:
@@ -132,6 +131,7 @@ class BabelFish
     /**
      * @param string $contentType The content-type of the uploaded file is returned in this variable
      *
+     * @throws \InvalidArgumentException
      * @throws \Kisma\Core\Exceptions\FileSystemException
      * @return string|bool
      */
@@ -176,7 +176,7 @@ class BabelFish
     {
         try
         {
-            return empty( $postData ) ? null : DataFormat::jsonToArray( $postData );
+            return empty( $postData ) ? null : DataFormatter::jsonToArray( $postData );
         }
         catch ( \Exception $_ex )
         {
