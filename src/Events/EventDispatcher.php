@@ -816,9 +816,13 @@ class EventDispatcher implements EventDispatcherInterface
             }
 
             //  The script runner should return an array
-            if ( is_array( $_result ) )
+            if ( is_array( $_result ) && isset( $_result['__tag__'] ) )
             {
                 ScriptEvent::updateEventFromHandler( $event, $_result );
+            }
+            else
+            {
+                Log::error( '  * Script did not return an array: ' . print_r( $_result, true ) );
             }
 
             if ( !empty( $_output ) )

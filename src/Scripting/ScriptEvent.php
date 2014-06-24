@@ -272,6 +272,11 @@ class ScriptEvent
         $_request = Option::getDeep( $exposedEvent, 'request', 'body' );
         $_response = Option::get( $exposedEvent, 'response', false );
 
+        if ( !$_response )
+        {
+            Log::error( 'missing response in exposed event' );
+        }
+
         if ( $_request )
         {
             if ( !$event->isPostProcessScript() )
