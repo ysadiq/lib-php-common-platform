@@ -19,8 +19,6 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Common\Enums\OutputFormats;
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Oasys\Exceptions\RedirectRequiredException;
 use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\ResponseFormats;
@@ -215,7 +213,7 @@ class RestResponse extends HttpResponse
             'error' => array($_errorInfo)
         );
 
-        $_result = DataFormat::reformatData( $_result, null, $desired_format );
+        $_result = DataFormatter::reformatData( $_result, null, $desired_format );
 
         return static::sendResults( $_result, $_status, $desired_format, $as_file, $exitAfterSend );
     }
@@ -247,13 +245,13 @@ class RestResponse extends HttpResponse
 
         switch ( $format )
         {
-            case OutputFormats::JSON:
+            case DataFormats::JSON:
             case 'json':
                 $_contentType = 'application/json; charset=utf-8';
 
                 if ( !is_string( $result ) )
                 {
-                    $result = DataFormat::arrayToJson( $result );
+                    $result = DataFormatter::arrayToJson( $result );
                 }
 
                 // JSON if no callback
@@ -270,13 +268,13 @@ class RestResponse extends HttpResponse
                 }
                 break;
 
-            case OutputFormats::XML:
+            case DataFormats::XML:
             case 'xml':
                 $_contentType = 'application/xml';
                 $result = '<?xml version="1.0" ?>' . "<dfapi>\n$result</dfapi>";
                 break;
 
-            case OutputFormats::CSV:
+            case DataFormats::CSV:
             case 'csv':
                 $_contentType = 'text/csv';
                 break;
@@ -369,7 +367,7 @@ class RestResponse extends HttpResponse
 
         switch ( $format )
         {
-            case OutputFormats::JSON:
+            case DataFormats::JSON:
             case 'json':
                 if ( !is_string( $result ) )
                 {
@@ -381,23 +379,23 @@ class RestResponse extends HttpResponse
                 }
                 break;
 
-            case OutputFormats::XML:
+            case DataFormats::XML:
             case 'xml':
                 $_contentType = 'application/xml';
                 $_content = '<?xml version="1.0" ?><dfapi>' . $result . '</dfapi>';
                 break;
 
-            case OutputFormats::CSV:
+            case DataFormats::CSV:
             case 'csv':
                 $_contentType = 'text/csv; application/csv;';
                 break;
 
-            case OutputFormats::TSV:
+            case DataFormats::TSV:
             case 'tsv':
                 $_contentType = 'text/tsv; application/tsv;';
                 break;
 
-            case OutputFormats::PSV:
+            case DataFormats::PSV:
             case 'psv':
                 $_contentType = 'text/psv; application/psv;';
                 break;

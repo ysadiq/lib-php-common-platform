@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Interfaces\FileServiceLike;

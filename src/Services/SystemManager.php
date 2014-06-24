@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Services;
 
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\InstallationTypes;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -27,6 +26,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\PlatformServiceException;
 use DreamFactory\Platform\Interfaces\PlatformStates;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\DataFormatter;
 use DreamFactory\Platform\Utility\Drupal;
 use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\FileUtilities;
@@ -742,7 +742,7 @@ SQL;
     {
         static::validateHosts( $allowed_hosts );
 
-        $allowed_hosts = DataFormat::jsonEncode( $allowed_hosts, true );
+        $allowed_hosts = DataFormatter::jsonEncode( $allowed_hosts, true );
         $_path = Pii::getParam( 'storage_base_path' );
         $_config = $_path . static::CORS_DEFAULT_CONFIG_FILE;
 
@@ -1127,7 +1127,7 @@ SQL
             throw new InternalServerErrorException( static::BOGUS_INSTALL_MESSAGE );
         }
 
-        $_schema[$_schemaFilePath] = DataFormat::jsonToArray( $_jsonSchema );
+        $_schema[$_schemaFilePath] = DataFormatter::jsonToArray( $_jsonSchema );
 
         if ( false !== $checkTables )
         {
