@@ -88,8 +88,8 @@ class SwaggerManager extends BasePlatformRestService
      * @var array The core DSP services that are built-in
      */
     protected static $_builtInServices = array(
-        array( 'api_name' => 'user', 'type_id' => 0, 'description' => 'User Login' ),
-        array( 'api_name' => 'system', 'type_id' => 0, 'description' => 'System Configuration' )
+        array( 'api_name' => 'user', 'type_id' => 0, 'description' => 'User session and profile' ),
+        array( 'api_name' => 'system', 'type_id' => 0, 'description' => 'System configuration' )
     );
 
     //*************************************************************************
@@ -209,8 +209,7 @@ SQL;
             //	Check php file path, then custom...
             if ( file_exists( $_filePath ) )
             {
-                /** @noinspection PhpIncludeInspection */
-                $_fromFile = require( $_filePath );
+                $_fromFile = static::_getSwaggerFile( $_filePath );
 
                 if ( is_array( $_fromFile ) && !empty( $_fromFile ) )
                 {
@@ -288,8 +287,7 @@ SQL;
 
         // cache main api listing file
         $_main = $_scanPath . static::SWAGGER_BASE_API_FILE;
-        /** @noinspection PhpIncludeInspection */
-        $_resourceListing = require( $_main );
+        $_resourceListing = static::_getSwaggerFile( $_main );
         $_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
 
         $_filePath = $_cachePath . static::SWAGGER_CACHE_FILE;
@@ -326,6 +324,14 @@ SQL;
         Pii::app()->trigger( SwaggerEvents::CACHE_REBUILT );
 
         return $_out;
+    }
+
+    protected static function _getSwaggerFile( $file_path )
+    {
+        /** @noinspection PhpIncludeInspection */
+        $_fromFile = require( $file_path );
+
+        return $_fromFile;
     }
 
     /**
