@@ -307,7 +307,7 @@ class ScriptEngine
             );
         }
 
-        static::$_logScriptMemoryUsage = Pii::getParam( 'dsp.log_script_memory_usage' );
+        static::$_logScriptMemoryUsage = Pii::getParam( 'dsp.log_script_memory_usage', false );
 
         //  All the paths that we will check for scripts
         static::$_supportedScriptPaths = array(
@@ -369,20 +369,25 @@ class ScriptEngine
      */
     public static function enrobeScript( $script, array $exposedEvent = array(), array $exposedPlatform = array() )
     {
+        $exposedEvent['__tag__'] = 'exposed_event';
         $exposedPlatform['api'] = static::_getExposedApi();
         static::$_engine->event = $exposedEvent;
         static::$_engine->platform = $exposedPlatform;
+
         $_jsonEvent = json_encode( $exposedEvent, JSON_UNESCAPED_SLASHES );
 
         $_enrobedScript = <<<JS
         
-var _wrapperResult = (function() {
+_wrapperResult = (function() {
 
     var _event = {$_jsonEvent};
 
 	try	{
 		_event.script_result = (function(event, platform) {
-			{$script};
+		
+			{$script}
+			;
+			
 		})(_event, DSP.platform);
 	}
 	catch ( _ex ) {
