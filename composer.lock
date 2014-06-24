@@ -2100,7 +2100,7 @@
     ],
     "minimum-stability": "dev",
     "stability-flags": {
-        "kisma/kisma": 0,
+        "kisma/kisma": 20,
         "swiftmailer/swiftmailer": 0,
         "aws/aws-sdk-php": 0,
         "rackspace/php-opencloud": 0,
