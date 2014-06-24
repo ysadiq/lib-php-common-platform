@@ -2,6 +2,10 @@
 
 ### More information can now be found on the DSP project wiki [CHANGELOG](https://github.com/dreamfactorysoftware/dsp-core/wiki/CHANGELOG)
 
+## v1.6.1 (Release 2014-06-24)
+###Fixes
+* Pull Common library DataFormat class to this library as DataFormatter and fix csv file ending detection. Update references.
+
 ## v1.6.0 (Release 2014-06-20)
 ###New!
 * Server Side Lookups changed so private can only be used by service configuration, and non-private for other things like filtering

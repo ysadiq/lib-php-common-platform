@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
@@ -87,17 +86,17 @@ class RestData
                 if ( false !== stripos( $_contentType, '/json' ) )
                 {
                     // application/json
-                    $_data = DataFormat::jsonToArray( $_postData );
+                    $_data = DataFormatter::jsonToArray( $_postData );
                 }
                 elseif ( false !== stripos( $_contentType, '/xml' ) )
                 {
                     // application/xml or text/xml
-                    $_data = DataFormat::xmlToArray( $_postData );
+                    $_data = DataFormatter::xmlToArray( $_postData );
                 }
                 elseif ( false !== stripos( $_contentType, '/csv' ) )
                 {
                     // text/csv
-                    $_data = DataFormat::csvToArray( $_postData );
+                    $_data = DataFormatter::csvToArray( $_postData );
                 }
             }
 
@@ -106,7 +105,7 @@ class RestData
                 // last chance, assume it is json
                 try
                 {
-                    $_data = DataFormat::jsonToArray( $_postData );
+                    $_data = DataFormatter::jsonToArray( $_postData );
                 }
                 catch ( \Exception $_ex )
                 {

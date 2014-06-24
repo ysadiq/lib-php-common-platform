@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Utility;
 
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
@@ -279,7 +278,7 @@ class Packager
             throw new BadRequestException( 'No application description file in this package file.' );
         }
 
-        $_record = DataFormat::jsonToArray( $_data );
+        $_record = DataFormatter::jsonToArray( $_data );
         if ( !empty( $import_url ) && !isset( $_record['import_url'] ) )
         {
             $_record['import_url'] = $import_url;
@@ -318,7 +317,7 @@ class Packager
             $_data = $_zip->getFromName( 'services.json' );
             if ( false !== $_data )
             {
-                $_data = DataFormat::jsonToArray( $_data );
+                $_data = DataFormatter::jsonToArray( $_data );
                 try
                 {
                     //set service 'service',
@@ -340,7 +339,7 @@ class Packager
             $_data = $_zip->getFromName( 'schema.json' );
             if ( false !== $_data )
             {
-                $_data = DataFormat::jsonToArray( $_data );
+                $_data = DataFormatter::jsonToArray( $_data );
                 $services = Option::get( $_data, 'service' );
                 if ( !empty( $services ) )
                 {
@@ -405,7 +404,7 @@ class Packager
             $_data = $_zip->getFromName( 'data.json' );
             if ( false !== $_data )
             {
-                $_data = DataFormat::jsonToArray( $_data );
+                $_data = DataFormatter::jsonToArray( $_data );
                 $services = Option::get( $_data, 'service' );
                 if ( !empty( $services ) )
                 {

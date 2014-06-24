@@ -62,11 +62,11 @@ class StateStack
     public static function current()
     {
         $_state = array(
-            'GET'             => isset( $_GET ) ? $_GET : null,
-            'POST'            => isset( $_POST ) ? $_POST : null,
-            'REQUEST'         => isset( $_REQUEST ) ? $_REQUEST : null,
-            'FILES'           => isset( $_FILES ) ? $_FILES : null,
-            'COOKIE'          => isset( $_COOKIE ) ? $_COOKIE : null,
+            'GET'             => isset( $_GET ) && !empty( $_GET ) ? $_GET : null,
+            'POST'            => isset( $_POST ) && !empty( $_POST ) ? $_POST : null,
+            'REQUEST'         => isset( $_REQUEST ) && !empty( $_REQUEST ) ? $_REQUEST : null,
+            'FILES'           => isset( $_FILES ) && !empty( $_FILES ) ? $_FILES : null,
+            'COOKIE'          => isset( $_COOKIE ) && !empty( $_COOKIE ) ? $_COOKIE : null,
             'SERVER'          => isset( $_SERVER ) ? $_SERVER : null,
             //  Store request object
             '_REQUEST_OBJECT' => Pii::requestObject(),
@@ -95,7 +95,7 @@ class StateStack
                     //  Restore request object
                     Pii::app()->setRequestObject( $_value );
                 }
-                elseif ( null !== $_value )
+                elseif ( null !== $_value && $GLOBALS[ '_' . $_key ] !== $_value )
                 {
                     $GLOBALS[ '_' . $_key ] = $_value;
                 }
@@ -105,6 +105,9 @@ class StateStack
         return $_state;
     }
 
+    /**
+     * @param bool $keepServerStuff
+     */
     public static function clear( $keepServerStuff = true )
     {
         if ( isset( $GLOBALS['_GET'] ) )

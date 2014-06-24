@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Common\Enums\OutputFormats;
-use DreamFactory\Common\Utility\DataFormat;
 use DreamFactory\Platform\Components\DataTablesFormatter;
 use DreamFactory\Platform\Enums\DataFormats;
 use DreamFactory\Platform\Enums\ResponseFormats;
@@ -35,6 +34,7 @@ use DreamFactory\Platform\Interfaces\ServiceOnlyResourceLike;
 use DreamFactory\Platform\Interfaces\TransformerLike;
 use DreamFactory\Platform\Resources\BasePlatformRestResource;
 use DreamFactory\Platform\Resources\System\Event;
+use DreamFactory\Platform\Utility\DataFormatter;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\RestData;
@@ -445,7 +445,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         //	json response formatted by specialized response class (JsonResponse)
         if ( DataFormats::JSON !== $this->_outputFormat )
         {
-            $_result = DataFormat::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
+            $_result = DataFormatter::reformatData( $_result, $this->_nativeFormat, $this->_outputFormat );
         }
 
         if ( !empty( $this->_outputFormat ) )
