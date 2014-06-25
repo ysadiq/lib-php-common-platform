@@ -99,12 +99,17 @@ class SqlDbUtilities implements SqlDbDriverTypes
         }
 
         //  Build the lower-cased table array
-        $_tables = is_array( $db ) ? $db : static::_getCachedTables( $db );
+        $_tables = is_array( $db ) ? array_values( $db ) : static::_getCachedTables( $db );
 
         //	Make search case insensitive
-        $_result = ( $_key = array_search( strtolower( $name ), is_array( $db ) ? $_tables : static::$_tableNameCache[ spl_object_hash( $db ) ] ) );
+        $_key = array_search( strtolower( $name ), $_tables );
 
-        return false !== $_result ? ( $returnName ? $_tables[ $_key ] : true ) : $_result;
+        if ( false === $_key )
+        {
+            return false;
+        }
+
+        return $returnName ? $_tables[ $_key ] : true;
     }
 
     /**
@@ -2312,9 +2317,9 @@ SQL;
             $_tables = array();
 
             //  Make a new column for the search version of the table name
-            foreach ( $db->getSchema()->getTableNames() as $_key => $_value )
+            foreach ( $db->getSchema()->getTableNames() as $_table )
             {
-                $_tables[ $_key ] = strtolower( $_value );
+                $_tables[] = strtolower( $_table );
             }
 
             static::$_tableNameCache[ $_hash ] = $_tables;
