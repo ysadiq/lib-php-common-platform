@@ -2327,7 +2327,7 @@ SQL;
             unset( $_tables );
         }
 
-        return static::$_tableNameCache;
+        return static::$_tableNameCache[ $_hash ];
     }
 
     /**
