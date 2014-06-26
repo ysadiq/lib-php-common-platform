@@ -36,7 +36,6 @@ use Kisma\Core\Utility\Curl;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\HttpFoundation\Request;
-use TokenReflection\ReflectionClass;
 
 /**
  * V8Js scripting engine
@@ -77,7 +76,7 @@ class ScriptEngine
      */
     protected static $_supportedScriptPaths;
     /**
-     * @var ReflectionClass
+     * @var \ReflectionClass
      */
     protected static $_mirror;
     /**
@@ -355,7 +354,8 @@ class ScriptEngine
         if ( empty( static::$_libraryScriptPath ) || !is_dir( static::$_libraryScriptPath ) )
         {
             throw new RestException(
-                HttpResponse::ServiceUnavailable, 'This service is not available . Storage path and/or required libraries not available . '
+                HttpResponse::ServiceUnavailable,
+                'This service is not available . Storage path and/or required libraries not available . '
             );
         }
 
@@ -480,13 +480,16 @@ JS;
     {
         try
         {
-            return Curl::request( $method, $url, $payload, $curlOptions );
+            $_result = Curl::request( $method, $url, $payload, $curlOptions );
         }
         catch ( \Exception $_ex )
         {
             $_result = RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false );
+
             Log::error( 'Exception: ' . $_ex->getMessage(), array(), array( 'response' => $_result ) );
         }
+
+        return $_result;
     }
 
     /**
@@ -526,7 +529,8 @@ JS;
             //	Fix removal of trailing slashes from resource
             if ( !empty( $_resource ) )
             {
-                if ( ( false === strpos( $_requestUri, '?' ) && '/' === substr( $_requestUri, strlen( $_requestUri ) - 1, 1 ) ) ||
+                if ( ( false === strpos( $_requestUri, '?' ) &&
+                       '/' === substr( $_requestUri, strlen( $_requestUri ) - 1, 1 ) ) ||
                      ( '/' === substr( $_requestUri, strpos( $_requestUri, '?' ) - 1, 1 ) )
                 )
                 {
@@ -540,7 +544,8 @@ JS;
             return null;
         }
 
-        if ( false === ( $_payload = json_encode( $payload, JSON_UNESCAPED_SLASHES ) ) || JSON_ERROR_NONE != json_last_error()
+        if ( false === ( $_payload = json_encode( $payload, JSON_UNESCAPED_SLASHES ) ) ||
+             JSON_ERROR_NONE != json_last_error()
         )
         {
             $_contentType = 'text/plain';
