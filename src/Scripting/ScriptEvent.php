@@ -274,7 +274,7 @@ class ScriptEvent
 
         if ( !$_response )
         {
-            Log::error( 'missing response in exposed event' );
+//            Log::debug( 'No response in exposed event' );
         }
 
         if ( $_request )
