@@ -661,25 +661,9 @@ class SqlDbSvc extends BaseDbSvc
         // use query builder
         /** @var \CDbCommand $_command */
         $_command = $this->_dbConn->createCommand();
-        if ( is_array( $select ) )
-        {
-            foreach ( $select as $_key => $_value )
-            {
-                if ( false !== strpos( $_value, ' ' ) )
-                {
-                    // yii doesn't handle spaces in column names very well.
-                    $select[$_key] = '(' . $this->_dbConn->quoteColumnName( $_value ) . ')';
-                }
-            }
-        }
         $_command->select( $select );
 
         $_from = $table;
-        if ( false !== strpos( $_from, ' ' ) )
-        {
-            // yii doesn't handle spaces in tables names very well.
-            $_from = '(' . $this->_dbConn->quoteTableName( $_from ) . ')';
-        }
         $_command->from( $_from );
 
         if ( !empty( $where ) )
