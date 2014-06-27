@@ -206,6 +206,11 @@ class EventDispatcher implements EventDispatcherInterface
         //  If the cache rebuilds, bust our cache and remap scripts
         $this->addListener(
             SwaggerEvents::CACHE_REBUILT,
+            /**
+             * @param string          $eventName
+             * @param PlatformEvent   $event
+             * @param EventDispatcher $dispatcher
+             */
             function ( $eventName, $event, $dispatcher )
             {
                 /** @var EventDispatcher $dispatcher */
@@ -229,7 +234,6 @@ class EventDispatcher implements EventDispatcherInterface
         $this->_doDispatch( $_event, $eventName, $this );
 
         return $_event;
-
     }
 
     /**
@@ -246,11 +250,7 @@ class EventDispatcher implements EventDispatcherInterface
     protected function _doDispatch( &$event, $eventName )
     {
         //  Do nothing if not wanted
-        if ( !static::$_enableRestEvents &&
-             !static::$_enablePlatformEvents &&
-             !static::$_enableEventScripts &&
-             !static::$_enableEventObservers
-        )
+        if ( !static::$_enableRestEvents && !static::$_enablePlatformEvents && !static::$_enableEventScripts && !static::$_enableEventObservers )
         {
             return false;
         }
@@ -332,9 +332,7 @@ class EventDispatcher implements EventDispatcherInterface
 
                     $_hash = spl_object_hash( $_listener );
                     $_name = gettype( $_listener );
-                    $_listener =
-                        ( ( $_listener instanceof \Closure || $_listener instanceof SerializableClosure ) ? 'Closure'
-                            : $_name ) . 'id#' . $_hash;
+                    $_listener = ( ( $_listener instanceof \Closure || $_listener instanceof SerializableClosure ) ? 'Closure' : $_name ) . 'id#' . $_hash;
                 }
             }
 
@@ -384,7 +382,7 @@ class EventDispatcher implements EventDispatcherInterface
         $this->_sanitizeListener( $listener );
 
         $_found = false;
-        $_newListener = serialize( $listener );
+        $_newListener = static::_serialize( $listener );
 
         foreach ( $this->_listeners[ $eventName ][ $priority ] as $_liveListener )
         {
@@ -406,6 +404,11 @@ class EventDispatcher implements EventDispatcherInterface
 
     /**
      * @see EventDispatcherInterface::removeListener
+     *
+     * @param array|string $eventName
+     * @param callable     $listener
+     *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      */
     public function removeListener( $eventName, $listener )
     {
@@ -427,6 +430,8 @@ class EventDispatcher implements EventDispatcherInterface
 
     /**
      * @see EventDispatcherInterface::addSubscriber
+     *
+     * @param EventSubscriberInterface $subscriber
      */
     public function addSubscriber( EventSubscriberInterface $subscriber )
     {
@@ -460,6 +465,8 @@ class EventDispatcher implements EventDispatcherInterface
 
     /**
      * @see EventDispatcherInterface::removeSubscriber
+     *
+     * @param EventSubscriberInterface $subscriber
      */
     public function removeSubscriber( EventSubscriberInterface $subscriber )
     {
@@ -501,9 +508,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected function isPhpScript( $callable )
     {
-        return
-            is_callable( $callable ) ||
-            ( ( false === strpos( $callable, ' ' ) && false !== strpos( $callable, '::' ) ) );
+        return is_callable( $callable ) || ( ( false === strpos( $callable, ' ' ) && false !== strpos( $callable, '::' ) ) );
     }
 
     /**
@@ -594,8 +599,7 @@ class EventDispatcher implements EventDispatcherInterface
 
                         if ( is_file( $_scriptFile ) && is_readable( $_scriptFile ) )
                         {
-                            if ( !isset( $this->_scripts[ $_eventKey ] ) ||
-                                 !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
+                            if ( !isset( $this->_scripts[ $_eventKey ] ) || !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
                             )
                             {
                                 $_found[] = str_replace( $_basePath, '.', $_scriptFile );
@@ -622,8 +626,7 @@ class EventDispatcher implements EventDispatcherInterface
                     $_eventKey = str_ireplace( '.js', null, $_newScript );
                     $_scriptFile = $_basePath . '/' . $_newScript;
 
-                    if ( !array_key_exists( $_eventKey, $this->_scripts ) ||
-                         !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
+                    if ( !array_key_exists( $_eventKey, $this->_scripts ) || !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
                     )
                     {
                         $this->_scripts[ $_eventKey ][] = $_scriptFile;
@@ -748,6 +751,10 @@ class EventDispatcher implements EventDispatcherInterface
 
     /**
      * @see EventDispatcherInterface::hasListeners
+     *
+     * @param null $eventName
+     *
+     * @return bool
      */
     public function hasListeners( $eventName = null )
     {
@@ -953,15 +960,10 @@ class EventDispatcher implements EventDispatcherInterface
 
             if ( $_dispatched && static::$_logEvents && !static::$_logAllEvents )
             {
-                $_defaultPath =
-                    $event instanceof PlatformServiceEvent ? $event->getApiName() . '/' . $event->getResource() : null;
+                $_defaultPath = $event instanceof PlatformServiceEvent ? $event->getApiName() . '/' . $event->getResource() : null;
 
                 Log::debug(
-                    ( $_dispatched ? 'Dispatcher' : 'Unhandled' ) .
-                    ': event "' .
-                    $eventName .
-                    '" triggered by /' .
-                    Option::get( $_GET, 'path', $_defaultPath )
+                    ( $_dispatched ? 'Dispatcher' : 'Unhandled' ) . ': event "' . $eventName . '" triggered by /' . Option::get( $_GET, 'path', $_defaultPath )
                 );
             }
 
@@ -1010,10 +1012,37 @@ class EventDispatcher implements EventDispatcherInterface
     }
 
     /**
+     * @param EventObserverLike|mixed $observer
+     * @param string                  $serializedObserver Pre-serialized observer
+     *
+     * @return bool|int The index of the found observer or false if not found
+     */
+    protected function _observerExists( $observer, $serializedObserver = null )
+    {
+        /**
+         * Observers can take many forms, but are 99.666% of the time going to be an object.
+         *
+         * So we serialize the $observer before comparing with currently known observers.
+         * This allows $observer to be a string, closure, object, whatever...
+         */
+        $_serializedObserver = $serializedObserver ?: static::_serialize( $observer );
+
+        foreach ( static::$_observers as $_key => $_observer )
+        {
+            if ( $_serializedObserver == static::_serialize( $_observer ) )
+            {
+                return $_key;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @param EventObserverLike|EventObserverLike[] $observer
      * @param bool                                  $fromCache True if the cache is adding this handler Ignored by default
      *
-     * @return bool False if no observers added, otherwise how many were added
+     * @return bool False if no observers added, true if observer already existed, otherwise how many were added
      */
     public function addObserver( $observer, $fromCache = false )
     {
@@ -1032,25 +1061,15 @@ class EventDispatcher implements EventDispatcherInterface
             $observer = array( $observer );
         }
 
-        /**
-         * Observers can take many forms, but are 99.666% of the time going to be an object.
-         * So we serialize the $observer before comparing with currently known observers.
-         * This allows $observer to be a string, closure, object, whatever...
-         */
-        $_serializedObserver = serialize( $observer );
         $_additions = array();
 
-        \array_walk(
-            static::$_observers,
-            function ( $item, $index, $serializedObserver ) use ( $_additions )
+        foreach ( $observer as $_observer )
+        {
+            if ( false === $this->_observerExists( $_observer ) )
             {
-                if ( $serializedObserver != serialize( $item ) )
-                {
-                    $_additions[] = $index;
-                }
-            },
-            $_serializedObserver
-        );
+                $_additions[] = $_observer;
+            }
+        }
 
         if ( !empty( $_additions ) )
         {
@@ -1060,4 +1079,82 @@ class EventDispatcher implements EventDispatcherInterface
         return count( $_additions ) ?: false;
     }
 
+    /**
+     * @param EventObserverLike|EventObserverLike[] $observer
+     */
+    public function removeObserver( $observer )
+    {
+        if ( !isset( static::$_observers ) )
+        {
+            static::$_observers = array();
+        }
+
+        if ( empty( $observer ) )
+        {
+            return false;
+        }
+
+        if ( !is_array( $observer ) )
+        {
+            $observer = array( $observer );
+        }
+
+        foreach ( $observer as $_observer )
+        {
+            if ( false !== ( $_index = $this->_observerExists( $_observer ) ) )
+            {
+                unset( static::$_observers[ $_index ] );
+            }
+        }
+    }
+
+    /**
+     * @param mixed $object
+     *
+     * @return string
+     */
+    protected function _serialize( $object )
+    {
+        if ( $object instanceof \Closure )
+        {
+            $object = new SerializableClosure( $object );
+        }
+
+        if ( false === ( $_data = serialize( $object ) ) )
+        {
+            throw new \InvalidArgumentException( 'The object of type "' . gettype( $object ) . '" cannot be serialized' );
+        }
+
+        return $_data;
+    }
+
+    /**
+     * Tries to unserialize. upon failure, the original data is returned
+     *
+     * @param string $data
+     *
+     * @return mixed
+     */
+    protected function _unserialize( $data )
+    {
+        try
+        {
+            if ( false !== ( $_object = unserialize( $data ) ) )
+            {
+                //  Was this a serialized closure?
+                if ( $_object instanceof SerializableClosure )
+                {
+                    return $_object->getClosure();
+                }
+
+                return $_object;
+            }
+        }
+        catch ( \Exception $_ex )
+        {
+            //  Ignored
+        }
+
+        return $data;
+    }
 }
