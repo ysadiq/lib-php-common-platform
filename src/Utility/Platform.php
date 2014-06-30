@@ -155,7 +155,12 @@ class Platform
      */
     public static function getStorageBasePath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::_getPlatformPath( LocalStorageTypes::STORAGE_BASE_PATH, $append, $createIfMissing, $includesFile );
+        return static::_getPlatformPath(
+            LocalStorageTypes::STORAGE_BASE_PATH,
+            $append,
+            $createIfMissing,
+            $includesFile
+        );
     }
 
     /**
@@ -275,7 +280,12 @@ class Platform
      */
     public static function getApplicationsPath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::_getPlatformPath( LocalStorageTypes::APPLICATIONS_PATH, $append, $createIfMissing, $includesFile );
+        return static::_getPlatformPath(
+            LocalStorageTypes::APPLICATIONS_PATH,
+            $append,
+            $createIfMissing,
+            $includesFile
+        );
     }
 
     /**
@@ -596,7 +606,8 @@ class Platform
 
         foreach ( $key as $_key => $_value )
         {
-            $_result[ $_key ] = ( $_cache ? $_cache->set( $key, $value, $ttl ) : static::storeSet( $key, $value, $ttl ) );
+            $_result[ $_key ] =
+                ( $_cache ? $_cache->set( $_key, $_value, $ttl ) : static::storeSet( $_key, $_value, $ttl ) );
         }
 
         return $_singleton ? current( $_result ) : $_result;

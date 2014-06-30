@@ -525,8 +525,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         {
             if ( Scalar::boolval( $_file ) )
             {
-                $_file = (empty($this->_resource)) ?  $this->getApiName() : $this->_resource;
-                $_file .= '.' . DataFormats::toString($this->_outputFormat);
+                $_file = ( empty( $this->_resource ) ) ? $this->getApiName() : $this->_resource;
+                $_file .= '.' . DataFormats::toString( $this->_outputFormat );
             }
 
             $this->_outputAsFile = $_file;
@@ -705,9 +705,19 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             'service_id'      => $this->_serviceId,
             'request_payload' => $this->_requestPayload,
             'table_name'      => $this->_resource,
-            'container'       => $this->_resource,
-            'folder_path'     => Option::get( $this->_resourceArray, 1 ),
-            'file_path'       => Option::get( $this->_resourceArray, 2 ),
+            'container'       => method_exists( $this, 'getContainerId' ) ? $this->getContainerId() : $this->_resource,
+            'folder_path'     => method_exists( $this, 'getFolderPath' )
+                ? $this->getFolderPath()
+                : Option::get(
+                    $this->_resourceArray,
+                    1
+                ),
+            'file_path'       => method_exists( $this, 'getFilePath' )
+                ? $this->getFilePath()
+                : Option::get(
+                    $this->_resourceArray,
+                    2
+                ),
             'request_uri'     => explode( '/', $_pathInfo ),
         );
 

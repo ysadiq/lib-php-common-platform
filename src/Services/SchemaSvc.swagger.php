@@ -57,12 +57,12 @@ $_base['apis'] = array(
                 'notes'            => 'Post data should be a single table definition or an array of table definitions.',
             ),
             array(
-                'method'     => 'PUT',
-                'summary'    => 'replaceTables() - Update (replace) one or more tables.',
-                'nickname'   => 'replaceTables',
-                'event_name' => '{api_name}.alter',
-                'type'       => 'Resources',
-                'parameters' => array(
+                'method'           => 'PUT',
+                'summary'          => 'replaceTables() - Update (replace) one or more tables.',
+                'nickname'         => 'replaceTables',
+                'event_name'       => '{api_name}.alter',
+                'type'             => 'Resources',
+                'parameters'       => array(
                     array(
                         'name'          => 'tables',
                         'description'   => 'Array of table definitions.',
@@ -76,12 +76,12 @@ $_base['apis'] = array(
                 'notes'            => 'Post data should be a single table definition or an array of table definitions.',
             ),
             array(
-                'method'     => 'PATCH',
-                'summary'    => 'updateTables() - Update (patch) one or more tables.',
-                'nickname'   => 'updateTables',
-                'event_name' => '{api_name}.alter',
-                'type'       => 'Resources',
-                'parameters' => array(
+                'method'           => 'PATCH',
+                'summary'          => 'updateTables() - Update (patch) one or more tables.',
+                'nickname'         => 'updateTables',
+                'event_name'       => '{api_name}.alter',
+                'type'             => 'Resources',
+                'parameters'       => array(
                     array(
                         'name'          => 'tables',
                         'description'   => 'Array of table definitions.',
@@ -124,7 +124,10 @@ $_base['apis'] = array(
                 'summary'          => 'createFields() - Create one or more fields in the given table.',
                 'nickname'         => 'createFields',
                 'type'             => 'Success',
-                'event_name'       => array( '{api_name}.{table_name}.fields.create', '{api_name}.tables.fields_created' ),
+                'event_name'       => array(
+                    '{api_name}.{table_name}.fields.create',
+                    '{api_name}.tables.fields_created'
+                ),
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -151,7 +154,10 @@ $_base['apis'] = array(
                 'summary'          => 'replaceFields() - Update (replace) one or more fields in the given table.',
                 'nickname'         => 'replaceFields',
                 'type'             => 'Success',
-                'event_name'       => array( '{api_name}.{table_name}.fields.alter', '{api_name}.tables.fields_altered' ),
+                'event_name'       => array(
+                    '{api_name}.{table_name}.fields.alter',
+                    '{api_name}.tables.fields_altered'
+                ),
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -178,7 +184,10 @@ $_base['apis'] = array(
                 'summary'          => 'updateFields() - Update (patch) one or more fields in the given table.',
                 'nickname'         => 'updateFields',
                 'type'             => 'Success',
-                'event_name'       => array( '{api_name}.{table_name}.fields.alter', '{api_name}.tables.fields_altered' ),
+                'event_name'       => array(
+                    '{api_name}.{table_name}.fields.alter',
+                    '{api_name}.tables.fields_altered'
+                ),
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -230,7 +239,10 @@ $_base['apis'] = array(
                 'summary'          => 'describeField() - Retrieve the definition of the given field for the given table.',
                 'nickname'         => 'describeField',
                 'type'             => 'FieldSchema',
-                'event_name'       => array( '{api_name}.{table_name}.{field_name}.describe', '{api_name}.{table_name}.field_described' ),
+                'event_name'       => array(
+                    '{api_name}.{table_name}.{field_name}.describe',
+                    '{api_name}.{table_name}.field_described'
+                ),
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -257,7 +269,10 @@ $_base['apis'] = array(
                 'summary'          => 'replaceField() - Update one record by identifier.',
                 'nickname'         => 'replaceField',
                 'type'             => 'Success',
-                'event_name'       => array( '{api_name}.{table_name}.{field_name}.alter', '{api_name}.{table_name}.field_altered' ),
+                'event_name'       => array(
+                    '{api_name}.{table_name}.{field_name}.alter',
+                    '{api_name}.{table_name}.field_altered'
+                ),
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -292,7 +307,10 @@ $_base['apis'] = array(
                 'summary'          => 'updateField() - Update one record by identifier.',
                 'nickname'         => 'updateField',
                 'type'             => 'Success',
-                'event_name'       => array( '{api_name}.{table_name}.{field_name}.alter', '{api_name}.{table_name}.field_altered' ),
+                'event_name'       => array(
+                    '{api_name}.{table_name}.{field_name}.alter',
+                    '{api_name}.{table_name}.field_altered'
+                ),
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
@@ -327,7 +345,10 @@ $_base['apis'] = array(
                 'summary'          => 'deleteField() - Remove the given field from the given table.',
                 'nickname'         => 'deleteField',
                 'type'             => 'Success',
-                'event_name'       => array( '{api_name}.{table_name}.{field_name}.drop', '{api_name}.{table_name}.field_dropped' ),
+                'event_name'       => array(
+                    '{api_name}.{table_name}.{field_name}.drop',
+                    '{api_name}.{table_name}.field_dropped'
+                ),
                 'parameters'       => array(
                     array(
                         'name'          => 'table_name',
