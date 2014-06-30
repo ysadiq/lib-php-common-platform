@@ -218,8 +218,8 @@ class Config extends BaseSystemRestResource
                 'is_private'                => Fabric::hostedPrivatePlatform(),
                 //  DSP version info
                 'dsp_version'               => $_currentVersion = SystemManager::getCurrentVersion(),
-                'latest_version'            => $_latestVersion =
-                    ( $_fabricHosted ? $_currentVersion : SystemManager::getLatestVersion() ),
+                'server_os'                 => strtolower( php_uname( 's' ) ),
+                'latest_version'            => $_latestVersion = ( $_fabricHosted ? $_currentVersion : SystemManager::getLatestVersion() ),
                 'upgrade_available'         => version_compare( $_currentVersion, $_latestVersion, '<' ),
                 //  CORS Support
                 'allowed_hosts'             => SystemManager::getAllowedHosts(),
@@ -230,8 +230,7 @@ class Config extends BaseSystemRestResource
             {
                 $_remoteProviders = $this->_getRemoteProviders();
                 $_config['remote_login_providers'] = array();
-                $_config['allow_remote_logins'] =
-                    ( empty( $_remoteProviders ) ? false : array_values( $_remoteProviders ) );
+                $_config['allow_remote_logins'] = ( empty( $_remoteProviders ) ? false : array_values( $_remoteProviders ) );
                 unset( $_remoteProviders );
             }
             else
@@ -258,9 +257,7 @@ class Config extends BaseSystemRestResource
         }
 
         //	Only return a single row, not in an array
-        if ( is_array( $this->_response ) &&
-             !Pii::isEmpty( $_record = Option::get( $this->_response, 'record' ) ) &&
-             count( $_record ) >= 1
+        if ( is_array( $this->_response ) && !Pii::isEmpty( $_record = Option::get( $this->_response, 'record' ) ) && count( $_record ) >= 1
         )
         {
             $this->_response = current( $_record );
@@ -301,8 +298,7 @@ class Config extends BaseSystemRestResource
             }
         }
 
-        if ( null !==
-             ( $_values = Platform::storeGet( static::OPEN_REG_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
+        if ( null !== ( $_values = Platform::storeGet( static::OPEN_REG_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
         )
         {
             return $_values;
@@ -346,8 +342,7 @@ class Config extends BaseSystemRestResource
             }
         }
 
-        if ( null !==
-             ( $_lookups = Platform::storeGet( static::LOOKUP_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
+        if ( null !== ( $_lookups = Platform::storeGet( static::LOOKUP_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
         )
         {
             return $_lookups;
@@ -391,9 +386,7 @@ class Config extends BaseSystemRestResource
             }
         }
 
-        if ( null !==
-             ( $_remoteProviders =
-                 Platform::storeGet( static::PROVIDERS_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
+        if ( null !== ( $_remoteProviders = Platform::storeGet( static::PROVIDERS_CACHE_KEY, null, false, static::CONFIG_CACHE_TTL ) )
         )
         {
             return $_remoteProviders;
