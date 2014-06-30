@@ -23,6 +23,7 @@ use Doctrine\Common\Cache\CacheProvider;
 use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Events\EventDispatcher;
+use DreamFactory\Platform\Events\Interfaces\EventObserverLike;
 use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Services\SystemManager;
 use DreamFactory\Yii\Utility\Pii;
@@ -32,6 +33,7 @@ use Kisma\Core\Interfaces\StoreLike;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
  * Platform
@@ -72,6 +74,10 @@ class Platform
      * @var \Memcached A memcached persistent store
      */
     protected static $_memcache;
+    /**
+     * @var array
+     */
+    protected static $_paths;
 
     //*************************************************************************
     //	Methods
@@ -149,7 +155,12 @@ class Platform
      */
     public static function getStorageBasePath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::_getPlatformPath( LocalStorageTypes::STORAGE_BASE_PATH, $append, $createIfMissing, $includesFile );
+        return static::_getPlatformPath(
+            LocalStorageTypes::STORAGE_BASE_PATH,
+            $append,
+            $createIfMissing,
+            $includesFile
+        );
     }
 
     /**
@@ -269,7 +280,12 @@ class Platform
      */
     public static function getApplicationsPath( $append = null, $createIfMissing = true, $includesFile = false )
     {
-        return static::_getPlatformPath( LocalStorageTypes::APPLICATIONS_PATH, $append, $createIfMissing, $includesFile );
+        return static::_getPlatformPath(
+            LocalStorageTypes::APPLICATIONS_PATH,
+            $append,
+            $createIfMissing,
+            $includesFile
+        );
     }
 
     /**
@@ -284,7 +300,7 @@ class Platform
         $_hash = strtoupper(
             hash(
                 'ripemd128',
-                uniqid( '', true ) . ( $_uuid ? : microtime( true ) ) . md5(
+                uniqid( '', true ) . ( $_uuid ?: microtime( true ) ) . md5(
                     $namespace .
                     $_SERVER['REQUEST_TIME'] .
                     $_SERVER['HTTP_USER_AGENT'] .
@@ -447,6 +463,51 @@ class Platform
     }
 
     /**
+     * Add a subscriber to the dispatcher
+     *
+     * @param EventSubscriberInterface $subscriber
+     *
+     * @return void
+     */
+    public static function subscribe( EventSubscriberInterface $subscriber )
+    {
+        static::getDispatcher()->addSubscriber( $subscriber );
+    }
+
+    /**
+     * Remove an event subscriber from the dispatcher
+     *
+     * @param EventSubscriberInterface $subscriber
+     *
+     * @return void
+     */
+    public static function unsubscribe( EventSubscriberInterface $subscriber )
+    {
+        static::getDispatcher()->removeSubscriber( $subscriber );
+    }
+
+    /**
+     * @param EventObserverLike|EventObserverLike[] $observer
+     * @param bool                                  $fromCache True if the cache is adding this handler Ignored by default
+     *
+     * @return bool False if no observers added, otherwise how many were added
+     */
+    public static function addObserver( $observer, $fromCache = false )
+    {
+        return static::getDispatcher()->addObserver( $observer, $fromCache );
+    }
+
+    /**
+     * @param EventObserverLike $observer
+     *
+     * @return void
+     */
+    public static function removeObserver( $observer )
+    {
+        static::getDispatcher()->removeObserver( $observer );
+    }
+
+    /**
      * Turn off/unbind/remove $listener from an event
      *
      * @param string   $eventName
@@ -469,7 +530,7 @@ class Platform
         //  This is the only place in the library where we call Pii to get the dispatcher.
         //  In v2, the source of the dispatcher location will be different, most likely a service
 
-        return $_dispatcher ? : $_dispatcher = Pii::app()->getDispatcher();
+        return $_dispatcher ?: $_dispatcher = Pii::app()->getDispatcher();
     }
 
     /**
@@ -481,63 +542,98 @@ class Platform
      */
     public static function mcGet( $key, $defaultValue = null, $remove = false )
     {
-        if ( class_exists( '\\Memcached', false ) && false !== ( $_engine = static::_getMemcache() ) )
+        $_singleton = false;
+        $_cache = static::_getMemcache();
+
+        if ( !is_array( $key ) )
         {
-            if ( false === ( $_value = $_engine->get( $key ) ) )
-            {
-                static::mcSet( $key, $defaultValue );
-
-                return $defaultValue;
-            }
-
-            if ( $remove )
-            {
-                $_engine->delete( $key );
-            }
-
-            return $_value;
+            $key = array( $key );
+            $_singleton = true;
         }
 
-        //  Degrade to platform store
-        return static::storeGet( $key, $defaultValue, $remove );
+        $_result = array();
+
+        foreach ( $key as $_key )
+        {
+            if ( $_cache )
+            {
+                if ( false === ( $_value = $_cache->get( $_key ) ) )
+                {
+                    static::mcSet( $_key, $defaultValue );
+
+                    $_value = $defaultValue;
+                }
+
+                if ( $remove )
+                {
+                    $_cache->delete( $_key );
+                }
+
+                $_result[ $_key ] = $_value;
+
+                continue;
+            }
+
+            //  Degrade to platform store
+            $_result[ $_key ] = static::storeGet( $_key, $defaultValue, $remove );
+        }
+
+        return $_singleton ? current( $_result ) : $_result;
     }
 
     /**
-     * @param string $key
-     * @param mixed  $value
-     * @param int    $flag
-     * @param int    $ttl
+     * @param string|array $key
+     * @param mixed        $value
+     * @param int          $flag
+     * @param int          $ttl
      *
-     * @return bool
+     * @return bool|array
      */
-    public static function mcSet( $key, $value, $flag = 0, $ttl = self::MEMCACHE_TTL )
+    public static function mcSet( $key, $value = null, $flag = 0, $ttl = self::MEMCACHE_TTL )
     {
-        if ( class_exists( '\\Memcached', false ) && false !== ( $_cache = static::_getMemcache() ) )
+        $_singleton = false;
+
+        if ( !is_array( $key ) )
         {
-            return $_cache->set( $key, $value, $ttl );
+            $key = array( $key => $value );
+            $value = null;
+            $_singleton = true;
         }
 
-        //  Degrade to platform store
-        return static::storeSet( $key, $value, $ttl );
+        $_cache = static::_getMemcache();
+
+        $_result = array();
+
+        foreach ( $key as $_key => $_value )
+        {
+            $_result[ $_key ] =
+                ( $_cache ? $_cache->set( $_key, $_value, $ttl ) : static::storeSet( $_key, $_value, $ttl ) );
+        }
+
+        return $_singleton ? current( $_result ) : $_result;
     }
 
     /**
-     * @return \Memcached
+     * @return \Memcached|boolean
      */
     protected static function _getMemcache()
     {
-        if ( class_exists( '\\Memcached', false ) && null === static::$_memcache )
+        if ( !class_exists( '\\Memcached', false ) )
+        {
+            return false;
+        }
+
+        if ( null === static::$_memcache )
         {
             static::$_memcache = new \Memcached( __CLASS__ );
 
             if ( !static::$_memcache->addServer( static::MEMCACHE_HOST, static::MEMCACHE_PORT ) )
             {
-                Log::debug( 'Platform memcache not available.' );
-
+//                Log::debug( 'Platform memcache not available.' );
                 return static::$_memcache = false;
             }
 
-            Log::debug( 'Platform memcache enabled.' );
+//            Log::debug( 'Platform memcache enabled.' );
         }
 
         return static::$_memcache;

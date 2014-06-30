@@ -23,6 +23,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
+use DreamFactory\Platform\Interfaces\ServiceOnlyResourceLike;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
@@ -34,7 +35,7 @@ use Kisma\Core\Utility\Option;
  * A service to handle SQL database schema-related services accessed through the REST API.
  *
  */
-class SchemaSvc extends BasePlatformRestService
+class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLike
 {
     //*************************************************************************
     //	Members
@@ -213,6 +214,8 @@ class SchemaSvc extends BasePlatformRestService
 
         }
 
+        $this->_triggerActionEvent( $_result );
+
         return $_result;
     }
 
@@ -225,10 +228,10 @@ class SchemaSvc extends BasePlatformRestService
         {
             if ( empty( $this->_tables ) )
             {
-                return array('resource' => $this->describeDatabase());
+                return array( 'resource' => $this->describeDatabase() );
             }
 
-            return array('table' => $this->describeTables( $this->_tables ));
+            return array( 'table' => $this->describeTables( $this->_tables ) );
         }
 
         if ( empty( $this->_fieldName ) )
@@ -251,7 +254,7 @@ class SchemaSvc extends BasePlatformRestService
                 return $this->updateTable( $this->_payload );
             }
 
-            return array('table' => $this->updateTables( $this->_tables ));
+            return array( 'table' => $this->updateTables( $this->_tables ) );
         }
 
         if ( empty( $this->_fields ) )
@@ -259,7 +262,7 @@ class SchemaSvc extends BasePlatformRestService
             return $this->createField( $this->_tableName, $this->_payload );
         }
 
-        return array('field' => $this->updateFields( $this->_tableName, $this->_fields ));
+        return array( 'field' => $this->updateFields( $this->_tableName, $this->_fields ) );
     }
 
     /**
@@ -274,7 +277,7 @@ class SchemaSvc extends BasePlatformRestService
                 return $this->updateTable( $this->_payload, true, true );
             }
 
-            return array('table' => $this->updateTables( $this->_tables, true, true ));
+            return array( 'table' => $this->updateTables( $this->_tables, true, true ) );
         }
 
         if ( empty( $this->_fieldName ) )
@@ -284,7 +287,7 @@ class SchemaSvc extends BasePlatformRestService
                 return $this->updateField( $this->_tableName, null, $this->_payload, true );
             }
 
-            return array('field' => $this->updateFields( $this->_tableName, $this->_fields, true, true ));
+            return array( 'field' => $this->updateFields( $this->_tableName, $this->_fields, true, true ) );
         }
 
         //	Create new field in existing table
@@ -308,7 +311,7 @@ class SchemaSvc extends BasePlatformRestService
                 return $this->updateTable( $this->_payload, true );
             }
 
-            return array('table' => $this->updateTables( $this->_tables, true ));
+            return array( 'table' => $this->updateTables( $this->_tables, true ) );
         }
 
         if ( empty( $this->_fieldName ) )
@@ -318,7 +321,7 @@ class SchemaSvc extends BasePlatformRestService
                 return $this->updateField( $this->_tableName, null, $this->_payload );
             }
 
-            return array('field' => $this->updateFields( $this->_tableName, $this->_fields, true ));
+            return array( 'field' => $this->updateFields( $this->_tableName, $this->_fields, true ) );
         }
 
         //	Create new field in existing table
@@ -340,12 +343,12 @@ class SchemaSvc extends BasePlatformRestService
         {
             $this->deleteTable( $this->_tableName );
 
-            return array('table' => $this->_tableName);
+            return array( 'table' => $this->_tableName );
         }
 
         $this->deleteField( $this->_tableName, $this->_fieldName );
 
-        return array('field' => $this->_fieldName);
+        return array( 'field' => $this->_fieldName );
     }
 
     /**
@@ -383,8 +386,9 @@ class SchemaSvc extends BasePlatformRestService
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException( "Error describing database tables.\n" .
-                                                    $ex->getMessage(), $ex->getCode() );
+            throw new InternalServerErrorException(
+                "Error describing database tables.\n" . $ex->getMessage(), $ex->getCode()
+            );
         }
     }
 
@@ -438,8 +442,9 @@ class SchemaSvc extends BasePlatformRestService
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException( "Error describing database tables '$table_list'.\n" .
-                                                    $ex->getMessage(), $ex->getCode() );
+            throw new InternalServerErrorException(
+                "Error describing database tables '$table_list'.\n" . $ex->getMessage(), $ex->getCode()
+            );
         }
     }
 
@@ -484,8 +489,9 @@ class SchemaSvc extends BasePlatformRestService
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException( "Error describing database table '$table'.\n" .
-                                                    $ex->getMessage(), $ex->getCode() );
+            throw new InternalServerErrorException(
+                "Error describing database table '$table'.\n" . $ex->getMessage(), $ex->getCode()
+            );
         }
     }
 
@@ -528,8 +534,9 @@ class SchemaSvc extends BasePlatformRestService
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException( "Error describing database table '$table' field '$field'.\n" .
-                                                    $ex->getMessage(), $ex->getCode() );
+            throw new InternalServerErrorException(
+                "Error describing database table '$table' field '$field'.\n" . $ex->getMessage(), $ex->getCode()
+            );
         }
     }
 
@@ -560,7 +567,9 @@ class SchemaSvc extends BasePlatformRestService
 
                 if ( 0 === substr_compare( $_name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
                 {
-                    throw new BadRequestException( "Tables can not use the prefix '$_sysPrefix'. '$_name' can not be created." );
+                    throw new BadRequestException(
+                        "Tables can not use the prefix '$_sysPrefix'. '$_name' can not be created."
+                    );
                 }
             }
         }
@@ -619,8 +628,9 @@ class SchemaSvc extends BasePlatformRestService
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException( "Error creating database fields for table '$table'.\n" .
-                                                    $ex->getMessage(), $ex->getCode() );
+            throw new InternalServerErrorException(
+                "Error creating database fields for table '$table'.\n" . $ex->getMessage(), $ex->getCode()
+            );
         }
     }
 
@@ -741,7 +751,7 @@ class SchemaSvc extends BasePlatformRestService
             if ( !isset( $data[0] ) )
             {
                 // single record possibly passed in without wrapper array
-                $data = array($data);
+                $data = array( $data );
             }
         }
 
