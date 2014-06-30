@@ -195,8 +195,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $_message =
                 $this->_action .
                 ' requests' .
-                ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"'
-                    : ' without a resource' ) .
+                ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
                 ' are not currently supported by the "' .
                 $this->_apiName .
                 '" service.';
@@ -246,8 +245,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             }
 
             //	Does this action have a handler?
-            if ( false !==
-                 ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) )
+            if ( false !== ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) )
             )
             {
                 $_handler = $this->_extraActions[ $_action ];
@@ -690,14 +688,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         $_eventNames = is_array( $_eventNames ) ? $_eventNames : array( $_eventNames );
 
         $_result = array();
-        $_pathInfo = trim(
-            str_replace(
-                '/rest',
-                null,
-                Option::server( 'INLINE_REQUEST_URI', Pii::request( false )->getPathInfo() )
-            ),
-            '/'
-        );
+
+        $_pathInfo = $this->_getCleanedPathInfo();
 
         $_values = array(
             'action'          => strtolower( $this->_action ),
@@ -705,14 +697,14 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             'service_id'      => $this->_serviceId,
             'request_payload' => $this->_requestPayload,
             'table_name'      => $this->_resource,
-            'container'       => method_exists( $this, 'getContainerId' ) ? $this->getContainerId() : $this->_resource,
-            'folder_path'     => method_exists( $this, 'getFolderPath' )
+            'container'       => $this instanceof BaseFileSvc ? $this->getContainerId() : $this->_resource,
+            'folder_path'     => $this instanceof BaseFileSvc
                 ? $this->getFolderPath()
                 : Option::get(
                     $this->_resourceArray,
                     1
                 ),
-            'file_path'       => method_exists( $this, 'getFilePath' )
+            'file_path'       => $this instanceof BaseFileSvc
                 ? $this->getFilePath()
                 : Option::get(
                     $this->_resourceArray,
@@ -792,6 +784,23 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         }
 
         return 1 == count( $_result ) ? $_result[0] : $_result;
+    }
+
+    /**
+     * Cleans the path info/request uri for events
+     *
+     * @return string
+     */
+    protected function _getCleanedPathInfo()
+    {
+        $_pathInfo = Option::server( 'INLINE_REQUEST_URI', Pii::request( false )->getPathInfo() );
+
+        if ( '/rest' == substr( $_pathInfo, 0, 5 ) )
+        {
+            $_pathInfo = substr( $_pathInfo, 5 );
+        }
+
+        return trim( $_pathInfo, '/' );
     }
 
     /**

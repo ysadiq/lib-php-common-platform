@@ -76,8 +76,8 @@ class CouchDbSvc extends NoSqlDbSvc
         parent::__construct( $config );
 
         $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
-        $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn' ), true );
-        if ( empty( $_dsn ) )
+
+        if ( null === ( $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn', null, false, true ), true ) ) )
         {
             $_dsn = 'http://localhost:5984';
         }
@@ -150,17 +150,18 @@ class CouchDbSvc extends NoSqlDbSvc
                     $_access = $this->getPermissions( $_table );
                     if ( !empty( $_access ) )
                     {
-                        $_resources[] = array('name' => $_table, 'access' => $_access);
+                        $_resources[] = array( 'name' => $_table, 'access' => $_access );
                     }
                 }
             }
 
-            return array('resource' => $_resources);
+            return array( 'resource' => $_resources );
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
-            )}" );
+            throw new InternalServerErrorException(
+                "Failed to list resources for this service.\n{$_ex->getMessage()}"
+            );
         }
     }
 
@@ -200,8 +201,9 @@ class CouchDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage(
-            )}" );
+            throw new InternalServerErrorException(
+                "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}"
+            );
         }
     }
 
@@ -222,7 +224,7 @@ class CouchDbSvc extends NoSqlDbSvc
             $this->_dbConn->asArray()->createDatabase();
             // $_result['ok'] = true
 
-            $_out = array('name' => $_name);
+            $_out = array( 'name' => $_name );
 
             return $_out;
         }
@@ -246,7 +248,7 @@ class CouchDbSvc extends NoSqlDbSvc
         $this->selectTable( $_name );
 
 //		throw new InternalServerErrorException( "Failed to update table '$_name'." );
-        return array('name' => $_name);
+        return array( 'name' => $_name );
     }
 
     /**
@@ -267,7 +269,7 @@ class CouchDbSvc extends NoSqlDbSvc
 
             // $_result['ok'] = true
 
-            return array('name' => $_name);
+            return array( 'name' => $_name );
         }
         catch ( \Exception $_ex )
         {
@@ -337,9 +339,8 @@ class CouchDbSvc extends NoSqlDbSvc
             }
 
             $_rows = Option::get( $_result, 'rows' );
-            $_out = static::cleanRecords( $_rows, $_fields, $_includeDocs );
-            if ( Option::getBool( $extras, 'include_count', false ) ||
-                 ( 0 != intval( Option::get( $_result, 'offset' ) ) )
+            $_out = static::cleanRecords( $_rows, $_fields, static::DEFAULT_ID_FIELD, $_includeDocs );
+            if ( Option::getBool( $extras, 'include_count', false ) || ( 0 != intval( Option::get( $_result, 'offset' ) ) )
             )
             {
                 $_out['meta']['count'] = intval( Option::get( $_result, 'total_rows' ) );
@@ -355,9 +356,9 @@ class CouchDbSvc extends NoSqlDbSvc
 
     protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
-        $requested_fields = array(static::ID_FIELD); // can only be this
+        $requested_fields = array( static::ID_FIELD ); // can only be this
         $_ids = array(
-            array('name' => static::ID_FIELD, 'type' => 'string', 'required' => false),
+            array( 'name' => static::ID_FIELD, 'type' => 'string', 'required' => false ),
         );
 
         return $_ids;
@@ -365,62 +366,88 @@ class CouchDbSvc extends NoSqlDbSvc
 
     /**
      * @param array        $record
-     * @param string|array $include List of keys to include in the output record
+     * @param string|array $include  List of keys to include in the output record
+     * @param string|array $id_field Single or list of identifier fields
      *
      * @return array
      */
-    protected static function cleanRecord( $record = array(), $include = '*' )
+    protected static function cleanRecord( $record = array(), $include = '*', $id_field = self::DEFAULT_ID_FIELD )
     {
-        if ( '*' !== $include )
+        if ( '*' == $include )
         {
-            $_id = Option::get( $record, static::DEFAULT_ID_FIELD );
-            if ( empty( $_id ) )
-            {
-                $_id = Option::get( $record, 'id' );
-            }
-            $_rev = Option::get( $record, static::REV_FIELD );
-            if ( empty( $_rev ) )
-            {
-                $_rev = Option::get( $record, 'rev' );
-                if ( empty( $_rev ) )
-                {
-                    $_rev = Option::getDeep( $record, 'value', 'rev' );
-                }
-            }
-            $_out = array(static::DEFAULT_ID_FIELD => $_id, static::REV_FIELD => $_rev);
+            return $record;
+        }
 
-            if ( empty( $include ) )
-            {
-                return $_out;
-            }
-            if ( !is_array( $include ) )
-            {
-                $include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
-            }
-            foreach ( $include as $key )
-            {
-                if ( 0 == strcasecmp( $key, static::DEFAULT_ID_FIELD ) || 0 == strcasecmp( $key, static::REV_FIELD ) )
-                {
-                    continue;
-                }
-                $_out[$key] = Option::get( $record, $key );
-            }
+        //  Check for $record['_id']
+        $_id = Option::get(
+            $record,
+            $id_field,
+            //  Default to $record['id'] or null if not found
+            Option::get( $record, 'id', null, false, true ),
+            false,
+            true
+        );
 
+        //  Check for $record['_rev']
+        $_rev = Option::get(
+            $record,
+            static::REV_FIELD,
+            //  Default if not found to $record['rev']
+            Option::get(
+                $record,
+                'rev',
+                //  Default if not found to $record['value']['rev']
+                Option::getDeep( $record, 'value', 'rev', null, false, true ),
+                false,
+                true
+            ),
+            false,
+            true
+        );
+
+        $_out = array( $id_field => $_id, static::REV_FIELD => $_rev );
+
+        if ( empty( $include ) )
+        {
             return $_out;
         }
 
-        return $record;
+        if ( !is_array( $include ) )
+        {
+            $include = array_map( 'trim', explode( ',', trim( $include, ',' ) ) );
+        }
+
+        foreach ( $include as $key )
+        {
+            if ( 0 == strcasecmp( $key, $id_field ) || 0 == strcasecmp( $key, static::REV_FIELD ) )
+            {
+                continue;
+            }
+            $_out[ $key ] = Option::get( $record, $key );
+        }
+
+        return $_out;
     }
 
-    protected static function cleanRecords( $records, $include, $use_doc = false )
+    /**
+     * @param array $records
+     * @param mixed $include
+     * @param mixed $id_field
+     * @param bool  $use_doc If true, only the document is cleaned
+     *
+     * @return array
+     */
+    protected static function cleanRecords( $records, $include = '*', $id_field = self::DEFAULT_ID_FIELD, $use_doc = false )
     {
         $_out = array();
+
         foreach ( $records as $_record )
         {
             if ( $use_doc )
             {
                 $_record = Option::get( $_record, 'doc', $_record );
             }
+
             $_out[] = static::cleanRecord( $_record, $include, static::DEFAULT_ID_FIELD );
         }
 
@@ -478,8 +505,8 @@ class CouchDbSvc extends NoSqlDbSvc
                 if ( !empty( $_updates ) )
                 {
                     // make sure record doesn't contain identifiers
-                    unset( $_updates[static::DEFAULT_ID_FIELD] );
-                    unset( $_updates[static::REV_FIELD] );
+                    unset( $_updates[ static::DEFAULT_ID_FIELD ] );
+                    unset( $_updates[ static::REV_FIELD ] );
                     $_parsed = $this->parseRecord( $_updates, $_fieldsInfo, $_ssFilters, true );
                     if ( empty( $_parsed ) )
                     {
@@ -504,11 +531,11 @@ class CouchDbSvc extends NoSqlDbSvc
                 }
 
                 $_old = null;
-                if ( !isset( $record[static::REV_FIELD] ) || $rollback )
+                if ( !isset( $record[ static::REV_FIELD ] ) || $rollback )
                 {
                     // unfortunately we need the rev, so go get the latest
                     $_old = $this->_dbConn->asArray()->getDoc( $id );
-                    $record[static::REV_FIELD] = Option::get( $_old, static::REV_FIELD );
+                    $record[ static::REV_FIELD ] = Option::get( $_old, static::REV_FIELD );
                 }
 
                 $_result = $this->_dbConn->asArray()->storeDoc( (object)$record );
@@ -536,8 +563,8 @@ class CouchDbSvc extends NoSqlDbSvc
                 }
 
                 // make sure record doesn't contain identifiers
-                unset( $record[static::DEFAULT_ID_FIELD] );
-                unset( $record[static::REV_FIELD] );
+                unset( $record[ static::DEFAULT_ID_FIELD ] );
+                unset( $record[ static::REV_FIELD ] );
                 $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
                 if ( empty( $_parsed ) )
                 {
@@ -662,7 +689,7 @@ class CouchDbSvc extends NoSqlDbSvc
                         $this->_batchIds
                     )->getAllDocs();
                     $_rows = Option::get( $_result, 'rows' );
-                    $_out = static::cleanRecords( $_rows, $_fields, true );
+                    $_out = static::cleanRecords( $_rows, $_fields, static::DEFAULT_ID_FIELD, true );
                 }
 
                 $_result = $this->_dbConn->asArray()->deleteDocs( $this->_batchRecords, true );
@@ -673,12 +700,11 @@ class CouchDbSvc extends NoSqlDbSvc
                 break;
 
             case static::GET:
-                $_result =
-                    $this->_dbConn->setQueryParameters( $extras )->asArray()->include_docs( $_requireMore )->keys(
-                        $this->_batchIds
-                    )->getAllDocs();
+                $_result = $this->_dbConn->setQueryParameters( $extras )->asArray()->include_docs( $_requireMore )->keys(
+                    $this->_batchIds
+                )->getAllDocs();
                 $_rows = Option::get( $_result, 'rows' );
-                $_out = static::cleanRecords( $_rows, $_fields, true );
+                $_out = static::cleanRecords( $_rows, $_fields, static::DEFAULT_ID_FIELD, true );
 
                 if ( count( $this->_batchIds ) !== count( $_out ) )
                 {

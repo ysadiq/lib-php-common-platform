@@ -2419,7 +2419,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      *
      * @return array
      */
-    protected static function cleanRecord( $record, $include = '*', $id_field = null )
+    protected static function cleanRecord( $record = array(), $include = '*', $id_field = null )
     {
         if ( '*' !== $include )
         {

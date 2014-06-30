@@ -19,11 +19,13 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Platform\Events\PlatformServiceEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Interfaces\FileServiceLike;
 use DreamFactory\Platform\Interfaces\ServiceOnlyResourceLike;
 use DreamFactory\Platform\Utility\FileUtilities;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\RestData;
 use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
@@ -367,8 +369,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                 {
                     // create folder from resource path
                     $this->createFolder( $this->_container, $this->_folderPath );
-                    $result =
-                        array( 'folder' => array( array( 'path' => $this->_container . '/' . $this->_folderPath ) ) );
+                    $result = array( 'folder' => array( array( 'path' => $this->_container . '/' . $this->_folderPath ) ) );
                 }
                 else
                 {
@@ -699,8 +700,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
         }
         if ( !empty( $err ) )
         {
-            $msg =
-                'Failed to upload the following files to folder ' . $this->_folderPath . ': ' . implode( ', ', $err );
+            $msg = 'Failed to upload the following files to folder ' . $this->_folderPath . ': ' . implode( ', ', $err );
             throw new InternalServerErrorException( $msg );
         }
 
@@ -743,8 +743,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                         $name = FileUtilities::getNameFromPath( $srcPath );
                     }
                     $fullPathName = $this->_folderPath . $name . '/';
-                    $out['folder'][ $key ] =
-                        array( 'name' => $name, 'path' => $this->_container . '/' . $fullPathName );
+                    $out['folder'][ $key ] = array( 'name' => $name, 'path' => $this->_container . '/' . $fullPathName );
                     try
                     {
                         $this->copyFolder( $this->_container, $fullPathName, $srcContainer, $srcPath, true );
@@ -768,8 +767,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     {
                         $content = base64_decode( $content );
                     }
-                    $out['folder'][ $key ] =
-                        array( 'name' => $name, 'path' => $this->_container . '/' . $fullPathName );
+                    $out['folder'][ $key ] = array( 'name' => $name, 'path' => $this->_container . '/' . $fullPathName );
                     try
                     {
                         $this->createFolder( $this->_container, $fullPathName, true, $content );
@@ -886,6 +884,37 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
         }
 
         return $out;
+    }
+
+    /**
+     * @param string        $eventName
+     * @param PlatformEvent $event
+     * @param int           $priority
+     *
+     * @return bool|PlatformEvent
+     */
+    public function trigger( $eventName, $event = null, $priority = 0 )
+    {
+        if ( is_array( $event ) )
+        {
+            $event = new PlatformServiceEvent( $this->_apiName, $this->_resource, $event );
+        }
+
+        return Platform::trigger(
+            str_ireplace(
+                array( '{api_name}', '{action}', '{container}', '{folder_path}', '{file_path}', ),
+                array(
+                    $this->_apiName == 'system' ? $this->_resource : $this->_apiName,
+                    strtolower( $this->_action ),
+                    $this->_container,
+                    $this->_folderPath,
+                    $this->_filePath,
+                ),
+                $eventName
+            ),
+            $event ?: new PlatformServiceEvent( $this->_apiName, $this->_resource, $this->_response ),
+            $priority
+        );
     }
 
     /**
