@@ -150,12 +150,12 @@ class CouchDbSvc extends NoSqlDbSvc
                     $_access = $this->getPermissions( $_table );
                     if ( !empty( $_access ) )
                     {
-                        $_resources[] = array( 'name' => $_table, 'access' => $_access );
+                        $_resources[] = array('name' => $_table, 'access' => $_access);
                     }
                 }
             }
 
-            return array( 'resource' => $_resources );
+            return array('resource' => $_resources);
         }
         catch ( \Exception $_ex )
         {
@@ -224,7 +224,7 @@ class CouchDbSvc extends NoSqlDbSvc
             $this->_dbConn->asArray()->createDatabase();
             // $_result['ok'] = true
 
-            $_out = array( 'name' => $_name );
+            $_out = array('name' => $_name);
 
             return $_out;
         }
@@ -248,7 +248,7 @@ class CouchDbSvc extends NoSqlDbSvc
         $this->selectTable( $_name );
 
 //		throw new InternalServerErrorException( "Failed to update table '$_name'." );
-        return array( 'name' => $_name );
+        return array('name' => $_name);
     }
 
     /**
@@ -269,7 +269,7 @@ class CouchDbSvc extends NoSqlDbSvc
 
             // $_result['ok'] = true
 
-            return array( 'name' => $_name );
+            return array('name' => $_name);
         }
         catch ( \Exception $_ex )
         {
@@ -356,9 +356,9 @@ class CouchDbSvc extends NoSqlDbSvc
 
     protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
-        $requested_fields = array( static::ID_FIELD ); // can only be this
+        $requested_fields = array(static::ID_FIELD); // can only be this
         $_ids = array(
-            array( 'name' => static::ID_FIELD, 'type' => 'string', 'required' => false ),
+            array('name' => static::ID_FIELD, 'type' => 'string', 'required' => false),
         );
 
         return $_ids;
@@ -405,7 +405,7 @@ class CouchDbSvc extends NoSqlDbSvc
             true
         );
 
-        $_out = array( $id_field => $_id, static::REV_FIELD => $_rev );
+        $_out = array($id_field => $_id, static::REV_FIELD => $_rev);
 
         if ( empty( $include ) )
         {
@@ -448,7 +448,7 @@ class CouchDbSvc extends NoSqlDbSvc
                 $_record = Option::get( $_record, 'doc', $_record );
             }
 
-            $_out[] = static::cleanRecord( $_record, $include, static::DEFAULT_ID_FIELD );
+            $_out[] = '*' == $include ? $_record : static::cleanRecord( $_record, $include, static::DEFAULT_ID_FIELD );
         }
 
         return $_out;

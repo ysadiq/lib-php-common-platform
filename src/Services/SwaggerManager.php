@@ -88,8 +88,8 @@ class SwaggerManager extends BasePlatformRestService
      * @var array The core DSP services that are built-in
      */
     protected static $_builtInServices = array(
-        array( 'api_name' => 'user', 'type_id' => 0, 'description' => 'User session and profile' ),
-        array( 'api_name' => 'system', 'type_id' => 0, 'description' => 'System configuration' )
+        array('api_name' => 'user', 'type_id' => 0, 'description' => 'User session and profile'),
+        array('api_name' => 'system', 'type_id' => 0, 'description' => 'System configuration')
     );
 
     //*************************************************************************
@@ -193,7 +193,7 @@ SQL;
         $_services = array();
 
         //	Initialize the event map
-        static::$_eventMap = static::$_eventMap ? : array();
+        static::$_eventMap = static::$_eventMap ?: array();
 
         //	Spin through services and pull the configs
         foreach ( $_result as $_service )
@@ -249,9 +249,7 @@ SQL;
             // replace service type placeholder with api name for this service instance
             $_content = str_replace( '/{api_name}', '/' . $_apiName, $_content );
 
-            if ( !isset( static::$_eventMap[ $_apiName ] ) ||
-                 !is_array( static::$_eventMap[ $_apiName ] ) ||
-                 empty( static::$_eventMap[ $_apiName ] )
+            if ( !isset( static::$_eventMap[ $_apiName ] ) || !is_array( static::$_eventMap[ $_apiName ] ) || empty( static::$_eventMap[ $_apiName ] )
             )
             {
                 static::$_eventMap[ $_apiName ] = array();
@@ -288,7 +286,7 @@ SQL;
         // cache main api listing file
         $_main = $_scanPath . static::SWAGGER_BASE_API_FILE;
         $_resourceListing = static::_getSwaggerFile( $_main );
-        $_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
+        $_out = array_merge( $_resourceListing, array('apis' => $_services) );
 
         $_filePath = $_cachePath . static::SWAGGER_CACHE_FILE;
 
@@ -310,8 +308,7 @@ SQL;
         }
 
         //	Create example file
-        if ( !file_exists( $_customPath . static::SWAGGER_CUSTOM_EXAMPLE_FILE ) &&
-             file_exists( $_templatePath . static::SWAGGER_CUSTOM_EXAMPLE_FILE )
+        if ( !file_exists( $_customPath . static::SWAGGER_CUSTOM_EXAMPLE_FILE ) && file_exists( $_templatePath . static::SWAGGER_CUSTOM_EXAMPLE_FILE )
         )
         {
             file_put_contents(
@@ -356,8 +353,8 @@ SQL;
             }
 
             $_path = str_replace(
-                array( '{api_name}', '/' ),
-                array( $apiName, '.' ),
+                array('{api_name}', '/'),
+                array($apiName, '.'),
                 trim( $_path, '/' )
             );
 
@@ -386,7 +383,7 @@ SQL;
                     }
                     else if ( !is_array( $_eventNames ) )
                     {
-                        $_eventNames = array( $_eventNames );
+                        $_eventNames = array($_eventNames);
                     }
 
                     //  Set into master record
@@ -485,8 +482,7 @@ SQL;
         }
 
         $_response = array();
-        $_eventPattern =
-            '/^' . str_replace( array( '.*.js', '.' ), array( null, '\\.' ), $_scriptPattern ) . '\\.(\w)\\.js$/i';
+        $_eventPattern = '/^' . str_replace( array('.*.js', '.'), array(null, '\\.'), $_scriptPattern ) . '\\.(\w)\\.js$/i';
 
         foreach ( $_scripts as $_script )
         {
@@ -502,17 +498,18 @@ SQL;
     /**
      * @param BasePlatformRestService $service
      * @param string                  $method
-     * @param string                  $eventName Global search for event name
+     * @param string                  $eventName         Global search for event name
+     * @param array                   $replacementValues An optional array of replacements to consider in event name matching
      *
      * @return string
      */
-    public static function findEvent( BasePlatformRestService $service, $method, $eventName = null )
+    public static function findEvent( BasePlatformRestService $service, $method, $eventName = null, array $replacementValues = array() )
     {
-        $_cache = Platform::storeGet( 'swagger.event_map_cache', array() );
+        $_cache = Platform::mcGet( 'swagger.event_map_cache', array() );
 
         $_map = static::getEventMap();
         $_aliases = $service->getVerbAliases();
-        $_methods = array( $method );
+        $_methods = array($method);
 
         foreach ( Option::clean( $_aliases ) as $_action => $_alias )
         {
@@ -597,8 +594,7 @@ SQL;
 
         if ( null === ( $_resources = Option::get( $_map, $_resource ) ) )
         {
-            if ( !method_exists( $service, 'getServiceName' ) ||
-                 null === ( $_resources = Option::get( $_map, $service->getServiceName() ) )
+            if ( !method_exists( $service, 'getServiceName' ) || null === ( $_resources = Option::get( $_map, $service->getServiceName() ) )
             )
             {
                 if ( null === ( $_resources = Option::get( $_map, 'system' ) ) )
@@ -608,11 +604,14 @@ SQL;
             }
         }
 
-        $_path = str_ireplace(
-            'rest',
-            null,
-            trim( !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath(), '/' )
-        );
+        $_path = !Pii::cli() ? Pii::request( true )->getPathInfo() : $service->getResourcePath();
+
+        if ( 'rest' == substr( $_path, 0, 4 ) )
+        {
+            $_path = substr( $_path, 4 );
+        }
+
+        $_path = trim( $_path, '/' );
 
         //  Strip off the resource ID if any...
         if ( $_resourceId && false !== ( $_pos = stripos( $_path, '/' . $_resourceId ) ) )
@@ -620,12 +619,13 @@ SQL;
             $_path = substr( $_path, 0, $_pos );
         }
 
-        $_swaps = array( array(), array() );
+        $_swaps = array(array(), array());
 
         switch ( $service->getTypeId() )
         {
             case PlatformServiceTypes::LOCAL_SQL_DB:
             case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
+            case PlatformServiceTypes::NOSQL_DB:
                 $_swaps = array(
                     array(
                         $_savedResource,
@@ -640,46 +640,49 @@ SQL;
 
             case PlatformServiceTypes::LOCAL_FILE_STORAGE:
             case PlatformServiceTypes::REMOTE_FILE_STORAGE:
-                $_swaps = array(
-                    array(
-                        $service->getContainerId(),
-                        $_folderPath = $service->getFolderPath(),
-                        $_filePath = $service->getFilePath(),
-                        //  This one removes any slashes from the final event name...
-                        null,
-                    ),
-                    array(
-                        '{container}',
-                        '{folder_path}',
-                        '{file_path}',
-                        //  This one removes any slashes from the final event name...
-                        '/',
-                    ),
-                );
-
-                //  Add in optional trailing slashes
-                if ( $_folderPath )
+                if ( $service instanceof BaseFileSvc )
                 {
-                    $_swaps[0][] = $_folderPath[ strlen( $_folderPath ) - 1 ] != '/'
-                        ? $_folderPath . '/'
-                        : substr(
-                            $_folderPath,
-                            0,
-                            strlen( $_folderPath ) - 1
-                        );
-                    $_swaps[1][] = '{folder_path}';
-                }
+                    $_swaps = array(
+                        array(
+                            Option::get( $replacementValues, 'container', $service->getContainerId() ),
+                            $_folderPath = Option::get( $replacementValues, 'folder_path', $service->getFolderPath() ),
+                            $_filePath = Option::get( $replacementValues, 'file_path', $service->getFilePath() ),
+                            //  This one removes any slashes from the final event name...
+                            null,
+                        ),
+                        array(
+                            '{container}',
+                            '{folder_path}',
+                            '{file_path}',
+                            //  This one removes any slashes from the final event name...
+                            '/',
+                        ),
+                    );
 
-                if ( $_filePath )
-                {
-                    $_swaps[0][] = $_filePath[ strlen( $_filePath ) - 1 ] != '/'
-                        ? $_filePath . '/'
-                        : substr(
-                            $_filePath,
-                            0,
-                            strlen( $_filePath ) - 1
-                        );
-                    $_swaps[1][] = '{file_path}';
+                    //  Add in optional trailing slashes
+                    if ( $_folderPath )
+                    {
+                        $_swaps[0][] = $_folderPath[ strlen( $_folderPath ) - 1 ] != '/'
+                            ? $_folderPath . '/'
+                            : substr(
+                                $_folderPath,
+                                0,
+                                strlen( $_folderPath ) - 1
+                            );
+                        $_swaps[1][] = '{folder_path}';
+                    }
+
+                    if ( $_filePath )
+                    {
+                        $_swaps[0][] = $_filePath[ strlen( $_filePath ) - 1 ] != '/'
+                            ? $_filePath . '/'
+                            : substr(
+                                $_filePath,
+                                0,
+                                strlen( $_filePath ) - 1
+                            );
+                        $_swaps[1][] = '{file_path}';
+                    }
                 }
 
                 $_path = str_ireplace( $_swaps[0], $_swaps[1], $_path );
@@ -692,10 +695,7 @@ SQL;
         }
 
         $_path = implode( '.', explode( '/', ltrim( $_path, '/' ) ) );
-
-        $_pattern =
-            '#^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$#';
-
+        $_pattern = '#^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$#';
         $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
         if ( empty( $_matches ) )
@@ -720,7 +720,7 @@ SQL;
                     $_cache[ $_hash ] = $_eventName;
 
                     //  Cache for one minute...
-                    Platform::storeSet( 'swagger.event_map_cache', $_cache, 60 );
+                    Platform::mcSet( 'swagger.event_map_cache', $_cache, 60 );
 
                     return $_eventName;
                 }
@@ -843,7 +843,7 @@ SQL;
 
         if ( file_exists( $_swaggerPath ) )
         {
-            $files = array_diff( scandir( $_swaggerPath ), array( '.', '..' ) );
+            $files = array_diff( scandir( $_swaggerPath ), array('.', '..') );
             foreach ( $files as $file )
             {
                 @unlink( $_swaggerPath . '/' . $file );
