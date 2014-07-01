@@ -415,7 +415,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             throw new BadRequestException( 'No record(s) detected in request.' );
         }
 
-        $this->_triggerActionEvent( $this->_response );
+        $this->_triggerActionEvent( $this->_requestPayload );
 
         if ( $this->_singleRecordAmnesty )
         {
@@ -446,7 +446,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             throw new BadRequestException( 'No record(s) detected in request.' );
         }
 
-        $this->_triggerActionEvent( $this->_response );
+        $this->_triggerActionEvent( $this->_requestPayload );
 
         if ( !empty( $this->_resourceId ) )
         {
@@ -509,7 +509,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected function _handleDelete()
     {
-        $this->_triggerActionEvent( $this->_response );
+        $this->_triggerActionEvent( $this->_requestPayload );
 
         if ( !empty( $this->_resourceId ) )
         {
