@@ -181,6 +181,72 @@ class SqlDbUtilities implements SqlDbDriverTypes
 
     /**
      * @param \CDbConnection $db
+     * @param string         $include
+     * @param string         $exclude
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public static function listStoredProcedures( $db, $include = null, $exclude = null )
+    {
+        try
+        {
+            $_names = $db->schema->getProcedureNames();
+            $includeArray = array_map( 'trim', explode( ',', strtolower( $include ) ) );
+            $excludeArray = array_map( 'trim', explode( ',', strtolower( $exclude ) ) );
+            $temp = array();
+
+            foreach ( $_names as $name )
+            {
+                if ( !empty( $include ) )
+                {
+                    if ( false === array_search( strtolower( $name ), $includeArray ) )
+                    {
+                        continue;
+                    }
+                }
+                elseif ( !empty( $exclude ) )
+                {
+                    if ( false !== array_search( strtolower( $name ), $excludeArray ) )
+                    {
+                        continue;
+                    }
+                }
+                $temp[] = $name;
+            }
+            $_names = $temp;
+            natcasesort( $_names );
+
+            return array_values( $_names );
+        }
+        catch ( \Exception $ex )
+        {
+            throw new InternalServerErrorException( "Failed to list database stored procedures.\n{$ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * @param \CDbConnection $db
+     * @param string         $name
+     * @param string         $remove_prefix
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public static function callProcedure( $db, $name, $remove_prefix = '' )
+    {
+        try
+        {
+            return $db->schema->callProcedure( $name );
+        }
+        catch ( \Exception $ex )
+        {
+            throw new InternalServerErrorException( "Failed to call database stored procedure.\n{$ex->getMessage()}" );
+        }
+    }
+
+    /**
+     * @param \CDbConnection $db
      * @param string         $include_prefix
      * @param string         $exclude_prefix
      *

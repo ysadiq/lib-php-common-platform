@@ -51,6 +51,10 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * Default record wrapping tag for single or array of records
      */
     const RECORD_WRAPPER = 'record';
+    /**
+     * Resource tag for dealing with table schema
+     */
+    const SCHEMA_RESOURCE = '_schema';
 
     //*************************************************************************
     //	Members
@@ -246,35 +250,29 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     }
 
     /**
-     * @param string $table
+     * @param string $resource
+     * @param string $resource_id
      * @param string $action
      *
-     * @throws BadRequestException
+     * @internal param string $resourceId
      */
-    protected function validateTableAccess( &$table, $action = null )
+    protected function validateResourceAccess( $resource, $resource_id, $action )
     {
-        if ( empty( $table ) )
+        if ( !empty( $resource ) )
         {
-            throw new BadRequestException( 'Table name can not be empty.' );
-        }
+            switch ( $resource )
+            {
+                case static::SCHEMA_RESOURCE:
+                    if ( !empty( $resource_id ) )
+                    {
+                        $resource = $resource . '/' . $resource_id;
+                    }
+                    break;
+                default:
+                    break;
+            }
 
-        $_action = ( empty( $action ) ) ? $this->_action : $action;
-
-        // finally check that the current user has privileges to access this table
-        $this->checkPermission( $_action, $table );
-    }
-
-    /**
-     * {@InheritDoc}
-     */
-    protected function _preProcess()
-    {
-        parent::_preProcess();
-
-        //	Do validation here
-        if ( !empty( $this->_resource ) )
-        {
-            $this->validateTableAccess( $this->_resource );
+            $this->checkPermission( $action, $resource );
         }
         else
         {
@@ -284,6 +282,45 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 $this->checkPermission( $this->_action );
             }
         }
+    }
+
+    /**
+     * @param string $table
+     * @param string $action
+     *
+     * @throws BadRequestException
+     */
+    protected function validateSchemaAccess( $table = null, $action = null )
+    {
+        $this->validateResourceAccess( static::SCHEMA_RESOURCE, $table, $action );
+    }
+
+    /**
+     * @param string $table
+     * @param string $action
+     *
+     * @throws BadRequestException
+     */
+    protected function validateTableAccess( $table, $action = null )
+    {
+        if ( empty( $table ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        // finally check that the current user has privileges to access this table
+        $this->validateResourceAccess( $table, null, $action );
+    }
+
+    /**
+     * {@InheritDoc}
+     */
+    protected function _preProcess()
+    {
+        //	Do validation here
+        $this->validateResourceAccess( $this->_resource, $this->_resourceId, $this->_action );
+
+        parent::_preProcess();
     }
 
     /**
@@ -297,6 +334,15 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             $this->_triggerActionEvent( $_result );
 
             return $_result;
+        }
+
+        switch ( $this->_resource )
+        {
+            case static::SCHEMA_RESOURCE:
+                return parent::_handleSchema();
+                break;
+            default:
+                break;
         }
 
         return parent::_handleResource();
@@ -2847,6 +2893,84 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     }
 
     // Handle administrative options, table add, delete, etc
+
+    /**
+     * @return array|bool
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     */
+    protected function _handleSchema()
+    {
+        $_result = false;
+
+        switch ( $this->_action )
+        {
+            case static::GET:
+                $_ids = Option::get( $this->_requestPayload, 'names' );
+                if ( empty( $_ids ) )
+                {
+                    return $this->_listResources();
+                }
+
+                $_result = $this->getTables( $_ids );
+                $_result = array('table' => $_result);
+                break;
+
+            case static::POST:
+                $_tables = Option::get( $this->_requestPayload, 'table' );
+
+                if ( empty( $_tables ) )
+                {
+                    $_result = $this->createTable( $this->_requestPayload );
+                }
+                else
+                {
+                    $_result = $this->createTables( $_tables );
+                    $_result = array('table' => $_result);
+                }
+                break;
+
+            case static::PUT:
+            case static::PATCH:
+            case static::MERGE:
+                $_tables = Option::get( $this->_requestPayload, 'table' );
+
+                if ( empty( $_tables ) )
+                {
+                    $_result = $this->updateTable( $this->_requestPayload );
+                }
+                else
+                {
+                    $_result = $this->updateTables( $_tables );
+                    $_result = array('table' => $_result);
+                }
+                break;
+
+            case static::DELETE:
+                $_ids = Option::get( $this->_requestPayload, 'names' );
+                if ( !empty( $_ids ) )
+                {
+                    $_result = $this->deleteTables( $_ids );
+                    $_result = array('table' => $_result);
+                }
+                else
+                {
+                    $_tables = Option::get( $this->_requestPayload, 'table' );
+
+                    if ( empty( $_tables ) )
+                    {
+                        $_result = $this->deleteTable( $this->_requestPayload );
+                    }
+                    else
+                    {
+                        $_result = $this->deleteTables( $_tables );
+                        $_result = array('table' => $_result);
+                    }
+                }
+                break;
+        }
+
+        return $_result;
+    }
 
     /**
      * @return array|bool
