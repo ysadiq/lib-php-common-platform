@@ -29,7 +29,7 @@ $_addDbOps = array(
         'nickname'         => 'createTables',
         'notes'            => 'Post body should be a single table definition or an array of table definitions.',
         'type'             => 'Tables',
-        'event_name'       => array( '{api_name}.create', ),
+        'event_name'       => array( '{api_name}.tables.create', ),
         'parameters'       => array(
             array(
                 'name'          => 'tables',
@@ -65,7 +65,7 @@ $_addDbOps = array(
         'nickname'         => 'updateTableProperties',
         'notes'            => 'Post body should be a single table definition or an array of table definitions.',
         'type'             => 'Tables',
-        'event_name'       => array( '{api_name}.update' ),
+        'event_name'       => array( '{api_name}.tables.update' ),
         'parameters'       => array(
             array(
                 'name'          => 'body',
@@ -87,7 +87,7 @@ $_addDbOps = array(
             'Alternatively, to delete by table definitions or a large list of names, ' .
             'use the POST request with X-HTTP-METHOD = DELETE header and post array of definitions or names.',
         'type'             => 'Tables',
-        'event_name'       => array( '{api_name}.delete' ),
+        'event_name'       => array( '{api_name}.tables.delete' ),
         'parameters'       => array(
             array(
                 'name'          => 'names',

@@ -804,8 +804,7 @@ class MongoDbSvc extends NoSqlDbSvc
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
         if ( !empty( $_serverCriteria ) )
         {
-            $_criteria =
-                ( !empty( $_criteria ) ) ? array('$and' => array($_criteria, $_serverCriteria)) : $_serverCriteria;
+            $_criteria = ( !empty( $_criteria ) ) ? array('$and' => array($_criteria, $_serverCriteria)) : $_serverCriteria;
         }
 
         return $_criteria;
@@ -954,7 +953,7 @@ class MongoDbSvc extends NoSqlDbSvc
      *
      * @return array
      */
-    protected static function cleanRecord( $record, $include = '*', $id_field = null )
+    protected static function cleanRecord( $record = array(), $include = '*', $id_field = null )
     {
         $_out = parent::cleanRecord( $record, $include, $id_field );
 

@@ -195,8 +195,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             $_message =
                 $this->_action .
                 ' requests' .
-                ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"'
-                    : ' without a resource' ) .
+                ( !empty( $this->_resource ) ? ' for resource "' . $this->_resourcePath . '"' : ' without a resource' ) .
                 ' are not currently supported by the "' .
                 $this->_apiName .
                 '" service.';
@@ -246,8 +245,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             }
 
             //	Does this action have a handler?
-            if ( false !==
-                 ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) )
+            if ( false !== ( $_action = array_search( strtolower( $this->_resource ), array_map( 'strtolower', $_keys ) ) )
             )
             {
                 $_handler = $this->_extraActions[ $_action ];
@@ -314,7 +312,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
             if ( $this->_autoDispatch && method_exists( $this, $_method ) )
             {
-                $_methodToCall = array( $this, $_method );
+                $_methodToCall = array($this, $_method);
             }
         }
 
@@ -414,7 +412,7 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         //	Native and PHP response types return, not emit...
         if ( in_array(
             $this->_outputFormat,
-            array( false, null, '', DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE ),
+            array(false, null, '', DataFormats::PHP_ARRAY, DataFormats::PHP_OBJECT, DataFormats::NATIVE),
             true
         ) )
         {
@@ -653,8 +651,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
 
         return Platform::trigger(
             str_ireplace(
-                array( '{api_name}', '{action}' ),
-                array( $this->_apiName == 'system' ? $this->_resource : $this->_apiName, strtolower( $this->_action ) ),
+                array('{api_name}', '{action}'),
+                array($this->_apiName == 'system' ? $this->_resource : $this->_apiName, strtolower( $this->_action )),
                 $eventName
             ),
             $event ?: new PlatformServiceEvent( $this->_apiName, $this->_resource, $this->_response ),
@@ -685,19 +683,8 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     {
         static $_triggeredEvents = array();
 
-        //  Lookup the appropriate event if not specified.
-        $_eventNames = $eventName ?: SwaggerManager::findEvent( $this, $this->_action );
-        $_eventNames = is_array( $_eventNames ) ? $_eventNames : array( $_eventNames );
-
         $_result = array();
-        $_pathInfo = trim(
-            str_replace(
-                '/rest',
-                null,
-                Option::server( 'INLINE_REQUEST_URI', Pii::request( false )->getPathInfo() )
-            ),
-            '/'
-        );
+        $_pathInfo = $this->_getCleanedPathInfo();
 
         $_values = array(
             'action'          => strtolower( $this->_action ),
@@ -705,21 +692,30 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
             'service_id'      => $this->_serviceId,
             'request_payload' => $this->_requestPayload,
             'table_name'      => $this->_resource,
-            'container'       => method_exists( $this, 'getContainerId' ) ? $this->getContainerId() : $this->_resource,
-            'folder_path'     => method_exists( $this, 'getFolderPath' )
-                ? $this->getFolderPath()
-                : Option::get(
-                    $this->_resourceArray,
-                    1
-                ),
-            'file_path'       => method_exists( $this, 'getFilePath' )
-                ? $this->getFilePath()
-                : Option::get(
-                    $this->_resourceArray,
-                    2
-                ),
             'request_uri'     => explode( '/', $_pathInfo ),
+            'container'       => $this->_resource,
+            'folder_path'     => Option::get( $this->_resourceArray, 1 ),
+            'file_path'       => Option::get( $this->_resourceArray, 2 ),
         );
+
+        //  Add file service replacements
+        if ( $this instanceof BaseFileSvc )
+        {
+            $_values['container'] = $this->getContainerId();
+            $_values['folder_path'] = $this->getFolderPath();
+
+            //  Convert embedded slashes to dollar signs
+            if ( false !== strpos( $_values['folder_path'], '/' ) )
+            {
+                $_values['folder_path'] = str_replace( '/', '$', $_values['folder_path'] );
+            }
+
+            $_values['file_path'] = $this->getFilePath();
+        }
+
+        //  Lookup the appropriate event if not specified.
+        $_eventNames = $eventName ?: SwaggerManager::findEvent( $this, $this->_action, null, $_values );
+        $_eventNames = is_array( $_eventNames ) ? $_eventNames : array($_eventNames);
 
         if ( 'rest' !== ( $_part = array_shift( $_values['request_uri'] ) ) )
         {
@@ -792,6 +788,23 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
         }
 
         return 1 == count( $_result ) ? $_result[0] : $_result;
+    }
+
+    /**
+     * Cleans the path info/request uri for events
+     *
+     * @return string
+     */
+    protected function _getCleanedPathInfo()
+    {
+        $_pathInfo = Option::server( 'INLINE_REQUEST_URI', Pii::request( false )->getPathInfo() );
+
+        if ( '/rest' == substr( $_pathInfo, 0, 5 ) )
+        {
+            $_pathInfo = substr( $_pathInfo, 5 );
+        }
+
+        return trim( $_pathInfo, '/' );
     }
 
     /**
