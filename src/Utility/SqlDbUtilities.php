@@ -228,16 +228,17 @@ class SqlDbUtilities implements SqlDbDriverTypes
     /**
      * @param \CDbConnection $db
      * @param string         $name
-     * @param string         $remove_prefix
+     * @param string         $type
+     * @param array          $params
      *
      * @throws \Exception
      * @return array
      */
-    public static function callProcedure( $db, $name, $remove_prefix = '' )
+    public static function callProcedure( $db, $name, $type = null, $params = null )
     {
         try
         {
-            return $db->schema->callProcedure( $name );
+            return $db->schema->callProcedure( $name, $type, $params );
         }
         catch ( \Exception $ex )
         {
