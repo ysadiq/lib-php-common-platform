@@ -653,15 +653,11 @@ SQL;
                             Option::get( $replacementValues, 'container', $service->getContainerId() ),
                             $_folderPath = Option::get( $replacementValues, 'folder_path', $service->getFolderPath() ),
                             $_filePath = Option::get( $replacementValues, 'file_path', $service->getFilePath() ),
-                            //  This one removes any slashes from the final event name...
-                            null,
                         ),
                         array(
                             '{container}',
                             '{folder_path}',
                             '{file_path}',
-                            //  This one removes any slashes from the final event name...
-                            '/',
                         ),
                     );
 
