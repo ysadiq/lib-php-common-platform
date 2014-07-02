@@ -165,88 +165,93 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         // override - don't call parent class here
         $_posted = Option::clean( RestData::getPostedData( true, true ) );
 
-        if ( empty( $this->_resource ) )
+        if ( $this->resourceIsTable( $this->_resource ))
         {
-            // admin/schema requests
+            if ( !empty( $this->_resourceId ) )
+            {
+                if ( !empty( $_posted ) )
+                {
+                    // single records don't use the record wrapper, so wrap it
+                    $_posted = array(static::RECORD_WRAPPER => array($_posted));
+                }
+            }
+            elseif ( DataFormatter::isArrayNumeric( $_posted ) )
+            {
+                // import from csv, etc doesn't include a wrapper, so wrap it
+                $_posted = array(static::RECORD_WRAPPER => $_posted);
+            }
+            else
+            {
+                switch ( $this->_action )
+                {
+                    case static::POST:
+                    case static::PUT:
+                    case static::PATCH:
+                    case static::MERGE:
+                        // fix wrapper on posted single record
+                        if ( !isset( $_posted[static::RECORD_WRAPPER] ) )
+                        {
+                            $this->_singleRecordAmnesty = true;
+                            if ( !empty( $_posted ) )
+                            {
+                                // stuff it back in for event
+                                $_posted[static::RECORD_WRAPPER] = array($_posted);
+                            }
+                        }
+                        break;
+                }
+            }
+
             // MERGE URL parameters with posted data, posted data takes precedence
             $this->_requestPayload = array_merge( $_REQUEST, $_posted );
 
-            return $this;
-        }
-
-        if ( !empty( $this->_resourceId ) )
-        {
-            if ( !empty( $_posted ) )
+            if ( static::GET == $this->_action )
             {
-                // single records don't use the record wrapper, so wrap it
-                $_posted = array(static::RECORD_WRAPPER => array($_posted));
+                // default for GET should be "return all fields"
+                if ( !isset( $this->_requestPayload['fields'] ) )
+                {
+                    $this->_requestPayload['fields'] = '*';
+                }
             }
-        }
-        elseif ( DataFormatter::isArrayNumeric( $_posted ) )
-        {
-            // import from csv, etc doesn't include a wrapper, so wrap it
-            $_posted = array(static::RECORD_WRAPPER => $_posted);
+
+            // Add server side filtering properties
+            if ( null != $_ssFilters = Session::getServiceFilters( $this->_action, $this->_apiName, $this->_resource ) )
+            {
+                $this->_requestPayload['ss_filters'] = $_ssFilters;
+            }
+
+            // look for limit, accept top as well as limit
+            if ( !isset( $this->_requestPayload['limit'] ) && ( $_limit = Option::get( $this->_requestPayload, 'top' ) ) )
+            {
+                $this->_requestPayload['limit'] = $_limit;
+            }
+
+            // accept skip as well as offset
+            if ( !isset( $this->_requestPayload['offset'] ) && ( $_offset = Option::get( $this->_requestPayload, 'skip' ) )
+            )
+            {
+                $this->_requestPayload['offset'] = $_offset;
+            }
+
+            // accept sort as well as order
+            if ( !isset( $this->_requestPayload['order'] ) && ( $_order = Option::get( $this->_requestPayload, 'sort' ) ) )
+            {
+                $this->_requestPayload['order'] = $_order;
+            }
         }
         else
         {
-            switch ( $this->_action )
-            {
-                case static::POST:
-                case static::PUT:
-                case static::PATCH:
-                case static::MERGE:
-                    // fix wrapper on posted single record
-                    if ( !isset( $_posted[ static::RECORD_WRAPPER ] ) )
-                    {
-                        $this->_singleRecordAmnesty = true;
-                        if ( !empty( $_posted ) )
-                        {
-                            // stuff it back in for event
-                            $_posted[ static::RECORD_WRAPPER ] = array($_posted);
-                        }
-                    }
-                    break;
-            }
-        }
-
-        // MERGE URL parameters with posted data, posted data takes precedence
-        $this->_requestPayload = array_merge( $_REQUEST, $_posted );
-
-        if ( static::GET == $this->_action )
-        {
-            // default for GET should be "return all fields"
-            if ( !isset( $this->_requestPayload['fields'] ) )
-            {
-                $this->_requestPayload['fields'] = '*';
-            }
-        }
-
-        // Add server side filtering properties
-        if ( null != $_ssFilters = Session::getServiceFilters( $this->_action, $this->_apiName, $this->_resource ) )
-        {
-            $this->_requestPayload['ss_filters'] = $_ssFilters;
-        }
-
-        // look for limit, accept top as well as limit
-        if ( !isset( $this->_requestPayload['limit'] ) && ( $_limit = Option::get( $this->_requestPayload, 'top' ) ) )
-        {
-            $this->_requestPayload['limit'] = $_limit;
-        }
-
-        // accept skip as well as offset
-        if ( !isset( $this->_requestPayload['offset'] ) && ( $_offset = Option::get( $this->_requestPayload, 'skip' ) )
-        )
-        {
-            $this->_requestPayload['offset'] = $_offset;
-        }
-
-        // accept sort as well as order
-        if ( !isset( $this->_requestPayload['order'] ) && ( $_order = Option::get( $this->_requestPayload, 'sort' ) ) )
-        {
-            $this->_requestPayload['order'] = $_order;
+            // admin/schema/etc. requests
+            // MERGE URL parameters with posted data, posted data takes precedence
+            $this->_requestPayload = array_merge( $_REQUEST, $_posted );
         }
 
         return $this;
+    }
+
+    protected function resourceIsTable( $resource )
+    {
+        return !(empty($resource) || static::SCHEMA_RESOURCE == $resource);
     }
 
     /**
@@ -339,13 +344,13 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         switch ( $this->_resource )
         {
             case static::SCHEMA_RESOURCE:
-                return parent::_handleSchema();
+                return $this->_handleSchema();
                 break;
+
             default:
+                return parent::_handleResource();
                 break;
         }
-
-        return parent::_handleResource();
     }
 
     /**

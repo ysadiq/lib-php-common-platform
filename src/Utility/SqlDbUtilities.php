@@ -230,15 +230,16 @@ class SqlDbUtilities implements SqlDbDriverTypes
      * @param string         $name
      * @param string         $type
      * @param array          $params
+     * @param string         $wrapper
      *
      * @throws \Exception
      * @return array
      */
-    public static function callProcedure( $db, $name, $type = null, $params = null )
+    public static function callProcedure( $db, $name, $type = null, $params = null, $wrapper = null )
     {
         try
         {
-            return $db->schema->callProcedure( $name, $type, $params );
+            return $db->schema->callProcedure( $name, $type, $params, $wrapper );
         }
         catch ( \Exception $ex )
         {

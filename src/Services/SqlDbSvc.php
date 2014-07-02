@@ -276,6 +276,16 @@ class SqlDbSvc extends BaseDbSvc
         }
     }
 
+    protected function resourceIsTable( $resource )
+    {
+        if ( static::STORED_PROCEDURE_RESOURCE == $resource )
+        {
+            return false;
+        }
+
+        return parent::resourceIsTable( $resource );
+    }
+
     /**
      * Corrects capitalization, etc. on table names, ensures it is not a system table
      *
@@ -314,25 +324,27 @@ class SqlDbSvc extends BaseDbSvc
      */
     protected function validateResourceAccess( $resource, $resource_id, $action )
     {
-        switch ( $resource )
+        if ( !empty( $resource ) )
         {
-            case ( empty( $resource ) ):
-                break;
-            case static::STORED_PROCEDURE_RESOURCE:
-                if ( !empty( $resource_id ) )
-                {
-                    $resource = $resource . '/' . $resource_id;
-                }
-                break;
-            case static::SCHEMA_RESOURCE:
-                if ( !empty( $resource_id ) )
-                {
-                    $resource_id = $this->correctTableName( $resource_id );
-                }
-                break;
-            default:
-                $resource = $this->correctTableName( $resource );
-                break;
+            switch ( $resource )
+            {
+                case static::STORED_PROCEDURE_RESOURCE:
+                    if ( !empty( $resource_id ) )
+                    {
+                        $resource = $resource . '/' . $resource_id;
+                    }
+                    break;
+                case static::SCHEMA_RESOURCE:
+                    if ( !empty( $resource_id ) )
+                    {
+                        $resource_id = $this->correctTableName( $resource_id );
+                    }
+                    break;
+                default:
+                    $resource = $this->correctTableName( $resource );
+                    break;
+            }
+
         }
 
         parent::validateResourceAccess( $resource, $resource_id, $action );
@@ -372,34 +384,35 @@ class SqlDbSvc extends BaseDbSvc
     {
         parent::_detectRequestMembers();
 
-        switch ( $this->_resource )
+        if ( !empty( $this->_resource ) )
         {
-            case ( empty( $this->_resource ) ):
-                break;
-            case static::STORED_PROCEDURE_RESOURCE:
-                break;
-            case static::SCHEMA_RESOURCE:
-                break;
-            default:
-                // All calls can request related data to be returned
-                $_related = Option::get( $this->_requestPayload, 'related' );
-                if ( !empty( $_related ) && is_string( $_related ) && ( '*' !== $_related ) )
-                {
-                    $_relations = array();
-                    if ( !is_array( $_related ) )
+            switch ( $this->_resource )
+            {
+                case static::STORED_PROCEDURE_RESOURCE:
+                case static::SCHEMA_RESOURCE:
+                    break;
+                default:
+                    // All calls can request related data to be returned
+                    $_related = Option::get( $this->_requestPayload, 'related' );
+                    if ( !empty( $_related ) && is_string( $_related ) && ( '*' !== $_related ) )
                     {
-                        $_related = array_map( 'trim', explode( ',', $_related ) );
-                    }
-                    foreach ( $_related as $_relative )
-                    {
-                        $_extraFields = Option::get( $this->_requestPayload, $_relative . '_fields', '*' );
-                        $_extraOrder = Option::get( $this->_requestPayload, $_relative . '_order', '' );
-                        $_relations[] = array('name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder);
-                    }
+                        $_relations = array();
+                        if ( !is_array( $_related ) )
+                        {
+                            $_related = array_map( 'trim', explode( ',', $_related ) );
+                        }
+                        foreach ( $_related as $_relative )
+                        {
+                            $_extraFields = Option::get( $this->_requestPayload, $_relative . '_fields', '*' );
+                            $_extraOrder = Option::get( $this->_requestPayload, $_relative . '_order', '' );
+                            $_relations[] =
+                                array('name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder);
+                        }
 
-                    $this->_requestPayload['related'] = $_relations;
-                }
-                break;
+                        $this->_requestPayload['related'] = $_relations;
+                    }
+                    break;
+            }
         }
 
         return $this;
@@ -449,7 +462,8 @@ class SqlDbSvc extends BaseDbSvc
 
                 foreach ( $_result as $_name )
                 {
-                    $_access = $this->getPermissions( static::STORED_PROCEDURE_RESOURCE . '/' . $_name );
+                    $_name = static::STORED_PROCEDURE_RESOURCE . '/' . $_name;
+                    $_access = $this->getPermissions( $_name );
                     if ( !empty( $_access ) )
                     {
                         $_resources[] = array('name' => $_name, 'access' => $_access);
@@ -487,8 +501,9 @@ class SqlDbSvc extends BaseDbSvc
 
                 $_type = Option::get( $this->_requestPayload, 'type' );
                 $_params = Option::get( $this->_requestPayload, 'params' );
+                $_wrapper = Option::get( $this->_requestPayload, 'wrapper' );
 
-                $_result = $this->callProcedure( $this->_resourceId, $_type, $_params );
+                $_result = $this->callProcedure( $this->_resourceId, $_type, $_params, $_wrapper );
                 break;
 
 //            case static::PUT:
@@ -542,7 +557,16 @@ class SqlDbSvc extends BaseDbSvc
         }
     }
 
-    public function callProcedure( $name )
+    /**
+     * @param string $name
+     * @param string $type
+     * @param array  $params
+     * @param string $wrapper
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public function callProcedure( $name, $type = null, $params = null, $wrapper = null )
     {
         if ( empty( $name ) )
         {
@@ -551,7 +575,7 @@ class SqlDbSvc extends BaseDbSvc
 
         try
         {
-            $_out = SqlDbUtilities::callProcedure( $this->_dbConn, $name );
+            $_out = SqlDbUtilities::callProcedure( $this->_dbConn, $name, $type, $params, $wrapper );
 
             return $_out;
         }
