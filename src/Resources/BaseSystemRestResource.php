@@ -84,15 +84,14 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     public function __construct( $consumer, $settings = array(), $resourceArray = array() )
     {
-        $this->_resourceArray = $resourceArray ? : Option::get( $settings, 'resource_array', array(), true );
+        $this->_resourceArray = $resourceArray ?: Option::get( $settings, 'resource_array', array(), true );
 
         //	Default service name if not supplied. Should work for subclasses by defining the constant in your class
-        $settings['service_name'] =
-            $this->_serviceName ? : Option::get( $settings, 'service_name', static::DEFAULT_SERVICE_NAME, true );
+        $settings['service_name'] = $this->_serviceName ?: Option::get( $settings, 'service_name', static::DEFAULT_SERVICE_NAME, true );
 
         //	Default verb aliases for all system resources
         $settings['verb_aliases'] = $this->_verbAliases
-            ? : array_merge(
+            ?: array_merge(
                 array(
                     static::PATCH => static::PUT,
                     static::MERGE => static::PUT,
@@ -189,13 +188,13 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
                 case static::PATCH:
                 case static::MERGE:
                     // fix wrapper on posted single record
-                    if ( !isset( $_posted[static::RECORD_WRAPPER] ) )
+                    if ( !isset( $_posted[ static::RECORD_WRAPPER ] ) )
                     {
                         $this->_singleRecordAmnesty = true;
                         if ( !empty( $_posted ) )
                         {
                             // stuff it back in for event
-                            $_posted[static::RECORD_WRAPPER] = array($_posted);
+                            $_posted[ static::RECORD_WRAPPER ] = array($_posted);
                         }
                     }
                     break;
@@ -230,8 +229,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
         }
 
         // accept skip as well as offset
-        if ( !isset( $this->_requestPayload['offset'] ) &&
-             ( $_offset = Option::get( $this->_requestPayload, 'skip' ) )
+        if ( !isset( $this->_requestPayload['offset'] ) && ( $_offset = Option::get( $this->_requestPayload, 'skip' ) )
         )
         {
             $this->_requestPayload['offset'] = $_offset;
@@ -415,7 +413,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             throw new BadRequestException( 'No record(s) detected in request.' );
         }
 
-        $this->_triggerActionEvent( $this->_requestPayload );
+        $this->_triggerActionEvent( $this->_response );
 
         if ( $this->_singleRecordAmnesty )
         {
@@ -446,7 +444,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
             throw new BadRequestException( 'No record(s) detected in request.' );
         }
 
-        $this->_triggerActionEvent( $this->_requestPayload );
+        $this->_triggerActionEvent( $this->_response );
 
         if ( !empty( $this->_resourceId ) )
         {
@@ -509,7 +507,7 @@ abstract class BaseSystemRestResource extends BasePlatformRestResource
      */
     protected function _handleDelete()
     {
-        $this->_triggerActionEvent( $this->_requestPayload );
+        $this->_triggerActionEvent( $this->_response );
 
         if ( !empty( $this->_resourceId ) )
         {

@@ -28,6 +28,7 @@ use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FileSystem;
+use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -318,11 +319,16 @@ SQL;
         }
 
         Log::info( 'Swagger cache build process complete' );
-        Pii::app()->trigger( SwaggerEvents::CACHE_REBUILT );
+        Platform::trigger( SwaggerEvents::CACHE_REBUILT );
 
         return $_out;
     }
 
+    /**
+     * @param string $file_path
+     *
+     * @return mixed
+     */
     protected static function _getSwaggerFile( $file_path )
     {
         /** @noinspection PhpIncludeInspection */
@@ -647,15 +653,11 @@ SQL;
                             Option::get( $replacementValues, 'container', $service->getContainerId() ),
                             $_folderPath = Option::get( $replacementValues, 'folder_path', $service->getFolderPath() ),
                             $_filePath = Option::get( $replacementValues, 'file_path', $service->getFilePath() ),
-                            //  This one removes any slashes from the final event name...
-                            null,
                         ),
                         array(
                             '{container}',
                             '{folder_path}',
                             '{file_path}',
-                            //  This one removes any slashes from the final event name...
-                            '/',
                         ),
                     );
 
@@ -850,8 +852,13 @@ SQL;
             }
         }
 
+        if ( 'upgrade' == FilterInput::get( INPUT_GET, 'path' ) )
+        {
+            Pii::redirect( '/web/upgrade' );
+        }
+
         //  Trigger a swagger.cache_cleared event
-        return Pii::app()->trigger( SwaggerEvents::CACHE_CLEARED );
+        return Platform::trigger( SwaggerEvents::CACHE_CLEARED );
     }
 
     /**

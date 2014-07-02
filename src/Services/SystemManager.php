@@ -566,22 +566,28 @@ SQL;
         {
             throw new \Exception( 'No version information in upgrade load.' );
         }
+
         $_versionUrl = 'https://github.com/dreamfactorysoftware/dsp-core/archive/' . $version . '.zip';
 
         // copy current directory to backup
         $_upgradeDir = Pii::getParam( 'base_path' ) . '/';
         $_backupDir = Platform::getStoragePath( '/backups/' );
+        
         if ( !file_exists( $_backupDir ) )
         {
             @\mkdir( $_backupDir, 0777, true );
         }
+        
         $_backupZipFile = $_backupDir . 'dsp_' . Pii::getParam( 'dsp.version' ) . '-' . time() . '.zip';
         $_backupZip = new \ZipArchive();
+        
         if ( true !== $_backupZip->open( $_backupZipFile, \ZIPARCHIVE::CREATE ) )
         {
             throw new \Exception( 'Error opening zip file.' );
         }
+        
         $_skip = array('.', '..', '.git', '.idea', 'log', 'vendor', 'shared', 'storage');
+        
         try
         {
             FileUtilities::addTreeToZip( $_backupZip, $_upgradeDir, '', $_skip );
@@ -599,14 +605,17 @@ SQL;
         // need to download and extract zip file of latest version
         $_tempDir = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR;
         $_tempZip = null;
+        
         try
         {
             $_tempZip = FileUtilities::importUrlFileToTemp( $_versionUrl );
             $zip = new \ZipArchive();
+            
             if ( true !== $zip->open( $_tempZip ) )
             {
                 throw new \Exception( 'Error opening zip file.' );
             }
+            
             if ( !$zip->extractTo( $_tempDir ) )
             {
                 throw new \Exception( "Error extracting zip contents to temp directory - $_tempDir." );
@@ -629,6 +638,7 @@ SQL;
 
         // now copy over
         $_tempDir .= 'dsp-core-' . $version;
+        
         if ( !file_exists( $_tempDir ) )
         {
             throw new \Exception( "Failed to find new dsp package $_tempDir." );
@@ -639,6 +649,7 @@ SQL;
         // now run installer script
         $_oldWorkingDir = getcwd();
         chdir( $_upgradeDir );
+        
         $_installCommand = 'export COMPOSER_HOME=' . $_upgradeDir . '; /bin/bash ./scripts/installer.sh -cDf 2>&1';
         exec( $_installCommand, $_installOut );
         Log::info( implode( PHP_EOL, $_installOut ) );
