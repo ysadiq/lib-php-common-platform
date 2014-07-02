@@ -204,7 +204,7 @@ $_base['apis'] = array(
                 'summary'          => 'createContainer() - Create container and/or add content.',
                 'nickname'         => 'createContainer',
                 'type'             => 'ContainerResponse',
-                'event_name'       => array( '{api_name}.{container}.insert', '{api_name}.container_created' ),
+                'event_name'       => array( '{api_name}.{container}.create', '{api_name}.container_created' ),
                 'parameters'       => array(
                     array(
                         'name'          => 'container',
@@ -422,7 +422,7 @@ $_base['apis'] = array(
                 'nickname'         => 'createFolder',
                 'type'             => 'FolderResponse',
                 'event_name'       => array(
-                    '{api_name}.{container}.{folder_path}.insert',
+                    '{api_name}.{container}.{folder_path}.create',
                     '{api_name}.{container}.folder_created'
                 ),
                 'parameters'       => array(

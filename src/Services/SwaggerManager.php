@@ -857,6 +857,9 @@ SQL;
         {
             //  Delete any cache files too...
             Platform::storeDelete( PlatformStore::buildCacheKey() );
+            
+            //  Try and remove any cache data from /tmp
+            @shell_exec( 'rm -rf /tmp/.dsp* /tmp/.dfcc-* /tmp/*.dfcc' );
 
             Pii::redirect( '/web/upgrade' );
         }
