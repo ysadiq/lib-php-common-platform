@@ -370,7 +370,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             throw new BadRequestException( 'No record(s) detected in request.' );
         }
 
-        $this->_triggerActionEvent( $this->_requestPayload );
+        $this->_triggerActionEvent( $this->_response );
 
         $_result = $this->createRecords( $this->_resource, $_records, $this->_requestPayload );
 
@@ -401,7 +401,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             throw new BadRequestException( 'No record(s) detected in request.' );
         }
 
-        $this->_triggerActionEvent( $this->_requestPayload );
+        $this->_triggerActionEvent( $this->_response );
 
         if ( !empty( $this->_resourceId ) )
         {
@@ -465,7 +465,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             throw new BadRequestException( 'No record(s) detected in request.' );
         }
 
-        $this->_triggerActionEvent( $this->_requestPayload );
+        $this->_triggerActionEvent( $this->_response );
 
         if ( !empty( $this->_resourceId ) )
         {
@@ -522,7 +522,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     protected function _handleDelete()
     {
-        $this->_triggerActionEvent( $this->_requestPayload );
+        $this->_triggerActionEvent( $this->_response );
 
         if ( !empty( $this->_resourceId ) )
         {
