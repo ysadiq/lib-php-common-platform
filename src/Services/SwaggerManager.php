@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Events\Enums\SwaggerEvents;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
@@ -28,7 +29,6 @@ use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FileSystem;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Sql;
@@ -852,8 +852,12 @@ SQL;
             }
         }
 
-        if ( 'upgrade' == FilterInput::get( INPUT_GET, 'path' ) )
+        //  Redirect back to upgrade page if this was from an upgrade request
+        if ( isset( $_POST, $_POST['UpgradeDspForm'], $_POST['UpgradeDspForm']['selected'] ) )
         {
+            //  Delete any cache files too...
+            Platform::storeDelete( PlatformStore::buildCacheKey() );
+
             Pii::redirect( '/web/upgrade' );
         }
 
