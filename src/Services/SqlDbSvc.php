@@ -450,26 +450,27 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
-            $_result = SqlDbUtilities::listStoredProcedures( $this->_dbConn, '', $_exclude );
-            if ( !empty( $_result ) )
-            {
-                $_name = static::STORED_PROCEDURE_RESOURCE . '/';
-                $_access = $this->getPermissions( $_name );
-                if ( !empty( $_access ) )
-                {
-                    $_resources[] = array('name' => $_name, 'access' => $_access);
-                }
-
-                foreach ( $_result as $_name )
-                {
-                    $_name = static::STORED_PROCEDURE_RESOURCE . '/' . $_name;
-                    $_access = $this->getPermissions( $_name );
-                    if ( !empty( $_access ) )
-                    {
-                        $_resources[] = array('name' => $_name, 'access' => $_access);
-                    }
-                }
-            }
+            // Don't include stored procedures for now
+//            $_result = SqlDbUtilities::listStoredProcedures( $this->_dbConn, '', $_exclude );
+//            if ( !empty( $_result ) )
+//            {
+//                $_name = static::STORED_PROCEDURE_RESOURCE . '/';
+//                $_access = $this->getPermissions( $_name );
+//                if ( !empty( $_access ) )
+//                {
+//                    $_resources[] = array('name' => $_name, 'access' => $_access);
+//                }
+//
+//                foreach ( $_result as $_name )
+//                {
+//                    $_name = static::STORED_PROCEDURE_RESOURCE . '/' . $_name;
+//                    $_access = $this->getPermissions( $_name );
+//                    if ( !empty( $_access ) )
+//                    {
+//                        $_resources[] = array('name' => $_name, 'access' => $_access);
+//                    }
+//                }
+//            }
 
             return array('resource' => $_resources);
         }
@@ -492,13 +493,14 @@ class SqlDbSvc extends BaseDbSvc
     {
         switch ( $this->_action )
         {
+            /** @noinspection PhpMissingBreakStatementInspection */
             case static::GET:
-            case static::POST:
                 if ( empty( $this->_resourceId ) )
                 {
                     return $this->listProcedures();
                 }
 
+            case static::POST:
                 $_type = Option::get( $this->_requestPayload, 'type' );
                 $_params = Option::get( $this->_requestPayload, 'params' );
                 $_wrapper = Option::get( $this->_requestPayload, 'wrapper' );
