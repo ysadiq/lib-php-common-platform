@@ -691,16 +691,16 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.45",
+            "version": "0.2.47",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "5f0501d309ae6379c58cd22e5a0c598ab082e22b"
+                "reference": "c2a9340a86b66e40657325eb4b9c0c997603c3df"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/5f0501d309ae6379c58cd22e5a0c598ab082e22b",
-                "reference": "5f0501d309ae6379c58cd22e5a0c598ab082e22b",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/c2a9340a86b66e40657325eb4b9c0c997603c3df",
+                "reference": "c2a9340a86b66e40657325eb4b9c0c997603c3df",
                 "shasum": ""
             },
             "require": {
@@ -745,7 +745,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-06-12 17:48:14"
+            "time": "2014-07-08 16:42:40"
         },
         {
             "name": "monolog/monolog",
@@ -1356,12 +1356,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/EventDispatcher.git",
-                "reference": "7a4f4b42886f8c2e35acb1071f157a0b8eb1bd39"
+                "reference": "dc2182b4275f153469321b99c3a675ef3cffafd4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/7a4f4b42886f8c2e35acb1071f157a0b8eb1bd39",
-                "reference": "7a4f4b42886f8c2e35acb1071f157a0b8eb1bd39",
+                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/dc2182b4275f153469321b99c3a675ef3cffafd4",
+                "reference": "dc2182b4275f153469321b99c3a675ef3cffafd4",
                 "shasum": ""
             },
             "require": {
@@ -1406,7 +1406,7 @@
             ],
             "description": "Symfony EventDispatcher Component",
             "homepage": "http://symfony.com",
-            "time": "2014-05-23 14:36:49"
+            "time": "2014-07-08 12:21:41"
         },
         {
             "name": "symfony/http-foundation",
@@ -2053,12 +2053,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Yaml.git",
-                "reference": "a0e90f173c33a57bfbb5561793d25864182239ad"
+                "reference": "4168f7b8e211cdc2d778ab78f35666580a6d7437"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Yaml/zipball/a0e90f173c33a57bfbb5561793d25864182239ad",
-                "reference": "a0e90f173c33a57bfbb5561793d25864182239ad",
+                "url": "https://api.github.com/repos/symfony/Yaml/zipball/4168f7b8e211cdc2d778ab78f35666580a6d7437",
+                "reference": "4168f7b8e211cdc2d778ab78f35666580a6d7437",
                 "shasum": ""
             },
             "require": {
@@ -2093,7 +2093,7 @@
             ],
             "description": "Symfony Yaml Component",
             "homepage": "http://symfony.com",
-            "time": "2014-06-20 17:41:51"
+            "time": "2014-07-08 12:21:41"
         }
     ],
     "aliases": [
