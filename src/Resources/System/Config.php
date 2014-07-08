@@ -131,12 +131,12 @@ class Config extends BaseSystemRestResource
         // changing config, bust caches
         if ( false === Platform::storeDelete( static::OPEN_REG_CACHE_KEY ) )
         {
-            Log::error( 'Unable to delete configuration cache key "' . static::OPEN_REG_CACHE_KEY . '"' );
+            Log::notice( 'Unable to delete configuration cache key "' . static::OPEN_REG_CACHE_KEY . '"' );
             Platform::storeSet( static::OPEN_REG_CACHE_KEY, null, static::CONFIG_CACHE_TTL );
         }
         if ( false === Platform::storeDelete( static::PROVIDERS_CACHE_KEY ) )
         {
-            Log::error( 'Unable to delete configuration cache key "' . static::PROVIDERS_CACHE_KEY . '"' );
+            Log::notice( 'Unable to delete configuration cache key "' . static::PROVIDERS_CACHE_KEY . '"' );
             Platform::storeSet( static::PROVIDERS_CACHE_KEY, null, static::CONFIG_CACHE_TTL );
         }
 
@@ -157,7 +157,7 @@ class Config extends BaseSystemRestResource
                     // changing config, bust cache
                     if ( false === Platform::storeDelete( static::LOOKUP_CACHE_KEY ) )
                     {
-                        Log::error( 'Unable to delete configuration cache key "' . static::LOOKUP_CACHE_KEY . '"' );
+                        Log::notice( 'Unable to delete configuration cache key "' . static::LOOKUP_CACHE_KEY . '"' );
                         Platform::storeSet( static::LOOKUP_CACHE_KEY, null, static::CONFIG_CACHE_TTL );
                     }
                 }
@@ -211,8 +211,7 @@ class Config extends BaseSystemRestResource
             $_config = array(
                 //  General settings
                 'allow_admin_remote_logins' => Pii::getParam( 'dsp.allow_admin_remote_logins', false ),
-                'allow_remote_logins'       => ( Pii::getParam( 'dsp.allow_remote_logins', false ) &&
-                                                 Option::getBool( $this->_response, 'allow_open_registration' ) ),
+                'allow_remote_logins'       => ( Pii::getParam( 'dsp.allow_remote_logins', false ) && Option::getBool( $this->_response, 'allow_open_registration' ) ),
                 'remote_login_providers'    => null,
                 'is_hosted'                 => $_fabricHosted = Pii::getParam( 'dsp.fabric_hosted', false ),
                 'is_private'                => Fabric::hostedPrivatePlatform(),
@@ -293,7 +292,7 @@ class Config extends BaseSystemRestResource
         {
             if ( false === Platform::storeDelete( static::OPEN_REG_CACHE_KEY ) )
             {
-                Log::error( 'Unable to delete configuration cache key "' . static::OPEN_REG_CACHE_KEY . '"' );
+                Log::notice( 'Unable to delete configuration cache key "' . static::OPEN_REG_CACHE_KEY . '"' );
                 Platform::storeSet( static::OPEN_REG_CACHE_KEY, null, static::CONFIG_CACHE_TTL );
             }
         }
@@ -305,7 +304,7 @@ class Config extends BaseSystemRestResource
         }
 
         /** @var $_config \DreamFactory\Platform\Yii\Models\Config */
-        $_config = ResourceStore::model( 'config' )->find( array( 'select' => $COLUMNS ) );
+        $_config = ResourceStore::model( 'config' )->find( array('select' => $COLUMNS) );
 
         if ( null === $_config )
         {
@@ -337,7 +336,7 @@ class Config extends BaseSystemRestResource
         {
             if ( false === Platform::storeDelete( static::LOOKUP_CACHE_KEY ) )
             {
-                Log::error( 'Unable to delete configuration cache key "' . static::LOOKUP_CACHE_KEY . '"' );
+                Log::notice( 'Unable to delete configuration cache key "' . static::LOOKUP_CACHE_KEY . '"' );
                 Platform::storeSet( static::LOOKUP_CACHE_KEY, null, static::CONFIG_CACHE_TTL );
             }
         }
@@ -354,7 +353,7 @@ class Config extends BaseSystemRestResource
         $_lookups = array();
         if ( !empty( $_models ) )
         {
-            $_template = array( 'name', 'value', 'private' );
+            $_template = array('name', 'value', 'private');
 
             foreach ( $_models as $_row )
             {
@@ -381,7 +380,7 @@ class Config extends BaseSystemRestResource
         {
             if ( false === Platform::storeDelete( static::PROVIDERS_CACHE_KEY ) )
             {
-                Log::error( 'Unable to delete configuration cache key "' . static::PROVIDERS_CACHE_KEY . '"' );
+                Log::notice( 'Unable to delete configuration cache key "' . static::PROVIDERS_CACHE_KEY . '"' );
                 Platform::storeSet( static::PROVIDERS_CACHE_KEY, null, static::CONFIG_CACHE_TTL );
             }
         }
@@ -432,7 +431,7 @@ class Config extends BaseSystemRestResource
         //*************************************************************************
 
         /** @var Provider[] $_models */
-        $_models = ResourceStore::model( 'provider' )->findAll( array( 'order' => 'provider_name' ) );
+        $_models = ResourceStore::model( 'provider' )->findAll( array('order' => 'provider_name') );
 
         if ( !empty( $_models ) )
         {
@@ -447,12 +446,12 @@ class Config extends BaseSystemRestResource
                     {
                         if ( $_priorRow['api_name'] == $_row->api_name )
                         {
-                            unset( $_remoteProviders[ $_index ] );
+                            unset( $_remoteProviders[$_index] );
                             break;
                         }
                     }
 
-                    $_remoteProviders[] = array_merge( $_row->getAttributes(), array( 'config_text' => $_config ) );
+                    $_remoteProviders[] = array_merge( $_row->getAttributes(), array('config_text' => $_config) );
                 }
 
                 unset( $_row );

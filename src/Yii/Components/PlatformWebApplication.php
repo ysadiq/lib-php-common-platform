@@ -116,7 +116,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @var array[] The namespaces in use by this system. Used by the routing engine
      */
-    protected static $_namespaceMap = array( NamespaceTypes::MODELS => array(), NamespaceTypes::SERVICES => array(), NamespaceTypes::RESOURCES => array() );
+    protected static $_namespaceMap = array(NamespaceTypes::MODELS => array(), NamespaceTypes::SERVICES => array(), NamespaceTypes::RESOURCES => array());
     /**
      * @var array An indexed array of white-listed hosts (ajax.example.com or foo.bar.com or just bar.com)
      */
@@ -179,8 +179,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
 
         //	Setup the request handler and events
-        $this->onBeginRequest = array( $this, '_onBeginRequest' );
-        $this->onEndRequest = array( $this, '_onEndRequest' );
+        $this->onBeginRequest = array($this, '_onBeginRequest');
+        $this->onEndRequest = array($this, '_onEndRequest');
     }
 
     /**
@@ -350,6 +350,13 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     protected function _onEndRequest( \CEvent $event )
     {
         $this->stopProfiler( 'app.request' );
+//
+//        if ( Pii::isEmpty( $_sid = session_id() ) )
+//        {
+//            $_sid = '**NONE**';
+//        }
+//
+//        Log::debug( '  * <path> sid: <' . $this->_requestObject->getRequestUri() . '> ' . $_sid . ' (' . session_status() . ')' );
     }
 
     /**
@@ -495,8 +502,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             return true;
         }
 
-        $_originUri = null;
-        $_requestUri = Pii::request( false )->getSchemeAndHttpHost();
         $_origin = trim( Option::server( 'HTTP_ORIGIN' ) );
 
         //	Was an origin header passed? If not, don't do CORS.
@@ -504,6 +509,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         {
             return true;
         }
+
+        $_originUri = null;
+        $_requestUri = $this->_requestObject->getSchemeAndHttpHost();
 
         if ( $this->_logCorsInfo )
         {
@@ -546,14 +554,13 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 return false;
             }
 
-//			Log::debug( 'Committing origin to the CORS cache > Source: ' . $_requestUri . ' > Origin: ' . $_originUri );
-            $_cache[ $_key ] = $_originUri;
-            $_cacheVerbs[ $_key ] = $_allowedMethods;
+            $_cache[$_key] = $_originUri;
+            $_cacheVerbs[$_key] = $_allowedMethods;
         }
         else
         {
-            $_originUri = trim( $_cache[ $_key ] );
-            $_allowedMethods = $_cacheVerbs[ $_key ];
+            $_originUri = trim( $_cache[$_key] );
+            $_allowedMethods = $_cacheVerbs[$_key];
         }
 
         $_headers = array();
@@ -579,8 +586,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         //	Store in cache...
-        $_cache[ $_key ] = $_originUri;
-        $_cacheVerbs[ $_key ] = array(
+        $_cache[$_key] = $_originUri;
+        $_cacheVerbs[$_key] = array(
             'allowed_methods' => $_allowedMethods,
             'headers'         => $_headers
         );
@@ -763,9 +770,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _normalizeUri( $parts )
     {
-        return !is_array( $parts )
-            ? $parts :
-            ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null );
+        return !is_array( $parts ) ? $parts
+            : ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null );
     }
 
     /**
@@ -973,7 +979,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function setResourceNamespaces( $resourceNamespaces )
     {
-        static::$_namespaceMap[ NamespaceTypes::RESOURCES ] = $resourceNamespaces;
+        static::$_namespaceMap[NamespaceTypes::RESOURCES] = $resourceNamespaces;
 
         return $this;
     }
@@ -983,7 +989,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function getResourceNamespaces()
     {
-        return static::$_namespaceMap[ NamespaceTypes::RESOURCES ];
+        return static::$_namespaceMap[NamespaceTypes::RESOURCES];
     }
 
     /**
@@ -1008,7 +1014,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function setModelNamespaces( $modelNamespaces )
     {
-        static::$_namespaceMap[ NamespaceTypes::MODELS ] = $modelNamespaces;
+        static::$_namespaceMap[NamespaceTypes::MODELS] = $modelNamespaces;
 
         return $this;
     }
@@ -1018,7 +1024,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function getModelNamespaces()
     {
-        return static::$_namespaceMap[ NamespaceTypes::MODELS ];
+        return static::$_namespaceMap[NamespaceTypes::MODELS];
     }
 
     /**
@@ -1042,7 +1048,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public static function getNamespaceMap( $which = null )
     {
-        return $which ? static::$_namespaceMap[ $which ] : static::$_namespaceMap;
+        return $which ? static::$_namespaceMap[$which] : static::$_namespaceMap;
     }
 
     /**
@@ -1081,11 +1087,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         if ( $prepend )
         {
-            array_unshift( static::$_namespaceMap[ $which ], array( $namespace, $path ) );
+            array_unshift( static::$_namespaceMap[$which], array($namespace, $path) );
         }
         else
         {
-            static::$_namespaceMap[ $which ][ $namespace ] = $path;
+            static::$_namespaceMap[$which][$namespace] = $path;
         }
     }
 

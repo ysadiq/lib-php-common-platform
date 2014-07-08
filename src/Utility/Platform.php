@@ -312,18 +312,7 @@ class Platform
             )
         );
 
-        $_uuid =
-            '{' .
-            substr( $_hash, 0, 8 ) .
-            '-' .
-            substr( $_hash, 8, 4 ) .
-            '-' .
-            substr( $_hash, 12, 4 ) .
-            '-' .
-            substr( $_hash, 16, 4 ) .
-            '-' .
-            substr( $_hash, 20, 12 ) .
-            '}';
+        $_uuid = '{' . substr( $_hash, 0, 8 ) . '-' . substr( $_hash, 8, 4 ) . '-' . substr( $_hash, 12, 4 ) . '-' . substr( $_hash, 16, 4 ) . '-' . substr( $_hash, 20, 12 ) . '}';
 
         return $_uuid;
     }
@@ -351,7 +340,7 @@ class Platform
     }
 
     //*************************************************************************
-    //	Persistent Storage
+    //	Persistent Storage (Disk and Memcache)
     //*************************************************************************
 
     /**
@@ -382,7 +371,7 @@ class Platform
      */
     public static function storeGet( $key, $defaultValue = null, $remove = false, $ttl = PlatformStore::DEFAULT_TTL )
     {
-        return static::getStore()->get( $key, $defaultValue, $remove, $ttl );
+        return static::_doGet( $key, $defaultValue, $remove, $ttl );
     }
 
     /**
@@ -397,27 +386,27 @@ class Platform
      */
     public static function storeSet( $key, $data, $ttl = PlatformStore::DEFAULT_TTL )
     {
-        return static::getStore()->set( $key, $data, $ttl );
+        return static::_doSet( $key, $data, $ttl );
     }
 
     /**
-     * @param string $id
+     * @param string $key
      *
      * @return bool
      */
-    public static function storeContains( $id )
+    public static function storeContains( $key )
     {
-        return static::getStore()->contains( $id );
+        return static::_doContains( $key );
     }
 
     /**
-     * @param string $id
+     * @param string $key
      *
      * @return bool
      */
-    public static function storeDelete( $id )
+    public static function storeDelete( $key )
     {
-        return static::getStore()->delete( $id );
+        return static::_doDelete( $key );
     }
 
     /**
@@ -425,7 +414,235 @@ class Platform
      */
     public static function storeDeleteAll()
     {
-        return static::getStore()->deleteAll();
+        return static::_doDeleteAll();
+    }
+
+    /**
+     * @param string $key
+     * @param mixed  $defaultValue
+     * @param bool   $remove
+     *
+     * @return array|null|string
+     */
+    public static function mcGet( $key, $defaultValue = null, $remove = false )
+    {
+        $_singleton = false;
+        $_cache = static::getMemcache();
+
+        if ( !is_array( $key ) )
+        {
+            $key = array($key);
+            $_singleton = true;
+        }
+
+        $_result = array();
+
+        foreach ( $key as $_key )
+        {
+            if ( $_cache )
+            {
+                if ( false === ( $_value = $_cache->get( $_key ) ) )
+                {
+                    static::mcSet( $_key, $defaultValue );
+
+                    $_value = $defaultValue;
+                }
+
+                if ( $remove )
+                {
+                    $_cache->delete( $_key );
+                }
+
+                $_result[$_key] = $_value;
+
+                continue;
+            }
+
+            //  Degrade to platform store
+            $_result[$_key] = static::storeGet( $_key, $defaultValue, $remove );
+        }
+
+        return $_singleton ? current( $_result ) : $_result;
+    }
+
+    /**
+     * @param string|array $key
+     * @param mixed        $value
+     * @param int          $flag
+     * @param int          $ttl
+     *
+     * @return bool|array
+     */
+    public static function mcSet( $key, $value = null, $flag = 0, $ttl = self::MEMCACHE_TTL )
+    {
+        return static::_doSet( $key, $value, $ttl, $flag );
+    }
+
+    /**
+     * @return \Memcached|boolean
+     */
+    public static function getMemcache()
+    {
+        if ( !Pii::getParam( 'dsp.use_memcached', false ) || !class_exists( '\\Memcached', false ) )
+        {
+            return false;
+        }
+
+        if ( null === static::$_memcache )
+        {
+            static::$_memcache = new \Memcached( __CLASS__ );
+
+            $_servers = Pii::getParam( 'dsp.memcached.servers', array() );
+
+            foreach ( $_servers as $_server )
+            {
+                if ( !static::$_memcache->addServer(
+                    Option::get( $_server, 'host', static::MEMCACHE_HOST ),
+                    Option::get( $_server, 'port', static::MEMCACHE_PORT ),
+                    Option::get( $_server, 'weight', 0 )
+                )
+                )
+                {
+                    return static::$_memcache = false;
+                }
+            }
+        }
+
+        return static::$_memcache;
+    }
+
+    /**
+     * @param string $key
+     * @param mixed  $value
+     * @param int    $ttl
+     * @param int    $flag
+     *
+     * @return bool|bool[]
+     */
+    protected static function _doSet( $key, $value = null, $ttl = self::MEMCACHE_TTL, $flag = 0 )
+    {
+        //  Get the cache object
+        $_cache = static::getMemcache();
+        $_store = static::getStore();
+
+        $_result = array();
+        $_singleton = false;
+
+        if ( !is_array( $key ) )
+        {
+            $key = array($key => $value);
+            $_singleton = true;
+        }
+
+        foreach ( $key as $_key => $_value )
+        {
+            $_result[$_key] = $_cache ? $_cache->set( $_key, $_value, $ttl ) : $_store->set( $_key, $_value, $ttl );
+        }
+
+        return $_singleton ? current( $_result ) : $_result;
+    }
+
+    /**
+     * @param string $key
+     * @param mixed  $defaultValue
+     * @param bool   $remove
+     * @param int    $ttl
+     *
+     * @return bool|bool[]
+     */
+    protected static function _doGet( $key, $defaultValue = null, $remove = false, $ttl = self::MEMCACHE_TTL )
+    {
+        //  Get the cache object
+        $_cache = static::getMemcache();
+        $_store = static::getStore();
+
+        $_result = array();
+        $_singleton = false;
+
+        if ( !is_array( $key ) )
+        {
+            $key = array($key);
+            $_singleton = true;
+        }
+
+        foreach ( $key as $_key )
+        {
+            if ( $_cache )
+            {
+                if ( false === ( $_value = $_cache->get( $_key ) ) && \Memcached::RES_NOTFOUND === $_cache->getResultCode() )
+                {
+                    $_cache->set( $_key, $_value = $defaultValue, $ttl );
+                }
+
+                if ( $remove )
+                {
+                    $_cache->delete( $_key );
+                }
+            }
+            else
+            {
+                //  Degrade to platform store
+                $_value = $_store->contains( $_key ) ? $_store->get( $_key, $defaultValue, $remove, $ttl ) : $defaultValue;
+
+                if ( $remove )
+                {
+                    $_store->delete( $_key );
+                }
+            }
+
+            $_result[$_key] = $_value;
+        }
+
+        return $_singleton ? current( $_result ) : $_result;
+    }
+
+    /**
+     * @param string $key
+     * @param bool   $returnValue
+     *
+     * @return bool|mixed
+     */
+    protected static function _doContains( $key, $returnValue = false )
+    {
+        if ( false === ( $_cache = static::getMemcache() ) )
+        {
+            return static::getStore()->contains( $key );
+        }
+
+        if ( false === ( $_result = $_cache->get( $key ) ) && \Memcached::RES_NOTFOUND === $_cache->getResultCode() )
+        {
+            return false;
+        }
+
+        return $returnValue ? $_result : true;
+    }
+
+    /**
+     * @param string $key
+     *
+     * @return bool
+     */
+    protected static function _doDelete( $key )
+    {
+        if ( false === ( $_cache = static::getMemcache() ) )
+        {
+            return static::getStore()->delete( $key );
+        }
+
+        return $_cache->delete( $key );
+    }
+
+    /**
+     * @return bool
+     */
+    protected static function _doDeleteAll()
+    {
+        if ( false === ( $_cache = static::getMemcache() ) )
+        {
+            return static::getStore()->deleteAll();
+        }
+
+        return $_cache->flush();
     }
 
     //*************************************************************************
@@ -533,109 +750,15 @@ class Platform
         return $_dispatcher ?: $_dispatcher = Pii::app()->getDispatcher();
     }
 
-    /**
-     * @param string $key
-     * @param mixed  $defaultValue
-     * @param bool   $remove
-     *
-     * @return array|null|string
-     */
-    public static function mcGet( $key, $defaultValue = null, $remove = false )
-    {
-        $_singleton = false;
-        $_cache = static::_getMemcache();
+}
 
-        if ( !is_array( $key ) )
+if ( Pii::getParam( 'dsp.log_cache_stats' ) )
+{
+    Platform::on(
+        Pii::getParam( 'dsp.cache_stats_event' ),
+        function ( $eventName, $event, $dispatcher )
         {
-            $key = array( $key );
-            $_singleton = true;
+            Log::debug( 'Cache stats: ' . print_r( Platform::getStore()->getStats(), true ) );
         }
-
-        $_result = array();
-
-        foreach ( $key as $_key )
-        {
-            if ( $_cache )
-            {
-                if ( false === ( $_value = $_cache->get( $_key ) ) )
-                {
-                    static::mcSet( $_key, $defaultValue );
-
-                    $_value = $defaultValue;
-                }
-
-                if ( $remove )
-                {
-                    $_cache->delete( $_key );
-                }
-
-                $_result[ $_key ] = $_value;
-
-                continue;
-            }
-
-            //  Degrade to platform store
-            $_result[ $_key ] = static::storeGet( $_key, $defaultValue, $remove );
-        }
-
-        return $_singleton ? current( $_result ) : $_result;
-    }
-
-    /**
-     * @param string|array $key
-     * @param mixed        $value
-     * @param int          $flag
-     * @param int          $ttl
-     *
-     * @return bool|array
-     */
-    public static function mcSet( $key, $value = null, $flag = 0, $ttl = self::MEMCACHE_TTL )
-    {
-        $_singleton = false;
-
-        if ( !is_array( $key ) )
-        {
-            $key = array( $key => $value );
-            $value = null;
-            $_singleton = true;
-        }
-
-        $_cache = static::_getMemcache();
-
-        $_result = array();
-
-        foreach ( $key as $_key => $_value )
-        {
-            $_result[ $_key ] =
-                ( $_cache ? $_cache->set( $_key, $_value, $ttl ) : static::storeSet( $_key, $_value, $ttl ) );
-        }
-
-        return $_singleton ? current( $_result ) : $_result;
-    }
-
-    /**
-     * @return \Memcached|boolean
-     */
-    protected static function _getMemcache()
-    {
-        if ( !class_exists( '\\Memcached', false ) )
-        {
-            return false;
-        }
-
-        if ( null === static::$_memcache )
-        {
-            static::$_memcache = new \Memcached( __CLASS__ );
-
-            if ( !static::$_memcache->addServer( static::MEMCACHE_HOST, static::MEMCACHE_PORT ) )
-            {
-//                Log::debug( 'Platform memcache not available.' );
-                return static::$_memcache = false;
-            }
-
-//            Log::debug( 'Platform memcache enabled.' );
-        }
-
-        return static::$_memcache;
-    }
+    );
 }
