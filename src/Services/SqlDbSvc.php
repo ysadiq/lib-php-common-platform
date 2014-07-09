@@ -49,6 +49,10 @@ class SqlDbSvc extends BaseDbSvc
      * @var string The name of the remote cache component
      */
     const REMOTE_CACHE_ID = 'cache.remote';
+    /**
+     * Resource tag for dealing with stored procedures
+     */
+    const STORED_PROCEDURE_RESOURCE = '_proc';
 
     //*************************************************************************
     //	Members
@@ -272,8 +276,18 @@ class SqlDbSvc extends BaseDbSvc
         }
     }
 
+    protected function resourceIsTable( $resource )
+    {
+        if ( static::STORED_PROCEDURE_RESOURCE == $resource )
+        {
+            return false;
+        }
+
+        return parent::resourceIsTable( $resource );
+    }
+
     /**
-     * Corrects capitalization, etc. on table names
+     * Corrects capitalization, etc. on table names, ensures it is not a system table
      *
      * @param $name
      *
@@ -282,19 +296,6 @@ class SqlDbSvc extends BaseDbSvc
      * @throws \Exception
      */
     public function correctTableName( $name )
-    {
-        return SqlDbUtilities::correctTableName( $this->_dbConn, $name );
-    }
-
-    /**
-     * Ensures a table is not a system table and that you have permission to access it
-     *
-     * @param string $table
-     * @param string $action
-     *
-     * @throws \Exception
-     */
-    protected function validateTableAccess( &$table, $action = null )
     {
         if ( $this->_isNative )
         {
@@ -305,15 +306,75 @@ class SqlDbSvc extends BaseDbSvc
                 $_length = strlen( SystemManager::SYSTEM_TABLE_PREFIX );
             }
 
-            if ( 0 === substr_compare( $table, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
+            if ( 0 === substr_compare( $name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
             {
-                throw new NotFoundException( "Table '$table' not found." );
+                throw new NotFoundException( "Table '$name' not found." );
             }
         }
 
-        $table = $this->correctTableName( $table );
+        return SqlDbUtilities::correctTableName( $this->_dbConn, $name );
+    }
 
-        parent::validateTableAccess( $table, $action );
+    /**
+     * @param string $resource
+     * @param string $resource_id
+     * @param string $action
+     *
+     * @internal param string $resourceId
+     */
+    protected function validateResourceAccess( $resource, $resource_id, $action )
+    {
+        if ( !empty( $resource ) )
+        {
+            switch ( $resource )
+            {
+                case static::STORED_PROCEDURE_RESOURCE:
+                    if ( !empty( $resource_id ) )
+                    {
+                        $resource = $resource . '/' . $resource_id;
+                    }
+                    break;
+                case static::SCHEMA_RESOURCE:
+                    if ( !empty( $resource_id ) )
+                    {
+                        $resource_id = $this->correctTableName( $resource_id );
+                    }
+                    break;
+                default:
+                    $resource = $this->correctTableName( $resource );
+                    break;
+            }
+
+        }
+
+        parent::validateResourceAccess( $resource, $resource_id, $action );
+    }
+
+    /**
+     * @param string $procedure
+     * @param string $action
+     *
+     * @throws BadRequestException
+     */
+    protected function validateStoredProcedureAccess( &$procedure, $action = null )
+    {
+        // finally check that the current user has privileges to access this table
+        $this->validateResourceAccess( static::STORED_PROCEDURE_RESOURCE, $procedure, $action );
+    }
+
+    /**
+     * @return array|bool
+     */
+    protected function _handleResource()
+    {
+        switch ( $this->_resource )
+        {
+            case static::STORED_PROCEDURE_RESOURCE:
+                return $this->_handleStoredProcedures();
+                break;
+        }
+
+        return parent::_handleResource();
     }
 
     /**
@@ -323,23 +384,35 @@ class SqlDbSvc extends BaseDbSvc
     {
         parent::_detectRequestMembers();
 
-        // All calls can request related data to be returned
-        $_related = Option::get( $this->_requestPayload, 'related' );
-        if ( !empty( $_related ) && is_string( $_related ) && ( '*' !== $_related ) )
+        if ( !empty( $this->_resource ) )
         {
-            $_relations = array();
-            if ( !is_array( $_related ) )
+            switch ( $this->_resource )
             {
-                $_related = array_map( 'trim', explode( ',', $_related ) );
-            }
-            foreach ( $_related as $_relative )
-            {
-                $_extraFields = Option::get( $this->_requestPayload, $_relative . '_fields', '*' );
-                $_extraOrder = Option::get( $this->_requestPayload, $_relative . '_order', '' );
-                $_relations[] = array('name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder);
-            }
+                case static::STORED_PROCEDURE_RESOURCE:
+                case static::SCHEMA_RESOURCE:
+                    break;
+                default:
+                    // All calls can request related data to be returned
+                    $_related = Option::get( $this->_requestPayload, 'related' );
+                    if ( !empty( $_related ) && is_string( $_related ) && ( '*' !== $_related ) )
+                    {
+                        $_relations = array();
+                        if ( !is_array( $_related ) )
+                        {
+                            $_related = array_map( 'trim', explode( ',', $_related ) );
+                        }
+                        foreach ( $_related as $_relative )
+                        {
+                            $_extraFields = Option::get( $this->_requestPayload, $_relative . '_fields', '*' );
+                            $_extraOrder = Option::get( $this->_requestPayload, $_relative . '_order', '' );
+                            $_relations[] =
+                                array('name' => $_relative, 'fields' => $_extraFields, 'order' => $_extraOrder);
+                        }
 
-            $this->_requestPayload['related'] = $_relations;
+                        $this->_requestPayload['related'] = $_relations;
+                    }
+                    break;
+            }
         }
 
         return $this;
@@ -361,9 +434,9 @@ class SqlDbSvc extends BaseDbSvc
         }
         try
         {
-            $_result = SqlDbUtilities::describeDatabase( $this->_dbConn, '', $_exclude );
-
             $_resources = array();
+
+            $_result = SqlDbUtilities::describeDatabase( $this->_dbConn, '', $_exclude );
             foreach ( $_result as $_table )
             {
                 if ( null != $_name = Option::get( $_table, 'name' ) )
@@ -377,6 +450,28 @@ class SqlDbSvc extends BaseDbSvc
                 }
             }
 
+            // Don't include stored procedures for now
+//            $_result = SqlDbUtilities::listStoredProcedures( $this->_dbConn, '', $_exclude );
+//            if ( !empty( $_result ) )
+//            {
+//                $_name = static::STORED_PROCEDURE_RESOURCE . '/';
+//                $_access = $this->getPermissions( $_name );
+//                if ( !empty( $_access ) )
+//                {
+//                    $_resources[] = array('name' => $_name, 'access' => $_access);
+//                }
+//
+//                foreach ( $_result as $_name )
+//                {
+//                    $_name = static::STORED_PROCEDURE_RESOURCE . '/' . $_name;
+//                    $_access = $this->getPermissions( $_name );
+//                    if ( !empty( $_access ) )
+//                    {
+//                        $_resources[] = array('name' => $_name, 'access' => $_access);
+//                    }
+//                }
+//            }
+
             return array('resource' => $_resources);
         }
         catch ( RestException $_ex )
@@ -387,6 +482,112 @@ class SqlDbSvc extends BaseDbSvc
         {
             throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
             )}" );
+        }
+    }
+
+    /**
+     * @return array|bool
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     */
+    protected function _handleStoredProcedures()
+    {
+        switch ( $this->_action )
+        {
+            /** @noinspection PhpMissingBreakStatementInspection */
+            case static::GET:
+                if ( empty( $this->_resourceId ) )
+                {
+                    return $this->listProcedures();
+                }
+
+            case static::POST:
+                $_params = Option::get( $this->_requestPayload, 'params' );
+                $_wrapper = Option::get( $this->_requestPayload, 'wrapper' );
+                $_schema = Option::get( $this->_requestPayload, 'schema' );
+
+                $_result = $this->callProcedure( $this->_resourceId, $_params, $_schema, $_wrapper );
+                break;
+
+//            case static::PUT:
+//            case static::PATCH:
+//            case static::MERGE:
+//            case static::DELETE:
+            default:
+                throw new BadRequestException( 'Verb not currently supported on stored procedures.' );
+                break;
+        }
+
+        return $_result;
+    }
+
+    /**
+     * @throws \Exception
+     * @return array
+     */
+    public function listProcedures()
+    {
+        $_exclude = '';
+        if ( $this->_isNative )
+        {
+            // check for system tables
+            $_exclude = SystemManager::SYSTEM_TABLE_PREFIX;
+        }
+        try
+        {
+            $_result = SqlDbUtilities::listStoredProcedures( $this->_dbConn, '', $_exclude );
+
+            $_resources = array();
+            foreach ( $_result as $_name )
+            {
+                $_access = $this->getPermissions( static::STORED_PROCEDURE_RESOURCE . '/' . $_name );
+                if ( !empty( $_access ) )
+                {
+                    $_resources[] = array('name' => $_name, 'access' => $_access);
+                }
+            }
+
+            return array('resource' => $_resources);
+        }
+        catch ( RestException $_ex )
+        {
+            throw $_ex;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
+            )}" );
+        }
+    }
+
+    /**
+     * @param string $name
+     * @param array  $params
+     * @param array  $schema
+     * @param string $wrapper
+     *
+     * @throws \Exception
+     * @return array
+     */
+    public function callProcedure( $name, $params = null, $schema = null, $wrapper = null )
+    {
+        if ( empty( $name ) )
+        {
+            throw new BadRequestException( 'Stored procedure name can not be empty.' );
+        }
+
+        try
+        {
+            $_out = SqlDbUtilities::callProcedure( $this->_dbConn, $name, $params, $schema, $wrapper );
+
+            return $_out;
+        }
+        catch ( RestException $_ex )
+        {
+            throw $_ex;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to call stored procedure '$name'.\n{$_ex->getMessage()}" );
         }
     }
 

@@ -38,6 +38,11 @@ if ( !isset( $_addApis ) )
     $_addApis = array();
 }
 
+if ( !isset( $_addApis ) )
+{
+    $_addModels = array();
+}
+
 if ( !isset( $_baseDbOps ) )
 {
     $_baseDbOps = array(
@@ -1787,7 +1792,7 @@ $_models = array(
     ),
 );
 
-$_base['models'] = array_merge( $_base['models'], $_models );
+$_base['models'] = array_merge( $_base['models'], $_models, $_addModels );
 
 unset( $_commonProperties, $_commonResponses, $_models, $_baseDbOps, $_baseTableOps, $_baseRecordOps );
 
