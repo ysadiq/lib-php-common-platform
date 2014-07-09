@@ -505,7 +505,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_wrapper = Option::get( $this->_requestPayload, 'wrapper' );
                 $_schema = Option::get( $this->_requestPayload, 'schema' );
 
-                $_result = $this->callProcedure( $this->_resourceId, $_params, $_schema, $_wrapper );
+                return SqlDbUtilities::callProcedure( $this->_dbConn, $this->_resourceId, $_params, $_schema, $_wrapper );
                 break;
 
 //            case static::PUT:
@@ -516,8 +516,6 @@ class SqlDbSvc extends BaseDbSvc
                 throw new BadRequestException( 'Verb not currently supported on stored procedures.' );
                 break;
         }
-
-        return $_result;
     }
 
     /**
@@ -570,25 +568,7 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function callProcedure( $name, $params = null, $schema = null, $wrapper = null )
     {
-        if ( empty( $name ) )
-        {
-            throw new BadRequestException( 'Stored procedure name can not be empty.' );
-        }
-
-        try
-        {
-            $_out = SqlDbUtilities::callProcedure( $this->_dbConn, $name, $params, $schema, $wrapper );
-
-            return $_out;
-        }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to call stored procedure '$name'.\n{$_ex->getMessage()}" );
-        }
+        return SqlDbUtilities::callProcedure( $this->_dbConn, $name, $params, $schema, $wrapper );
     }
 
     // Handle administrative options, table add, delete, etc

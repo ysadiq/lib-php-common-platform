@@ -30,6 +30,7 @@ use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Scalar;
 use Kisma\Core\Utility\Sql;
 
 /**
@@ -237,9 +238,92 @@ class SqlDbUtilities implements SqlDbDriverTypes
      */
     public static function callProcedure( $db, $name, $params = null, $schema = null, $wrapper = null )
     {
+        if ( empty( $name ) )
+        {
+            throw new BadRequestException( 'Stored procedure name can not be empty.' );
+        }
+
+        if ( is_array( $params ) )
+        {
+            foreach ( $params as $_key => $_param )
+            {
+                // overcome shortcomings of passed in data
+                if ( null === $_pName = Option::get( $_param, 'name', null, false, true ) )
+                {
+                    $_pName = 'param_' . $_key;
+                    $params[$_key]['name'] = $_pName;
+                }
+                if ( null === $_pType = Option::get( $_param, 'param_type', null, false, true ) )
+                {
+                    $_pType = 'IN';
+                    $params[$_key]['param_type'] = $_pType;
+                }
+                if ( null === $_pValue = Option::get( $_param, 'value', null ) )
+                {
+                    $_pValue = null;
+                    $params[$_key]['value'] = $_pValue;
+                }
+                if ( null === $_rType = Option::get( $_param, 'type', null, false, true ) )
+                {
+                    $_rType = ( isset( $_pValue ) ) ? gettype( $_pValue ) : 'string';
+                    $params[$_key]['type'] = $_rType;
+                }
+            }
+        }
+        else
+        {
+            $params = array();
+        }
+
         try
         {
-            return $db->schema->callProcedure( $name, $params, $schema, $wrapper );
+            $_result = $db->schema->callProcedure( $name, $params );
+
+            // convert result field values to types according to schema received
+            if ( is_array( $schema ) )
+            {
+
+            }
+
+            // wrap the result set if desired
+            if ( !empty( $wrapper ) )
+            {
+                $_result = array($wrapper => $_result);
+            }
+
+            // add back output parameters to results
+            if ( !empty( $params ) )
+            {
+                foreach ( $params as $_param )
+                {
+                    $_pType = strtoupper( Option::get( $_param, 'param_type', 'IN' ) );
+                    switch ( $_pType )
+                    {
+                        case 'INOUT':
+                        case 'OUT':
+                            $_name = $_param['name'];
+                            $_type = $_param['type'];
+                            if ( null !== $_value = Option::get( $_param, 'value', null ) )
+                            {
+                                switch ( $_type )
+                                {
+                                    case 'integer':
+                                    case 'int':
+                                        $_value = intval( $_value );
+                                        break;
+                                    case 'boolean':
+                                    case 'bool':
+                                        $_value = Scalar::boolval( $_value );
+                                        break;
+                                }
+                            }
+                            $_result[$_name] = $_value;
+                            break;
+                    }
+                }
+            }
+
+            return $_result;
         }
         catch ( \Exception $ex )
         {
