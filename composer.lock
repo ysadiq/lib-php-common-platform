@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "a9e67915a099259bacfd65887b5653b3",
+    "hash": "b16bbd848dc02797c932aca9c7bcb4e6",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -274,9 +274,9 @@
             ],
             "authors": [
                 {
-                    "name": "Sykes, Jason",
+                    "name": "Jason Sykes",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Engineer, client-side"
+                    "role": "Lead Developer, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Javascript SDK",
@@ -398,7 +398,7 @@
                 {
                     "name": "Jason Sykes",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Developer, client-side"
+                    "role": "Lead Engineer, client-side"
                 },
                 {
                     "name": "Lee Hicks",
@@ -408,7 +408,7 @@
                 {
                     "name": "Todd Appleton",
                     "email": "toddappleton@dreamfactory.com",
-                    "role": "Lead Developer and QA, client-side"
+                    "role": "Lead Engineer, client-side; UX/QA"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Yii Components Library",
@@ -533,12 +533,12 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Exterminator"
+                    "role": "Lead Developer, server-side/client-side"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Exterminator"
+                    "role": "Lead Developer, server-side/client-side"
                 }
             ],
             "description": "Yii Web Programming Framework",
@@ -555,12 +555,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/guzzle3.git",
-                "reference": "49104c619b663038e636a819718adce3b27ba6f2"
+                "reference": "f7f3c2e66c9e60e6cc5b40298880588af52edf56"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle3/zipball/49104c619b663038e636a819718adce3b27ba6f2",
-                "reference": "49104c619b663038e636a819718adce3b27ba6f2",
+                "url": "https://api.github.com/repos/guzzle/guzzle3/zipball/f7f3c2e66c9e60e6cc5b40298880588af52edf56",
+                "reference": "f7f3c2e66c9e60e6cc5b40298880588af52edf56",
                 "shasum": ""
             },
             "require": {
@@ -639,7 +639,7 @@
                 "rest",
                 "web service"
             ],
-            "time": "2014-06-04 19:49:37"
+            "time": "2014-07-08 18:26:17"
         },
         {
             "name": "jeremeamia/SuperClosure",
@@ -691,16 +691,16 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.47",
+            "version": "0.2.50",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "c2a9340a86b66e40657325eb4b9c0c997603c3df"
+                "reference": "ee3494618b406b3c0906a60c64791a8cebd98fd6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/c2a9340a86b66e40657325eb4b9c0c997603c3df",
-                "reference": "c2a9340a86b66e40657325eb4b9c0c997603c3df",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/ee3494618b406b3c0906a60c64791a8cebd98fd6",
+                "reference": "ee3494618b406b3c0906a60c64791a8cebd98fd6",
                 "shasum": ""
             },
             "require": {
@@ -745,7 +745,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-07-08 16:42:40"
+            "time": "2014-07-09 21:04:27"
         },
         {
             "name": "monolog/monolog",
@@ -2110,6 +2110,7 @@
         "swiftmailer/swiftmailer": 0,
         "aws/aws-sdk-php": 0,
         "rackspace/php-opencloud": 0,
+        "dreamfactory/yii": 20,
         "dreamfactory/lib-php-common": 0,
         "dreamfactory/lib-php-common-yii": 0,
         "dreamfactory/oasys": 0,

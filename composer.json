@@ -35,7 +35,7 @@
 		"pear-pear.php.net/Net_URL2":        "*",
 		"pear-pear.php.net/Mail_Mime":       "*",
 		"pear-pear.php.net/Mail_mimeDecode": "*",
-		"dreamfactory/yii":                  "dev-develop as dev-master",
+		"dreamfactory/yii":                  "~1.1.13.1@dev",
 		"dreamfactory/lib-php-common":       "~1.5@stable",
 		"dreamfactory/lib-php-common-yii":   "~1.5@stable",
 		"dreamfactory/oasys":                "~0.4@stable",
