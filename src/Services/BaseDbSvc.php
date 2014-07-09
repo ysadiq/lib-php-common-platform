@@ -51,6 +51,10 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * Default record wrapping tag for single or array of records
      */
     const RECORD_WRAPPER = 'record';
+    /**
+     * Resource tag for dealing with table schema
+     */
+    const SCHEMA_RESOURCE = '_schema';
 
     //*************************************************************************
     //	Members
@@ -161,120 +165,119 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         // override - don't call parent class here
         $_posted = Option::clean( RestData::getPostedData( true, true ) );
 
-        if ( empty( $this->_resource ) )
+        if ( $this->resourceIsTable( $this->_resource ))
         {
-            // admin/schema requests
+            if ( !empty( $this->_resourceId ) )
+            {
+                if ( !empty( $_posted ) )
+                {
+                    // single records don't use the record wrapper, so wrap it
+                    $_posted = array(static::RECORD_WRAPPER => array($_posted));
+                }
+            }
+            elseif ( DataFormatter::isArrayNumeric( $_posted ) )
+            {
+                // import from csv, etc doesn't include a wrapper, so wrap it
+                $_posted = array(static::RECORD_WRAPPER => $_posted);
+            }
+            else
+            {
+                switch ( $this->_action )
+                {
+                    case static::POST:
+                    case static::PUT:
+                    case static::PATCH:
+                    case static::MERGE:
+                        // fix wrapper on posted single record
+                        if ( !isset( $_posted[static::RECORD_WRAPPER] ) )
+                        {
+                            $this->_singleRecordAmnesty = true;
+                            if ( !empty( $_posted ) )
+                            {
+                                // stuff it back in for event
+                                $_posted[static::RECORD_WRAPPER] = array($_posted);
+                            }
+                        }
+                        break;
+                }
+            }
+
             // MERGE URL parameters with posted data, posted data takes precedence
             $this->_requestPayload = array_merge( $_REQUEST, $_posted );
 
-            return $this;
-        }
-
-        if ( !empty( $this->_resourceId ) )
-        {
-            if ( !empty( $_posted ) )
+            if ( static::GET == $this->_action )
             {
-                // single records don't use the record wrapper, so wrap it
-                $_posted = array(static::RECORD_WRAPPER => array($_posted));
+                // default for GET should be "return all fields"
+                if ( !isset( $this->_requestPayload['fields'] ) )
+                {
+                    $this->_requestPayload['fields'] = '*';
+                }
             }
-        }
-        elseif ( DataFormatter::isArrayNumeric( $_posted ) )
-        {
-            // import from csv, etc doesn't include a wrapper, so wrap it
-            $_posted = array(static::RECORD_WRAPPER => $_posted);
+
+            // Add server side filtering properties
+            if ( null != $_ssFilters = Session::getServiceFilters( $this->_action, $this->_apiName, $this->_resource ) )
+            {
+                $this->_requestPayload['ss_filters'] = $_ssFilters;
+            }
+
+            // look for limit, accept top as well as limit
+            if ( !isset( $this->_requestPayload['limit'] ) && ( $_limit = Option::get( $this->_requestPayload, 'top' ) ) )
+            {
+                $this->_requestPayload['limit'] = $_limit;
+            }
+
+            // accept skip as well as offset
+            if ( !isset( $this->_requestPayload['offset'] ) && ( $_offset = Option::get( $this->_requestPayload, 'skip' ) )
+            )
+            {
+                $this->_requestPayload['offset'] = $_offset;
+            }
+
+            // accept sort as well as order
+            if ( !isset( $this->_requestPayload['order'] ) && ( $_order = Option::get( $this->_requestPayload, 'sort' ) ) )
+            {
+                $this->_requestPayload['order'] = $_order;
+            }
         }
         else
         {
-            switch ( $this->_action )
-            {
-                case static::POST:
-                case static::PUT:
-                case static::PATCH:
-                case static::MERGE:
-                    // fix wrapper on posted single record
-                    if ( !isset( $_posted[ static::RECORD_WRAPPER ] ) )
-                    {
-                        $this->_singleRecordAmnesty = true;
-                        if ( !empty( $_posted ) )
-                        {
-                            // stuff it back in for event
-                            $_posted[ static::RECORD_WRAPPER ] = array($_posted);
-                        }
-                    }
-                    break;
-            }
-        }
-
-        // MERGE URL parameters with posted data, posted data takes precedence
-        $this->_requestPayload = array_merge( $_REQUEST, $_posted );
-
-        if ( static::GET == $this->_action )
-        {
-            // default for GET should be "return all fields"
-            if ( !isset( $this->_requestPayload['fields'] ) )
-            {
-                $this->_requestPayload['fields'] = '*';
-            }
-        }
-
-        // Add server side filtering properties
-        if ( null != $_ssFilters = Session::getServiceFilters( $this->_action, $this->_apiName, $this->_resource ) )
-        {
-            $this->_requestPayload['ss_filters'] = $_ssFilters;
-        }
-
-        // look for limit, accept top as well as limit
-        if ( !isset( $this->_requestPayload['limit'] ) && ( $_limit = Option::get( $this->_requestPayload, 'top' ) ) )
-        {
-            $this->_requestPayload['limit'] = $_limit;
-        }
-
-        // accept skip as well as offset
-        if ( !isset( $this->_requestPayload['offset'] ) && ( $_offset = Option::get( $this->_requestPayload, 'skip' ) )
-        )
-        {
-            $this->_requestPayload['offset'] = $_offset;
-        }
-
-        // accept sort as well as order
-        if ( !isset( $this->_requestPayload['order'] ) && ( $_order = Option::get( $this->_requestPayload, 'sort' ) ) )
-        {
-            $this->_requestPayload['order'] = $_order;
+            // admin/schema/etc. requests
+            // MERGE URL parameters with posted data, posted data takes precedence
+            $this->_requestPayload = array_merge( $_REQUEST, $_posted );
         }
 
         return $this;
     }
 
-    /**
-     * @param string $table
-     * @param string $action
-     *
-     * @throws BadRequestException
-     */
-    protected function validateTableAccess( &$table, $action = null )
+    protected function resourceIsTable( $resource )
     {
-        if ( empty( $table ) )
-        {
-            throw new BadRequestException( 'Table name can not be empty.' );
-        }
-
-        $_action = ( empty( $action ) ) ? $this->_action : $action;
-
-        // finally check that the current user has privileges to access this table
-        $this->checkPermission( $_action, $table );
+        return !(empty($resource) || static::SCHEMA_RESOURCE == $resource);
     }
 
     /**
-     * {@InheritDoc}
+     * @param string $resource
+     * @param string $resource_id
+     * @param string $action
+     *
+     * @internal param string $resourceId
      */
-    protected function _preProcess()
+    protected function validateResourceAccess( $resource, $resource_id, $action )
     {
-        parent::_preProcess();
-
-        //	Do validation here
-        if ( !empty( $this->_resource ) )
+        if ( !empty( $resource ) )
         {
-            $this->validateTableAccess( $this->_resource );
+            switch ( $resource )
+            {
+                case static::SCHEMA_RESOURCE:
+                    if ( !empty( $resource_id ) )
+                    {
+                        $resource = $resource . '/' . $resource_id;
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            $this->checkPermission( $action, $resource );
         }
         else
         {
@@ -284,6 +287,45 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 $this->checkPermission( $this->_action );
             }
         }
+    }
+
+    /**
+     * @param string $table
+     * @param string $action
+     *
+     * @throws BadRequestException
+     */
+    protected function validateSchemaAccess( $table = null, $action = null )
+    {
+        $this->validateResourceAccess( static::SCHEMA_RESOURCE, $table, $action );
+    }
+
+    /**
+     * @param string $table
+     * @param string $action
+     *
+     * @throws BadRequestException
+     */
+    protected function validateTableAccess( $table, $action = null )
+    {
+        if ( empty( $table ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        // finally check that the current user has privileges to access this table
+        $this->validateResourceAccess( $table, null, $action );
+    }
+
+    /**
+     * {@InheritDoc}
+     */
+    protected function _preProcess()
+    {
+        //	Do validation here
+        $this->validateResourceAccess( $this->_resource, $this->_resourceId, $this->_action );
+
+        parent::_preProcess();
     }
 
     /**
@@ -299,7 +341,16 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             return $_result;
         }
 
-        return parent::_handleResource();
+        switch ( $this->_resource )
+        {
+            case static::SCHEMA_RESOURCE:
+                return $this->_handleSchema();
+                break;
+
+            default:
+                return parent::_handleResource();
+                break;
+        }
     }
 
     /**
@@ -2847,6 +2898,84 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     }
 
     // Handle administrative options, table add, delete, etc
+
+    /**
+     * @return array|bool
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     */
+    protected function _handleSchema()
+    {
+        $_result = false;
+
+        switch ( $this->_action )
+        {
+            case static::GET:
+                $_ids = Option::get( $this->_requestPayload, 'names' );
+                if ( empty( $_ids ) )
+                {
+                    return $this->_listResources();
+                }
+
+                $_result = $this->getTables( $_ids );
+                $_result = array('table' => $_result);
+                break;
+
+            case static::POST:
+                $_tables = Option::get( $this->_requestPayload, 'table' );
+
+                if ( empty( $_tables ) )
+                {
+                    $_result = $this->createTable( $this->_requestPayload );
+                }
+                else
+                {
+                    $_result = $this->createTables( $_tables );
+                    $_result = array('table' => $_result);
+                }
+                break;
+
+            case static::PUT:
+            case static::PATCH:
+            case static::MERGE:
+                $_tables = Option::get( $this->_requestPayload, 'table' );
+
+                if ( empty( $_tables ) )
+                {
+                    $_result = $this->updateTable( $this->_requestPayload );
+                }
+                else
+                {
+                    $_result = $this->updateTables( $_tables );
+                    $_result = array('table' => $_result);
+                }
+                break;
+
+            case static::DELETE:
+                $_ids = Option::get( $this->_requestPayload, 'names' );
+                if ( !empty( $_ids ) )
+                {
+                    $_result = $this->deleteTables( $_ids );
+                    $_result = array('table' => $_result);
+                }
+                else
+                {
+                    $_tables = Option::get( $this->_requestPayload, 'table' );
+
+                    if ( empty( $_tables ) )
+                    {
+                        $_result = $this->deleteTable( $this->_requestPayload );
+                    }
+                    else
+                    {
+                        $_result = $this->deleteTables( $_tables );
+                        $_result = array('table' => $_result);
+                    }
+                }
+                break;
+        }
+
+        return $_result;
+    }
 
     /**
      * @return array|bool
