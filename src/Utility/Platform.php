@@ -312,7 +312,18 @@ class Platform
             )
         );
 
-        $_uuid = '{' . substr( $_hash, 0, 8 ) . '-' . substr( $_hash, 8, 4 ) . '-' . substr( $_hash, 12, 4 ) . '-' . substr( $_hash, 16, 4 ) . '-' . substr( $_hash, 20, 12 ) . '}';
+        $_uuid =
+            '{' .
+            substr( $_hash, 0, 8 ) .
+            '-' .
+            substr( $_hash, 8, 4 ) .
+            '-' .
+            substr( $_hash, 12, 4 ) .
+            '-' .
+            substr( $_hash, 16, 4 ) .
+            '-' .
+            substr( $_hash, 20, 12 ) .
+            '}';
 
         return $_uuid;
     }
@@ -426,43 +437,7 @@ class Platform
      */
     public static function mcGet( $key, $defaultValue = null, $remove = false )
     {
-        $_singleton = false;
-        $_cache = static::getMemcache();
-
-        if ( !is_array( $key ) )
-        {
-            $key = array($key);
-            $_singleton = true;
-        }
-
-        $_result = array();
-
-        foreach ( $key as $_key )
-        {
-            if ( $_cache )
-            {
-                if ( false === ( $_value = $_cache->get( $_key ) ) )
-                {
-                    static::mcSet( $_key, $defaultValue );
-
-                    $_value = $defaultValue;
-                }
-
-                if ( $remove )
-                {
-                    $_cache->delete( $_key );
-                }
-
-                $_result[$_key] = $_value;
-
-                continue;
-            }
-
-            //  Degrade to platform store
-            $_result[$_key] = static::storeGet( $_key, $defaultValue, $remove );
-        }
-
-        return $_singleton ? current( $_result ) : $_result;
+        return static::_doGet( $key, $defaultValue, $remove );
     }
 
     /**
@@ -479,39 +454,6 @@ class Platform
     }
 
     /**
-     * @return \Memcached|boolean
-     */
-    public static function getMemcache()
-    {
-        if ( !Pii::getParam( 'dsp.use_memcached', false ) || !class_exists( '\\Memcached', false ) )
-        {
-            return false;
-        }
-
-        if ( null === static::$_memcache )
-        {
-            static::$_memcache = new \Memcached( __CLASS__ );
-
-            $_servers = Pii::getParam( 'dsp.memcached.servers', array() );
-
-            foreach ( $_servers as $_server )
-            {
-                if ( !static::$_memcache->addServer(
-                    Option::get( $_server, 'host', static::MEMCACHE_HOST ),
-                    Option::get( $_server, 'port', static::MEMCACHE_PORT ),
-                    Option::get( $_server, 'weight', 0 )
-                )
-                )
-                {
-                    return static::$_memcache = false;
-                }
-            }
-        }
-
-        return static::$_memcache;
-    }
-
-    /**
      * @param string $key
      * @param mixed  $value
      * @param int    $ttl
@@ -521,25 +463,7 @@ class Platform
      */
     protected static function _doSet( $key, $value = null, $ttl = self::MEMCACHE_TTL, $flag = 0 )
     {
-        //  Get the cache object
-        $_cache = static::getMemcache();
-        $_store = static::getStore();
-
-        $_result = array();
-        $_singleton = false;
-
-        if ( !is_array( $key ) )
-        {
-            $key = array($key => $value);
-            $_singleton = true;
-        }
-
-        foreach ( $key as $_key => $_value )
-        {
-            $_result[$_key] = $_cache ? $_cache->set( $_key, $_value, $ttl ) : $_store->set( $_key, $_value, $ttl );
-        }
-
-        return $_singleton ? current( $_result ) : $_result;
+        return Pii::appStoreSet( $key, $value, $ttl, $flag );
     }
 
     /**
@@ -552,48 +476,7 @@ class Platform
      */
     protected static function _doGet( $key, $defaultValue = null, $remove = false, $ttl = self::MEMCACHE_TTL )
     {
-        //  Get the cache object
-        $_cache = static::getMemcache();
-        $_store = static::getStore();
-
-        $_result = array();
-        $_singleton = false;
-
-        if ( !is_array( $key ) )
-        {
-            $key = array($key);
-            $_singleton = true;
-        }
-
-        foreach ( $key as $_key )
-        {
-            if ( $_cache )
-            {
-                if ( false === ( $_value = $_cache->get( $_key ) ) && \Memcached::RES_NOTFOUND === $_cache->getResultCode() )
-                {
-                    $_cache->set( $_key, $_value = $defaultValue, $ttl );
-                }
-
-                if ( $remove )
-                {
-                    $_cache->delete( $_key );
-                }
-            }
-            else
-            {
-                //  Degrade to platform store
-                $_value = $_store->contains( $_key ) ? $_store->get( $_key, $defaultValue, $remove, $ttl ) : $defaultValue;
-
-                if ( $remove )
-                {
-                    $_store->delete( $_key );
-                }
-            }
-
-            $_result[$_key] = $_value;
-        }
-
-        return $_singleton ? current( $_result ) : $_result;
+        return Pii::appStoreGet( $key, $defaultValue, $remove );
     }
 
     /**
@@ -604,17 +487,7 @@ class Platform
      */
     protected static function _doContains( $key, $returnValue = false )
     {
-        if ( false === ( $_cache = static::getMemcache() ) )
-        {
-            return static::getStore()->contains( $key );
-        }
-
-        if ( false === ( $_result = $_cache->get( $key ) ) && \Memcached::RES_NOTFOUND === $_cache->getResultCode() )
-        {
-            return false;
-        }
-
-        return $returnValue ? $_result : true;
+        return Pii::appStoreContains( $key );
     }
 
     /**
@@ -624,12 +497,7 @@ class Platform
      */
     protected static function _doDelete( $key )
     {
-        if ( false === ( $_cache = static::getMemcache() ) )
-        {
-            return static::getStore()->delete( $key );
-        }
-
-        return $_cache->delete( $key );
+        return Pii::appStoreDelete( $key );
     }
 
     /**
@@ -637,12 +505,7 @@ class Platform
      */
     protected static function _doDeleteAll()
     {
-        if ( false === ( $_cache = static::getMemcache() ) )
-        {
-            return static::getStore()->deleteAll();
-        }
-
-        return $_cache->flush();
+        return Pii::appStoreDeleteAll();
     }
 
     //*************************************************************************
