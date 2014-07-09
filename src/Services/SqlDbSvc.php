@@ -52,7 +52,7 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * Resource tag for dealing with stored procedures
      */
-    const STORED_PROCEDURE_RESOURCE = '_call';
+    const STORED_PROCEDURE_RESOURCE = '_proc';
 
     //*************************************************************************
     //	Members
@@ -501,11 +501,11 @@ class SqlDbSvc extends BaseDbSvc
                 }
 
             case static::POST:
-                $_type = Option::get( $this->_requestPayload, 'type' );
                 $_params = Option::get( $this->_requestPayload, 'params' );
                 $_wrapper = Option::get( $this->_requestPayload, 'wrapper' );
+                $_schema = Option::get( $this->_requestPayload, 'schema' );
 
-                $_result = $this->callProcedure( $this->_resourceId, $_type, $_params, $_wrapper );
+                $_result = $this->callProcedure( $this->_resourceId, $_params, $_schema, $_wrapper );
                 break;
 
 //            case static::PUT:
@@ -561,14 +561,14 @@ class SqlDbSvc extends BaseDbSvc
 
     /**
      * @param string $name
-     * @param string $type
      * @param array  $params
+     * @param array  $schema
      * @param string $wrapper
      *
      * @throws \Exception
      * @return array
      */
-    public function callProcedure( $name, $type = null, $params = null, $wrapper = null )
+    public function callProcedure( $name, $params = null, $schema = null, $wrapper = null )
     {
         if ( empty( $name ) )
         {
@@ -577,7 +577,7 @@ class SqlDbSvc extends BaseDbSvc
 
         try
         {
-            $_out = SqlDbUtilities::callProcedure( $this->_dbConn, $name, $type, $params, $wrapper );
+            $_out = SqlDbUtilities::callProcedure( $this->_dbConn, $name, $params, $schema, $wrapper );
 
             return $_out;
         }

@@ -124,7 +124,7 @@ $_addApis = array(
                 'responseMessages' => SwaggerManager::getCommonResponses(),
             ),
         ),
-        'description' => 'Operations for calling a stored procedure.',
+        'description' => 'Operations for SQL database stored procedures.',
     ),
 );
 
@@ -132,12 +132,16 @@ $_addModels = array(
     'ProcedureResponse'          => array(
         'id'         => 'ProcedureResponse',
         'properties' => array(
-            '_wrapper_if_supplied' => array(
+            '_wrapper_if_supplied_' => array(
                 'type'        => 'Array',
                 'description' => 'Array of returned data.',
                 'items'       => array(
                     'type'   => 'string'
                 ),
+            ),
+            '_out_param_name_' => array(
+                'type'        => 'string',
+                'description' => 'Name and value of any given output parameter.',
             ),
         ),
     ),
@@ -146,10 +150,22 @@ $_addModels = array(
         'properties' => array(
             'params'    => array(
                 'type'        => 'array',
-                'description' => 'Array of record identifiers.',
+                'description' => 'Optional array of input and output parameters.',
                 'items'       => array(
                     '$ref' => 'ProcedureParam',
                 ),
+            ),
+            'schema'    => array(
+                'type'        => 'array',
+                'description' => 'Optional array of name and type to be applied to returned data.',
+                'items'       => array(
+                    '$ref' => 'ProcedureResultSchema',
+                ),
+            ),
+            'name' => array(
+                'type'        => 'string',
+                'description' => "Name of the parameter, if not provided for OUT and INOUT types, " .
+                                 "'param_' + numeric index is used for return, i.e. 'param_0.'",
             ),
         ),
     ),
@@ -158,18 +174,36 @@ $_addModels = array(
         'properties' => array(
             'name' => array(
                 'type'        => 'string',
-                'description' => 'Name of the parameter, required for OUT and INOUT types.',
+                'description' => "Name of the parameter, if not provided for OUT and INOUT types, " .
+                                 "'param_' + numeric index is used for return, i.e. 'param_0.'",
             ),
-            'type' => array(
+            'param_type' => array(
                 'type'        => 'string',
-                'description' => 'IN, OUT, or INOUT.',
+                'description' => 'Parameter type of IN, OUT, or INOUT, defaults to IN.',
             ),
             'value' => array(
                 'type'        => 'string',
-                'description' => 'Value of the parameter, required for the IN and INOUT types.',
+                'description' => 'Value of the parameter, used for the IN and INOUT types, defaults to NULL.',
+            ),
+            'type' => array(
+                'type'        => 'string',
+                'description' => 'For OUT parameters, the requested type for the returned value, i.e. int, boolean, string, etc.',
             ),
         ),
-    )
+    ),
+    'ProcedureResultSchema'  => array(
+    'id'         => 'ProcedureResultSchema',
+    'properties' => array(
+        'name' => array(
+            'type'        => 'string',
+            'description' => 'Name of the returned element.',
+        ),
+        'type' => array(
+            'type'        => 'string',
+            'description' => 'The requested type for the returned value, i.e. int, boolean, string, etc.',
+        ),
+    ),
+)
 );
 
 $_base = require( __DIR__ . '/BaseDbSvc.swagger.php' );
