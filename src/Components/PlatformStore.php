@@ -41,7 +41,7 @@ class PlatformStore extends Flexistore
     /**
      * @type string
      */
-    const STORE_CACHE_PATH = '/store.cache';
+    const STORE_CACHE_PATH = '/app.store';
     /**
      * @type string The session key
      */
