@@ -38,7 +38,7 @@ if ( !isset( $_addApis ) )
     $_addApis = array();
 }
 
-if ( !isset( $_addApis ) )
+if ( !isset( $_addModels ) )
 {
     $_addModels = array();
 }
@@ -1249,7 +1249,9 @@ if ( !isset( $_baseRecordOps ) )
             'summary'          => 'getRecord() - Retrieve one record by identifier.',
             'nickname'         => 'getRecord',
             'notes'            =>
-                $_addTableNotes . 'Use the <b>fields</b> parameter to limit properties that are returned. ' . 'By default, all fields are returned.',
+                $_addTableNotes .
+                'Use the <b>fields</b> parameter to limit properties that are returned. ' .
+                'By default, all fields are returned.',
             'type'             => 'RecordResponse',
             'event_name'       => array('{api_name}.{table_name}.select', '{api_name}.table_selected',),
             'parameters'       => array_merge(
@@ -1615,7 +1617,7 @@ $_commonProperties = array(
 );
 
 $_models = array(
-    'Tables'          => array(
+    'Tables'              => array(
         'id'         => 'Tables',
         'properties' => array(
             'table' => array(
@@ -1627,7 +1629,7 @@ $_models = array(
             ),
         ),
     ),
-    'Table'           => array(
+    'Table'               => array(
         'id'         => 'Table',
         'properties' => array(
             'name' => array(
@@ -1636,13 +1638,13 @@ $_models = array(
             ),
         ),
     ),
-    'RecordRequest'   => array(
+    'RecordRequest'       => array(
         'id'         => 'RecordRequest',
         'properties' => array_merge(
             $_commonProperties
         )
     ),
-    'RecordsRequest'  => array(
+    'RecordsRequest'      => array(
         'id'         => 'RecordsRequest',
         'properties' => array(
             'record' => array(
@@ -1654,10 +1656,10 @@ $_models = array(
             ),
         ),
     ),
-    'IdsRequest'  => array(
+    'IdsRequest'          => array(
         'id'         => 'IdsRequest',
         'properties' => array(
-            'ids'    => array(
+            'ids' => array(
                 'type'        => 'array',
                 'description' => 'Array of record identifiers.',
                 'items'       => array(
@@ -1667,7 +1669,7 @@ $_models = array(
             ),
         ),
     ),
-    'IdsRecordRequest'  => array(
+    'IdsRecordRequest'    => array(
         'id'         => 'IdsRecordRequest',
         'properties' => array(
             'record' => array(
@@ -1684,7 +1686,7 @@ $_models = array(
             ),
         ),
     ),
-    'FilterRequest'  => array(
+    'FilterRequest'       => array(
         'id'         => 'FilterRequest',
         'properties' => array(
             'filter' => array(
@@ -1700,7 +1702,7 @@ $_models = array(
             ),
         ),
     ),
-    'FilterRecordRequest'  => array(
+    'FilterRecordRequest' => array(
         'id'         => 'FilterRecordRequest',
         'properties' => array(
             'record' => array(
@@ -1720,7 +1722,7 @@ $_models = array(
             ),
         ),
     ),
-    'GetRecordsRequest'  => array(
+    'GetRecordsRequest'   => array(
         'id'         => 'GetRecordsRequest',
         'properties' => array(
             'record' => array(
@@ -1751,13 +1753,13 @@ $_models = array(
             ),
         ),
     ),
-    'RecordResponse'  => array(
+    'RecordResponse'      => array(
         'id'         => 'RecordResponse',
         'properties' => array_merge(
             $_commonProperties
         ),
     ),
-    'RecordsResponse' => array(
+    'RecordsResponse'     => array(
         'id'         => 'RecordsResponse',
         'properties' => array(
             'record' => array(
@@ -1773,7 +1775,7 @@ $_models = array(
             ),
         ),
     ),
-    'Metadata'        => array(
+    'Metadata'            => array(
         'id'         => 'Metadata',
         'properties' => array(
             'schema' => array(
