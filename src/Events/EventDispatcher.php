@@ -66,7 +66,7 @@ class EventDispatcher implements EventDispatcherInterface
     /**
      * @var array The cached portions of this object
      */
-    protected static $_cachedData = array( 'listeners', 'scripts', 'observers' );
+    protected static $_cachedData = array('listeners', 'scripts', 'observers');
     /**
      * @var EventObserverLike[]
      */
@@ -91,6 +91,10 @@ class EventDispatcher implements EventDispatcherInterface
      * @var bool Enable/disable event scripts
      */
     protected static $_enableEventScripts = true;
+    /**
+     * @var bool Enable/disable user scripts
+     */
+    protected static $_enableUserScripts = false;
     /**
      * @var bool Enable/disable event observation
      */
@@ -142,6 +146,7 @@ class EventDispatcher implements EventDispatcherInterface
         static::$_enablePlatformEvents = Pii::getParam( 'dsp.enable_rest_events', static::$_enablePlatformEvents );
         static::$_enableEventScripts = Pii::getParam( 'dsp.enable_event_scripts', static::$_enableEventScripts );
         static::$_enableEventObservers = Pii::getParam( 'dsp.enable_event_observers', static::$_enableEventObservers );
+        static::$_enableUserScripts = Pii::getParam( 'dsp.enable_user_scripts', static::$_enableUserScripts );
 
         try
         {
@@ -301,17 +306,17 @@ class EventDispatcher implements EventDispatcherInterface
     {
         if ( !empty( $eventName ) )
         {
-            if ( !isset( $this->_sorted[ $eventName ] ) )
+            if ( !isset( $this->_sorted[$eventName] ) )
             {
                 $this->_sortListeners( $eventName );
             }
 
-            return $this->_sorted[ $eventName ];
+            return $this->_sorted[$eventName];
         }
 
         foreach ( array_keys( $this->_listeners ) as $eventName )
         {
-            if ( !isset( $this->_sorted[ $eventName ] ) )
+            if ( !isset( $this->_sorted[$eventName] ) )
             {
                 $this->_sortListeners( $eventName );
             }
@@ -349,12 +354,12 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected function _sortListeners( $eventName )
     {
-        $this->_sorted[ $eventName ] = array();
+        $this->_sorted[$eventName] = array();
 
-        if ( isset( $this->_listeners[ $eventName ] ) )
+        if ( isset( $this->_listeners[$eventName] ) )
         {
-            krsort( $this->_listeners[ $eventName ] );
-            $this->_sorted[ $eventName ] = call_user_func_array( 'array_merge', $this->_listeners[ $eventName ] );
+            krsort( $this->_listeners[$eventName] );
+            $this->_sorted[$eventName] = call_user_func_array( 'array_merge', $this->_listeners[$eventName] );
         }
     }
 
@@ -369,14 +374,14 @@ class EventDispatcher implements EventDispatcherInterface
      */
     public function addListener( $eventName, $listener, $priority = 0, $fromCache = false )
     {
-        if ( !isset( $this->_listeners[ $eventName ] ) || empty( $this->_listeners[ $eventName ] ) )
+        if ( !isset( $this->_listeners[$eventName] ) || empty( $this->_listeners[$eventName] ) )
         {
-            $this->_listeners[ $eventName ] = array();
+            $this->_listeners[$eventName] = array();
         }
 
-        if ( !isset( $this->_listeners[ $eventName ][ $priority ] ) )
+        if ( !isset( $this->_listeners[$eventName][$priority] ) )
         {
-            $this->_listeners[ $eventName ][ $priority ] = array();
+            $this->_listeners[$eventName][$priority] = array();
         }
 
         $this->_sanitizeListener( $listener );
@@ -384,7 +389,7 @@ class EventDispatcher implements EventDispatcherInterface
         $_found = false;
         $_newListener = static::_serialize( $listener );
 
-        foreach ( $this->_listeners[ $eventName ][ $priority ] as $_liveListener )
+        foreach ( $this->_listeners[$eventName][$priority] as $_liveListener )
         {
             if ( $_newListener === serialize( $_liveListener ) )
             {
@@ -395,8 +400,8 @@ class EventDispatcher implements EventDispatcherInterface
 
         if ( !$_found )
         {
-            $this->_listeners[ $eventName ][ $priority ][] = $listener;
-            unset( $this->_sorted[ $eventName ] );
+            $this->_listeners[$eventName][$priority][] = $listener;
+            unset( $this->_sorted[$eventName] );
         }
 
         return true;
@@ -412,18 +417,18 @@ class EventDispatcher implements EventDispatcherInterface
      */
     public function removeListener( $eventName, $listener )
     {
-        if ( !isset( $this->_listeners[ $eventName ] ) )
+        if ( !isset( $this->_listeners[$eventName] ) )
         {
             return;
         }
 
         $this->_sanitizeListener( $listener );
 
-        foreach ( $this->_listeners[ $eventName ] as $_priority => $_listeners )
+        foreach ( $this->_listeners[$eventName] as $_priority => $_listeners )
         {
             if ( false !== ( $key = array_search( $listener, $_listeners, true ) ) )
             {
-                unset( $this->_listeners[ $eventName ][ $_priority ][ $key ], $this->_sorted[ $eventName ] );
+                unset( $this->_listeners[$eventName][$_priority][$key], $this->_sorted[$eventName] );
             }
         }
     }
@@ -439,13 +444,13 @@ class EventDispatcher implements EventDispatcherInterface
         {
             if ( is_string( $_params ) )
             {
-                $this->addListener( $_eventName, array( $subscriber, $_params ) );
+                $this->addListener( $_eventName, array($subscriber, $_params) );
             }
             elseif ( is_string( $_params[0] ) )
             {
                 $this->addListener(
                     $_eventName,
-                    array( $subscriber, $_params[0] ),
+                    array($subscriber, $_params[0]),
                     isset( $_params[1] ) ? $_params[1] : 0
                 );
             }
@@ -455,7 +460,7 @@ class EventDispatcher implements EventDispatcherInterface
                 {
                     $this->addListener(
                         $_eventName,
-                        array( $subscriber, $listener[0] ),
+                        array($subscriber, $listener[0]),
                         isset( $listener[1] ) ? $listener[1] : 0
                     );
                 }
@@ -476,14 +481,14 @@ class EventDispatcher implements EventDispatcherInterface
             {
                 foreach ( $_params as $listener )
                 {
-                    $this->removeListener( $_eventName, array( $subscriber, $listener[0] ) );
+                    $this->removeListener( $_eventName, array($subscriber, $listener[0]) );
                 }
             }
             else
             {
                 $this->removeListener(
                     $_eventName,
-                    array( $subscriber, is_string( $_params ) ? $_params : $_params[0] )
+                    array($subscriber, is_string( $_params ) ? $_params : $_params[0])
                 );
             }
         }
@@ -525,7 +530,7 @@ class EventDispatcher implements EventDispatcherInterface
         try
         {
             return call_user_func(
-                array( $className, $methodName ),
+                array($className, $methodName),
                 $event,
                 $eventName,
                 $dispatcher
@@ -599,11 +604,11 @@ class EventDispatcher implements EventDispatcherInterface
 
                         if ( is_file( $_scriptFile ) && is_readable( $_scriptFile ) )
                         {
-                            if ( !isset( $this->_scripts[ $_eventKey ] ) || !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
+                            if ( !isset( $this->_scripts[$_eventKey] ) || !Scalar::contains( $_scriptFile, $this->_scripts[$_eventKey] )
                             )
                             {
                                 $_found[] = str_replace( $_basePath, '.', $_scriptFile );
-                                $this->_scripts[ $_eventKey ][] = $_scriptFile;
+                                $this->_scripts[$_eventKey][] = $_scriptFile;
                             }
                         }
                     }
@@ -626,10 +631,10 @@ class EventDispatcher implements EventDispatcherInterface
                     $_eventKey = str_ireplace( '.js', null, $_newScript );
                     $_scriptFile = $_basePath . '/' . $_newScript;
 
-                    if ( !array_key_exists( $_eventKey, $this->_scripts ) || !Scalar::contains( $_scriptFile, $this->_scripts[ $_eventKey ] )
+                    if ( !array_key_exists( $_eventKey, $this->_scripts ) || !Scalar::contains( $_scriptFile, $this->_scripts[$_eventKey] )
                     )
                     {
-                        $this->_scripts[ $_eventKey ][] = $_scriptFile;
+                        $this->_scripts[$_eventKey][] = $_scriptFile;
                     }
 
                 }
@@ -920,7 +925,7 @@ class EventDispatcher implements EventDispatcherInterface
 
                 $_posts[] = static::$_client->post(
                     $_listener,
-                    array( 'content-type' => 'application/json' ),
+                    array('content-type' => 'application/json'),
                     json_encode( $_payload, JSON_UNESCAPED_SLASHES )
                 );
             }
@@ -985,26 +990,26 @@ class EventDispatcher implements EventDispatcherInterface
      */
     public function addScript( $eventName, $scriptPath, $fromCache = false )
     {
-        if ( !isset( $this->_scripts[ $eventName ] ) )
+        if ( !isset( $this->_scripts[$eventName] ) )
         {
-            $this->_scripts[ $eventName ] = array();
+            $this->_scripts[$eventName] = array();
         }
 
         if ( !is_array( $scriptPath ) )
         {
-            $scriptPath = array( $scriptPath );
+            $scriptPath = array($scriptPath);
         }
 
         foreach ( $scriptPath as $_script )
         {
-            if ( !Scalar::contains( $_script, $this->_scripts[ $eventName ] ) )
+            if ( !Scalar::contains( $_script, $this->_scripts[$eventName] ) )
             {
                 if ( !is_file( $_script ) || !is_readable( $_script ) )
                 {
                     continue;
                 }
 
-                $this->_scripts[ $eventName ][] = $_script;
+                $this->_scripts[$eventName][] = $_script;
             }
         }
 
@@ -1058,7 +1063,7 @@ class EventDispatcher implements EventDispatcherInterface
 
         if ( !is_array( $observer ) )
         {
-            $observer = array( $observer );
+            $observer = array($observer);
         }
 
         $_additions = array();
@@ -1096,14 +1101,14 @@ class EventDispatcher implements EventDispatcherInterface
 
         if ( !is_array( $observer ) )
         {
-            $observer = array( $observer );
+            $observer = array($observer);
         }
 
         foreach ( $observer as $_observer )
         {
             if ( false !== ( $_index = $this->_observerExists( $_observer ) ) )
             {
-                unset( static::$_observers[ $_index ] );
+                unset( static::$_observers[$_index] );
             }
         }
     }
