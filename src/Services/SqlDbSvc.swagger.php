@@ -38,32 +38,34 @@ $_addTableNotes =
 
 $_addApis = array(
     array(
-        'path'        => '/{api_name}/' . SqlDbSvc::STORED_PROCEDURE_RESOURCE,
+        'path'        => '/{api_name}/' . SqlDbSvc::STORED_PROC_RESOURCE,
         'operations'  => array(
             array(
                 'method'           => 'GET',
-                'summary'          => 'getStoredProcedures() - List callable stored procedures.',
-                'nickname'         => 'getStoredProcedures',
+                'summary'          => 'getStoredProcs() - List callable stored procedures.',
+                'nickname'         => 'getStoredProcs',
                 'notes'            => 'List the names of the available stored procedures on this database. ',
                 'type'             => 'Resources',
-                'event_name'       => array('{api_name}.' . SqlDbSvc::STORED_PROCEDURE_RESOURCE . '.list'),
+                'event_name'       => array('{api_name}.' . SqlDbSvc::STORED_PROC_RESOURCE . '.list'),
                 'responseMessages' => SwaggerManager::getCommonResponses( array(400, 401, 500) ),
             ),
         ),
         'description' => 'Operations for retrieving callable stored procedures.',
     ),
     array(
-        'path'        => '/{api_name}/' . SqlDbSvc::STORED_PROCEDURE_RESOURCE . '/{procedure_name}',
+        'path'        => '/{api_name}/' . SqlDbSvc::STORED_PROC_RESOURCE . '/{procedure_name}',
         'operations'  => array(
             array(
                 'method'           => 'GET',
-                'summary'          => 'callStoredProcedure() - Call a stored procedure.',
-                'nickname'         => 'callStoredProcedure()',
-                'notes'            => 'Call a stored procedure with no parameters. Set an optional wrapper for the returned data set. ',
-                'type'             => 'ProcedureResponse',
+                'summary'          => 'callStoredProc() - Call a stored procedure.',
+                'nickname'         => 'callStoredProc()',
+                'notes'            =>
+                    'Call a stored procedure with no parameters. ' .
+                    'Set an optional wrapper for the returned data set. ',
+                'type'             => 'StoredProcResponse',
                 'event_name'       => array(
-                    '{api_name}.' . SqlDbSvc::STORED_PROCEDURE_RESOURCE . '.{procedure_name}.call',
-                    '{api_name}.' . SqlDbSvc::STORED_PROCEDURE_RESOURCE . '.procedure_called',
+                    '{api_name}.' . SqlDbSvc::STORED_PROC_RESOURCE . '.{procedure_name}.call',
+                    '{api_name}.' . SqlDbSvc::STORED_PROC_RESOURCE . '.procedure_called',
                 ),
                 'parameters'       => array(
                     array(
@@ -87,13 +89,15 @@ $_addApis = array(
             ),
             array(
                 'method'           => 'POST',
-                'summary'          => 'callStoredProcedureWithParams() - Call a stored procedure.',
-                'nickname'         => 'callStoredProcedureWithParams()',
-                'notes'            => 'Call a stored procedure with parameters. Set an optional wrapper for the returned data set. ',
-                'type'             => 'ProcedureResponse',
+                'summary'          => 'callStoredProcWithParams() - Call a stored procedure.',
+                'nickname'         => 'callStoredProcWithParams()',
+                'notes'            =>
+                    'Call a stored procedure with parameters. ' .
+                    'Set an optional wrapper and schema for the returned data set. ',
+                'type'             => 'StoredProcResponse',
                 'event_name'       => array(
-                    '{api_name}.' . SqlDbSvc::STORED_PROCEDURE_RESOURCE . '.{procedure_name}.call',
-                    '{api_name}.' . SqlDbSvc::STORED_PROCEDURE_RESOURCE . '.procedure_called',
+                    '{api_name}.' . SqlDbSvc::STORED_PROC_RESOURCE . '.{procedure_name}.call',
+                    '{api_name}.' . SqlDbSvc::STORED_PROC_RESOURCE . '.procedure_called',
                 ),
                 'parameters'       => array(
                     array(
@@ -108,7 +112,7 @@ $_addApis = array(
                         'name'          => 'body',
                         'description'   => 'Data containing in and out parameters to pass to procedure.',
                         'allowMultiple' => false,
-                        'type'          => 'ProcedureRequest',
+                        'type'          => 'StoredProcRequest',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -129,81 +133,85 @@ $_addApis = array(
 );
 
 $_addModels = array(
-    'ProcedureResponse'          => array(
-        'id'         => 'ProcedureResponse',
+    'StoredProcResponse'     => array(
+        'id'         => 'StoredProcResponse',
         'properties' => array(
             '_wrapper_if_supplied_' => array(
                 'type'        => 'Array',
                 'description' => 'Array of returned data.',
                 'items'       => array(
-                    'type'   => 'string'
+                    'type' => 'string'
                 ),
             ),
-            '_out_param_name_' => array(
+            '_out_param_name_'      => array(
                 'type'        => 'string',
                 'description' => 'Name and value of any given output parameter.',
             ),
         ),
     ),
-    'ProcedureRequest'   => array(
-        'id'         => 'ProcedureRequest',
+    'StoredProcRequest'      => array(
+        'id'         => 'StoredProcRequest',
         'properties' => array(
-            'params'    => array(
+            'params'  => array(
                 'type'        => 'array',
                 'description' => 'Optional array of input and output parameters.',
                 'items'       => array(
-                    '$ref' => 'ProcedureParam',
+                    '$ref' => 'StoredProcParam',
                 ),
             ),
-            'schema'    => array(
-                'type'        => 'array',
-                'description' => 'Optional array of name and type to be applied to returned data.',
-                'items'       => array(
-                    '$ref' => 'ProcedureResultSchema',
-                ),
+            'schema'  => array(
+                'type'        => 'StoredProcResultSchema',
+                'description' => 'Optional name to type pairs to be applied to returned data.',
             ),
-            'name' => array(
+            'wrapper' => array(
                 'type'        => 'string',
-                'description' => "Name of the parameter, if not provided for OUT and INOUT types, " .
-                                 "'param_' + numeric index is used for return, i.e. 'param_0.'",
+                'description' => 'Add this wrapper around the expected data set before returning, same as URL parameter.',
             ),
         ),
     ),
-    'ProcedureParam'  => array(
-        'id'         => 'ProcedureParam',
+    'StoredProcParam'        => array(
+        'id'         => 'StoredProcParam',
         'properties' => array(
-            'name' => array(
+            'name'       => array(
                 'type'        => 'string',
-                'description' => "Name of the parameter, if not provided for OUT and INOUT types, " .
-                                 "'param_' + numeric index is used for return, i.e. 'param_0.'",
+                'description' =>
+                    'Name of the parameter, required for OUT and INOUT types, ' .
+                    'must be the same as the stored procedure\'s parameter name.',
             ),
             'param_type' => array(
                 'type'        => 'string',
                 'description' => 'Parameter type of IN, OUT, or INOUT, defaults to IN.',
             ),
-            'value' => array(
+            'value'      => array(
                 'type'        => 'string',
                 'description' => 'Value of the parameter, used for the IN and INOUT types, defaults to NULL.',
             ),
-            'type' => array(
+            'type'       => array(
                 'type'        => 'string',
-                'description' => 'For OUT parameters, the requested type for the returned value, i.e. int, boolean, string, etc.',
+                'description' =>
+                    'For INOUT and OUT parameters, the requested type for the returned value, ' .
+                    'i.e. integer, boolean, string, etc. Defaults to value type for INOUT and string for OUT.',
+            ),
+            'length'     => array(
+                'type'        => 'integer',
+                'format'      => 'int32',
+                'description' =>
+                    'For INOUT and OUT parameters, the requested length for the returned value. ' .
+                    'May be required by some database drivers.',
             ),
         ),
     ),
-    'ProcedureResultSchema'  => array(
-    'id'         => 'ProcedureResultSchema',
-    'properties' => array(
-        'name' => array(
-            'type'        => 'string',
-            'description' => 'Name of the returned element.',
+    'StoredProcResultSchema' => array(
+        'id'         => 'StoredProcResultSchema',
+        'properties' => array(
+            '_field_name_' => array(
+                'type'        => 'string',
+                'description' =>
+                    'The name of the returned element where the value is set to the requested type ' .
+                    'for the returned value, i.e. integer, boolean, string, etc.',
+            ),
         ),
-        'type' => array(
-            'type'        => 'string',
-            'description' => 'The requested type for the returned value, i.e. int, boolean, string, etc.',
-        ),
-    ),
-)
+    )
 );
 
 $_base = require( __DIR__ . '/BaseDbSvc.swagger.php' );

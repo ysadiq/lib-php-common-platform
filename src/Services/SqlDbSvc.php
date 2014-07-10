@@ -52,7 +52,7 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * Resource tag for dealing with stored procedures
      */
-    const STORED_PROCEDURE_RESOURCE = '_proc';
+    const STORED_PROC_RESOURCE = '_proc';
 
     //*************************************************************************
     //	Members
@@ -278,7 +278,7 @@ class SqlDbSvc extends BaseDbSvc
 
     protected function resourceIsTable( $resource )
     {
-        if ( static::STORED_PROCEDURE_RESOURCE == $resource )
+        if ( static::STORED_PROC_RESOURCE == $resource )
         {
             return false;
         }
@@ -328,7 +328,7 @@ class SqlDbSvc extends BaseDbSvc
         {
             switch ( $resource )
             {
-                case static::STORED_PROCEDURE_RESOURCE:
+                case static::STORED_PROC_RESOURCE:
                     if ( !empty( $resource_id ) )
                     {
                         $resource = $resource . '/' . $resource_id;
@@ -359,7 +359,7 @@ class SqlDbSvc extends BaseDbSvc
     protected function validateStoredProcedureAccess( &$procedure, $action = null )
     {
         // finally check that the current user has privileges to access this table
-        $this->validateResourceAccess( static::STORED_PROCEDURE_RESOURCE, $procedure, $action );
+        $this->validateResourceAccess( static::STORED_PROC_RESOURCE, $procedure, $action );
     }
 
     /**
@@ -369,7 +369,7 @@ class SqlDbSvc extends BaseDbSvc
     {
         switch ( $this->_resource )
         {
-            case static::STORED_PROCEDURE_RESOURCE:
+            case static::STORED_PROC_RESOURCE:
                 return $this->_handleStoredProcedures();
                 break;
         }
@@ -388,7 +388,7 @@ class SqlDbSvc extends BaseDbSvc
         {
             switch ( $this->_resource )
             {
-                case static::STORED_PROCEDURE_RESOURCE:
+                case static::STORED_PROC_RESOURCE:
                 case static::SCHEMA_RESOURCE:
                     break;
                 default:
@@ -537,7 +537,7 @@ class SqlDbSvc extends BaseDbSvc
             $_resources = array();
             foreach ( $_result as $_name )
             {
-                $_access = $this->getPermissions( static::STORED_PROCEDURE_RESOURCE . '/' . $_name );
+                $_access = $this->getPermissions( static::STORED_PROC_RESOURCE . '/' . $_name );
                 if ( !empty( $_access ) )
                 {
                     $_resources[] = array('name' => $_name, 'access' => $_access);

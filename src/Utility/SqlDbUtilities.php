@@ -248,15 +248,20 @@ class SqlDbUtilities implements SqlDbDriverTypes
             foreach ( $params as $_key => $_param )
             {
                 // overcome shortcomings of passed in data
-                if ( null === $_pName = Option::get( $_param, 'name', null, false, true ) )
-                {
-                    $_pName = 'param_' . $_key;
-                    $params[$_key]['name'] = $_pName;
-                }
                 if ( null === $_pType = Option::get( $_param, 'param_type', null, false, true ) )
                 {
                     $_pType = 'IN';
                     $params[$_key]['param_type'] = $_pType;
+                }
+                if ( null === $_pName = Option::get( $_param, 'name', null, false, true ) )
+                {
+                    if ( 0 !== strcasecmp( $_pName, 'IN' ) )
+                    {
+                        throw new BadRequestException( 'Stored procedure output parameter name can not be empty.' );
+                    }
+
+                    $_pName = 'param_' . $_key;
+                    $params[$_key]['name'] = $_pName;
                 }
                 if ( null === $_pValue = Option::get( $_param, 'value', null ) )
                 {
@@ -267,6 +272,18 @@ class SqlDbUtilities implements SqlDbDriverTypes
                 {
                     $_rType = ( isset( $_pValue ) ) ? gettype( $_pValue ) : 'string';
                     $params[$_key]['type'] = $_rType;
+                }
+                if ( null === $_rLength = Option::get( $_param, 'length', null, false, true ) )
+                {
+                    $_rLength = 256;
+                    switch ( $_rType )
+                    {
+                        case 'int':
+                        case 'integer':
+                            $_rLength = 12;
+                            break;
+                    }
+                    $params[$_key]['length'] = $_rLength;
                 }
             }
         }
@@ -280,9 +297,21 @@ class SqlDbUtilities implements SqlDbDriverTypes
             $_result = $db->schema->callProcedure( $name, $params );
 
             // convert result field values to types according to schema received
-            if ( is_array( $schema ) )
+            if ( is_array( $schema ) && is_array( $_result ) )
             {
-
+                foreach ( $_result as &$_row )
+                {
+                    if ( is_array( $_row ) )
+                    {
+                        foreach ( $_row as $_key => $_value )
+                        {
+                            if ( null !== $_type = Option::get( $schema, $_key, null, false, true ) )
+                            {
+                                $_row[$_key] = static::formatValue($_value, $_type);
+                            }
+                        }
+                    }
+                }
             }
 
             // wrap the result set if desired
@@ -305,17 +334,7 @@ class SqlDbUtilities implements SqlDbDriverTypes
                             $_type = $_param['type'];
                             if ( null !== $_value = Option::get( $_param, 'value', null ) )
                             {
-                                switch ( $_type )
-                                {
-                                    case 'integer':
-                                    case 'int':
-                                        $_value = intval( $_value );
-                                        break;
-                                    case 'boolean':
-                                    case 'bool':
-                                        $_value = Scalar::boolval( $_value );
-                                        break;
-                                }
+                                $_value = static::formatValue($_value, $_type);
                             }
                             $_result[$_name] = $_value;
                             break;
@@ -2576,5 +2595,26 @@ SQL;
         }
 
         return $data;
+    }
+
+    public static function formatValue($value, $type)
+    {
+        switch ( $type )
+        {
+            case 'int':
+            case 'integer':
+                return intval( $value );
+
+            case 'decimal':
+            case 'double':
+            case 'float':
+                return floatval( $value );
+
+            case 'boolean':
+            case 'bool':
+                return Scalar::boolval( $value );
+        }
+
+        return $value;
     }
 }
