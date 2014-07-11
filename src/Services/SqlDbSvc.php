@@ -424,7 +424,7 @@ class SqlDbSvc extends BaseDbSvc
      * @throws \Exception
      * @return array
      */
-    protected function _listResources()
+    protected function _listTables()
     {
         $_exclude = '';
         if ( $this->_isNative )
@@ -432,57 +432,75 @@ class SqlDbSvc extends BaseDbSvc
             // check for system tables
             $_exclude = SystemManager::SYSTEM_TABLE_PREFIX;
         }
-        try
-        {
-            $_resources = array();
 
-            $_result = SqlDbUtilities::describeDatabase( $this->_dbConn, '', $_exclude );
-            foreach ( $_result as $_table )
+        return SqlDbUtilities::describeDatabase( $this->_dbConn, '', $_exclude );
+    }
+
+    /**
+     * @param array|null $options
+     *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
+     * @throws \Exception
+     * @return array
+     */
+    public function retrieveResources( $options = null )
+    {
+        $_resources = parent::retrieveResources( $options );
+
+        if ( Option::getBool( $this->_requestPayload, 'include_procs' ) )
+        {
+            $_namesOnly = Option::getBool( $this->_requestPayload, 'names_only' );
+
+            try
             {
-                if ( null != $_name = Option::get( $_table, 'name' ) )
+                $_result = SqlDbUtilities::listStoredProcedures( $this->_dbConn );
+                if ( !empty( $_result ) )
                 {
+                    $_name = static::STORED_PROC_RESOURCE . '/';
                     $_access = $this->getPermissions( $_name );
                     if ( !empty( $_access ) )
                     {
-                        $_table['access'] = $_access;
-                        $_resources[] = $_table;
+                        if ( $_namesOnly )
+                        {
+                            $_resources[] = $_name;
+                        }
+                        else
+                        {
+                            $_resources[] = array('name' => $_name, 'access' => $_access);
+                        }
+                    }
+
+                    foreach ( $_result as $_name )
+                    {
+                        $_name = static::STORED_PROC_RESOURCE . '/' . $_name;
+                        $_access = $this->getPermissions( $_name );
+                        if ( !empty( $_access ) )
+                        {
+                            if ( $_namesOnly )
+                            {
+                                $_resources[] = $_name;
+                            }
+                            else
+                            {
+                                $_resources[] = array('name' => $_name, 'access' => $_access);
+                            }
+                        }
                     }
                 }
             }
+            catch ( RestException $_ex )
+            {
+//                throw $_ex;
+            }
+            catch ( \Exception $_ex )
+            {
+//                throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
+//                )}" );
+            }
+        }
 
-            // Don't include stored procedures for now
-//            $_result = SqlDbUtilities::listStoredProcedures( $this->_dbConn, '', $_exclude );
-//            if ( !empty( $_result ) )
-//            {
-//                $_name = static::STORED_PROCEDURE_RESOURCE . '/';
-//                $_access = $this->getPermissions( $_name );
-//                if ( !empty( $_access ) )
-//                {
-//                    $_resources[] = array('name' => $_name, 'access' => $_access);
-//                }
-//
-//                foreach ( $_result as $_name )
-//                {
-//                    $_name = static::STORED_PROCEDURE_RESOURCE . '/' . $_name;
-//                    $_access = $this->getPermissions( $_name );
-//                    if ( !empty( $_access ) )
-//                    {
-//                        $_resources[] = array('name' => $_name, 'access' => $_access);
-//                    }
-//                }
-//            }
-
-            return array('resource' => $_resources);
-        }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
-            )}" );
-        }
+        return $_resources;
     }
 
     /**
@@ -497,7 +515,9 @@ class SqlDbSvc extends BaseDbSvc
             case static::GET:
                 if ( empty( $this->_resourceId ) )
                 {
-                    return $this->listProcedures();
+                    $_result = $this->listProcedures();
+
+                    return array('resource' => $_result);
                 }
 
             case static::POST:
@@ -505,7 +525,13 @@ class SqlDbSvc extends BaseDbSvc
                 $_wrapper = Option::get( $this->_requestPayload, 'wrapper' );
                 $_schema = Option::get( $this->_requestPayload, 'schema' );
 
-                return SqlDbUtilities::callProcedure( $this->_dbConn, $this->_resourceId, $_params, $_schema, $_wrapper );
+                return SqlDbUtilities::callProcedure(
+                    $this->_dbConn,
+                    $this->_resourceId,
+                    $_params,
+                    $_schema,
+                    $_wrapper
+                );
                 break;
 
 //            case static::PUT:
@@ -530,21 +556,30 @@ class SqlDbSvc extends BaseDbSvc
             // check for system tables
             $_exclude = SystemManager::SYSTEM_TABLE_PREFIX;
         }
+
+        $_namesOnly = Option::getBool( $this->_requestPayload, 'names_only' );
+        $_resources = array();
+
         try
         {
             $_result = SqlDbUtilities::listStoredProcedures( $this->_dbConn, '', $_exclude );
-
-            $_resources = array();
             foreach ( $_result as $_name )
             {
                 $_access = $this->getPermissions( static::STORED_PROC_RESOURCE . '/' . $_name );
                 if ( !empty( $_access ) )
                 {
-                    $_resources[] = array('name' => $_name, 'access' => $_access);
+                    if ( $_namesOnly )
+                    {
+                        $_resources[] = $_name;
+                    }
+                    else
+                    {
+                        $_resources[] = array('name' => $_name, 'access' => $_access);
+                    }
                 }
             }
 
-            return array('resource' => $_resources);
+            return $_resources;
         }
         catch ( RestException $_ex )
         {

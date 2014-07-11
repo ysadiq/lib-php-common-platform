@@ -116,14 +116,6 @@ class SwaggerManager extends BasePlatformRestService
     }
 
     /**
-     * @return array
-     */
-    protected function _listResources()
-    {
-        return static::getSwagger();
-    }
-
-    /**
      * @return array|string|bool
      */
     protected function _handleResource()

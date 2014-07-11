@@ -164,29 +164,9 @@ class SalesforceDbSvc extends BaseDbSvc
      * @throws \Exception
      * @return array
      */
-    protected function _listResources()
+    protected function _listTables()
     {
-        try
-        {
-            $_resources = array();
-            $_result = $this->_getSObjectsArray();
-            foreach ( $_result as $_table )
-            {
-                $_name = Option::get( $_table, 'name' );
-                $_access = $this->getPermissions( $_name );
-                if ( !empty( $_access ) )
-                {
-                    $_resources[] = array_merge( $_table, array('access' => $_access) );
-                }
-            }
-
-            return array('resource' => $_resources);
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
-            )}" );
-        }
+        return $this->_getSObjectsArray();
     }
 
     // Handle administrative options, table add, delete, etc

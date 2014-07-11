@@ -174,28 +174,16 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
      * @throws \Exception
      * @return array
      */
-    protected function _listResources()
+    protected function _listTables()
     {
-        try
+        $_resources = array();
+        $_result = $this->_getTablesAsArray();
+        foreach ( $_result as $_table )
         {
-            $_resources = array();
-            $_result = $this->_getTablesAsArray();
-            foreach ( $_result as $_table )
-            {
-                $_access = $this->getPermissions( $_table );
-                if ( !empty( $_access ) )
-                {
-                    $_resources[] = array('name' => $_table, 'access' => $_access, static::TABLE_INDICATOR => $_table);
-                }
-            }
+            $_resources[] = array('name' => $_table, static::TABLE_INDICATOR => $_table);
+        }
 
-            return array('resource' => $_resources);
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
-            )}" );
-        }
+        return $_resources;
     }
 
     // Handle administrative options, table add, delete, etc
