@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "b16bbd848dc02797c932aca9c7bcb4e6",
+    "hash": "a1fb25ae81b8ef76c55ab59028953a65",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -471,16 +471,16 @@
         },
         {
             "name": "dreamfactory/yii",
-            "version": "1.1.13.1",
+            "version": "1.1.13.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/yii.git",
-                "reference": "6c0dabc38eee78fe9d018add20ce8e1efc066195"
+                "reference": "8cf385458278df6948a5f7e934db742b69bd4ea5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/6c0dabc38eee78fe9d018add20ce8e1efc066195",
-                "reference": "6c0dabc38eee78fe9d018add20ce8e1efc066195",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/8cf385458278df6948a5f7e934db742b69bd4ea5",
+                "reference": "8cf385458278df6948a5f7e934db742b69bd4ea5",
                 "shasum": ""
             },
             "require": {
@@ -533,12 +533,12 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Exterminator"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "role": "Exterminator"
                 }
             ],
             "description": "Yii Web Programming Framework",
@@ -547,7 +547,7 @@
                 "framework",
                 "yii"
             ],
-            "time": "2014-06-05 15:21:23"
+            "time": "2014-07-10 20:38:08"
         },
         {
             "name": "guzzle/guzzle",
@@ -2110,7 +2110,6 @@
         "swiftmailer/swiftmailer": 0,
         "aws/aws-sdk-php": 0,
         "rackspace/php-opencloud": 0,
-        "dreamfactory/yii": 20,
         "dreamfactory/lib-php-common": 0,
         "dreamfactory/lib-php-common-yii": 0,
         "dreamfactory/oasys": 0,
