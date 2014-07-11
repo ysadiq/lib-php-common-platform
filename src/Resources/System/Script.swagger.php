@@ -25,15 +25,39 @@ $_commonResponses = SwaggerManager::getCommonResponses();
 //  The script record model properties
 $_properties = array_merge(
     array(
-        'script_id'   => array(
+        'script_id'      => array(
             'type'        => 'string',
             'description' => 'The script ID',
         ),
-        'script_body' => array(
+        'script_body'    => array(
             'type'        => 'string',
             'description' => 'The body of the script',
         ),
-        'metadata'    => array(
+        'script'         => array(
+            'type'        => 'string',
+            'description' => 'The script file name',
+        ),
+        'is_user_script' => array(
+            'type'        => 'boolean',
+            'description' => 'True if this is a user script',
+        ),
+        'language'       => array(
+            'type'        => 'string',
+            'description' => 'The scripting language. Only "js" is supported at this time',
+        ),
+        'file_name'      => array(
+            'type'        => 'string',
+            'description' => 'The script file name',
+        ),
+        'file_path'      => array(
+            'type'        => 'string',
+            'description' => 'The path where the script file lives',
+        ),
+        'event_name'     => array(
+            'type'        => 'string',
+            'description' => 'The name of the event this script is fired on or FALSE if none"',
+        ),
+        'metadata'       => array(
             'type'        => 'Array',
             'description' => 'An array of name-value pairs.',
             'items'       => array(
@@ -45,8 +69,8 @@ $_properties = array_merge(
 );
 
 $_script = array(
-    'produces' => array( 'application/json' ),
-    'consumes' => array( 'application/javascript', 'text/javascript', 'text/plain' ),
+    'produces' => array('application/json'),
+    'consumes' => array('application/javascript', 'text/javascript', 'text/plain'),
     'apis'     => array(
         array(
             'path'        => '/{api_name}/script',
@@ -56,10 +80,39 @@ $_script = array(
                     'method'           => 'GET',
                     'summary'          => 'getScripts() - List all scripts',
                     'nickname'         => 'getScripts',
-                    'type'             => 'Scripts',
+                    'type'             => 'ScriptsResponse',
                     'event_name'       => '{api_name}.scripts.list',
                     'notes'            => 'List all known scripts',
                     'responseMessages' => $_commonResponses,
+                    'parameters'       => array(
+                        array(
+                            'name'          => 'is_user_script',
+                            'description'   => 'True if you would like a user script to be returned',
+                            'allowMultiple' => false,
+                            'type'          => 'boolean',
+                            'paramType'     => 'path',
+                            'required'      => false,
+                            'defaultValue'  => 'false',
+                        ),
+                        array(
+                            'name'          => 'language',
+                            'description'   => 'The language of the script',
+                            'allowMultiple' => false,
+                            'type'          => 'string',
+                            'paramType'     => 'path',
+                            'required'      => false,
+                            'defaultValue'  => 'js',
+                        ),
+                        array(
+                            'name'          => 'include_script_body',
+                            'description'   => 'True if you would like the body of the scripts back as well',
+                            'allowMultiple' => false,
+                            'type'          => 'boolean',
+                            'paramType'     => 'path',
+                            'required'      => false,
+                            'defaultValue'  => 'false',
+                        ),
+                    ),
                 ),
             ),
         ),
@@ -82,6 +135,33 @@ $_script = array(
                             'paramType'     => 'path',
                             'required'      => true,
                         ),
+                        array(
+                            'name'          => 'is_user_script',
+                            'description'   => 'True if you would like a user script to be returned',
+                            'allowMultiple' => false,
+                            'type'          => 'boolean',
+                            'paramType'     => 'path',
+                            'required'      => false,
+                            'defaultValue'  => 'false',
+                        ),
+                        array(
+                            'name'          => 'language',
+                            'description'   => 'The language of the script',
+                            'allowMultiple' => false,
+                            'type'          => 'string',
+                            'paramType'     => 'path',
+                            'required'      => false,
+                            'defaultValue'  => 'js',
+                        ),
+                        array(
+                            'name'          => 'include_body',
+                            'description'   => 'True if you would like the body of the scripts back as well',
+                            'allowMultiple' => false,
+                            'type'          => 'boolean',
+                            'paramType'     => 'path',
+                            'required'      => false,
+                            'defaultValue'  => 'false',
+                        ),
                     ),
                     'responseMessages' => $_commonResponses,
                 ),
@@ -99,6 +179,24 @@ $_script = array(
                             'type'          => 'string',
                             'paramType'     => 'path',
                             'required'      => true,
+                        ),
+                        array(
+                            'name'          => 'is_user_script',
+                            'description'   => 'True if you would like a user script to be returned',
+                            'allowMultiple' => false,
+                            'type'          => 'boolean',
+                            'paramType'     => 'path',
+                            'required'      => false,
+                            'defaultValue'  => 'false',
+                        ),
+                        array(
+                            'name'          => 'language',
+                            'description'   => 'The language of the script',
+                            'allowMultiple' => false,
+                            'type'          => 'string',
+                            'paramType'     => 'path',
+                            'required'      => false,
+                            'defaultValue'  => 'js',
                         ),
                     ),
                     'responseMessages' => $_commonResponses,
@@ -128,6 +226,24 @@ $_script = array(
                             'paramType'     => 'body',
                             'required'      => true,
                         ),
+                        array(
+                            'name'          => 'is_user_script',
+                            'description'   => 'True if you would like a user script to be returned',
+                            'allowMultiple' => false,
+                            'type'          => 'boolean',
+                            'paramType'     => 'path',
+                            'required'      => false,
+                            'defaultValue'  => 'false',
+                        ),
+                        array(
+                            'name'          => 'language',
+                            'description'   => 'The language of the script',
+                            'allowMultiple' => false,
+                            'type'          => 'string',
+                            'paramType'     => 'path',
+                            'required'      => false,
+                            'defaultValue'  => 'js',
+                        ),
                     ),
                     'responseMessages' => $_commonResponses,
                 ),
@@ -146,6 +262,24 @@ $_script = array(
                             'paramType'     => 'path',
                             'required'      => true,
                         ),
+                        array(
+                            'name'          => 'is_user_script',
+                            'description'   => 'True if you would like a user script to be returned',
+                            'allowMultiple' => false,
+                            'type'          => 'boolean',
+                            'paramType'     => 'path',
+                            'required'      => false,
+                            'defaultValue'  => 'false',
+                        ),
+                        array(
+                            'name'          => 'language',
+                            'description'   => 'The language of the script',
+                            'allowMultiple' => false,
+                            'type'          => 'string',
+                            'paramType'     => 'path',
+                            'required'      => false,
+                            'defaultValue'  => 'js',
+                        ),
                     ),
                     'responseMessages' => $_commonResponses,
                 ),
@@ -155,8 +289,8 @@ $_script = array(
 );
 
 $_script['models'] = array(
-    'Script'          => array(
-        'id'         => 'Script',
+    'ScriptModel'     => array(
+        'id'         => 'ScriptModel',
         'properties' => $_properties,
     ),
     'ScriptRequest'   => array(
@@ -174,7 +308,7 @@ $_script['models'] = array(
                 'type'        => 'Array',
                 'description' => 'An array of script resources',
                 'items'       => array(
-                    '$ref' => 'Script',
+                    '$ref' => 'ScriptRequest',
                 ),
             ),
         ),
@@ -186,7 +320,7 @@ $_script['models'] = array(
                 'type'        => 'Array',
                 'description' => 'An array of script resources',
                 'items'       => array(
-                    '$ref' => 'Script',
+                    '$ref' => 'ScriptResponse',
                 ),
             ),
         ),
@@ -205,5 +339,7 @@ $_script['models'] = array(
         ),
     ),
 );
+
+unset( $_properties, $_commonResponses );
 
 return $_script;
