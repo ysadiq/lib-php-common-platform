@@ -68,6 +68,14 @@ class ScriptEngine
         'lodash' => 'lodash.min.js',
     );
     /**
+     * @var array The currently supported scripting languages
+     */
+    protected static $_supportedLanguages = array(
+        'js'  => 'Javascript',
+        'lua' => 'Lua',
+        'py'  => 'Python',
+    );
+    /**
      * @var string One path to rule them all
      */
     protected static $_libraryScriptPath;
@@ -141,7 +149,7 @@ class ScriptEngine
         }
 
         //  Stuff it in our instances array
-        static::$_instances[ spl_object_hash( $_engine ) ] = $_engine;
+        static::$_instances[spl_object_hash( $_engine )] = $_engine;
 
         return $_engine;
     }
@@ -155,9 +163,9 @@ class ScriptEngine
     {
         $_hash = spl_object_hash( $engine );
 
-        if ( isset( static::$_instances[ $_hash ] ) )
+        if ( isset( static::$_instances[$_hash] ) )
         {
-            unset( static::$_instances[ $_hash ] );
+            unset( static::$_instances[$_hash] );
         }
 
         unset( $engine );
@@ -302,7 +310,7 @@ class ScriptEngine
         $_fullScriptPath = false;
 
         //  Remove any quotes from this passed in module
-        $module = trim( str_replace( array( "'", '"' ), null, $module ), ' /' );
+        $module = trim( str_replace( array("'", '"'), null, $module ), ' /' );
 
         //  Check the configured script paths
         if ( null === ( $_script = Option::get( static::$_libraryModules, $module ) ) )
@@ -354,8 +362,7 @@ class ScriptEngine
         if ( empty( static::$_libraryScriptPath ) || !is_dir( static::$_libraryScriptPath ) )
         {
             throw new RestException(
-                HttpResponse::ServiceUnavailable,
-                'This service is not available . Storage path and/or required libraries not available . '
+                HttpResponse::ServiceUnavailable, 'This service is not available . Storage path and/or required libraries not available . '
             );
         }
 
@@ -486,7 +493,7 @@ JS;
         {
             $_result = RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false );
 
-            Log::error( 'Exception: ' . $_ex->getMessage(), array(), array( 'response' => $_result ) );
+            Log::error( 'Exception: ' . $_ex->getMessage(), array(), array('response' => $_result) );
         }
 
         return $_result;
@@ -529,8 +536,7 @@ JS;
             //	Fix removal of trailing slashes from resource
             if ( !empty( $_resource ) )
             {
-                if ( ( false === strpos( $_requestUri, '?' ) &&
-                       '/' === substr( $_requestUri, strlen( $_requestUri ) - 1, 1 ) ) ||
+                if ( ( false === strpos( $_requestUri, '?' ) && '/' === substr( $_requestUri, strlen( $_requestUri ) - 1, 1 ) ) ||
                      ( '/' === substr( $_requestUri, strpos( $_requestUri, '?' ) - 1, 1 ) )
                 )
                 {
@@ -544,8 +550,7 @@ JS;
             return null;
         }
 
-        if ( false === ( $_payload = json_encode( $payload, JSON_UNESCAPED_SLASHES ) ) ||
-             JSON_ERROR_NONE != json_last_error()
+        if ( false === ( $_payload = json_encode( $payload, JSON_UNESCAPED_SLASHES ) ) || JSON_ERROR_NONE != json_last_error()
         )
         {
             $_contentType = 'text/plain';
@@ -579,7 +584,7 @@ JS;
         {
             $_result = RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false );
 
-            Log::error( 'Exception: ' . $_ex->getMessage(), array(), array( 'response' => $_result ) );
+            Log::error( 'Exception: ' . $_ex->getMessage(), array(), array('response' => $_result) );
         }
 
         StateStack::pop();
@@ -654,5 +659,13 @@ JS;
     public static function getLibraryModules()
     {
         return static::$_libraryModules;
+    }
+
+    /**
+     * @return array
+     */
+    public static function getSupportedExtensions()
+    {
+        return array_keys( static::$_supportedLanguages );
     }
 }
