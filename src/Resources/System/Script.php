@@ -190,20 +190,36 @@ class Script extends BaseSystemRestResource
      */
     protected function _getScriptList( $includeUserScripts = true )
     {
-        $_userScripts = array();
+        $_resources = array(
+            'event' => $this->_scriptPath . '/*',
+            'user'  => $this->_userScriptPath . '/*',
+        );
 
-        $_globPattern = str_replace( '{extension_list}', implode( '|', $this->_extensions ), static::DEFAULT_SCRIPT_PATTERN );
+        $_response = array();
 
-        $_pattern = $this->_scriptPath . $_globPattern;
-        $_scripts = FileSystem::glob( $_pattern, GlobFlags::GLOB_NODOTS );
-
-        if ( $includeUserScripts )
+        foreach ( $_resources as $_key => $_resource )
         {
-            $_pattern = $this->_userScriptPath . $_globPattern;
-            $_userScripts = FileSystem::glob( $_pattern, GlobFlags::GLOB_NODOTS );
+            $_response[$_key] = array();
+            $_files = FileSystem::glob( $_resource, GlobFlags::GLOB_NODOTS );
+
+            if ( !empty( $_files ) )
+            {
+                foreach ( $_files as $_file )
+                {
+                    if ( in_array( pathinfo( $_file, PATHINFO_EXTENSION ), $this->_extensions ) )
+                    {
+                        $_response[$_key][] = $_file;
+                    }
+                }
+            }
         }
 
-        return array('event' => $_scripts, 'user' => $_userScripts);
+        if ( !$includeUserScripts )
+        {
+            unset( $_response['user'] );
+        }
+
+        return $_response;
     }
 
     /**
@@ -266,7 +282,7 @@ class Script extends BaseSystemRestResource
                 unset( $_resource );
             }
         }
-        
+
         ksort( $_response );
 
         return array('resource' => $_response);
