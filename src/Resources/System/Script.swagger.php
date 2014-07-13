@@ -87,12 +87,11 @@ $_script = array(
                     'parameters'       => array(
                         array(
                             'name'          => 'is_user_script',
-                            'description'   => 'True if you would like a user script to be returned',
+                            'description'   => 'Set to true to return a list of user scripts. Otherwise, only event scripts are returned.',
                             'allowMultiple' => false,
                             'type'          => 'boolean',
                             'paramType'     => 'path',
                             'required'      => false,
-                            'defaultValue'  => 'false',
                         ),
                         array(
                             'name'          => 'language',
@@ -101,7 +100,6 @@ $_script = array(
                             'type'          => 'string',
                             'paramType'     => 'path',
                             'required'      => false,
-                            'defaultValue'  => 'js',
                         ),
                         array(
                             'name'          => 'include_script_body',
@@ -110,7 +108,6 @@ $_script = array(
                             'type'          => 'boolean',
                             'paramType'     => 'path',
                             'required'      => false,
-                            'defaultValue'  => 'false',
                         ),
                     ),
                 ),
@@ -142,7 +139,6 @@ $_script = array(
                             'type'          => 'boolean',
                             'paramType'     => 'path',
                             'required'      => false,
-                            'defaultValue'  => 'false',
                         ),
                         array(
                             'name'          => 'language',
@@ -151,7 +147,6 @@ $_script = array(
                             'type'          => 'string',
                             'paramType'     => 'path',
                             'required'      => false,
-                            'defaultValue'  => 'js',
                         ),
                         array(
                             'name'          => 'include_body',
@@ -160,7 +155,6 @@ $_script = array(
                             'type'          => 'boolean',
                             'paramType'     => 'path',
                             'required'      => false,
-                            'defaultValue'  => 'false',
                         ),
                     ),
                     'responseMessages' => $_commonResponses,
@@ -187,7 +181,6 @@ $_script = array(
                             'type'          => 'boolean',
                             'paramType'     => 'path',
                             'required'      => false,
-                            'defaultValue'  => 'false',
                         ),
                         array(
                             'name'          => 'language',
@@ -196,7 +189,6 @@ $_script = array(
                             'type'          => 'string',
                             'paramType'     => 'path',
                             'required'      => false,
-                            'defaultValue'  => 'js',
                         ),
                     ),
                     'responseMessages' => $_commonResponses,
@@ -233,7 +225,6 @@ $_script = array(
                             'type'          => 'boolean',
                             'paramType'     => 'path',
                             'required'      => false,
-                            'defaultValue'  => 'false',
                         ),
                         array(
                             'name'          => 'language',
@@ -242,7 +233,6 @@ $_script = array(
                             'type'          => 'string',
                             'paramType'     => 'path',
                             'required'      => false,
-                            'defaultValue'  => 'js',
                         ),
                     ),
                     'responseMessages' => $_commonResponses,
@@ -269,7 +259,6 @@ $_script = array(
                             'type'          => 'boolean',
                             'paramType'     => 'path',
                             'required'      => false,
-                            'defaultValue'  => 'false',
                         ),
                         array(
                             'name'          => 'language',
@@ -278,7 +267,6 @@ $_script = array(
                             'type'          => 'string',
                             'paramType'     => 'path',
                             'required'      => false,
-                            'defaultValue'  => 'js',
                         ),
                     ),
                     'responseMessages' => $_commonResponses,
