@@ -53,6 +53,10 @@ $_properties = array_merge(
             'type'        => 'string',
             'description' => 'The path where the script file lives',
         ),
+        'file_mtime' => array(
+            'type'        => 'integer',
+            'description' => 'The last modified time of the file in UNIX time.',
+        ),
         'event_name'     => array(
             'type'        => 'string',
             'description' => 'The name of the event this script is fired on or FALSE if none"',

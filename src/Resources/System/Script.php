@@ -137,8 +137,7 @@ class Script extends BaseSystemRestResource
         if ( empty( $this->_scriptPath ) )
         {
             $_message = 'Empty script path';
-        }
-        else
+        } else
         {
             if ( !is_dir( $this->_scriptPath ) )
             {
@@ -146,8 +145,7 @@ class Script extends BaseSystemRestResource
                 {
                     $_message = 'File system error creating scripts path: ' . $this->_scriptPath;
                 }
-            }
-            else if ( !is_writable( $this->_scriptPath ) )
+            } else if ( !is_writable( $this->_scriptPath ) )
             {
                 $_message = 'Scripts path not writeable: ' . $this->_scriptPath;
             }
@@ -160,8 +158,7 @@ class Script extends BaseSystemRestResource
                     {
                         $_message = 'File system error creating user scripts path: ' . $this->_userScriptPath;
                     }
-                }
-                else if ( !is_writable( $this->_userScriptPath ) )
+                } else if ( !is_writable( $this->_userScriptPath ) )
                 {
                     $_message = 'User scripts path not writeable: ' . $this->_userScriptPath;
                 }
@@ -199,7 +196,7 @@ class Script extends BaseSystemRestResource
 
         foreach ( $_resources as $_key => $_resource )
         {
-            $_response[$_key] = array();
+            $_response[ $_key ] = array();
             $_files = FileSystem::glob( $_resource, GlobFlags::GLOB_NODOTS );
 
             if ( !empty( $_files ) )
@@ -208,7 +205,7 @@ class Script extends BaseSystemRestResource
                 {
                     if ( in_array( pathinfo( $_file, PATHINFO_EXTENSION ), $this->_extensions ) )
                     {
-                        $_response[$_key][] = $_file;
+                        $_response[ $_key ][] = $_file;
                     }
                 }
             }
@@ -217,6 +214,44 @@ class Script extends BaseSystemRestResource
         if ( !$includeUserScripts )
         {
             unset( $_response['user'] );
+        }
+
+        return $_response;
+    }
+
+    /**
+     * @param array $scripts
+     * @param bool  $userScripts
+     * @param bool  $includeBody
+     *
+     * @return array
+     */
+    protected function _buildScriptArray( $scripts = array(), $userScripts = false, $includeBody = false )
+    {
+        $_response = array();
+        foreach ( $scripts as $_script )
+        {
+            $_eventName = rtrim( str_ireplace( $this->_extensions, null, $_script ), '.' );
+            $_fullScriptPath = $this->_scriptPath . DIRECTORY_SEPARATOR . $_script;
+
+            $_resource = array(
+                'script_id'      => $_eventName,
+                'is_user_script' => $userScripts,
+                'script'         => $_script,
+                'file_name'      => $_script,
+                'file_path'      => $_fullScriptPath,
+                'file_mtime'     => filemtime( $_fullScriptPath ),
+                'event_name'     => $_eventName,
+                'language'       => trim( str_replace( $_eventName, null, $_script ), '.' ),
+            );
+
+            if ( $includeBody )
+            {
+                $_resource['script_body'] = @file_get_contents( $this->_scriptPath . '/' . $_script );
+            }
+
+            $_response[] = $_resource;
+            unset( $_resource, $_eventName );
         }
 
         return $_response;
@@ -236,56 +271,13 @@ class Script extends BaseSystemRestResource
 
         if ( !empty( $_scripts ) )
         {
-            foreach ( Option::get( $_scripts, 'event', array() ) as $_script )
-            {
-                $_eventName = rtrim( str_ireplace( $this->_extensions, null, $_script ), '.' );
-
-                $_resource = array(
-                    'script_id'      => $_eventName,
-                    'is_user_script' => false,
-                    'script'         => $_script,
-                    'file_name'      => $_script,
-                    'file_path'      => $this->_scriptPath . DIRECTORY_SEPARATOR . $_script,
-                    'event_name'     => $_eventName,
-                    'language'       => trim( str_replace( $_eventName, null, $_script ), '.' ),
-                );
-
-                if ( $_includeBody )
-                {
-                    $_resource['script_body'] = @file_get_contents( $this->_scriptPath . '/' . $_script );
-                }
-
-                $_response[] = $_resource;
-                unset( $_resource, $_eventName );
-            }
-
-            foreach ( Option::get( $_scripts, 'user', array() ) as $_script )
-            {
-                $_id = rtrim( str_ireplace( $this->_extensions, null, $_script ), '.' );
-
-                $_resource = array(
-                    'script_id'      => $_id,
-                    'is_user_script' => true,
-                    'script'         => $_script,
-                    'file_name'      => $_script,
-                    'file_path'      => $this->_userScriptPath . DIRECTORY_SEPARATOR . $_script,
-                    'event_name'     => false,
-                    'language'       => trim( str_replace( $_id, null, $_script ), '.' ),
-                );
-
-                if ( $_includeBody )
-                {
-                    $_resource['script_body'] = @file_get_contents( $this->_scriptPath . '/' . $_script );
-                }
-
-                $_response[] = $_resource;
-                unset( $_resource );
-            }
+            $_response = $this->_buildScriptArray( Option::get( $_scripts, 'event', array() ), false, $_includeBody );
+            $_response += $this->_buildScriptArray( Option::get( $_scripts, 'user', array() ), true, $_includeBody );
         }
 
         ksort( $_response );
 
-        return array('resource' => $_response);
+        return array( 'resource' => $_response );
     }
 
     /**
@@ -322,6 +314,7 @@ class Script extends BaseSystemRestResource
             'language'       => $_language,
             'file_name'      => $_script,
             'file_path'      => $_path,
+            'file_mtime'     => filemtime( $_path ),
             'event_name'     => $_user ? false : $this->_resourceId,
         );
     }
@@ -376,6 +369,7 @@ class Script extends BaseSystemRestResource
             'language'       => $_language,
             'file_name'      => $_script,
             'file_path'      => $_path,
+            'file_mtime'     => filemtime( $_path ),
             'event_name'     => $_user ? false : $this->_resourceId,
             'bytes_written'  => $_bytes,
         );
@@ -425,6 +419,7 @@ class Script extends BaseSystemRestResource
             'language'       => $_language,
             'file_name'      => $_script,
             'file_path'      => $_path,
+            'file_mtime'     => false,
             'event_name'     => $_user ? false : $this->_resourceId,
         );
     }
