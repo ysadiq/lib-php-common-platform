@@ -658,25 +658,7 @@ class LocalFileSvc extends BaseFileSvc
     {
         $_file = static::addContainerToName( $container, $path );
 
-        if ( is_file( $_file ) )
-        {
-            $_ext = FileUtilities::getFileExtension( $_file );
-            $_result = file_get_contents( $_file );
-            header( 'Last-Modified: ' . gmdate( 'D, d M Y H:i:s \G\M\T', filemtime( $_file ) ) );
-            header( 'Content-type: ' . FileUtilities::determineContentType( $_ext, '', $_file ) );
-            header( 'Content-Length:' . filesize( $_file ) );
-            $_disposition = ( $download ) ? 'attachment' : 'inline';
-            header( "Content-Disposition: $_disposition; filename=\"$path\";" );
-            echo $_result;
-        }
-        else
-        {
-            Log::debug( 'FileManager::streamFile is_file call fail: ' . $_file );
-
-            $_statusHeader = "HTTP/1.1 404 The specified file '$path' does not exist.";
-            header( $_statusHeader );
-            header( 'Content-type: text/html' );
-        }
+        FileUtilities::sendFile( $_file, $download );
     }
 
     /**

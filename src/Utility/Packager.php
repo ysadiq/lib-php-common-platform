@@ -225,23 +225,9 @@ class Packager
             {
                 // todo do we need to load data unfiltered
             }
-            $_zip->close();
 
-            $_fd = fopen( $_zipFileName, "r" );
-            if ( $_fd )
-            {
-                $_pathParts = pathinfo( $_zipFileName );
-                header( "Content-Type: application/zip" );
-                header( "Content-Disposition: filename=\"" . $_pathParts["basename"] . "\"" );
-                header( "Content-Length: " . filesize( $_zipFileName ) );
-                header( "Cache-Control: private" ); //use this to open files directly
-                while ( !feof( $_fd ) )
-                {
-                    $_buffer = fread( $_fd, 2048 );
-                    echo $_buffer;
-                }
-            }
-            fclose( $_fd );
+            $_zip->close();
+            FileUtilities::sendFile( $_zipFileName, true );
             unlink( $_zipFileName );
 
             return null;
