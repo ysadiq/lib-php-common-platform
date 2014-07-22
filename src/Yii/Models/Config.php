@@ -51,6 +51,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
  * @property Service             $password_email_service
  * @property EmailTemplate       $password_email_template
  * @property Role                $guest_role
+ * @property string              $private_storage
  */
 class Config extends BasePlatformSystemModel
 {
@@ -92,9 +93,9 @@ class Config extends BasePlatformSystemModel
     public function rules()
     {
         return array(
-            array( 'db_version', 'length', 'max' => 32 ),
-            array( 'editable_profile_fields', 'length', 'max' => 255 ),
-            array( 'allow_open_registration, allow_guest_user', 'boolean' ),
+            array('db_version', 'length', 'max' => 32),
+            array('editable_profile_fields', 'length', 'max' => 255),
+            array('allow_open_registration, allow_guest_user', 'boolean'),
             array(
                 'open_reg_role_id, open_reg_email_service_id, open_reg_email_template_id, ' .
                 'invite_email_service_id, invite_email_template_id, ' .
@@ -103,7 +104,7 @@ class Config extends BasePlatformSystemModel
                 'numerical',
                 'integerOnly' => true
             ),
-            array( 'custom_settings', 'safe' ),
+            array('custom_settings', 'safe'),
         );
     }
 
@@ -113,14 +114,14 @@ class Config extends BasePlatformSystemModel
     public function relations()
     {
         $_relations = array(
-            'open_reg_role'           => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'open_reg_role_id' ),
-            'open_reg_email_service'  => array( self::BELONGS_TO, __NAMESPACE__ . '\\Service', 'open_reg_email_service_id' ),
-            'open_reg_email_template' => array( self::BELONGS_TO, __NAMESPACE__ . '\\EmailTemplate', 'open_reg_email_template_id' ),
-            'invite_email_service'    => array( self::BELONGS_TO, __NAMESPACE__ . '\\Service', 'invite_email_service_id' ),
-            'invite_email_template'   => array( self::BELONGS_TO, __NAMESPACE__ . '\\EmailTemplate', 'invite_email_template_id' ),
-            'password_email_service'  => array( self::BELONGS_TO, __NAMESPACE__ . '\\Service', 'password_email_service_id' ),
-            'password_email_template' => array( self::BELONGS_TO, __NAMESPACE__ . '\\EmailTemplate', 'password_email_template_id' ),
-            'guest_role'              => array( self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'guest_role_id' ),
+            'open_reg_role'           => array(self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'open_reg_role_id'),
+            'open_reg_email_service'  => array(self::BELONGS_TO, __NAMESPACE__ . '\\Service', 'open_reg_email_service_id'),
+            'open_reg_email_template' => array(self::BELONGS_TO, __NAMESPACE__ . '\\EmailTemplate', 'open_reg_email_template_id'),
+            'invite_email_service'    => array(self::BELONGS_TO, __NAMESPACE__ . '\\Service', 'invite_email_service_id'),
+            'invite_email_template'   => array(self::BELONGS_TO, __NAMESPACE__ . '\\EmailTemplate', 'invite_email_template_id'),
+            'password_email_service'  => array(self::BELONGS_TO, __NAMESPACE__ . '\\Service', 'password_email_service_id'),
+            'password_email_template' => array(self::BELONGS_TO, __NAMESPACE__ . '\\EmailTemplate', 'password_email_template_id'),
+            'guest_role'              => array(self::BELONGS_TO, __NAMESPACE__ . '\\Role', 'guest_role_id'),
         );
 
         return array_merge( parent::relations(), $_relations );
