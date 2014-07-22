@@ -46,6 +46,11 @@ class PrivateStorage
      */
     public function __construct( $sourcePath )
     {
+        if ( empty( $sourcePath ) )
+        {
+            throw new \InvalidArgumentException( 'Source path must be specified.' );
+        }
+
         if ( !is_dir( $sourcePath ) )
         {
             //  Try and make the directory
@@ -79,8 +84,7 @@ class PrivateStorage
             throw new FileSytemException( 'Unable to create temporary zip file.' );
         }
 
-        $_zip->addGlob( '*', GLOB_BRACE, array('remove_path' => $this->_sourcePath) );
-        $_zip->addGlob( '.registration_complete*', GLOB_BRACE, array('remove_path' => $this->_sourcePath) );
+        $_zip->addGlob( $this->_sourcePath . '{*,.registration_complete*}', GLOB_BRACE, array('remove_path' => $this->_sourcePath) );
         $_zip->close();
 
         //  Read configuration record
