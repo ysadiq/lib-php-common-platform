@@ -565,9 +565,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
         $_headers = array();
 
-        if ( !empty( $_originUri ) || $_isStar )
+        if ( !empty( $_originUri ) )
         {
-            $_headers['Access-Control-Allow-Origin'] = ( $_isStar ? '*' : $_originUri );
+            $_headers['Access-Control-Allow-Origin'] = $_originUri;
         }
 
         $_headers['Access-Control-Allow-Credentials'] = 'true';
@@ -784,7 +784,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         static $_whitelist = null;
 
-        if ( null === $_whitelist /*&& null === ( $_whitelist = Platform::storeGet( 'cors.whitelist' ) )*/ )
+        if ( null === $_whitelist && null === ( $_whitelist = Platform::storeGet( 'cors.whitelist' ) ) )
         {
             //  Empty whitelist...
             $_whitelist = array();
