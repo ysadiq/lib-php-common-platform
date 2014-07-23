@@ -505,7 +505,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $_origin = trim( Option::server( 'HTTP_ORIGIN' ) );
 
         //	Was an origin header passed? If not, don't do CORS.
-        if ( empty( $_origin ) )
+        if ( 'file://' == $_origin || empty( $_origin ) )
         {
             return true;
         }
