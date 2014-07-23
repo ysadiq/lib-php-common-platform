@@ -19,91 +19,85 @@
  */
 namespace DreamFactory\Platform\Components;
 
+use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Yii\Models\Config;
+use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Exceptions\FileSystemException;
+use Kisma\Core\Exceptions\StorageException;
+use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
+use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Storage;
 
 /**
  * Backup/Restore private storage area to df_sys_config
  */
-class PrivateStorage
+class PrivateStorage extends \ZipArchive
 {
-    //*************************************************************************
-    //	Members
-    //*************************************************************************
-
-    /**
-     * @var string The source path
-     */
-    protected $_sourcePath = null;
-
     //*************************************************************************
     //	Methods
     //*************************************************************************
 
     /**
+     * Creates a zip of a directory and writes to the config table
+     *
      * @param string $sourcePath
+     * @param string $localName
+     *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \Exception
+     * @throws \Kisma\Core\Exceptions\FileSystemException
      */
-    public function __construct( $sourcePath )
+    public static function backup( $sourcePath, $localName = null )
     {
-        if ( empty( $sourcePath ) )
-        {
-            throw new \InvalidArgumentException( 'Source path must be specified.' );
-        }
+        $_path = static::_validatePath( $sourcePath );
 
-        if ( !is_dir( $sourcePath ) )
-        {
-            //  Try and make the directory
-            if ( false === ( $_result = mkdir( $sourcePath, 0777, true ) ) )
-            {
-                throw new \InvalidArgumentException( 'The source path "' . $sourcePath . '" cannot be created. Please validate installation.' );
-            }
-        }
+        $_zip = new static();
 
-        //  Make sure we can read/write there...
-        if ( !is_readable( $sourcePath ) || !is_writable( $sourcePath ) )
-        {
-            throw new \InvalidArgumentException( 'The source path "' . $sourcePath . '" exists but cannot be accessed. Please validate installation.' );
-        }
-
-        $this->_sourcePath = rtrim( $sourcePath, '/' ) . '/';
-    }
-
-    /**
-     * Creates a zip of the private directory and writes to the config table
-     */
-    public function backup()
-    {
         //  Make a temp file name...
         $_zipName = tempnam( sys_get_temp_dir(), sha1( uniqid() ) );
 
-        $_zip = new \ZipArchive();
-
         if ( !$_zip->open( $_zipName, \ZipArchive::CREATE ) )
         {
-            throw new FileSytemException( 'Unable to create temporary zip file.' );
+            throw new FileSystemException( 'Unable to create temporary zip file.' );
         }
 
-        $_zip->addGlob( $this->_sourcePath . '{*,.registration_complete*}', GLOB_BRACE, array('remove_path' => $this->_sourcePath) );
+        if ( $localName )
+        {
+            $_zip->addEmptyDir( $localName );
+        }
+
+        $_zip->_addPath( $_path, $localName );
         $_zip->close();
 
         //  Read configuration record
         /** @var Config $_config */
-        if ( null === ( $_config = Config::model()->find( array('select' => 'private_storage', 'limit' => 1, 'order' => 'id') ) ) )
+        $_config = ResourceStore::model( 'config' )->find( array( 'select' => 'id, private_storage', 'limit' => 1, 'order' => 'id' ) );
+
+        if ( empty( $_config ) )
         {
             throw new \RuntimeException( 'Platform configuration record not found.' );
         }
 
         try
         {
-            if ( false === ( $_config->private_storage = file_get_contents( $_zipName ) ) )
+            if ( false === ( $_data = file_get_contents( $_zipName ) ) )
             {
                 throw new \RuntimeException( 'Error reading temporary zip file for storage.' );
             }
 
-            if ( !$_config->save() )
+            if ( !empty( $_data ) )
             {
-                throw new FileSystemException( 'Save failure: ' . $_config->getErrorsForLogging() );
+                $_payload = array(
+                    '.private' => $_data,
+                );
+
+                $_config->setAttribute( 'private_storage', Storage::freeze( $_payload ) );
+
+                if ( !$_config->update( array( 'private_storage' ) ) )
+                {
+                    throw new StorageException( $_config->getErrorsForLogging() );
+                }
             }
         }
         catch ( \Exception $_ex )
@@ -119,34 +113,42 @@ class PrivateStorage
     /**
      * Reads the private storage from the configuration table and restores the directory
      *
-     * @param bool $overwrite If true, any conflict files will be overwritten. Otherwise they will be skipped
+     * @param string $path
      *
      * @throws \Exception
+     * @throws \Kisma\Core\Exceptions\FileSystemException
      */
-    public function restore( $overwrite = true )
+    public static function restore( $path )
     {
+        $_path = static::_validatePath( $path );
+
         //  Read configuration record
         /** @var Config $_config */
-        if ( null === ( $_config = Config::model()->find( array('select' => 'private_storage', 'limit' => 1, 'order' => 'id') ) ) )
+        if ( null === ( $_config = Config::model()->find( array( 'select' => 'private_storage', 'limit' => 1, 'order' => 'id' ) ) ) )
         {
             throw new \RuntimeException( 'Platform configuration record not found.' );
         }
 
         //  Nothing to restore, bail...
-        if ( empty( $_config->private_storage ) )
+        $_payload = Storage::defrost( $_config->getAttribute( 'private_storage' ) );
+
+        if ( empty( $_payload ) )
         {
             return;
         }
 
+        $_data = Option::get( $_payload, '.private' );
+
         //  Make a temp file name...
         $_zipName = tempnam( sys_get_temp_dir(), sha1( uniqid() ) );
 
-        if ( false === ( $_bytes = file_put_contents( $_zipName, $_config->private_storage ) ) )
+        if ( false === ( $_bytes = file_put_contents( $_zipName, $_data ) ) )
         {
             throw new FileSystemException( 'Error creating temporary zip file for restoration.' );
         }
 
-        $_zip = new \ZipArchive();
+        //  Open our new zip and extract...
+        $_zip = new static();
 
         if ( !$_zip->open( $_zipName ) )
         {
@@ -155,7 +157,7 @@ class PrivateStorage
 
         try
         {
-            $_zip->extractTo( $this->_sourcePath );
+            $_zip->extractTo( $_path );
             $_zip->close();
         }
         catch ( \Exception $_ex )
@@ -166,5 +168,66 @@ class PrivateStorage
 
         //  Remove temporary file
         \unlink( $_zipName );
+    }
+
+    /**
+     * Recursively add a path to myself
+     *
+     * @param string $path
+     * @param string $localName
+     */
+    protected function _addPath( $path, $localName = null )
+    {
+        $_files = FileSystem::glob( $path . '/*.*', GlobFlags::GLOB_NODOTS | GlobFlags::GLOB_RECURSE );
+
+        if ( empty( $_files ) )
+        {
+            return;
+        }
+
+        foreach ( $_files as $_file )
+        {
+            $_filePath = $path . DIRECTORY_SEPARATOR . $_file;
+            $_localFilePath = ( $localName ? $localName . DIRECTORY_SEPARATOR . $_file : $_file );
+
+            if ( is_dir( $_filePath ) )
+            {
+                $this->addEmptyDir( $_file );
+            }
+            else
+            {
+                $this->addFile( $_filePath, $_localFilePath );
+            }
+        }
+    }
+
+    /**
+     * @param string $path
+     *
+     * @return string
+     */
+    protected static function _validatePath( $path )
+    {
+        if ( empty( $path ) )
+        {
+            throw new \InvalidArgumentException( 'Invalid path specified.' );
+        }
+
+        if ( !is_dir( $path ) )
+        {
+            //  Try and make the directory
+            if ( false === ( $_result = mkdir( $path, 0777, true ) ) )
+            {
+                throw new \InvalidArgumentException( 'The path "' . $path . '" cannot be created. Please validate installation.' );
+            }
+        }
+
+        //  Make sure we can read/write there...
+        if ( !is_readable( $path ) || !is_writable( $path ) )
+        {
+            throw new \InvalidArgumentException( 'The path "' . $path . '" exists but cannot be accessed. Please validate installation.' );
+        }
+
+        return rtrim( $path, '/' );
     }
 }

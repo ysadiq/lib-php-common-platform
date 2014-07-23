@@ -21,6 +21,7 @@ namespace DreamFactory\Platform\Utility;
 
 use Doctrine\Common\Cache\CacheProvider;
 use DreamFactory\Platform\Components\PlatformStore;
+use DreamFactory\Platform\Components\PrivateStorage;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\Interfaces\EventObserverLike;
@@ -506,6 +507,36 @@ class Platform
     protected static function _doDeleteAll()
     {
         return Pii::appStoreDeleteAll();
+    }
+
+    //******************************************************************************
+    //* Persistent Storage
+    //******************************************************************************
+
+    /**
+     * @param string $privatePath
+     */
+    public static function backupPrivateStorage( $privatePath = null )
+    {
+        if ( Fabric::fabricHosted() || !Pii::getParam( 'dsp.no_persistent_storage', false ) )
+        {
+            return;
+        }
+
+        PrivateStorage::backup( $privatePath ?: static::getPrivatePath() );
+    }
+
+    /**
+     * @param string $privatePath
+     */
+    public static function restorePrivateStorage( $privatePath = null )
+    {
+        if ( Fabric::fabricHosted() || !Pii::getParam( 'dsp.no_persistent_storage', false ) )
+        {
+            return;
+        }
+
+        PrivateStorage::restore( $privatePath ?: static::getPrivatePath() );
     }
 
     //*************************************************************************

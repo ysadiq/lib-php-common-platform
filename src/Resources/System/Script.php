@@ -137,7 +137,8 @@ class Script extends BaseSystemRestResource
         if ( empty( $this->_scriptPath ) )
         {
             $_message = 'Empty script path';
-        } else
+        }
+        else
         {
             if ( !is_dir( $this->_scriptPath ) )
             {
@@ -145,7 +146,8 @@ class Script extends BaseSystemRestResource
                 {
                     $_message = 'File system error creating scripts path: ' . $this->_scriptPath;
                 }
-            } else if ( !is_writable( $this->_scriptPath ) )
+            }
+            else if ( !is_writable( $this->_scriptPath ) )
             {
                 $_message = 'Scripts path not writeable: ' . $this->_scriptPath;
             }
@@ -158,7 +160,8 @@ class Script extends BaseSystemRestResource
                     {
                         $_message = 'File system error creating user scripts path: ' . $this->_userScriptPath;
                     }
-                } else if ( !is_writable( $this->_userScriptPath ) )
+                }
+                else if ( !is_writable( $this->_userScriptPath ) )
                 {
                     $_message = 'User scripts path not writeable: ' . $this->_userScriptPath;
                 }
@@ -361,6 +364,9 @@ class Script extends BaseSystemRestResource
         //  Clear the swagger cache...
         SwaggerManager::clearCache();
 
+        //  Backup the private junk
+        Platform::backupPrivateStorage();
+
         return array(
             'script_id'      => $this->_resourceId,
             'script'         => $_script,
@@ -407,6 +413,9 @@ class Script extends BaseSystemRestResource
         {
             throw new InternalServerErrorException( 'Unable to delete script ID "' . $this->_resourceId . '"' );
         }
+
+        //  Backup the private junk
+        Platform::backupPrivateStorage();
 
         //  Clear the swagger cache...
         SwaggerManager::clearCache();

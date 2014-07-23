@@ -95,9 +95,7 @@ class Session extends BasePlatformRestResource
                 'description'    => 'Resource for a user to manage their session.',
                 'is_active'      => true,
                 'resource_array' => $resources,
-                'verb_aliases'   => array(
-                    static::PUT => static::POST,
-                )
+                'verb_aliases'   => array( static::PUT => static::POST, )
             )
         );
     }
@@ -119,17 +117,19 @@ class Session extends BasePlatformRestResource
      */
     protected function _handlePost()
     {
-        //  Restore private junk
-        Pii::restorePrivateStorage( Platform::getPrivatePath() );
-
         $_data = RestData::getPostedData( false, true );
 
-        return $this->userLogin(
+        $_result = $this->userLogin(
             Option::get( $_data, 'email' ),
             Option::get( $_data, 'password' ),
             Option::get( $_data, 'duration', 0 ),
             true
         );
+
+        //  Restore private data after successful login...
+        Platform::restorePrivateStorage();
+
+        return $_result;
     }
 
     /**
@@ -138,11 +138,11 @@ class Session extends BasePlatformRestResource
     protected function _handleDelete()
     {
         //  Backup private junk
-        Pii::backupPrivateStorage( Platform::getPrivatePath() );
+        Platform::backupPrivateStorage();
 
         $this->userLogout();
 
-        return array('success' => true);
+        return array( 'success' => true );
     }
 
     //-------- User Operations ------------------------------------------------
@@ -181,7 +181,8 @@ class Session extends BasePlatformRestResource
         }
         catch ( \Exception $_ex )
         {
-            static::userLogout();
+            //  Flush caches but don't touch session...
+            static::userLogout( false );
 
             //	Special case for guest user
             $_config = ResourceStore::model( 'config' )->with(
@@ -301,7 +302,7 @@ class Session extends BasePlatformRestResource
         static::$_ownerId = sha1( $_user->email );
 
         // write back login datetime
-        $_user->update( array('last_login_date' => date( 'c' )) );
+        $_user->update( array( 'last_login_date' => date( 'c' ) ) );
 
         if ( $return_extras )
         {
@@ -313,14 +314,14 @@ class Session extends BasePlatformRestResource
     }
 
     /**
-     *
+     * @param bool $deleteSession If true, any active session will be destroyed
      */
-    public static function userLogout()
+    public static function userLogout( $deleteSession = true )
     {
         // helper for non-browser-managed sessions
         $_sessionId = FilterInput::server( 'HTTP_X_DREAMFACTORY_SESSION_TOKEN' );
 
-        if ( !empty( $_sessionId ) )
+        if ( $deleteSession && !empty( $_sessionId ) )
         {
             session_write_close();
             session_id( $_sessionId );
@@ -364,7 +365,7 @@ class Session extends BasePlatformRestResource
             'last_login_date'
         );
 
-        static $_appFields = array('id', 'api_name', 'is_active');
+        static $_appFields = array( 'id', 'api_name', 'is_active' );
 
         /** @var User $_user */
         $_user = $user
@@ -439,7 +440,7 @@ class Session extends BasePlatformRestResource
                 }
             }
 
-            $_role = array('name' => $_roleName, 'id' => $_roleId);
+            $_role = array( 'name' => $_roleName, 'id' => $_roleId );
             $_role['apps'] = $_roleApps;
             $_role['services'] = $_user->getRoleServicePermissions();
 
@@ -449,7 +450,7 @@ class Session extends BasePlatformRestResource
         }
         else
         {
-            $_allowedApps = ResourceStore::model( 'app' )->findAll( 'is_active = :ia', array(':ia' => 1) );
+            $_allowedApps = ResourceStore::model( 'app' )->findAll( 'is_active = :ia', array( ':ia' => 1 ) );
         }
 
         $_public['dsp_name'] = Pii::getParam( 'dsp_name' );
@@ -473,7 +474,7 @@ class Session extends BasePlatformRestResource
      */
     public static function generateSessionDataFromRole( $roleId, $role = null )
     {
-        static $_appFields = array('id', 'api_name', 'is_active');
+        static $_appFields = array( 'id', 'api_name', 'is_active' );
 
         /** @var Role $_role */
         $_role = $role
@@ -498,7 +499,7 @@ class Session extends BasePlatformRestResource
         $_public = array();
         $_allowedApps = array();
         $_defaultAppId = $_role->default_app_id;
-        $_roleData = array('name' => $_role->name, 'id' => $_role->id);
+        $_roleData = array( 'name' => $_role->name, 'id' => $_role->id );
 
         /**
          * @var App[] $_apps
@@ -671,7 +672,7 @@ class Session extends BasePlatformRestResource
 
         if ( Option::getBool( static::$_cache, 'is_sys_admin' ) )
         {
-            return array(static::GET, static::POST, static::PUT, static::PATCH, static::MERGE, static::DELETE);
+            return array( static::GET, static::POST, static::PUT, static::PATCH, static::MERGE, static::DELETE );
         }
 
         if ( null === ( $_roleInfo = Option::get( static::$_cache, 'role' ) ) )
@@ -781,16 +782,16 @@ class Session extends BasePlatformRestResource
         {
             case PermissionTypes::READ_ONLY:
             case 'Read Only':
-                return array(static::GET);
+                return array( static::GET );
             case PermissionTypes::WRITE_ONLY:
             case 'Write Only':
-                return array(static::POST);
+                return array( static::POST );
             case PermissionTypes::READ_WRITE:
             case 'Read and Write':
-                return array(static::GET, static::POST, static::PUT, static::PATCH, static::MERGE);
+                return array( static::GET, static::POST, static::PUT, static::PATCH, static::MERGE );
             case PermissionTypes::FULL_ACCESS:
             case 'Full Access':
-                return array(static::GET, static::POST, static::PUT, static::PATCH, static::MERGE, static::DELETE);
+                return array( static::GET, static::POST, static::PUT, static::PATCH, static::MERGE, static::DELETE );
         }
 
         return array();
@@ -844,7 +845,7 @@ class Session extends BasePlatformRestResource
                     if ( 0 == strcasecmp( $component, $_tempComponent ) )
                     {
                         $_componentFound = true;
-                        if ( isset( $_tempVerbs[$action] ) )
+                        if ( isset( $_tempVerbs[ $action ] ) )
                         {
                             $_filters = Option::get( $_svcInfo, 'filters' );
                             $_operator = Option::get( $_svcInfo, 'filter_op', 'AND' );
@@ -853,12 +854,12 @@ class Session extends BasePlatformRestResource
                                 return null;
                             }
 
-                            return array('filters' => $_filters, 'filter_op' => $_operator);
+                            return array( 'filters' => $_filters, 'filter_op' => $_operator );
                         }
                     }
                     elseif ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
                     {
-                        if ( isset( $_tempVerbs[$action] ) )
+                        if ( isset( $_tempVerbs[ $action ] ) )
                         {
                             $_filters = Option::get( $_svcInfo, 'filters' );
                             $_operator = Option::get( $_svcInfo, 'filter_op', 'AND' );
@@ -867,7 +868,7 @@ class Session extends BasePlatformRestResource
                                 return null;
                             }
 
-                            $_serviceAllowed = array('filters' => $_filters, 'filter_op' => $_operator);
+                            $_serviceAllowed = array( 'filters' => $_filters, 'filter_op' => $_operator );
                         }
                     }
                 }
@@ -875,7 +876,7 @@ class Session extends BasePlatformRestResource
                 {
                     if ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
                     {
-                        if ( isset( $_tempVerbs[$action] ) )
+                        if ( isset( $_tempVerbs[ $action ] ) )
                         {
                             $_filters = Option::get( $_svcInfo, 'filters' );
                             $_operator = Option::get( $_svcInfo, 'filter_op', 'AND' );
@@ -884,7 +885,7 @@ class Session extends BasePlatformRestResource
                                 return null;
                             }
 
-                            $_serviceAllowed = array('filters' => $_filters, 'filter_op' => $_operator);
+                            $_serviceAllowed = array( 'filters' => $_filters, 'filter_op' => $_operator );
                         }
                     }
                 }
@@ -949,9 +950,9 @@ class Session extends BasePlatformRestResource
                         // get fields here
                         if ( !empty( $_lookup ) )
                         {
-                            if ( isset( static::$_cache, static::$_cache[$_lookup] ) )
+                            if ( isset( static::$_cache, static::$_cache[ $_lookup ] ) )
                             {
-                                $value = static::$_cache[$_lookup];
+                                $value = static::$_cache[ $_lookup ];
 
                                 return true;
                             }
@@ -962,9 +963,9 @@ class Session extends BasePlatformRestResource
                         // get fields here
                         if ( !empty( $_lookup ) )
                         {
-                            if ( isset( static::$_cache, static::$_cache['role'], static::$_cache['role'][$_lookup] ) )
+                            if ( isset( static::$_cache, static::$_cache['role'], static::$_cache['role'][ $_lookup ] ) )
                             {
-                                $value = static::$_cache['role'][$_lookup];
+                                $value = static::$_cache['role'][ $_lookup ];
 
                                 return true;
                             }
@@ -1012,9 +1013,9 @@ class Session extends BasePlatformRestResource
 
         $_control = $use_private ? 'secret' : 'lookup';
 
-        if ( isset( static::$_cache, static::$_cache[$_control], static::$_cache[$_control][$lookup] ) )
+        if ( isset( static::$_cache, static::$_cache[ $_control ], static::$_cache[ $_control ][ $lookup ] ) )
         {
-            $value = static::$_cache[$_control][$lookup];
+            $value = static::$_cache[ $_control ][ $lookup ];
 
             return true;
         }
@@ -1208,10 +1209,10 @@ class Session extends BasePlatformRestResource
                 foreach ( $theGroups as $g_key => $group )
                 {
                     $groupId = $group->id;
-                    $groupData = ( isset( $appGroups[$g_key] ) )
-                        ? $appGroups[$g_key]
+                    $groupData = ( isset( $appGroups[ $g_key ] ) )
+                        ? $appGroups[ $g_key ]
                         : $group->getAttributes(
-                            array('id', 'name', 'description')
+                            array( 'id', 'name', 'description' )
                         );
                     foreach ( $tempGroups as $tempGroup )
                     {
@@ -1223,7 +1224,7 @@ class Session extends BasePlatformRestResource
                             $groupData['apps'] = $temp;
                         }
                     }
-                    $appGroups[$g_key] = $groupData;
+                    $appGroups[ $g_key ] = $groupData;
                 }
                 if ( !$found )
                 {
@@ -1235,7 +1236,7 @@ class Session extends BasePlatformRestResource
             {
                 if ( !isset( $group['apps'] ) )
                 {
-                    unset( $appGroups[$g_key] );
+                    unset( $appGroups[ $g_key ] );
                 }
             }
             $_data['app_groups'] = array_values( $appGroups ); // reset indexing
