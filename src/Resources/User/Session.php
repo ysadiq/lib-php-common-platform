@@ -95,9 +95,7 @@ class Session extends BasePlatformRestResource
                 'description'    => 'Resource for a user to manage their session.',
                 'is_active'      => true,
                 'resource_array' => $resources,
-                'verb_aliases'   => array(
-                    static::PUT => static::POST,
-                )
+                'verb_aliases'   => array( static::PUT => static::POST, )
             )
         );
     }
@@ -121,12 +119,17 @@ class Session extends BasePlatformRestResource
     {
         $_data = RestData::getPostedData( false, true );
 
-        return $this->userLogin(
+        $_result = $this->userLogin(
             Option::get( $_data, 'email' ),
             Option::get( $_data, 'password' ),
             Option::get( $_data, 'duration', 0 ),
             true
         );
+
+        //  Restore private data after successful login...
+        Platform::restorePrivateStorage();
+
+        return $_result;
     }
 
     /**
@@ -134,6 +137,9 @@ class Session extends BasePlatformRestResource
      */
     protected function _handleDelete()
     {
+        //  Backup private junk
+        Platform::backupPrivateStorage();
+
         $this->userLogout();
 
         return array( 'success' => true );
@@ -175,7 +181,8 @@ class Session extends BasePlatformRestResource
         }
         catch ( \Exception $_ex )
         {
-            static::userLogout();
+            //  Flush caches but don't touch session...
+            static::userLogout( false );
 
             //	Special case for guest user
             $_config = ResourceStore::model( 'config' )->with(
@@ -287,6 +294,7 @@ class Session extends BasePlatformRestResource
         $_user = User::loginRequest( $email, $password, $duration );
 
         $_result = static::generateSessionDataFromUser( $_user->id, $_user );
+
         static::$_cache = Option::get( $_result, 'cached' );
         Pii::setState( 'cached', static::$_cache );
 
@@ -306,14 +314,14 @@ class Session extends BasePlatformRestResource
     }
 
     /**
-     *
+     * @param bool $deleteSession If true, any active session will be destroyed
      */
-    public static function userLogout()
+    public static function userLogout( $deleteSession = true )
     {
         // helper for non-browser-managed sessions
         $_sessionId = FilterInput::server( 'HTTP_X_DREAMFACTORY_SESSION_TOKEN' );
 
-        if ( !empty( $_sessionId ) )
+        if ( $deleteSession && !empty( $_sessionId ) )
         {
             session_write_close();
             session_id( $_sessionId );
