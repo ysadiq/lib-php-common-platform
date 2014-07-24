@@ -26,6 +26,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\System\Script;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\Platform;
+use DreamFactory\Platform\Yii\Models\ServiceDoc;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\HttpMethod;
 use Kisma\Core\Utility\FileSystem;
@@ -49,25 +50,13 @@ class SwaggerManager extends BasePlatformRestService
      */
     const SWAGGER_VERSION = '1.2';
     /**
-     * @const string The private caching directory
-     */
-    const SWAGGER_CACHE_DIR = '/cache';
-    /**
      * @const string The private cache file
      */
-    const SWAGGER_CACHE_FILE = '/_.json';
+    const SWAGGER_CACHE_FILE = '_.json';
     /**
      * @const string A cached events list derived from Swagger
      */
-    const SWAGGER_EVENT_CACHE_FILE = '/_events.json';
-    /**
-     * @const string The private storage directory for non-generated files
-     */
-    const SWAGGER_CUSTOM_DIR = '/custom';
-    /**
-     * @const string The name of the custom example file
-     */
-    const SWAGGER_CUSTOM_EXAMPLE_FILE = '/example_service_swagger.json';
+    const SWAGGER_EVENT_CACHE_FILE = '_events.json';
     /**
      * @const string Our base API swagger file
      */
@@ -149,11 +138,6 @@ class SwaggerManager extends BasePlatformRestService
     {
         Log::info( 'Building Swagger cache' );
 
-        //	Create cache & custom directories
-        $_cachePath = Platform::getSwaggerPath( static::SWAGGER_CACHE_DIR );
-        $_customPath = Platform::getSwaggerPath( static::SWAGGER_CUSTOM_DIR );
-        $_templatePath = Platform::getLibraryTemplatePath( '/swagger' );
-
         //	Generate swagger output from file annotations
         $_scanPath = __DIR__;
 
@@ -166,6 +150,7 @@ class SwaggerManager extends BasePlatformRestService
         //  Build services from database
         $_sql = <<<SQL
 SELECT
+    id,
 	api_name,
 	type_id,
 	storage_type_id,
@@ -182,11 +167,14 @@ SQL;
             $_rows = Sql::findAll( $_sql, null, Pii::pdo() )
         );
 
+        //  Pull any custom swagger docs
+        $_customs = ServiceDoc::model()->findAll( 'format = :format', array(':format' => 'SWAGGER') );
+
         // gather the services
         $_services = array();
 
         //	Initialize the event map
-        static::$_eventMap = static::$_eventMap ?: array();
+        static::$_eventMap = static::$_eventMap ? : array();
 
         //	Spin through services and pull the configs
         foreach ( $_result as $_service )
@@ -211,24 +199,13 @@ SQL;
             }
             else //	Check custom path, uses api name
             {
-                $_filePath = $_customPath . '/' . $_apiName . '.json';
-
-                if ( file_exists( $_filePath ) )
+                // check the database records for swagger, raml, etc.
+                $_id = Option::get( $_service, 'id' );
+                foreach ( $_customs as $_custom )
                 {
-                    $_fromFile = file_get_contents( $_filePath );
-
-                    if ( !empty( $_fromFile ) )
+                    if ( $_id == $_custom->service_id )
                     {
-                        $_content = $_fromFile;
-                    }
-                }
-                else
-                {
-                    $_filePath = $_customPath . '/' . $_apiName . '.raml';
-
-                    if ( file_exists( $_filePath ) )
-                    {
-                        // todo check for RAML and convert
+                        $_content = $_custom->content;
                     }
                 }
             }
@@ -242,22 +219,22 @@ SQL;
             // replace service type placeholder with api name for this service instance
             $_content = str_replace( '/{api_name}', '/' . $_apiName, $_content );
 
-            if ( !isset( static::$_eventMap[ $_apiName ] ) || !is_array( static::$_eventMap[ $_apiName ] ) || empty( static::$_eventMap[ $_apiName ] )
+            if ( !isset( static::$_eventMap[$_apiName] ) ||
+                 !is_array( static::$_eventMap[$_apiName] ) ||
+                 empty( static::$_eventMap[$_apiName] )
             )
             {
-                static::$_eventMap[ $_apiName ] = array();
+                static::$_eventMap[$_apiName] = array();
             }
 
             $_chunk = json_decode( $_content, true );
             $_serviceEvents = static::_parseSwaggerEvents( $_apiName, $_chunk );
             $_content = json_encode( $_chunk, JSON_UNESCAPED_SLASHES );
 
-            // cache it to a file for later access
-            $_filePath = $_cachePath . '/' . $_apiName . '.json';
-
-            if ( false === file_put_contents( $_filePath, $_content ) )
+            // cache it for later access
+            if ( false === Platform::storeSet( $_apiName . '.json', $_content ) )
             {
-                Log::error( '  * File system error creating swagger cache file: ' . $_filePath );
+                Log::error( '  * System error creating swagger cache file: ' . $_apiName . '.json' );
                 continue;
             }
 
@@ -268,8 +245,8 @@ SQL;
             );
 
             //	Parse the events while we get the chance...
-            static::$_eventMap[ $_apiName ] = array_merge(
-                Option::clean( static::$_eventMap[ $_apiName ] ),
+            static::$_eventMap[$_apiName] = array_merge(
+                Option::clean( static::$_eventMap[$_apiName] ),
                 $_serviceEvents
             );
 
@@ -281,33 +258,19 @@ SQL;
         $_resourceListing = static::_getSwaggerFile( $_main );
         $_out = array_merge( $_resourceListing, array('apis' => $_services) );
 
-        $_filePath = $_cachePath . static::SWAGGER_CACHE_FILE;
-
-        if ( false === file_put_contents( $_filePath, json_encode( $_out, JSON_UNESCAPED_SLASHES ) ) )
+        if ( false === Platform::storeSet( static::SWAGGER_CACHE_FILE, json_encode( $_out, JSON_UNESCAPED_SLASHES ) ) )
         {
-            Log::error( '  * File system error creating swagger cache file: ' . $_filePath );
+            Log::error( '  * System error creating swagger cache file: ' . static::SWAGGER_CACHE_FILE );
         }
 
         //	Write event cache file
-        if ( false === file_put_contents(
-                $_cachePath . static::SWAGGER_EVENT_CACHE_FILE,
+        if ( false === Platform::storeSet(
+                static::SWAGGER_EVENT_CACHE_FILE,
                 json_encode( static::$_eventMap, JSON_UNESCAPED_SLASHES )
             )
         )
         {
-            Log::error(
-                '  * File system error writing events cache file: ' . $_cachePath . static::SWAGGER_EVENT_CACHE_FILE
-            );
-        }
-
-        //	Create example file
-        if ( !file_exists( $_customPath . static::SWAGGER_CUSTOM_EXAMPLE_FILE ) && file_exists( $_templatePath . static::SWAGGER_CUSTOM_EXAMPLE_FILE )
-        )
-        {
-            file_put_contents(
-                $_customPath . static::SWAGGER_CUSTOM_EXAMPLE_FILE,
-                file_get_contents( $_templatePath . static::SWAGGER_CUSTOM_EXAMPLE_FILE )
-            );
+            Log::error( '  * System error creating swagger cache file: ' . static::SWAGGER_EVENT_CACHE_FILE );
         }
 
         Log::info( 'Swagger cache build process complete' );
@@ -385,7 +348,7 @@ SQL;
                     }
 
                     //  Set into master record
-                    $data['apis'][ $_ixApi ]['operations'][ $_ixOps ]['event_name'] = $_eventNames;
+                    $data['apis'][$_ixApi]['operations'][$_ixOps]['event_name'] = $_eventNames;
 
                     foreach ( $_eventNames as $_ixEventNames => $_templateEventName )
                     {
@@ -410,12 +373,12 @@ SQL;
                         $_eventsThrown[] = $_eventName;
 
                         //  Set actual name in swagger file
-                        $data['apis'][ $_ixApi ]['operations'][ $_ixOps ]['event_name'][ $_ixEventNames ] = $_eventName;
+                        $data['apis'][$_ixApi]['operations'][$_ixOps]['event_name'][$_ixEventNames] = $_eventName;
 
                         Log::debug( '  * Found event "' . $_eventName . '"' );
                     }
 
-                    $_events[ $_method ] = array(
+                    $_events[$_method] = array(
                         'event'   => $_eventsThrown,
                         'scripts' => $_scripts,
                     );
@@ -424,7 +387,7 @@ SQL;
                 unset( $_operation, $_scripts, $_eventsThrown );
             }
 
-            $_eventMap[ str_ireplace( '{api_name}', $apiName, $_path ) ] = $_events;
+            $_eventMap[str_ireplace( '{api_name}', $apiName, $_path )] = $_events;
 
             unset( $_scripts, $_events, $_api );
         }
@@ -480,7 +443,8 @@ SQL;
         }
 
         $_response = array();
-        $_eventPattern = '/^' . str_replace( array('.*.js', '.'), array(null, '\\.'), $_scriptPattern ) . '\\.(\w)\\.js$/i';
+        $_eventPattern =
+            '/^' . str_replace( array('.*.js', '.'), array(null, '\\.'), $_scriptPattern ) . '\\.(\w)\\.js$/i';
 
         foreach ( $_scripts as $_script )
         {
@@ -522,9 +486,9 @@ SQL;
 
         $_hash = sha1( $method . '.' . $_requestUri );
 
-        if ( isset( $_cache[ $_hash ] ) )
+        if ( isset( $_cache[$_hash] ) )
         {
-            return $_cache[ $_hash ];
+            return $_cache[$_hash];
         }
 
         //  Global search by name
@@ -541,7 +505,7 @@ SQL;
 
                     if ( 0 == strcasecmp( $eventName, $_eventName = Option::get( $_info, 'event' ) ) )
                     {
-                        $_cache[ $_hash ] = $_eventName;
+                        $_cache[$_hash] = $_eventName;
 
                         return true;
                     }
@@ -592,7 +556,8 @@ SQL;
 
         if ( null === ( $_resources = Option::get( $_map, $_resource ) ) )
         {
-            if ( !method_exists( $service, 'getServiceName' ) || null === ( $_resources = Option::get( $_map, $service->getServiceName() ) )
+            if ( !method_exists( $service, 'getServiceName' ) ||
+                 null === ( $_resources = Option::get( $_map, $service->getServiceName() ) )
             )
             {
                 if ( null === ( $_resources = Option::get( $_map, 'system' ) ) )
@@ -656,7 +621,7 @@ SQL;
                     //  Add in optional trailing slashes
                     if ( $_folderPath )
                     {
-                        $_swaps[0][] = $_folderPath[ strlen( $_folderPath ) - 1 ] != '/'
+                        $_swaps[0][] = $_folderPath[strlen( $_folderPath ) - 1] != '/'
                             ? $_folderPath . '/'
                             : substr(
                                 $_folderPath,
@@ -668,7 +633,7 @@ SQL;
 
                     if ( $_filePath )
                     {
-                        $_swaps[0][] = $_filePath[ strlen( $_filePath ) - 1 ] != '/'
+                        $_swaps[0][] = $_filePath[strlen( $_filePath ) - 1] != '/'
                             ? $_filePath . '/'
                             : substr(
                                 $_filePath,
@@ -689,7 +654,8 @@ SQL;
         }
 
         $_path = implode( '.', explode( '/', ltrim( $_path, '/' ) ) );
-        $_pattern = '#^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$#';
+        $_pattern =
+            '#^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$#';
         $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
         if ( empty( $_matches ) )
@@ -711,7 +677,7 @@ SQL;
                     //  Restore the original path...
                     $_eventName = str_ireplace( $_swaps[1], $_swaps[0], $_eventName );
 
-                    $_cache[ $_hash ] = $_eventName;
+                    $_cache[$_hash] = $_eventName;
 
                     //  Cache for one minute...
                     Platform::mcSet( 'swagger.event_map_cache', $_cache, 60 );
@@ -736,14 +702,13 @@ SQL;
             return static::$_eventMap;
         }
 
-        $_cachePath = Platform::getSwaggerPath( static::SWAGGER_CACHE_DIR );
-        $_encoded = @file_get_contents( $_cachePath . static::SWAGGER_EVENT_CACHE_FILE );
+        $_encoded = Platform::storeGet( static::SWAGGER_EVENT_CACHE_FILE );
 
         if ( !empty( $_encoded ) )
         {
             if ( false === ( static::$_eventMap = json_decode( $_encoded, true ) ) )
             {
-                Log::error( '  * Event cache file appears corrupt, or cannot be read.' );
+                Log::error( '  * Event cache appears corrupt, or cannot be read.' );
             }
         }
 
@@ -765,31 +730,14 @@ SQL;
      */
     public static function getSwagger()
     {
-        $_swaggerPath = Platform::getSwaggerPath( static::SWAGGER_CACHE_DIR );
-
-        if ( !is_dir( $_swaggerPath ) )
-        {
-            if ( false === @mkdir( $_swaggerPath, 0777, true ) )
-            {
-                Log::error( 'File system error while creating swagger cache path: ' . $_swaggerPath );
-            }
-        }
-
-        $_filePath = $_swaggerPath . static::SWAGGER_CACHE_FILE;
-
-        if ( !file_exists( $_filePath ) )
+        if ( null === $_content = Platform::storeGet( static::SWAGGER_CACHE_FILE ) )
         {
             static::_buildSwagger();
 
-            if ( !file_exists( $_filePath ) )
+            if ( null === $_content = Platform::storeGet( static::SWAGGER_CACHE_FILE ) )
             {
-                throw new InternalServerErrorException( "Failed to create swagger cache." );
+                throw new InternalServerErrorException( "Failed to get or create swagger cache." );
             }
-        }
-
-        if ( false === ( $_content = file_get_contents( $_filePath ) ) )
-        {
-            throw new InternalServerErrorException( "Failed to retrieve swagger cache." );
         }
 
         return $_content;
@@ -805,51 +753,35 @@ SQL;
      */
     public static function getSwaggerForService( $service )
     {
-        $_swaggerPath = Platform::getSwaggerPath( static::SWAGGER_CACHE_DIR );
-        $_filePath = $_swaggerPath . '/' . $service . '.json';
+        $_cachePath = $service . '.json';
 
-        if ( !file_exists( $_filePath ) )
+        if ( null === $_content = Platform::storeGet( $_cachePath ) )
         {
             static::_buildSwagger();
 
-            if ( !file_exists( $_filePath ) )
+            if ( null === $_content = Platform::storeGet( $_cachePath ) )
             {
-                throw new InternalServerErrorException(
-                    'File system error creating Swagger cache file for "' . $service . '"'
-                );
+                throw new InternalServerErrorException( "Failed to get or create swagger cache." );
             }
-        }
-
-        if ( false === ( $_content = file_get_contents( $_filePath ) ) )
-        {
-            throw new InternalServerErrorException( 'File system error reading Swagger cache: ' . $_filePath );
         }
 
         return $_content;
     }
 
     /**
-     * Clears the cached files produced by the swagger annotations
+     * Clears the cache produced by the swagger annotations
      */
     public static function clearCache()
     {
-        $_swaggerPath = Platform::getSwaggerPath( static::SWAGGER_CACHE_DIR );
-
-        if ( file_exists( $_swaggerPath ) )
-        {
-            $files = array_diff( scandir( $_swaggerPath ), array('.', '..') );
-            foreach ( $files as $file )
-            {
-                @unlink( $_swaggerPath . '/' . $file );
-            }
-        }
+        Platform::storeDelete( static::SWAGGER_CACHE_FILE );
+        // todo clear the rest of the swagger cache for each service api name?
 
         //  Redirect back to upgrade page if this was from an upgrade request
         if ( isset( $_POST, $_POST['UpgradeDspForm'], $_POST['UpgradeDspForm']['selected'] ) )
         {
             //  Delete any cache files too...
             Platform::storeDelete( PlatformStore::buildCacheKey() );
-            
+
             //  Try and remove any cache data from /tmp
             @shell_exec( 'rm -rf /tmp/.dsp* /tmp/.dfcc-* /tmp/*.dfcc' );
 
@@ -898,7 +830,7 @@ SQL;
                 {
                     if ( !isset( $_commonResponse['code'] ) || $_code != $_commonResponse['code'] )
                     {
-                        unset( $_response[ $_commonResponse['code'] ] );
+                        unset( $_response[$_commonResponse['code']] );
                     }
                 }
             }

@@ -1551,6 +1551,41 @@
 					}
 				}
 			]
+		},
+		{
+			"name":  "df_sys_service_doc",
+			"field": [
+				{
+					"name": "id",
+					"type": "id"
+				},
+				{
+					"name":          "service_id",
+					"type":          "reference",
+					"ref_table":     "df_sys_service",
+					"ref_fields":    "id",
+					"ref_on_update": "CASCADE",
+					"ref_on_delete": "CASCADE",
+					"allow_null":    true
+				},
+				{
+					"name":       "format",
+					"type":       "string",
+					"length":     64,
+					"value":      ["SWAGGER", "RAML", "API_BLUEPRINT", "IO_DOCS"],
+					"default":    "SWAGGER",
+					"allow_null": false,
+					"is_index":   true,
+					"validation": {
+						"picklist": {}
+					}
+				},
+				{
+					"name":       "content",
+					"type":       "mediumtext",
+					"allow_null": true
+				}
+			]
 		}
 	]
 }

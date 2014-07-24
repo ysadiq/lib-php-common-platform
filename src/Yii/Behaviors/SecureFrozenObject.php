@@ -21,12 +21,13 @@ namespace DreamFactory\Platform\Yii\Behaviors;
 
 use CModelEvent;
 use Kisma\Core\Utility\Hasher;
+use Kisma\Core\Utility\Storage;
 
 /**
- * SecureJson.php
+ * SecureFrozenObject.php
  * If attached to a model, fields are decrypted/encrypted on load/save
  */
-class SecureJson extends SecureString
+class SecureFrozenObject extends SecureString
 {
     //*************************************************************************
     //* Handlers
@@ -53,7 +54,7 @@ class SecureJson extends SecureString
                         case true:
                             if ( empty( $_value ) )
                             {
-                                $_value = array();
+                                $_value = null;
                             }
                             else
                             {
@@ -64,56 +65,34 @@ class SecureJson extends SecureString
                                     $_workData = Hasher::decryptString( $_workData, $this->_salt );
                                 }
 
-                                // 	Try decoding decrypted string
+                                // 	Try defrosting decrypted string
                                 //	Make sure we can deserialize...
-                                $_decoded = json_decode( $_workData, true );
+                                $_decoded = Storage::defrost( $_workData );
 
                                 if ( empty( $_decoded ) )
                                 {
                                     //	Try decoding raw string
-                                    $_decoded = json_decode( $_value, true );
+                                    $_decoded = Storage::defrost( $_value );
                                 }
-
-                                if ( JSON_ERROR_NONE != json_last_error() )
+                                elseif ( is_string( $_decoded) && ( $_decoded === $_value ) )
                                 {
-                                    $event->handled = true;
-                                    $event->sender->addError(
-                                        $_attribute,
-                                        'The column "' . $_attribute . '" is malformed or otherwise invalid.'
-                                    );
-                                    continue;
+                                    $_decoded = @gzuncompress( @base64_decode( $_value ) );
                                 }
 
-                                $_value = $_decoded ? : array();
+                                $_value = $_decoded ? : $_value;
                             }
 
                             break;
 
                         case false:
                             //	Make sure we can serialize...
-                            if ( empty( $_value ) )
+                            if ( is_string( $_value ) )
                             {
-                                $_value = array();
+                                $_encoded = base64_encode( gzcompress( $_value ) );
                             }
-                            elseif ( is_string( $_value ) )
+                            else
                             {
-                                // maybe it is already encoded json, check for original
-                                if ( null !== ( $_decoded = json_decode( $_value, true ) ) )
-                                {
-                                    $_value = $_decoded;
-                                }
-                            }
-
-                            $_encoded = json_encode( $_value );
-
-                            if ( ( false === $_encoded ) || ( JSON_ERROR_NONE != json_last_error() ) )
-                            {
-                                $event->handled = true;
-                                $event->sender->addError(
-                                    $_attribute,
-                                    'The column "' . $_attribute . '" is malformed or otherwise invalid.'
-                                );
-                                continue;
+                                $_encoded = Storage::freeze( $_value );
                             }
 
                             //	Encrypt it...
