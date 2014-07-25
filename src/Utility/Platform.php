@@ -20,8 +20,8 @@
 namespace DreamFactory\Platform\Utility;
 
 use Doctrine\Common\Cache\CacheProvider;
+use DreamFactory\Platform\Components\DirectoryStorage;
 use DreamFactory\Platform\Components\PlatformStore;
-use DreamFactory\Platform\Components\PrivateStorage;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\Interfaces\EventObserverLike;
@@ -313,18 +313,7 @@ class Platform
             )
         );
 
-        $_uuid =
-            '{' .
-            substr( $_hash, 0, 8 ) .
-            '-' .
-            substr( $_hash, 8, 4 ) .
-            '-' .
-            substr( $_hash, 12, 4 ) .
-            '-' .
-            substr( $_hash, 16, 4 ) .
-            '-' .
-            substr( $_hash, 20, 12 ) .
-            '}';
+        $_uuid = '{' . substr( $_hash, 0, 8 ) . '-' . substr( $_hash, 8, 4 ) . '-' . substr( $_hash, 12, 4 ) . '-' . substr( $_hash, 16, 4 ) . '-' . substr( $_hash, 20, 12 ) . '}';
 
         return $_uuid;
     }
@@ -514,29 +503,33 @@ class Platform
     //******************************************************************************
 
     /**
-     * @param string $privatePath
+     * @param string $storageId The id for this store
+     * @param string $sourcePath
      */
-    public static function backupPrivateStorage( $privatePath = null )
+    public static function backupPrivateStorage( $storageId = 'storage', $sourcePath = null )
     {
         if ( Fabric::fabricHosted() || !Pii::getParam( 'dsp.no_persistent_storage', false ) )
         {
             return;
         }
 
-        PrivateStorage::backup( $privatePath ?: static::getPrivatePath() );
+        $_store = new DirectoryStorage( $storageId, Pii::pdo() );
+        $_store->backup( $storageId, $sourcePath ?: static::getStorageBasePath() );
     }
 
     /**
-     * @param string $privatePath
+     * @param string $storageId  The id for this store
+     * @param string $targetPath Where to restore the data
      */
-    public static function restorePrivateStorage( $privatePath = null )
+    public static function restorePrivateStorage( $storageId = 'storage', $targetPath = null )
     {
         if ( Fabric::fabricHosted() || !Pii::getParam( 'dsp.no_persistent_storage', false ) )
         {
             return;
         }
 
-        PrivateStorage::restore( $privatePath ?: static::getPrivatePath() );
+        $_store = new DirectoryStorage( $storageId, Pii::pdo() );
+        $_store->restore( $storageId, $targetPath ?: static::getStorageBasePath() );
     }
 
     //*************************************************************************
