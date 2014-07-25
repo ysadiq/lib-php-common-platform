@@ -36,33 +36,27 @@ class EmailUtilities
     /**
      * Create a SwiftMailer Transport
      *
-     * @param string $type
-     * @param array  $credentials
+     * @param array  $settings
      *
      * @throws \InvalidArgumentException
      * @return \Swift_MailTransport|\Swift_SendmailTransport|\Swift_SmtpTransport
      */
-    public static function createTransport( $type = null, $credentials = array() )
+    public static function createTransport( $settings = array() )
     {
-        switch ( $type )
+        $_transportType = Option::get( $settings, 'transport_type' );
+        switch ( $_transportType )
         {
-            case null:
-            case '':
-                // mail()
-                $transport = \Swift_MailTransport::newInstance();
-                break;
-
             case 'smtp': // SMTP
             case 'SMTP': // SMTP
-                if ( null === ( $host = Option::get( $credentials, 'host', 'localhost' ) ) )
+                if ( null === ( $host = Option::get( $settings, 'host', 'localhost' ) ) )
                 {
                     throw new \InvalidArgumentException( 'SMTP host name can not be empty.' );
                 }
 
-                $user = Session::replaceLookup( Option::get( $credentials, 'user', '' ), true );
-                $pwd = Session::replaceLookup( Option::get( $credentials, 'pwd', '' ), true );
-                $port = Option::get( $credentials, 'port', 25 );
-                $security = strtolower( Option::get( $credentials, 'security', null ) );
+                $user = Session::replaceLookup( Option::get( $settings, 'user', '' ), true );
+                $pwd = Session::replaceLookup( Option::get( $settings, 'pwd', '' ), true );
+                $port = Option::get( $settings, 'port', 25 );
+                $security = strtolower( Option::get( $settings, 'security', null ) );
 
                 $transport = \Swift_SmtpTransport::newInstance( $host, $port, $security );
 
@@ -73,9 +67,15 @@ class EmailUtilities
                 }
                 break;
 
-            default: // use local process, i.e. sendmail, exim, postscript, etc
-                $transport = \Swift_SendmailTransport::newInstance( $type );
+            case 'command': // use local process, i.e. sendmail, exim, postscript, etc
+                $transport = \Swift_SendmailTransport::newInstance( Option::get( $settings, 'command', '' ) );
                 break;
+
+            default:
+                // mail()
+                $transport = \Swift_MailTransport::newInstance();
+                break;
+
         }
 
         return $transport;
