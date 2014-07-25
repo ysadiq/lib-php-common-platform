@@ -503,10 +503,6 @@ $_commonProperties = array(
         'format'      => 'int32',
         'description' => 'One of the supported enumerated service types.',
     ),
-    'storage_name'    => array(
-        'type'        => 'string',
-        'description' => 'The local or remote storage name (i.e. root folder).',
-    ),
     'storage_type'    => array(
         'type'        => 'string',
         'description' => 'They supported storage service type.',

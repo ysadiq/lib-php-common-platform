@@ -68,12 +68,6 @@ class SecureJson extends SecureString
                                 //	Make sure we can deserialize...
                                 $_decoded = json_decode( $_workData, true );
 
-                                if ( empty( $_decoded ) )
-                                {
-                                    //	Try decoding raw string
-                                    $_decoded = json_decode( $_value, true );
-                                }
-
                                 if ( JSON_ERROR_NONE != json_last_error() )
                                 {
                                     $event->handled = true;

@@ -42,7 +42,6 @@ use Kisma\Core\Utility\Sql;
  * @property boolean             $is_system
  * @property string              $type
  * @property int                 $type_id
- * @property string              $storage_name
  * @property string              $storage_type
  * @property int                 $storage_type_id
  * @property string              $credentials
@@ -252,7 +251,6 @@ MYSQL;
             array('name, api_name', 'unique', 'allowEmpty' => false, 'caseSensitive' => false),
             array('type_id, storage_type_id', 'numerical', 'integerOnly' => true),
             array('name, api_name, type, storage_type, native_format', 'length', 'max' => 64),
-            array('storage_name', 'length', 'max' => 80),
             array('base_url', 'length', 'max' => 255),
             array('is_active', 'boolean'),
             array('description, credentials, parameters, headers', 'safe'),
@@ -301,7 +299,6 @@ MYSQL;
                     'is_system'     => 'Is System',
                     'type'          => 'Type',
                     'type_id'       => 'Type ID',
-                    'storage_name'  => 'Storage Name',
                     'storage_type'  => 'Storage Type',
                     'credentials'   => 'Credentials',
                     'native_format' => 'Native Format',
@@ -539,9 +536,18 @@ MYSQL;
                 break;
         }
 
-        if ( 'local email service' == strtolower( trim( $this->type ) ) )
+        if (PlatformServiceTypes::EMAIL_SERVICE === $this->type_id)
         {
-            $this->type = 'Email Service';
+            if ( 'local email service' == strtolower( trim( $this->type ) ) )
+            {
+                $this->type = 'Email Service';
+            }
+
+            // transport type used to be stored in storage_type
+            if ( !Option::contains($this->credentials, 'transport_type' ))
+            {
+                $this->credentials['transport_type'] = $this->storage_type;
+            }
         }
 
         parent::afterFind();
@@ -567,7 +573,6 @@ MYSQL;
                     'type',
                     'type_id',
                     'is_system',
-                    'storage_name',
                     'storage_type',
                     'storage_type_id',
                     'credentials',

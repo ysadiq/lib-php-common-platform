@@ -71,10 +71,6 @@ class PlatformStorageTypes extends SeedEnum
      * @var int
      */
     const RACKSPACE_CLOUDFILES = 8;
-    /**
-     * @var int
-     */
-    const EMAIL_TRANSPORT = 10;
 
     /**
      * @param int    $value        enumerated type value
@@ -93,7 +89,6 @@ class PlatformStorageTypes extends SeedEnum
         self::MONGOHQ                  => 'MongoDbSvc',
         self::OPENSTACK_OBJECT_STORAGE => 'OpenStackObjectStoreSvc',
         self::RACKSPACE_CLOUDFILES     => 'OpenStackObjectStoreSvc',
-        self::EMAIL_TRANSPORT          => 'EmailSvc',
     );
 
     //*************************************************************************
