@@ -536,21 +536,58 @@ MYSQL;
                 break;
         }
 
-        if (PlatformServiceTypes::EMAIL_SERVICE === $this->type_id)
-        {
-            if ( 'local email service' == strtolower( trim( $this->type ) ) )
-            {
-                $this->type = 'Email Service';
-            }
-
-            // transport type used to be stored in storage_type
-            if ( !Option::contains($this->credentials, 'transport_type' ))
-            {
-                $this->credentials['transport_type'] = $this->storage_type;
-            }
-        }
-
+        // behaviors run here!
         parent::afterFind();
+
+        // backwards compatibility helper
+        switch ( $this->type_id )
+        {
+            case PlatformServiceTypes::LOCAL_SQL_DB:
+            case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
+                break;
+
+            case PlatformServiceTypes::LOCAL_FILE_STORAGE:
+            case PlatformServiceTypes::REMOTE_FILE_STORAGE:
+                // new public paths feature needs to allow at least applications by default
+                $_creds = $this->credentials;
+                if ( is_array( $_creds ) && !array_key_exists( 'public_paths', $_creds ) )
+                {
+                    $_creds['public_paths'] = array('applications/');
+                    $this->credentials = $_creds;
+                }
+                break;
+
+            case PlatformServiceTypes::EMAIL_SERVICE:
+                if ( 'local email service' == strtolower( trim( $this->type ) ) )
+                {
+                    $this->type = 'Email Service';
+                }
+
+                // transport type used to be stored in storage_type
+                $_creds = $this->credentials;
+                if ( is_array( $_creds ) && !array_key_exists( 'transport_type', $_creds ) )
+                {
+                    $_creds['transport_type'] = null;
+                    if ( !empty( $this->storage_type ) )
+                    {
+                        switch ( $this->storage_type )
+                        {
+                            case 'smtp': // SMTP
+                            case 'SMTP': // SMTP
+                                $_creds['transport_type'] = 'SMTP';
+                                break;
+
+                            default:
+                                // mail()
+                                $_creds['transport_type'] = 'command';
+                                $_creds['command'] = $this->storage_type;
+                                break;
+                        }
+                    }
+                    $this->credentials = $_creds;
+                }
+                break;
+        }
     }
 
     /**

@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Utility;
 
+use DreamFactory\Platform\Enums\EmailTransportTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Resources\User\Session;
@@ -46,8 +47,7 @@ class EmailUtilities
         $_transportType = Option::get( $settings, 'transport_type' );
         switch ( $_transportType )
         {
-            case 'smtp': // SMTP
-            case 'SMTP': // SMTP
+            case EmailTransportTypes::SMTP: // SMTP
                 if ( null === ( $host = Option::get( $settings, 'host', 'localhost' ) ) )
                 {
                     throw new \InvalidArgumentException( 'SMTP host name can not be empty.' );
@@ -67,7 +67,7 @@ class EmailUtilities
                 }
                 break;
 
-            case 'command': // use local process, i.e. sendmail, exim, postscript, etc
+            case EmailTransportTypes::SERVER_COMMAND: // use local process, i.e. sendmail, exim, postscript, etc
                 $transport = \Swift_SendmailTransport::newInstance( Option::get( $settings, 'command', '' ) );
                 break;
 

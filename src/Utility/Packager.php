@@ -116,7 +116,6 @@ class Packager
                         'type',
                         'type_id',
                         'is_system',
-                        'storage_name',
                         'storage_type',
                         'storage_type_id',
                         'credentials',
