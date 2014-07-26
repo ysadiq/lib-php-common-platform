@@ -307,7 +307,13 @@ MYSQL;
 
         if ( false === ( $_row = Sql::find( $_sql, $_params ) ) )
         {
-            throw new StorageException( 'Error retrieving data to restore: ' . print_r( $this->_pdo->errorInfo(), true ) );
+            if ( $this->_pdo->errorCode() )
+            {
+                throw new StorageException( 'Error retrieving data to restore: ' . print_r( $this->_pdo->errorInfo(), true ) );
+            }
+
+            //  No rows...
+            return;
         }
 
         //  Nothing to restore, bail...
@@ -424,13 +430,15 @@ MYSQL;
 
         //  Create table...
         $_ddl = <<<MYSQL
-CREATE TABLE IF NOT EXISTS `{$this->_tableName}` (
+CREATE TABLE IF NOT EXISTS `{$this->_tableName}` 
+(
     `storage_id` VARCHAR(64) NOT NULL,
     `revision_id` int(11) NOT NULL DEFAULT '0',
     `data_blob` MEDIUMTEXT NULL,
     `time_stamp` int(11) not null,
     PRIMARY KEY (`storage_id`,`revision_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8
+)
+ENGINE=InnoDB DEFAULT CHARSET=utf8
 MYSQL;
 
         if ( false === ( $_result = Sql::execute( $_ddl ) ) )

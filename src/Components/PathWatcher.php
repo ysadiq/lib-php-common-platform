@@ -81,14 +81,14 @@ class PathWatcher
      */
     public function __destruct()
     {
-        foreach ( $this->_watches as $_watchId )
-        {
-            /** @noinspection PhpUndefinedFunctionInspection */
-            inotify_rm_watch( $_watchId );
-        }
-
         if ( $this->_stream )
         {
+            foreach ( $this->_watches as $_watchId )
+            {
+                /** @noinspection PhpUndefinedFunctionInspection */
+                inotify_rm_watch( $this->_stream, $_watchId );
+            }
+
             fclose( $this->_stream );
         }
     }
@@ -170,7 +170,7 @@ class PathWatcher
                 }
             }
         }
-        
+
         return $_count;
     }
 }
