@@ -19,7 +19,11 @@
  */
 namespace DreamFactory\Platform\Components;
 
+use DreamFactory\Platform\Events\Enums\DspEvents;
+use DreamFactory\Platform\Events\EventDispatcher;
+use DreamFactory\Platform\Events\StorageChangeEvent;
 use DreamFactory\Platform\Services\SystemManager;
+use DreamFactory\Platform\Utility\Platform;
 use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\Exceptions\StorageException;
@@ -42,6 +46,10 @@ class DirectoryStorage extends \ZipArchive
      * @type string
      */
     const DEFAULT_TABLE_NAME = 'dir_store';
+    /**
+     * @type string
+     */
+    const MARKER_FILE_NAME = '.dir_stored';
 
     //*************************************************************************
     //	Members
@@ -63,6 +71,14 @@ class DirectoryStorage extends \ZipArchive
      * @var string The base name of the table
      */
     protected $_tableName = self::DEFAULT_TABLE_NAME;
+    /**
+     * @var PathWatcher
+     */
+    protected $_watcher = false;
+    /**
+     * @var array The paths I'm managing
+     */
+    protected $_paths = array();
 
     //*************************************************************************
     //	Methods
@@ -83,7 +99,38 @@ class DirectoryStorage extends \ZipArchive
         $this->_tablePrefix = $tablePrefix;
         $this->_tableName = $tablePrefix . $tableName;
 
+        if ( PathWatcher::available() )
+        {
+            $this->_watcher = new PathWatcher();
+        }
+
         $this->_initDatabase();
+    }
+
+    public function __destruct()
+    {
+        if ( $this->_watcher )
+        {
+            $_paths = $this->_paths;
+
+            Platform::on(
+                DspEvents::STORAGE_CHANGE,
+                /**
+                 * @param string             $eventName
+                 * @param StorageChangeEvent $event
+                 * @param EventDispatcher    $dispatcher
+                 */
+                function ( $eventName, StorageChangeEvent $event, $dispatcher ) use ( $_paths )
+                {
+                    if ( null !== ( $_path = Option::get( $_paths, $event->getWatchId() ) ) )
+                    {
+                        $this->backup( $this->_storageId, $_path );
+                    }
+                }
+            );
+
+            $this->_watcher->checkForEvents();
+        }
     }
 
     /**
@@ -123,20 +170,22 @@ class DirectoryStorage extends \ZipArchive
 
         if ( $newRevision || false === $_currentRevision )
         {
-            $_currentRevision = ( false === $_currentRevision ? 0 : $_currentRevision++ );
+            $_currentRevision = ( false === $_currentRevision ) ? 0 : ++$_currentRevision;
 
             $_sql = <<<MYSQL
 INSERT INTO {$this->_tableName}
 (
     storage_id,
     revision_id,
-    data_blob
+    data_blob,
+    time_stamp
 )
 VALUES
 (
     :storage_id,
     :revision_id,
-    :data_blob
+    :data_blob,
+    :time_stamp
 )
 MYSQL;
         }
@@ -147,7 +196,8 @@ UPDATE {$this->_tableName} SET
     data_blob = :data_blob
 WHERE
     storage_id = :storage_id AND
-    revision_id = :revision_id
+    revision_id = :revision_id AND
+    time_stamp = :time_stamp
 MYSQL;
         }
 
@@ -161,8 +211,10 @@ MYSQL;
             if ( !empty( $_data ) )
             {
                 $_payload = array(
-                    '.private' => $_data,
+                    $storageId => $_data,
                 );
+
+                $_timestamp = time();
 
                 $_result = Sql::execute(
                     $_sql,
@@ -170,6 +222,7 @@ MYSQL;
                         ':storage_id'  => $storageId,
                         ':revision_id' => $_currentRevision,
                         ':data_blob'   => Storage::freeze( $_payload ),
+                        ':time_stamp'  => $_timestamp,
                     )
                 );
 
@@ -178,17 +231,39 @@ MYSQL;
                     throw new StorageException( print_r( $this->_pdo->errorInfo(), true ) );
                 }
 
-                Log::debug( 'Result from dir store: ' . $_result );
+                //  Dump a marker that we've backed up
+                if ( !$this->_setDirStoreTimestamp( $_path, $_timestamp ) )
+                {
+                    Log::error( 'Error creating storage marker file. No biggie, but you may be out of disk space.' );
+                }
             }
+
+            //  Remove temporary file
+            \unlink( $_zipName );
+
+            //  Watch for changes...
+            if ( $this->_watcher )
+            {
+                $_id = $this->_watcher->watch( $_path );
+
+                if ( false !== $_id )
+                {
+                    $this->_paths[$_id] = array(
+                        'storage_id'   => $storageId,
+                        'path'         => $_path,
+                        'new_revision' => $newRevision,
+                        'local_name'   => $localName
+                    );
+                }
+            }
+
+            return true;
         }
         catch ( \Exception $_ex )
         {
             Log::error( 'Exception storing backup data: ' . $_ex->getMessage() );
             throw $_ex;
         }
-
-        //  Remove temporary file
-        \unlink( $_zipName );
     }
 
     /**
@@ -203,12 +278,15 @@ MYSQL;
     public function restore( $storageId, $path )
     {
         $_path = $this->_validatePath( $path );
+        $_timestamp = null;
 
         //  Get the latest revision
         if ( false === ( $_currentRevision = $this->_getCurrentRevisionId( $storageId ) ) )
         {
             return;
         }
+
+        $_timestamp = $this->_getDirStoreTimestamp( $_path );
 
         $_sql = <<<MYSQL
 SELECT
@@ -217,23 +295,30 @@ FROM
     {$this->_tableName}
 WHERE
     storage_id = :storage_id AND
-    revision_id = :revision_id
+    revision_id = :revision_id AND
+    time_stamp > :time_stamp
 MYSQL;
 
-        if ( false === ( $_row = Sql::find( $_sql, array(':storage_id' => $storageId, ':revision_id' => $_currentRevision) ) ) )
+        $_params = array(
+            ':storage_id'  => $storageId,
+            ':revision_id' => $_currentRevision,
+            ':time_stamp'  => $_timestamp
+        );
+
+        if ( false === ( $_row = Sql::find( $_sql, $_params ) ) )
         {
             throw new StorageException( 'Error retrieving data to restore: ' . print_r( $this->_pdo->errorInfo(), true ) );
         }
 
         //  Nothing to restore, bail...
-        $_payload = Storage::defrost( $_row['data_blob'] );
+        $_payload = Storage::defrost( Option::get( $_row, 'data_blob' ) );
 
         if ( empty( $_payload ) )
         {
             return;
         }
 
-        $_data = Option::get( $_payload, '.private' );
+        $_data = Option::get( $_payload, $storageId );
 
         //  Make a temp file name...
         $_zipName = tempnam( sys_get_temp_dir(), sha1( uniqid() ) );
@@ -262,6 +347,9 @@ MYSQL;
 
         //  Remove temporary file
         \unlink( $_zipName );
+
+        //  Remove marker, ignore result (may not be one...)
+        $this->_setDirStoreTimestamp( $_path, null, true );
     }
 
     /**
@@ -340,8 +428,7 @@ CREATE TABLE IF NOT EXISTS `{$this->_tableName}` (
     `storage_id` VARCHAR(64) NOT NULL,
     `revision_id` int(11) NOT NULL DEFAULT '0',
     `data_blob` MEDIUMTEXT NULL,
-    `create_date` datetime DEFAULT NULL,
-    `lmod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `time_stamp` int(11) not null,
     PRIMARY KEY (`storage_id`,`revision_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 MYSQL;
@@ -376,5 +463,45 @@ MYSQL;
 
         //  If no revisions, return false...
         return null === $_revisionId ? false : $_revisionId;
+    }
+
+    /**
+     * Retrieves the timestamp from a marker file, if any
+     *
+     * @param string $path
+     *
+     * @return int|null|string
+     */
+    protected function _getDirStoreTimestamp( $path )
+    {
+        $_marker = $path . DIRECTORY_SEPARATOR . static::MARKER_FILE_NAME;
+
+        if ( !file_exists( $_marker ) || false === ( $_timestamp = file_get_contents( $_marker ) ) )
+        {
+            return 0;
+        }
+
+        return $_timestamp;
+    }
+
+    /**
+     * Sets the timestamp in a marker file
+     *
+     * @param string $path      The path
+     * @param int    $timestamp The timestamp to use or null (which will use the value of time().
+     * @param bool   $delete    If true, the marker file will be deleted.
+     *
+     * @return int|null|string
+     */
+    protected function _setDirStoreTimestamp( $path, $timestamp = null, $delete = false )
+    {
+        $_marker = $path . DIRECTORY_SEPARATOR . static::MARKER_FILE_NAME;
+
+        if ( false !== $delete )
+        {
+            return @\unlink( $_marker );
+        }
+
+        return false !== file_put_contents( $_marker, $timestamp ?: time() );
     }
 }
