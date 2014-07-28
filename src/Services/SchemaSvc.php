@@ -89,8 +89,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         if ( empty( $this->_verbAliases ) )
         {
             $this->_verbAliases = array(
-                static::PATCH => static::PUT,
-                static::MERGE => static::PUT,
+                static::MERGE => static::PATCH,
             );
         }
 
@@ -400,7 +399,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
      */
     public function describeTables( $table_list )
     {
-        $_tables = BaseDbSvc::validateAsArray( $table_list, ',', true );
+        $_tables = SqlDbUtilities::validateAsArray( $table_list, ',', true );
 
         //	Check for system tables and deny
         $_sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
@@ -550,7 +549,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
      */
     public function updateTables( $tables, $allow_merge = false, $allow_delete = false )
     {
-        $tables = static::validateAsArray( $tables, null, true, 'There are no table sets in the request.' );
+        $tables = SqlDbUtilities::validateAsArray( $tables, null, true, 'There are no table sets in the request.' );
 
         $_sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
         $_length = strlen( SystemManager::SYSTEM_TABLE_PREFIX );
@@ -578,14 +577,15 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
     }
 
     /**
-     * @param $table
+     * @param      $table
+     * @param bool $allow_merge
+     * @param bool $allow_delete
      *
      * @return array
-     * @throws \Exception
      */
     public function updateTable( $table, $allow_merge = false, $allow_delete = false )
     {
-        $_tables = static::validateAsArray( $table, null, true, 'Bad data format in request.' );
+        $_tables = SqlDbUtilities::validateAsArray( $table, null, true, 'Bad data format in request.' );
 
         $_result = $this->updateTables( $_tables, $allow_merge, $allow_delete );
 
@@ -593,9 +593,15 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
     }
 
     /**
-     * @param $table
-     * @param $fields
+     * @param      $table
+     * @param      $fields
+     * @param bool $allow_merge
+     * @param bool $allow_delete
      *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
      * @throws \Exception
      * @return array
      */
@@ -643,7 +649,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
      */
     public function createField( $table, $data )
     {
-        $_fields = static::validateAsArray( $data, null, true, 'Bad data format in request.' );
+        $_fields = SqlDbUtilities::validateAsArray( $data, null, true, 'Bad data format in request.' );
 
         $result = $this->updateFields( $table, $_fields );
 
@@ -717,45 +723,6 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
 
         SqlDbUtilities::dropField( $this->_dbConn, $table, $field );
-    }
-
-    /**
-     * @param array | string $data          Array to check or comma-delimited string to convert
-     * @param string | null  $str_delimiter Delimiter to check for string to array mapping, no op if null
-     * @param boolean        $check_single  Check if single (associative) needs to be made multiple (numeric)
-     * @param string | null  $on_fail       Error string to deliver in thrown exception
-     *
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return array | boolean If requirements not met then throws exception if
-     * $on_fail string given, or returns false. Otherwise returns valid array
-     */
-    public static function validateAsArray( $data, $str_delimiter = null, $check_single = false, $on_fail = null )
-    {
-        if ( !empty( $data ) && !is_array( $data ) && ( is_string( $str_delimiter ) && !empty( $str_delimiter ) ) )
-        {
-            $data = array_map( 'trim', explode( $str_delimiter, trim( $data, $str_delimiter ) ) );
-        }
-
-        if ( !is_array( $data ) || empty( $data ) )
-        {
-            if ( !is_string( $on_fail ) || empty( $on_fail ) )
-            {
-                return false;
-            }
-
-            throw new BadRequestException( $on_fail );
-        }
-
-        if ( $check_single )
-        {
-            if ( !isset( $data[0] ) )
-            {
-                // single record possibly passed in without wrapper array
-                $data = array( $data );
-            }
-        }
-
-        return $data;
     }
 
     /**

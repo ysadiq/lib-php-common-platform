@@ -30,7 +30,7 @@ use Kisma\Core\Utility\Option;
  *
  * @property integer    $id
  * @property integer    $service_id
- * @property string     $format
+ * @property integer    $format
  * @property string     $content
  *
  * Relations:
@@ -77,8 +77,7 @@ class ServiceDoc extends BasePlatformSystemModel
     public function rules()
     {
         return array(
-            array('service_id', 'numerical', 'integerOnly' => true),
-            array('format', 'length', 'max' => 64),
+            array('service_id, format', 'numerical', 'integerOnly' => true),
             array('content', 'safe'),
         );
     }
@@ -159,13 +158,13 @@ class ServiceDoc extends BasePlatformSystemModel
             for ( $_key1 = 0; $_key1 < $_count; $_key1++ )
             {
                 $_doc = $docs[$_key1];
-                $_format = Option::get( $_doc, 'format', '' );
+                $_format = Option::get( $_doc, 'format', 0 );
 
                 for ( $_key2 = $_key1 + 1; $_key2 < $_count; $_key2++ )
                 {
                     $_doc2 = $docs[$_key2];
-                    $_format2 = Option::get( $_doc2, 'format', '' );
-                    if ( $_format == $_format2 )
+                    $_format2 = Option::get( $_doc2, 'format', 0 );
+                    if ( $_format === $_format2 )
                     {
                         throw new BadRequestException( "Duplicate service doc defined for format '$_format'." );
                     }
@@ -180,8 +179,8 @@ class ServiceDoc extends BasePlatformSystemModel
                 foreach ( $docs as $_key => $_item )
                 {
                     $_newId = Option::get( $_item, 'service_id' );
-                    $_newFormat = Option::get( $_item, 'format', '' );
-                    if ( ( $_newId == $_doc->service_id ) && ( $_newFormat == $_doc->format ) )
+                    $_newFormat = Option::get( $_item, 'format', 0 );
+                    if ( ( $_newId == $_doc->service_id ) && ( $_newFormat === $_doc->format ) )
                     {
                         $_doc->content = Option::get( $_item, 'content' );
                         // simple update request
@@ -226,7 +225,7 @@ class ServiceDoc extends BasePlatformSystemModel
         }
         catch ( \Exception $ex )
         {
-            throw new \Exception( "Error updating accesses to role assignment.\n{$ex->getMessage()}" );
+            throw new \Exception( "Error updating service docs.\n{$ex->getMessage()}" );
         }
     }
 }

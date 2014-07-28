@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use DreamFactory\Platform\Enums\EmailTransportTypes;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Enums\PlatformStorageTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
@@ -567,19 +568,18 @@ MYSQL;
                 $_creds = $this->credentials;
                 if ( is_array( $_creds ) && !array_key_exists( 'transport_type', $_creds ) )
                 {
-                    $_creds['transport_type'] = null;
+                    $_creds['transport_type'] = EmailTransportTypes::SERVER_DEFAULT;
                     if ( !empty( $this->storage_type ) )
                     {
-                        switch ( $this->storage_type )
+                        switch ( strtoupper($this->storage_type) )
                         {
-                            case 'smtp': // SMTP
                             case 'SMTP': // SMTP
-                                $_creds['transport_type'] = 'SMTP';
+                                $_creds['transport_type'] = EmailTransportTypes::SMTP;
                                 break;
 
                             default:
                                 // mail()
-                                $_creds['transport_type'] = 'command';
+                                $_creds['transport_type'] = EmailTransportTypes::SERVER_COMMAND;
                                 $_creds['command'] = $this->storage_type;
                                 break;
                         }

@@ -27,6 +27,7 @@ use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Interfaces\ServiceOnlyResourceLike;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\DataFormatter;
+use DreamFactory\Platform\Utility\DbUtilities;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
@@ -739,7 +740,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function createRecords( $table, $records, $extras = array() )
     {
-        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
+        $records = DbUtilities::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
 
         $_isSingle = ( 1 == count( $records ) );
         $_fields = Option::get( $extras, 'fields' );
@@ -860,7 +861,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function createRecord( $table, $record, $extras = array() )
     {
-        $_records = static::validateAsArray( $record, null, true, 'The request contains no valid record fields.' );
+        $_records = DbUtilities::validateAsArray( $record, null, true, 'The request contains no valid record fields.' );
 
         $_results = $this->createRecords( $table, $_records, $extras );
 
@@ -877,7 +878,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function updateRecords( $table, $records, $extras = array() )
     {
-        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
+        $records = DbUtilities::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
@@ -997,7 +998,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function updateRecord( $table, $record, $extras = array() )
     {
-        $_records = static::validateAsArray( $record, null, true, 'The request contains no valid record fields.' );
+        $_records = DbUtilities::validateAsArray( $record, null, true, 'The request contains no valid record fields.' );
 
         $_results = $this->updateRecords( $table, $_records, $extras );
 
@@ -1016,7 +1017,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
@@ -1053,8 +1054,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function updateRecordsByIds( $table, $record, $ids, $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $ids = DbUtilities::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
@@ -1178,7 +1179,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function updateRecordById( $table, $record, $id, $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
 
         $_results = $this->updateRecordsByIds( $table, $record, $id, $extras );
 
@@ -1195,7 +1196,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function patchRecords( $table, $records, $extras = array() )
     {
-        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
+        $records = DbUtilities::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
@@ -1315,7 +1316,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function patchRecord( $table, $record, $extras = array() )
     {
-        $_records = static::validateAsArray( $record, null, true, 'The request contains no valid record fields.' );
+        $_records = DbUtilities::validateAsArray( $record, null, true, 'The request contains no valid record fields.' );
 
         $_results = $this->patchRecords( $table, $_records, $extras );
 
@@ -1334,7 +1335,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function patchRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
@@ -1369,8 +1370,8 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function patchRecordsByIds( $table, $record, $ids, $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $ids = DbUtilities::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
@@ -1494,7 +1495,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function patchRecordById( $table, $record, $id, $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
 
         $_results = $this->patchRecordsByIds( $table, $record, $id, $extras );
 
@@ -1511,7 +1512,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function deleteRecords( $table, $records, $extras = array() )
     {
-        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
+        $records = DbUtilities::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
 
         $_idFields = Option::get( $extras, 'id_field' );
         $_idTypes = Option::get( $extras, 'id_type' );
@@ -1541,7 +1542,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function deleteRecord( $table, $record, $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
 
         $_results = $this->deleteRecords( $table, array($record), $extras );
 
@@ -1591,7 +1592,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function deleteRecordsByIds( $table, $ids, $extras = array() )
     {
-        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
+        $ids = DbUtilities::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
@@ -1737,7 +1738,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function retrieveRecords( $table, $records, $extras = array() )
     {
-        $records = static::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
+        $records = DbUtilities::validateAsArray( $records, null, true, 'The request contains no valid record sets.' );
 
         $_idFields = Option::get( $extras, 'id_field' );
         $_idTypes = Option::get( $extras, 'id_type' );
@@ -1768,7 +1769,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function retrieveRecord( $table, $record, $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'The request contains no valid record fields.' );
 
         $_results = $this->retrieveRecords( $table, array($record), $extras );
 
@@ -1785,7 +1786,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      */
     public function retrieveRecordsByIds( $table, $ids, $extras = array() )
     {
-        $ids = static::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
+        $ids = DbUtilities::validateAsArray( $ids, ',', true, 'The request contains no valid identifiers.' );
 
         $_fields = Option::get( $extras, 'fields' );
         $_idFields = Option::get( $extras, 'id_field' );
@@ -2251,7 +2252,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      */
-    protected function validateFieldValue( $name, $value, $validations, $for_update = false, $field_info = null )
+    protected static function validateFieldValue( $name, $value, $validations, $for_update = false, $field_info = null )
     {
         if ( is_array( $validations ) )
         {
@@ -2458,7 +2459,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                             $_delimiter = Option::get( $_config, 'delimiter', ',' );
                             $_min = Option::get( $_config, 'min', 1 );
                             $_max = Option::get( $_config, 'max' );
-                            $value = static::validateAsArray( $value, $_delimiter, true );
+                            $value = DbUtilities::validateAsArray( $value, $_delimiter, true );
                             $_count = count( $value );
                             if ( $_count < $_min )
                             {
@@ -2819,7 +2820,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             return true;
         }
 
-        if ( false === $fields = static::validateAsArray( $fields, ',' ) )
+        if ( false === $fields = DbUtilities::validateAsArray( $fields, ',' ) )
         {
             return false;
         }
@@ -2930,45 +2931,6 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         }
 
         return $record;
-    }
-
-    /**
-     * @param array | string $data          Array to check or comma-delimited string to convert
-     * @param string | null  $str_delimiter Delimiter to check for string to array mapping, no op if null
-     * @param boolean        $check_single  Check if single (associative) needs to be made multiple (numeric)
-     * @param string | null  $on_fail       Error string to deliver in thrown exception
-     *
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @return array | boolean If requirements not met then throws exception if
-     * $on_fail string given, or returns false. Otherwise returns valid array
-     */
-    public static function validateAsArray( $data, $str_delimiter = null, $check_single = false, $on_fail = null )
-    {
-        if ( !empty( $data ) && !is_array( $data ) && ( is_string( $str_delimiter ) && !empty( $str_delimiter ) ) )
-        {
-            $data = array_map( 'trim', explode( $str_delimiter, trim( $data, $str_delimiter ) ) );
-        }
-
-        if ( !is_array( $data ) || empty( $data ) )
-        {
-            if ( !is_string( $on_fail ) || empty( $on_fail ) )
-            {
-                return false;
-            }
-
-            throw new BadRequestException( $on_fail );
-        }
-
-        if ( $check_single )
-        {
-            if ( !isset( $data[0] ) )
-            {
-                // single record possibly passed in without wrapper array
-                $data = array($data);
-            }
-        }
-
-        return $data;
     }
 
     public static function startsWith( $haystack, $needle )
@@ -3162,7 +3124,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     public function getTables( $tables = array() )
     {
         $tables =
-            static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+            DbUtilities::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
 
         $_out = array();
         foreach ( $tables as $_table )
@@ -3197,7 +3159,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     public function createTables( $tables = array() )
     {
         $tables =
-            static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+            DbUtilities::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
 
         $_out = array();
         foreach ( $tables as $_table )
@@ -3228,7 +3190,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     public function updateTables( $tables = array() )
     {
         $tables =
-            static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+            DbUtilities::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
 
         $_out = array();
         foreach ( $tables as $_table )
@@ -3263,7 +3225,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     public function deleteTables( $tables = array(), $check_empty = false )
     {
         $tables =
-            static::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+            DbUtilities::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
 
         $_out = array();
         foreach ( $tables as $_table )
