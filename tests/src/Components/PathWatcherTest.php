@@ -54,7 +54,7 @@ class PathWatcherTest extends \PHPUnit_Framework_TestCase
      */
     public static function rmdir_recursive( $dir )
     {
-        $_files = array_diff( scandir( $dir ), array('.', '..') );
+        $_files = array_diff( scandir( $dir ), array( '.', '..' ) );
 
         foreach ( $_files as $_file )
         {
@@ -114,6 +114,7 @@ class PathWatcherTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Watch a file/path
+     *
      * @covers PathWatcher::watch
      * @covers PathWatcher::unwatch
      * @covers PathWatcher::checkForEvents
@@ -127,6 +128,7 @@ class PathWatcherTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Watch a file/path
+     *
      * @covers PathWatcher::watch
      * @covers PathWatcher::unwatch
      * @covers PathWatcher::checkForEvents
@@ -140,6 +142,7 @@ class PathWatcherTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Watch a file/path
+     *
      * @covers PathWatcher::watch
      * @covers PathWatcher::unwatch
      * @covers PathWatcher::checkForEvents

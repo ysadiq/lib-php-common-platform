@@ -33,20 +33,19 @@ if ( !is_dir( $_vendorPath ) )
     echo 'Please run composer install/update before running tests.';
     exit( 1 );
 }
-//	Composer
-$_autoloader = require( $_basePath . '/vendor/autoload.php' );
 
-echo 'autoloader :' . print_r( $_autoloader, true ) . PHP_EOL;
+//	Composer
+$_autoloader = require( $_vendorPath . '/autoload.php' );
 
 //	Load up Yii
-require_once $_basePath . '/vendor/dreamfactory/yii/framework/yii.php';
+require_once $_vendorPath . '/dreamfactory/yii/framework/yii.php';
 
 //	Yii debug settings
 defined( YII_DEBUG ) or define( YII_DEBUG, true );
 defined( YII_TRACE_LEVEL ) or define( YII_TRACE_LEVEL, 3 );
 
 //  Use this log file for testing
-\Kisma::set( 'app.log_file', $_basePath . '/console.test.log' );
+\Kisma::set( 'app.log_file', $_basePath . '/log/lib-php-common-platform.test.log' );
 \Kisma\Core\Utility\Log::setDefaultLog( \Kisma::get( 'app.log_file' ) );
 
 $_config = require( __DIR__ . '/config/test.config.php' );
