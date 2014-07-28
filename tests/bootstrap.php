@@ -1,9 +1,8 @@
 <?php
 /**
- * This file is part of the DreamFactory Oasys (Open Authentication SYStem)
+ * This file is part of the DreamFactory Services Platform(tm) SDK For PHP
  *
- * DreamFactory Oasys (Open Authentication SYStem) <http://dreamfactorysoftware.github.io>
- * Copyright 2013 DreamFactory Software, Inc. <support@dreamfactory.com>
+ * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +36,8 @@ if ( !is_dir( $_vendorPath ) )
 //	Composer
 $_autoloader = require( $_basePath . '/vendor/autoload.php' );
 
+echo 'autoloader :' . print_r( $_autoloader, true ) . PHP_EOL;
+
 //	Load up Yii
 require_once $_basePath . '/vendor/dreamfactory/yii/framework/yii.php';
 
@@ -67,4 +68,3 @@ $_app = DreamFactory\Yii\Utility\Pii::run(
     true,
     false
 );
-

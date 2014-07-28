@@ -104,7 +104,7 @@ class PathWatcher
      */
     public function watch( $path, $mask = INotify::IN_ATTRIB, $overwrite = false )
     {
-        if ( $overwrite && isset( $this->_watches[$path] ) )
+        if ( !$overwrite && isset( $this->_watches[$path] ) )
         {
             $mask |= INotify::IN_MASK_ADD;
         }
@@ -145,9 +145,8 @@ class PathWatcher
      */
     public function checkForEvents( $trigger = true )
     {
-        $_count = 0;
         $_read = array($this->_stream);
-        $_except = $_write = array();
+        $_result = $_except = $_write = array();
 
         stream_select( $_read, $_write, $_except, 0 );
 
@@ -158,19 +157,22 @@ class PathWatcher
             /** @noinspection PhpUndefinedFunctionInspection */
             if ( false !== ( $_events = inotify_read( $this->_stream ) ) )
             {
-                $_count += count( $_events );
-
                 //  Handle events
                 foreach ( $_events as $_watchEvent )
                 {
-                    Platform::trigger(
-                        DspEvents::STORAGE_CHANGE,
-                        new StorageChangeEvent( $_watchEvent )
-                    );
+                    $_result[] = $_watchEvent;
+
+                    if ( $trigger )
+                    {
+                        Platform::trigger(
+                            DspEvents::STORAGE_CHANGE,
+                            new StorageChangeEvent( $_watchEvent )
+                        );
+                    }
                 }
             }
         }
 
-        return $_count;
+        return $_result;
     }
 }

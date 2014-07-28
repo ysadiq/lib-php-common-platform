@@ -145,7 +145,7 @@ class SwaggerManager extends BasePlatformRestService
         $_baseSwagger = array(
             'swaggerVersion' => static::SWAGGER_VERSION,
             'apiVersion'     => API_VERSION,
-            'basePath'       => Pii::request()->getHostInfo() . '/rest',
+            'basePath'       => Pii::request( false )->getSchemeAndHttpHost() . '/rest',
         );
 
         //  Build services from database
@@ -175,7 +175,7 @@ SQL;
         $_services = array();
 
         //	Initialize the event map
-        static::$_eventMap = static::$_eventMap ? : array();
+        static::$_eventMap = static::$_eventMap ?: array();
 
         //	Spin through services and pull the configs
         foreach ( $_result as $_service )
@@ -220,9 +220,7 @@ SQL;
             // replace service type placeholder with api name for this service instance
             $_content = str_replace( '/{api_name}', '/' . $_apiName, $_content );
 
-            if ( !isset( static::$_eventMap[$_apiName] ) ||
-                 !is_array( static::$_eventMap[$_apiName] ) ||
-                 empty( static::$_eventMap[$_apiName] )
+            if ( !isset( static::$_eventMap[$_apiName] ) || !is_array( static::$_eventMap[$_apiName] ) || empty( static::$_eventMap[$_apiName] )
             )
             {
                 static::$_eventMap[$_apiName] = array();
@@ -444,8 +442,7 @@ SQL;
         }
 
         $_response = array();
-        $_eventPattern =
-            '/^' . str_replace( array('.*.js', '.'), array(null, '\\.'), $_scriptPattern ) . '\\.(\w)\\.js$/i';
+        $_eventPattern = '/^' . str_replace( array('.*.js', '.'), array(null, '\\.'), $_scriptPattern ) . '\\.(\w)\\.js$/i';
 
         foreach ( $_scripts as $_script )
         {
@@ -557,8 +554,7 @@ SQL;
 
         if ( null === ( $_resources = Option::get( $_map, $_resource ) ) )
         {
-            if ( !method_exists( $service, 'getServiceName' ) ||
-                 null === ( $_resources = Option::get( $_map, $service->getServiceName() ) )
+            if ( !method_exists( $service, 'getServiceName' ) || null === ( $_resources = Option::get( $_map, $service->getServiceName() ) )
             )
             {
                 if ( null === ( $_resources = Option::get( $_map, 'system' ) ) )
@@ -655,8 +651,7 @@ SQL;
         }
 
         $_path = implode( '.', explode( '/', ltrim( $_path, '/' ) ) );
-        $_pattern =
-            '#^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$#';
+        $_pattern = '#^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$#';
         $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
         if ( empty( $_matches ) )

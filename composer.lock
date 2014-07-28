@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "a1fb25ae81b8ef76c55ab59028953a65",
+    "hash": "d6f18fcc97ca32825c88c23a310358b6",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -691,16 +691,16 @@
         },
         {
             "name": "kisma/kisma",
-            "version": "0.2.50",
+            "version": "0.2.51",
             "source": {
                 "type": "git",
                 "url": "https://github.com/lucifurious/kisma.git",
-                "reference": "ee3494618b406b3c0906a60c64791a8cebd98fd6"
+                "reference": "3fc0726977af3dbaf25bdb0a039198c433ee4698"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/ee3494618b406b3c0906a60c64791a8cebd98fd6",
-                "reference": "ee3494618b406b3c0906a60c64791a8cebd98fd6",
+                "url": "https://api.github.com/repos/lucifurious/kisma/zipball/3fc0726977af3dbaf25bdb0a039198c433ee4698",
+                "reference": "3fc0726977af3dbaf25bdb0a039198c433ee4698",
                 "shasum": ""
             },
             "require": {
@@ -745,7 +745,7 @@
                 "php5",
                 "utility"
             ],
-            "time": "2014-07-09 21:04:27"
+            "time": "2014-07-25 18:03:22"
         },
         {
             "name": "monolog/monolog",
@@ -753,12 +753,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
-                "reference": "8228d1ee833dbec710161ac179d1fb9ff6cd6f28"
+                "reference": "61145103b6521d04c0386d1ea6899437df9d45e2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/8228d1ee833dbec710161ac179d1fb9ff6cd6f28",
-                "reference": "8228d1ee833dbec710161ac179d1fb9ff6cd6f28",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/61145103b6521d04c0386d1ea6899437df9d45e2",
+                "reference": "61145103b6521d04c0386d1ea6899437df9d45e2",
                 "shasum": ""
             },
             "require": {
@@ -805,8 +805,7 @@
                 {
                     "name": "Jordi Boggiano",
                     "email": "j.boggiano@seld.be",
-                    "homepage": "http://seld.be",
-                    "role": "Developer"
+                    "homepage": "http://seld.be"
                 }
             ],
             "description": "Sends your logs to files, sockets, inboxes, databases and various web services",
@@ -816,7 +815,7 @@
                 "logging",
                 "psr-3"
             ],
-            "time": "2014-06-30 13:24:53"
+            "time": "2014-07-19 19:11:34"
         },
         {
             "name": "nikic/php-parser",
@@ -824,12 +823,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/nikic/PHP-Parser.git",
-                "reference": "5960ecfc105011b8d1bfedf7647b4b8989dbcb4c"
+                "reference": "ef70767475434bdb3615b43c327e2cae17ef12eb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/5960ecfc105011b8d1bfedf7647b4b8989dbcb4c",
-                "reference": "5960ecfc105011b8d1bfedf7647b4b8989dbcb4c",
+                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/ef70767475434bdb3615b43c327e2cae17ef12eb",
+                "reference": "ef70767475434bdb3615b43c327e2cae17ef12eb",
                 "shasum": ""
             },
             "require": {
@@ -861,7 +860,7 @@
                 "parser",
                 "php"
             ],
-            "time": "2014-04-19 20:26:05"
+            "time": "2014-07-23 18:24:17"
         },
         {
             "name": "pear-pear.php.net/Archive_Tar",
@@ -1024,17 +1023,17 @@
         },
         {
             "name": "pear-pear.php.net/PEAR",
-            "version": "1.9.4",
+            "version": "1.9.5",
             "dist": {
                 "type": "file",
-                "url": "http://pear.php.net/get/PEAR-1.9.4.tgz",
+                "url": "http://pear.php.net/get/PEAR-1.9.5.tgz",
                 "reference": null,
                 "shasum": null
             },
             "require": {
                 "ext-pcre": "*",
                 "ext-xml": "*",
-                "pear-pear.php.net/archive_tar": ">=1.3.7.0",
+                "pear-pear.php.net/archive_tar": ">=1.3.11.0",
                 "pear-pear.php.net/console_getopt": ">=1.2.0.0",
                 "pear-pear.php.net/structures_graph": ">=1.0.2.0",
                 "pear-pear.php.net/xml_util": ">=1.2.0.0",
@@ -1045,7 +1044,7 @@
                 "pear-pear.php.net/pear_frontend_web": "<=0.4.0.0"
             },
             "replace": {
-                "pear-pear/pear": "== 1.9.4.0"
+                "pear-pear/pear": "== 1.9.5.0"
             },
             "type": "pear-library",
             "autoload": {
@@ -1356,12 +1355,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/EventDispatcher.git",
-                "reference": "dc2182b4275f153469321b99c3a675ef3cffafd4"
+                "reference": "c2f8a5d3181736d107d6622a536fbdcd55436674"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/dc2182b4275f153469321b99c3a675ef3cffafd4",
-                "reference": "dc2182b4275f153469321b99c3a675ef3cffafd4",
+                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/c2f8a5d3181736d107d6622a536fbdcd55436674",
+                "reference": "c2f8a5d3181736d107d6622a536fbdcd55436674",
                 "shasum": ""
             },
             "require": {
@@ -1406,7 +1405,7 @@
             ],
             "description": "Symfony EventDispatcher Component",
             "homepage": "http://symfony.com",
-            "time": "2014-07-08 12:21:41"
+            "time": "2014-07-09 09:06:26"
         },
         {
             "name": "symfony/http-foundation",
@@ -2053,12 +2052,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Yaml.git",
-                "reference": "4168f7b8e211cdc2d778ab78f35666580a6d7437"
+                "reference": "07ff901ce8b081cf227091b4919d347fa999b2a0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Yaml/zipball/4168f7b8e211cdc2d778ab78f35666580a6d7437",
-                "reference": "4168f7b8e211cdc2d778ab78f35666580a6d7437",
+                "url": "https://api.github.com/repos/symfony/Yaml/zipball/07ff901ce8b081cf227091b4919d347fa999b2a0",
+                "reference": "07ff901ce8b081cf227091b4919d347fa999b2a0",
                 "shasum": ""
             },
             "require": {
@@ -2093,7 +2092,7 @@
             ],
             "description": "Symfony Yaml Component",
             "homepage": "http://symfony.com",
-            "time": "2014-07-08 12:21:41"
+            "time": "2014-07-09 09:06:26"
         }
     ],
     "aliases": [
@@ -2120,6 +2119,7 @@
         "phpunit/dbunit": 0,
         "phpunit/php-invoker": 0
     },
+    "prefer-stable": false,
     "platform": {
         "php": ">=5.3.18"
     },

@@ -21,11 +21,19 @@ namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
 use DreamFactory\Platform\Components\Profiler;
+use DreamFactory\Platform\Enums\NamespaceTypes;
+use DreamFactory\Platform\Events\Enums\DspEvents;
+use DreamFactory\Platform\Events\EventDispatcher;
+use DreamFactory\Platform\Events\PlatformEvent;
+use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
-use DreamFactory\Platform\Exceptions\RestException;
-use DreamFactory\Platform\Utility\CorsManager;
+use DreamFactory\Platform\Scripting\ScriptEvent;
+use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
+use Kisma\Core\Enums\GlobFlags;
+use Kisma\Core\Exceptions\FileSystemException;
+use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -40,6 +48,30 @@ class PlatformConsoleApplication extends \CConsoleApplication
     //*************************************************************************
 
     /**
+     * @var string The HTTP Option method
+     */
+    const CORS_OPTION_METHOD = 'OPTIONS';
+    /**
+     * @var string The allowed HTTP methods
+     */
+    const CORS_DEFAULT_ALLOWED_METHODS = 'GET, POST, PUT, DELETE, PATCH, MERGE, COPY, OPTIONS';
+    /**
+     * @var string The allowed HTTP headers
+     */
+    const CORS_DEFAULT_ALLOWED_HEADERS = 'Content-Type, X-Requested-With, X-DreamFactory-Application-Name, X-Application-Name, X-DreamFactory-Session-Token';
+    /**
+     * @var int The default number of seconds to allow this to be cached. Default is 15 minutes.
+     */
+    const CORS_DEFAULT_MAX_AGE = 900;
+    /**
+     * @var string The private CORS configuration file
+     */
+    const CORS_DEFAULT_CONFIG_FILE = '/cors.config.json';
+    /**
+     * @var string The session key for CORS configs
+     */
+    const CORS_WHITELIST_KEY = 'cors.config';
+    /**
      * @var string The default DSP resource namespace
      */
     const DEFAULT_SERVICE_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Services';
@@ -52,26 +84,22 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     const DEFAULT_MODEL_NAMESPACE_ROOT = 'DreamFactory\\Platform\\Yii\\Models';
     /**
+     * @var string The pattern of for local configuration files
+     */
+    const DEFAULT_LOCAL_CONFIG_PATTERN = '/*.config.php';
+    /**
      * @var string The default path (sub-path) of installed plug-ins
      */
     const DEFAULT_PLUGINS_PATH = '/storage/plugins';
-    /**
-     * @const int The services namespace map index
-     */
-    const NS_SERVICES = 0;
-    /**
-     * @const int The resources namespace map index
-     */
-    const NS_RESOURCES = 1;
-    /**
-     * @const int The models namespace map index
-     */
-    const NS_MODELS = 2;
 
     //*************************************************************************
     //	Members
     //*************************************************************************
 
+    /**
+     * @var EventDispatcher
+     */
+    protected static $_dispatcher;
     /**
      * @var bool If true, profiling information is output to the log
      */
@@ -79,7 +107,20 @@ class PlatformConsoleApplication extends \CConsoleApplication
     /**
      * @var array[] The namespaces in use by this system. Used by the routing engine
      */
-    protected static $_namespaceMap = array( self::NS_MODELS => array(), self::NS_SERVICES => array(), self::NS_RESOURCES => array() );
+    protected static $_namespaceMap = array(NamespaceTypes::MODELS => array(), NamespaceTypes::SERVICES => array(), NamespaceTypes::RESOURCES => array());
+    /**
+     * @var array An indexed array of white-listed hosts (ajax.example.com or foo.bar.com or just bar.com)
+     */
+    protected $_corsWhitelist = array();
+    /**
+     * @var bool    If true, the CORS headers will be sent automatically before dispatching the action.
+     *              NOTE: "OPTIONS" calls will always get headers, regardless of the setting. All other requests respect the setting.
+     */
+    protected $_autoAddHeaders = true;
+    /**
+     * @var bool If true, adds some extended information about the request in the form of X-DreamFactory-* headers
+     */
+    protected $_extendedHeaders = true;
     /**
      * @var array The namespaces that contain resources. Used by the routing engine
      */
@@ -93,6 +134,10 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     protected $_requestObject;
     /**
+     * @var array Normalized array of inbound request body
+     */
+    protected $_requestBody;
+    /**
      * @var  Response
      */
     protected $_responseObject;
@@ -100,6 +145,10 @@ class PlatformConsoleApplication extends \CConsoleApplication
      * @var bool If true, headers will be added to the response object instance of this run
      */
     protected $_useResponseObject = false;
+    /**
+     * @var bool If true, CORS info will be logged
+     */
+    protected $_logCorsInfo = false;
 
     //*************************************************************************
     //	Methods
@@ -116,10 +165,11 @@ class PlatformConsoleApplication extends \CConsoleApplication
         static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
 
         //	Setup the request handler and events
-        /** @noinspection PhpUndefinedFieldInspection */
-        $this->onBeginRequest = array( $this, '_onBeginRequest' );
-        /** @noinspection PhpUndefinedFieldInspection */
-        $this->onEndRequest = array( $this, '_onEndRequest' );
+        $this->onBeginRequest = array($this, '_onBeginRequest');
+        $this->onEndRequest = array($this, '_onEndRequest');
+
+        //  Load any user config files...
+        $this->_loadLocalConfig();
     }
 
     /**
@@ -167,7 +217,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     protected function _loadPlugins()
     {
-        if ( null === ( $_autoloadPath = \Kisma::get( 'dsp.plugin_autoload_path' ) ) )
+        if ( null === ( $_autoloadPath = Platform::storeGet( 'dsp.plugin_autoload_path' ) ) )
         {
             //	Locate plug-in directory...
             $_path = Pii::getParam( 'dsp.plugins_path', Pii::getParam( 'dsp.base_path' ) . static::DEFAULT_PLUGINS_PATH );
@@ -191,16 +241,18 @@ class PlatformConsoleApplication extends \CConsoleApplication
                 return false;
             }
 
-            \Kisma::set( 'dsp.plugin_autoload_path', $_autoloadPath );
+            Platform::storeSet( 'dsp.plugin_autoload_path', $_autoloadPath );
         }
 
         /** @noinspection PhpIncludeInspection */
         if ( false === @require( $_autoloadPath ) )
         {
-            Log::error( 'Error reading plug-in configuration file. Some plug-ins may not function properly.' );
+            Log::error( 'Error reading plug-in autoload.php file. Some plug-ins may not function properly.' );
 
             return false;
         }
+
+        $this->trigger( DspEvents::PLUGINS_LOADED );
 
         return true;
     }
@@ -214,18 +266,18 @@ class PlatformConsoleApplication extends \CConsoleApplication
      *
      * @param \CEvent $event
      *
-     * @throws \UnexpectedValueException
-     * @throws RestException
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     * @throws \LogicException
-     * @throws \InvalidArgumentException
+     * @throws BadRequestException
      * @return bool
      */
     protected function _onBeginRequest( \CEvent $event )
     {
         //	Start the request-only profile
         $this->startProfiler( 'app.request' );
+
         $this->_requestObject = Request::createFromGlobals();
+
+        //  A pristine copy of the request
+        $this->_requestBody = ScriptEvent::buildRequestArray();
 
         //	Load any plug-ins
         $this->_loadPlugins();
@@ -240,17 +292,193 @@ class PlatformConsoleApplication extends \CConsoleApplication
     }
 
     /**
+     * Loads any local configuration files
+     */
+    protected function _loadLocalConfig()
+    {
+        $_config = Platform::storeGet( 'platform.local_config' );
+
+        if ( empty( $_config ) )
+        {
+            $_config = array();
+            $_configPath = Platform::getPrivatePath( '/config' );
+
+            $_files = FileSystem::glob( $_configPath . static::DEFAULT_LOCAL_CONFIG_PATTERN, GlobFlags::GLOB_NODIR | GlobFlags::GLOB_NODOTS );
+
+            if ( empty( $_files ) )
+            {
+                $_files = array();
+            }
+
+            sort( $_files );
+
+            foreach ( $_files as $_file )
+            {
+                try
+                {
+                    /** @noinspection PhpIncludeInspection */
+                    if ( false === ( $_data = @include( $_configPath . '/' . $_file ) ) )
+                    {
+                        throw new FileSystemException( 'File system error reading local config file "' . $_file . '"' );
+                    }
+
+                    if ( !is_array( $_data ) )
+                    {
+                        Log::notice( 'Config file "' . $_file . '" did not return an array. Skipping.' );
+                    }
+                    else
+                    {
+                        $_config = array_merge( $_config, $_data );
+
+                        $this->trigger(
+                            DspEvents::LOCAL_CONFIG_LOADED,
+                            new PlatformEvent(
+                                array(
+                                    'file' => $_file,
+                                    'data' => $_data
+                                )
+                            )
+                        );
+                    }
+                }
+                catch ( FileSystemException $_ex )
+                {
+                    Log::error( $_ex->getMessage() );
+                }
+            }
+
+            Platform::storeSet( 'platform.local_config', $_config );
+        }
+
+        //  Merge config with our params...
+        if ( !empty( $_config ) )
+        {
+            $this->getParams()->mergeWith( $_config );
+        }
+    }
+
+    //*************************************************************************
+    //  Server-Side Event Support
+    //*************************************************************************
+
+    /**
+     * Triggers a DSP-level event
+     *
+     * @param string        $eventName
+     * @param PlatformEvent $event
+     *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \Exception
+     * @return DspEvents
+     */
+    public function trigger( $eventName, $event = null )
+    {
+        return static::getDispatcher()->dispatch( $eventName, $event );
+    }
+
+    /**
+     * Adds an event listener that listens on the specified events.
+     *
+     * @param string   $eventName            The event to listen on
+     * @param callable $listener             The listener
+     * @param integer  $priority             The higher this value, the earlier an event
+     *                                       listener will be triggered in the chain (defaults to 0)
+     *
+     * @return void
+     */
+    public function on( $eventName, $listener, $priority = 0 )
+    {
+        static::getDispatcher()->addListener( $eventName, $listener, $priority );
+    }
+
+    /**
+     * Turn off/unbind/remove $listener from an event
+     *
+     * @param string   $eventName
+     * @param callable $listener
+     *
+     * @return void
+     */
+    public function off( $eventName, $listener )
+    {
+        static::getDispatcher()->removeListener( $eventName, $listener );
+    }
+
+    //*************************************************************************
+    //	Accessors
+    //*************************************************************************
+
+    /**
+     * @param array $corsWhitelist
+     *
+     * @throws \DreamFactory\Platform\Exceptions\RestException
+     * @return PlatformWebApplication
+     */
+    public function setCorsWhitelist( $corsWhitelist )
+    {
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getCorsWhitelist()
+    {
+        return $this->_corsWhitelist;
+    }
+
+    /**
+     * @param boolean $autoAddHeaders
+     *
+     * @return PlatformWebApplication
+     */
+    public function setAutoAddHeaders( $autoAddHeaders = true )
+    {
+        $this->_autoAddHeaders = $autoAddHeaders;
+
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getAutoAddHeaders()
+    {
+        return $this->_autoAddHeaders;
+    }
+
+    /**
+     * @param boolean $extendedHeaders
+     *
+     * @return PlatformWebApplication
+     */
+    public function setExtendedHeaders( $extendedHeaders = true )
+    {
+        $this->_extendedHeaders = $extendedHeaders;
+
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getExtendedHeaders()
+    {
+        return $this->_extendedHeaders;
+    }
+
+    /**
      * @param bool $createIfNull If true, the default, the response object will be created if it hasn't already
      * @param bool $sendHeaders
      *
-     * @throws RestException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
      * @return \Symfony\Component\HttpFoundation\Response
      */
     public function getResponseObject( $createIfNull = true, $sendHeaders = true )
     {
         if ( null === $this->_responseObject && $createIfNull )
         {
-            $this->setResponseObject( Response::create() );
+            $this->_responseObject = Response::create();
         }
 
         return $this->_responseObject;
@@ -259,13 +487,11 @@ class PlatformConsoleApplication extends \CConsoleApplication
     /**
      * @param \Symfony\Component\HttpFoundation\Response $responseObject
      *
-     * @throws RestException
      * @return PlatformWebApplication
      */
     public function setResponseObject( $responseObject )
     {
-        CorsManager::setResponseObject( $this->_responseObject = $responseObject );
-        CorsManager::autoSendHeaders();
+        $this->_responseObject = $responseObject;
 
         return $this;
     }
@@ -313,7 +539,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     public function setResourceNamespaces( $resourceNamespaces )
     {
-        static::$_namespaceMap[static::NS_RESOURCES] = $resourceNamespaces;
+        static::$_namespaceMap[NamespaceTypes::RESOURCES] = $resourceNamespaces;
 
         return $this;
     }
@@ -323,7 +549,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     public function getResourceNamespaces()
     {
-        return static::$_namespaceMap[static::NS_RESOURCES];
+        return static::$_namespaceMap[NamespaceTypes::RESOURCES];
     }
 
     /**
@@ -335,7 +561,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     public function addResourceNamespace( $namespace, $path, $prepend = false )
     {
-        static::_mapNamespace( static::NS_RESOURCES, $namespace, $path, $prepend );
+        static::_mapNamespace( NamespaceTypes::RESOURCES, $namespace, $path, $prepend );
         array_unshift( $this->_modelNamespaces, $_entry );
 
         return $this;
@@ -348,7 +574,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     public function setModelNamespaces( $modelNamespaces )
     {
-        static::$_namespaceMap[static::NS_MODELS] = $modelNamespaces;
+        static::$_namespaceMap[NamespaceTypes::MODELS] = $modelNamespaces;
 
         return $this;
     }
@@ -358,7 +584,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     public function getModelNamespaces()
     {
-        return static::$_namespaceMap[static::NS_MODELS];
+        return static::$_namespaceMap[NamespaceTypes::MODELS];
     }
 
     /**
@@ -370,7 +596,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     public function addModelNamespace( $namespace, $path, $prepend = false )
     {
-        static::_mapNamespace( static::NS_MODELS, $namespace, $path, $prepend );
+        static::_mapNamespace( NamespaceTypes::MODELS, $namespace, $path, $prepend );
 
         return $this;
     }
@@ -399,7 +625,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
     public static function addNamespace( $prefix, $paths, $prepend = false )
     {
         /** @var ClassLoader $_loader */
-        if ( null === ( $_loader = \Kisma::get( CoreSettings::AUTO_LOADER ) ) )
+        if ( null === ( $_loader = Platform::storeGet( CoreSettings::AUTO_LOADER ) ) )
         {
             throw new InternalServerErrorException( 'Unable to find auto-loader. :(' );
         }
@@ -421,7 +647,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
     {
         if ( $prepend )
         {
-            array_unshift( static::$_namespaceMap[$which], array( $namespace, $path ) );
+            array_unshift( static::$_namespaceMap[$which], array($namespace, $path) );
         }
         else
         {
@@ -430,64 +656,24 @@ class PlatformConsoleApplication extends \CConsoleApplication
     }
 
     /**
-     * @param array $corsWhitelist
-     *
-     * @throws RestException
-     * @return PlatformWebApplication
+     * @param EventDispatcher $dispatcher
      */
-    public function setCorsWhitelist( $corsWhitelist )
+    public static function setDispatcher( $dispatcher )
     {
-        CorsManager::setCorsWhitelist( $corsWhitelist );
-
-        return $this;
+        static::$_dispatcher = $dispatcher;
     }
 
     /**
-     * @return array
+     * @return EventDispatcher
      */
-    public function getCorsWhitelist()
+    public static function getDispatcher()
     {
-        return CorsManager::getCorsWhitelist();
-    }
+        if ( empty( static::$_dispatcher ) )
+        {
+            static::$_dispatcher = new EventDispatcher();
+        }
 
-    /**
-     * @param boolean $autoAddHeaders
-     *
-     * @return PlatformWebApplication
-     */
-    public function setAutoAddHeaders( $autoAddHeaders = true )
-    {
-        CorsManager::setAutoAddHeaders( $autoAddHeaders );
-
-        return $this;
-    }
-
-    /**
-     * @return boolean
-     */
-    public function getAutoAddHeaders()
-    {
-        return CorsManager::getAutoAddHeaders();
-    }
-
-    /**
-     * @param boolean $extendedHeaders
-     *
-     * @return PlatformWebApplication
-     */
-    public function setExtendedHeaders( $extendedHeaders = true )
-    {
-        CorsManager::setExtendedHeaders( $extendedHeaders );
-
-        return $this;
-    }
-
-    /**
-     * @return boolean
-     */
-    public function getExtendedHeaders()
-    {
-        return CorsManager::getExtendedHeaders();
+        return static::$_dispatcher;
     }
 
     /**
@@ -495,7 +681,7 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     public function getUseResponseObject()
     {
-        return false;
+        return $this->_useResponseObject;
     }
 
     /**
@@ -505,7 +691,16 @@ class PlatformConsoleApplication extends \CConsoleApplication
      */
     public function setUseResponseObject( $useResponseObject )
     {
+        $this->_useResponseObject = $useResponseObject;
+
         return $this;
     }
 
+    /**
+     * @return array
+     */
+    public function getRequestBody()
+    {
+        return $this->_requestBody;
+    }
 }
