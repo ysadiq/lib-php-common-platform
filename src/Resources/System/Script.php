@@ -173,7 +173,8 @@ class Script extends BaseSystemRestResource
             Log::error( $_message );
 
             throw new RestException(
-                HttpResponse::ServiceUnavailable, 'This service is not available. Storage path, area, and/or required libraries are missing.'
+                HttpResponse::ServiceUnavailable,
+                'This service is not available. Storage path, area, and/or required libraries are missing.'
             );
         }
 
@@ -199,7 +200,7 @@ class Script extends BaseSystemRestResource
 
         foreach ( $_resources as $_key => $_resource )
         {
-            $_response[ $_key ] = array();
+            $_response[$_key] = array();
             $_files = FileSystem::glob( $_resource, GlobFlags::GLOB_NODOTS );
 
             if ( !empty( $_files ) )
@@ -208,7 +209,7 @@ class Script extends BaseSystemRestResource
                 {
                     if ( in_array( pathinfo( $_file, PATHINFO_EXTENSION ), $this->_extensions ) )
                     {
-                        $_response[ $_key ][] = $_file;
+                        $_response[$_key][] = $_file;
                     }
                 }
             }
@@ -341,7 +342,12 @@ class Script extends BaseSystemRestResource
 
         $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
         $_language = Option::get( $this->_requestPayload, 'language', 'js' );
-        $_path = ( $_user ? $this->_userScriptPath : $this->_scriptPath ) . '/' . trim( $this->_resourceId, '/ ' ) . '.' . $_language;
+        $_path =
+            ( $_user ? $this->_userScriptPath : $this->_scriptPath ) .
+            '/' .
+            trim( $this->_resourceId, '/ ' ) .
+            '.' .
+            $_language;
         $_script = basename( $_path );
 
         $_scriptBody = Option::get( $this->_requestPayload, 'record' );
@@ -364,8 +370,8 @@ class Script extends BaseSystemRestResource
         //  Clear the swagger cache...
         SwaggerManager::clearCache();
 
-        //  Backup the private junk
-        Platform::backupPrivateStorage();
+        //  Flag storage as dirty
+        Pii::app()->setStorageDirty( true );
 
         return array(
             'script_id'      => $this->_resourceId,
@@ -399,7 +405,12 @@ class Script extends BaseSystemRestResource
 
         $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
         $_language = Option::get( $this->_requestPayload, 'language', 'js' );
-        $_path = ( $_user ? $this->_userScriptPath : $this->_scriptPath ) . '/' . trim( $this->_resourceId, '/ ' ) . '.' . $_language;
+        $_path =
+            ( $_user ? $this->_userScriptPath : $this->_scriptPath ) .
+            '/' .
+            trim( $this->_resourceId, '/ ' ) .
+            '.' .
+            $_language;
         $_script = basename( $_path );
 
         if ( !file_exists( $_path ) )
@@ -414,8 +425,8 @@ class Script extends BaseSystemRestResource
             throw new InternalServerErrorException( 'Unable to delete script ID "' . $this->_resourceId . '"' );
         }
 
-        //  Backup the private junk
-        Platform::backupPrivateStorage();
+        //  Flag storage as dirty
+        Pii::app()->setStorageDirty( true );
 
         //  Clear the swagger cache...
         SwaggerManager::clearCache();
@@ -451,7 +462,8 @@ class Script extends BaseSystemRestResource
         if ( !extension_loaded( 'v8js' ) )
         {
             throw new RestException(
-                HttpResponse::ServiceUnavailable, 'This DSP cannot run server-side javascript scripts. The "v8js" is not available.'
+                HttpResponse::ServiceUnavailable,
+                'This DSP cannot run server-side javascript scripts. The "v8js" is not available.'
             );
         }
 
@@ -517,7 +529,12 @@ class Script extends BaseSystemRestResource
      */
     protected function _getScriptPath( $scriptName = null, $extension = 'js', $userScript = false )
     {
-        return ( $userScript ? $this->_userScriptPath : $this->_scriptPath ) . '/' . trim( $scriptName ?: $this->_resourceId, '/ ' ) . '.' . $extension;
+        return
+            ( $userScript ? $this->_userScriptPath : $this->_scriptPath ) .
+            '/' .
+            trim( $scriptName ?: $this->_resourceId, '/ ' ) .
+            '.' .
+            $extension;
     }
 
     /**

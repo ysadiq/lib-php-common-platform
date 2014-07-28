@@ -79,8 +79,8 @@ class SwaggerManager extends BasePlatformRestService
      * @var array The core DSP services that are built-in
      */
     protected static $_builtInServices = array(
-        array('api_name' => 'user', 'type_id' => 0, 'description' => 'User session and profile'),
-        array('api_name' => 'system', 'type_id' => 0, 'description' => 'System configuration')
+        array( 'api_name' => 'user', 'type_id' => 0, 'description' => 'User session and profile' ),
+        array( 'api_name' => 'system', 'type_id' => 0, 'description' => 'System configuration' )
     );
 
     //*************************************************************************
@@ -145,7 +145,7 @@ class SwaggerManager extends BasePlatformRestService
         $_baseSwagger = array(
             'swaggerVersion' => static::SWAGGER_VERSION,
             'apiVersion'     => API_VERSION,
-            'basePath'       => Pii::request( false )->getSchemeAndHttpHost() . '/rest',
+            'basePath'       => Pii::request()->getHostInfo() . '/rest',
         );
 
         //  Build services from database
@@ -169,7 +169,8 @@ SQL;
         );
 
         //  Pull any custom swagger docs
-        $_customs = ServiceDoc::model()->findAll( 'format = :format', array(':format' => ApiDocFormatTypes::SWAGGER) );
+        $_customs =
+            ServiceDoc::model()->findAll( 'format = :format', array( ':format' => ApiDocFormatTypes::SWAGGER ) );
 
         // gather the services
         $_services = array();
@@ -220,7 +221,9 @@ SQL;
             // replace service type placeholder with api name for this service instance
             $_content = str_replace( '/{api_name}', '/' . $_apiName, $_content );
 
-            if ( !isset( static::$_eventMap[$_apiName] ) || !is_array( static::$_eventMap[$_apiName] ) || empty( static::$_eventMap[$_apiName] )
+            if ( !isset( static::$_eventMap[$_apiName] ) ||
+                !is_array( static::$_eventMap[$_apiName] ) ||
+                empty( static::$_eventMap[$_apiName] )
             )
             {
                 static::$_eventMap[$_apiName] = array();
@@ -255,7 +258,7 @@ SQL;
         // cache main api listing file
         $_main = $_scanPath . static::SWAGGER_BASE_API_FILE;
         $_resourceListing = static::_getSwaggerFile( $_main );
-        $_out = array_merge( $_resourceListing, array('apis' => $_services) );
+        $_out = array_merge( $_resourceListing, array( 'apis' => $_services ) );
 
         if ( false === Platform::storeSet( static::SWAGGER_CACHE_FILE, json_encode( $_out, JSON_UNESCAPED_SLASHES ) ) )
         {
@@ -313,8 +316,8 @@ SQL;
             }
 
             $_path = str_replace(
-                array('{api_name}', '/'),
-                array($apiName, '.'),
+                array( '{api_name}', '/' ),
+                array( $apiName, '.' ),
                 trim( $_path, '/' )
             );
 
@@ -343,7 +346,7 @@ SQL;
                     }
                     else if ( !is_array( $_eventNames ) )
                     {
-                        $_eventNames = array($_eventNames);
+                        $_eventNames = array( $_eventNames );
                     }
 
                     //  Set into master record
@@ -442,7 +445,8 @@ SQL;
         }
 
         $_response = array();
-        $_eventPattern = '/^' . str_replace( array('.*.js', '.'), array(null, '\\.'), $_scriptPattern ) . '\\.(\w)\\.js$/i';
+        $_eventPattern =
+            '/^' . str_replace( array( '.*.js', '.' ), array( null, '\\.' ), $_scriptPattern ) . '\\.(\w)\\.js$/i';
 
         foreach ( $_scripts as $_script )
         {
@@ -459,7 +463,8 @@ SQL;
      * @param BasePlatformRestService $service
      * @param string                  $method
      * @param string                  $eventName         Global search for event name
-     * @param array                   $replacementValues An optional array of replacements to consider in event name matching
+     * @param array                   $replacementValues An optional array of replacements to consider in event name
+     *                                                   matching
      *
      * @return string
      */
@@ -469,7 +474,7 @@ SQL;
 
         $_map = static::getEventMap();
         $_aliases = $service->getVerbAliases();
-        $_methods = array($method);
+        $_methods = array( $method );
 
         foreach ( Option::clean( $_aliases ) as $_action => $_alias )
         {
@@ -554,7 +559,8 @@ SQL;
 
         if ( null === ( $_resources = Option::get( $_map, $_resource ) ) )
         {
-            if ( !method_exists( $service, 'getServiceName' ) || null === ( $_resources = Option::get( $_map, $service->getServiceName() ) )
+            if ( !method_exists( $service, 'getServiceName' ) ||
+                null === ( $_resources = Option::get( $_map, $service->getServiceName() ) )
             )
             {
                 if ( null === ( $_resources = Option::get( $_map, 'system' ) ) )
@@ -579,7 +585,7 @@ SQL;
             $_path = substr( $_path, 0, $_pos );
         }
 
-        $_swaps = array(array(), array());
+        $_swaps = array( array(), array() );
 
         switch ( $service->getTypeId() )
         {
@@ -651,7 +657,8 @@ SQL;
         }
 
         $_path = implode( '.', explode( '/', ltrim( $_path, '/' ) ) );
-        $_pattern = '#^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$#';
+        $_pattern =
+            '#^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$#';
         $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
         if ( empty( $_matches ) )

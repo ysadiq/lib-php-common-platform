@@ -313,7 +313,18 @@ class Platform
             )
         );
 
-        $_uuid = '{' . substr( $_hash, 0, 8 ) . '-' . substr( $_hash, 8, 4 ) . '-' . substr( $_hash, 12, 4 ) . '-' . substr( $_hash, 16, 4 ) . '-' . substr( $_hash, 20, 12 ) . '}';
+        $_uuid =
+            '{' .
+            substr( $_hash, 0, 8 ) .
+            '-' .
+            substr( $_hash, 8, 4 ) .
+            '-' .
+            substr( $_hash, 12, 4 ) .
+            '-' .
+            substr( $_hash, 16, 4 ) .
+            '-' .
+            substr( $_hash, 20, 12 ) .
+            '}';
 
         return $_uuid;
     }
@@ -377,11 +388,13 @@ class Platform
 
     /**
      * Sets a value in the platform cache
-     * $key can be specified as an array of key-value pairs: array( 'alpha' => 'xyz', 'beta' => 'qrs', 'gamma' => 'lmo', ... )
+     * $key can be specified as an array of key-value pairs: array( 'alpha' => 'xyz', 'beta' => 'qrs', 'gamma' =>
+     * 'lmo', ... )
      *
      * @param string|array $key  The cache id or array of key-value pairs
      * @param mixed        $data The cache entry/data.
-     * @param int          $ttl  The cache lifetime. Sets a specific lifetime for this cache entry. Defaults to 0, or "never expire"
+     * @param int          $ttl  The cache lifetime. Sets a specific lifetime for this cache entry. Defaults to 0, or
+     *                           "never expire"
      *
      * @return boolean|boolean[] TRUE if the entry was successfully stored in the cache, FALSE otherwise.
      */
@@ -498,40 +511,6 @@ class Platform
         return Pii::appStoreDeleteAll();
     }
 
-    //******************************************************************************
-    //* Persistent Storage
-    //******************************************************************************
-
-    /**
-     * @param string $storageId The id for this store
-     * @param string $sourcePath
-     */
-    public static function backupPrivateStorage( $storageId = 'storage', $sourcePath = null )
-    {
-        if ( Fabric::fabricHosted() || !Pii::getParam( 'dsp.no_persistent_storage', false ) )
-        {
-            return;
-        }
-
-        $_store = new DirectoryStorage( $storageId, Pii::pdo() );
-        $_store->backup( $storageId, $sourcePath ?: static::getStorageBasePath() );
-    }
-
-    /**
-     * @param string $storageId  The id for this store
-     * @param string $targetPath Where to restore the data
-     */
-    public static function restorePrivateStorage( $storageId = 'storage', $targetPath = null )
-    {
-        if ( Fabric::fabricHosted() || !Pii::getParam( 'dsp.no_persistent_storage', false ) )
-        {
-            return;
-        }
-
-        $_store = new DirectoryStorage( $storageId, Pii::pdo() );
-        $_store->restore( $storageId, $targetPath ?: static::getStorageBasePath() );
-    }
-
     //*************************************************************************
     //	Event convenience methods
     //*************************************************************************
@@ -592,7 +571,8 @@ class Platform
 
     /**
      * @param EventObserverLike|EventObserverLike[] $observer
-     * @param bool                                  $fromCache True if the cache is adding this handler Ignored by default
+     * @param bool                                  $fromCache True if the cache is adding this handler Ignored by
+     *                                                         default
      *
      * @return bool False if no observers added, otherwise how many were added
      */

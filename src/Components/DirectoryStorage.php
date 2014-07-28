@@ -19,11 +19,8 @@
  */
 namespace DreamFactory\Platform\Components;
 
-use DreamFactory\Platform\Events\Enums\DspEvents;
-use DreamFactory\Platform\Events\EventDispatcher;
-use DreamFactory\Platform\Events\StorageChangeEvent;
+use DreamFactory\Platform\Interfaces\WatcherLike;
 use DreamFactory\Platform\Services\SystemManager;
-use DreamFactory\Platform\Utility\Platform;
 use Kisma\Core\Enums\GlobFlags;
 use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\Exceptions\StorageException;
@@ -50,11 +47,16 @@ class DirectoryStorage extends \ZipArchive
      * @type string
      */
     const MARKER_FILE_NAME = '.dir_stored';
+    /**
+     * @type string
+     */
+    const CHECKSUM_FILE_NAME = '.md5';
 
     //*************************************************************************
     //	Members
     //*************************************************************************
 
+    protected static $_aware = false;
     /**
      * @var \PDO The PDO instance to use
      */
@@ -85,51 +87,70 @@ class DirectoryStorage extends \ZipArchive
     //*************************************************************************
 
     /**
-     * @param string $storageId   The name of this directory store
-     * @param \PDO   $pdo         The PDO instance to use
-     * @param string $tableName   The base name of the table. Defaults to "dir_store"
-     * @param string $tablePrefix The prefix of the storage table. Defaults to "df_sys_"
+     * @param string      $storageId   The name of this directory store
+     * @param \PDO        $pdo         The PDO instance to use
+     * @param WatcherLike $watcher     A watcher instance, if you have one
+     * @param string      $tableName   The base name of the table. Defaults to "dir_store"
+     * @param string      $tablePrefix The prefix of the storage table. Defaults to "df_sys_"
      *
      * @throws \Kisma\Core\Exceptions\StorageException
      */
-    public function __construct( $storageId, \PDO $pdo, $tableName = self::DEFAULT_TABLE_NAME, $tablePrefix = SystemManager::SYSTEM_TABLE_PREFIX )
+    public function __construct( $storageId, \PDO $pdo, WatcherLike $watcher = null, $tableName = self::DEFAULT_TABLE_NAME, $tablePrefix = SystemManager::SYSTEM_TABLE_PREFIX )
     {
         $this->_storageId = $storageId;
         $this->_pdo = $pdo;
         $this->_tablePrefix = $tablePrefix;
         $this->_tableName = $tablePrefix . $tableName;
 
-        if ( PathWatcher::available() )
+        if ( !static::$_aware )
         {
-            $this->_watcher = new PathWatcher();
+            //  Flush myself before shutdown...
+            \register_shutdown_function(
+                function ( $store )
+                {
+                    /** @var DirectoryStorage $store */
+                    $store->_flush();
+                },
+                $this
+            );
+
+            //  Now I know!
+            static::$_aware = true;
         }
+
+        //  Now create the watcher so his shutdown is after mine...
+        $this->_watcher = $watcher ?: ( PathWatcher::available() ? new PathWatcher() : null );
 
         $this->_initDatabase();
     }
 
-    public function __destruct()
+    /**
+     * @throws \Exception
+     * @throws \Kisma\Core\Exceptions\FileSystemException
+     */
+    protected function _flush()
     {
         if ( $this->_watcher )
         {
-            $_paths = $this->_paths;
+            $_events = $this->_watcher->checkForEvents( false );
 
-            Platform::on(
-                DspEvents::STORAGE_CHANGE,
-                /**
-                 * @param string             $eventName
-                 * @param StorageChangeEvent $event
-                 * @param EventDispatcher    $dispatcher
-                 */
-                function ( $eventName, StorageChangeEvent $event, $dispatcher ) use ( $_paths )
+            if ( !empty( $_events ) )
+            {
+                foreach ( $_events as $_event )
                 {
-                    if ( null !== ( $_path = Option::get( $_paths, $event->getWatchId() ) ) )
+                    if ( !isset( $_event['wd'], $this->_paths, $this->_paths[$_event['wd']] ) )
                     {
-                        $this->backup( $this->_storageId, $_path );
+                        continue;
                     }
-                }
-            );
 
-            $this->_watcher->checkForEvents();
+                    //  Watch descriptor from INOTIFY
+                    $_id = $_event['wd'];
+                    $_path = Option::get( $this->_paths, $_id, array() );
+                    $this->backup( $_path['storage_id'], $_path['path'], $_path['local_name'], $_path['new_revision'] );
+
+                    unset( $_event, $_path, $_id );
+                }
+            }
         }
     }
 
@@ -141,9 +162,11 @@ class DirectoryStorage extends \ZipArchive
      * @param string $localName   The local name of the directory
      * @param bool   $newRevision If true, backup will be created as a new row with an incremented revision number
      *
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @throws \Exception
      * @throws \Kisma\Core\Exceptions\FileSystemException
+     * @throws \Kisma\Core\Exceptions\StorageException
+     *
+     * @return bool
      */
     public function backup( $storageId, $sourcePath, $localName = null, $newRevision = false )
     {
@@ -165,6 +188,8 @@ class DirectoryStorage extends \ZipArchive
         $this->_addPath( $_path, $localName );
         $this->close();
 
+        $_checksum = md5_file( $_zipName );
+
         //  Get the latest revision
         $_currentRevision = $this->_getCurrentRevisionId( $storageId );
 
@@ -178,14 +203,16 @@ INSERT INTO {$this->_tableName}
     storage_id,
     revision_id,
     data_blob,
-    time_stamp
+    time_stamp,
+    check_sum
 )
 VALUES
 (
     :storage_id,
     :revision_id,
     :data_blob,
-    :time_stamp
+    :time_stamp,
+    :check_sum
 )
 MYSQL;
         }
@@ -193,7 +220,8 @@ MYSQL;
         {
             $_sql = <<<MYSQL
 UPDATE {$this->_tableName} SET
-    data_blob = :data_blob
+    data_blob = :data_blob,
+    check_sum = :check_sum
 WHERE
     storage_id = :storage_id AND
     revision_id = :revision_id AND
@@ -223,6 +251,7 @@ MYSQL;
                         ':revision_id' => $_currentRevision,
                         ':data_blob'   => Storage::freeze( $_payload ),
                         ':time_stamp'  => $_timestamp,
+                        ':check_sum'   => $_checksum,
                     )
                 );
 
@@ -232,30 +261,14 @@ MYSQL;
                 }
 
                 //  Dump a marker that we've backed up
-                if ( !$this->_setDirStoreTimestamp( $_path, $_timestamp ) )
+                if ( !$this->_setChecksum( $_path, $_checksum ) )
                 {
-                    Log::error( 'Error creating storage marker file. No biggie, but you may be out of disk space.' );
+                    Log::error( 'Error creating storage checksum file. No biggie, but you may be out of disk space.' );
                 }
             }
 
             //  Remove temporary file
             \unlink( $_zipName );
-
-            //  Watch for changes...
-            if ( $this->_watcher )
-            {
-                $_id = $this->_watcher->watch( $_path );
-
-                if ( false !== $_id )
-                {
-                    $this->_paths[$_id] = array(
-                        'storage_id'   => $storageId,
-                        'path'         => $_path,
-                        'new_revision' => $newRevision,
-                        'local_name'   => $localName
-                    );
-                }
-            }
 
             return true;
         }
@@ -269,13 +282,16 @@ MYSQL;
     /**
      * Reads the private storage from the configuration table and restores the directory
      *
-     * @param string $storageId The name of this directory store
-     * @param string $path      The path in which to restore the data
+     * @param string $storageId   The name of this directory store
+     * @param string $path        The path in which to restore the data
+     * @param string $localName   The local name of the directory
+     * @param bool   $newRevision If true, backup will be created as a new row with an incremented revision number
      *
+     * @return bool Only returns false if no backup exists, otherwise TRUE
      * @throws \Exception
      * @throws \Kisma\Core\Exceptions\FileSystemException
      */
-    public function restore( $storageId, $path )
+    public function restore( $storageId, $path, $localName = null, $newRevision = false )
     {
         $_path = $this->_validatePath( $path );
         $_timestamp = null;
@@ -283,7 +299,8 @@ MYSQL;
         //  Get the latest revision
         if ( false === ( $_currentRevision = $this->_getCurrentRevisionId( $storageId ) ) )
         {
-            return;
+            //  No backups...
+            return false;
         }
 
         $_timestamp = $this->_getDirStoreTimestamp( $_path );
@@ -291,7 +308,7 @@ MYSQL;
         $_sql = <<<MYSQL
 SELECT
     *
-FROM 
+FROM
     {$this->_tableName}
 WHERE
     storage_id = :storage_id AND
@@ -309,11 +326,13 @@ MYSQL;
         {
             if ( $this->_pdo->errorCode() )
             {
-                throw new StorageException( 'Error retrieving data to restore: ' . print_r( $this->_pdo->errorInfo(), true ) );
+                throw new StorageException(
+                    'Error retrieving data to restore: ' . print_r( $this->_pdo->errorInfo(), true )
+                );
             }
 
             //  No rows...
-            return;
+            return false;
         }
 
         //  Nothing to restore, bail...
@@ -321,7 +340,8 @@ MYSQL;
 
         if ( empty( $_payload ) )
         {
-            return;
+            //  No data, but has backup
+            return true;
         }
 
         $_data = Option::get( $_payload, $storageId );
@@ -332,6 +352,13 @@ MYSQL;
         if ( false === ( $_bytes = file_put_contents( $_zipName, $_data ) ) )
         {
             throw new FileSystemException( 'Error creating temporary zip file for restoration.' );
+        }
+
+        //  Nothing new...
+        if ( $_row['check_sum'] == ( $_checksum = md5_file( $_zipName ) ) )
+        {
+            //  No changes
+            return true;
         }
 
         //  Open our new zip and extract...
@@ -356,6 +383,25 @@ MYSQL;
 
         //  Remove marker, ignore result (may not be one...)
         $this->_setDirStoreTimestamp( $_path, null, true );
+        $this->_setChecksum( $_path, $_checksum );
+
+        //  Watch for changes...
+        if ( $this->_watcher )
+        {
+            $_id = $this->_watcher->watch( $_path );
+
+            if ( false !== $_id )
+            {
+                $this->_paths[$_id] = array(
+                    'storage_id'   => $storageId,
+                    'path'         => $_path,
+                    'new_revision' => $newRevision,
+                    'local_name'   => $localName
+                );
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -363,6 +409,8 @@ MYSQL;
      *
      * @param string $path
      * @param string $localName
+     *
+     * @return bool
      */
     protected function _addPath( $path, $localName = null )
     {
@@ -370,7 +418,7 @@ MYSQL;
 
         if ( empty( $_files ) )
         {
-            return;
+            return false;
         }
 
         foreach ( $_files as $_file )
@@ -384,9 +432,17 @@ MYSQL;
             }
             else
             {
-                $this->addFile( $_filePath, $_localFilePath );
+                // Don't save our markers...
+                if ( $_file != ltrim( static::CHECKSUM_FILE_NAME, '/' ) &&
+                    $_file != ltrim( static::MARKER_FILE_NAME, '/' )
+                )
+                {
+                    $this->addFile( $_filePath, $_localFilePath );
+                }
             }
         }
+
+        return true;
     }
 
     /**
@@ -407,14 +463,18 @@ MYSQL;
             //  Try and make the directory if wanted
             if ( !$restoring || false === ( $_result = mkdir( $path, 0777, true ) ) )
             {
-                throw new \InvalidArgumentException( 'The path "' . $path . '" does not exist and/or cannot be created. Please validate installation.' );
+                throw new \InvalidArgumentException(
+                    'The path "' . $path . '" does not exist and/or cannot be created. Please validate installation.'
+                );
             }
         }
 
         //  Make sure we can read/write there...
         if ( !is_readable( $path ) || !is_writable( $path ) )
         {
-            throw new \InvalidArgumentException( 'The path "' . $path . '" exists but cannot be accessed. Please validate installation.' );
+            throw new \InvalidArgumentException(
+                'The path "' . $path . '" exists but cannot be accessed. Please validate installation.'
+            );
         }
 
         return rtrim( $path, '/' );
@@ -422,6 +482,7 @@ MYSQL;
 
     /**
      * Ensures the storage table exists. Creates if not
+     *
      * @throws \Kisma\Core\Exceptions\StorageException
      */
     protected function _initDatabase()
@@ -430,12 +491,13 @@ MYSQL;
 
         //  Create table...
         $_ddl = <<<MYSQL
-CREATE TABLE IF NOT EXISTS `{$this->_tableName}` 
+CREATE TABLE IF NOT EXISTS `{$this->_tableName}`
 (
     `storage_id` VARCHAR(64) NOT NULL,
-    `revision_id` int(11) NOT NULL DEFAULT '0',
+    `revision_id` INT(11) NOT NULL DEFAULT '0',
     `data_blob` MEDIUMTEXT NULL,
-    `time_stamp` int(11) not null,
+    `time_stamp` INT(11) not null,
+    `check_sum` VARCHAR(64) NOT NULL,
     PRIMARY KEY (`storage_id`,`revision_id`)
 )
 ENGINE=InnoDB DEFAULT CHARSET=utf8
@@ -464,9 +526,11 @@ WHERE
     storage_id = :storage_id
 MYSQL;
 
-        if ( false === ( $_revisionId = Sql::scalar( $_sql, 0, array(':storage_id' => $storageId) ) ) )
+        if ( false === ( $_revisionId = Sql::scalar( $_sql, 0, array( ':storage_id' => $storageId ) ) ) )
         {
-            throw new StorageException( 'Database error during revision check: ' . print_r( $this->_pdo->errorInfo(), true ) );
+            throw new StorageException(
+                'Database error during revision check: ' . print_r( $this->_pdo->errorInfo(), true )
+            );
         }
 
         //  If no revisions, return false...
@@ -511,5 +575,51 @@ MYSQL;
         }
 
         return false !== file_put_contents( $_marker, $timestamp ?: time() );
+    }
+
+    /**
+     * Gets the checksum from the file
+     *
+     * @param string $path
+     *
+     * @return null|string
+     */
+    protected function _getChecksum( $path )
+    {
+        $_marker = $path . DIRECTORY_SEPARATOR . static::CHECKSUM_FILE_NAME;
+
+        if ( !file_exists( $_marker ) || false === ( $_checksum = file_get_contents( $_marker ) ) )
+        {
+            return null;
+        }
+
+        return $_checksum;
+
+    }
+
+    /**
+     * Creates a checksum file
+     *
+     * @param string $path
+     * @param string $checksum
+     * @param bool   $delete If true, marker is deleted
+     *
+     * @return bool
+     */
+    protected function _setChecksum( $path, $checksum, $delete = false )
+    {
+        if ( empty( $checksum ) )
+        {
+            throw new \InvalidargumentException( 'The "$checksum" cannot be empty.' );
+        }
+
+        $_marker = $path . DIRECTORY_SEPARATOR . static::CHECKSUM_FILE_NAME;
+
+        if ( false !== $delete )
+        {
+            return @\unlink( $_marker );
+        }
+
+        return false !== file_put_contents( $_marker, $checksum );
     }
 }

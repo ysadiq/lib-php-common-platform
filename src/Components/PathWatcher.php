@@ -23,17 +23,24 @@ use DreamFactory\Platform\Enums\INotify;
 use DreamFactory\Platform\Events\Enums\DspEvents;
 use DreamFactory\Platform\Events\StorageChangeEvent;
 use DreamFactory\Platform\Exceptions\UnavailableExtensionException;
+use DreamFactory\Platform\Interfaces\WatcherLike;
 use DreamFactory\Platform\Utility\Platform;
+use Kisma\Core\SeedUtility;
+use Kisma\Core\Utility\Log;
 
 /**
  * Path/File watching object
  */
-class PathWatcher
+class PathWatcher implements WatcherLike
 {
     //*************************************************************************
     //	Members
     //*************************************************************************
 
+    /**
+     * @type bool True if I've been made aware of things
+     */
+    protected static $_aware = false;
     /**
      * @var resource
      */
@@ -50,19 +57,22 @@ class PathWatcher
     /**
      * Checks to see if this service is available
      *
-     * @param bool $exceptional If true an exception will be thrown if unavailable
-     *
      * @throws \DreamFactory\Platform\Exceptions\UnavailableExtensionException
      * @return bool
      */
-    public static function available( $exceptional = false )
+    public static function available()
     {
-        if ( false === ( $_available = function_exists( 'inotify_init' ) ) && $exceptional )
-        {
-            throw new UnavailableExtensionException( 'The pecl "inotify" extension is required to use this class.' );
-        }
+        return function_exists( 'inotify_init' );
+    }
 
-        return $_available;
+    /**
+     * @param resource $stream A stream resource to check
+     *
+     * @return bool True if the stream given is valid
+     */
+    public static function streamValid( $stream )
+    {
+        return $stream && is_resource( $stream ) && 'Unknown' != get_resource_type( $stream );
     }
 
     /**
@@ -70,7 +80,25 @@ class PathWatcher
      */
     public function __construct()
     {
-        static::available( true );
+        if ( !static::available( true ) )
+        {
+            throw new UnavailableExtensionException( 'The pecl "inotify" extension is required to use this class.' );
+        }
+
+        if ( !static::$_aware )
+        {
+            \register_shutdown_function(
+                function ( $watcher )
+                {
+                    /** @var PathWatcher $watcher */
+                    $watcher->_flush();
+                },
+                $this
+            );
+
+            //  Now I know!
+            static::$_aware = true;
+        }
 
         /** @noinspection PhpUndefinedFunctionInspection */
         $this->_stream = inotify_init();
@@ -79,9 +107,9 @@ class PathWatcher
     /**
      * Clean up stream and remove any watches
      */
-    public function __destruct()
+    public function _flush()
     {
-        if ( $this->_stream )
+        if ( static::streamValid( $this->_stream ) && !empty( $this->_watches ) )
         {
             foreach ( $this->_watches as $_watchId )
             {
@@ -146,29 +174,30 @@ class PathWatcher
      */
     public function checkForEvents( $trigger = true )
     {
-        $_read = array( $this->_stream );
-        $_result = $_except = $_write = array();
+        $_result = array();
 
-        stream_select( $_read, $_write, $_except, 0 );
-
-        //  Check for events
-        /** @noinspection PhpUndefinedFunctionInspection */
-        while ( inotify_queue_len( $this->_stream ) )
+        //  No watches? No events...
+        if ( !empty( $this->_watches ) && static::streamValid( $this->_stream ) )
         {
+            //  Check for events
             /** @noinspection PhpUndefinedFunctionInspection */
-            if ( false !== ( $_events = inotify_read( $this->_stream ) ) )
+            while ( inotify_queue_len( $this->_stream ) )
             {
-                //  Handle events
-                foreach ( $_events as $_watchEvent )
+                /** @noinspection PhpUndefinedFunctionInspection */
+                if ( false !== ( $_events = inotify_read( $this->_stream ) ) )
                 {
-                    $_result[] = $_watchEvent;
-
-                    if ( $trigger )
+                    //  Handle events
+                    foreach ( $_events as $_watchEvent )
                     {
-                        Platform::trigger(
-                            DspEvents::STORAGE_CHANGE,
-                            new StorageChangeEvent( $_watchEvent )
-                        );
+                        $_result[] = $_watchEvent;
+
+                        if ( $trigger )
+                        {
+                            Platform::trigger(
+                                DspEvents::STORAGE_CHANGE,
+                                new StorageChangeEvent( $_watchEvent )
+                            );
+                        }
                     }
                 }
             }
@@ -176,4 +205,5 @@ class PathWatcher
 
         return $_result;
     }
+
 }

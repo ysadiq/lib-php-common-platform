@@ -126,9 +126,6 @@ class Session extends BasePlatformRestResource
             true
         );
 
-        //  Restore private data after successful login...
-        Platform::restorePrivateStorage();
-
         return $_result;
     }
 
@@ -137,9 +134,6 @@ class Session extends BasePlatformRestResource
      */
     protected function _handleDelete()
     {
-        //  Backup private junk
-        Platform::backupPrivateStorage();
-
         $this->userLogout();
 
         return array( 'success' => true );
@@ -845,7 +839,7 @@ class Session extends BasePlatformRestResource
                     if ( 0 == strcasecmp( $component, $_tempComponent ) )
                     {
                         $_componentFound = true;
-                        if ( isset( $_tempVerbs[ $action ] ) )
+                        if ( isset( $_tempVerbs[$action] ) )
                         {
                             $_filters = Option::get( $_svcInfo, 'filters' );
                             $_operator = Option::get( $_svcInfo, 'filter_op', 'AND' );
@@ -859,7 +853,7 @@ class Session extends BasePlatformRestResource
                     }
                     elseif ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
                     {
-                        if ( isset( $_tempVerbs[ $action ] ) )
+                        if ( isset( $_tempVerbs[$action] ) )
                         {
                             $_filters = Option::get( $_svcInfo, 'filters' );
                             $_operator = Option::get( $_svcInfo, 'filter_op', 'AND' );
@@ -876,7 +870,7 @@ class Session extends BasePlatformRestResource
                 {
                     if ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
                     {
-                        if ( isset( $_tempVerbs[ $action ] ) )
+                        if ( isset( $_tempVerbs[$action] ) )
                         {
                             $_filters = Option::get( $_svcInfo, 'filters' );
                             $_operator = Option::get( $_svcInfo, 'filter_op', 'AND' );
@@ -950,9 +944,9 @@ class Session extends BasePlatformRestResource
                         // get fields here
                         if ( !empty( $_lookup ) )
                         {
-                            if ( isset( static::$_cache, static::$_cache[ $_lookup ] ) )
+                            if ( isset( static::$_cache, static::$_cache[$_lookup] ) )
                             {
-                                $value = static::$_cache[ $_lookup ];
+                                $value = static::$_cache[$_lookup];
 
                                 return true;
                             }
@@ -963,9 +957,9 @@ class Session extends BasePlatformRestResource
                         // get fields here
                         if ( !empty( $_lookup ) )
                         {
-                            if ( isset( static::$_cache, static::$_cache['role'], static::$_cache['role'][ $_lookup ] ) )
+                            if ( isset( static::$_cache, static::$_cache['role'], static::$_cache['role'][$_lookup] ) )
                             {
-                                $value = static::$_cache['role'][ $_lookup ];
+                                $value = static::$_cache['role'][$_lookup];
 
                                 return true;
                             }
@@ -1013,9 +1007,9 @@ class Session extends BasePlatformRestResource
 
         $_control = $use_private ? 'secret' : 'lookup';
 
-        if ( isset( static::$_cache, static::$_cache[ $_control ], static::$_cache[ $_control ][ $lookup ] ) )
+        if ( isset( static::$_cache, static::$_cache[$_control], static::$_cache[$_control][$lookup] ) )
         {
-            $value = static::$_cache[ $_control ][ $lookup ];
+            $value = static::$_cache[$_control][$lookup];
 
             return true;
         }
@@ -1185,7 +1179,8 @@ class Session extends BasePlatformRestResource
 
         if ( $add_apps )
         {
-            $appFields = 'id,api_name,name,description,is_url_external,launch_url,requires_fullscreen,allow_fullscreen_toggle,toggle_location';
+            $appFields =
+                'id,api_name,name,description,is_url_external,launch_url,requires_fullscreen,allow_fullscreen_toggle,toggle_location';
             /**
              * @var App[] $_apps
              */
@@ -1209,8 +1204,8 @@ class Session extends BasePlatformRestResource
                 foreach ( $theGroups as $g_key => $group )
                 {
                     $groupId = $group->id;
-                    $groupData = ( isset( $appGroups[ $g_key ] ) )
-                        ? $appGroups[ $g_key ]
+                    $groupData = ( isset( $appGroups[$g_key] ) )
+                        ? $appGroups[$g_key]
                         : $group->getAttributes(
                             array( 'id', 'name', 'description' )
                         );
@@ -1224,7 +1219,7 @@ class Session extends BasePlatformRestResource
                             $groupData['apps'] = $temp;
                         }
                     }
-                    $appGroups[ $g_key ] = $groupData;
+                    $appGroups[$g_key] = $groupData;
                 }
                 if ( !$found )
                 {
@@ -1236,7 +1231,7 @@ class Session extends BasePlatformRestResource
             {
                 if ( !isset( $group['apps'] ) )
                 {
-                    unset( $appGroups[ $g_key ] );
+                    unset( $appGroups[$g_key] );
                 }
             }
             $_data['app_groups'] = array_values( $appGroups ); // reset indexing
