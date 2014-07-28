@@ -274,9 +274,9 @@
             ],
             "authors": [
                 {
-                    "name": "Jason Sykes",
+                    "name": "Sykes, Jason",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Developer, client-side"
+                    "role": "Lead Engineer, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Javascript SDK",
@@ -398,7 +398,7 @@
                 {
                     "name": "Jason Sykes",
                     "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Engineer, client-side"
+                    "role": "Lead Developer, client-side"
                 },
                 {
                     "name": "Lee Hicks",
@@ -408,7 +408,7 @@
                 {
                     "name": "Todd Appleton",
                     "email": "toddappleton@dreamfactory.com",
-                    "role": "Lead Engineer, client-side; UX/QA"
+                    "role": "Lead Developer and QA, client-side"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Yii Components Library",
@@ -533,12 +533,12 @@
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Exterminator"
+                    "role": "Lead Developer, server-side"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Exterminator"
+                    "role": "Lead Developer, server-side"
                 }
             ],
             "description": "Yii Web Programming Framework",
@@ -753,12 +753,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Seldaek/monolog.git",
-                "reference": "61145103b6521d04c0386d1ea6899437df9d45e2"
+                "reference": "40dda4876d45602d7b9b0b5109027f51e291d64b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/61145103b6521d04c0386d1ea6899437df9d45e2",
-                "reference": "61145103b6521d04c0386d1ea6899437df9d45e2",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/40dda4876d45602d7b9b0b5109027f51e291d64b",
+                "reference": "40dda4876d45602d7b9b0b5109027f51e291d64b",
                 "shasum": ""
             },
             "require": {
@@ -789,7 +789,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "1.10.x-dev"
+                    "dev-master": "1.11.x-dev"
                 }
             },
             "autoload": {
@@ -815,7 +815,7 @@
                 "logging",
                 "psr-3"
             ],
-            "time": "2014-07-19 19:11:34"
+            "time": "2014-07-28 11:23:37"
         },
         {
             "name": "nikic/php-parser",
@@ -1355,12 +1355,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/EventDispatcher.git",
-                "reference": "c2f8a5d3181736d107d6622a536fbdcd55436674"
+                "reference": "68ab3c3f50eae2b152075da722204d4de67f596f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/c2f8a5d3181736d107d6622a536fbdcd55436674",
-                "reference": "c2f8a5d3181736d107d6622a536fbdcd55436674",
+                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/68ab3c3f50eae2b152075da722204d4de67f596f",
+                "reference": "68ab3c3f50eae2b152075da722204d4de67f596f",
                 "shasum": ""
             },
             "require": {
@@ -1393,19 +1393,17 @@
             ],
             "authors": [
                 {
-                    "name": "Fabien Potencier",
-                    "email": "fabien@symfony.com",
-                    "homepage": "http://fabien.potencier.org",
-                    "role": "Lead Developer"
-                },
-                {
                     "name": "Symfony Community",
                     "homepage": "http://symfony.com/contributors"
+                },
+                {
+                    "name": "Fabien Potencier",
+                    "email": "fabien@symfony.com"
                 }
             ],
             "description": "Symfony EventDispatcher Component",
             "homepage": "http://symfony.com",
-            "time": "2014-07-09 09:06:26"
+            "time": "2014-07-28 13:20:53"
         },
         {
             "name": "symfony/http-foundation",
