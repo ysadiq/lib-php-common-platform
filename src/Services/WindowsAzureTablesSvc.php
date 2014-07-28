@@ -23,6 +23,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\DbUtilities;
 use Kisma\Core\Utility\Option;
 use WindowsAzure\Common\ServiceException;
 use WindowsAzure\Common\ServicesBuilder;
@@ -326,7 +327,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
      */
     public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
@@ -357,7 +358,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
      */
     public function patchRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );

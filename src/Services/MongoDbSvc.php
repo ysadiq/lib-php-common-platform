@@ -24,6 +24,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\DbUtilities;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -298,7 +299,7 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'There are no fields in the record.' );
         $_coll = $this->selectTable( $table );
 
         $_fields = Option::get( $extras, 'fields' );
@@ -343,7 +344,7 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function patchRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'There are no fields in the record.' );
         $_coll = $this->selectTable( $table );
 
         $_fields = Option::get( $extras, 'fields' );

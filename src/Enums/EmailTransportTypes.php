@@ -42,7 +42,7 @@ class EmailTransportTypes extends SeedEnum
     /**
      * @var int Use SMTP configuration provided
      */
-    const SMTP = 3;
+    const SMTP = 2;
 
     //*************************************************************************
     //* Members

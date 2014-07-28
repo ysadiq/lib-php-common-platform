@@ -20,6 +20,7 @@
 namespace DreamFactory\Platform\Services;
 
 use DreamFactory\Platform\Components\PlatformStore;
+use DreamFactory\Platform\Enums\ApiDocFormatTypes;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Events\Enums\SwaggerEvents;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
@@ -168,7 +169,7 @@ SQL;
         );
 
         //  Pull any custom swagger docs
-        $_customs = ServiceDoc::model()->findAll( 'format = :format', array(':format' => 'SWAGGER') );
+        $_customs = ServiceDoc::model()->findAll( 'format = :format', array(':format' => ApiDocFormatTypes::SWAGGER) );
 
         // gather the services
         $_services = array();

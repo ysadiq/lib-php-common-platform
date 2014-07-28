@@ -1,5 +1,5 @@
 {
-	"version": "1.6.0",
+	"version": "1.6.1",
 	"scripts": {
 		"install": null,
 		"update":  "1.5.0-update.sql"
@@ -443,12 +443,6 @@
 					"type":       "integer",
 					"allow_null": false,
 					"default":    0
-				},
-				{
-					"name":       "storage_name",
-					"type":       "string",
-					"length":     80,
-					"allow_null": true
 				},
 				{
 					"name":       "storage_type",
@@ -1564,15 +1558,9 @@
 				},
 				{
 					"name":       "format",
-					"type":       "string",
-					"length":     64,
-					"value":      ["SWAGGER", "RAML", "API_BLUEPRINT", "IO_DOCS"],
-					"default":    "SWAGGER",
-					"allow_null": false,
-					"is_index":   true,
-					"validation": {
-						"picklist": {}
-					}
+					"type":       "integer",
+					"default":    0,
+					"allow_null": false
 				},
 				{
 					"name":       "content",

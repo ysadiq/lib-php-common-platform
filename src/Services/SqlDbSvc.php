@@ -97,15 +97,6 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function __construct( $config, $native = false )
     {
-        if ( null === Option::get( $config, 'verb_aliases' ) )
-        {
-            //	Default verb aliases
-            $config['verb_aliases'] = array(
-                static::PATCH => static::PUT,
-                static::MERGE => static::PUT,
-            );
-        }
-
         parent::__construct( $config );
 
         $this->_fieldCache = array();
@@ -669,7 +660,7 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $record = SqlDbUtilities::validateAsArray( $record, null, false, 'There are no fields in the record.' );
         $table = $this->correctTableName( $table );
 
         $_idFields = Option::get( $extras, 'id_field' );
@@ -1237,7 +1228,7 @@ class SqlDbSvc extends BaseDbSvc
                                     }
                                     break;
                             }
-                            switch ( SqlDbUtilities::determinePhpConversionType( $_type, $_dbType ) )
+                            switch ( SqlDbUtilities::determinePhpConversionType( $_type ) )
                             {
                                 case 'int':
                                     if ( !is_int( $_fieldVal ) )
@@ -1457,7 +1448,7 @@ class SqlDbSvc extends BaseDbSvc
             $bindArray[] = array(
                 'name'     => $field,
                 'pdo_type' => SqlDbUtilities::determinePdoBindingType( $type, $dbType ),
-                'php_type' => SqlDbUtilities::determinePhpConversionType( $type, $dbType ),
+                'php_type' => SqlDbUtilities::determinePhpConversionType( $type ),
             );
 
             // todo fix special cases - maybe after retrieve
@@ -2376,7 +2367,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         else
         {
-            if ( false !== $requested_fields = static::validateAsArray( $requested_fields, ',' ) )
+            if ( false !== $requested_fields = SqlDbUtilities::validateAsArray( $requested_fields, ',' ) )
             {
                 foreach ( $requested_fields as $_field )
                 {
