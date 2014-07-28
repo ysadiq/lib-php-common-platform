@@ -98,7 +98,8 @@ class PathWatcher
      *
      * @param string $path
      * @param int    $mask
-     * @param bool   $overwrite If true, the mask will be added to any existing mask on the path. If false, the $mask will replace an existing watch mask.
+     * @param bool   $overwrite If true, the mask will be added to any existing mask on the path. If false, the $mask
+     *                          will replace an existing watch mask.
      *
      * @return int The ID of this watch
      */
@@ -141,11 +142,11 @@ class PathWatcher
      *
      * @param bool $trigger If true (default), a DspEvents::STORAGE_CHANGE event is fired
      *
-     * @return int The number of events that occurred
+     * @return array The array of triggered events
      */
     public function checkForEvents( $trigger = true )
     {
-        $_read = array($this->_stream);
+        $_read = array( $this->_stream );
         $_result = $_except = $_write = array();
 
         stream_select( $_read, $_write, $_except, 0 );
