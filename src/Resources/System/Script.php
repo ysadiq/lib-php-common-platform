@@ -370,9 +370,6 @@ class Script extends BaseSystemRestResource
         //  Clear the swagger cache...
         SwaggerManager::clearCache();
 
-        //  Flag storage as dirty
-        Pii::app()->setStorageDirty( true );
-
         return array(
             'script_id'      => $this->_resourceId,
             'script'         => $_script,
@@ -424,9 +421,6 @@ class Script extends BaseSystemRestResource
         {
             throw new InternalServerErrorException( 'Unable to delete script ID "' . $this->_resourceId . '"' );
         }
-
-        //  Flag storage as dirty
-        Pii::app()->setStorageDirty( true );
 
         //  Clear the swagger cache...
         SwaggerManager::clearCache();

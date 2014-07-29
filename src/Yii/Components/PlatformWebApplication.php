@@ -231,11 +231,23 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             {
                 static::$_store = new DirectoryStorage( static::PSTORE_ID, Pii::pdo() );
 
+                //  Delete the marker file on any changes...
+                Platform::on(
+                    DspEvents::STORAGE_CHANGE,
+                    function ()
+                    {
+                        Log::debug( 'Dirty flag set' );
+                        $this->setStorageDirty( true );
+                    }
+                );
+
                 //  If we have no copy, make one...
                 if ( false === $this->_restoreStorage( static::PSTORE_ID, Platform::getStoragePath() ) )
                 {
                     $this->_backupStorage( static::PSTORE_ID, Platform::getStoragePath() );
                 }
+
+                $this->_storageDirty = false;
             }
         }
 
@@ -393,9 +405,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _onEndRequest( \CEvent $event )
     {
-        if ( static::$_store )
+        if ( static::$_store && $this->_storageDirty )
         {
             static::$_store->backup( static::PSTORE_ID, Platform::getStoragePath() );
+            Log::debug( '  * triggered by dirty flag' );
         }
 
         $this->stopProfiler( 'app.request' );
@@ -904,7 +917,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
     public function setStorageDirty( $dirty = false )
     {
-        $this->_storageDirety = $dirty;
+        $this->_storageDirty = $dirty;
 
         return $this;
     }
@@ -917,7 +930,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _backupStorage( $storageId = 'storage', $sourcePath = null )
     {
-        if ( static::$_store )
+        if ( static::$_store && $this->_storageDirty )
         {
             return static::$_store->backup( $storageId, $sourcePath ?: Platform::getStorageBasePath() );
         }
@@ -933,7 +946,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function _restoreStorage( $storageId = 'storage', $targetPath = null )
     {
-        if ( static::$_store )
+        if ( static::$_store && !$this->_storageDirty )
         {
             return static::$_store->restore( $storageId, $targetPath ?: Platform::getStorageBasePath() );
         }

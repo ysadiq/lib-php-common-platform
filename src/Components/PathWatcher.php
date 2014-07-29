@@ -156,14 +156,19 @@ class PathWatcher implements WatcherLike
     /**
      * Checks the stream and fires appropriate events
      *
-     * @param bool $trigger If true (default), a DspEvents::STORAGE_CHANGE event is fired
+     * @param bool $trigger If true, a DspEvents::STORAGE_CHANGE event is fired for each event
      *
      * @return array The array of triggered events
      */
-    public function processEvents( $trigger = true )
+    public function processEvents( $trigger = false )
     {
         $_result = array();
-        $_changes = $this->_processStream();
+
+        //  Check for changes
+        if ( 0 == $this->_processStream() )
+        {
+            return $_result;
+        }
 
         //  Check for events
         /** @noinspection PhpUndefinedFunctionInspection */
@@ -203,9 +208,33 @@ class PathWatcher implements WatcherLike
             return array();
         }
 
-        $_read = array($this->_stream);
+        $_read = array( $this->_stream );
         $_except = $_write = array();
 
         return stream_select( $_read, $_write, $_except, $timeout );
+    }
+
+    public function getPathChecksum( $path )
+    {
+        if ( !is_dir( $path ) )
+        {
+            return false;
+        }
+
+        $_files = array();
+        $_dir = dir( $path );
+
+        while ( false !== ( $_entry = $_dir->read() ) )
+        {
+            if ( '.' != $_entry && '..' != $_entry )
+            {
+                $_filePath = $path . DIRECTORY_SEPARATOR . $_entry;
+                $_files[] = is_dir( $_filePath ) ? $this->getPathChecksum( $_filePath ) : md5_file( $_filePath );
+            }
+        }
+
+        $_dir->close();
+
+        return md5( implode( '', $_files ) );
     }
 }

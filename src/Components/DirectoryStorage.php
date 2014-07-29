@@ -46,17 +46,12 @@ class DirectoryStorage extends \ZipArchive
     /**
      * @type string
      */
-    const MARKER_FILE_NAME = '.dir_stored';
-    /**
-     * @type string
-     */
     const CHECKSUM_FILE_NAME = '.md5';
 
     //*************************************************************************
     //	Members
     //*************************************************************************
 
-    protected static $_aware = false;
     /**
      * @var \PDO The PDO instance to use
      */
@@ -102,21 +97,15 @@ class DirectoryStorage extends \ZipArchive
         $this->_tablePrefix = $tablePrefix;
         $this->_tableName = $tablePrefix . $tableName;
 
-        if ( !static::$_aware )
-        {
-            //  Flush myself before shutdown...
-            \register_shutdown_function(
-                function ( $store )
-                {
-                    /** @var DirectoryStorage $store */
-                    $store->_flush();
-                },
-                $this
-            );
-
-            //  Now I know!
-            static::$_aware = true;
-        }
+        //  Flush myself before shutdown...
+        \register_shutdown_function(
+            function ( $store )
+            {
+                /** @var DirectoryStorage $store */
+                $store->_flush();
+            },
+            $this
+        );
 
         //  Now create the watcher so his shutdown is after mine...
         $this->_watcher = $watcher ?: ( PathWatcher::available() ? new PathWatcher() : null );
@@ -132,7 +121,7 @@ class DirectoryStorage extends \ZipArchive
     {
         if ( $this->_watcher )
         {
-            $_events = $this->_watcher->checkForEvents( false );
+            $_events = $this->_watcher->processEvents( true );
 
             if ( !empty( $_events ) )
             {
@@ -173,21 +162,7 @@ class DirectoryStorage extends \ZipArchive
         $_path = $this->_validatePath( $sourcePath );
 
         //  Make a temp file name...
-        $_zipName = tempnam( sys_get_temp_dir(), sha1( uniqid() ) );
-
-        if ( !$this->open( $_zipName, \ZipArchive::CREATE ) )
-        {
-            throw new FileSystemException( 'Unable to create temporary zip file.' );
-        }
-
-        if ( $localName )
-        {
-            $this->addEmptyDir( $localName );
-        }
-
-        $this->_addPath( $_path, $localName );
-        $this->close();
-
+        $_zipName = $this->_buildZipFile( $_path, $localName );
         $_checksum = md5_file( $_zipName );
 
         //  Get the latest revision
@@ -221,11 +196,11 @@ MYSQL;
             $_sql = <<<MYSQL
 UPDATE {$this->_tableName} SET
     data_blob = :data_blob,
+    time_stamp = :time_stamp,
     check_sum = :check_sum
 WHERE
     storage_id = :storage_id AND
-    revision_id = :revision_id AND
-    time_stamp = :time_stamp
+    revision_id = :revision_id
 MYSQL;
         }
 
@@ -261,10 +236,12 @@ MYSQL;
                 }
 
                 //  Dump a marker that we've backed up
-                if ( !$this->_setChecksum( $_path, $_checksum ) )
+                if ( !$this->_saveStoreMarker( $_path, $_timestamp, $_checksum ) )
                 {
                     Log::error( 'Error creating storage checksum file. No biggie, but you may be out of disk space.' );
                 }
+
+                Log::debug( 'DirStore: backup created: ' . $_checksum . '@' . $_timestamp );
             }
 
             //  Remove temporary file
@@ -303,7 +280,7 @@ MYSQL;
             return false;
         }
 
-        $_timestamp = $this->_getDirStoreTimestamp( $_path );
+        $_marker = $this->_loadStoreMarker( $_path );
 
         $_sql = <<<MYSQL
 SELECT
@@ -313,26 +290,34 @@ FROM
 WHERE
     storage_id = :storage_id AND
     revision_id = :revision_id AND
-    time_stamp > :time_stamp
+    time_stamp >= :time_stamp
+ORDER BY
+    time_stamp DESC
 MYSQL;
 
         $_params = array(
             ':storage_id'  => $storageId,
             ':revision_id' => $_currentRevision,
-            ':time_stamp'  => $_timestamp
+            ':time_stamp'  => $_marker['time_stamp'],
         );
 
         if ( false === ( $_row = Sql::find( $_sql, $_params ) ) )
         {
-            if ( $this->_pdo->errorCode() )
+            if ( '00000' != $this->_pdo->errorCode() )
             {
                 throw new StorageException(
                     'Error retrieving data to restore: ' . print_r( $this->_pdo->errorInfo(), true )
                 );
             }
 
-            //  No rows...
+            //  No rows, nothing to do...
             return false;
+        }
+
+        //  Nothing to restore...
+        if ( $_marker['time_stamp'] == $_row['time_stamp'] && $_marker['check_sum'] == $_row['check_sum'] )
+        {
+            return true;
         }
 
         //  Nothing to restore, bail...
@@ -347,58 +332,51 @@ MYSQL;
         $_data = Option::get( $_payload, $storageId );
 
         //  Make a temp file name...
-        $_zipName = tempnam( sys_get_temp_dir(), sha1( uniqid() ) );
+        $_zipName = $this->_buildZipFile( $_path, $localName, $_data );
 
-        if ( false === ( $_bytes = file_put_contents( $_zipName, $_data ) ) )
+        //  Checksum different?
+        if ( $_row['check_sum'] != ( $_checksum = md5_file( $_zipName ) ) )
         {
-            throw new FileSystemException( 'Error creating temporary zip file for restoration.' );
-        }
-
-        //  Nothing new...
-        if ( $_row['check_sum'] == ( $_checksum = md5_file( $_zipName ) ) )
-        {
-            //  No changes
-            return true;
-        }
-
-        //  Open our new zip and extract...
-        if ( !$this->open( $_zipName ) )
-        {
-            throw new FileSystemException( 'Unable to open temporary zip file.' );
-        }
-
-        try
-        {
-            $this->extractTo( $_path );
-            $this->close();
-        }
-        catch ( \Exception $_ex )
-        {
-            Log::error( 'Exception restoring private backup: ' . $_ex->getMessage() );
-            throw $_ex;
-        }
-
-        //  Remove temporary file
-        \unlink( $_zipName );
-
-        //  Remove marker, ignore result (may not be one...)
-        $this->_setDirStoreTimestamp( $_path, null, true );
-        $this->_setChecksum( $_path, $_checksum );
-
-        //  Watch for changes...
-        if ( $this->_watcher )
-        {
-            $_id = $this->_watcher->watch( $_path );
-
-            if ( false !== $_id )
+            //  Open our new zip and extract...
+            if ( !$this->open( $_zipName ) )
             {
-                $this->_paths[$_id] = array(
-                    'storage_id'   => $storageId,
-                    'path'         => $_path,
-                    'new_revision' => $newRevision,
-                    'local_name'   => $localName
-                );
+                throw new FileSystemException( 'Unable to open temporary zip file.' );
             }
+
+            try
+            {
+                $this->extractTo( $_path );
+                $this->close();
+            }
+            catch ( \Exception $_ex )
+            {
+                Log::error( 'Exception restoring private backup: ' . $_ex->getMessage() );
+                throw $_ex;
+            }
+
+            //  Remove temporary file
+            \unlink( $_zipName );
+
+            //  Make a new marker with stored info...
+            $this->_saveStoreMarker( $_path, $_row['time_stamp'], $_row['check_sum'] );
+
+            //  Watch for changes...
+            if ( $this->_watcher )
+            {
+                $_id = $this->_watcher->watch( $_path );
+
+                if ( false !== $_id )
+                {
+                    $this->_paths[$_id] = array(
+                        'storage_id'   => $storageId,
+                        'path'         => $_path,
+                        'new_revision' => $newRevision,
+                        'local_name'   => $localName
+                    );
+                }
+            }
+
+            Log::debug( 'DirStore: backup restored: ' . $_row['check_sum'] . '@' . $_row['time_stamp'] );
         }
 
         return true;
@@ -414,11 +392,38 @@ MYSQL;
      */
     protected function _addPath( $path, $localName = null )
     {
-        $_files = FileSystem::glob( $path . '/*.*', GlobFlags::GLOB_NODOTS | GlobFlags::GLOB_RECURSE );
+        $_excluded = array(
+            ltrim( static::CHECKSUM_FILE_NAME, DIRECTORY_SEPARATOR ),
+        );
+
+        $_excludedDirs = array(
+            '.private/app.store',
+            'swagger',
+        );
+
+        $_files =
+            FileSystem::glob( $path . DIRECTORY_SEPARATOR . '*.*', GlobFlags::GLOB_NODOTS | GlobFlags::GLOB_RECURSE );
 
         if ( empty( $_files ) )
         {
             return false;
+        }
+
+        //  Clean out the stuff we don't want in there...
+        foreach ( $_files as $_index => $_file )
+        {
+            foreach ( $_excludedDirs as $_mask )
+            {
+                if ( 0 === strpos( $_file, $_mask, 0 ) )
+                {
+                    unset( $_files[$_index] );
+                }
+            }
+
+            if ( in_array( $_file, $_excluded ) && isset( $_files[$_index] ) )
+            {
+                unset( $_files[$_index] );
+            }
         }
 
         foreach ( $_files as $_file )
@@ -432,13 +437,7 @@ MYSQL;
             }
             else
             {
-                // Don't save our markers...
-                if ( $_file != ltrim( static::CHECKSUM_FILE_NAME, '/' ) &&
-                    $_file != ltrim( static::MARKER_FILE_NAME, '/' )
-                )
-                {
-                    $this->addFile( $_filePath, $_localFilePath );
-                }
+                $this->addFile( $_filePath, $_localFilePath );
             }
         }
 
@@ -544,16 +543,16 @@ MYSQL;
      *
      * @return int|null|string
      */
-    protected function _getDirStoreTimestamp( $path )
+    protected function _loadStoreMarker( $path )
     {
-        $_marker = $path . DIRECTORY_SEPARATOR . static::MARKER_FILE_NAME;
+        $_marker = $path . DIRECTORY_SEPARATOR . static::CHECKSUM_FILE_NAME;
 
-        if ( !file_exists( $_marker ) || false === ( $_timestamp = file_get_contents( $_marker ) ) )
+        if ( !file_exists( $_marker ) || false === ( $_data = file_get_contents( $_marker ) ) )
         {
-            return 0;
+            return array( 'time_stamp' => 0, 'check_sum' => null );
         }
 
-        return $_timestamp;
+        return json_decode( $_data, true );
     }
 
     /**
@@ -565,61 +564,75 @@ MYSQL;
      *
      * @return int|null|string
      */
-    protected function _setDirStoreTimestamp( $path, $timestamp = null, $delete = false )
+    protected function _saveStoreMarker( $path, $timestamp, $checksum, $delete = false )
     {
-        $_marker = $path . DIRECTORY_SEPARATOR . static::MARKER_FILE_NAME;
+        $_marker = $path . DIRECTORY_SEPARATOR . static::CHECKSUM_FILE_NAME;
 
         if ( false !== $delete )
         {
             return @\unlink( $_marker );
         }
 
-        return false !== file_put_contents( $_marker, $timestamp ?: time() );
+        $_data = $this->_buildMarkerContent( $path, $timestamp, $checksum );
+
+        return false !== file_put_contents( $_marker, json_encode( $_data ) );
     }
 
     /**
-     * Gets the checksum from the file
-     *
      * @param string $path
-     *
-     * @return null|string
-     */
-    protected function _getChecksum( $path )
-    {
-        $_marker = $path . DIRECTORY_SEPARATOR . static::CHECKSUM_FILE_NAME;
-
-        if ( !file_exists( $_marker ) || false === ( $_checksum = file_get_contents( $_marker ) ) )
-        {
-            return null;
-        }
-
-        return $_checksum;
-
-    }
-
-    /**
-     * Creates a checksum file
-     *
-     * @param string $path
+     * @param int    $timestamp
      * @param string $checksum
-     * @param bool   $delete If true, marker is deleted
      *
-     * @return bool
+     * @return array
      */
-    protected function _setChecksum( $path, $checksum, $delete = false )
+    protected function _buildMarkerContent( $path, $timestamp, $checksum )
     {
-        if ( empty( $checksum ) )
+        return array(
+            'path'       => $path,
+            'time_stamp' => $timestamp,
+            'check_sum'  => $checksum,
+        );
+    }
+
+    /**
+     * Given a path, build a zip file and return the name
+     *
+     * @param string $path
+     * @param string $localName [optional]
+     * @param string $data      If provided, write to zip file instead of building from path
+     *
+     * @throws \Kisma\Core\Exceptions\FileSystemException
+     * @return string
+     */
+    protected function _buildZipFile( $path, $localName = null, $data = null )
+    {
+        $_zipName = tempnam( sys_get_temp_dir(), sha1( uniqid() ) );
+
+        if ( !$this->open( $_zipName, \ZipArchive::CREATE ) )
         {
-            throw new \InvalidargumentException( 'The "$checksum" cannot be empty.' );
+            throw new FileSystemException( 'Unable to create temporary zip file.' );
         }
 
-        $_marker = $path . DIRECTORY_SEPARATOR . static::CHECKSUM_FILE_NAME;
-
-        if ( false !== $delete )
+        //  Restore prior zipped content?
+        if ( null !== $data )
         {
-            return @\unlink( $_marker );
+            if ( false === ( $_bytes = file_put_contents( $_zipName, $data ) ) )
+            {
+                throw new FileSystemException( 'Error creating temporary zip file for restoration.' );
+            }
+
+            return $_zipName;
         }
 
-        return false !== file_put_contents( $_marker, $checksum );
+        //  Build from $path
+        if ( $localName )
+        {
+            $this->addEmptyDir( $localName );
+        }
+
+        $this->_addPath( $path, $localName );
+        $this->close();
+
+        return $_zipName;
     }
 }
