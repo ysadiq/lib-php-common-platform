@@ -25,8 +25,6 @@ use DreamFactory\Platform\Events\StorageChangeEvent;
 use DreamFactory\Platform\Exceptions\UnavailableExtensionException;
 use DreamFactory\Platform\Interfaces\WatcherLike;
 use DreamFactory\Platform\Utility\Platform;
-use Kisma\Core\SeedUtility;
-use Kisma\Core\Utility\Log;
 
 /**
  * Path/File watching object
@@ -37,10 +35,6 @@ class PathWatcher implements WatcherLike
     //	Members
     //*************************************************************************
 
-    /**
-     * @type bool True if I've been made aware of things
-     */
-    protected static $_aware = false;
     /**
      * @var resource
      */
@@ -85,20 +79,14 @@ class PathWatcher implements WatcherLike
             throw new UnavailableExtensionException( 'The pecl "inotify" extension is required to use this class.' );
         }
 
-        if ( !static::$_aware )
-        {
-            \register_shutdown_function(
-                function ( $watcher )
-                {
-                    /** @var PathWatcher $watcher */
-                    $watcher->_flush();
-                },
-                $this
-            );
-
-            //  Now I know!
-            static::$_aware = true;
-        }
+        \register_shutdown_function(
+            function ( $watcher )
+            {
+                /** @var PathWatcher $watcher */
+                $watcher->_flush();
+            },
+            $this
+        );
 
         /** @noinspection PhpUndefinedFunctionInspection */
         $this->_stream = inotify_init();
@@ -172,32 +160,29 @@ class PathWatcher implements WatcherLike
      *
      * @return array The array of triggered events
      */
-    public function checkForEvents( $trigger = true )
+    public function processEvents( $trigger = true )
     {
         $_result = array();
+        $_changes = $this->_processStream();
 
-        //  No watches? No events...
-        if ( !empty( $this->_watches ) && static::streamValid( $this->_stream ) )
+        //  Check for events
+        /** @noinspection PhpUndefinedFunctionInspection */
+        while ( ( $_length = inotify_queue_len( $this->_stream ) ) )
         {
-            //  Check for events
             /** @noinspection PhpUndefinedFunctionInspection */
-            while ( inotify_queue_len( $this->_stream ) )
+            if ( false !== ( $_events = inotify_read( $this->_stream ) ) )
             {
-                /** @noinspection PhpUndefinedFunctionInspection */
-                if ( false !== ( $_events = inotify_read( $this->_stream ) ) )
+                //  Handle events
+                foreach ( $_events as $_watchEvent )
                 {
-                    //  Handle events
-                    foreach ( $_events as $_watchEvent )
-                    {
-                        $_result[] = $_watchEvent;
+                    $_result[] = $_watchEvent;
 
-                        if ( $trigger )
-                        {
-                            Platform::trigger(
-                                DspEvents::STORAGE_CHANGE,
-                                new StorageChangeEvent( $_watchEvent )
-                            );
-                        }
+                    if ( $trigger )
+                    {
+                        Platform::trigger(
+                            DspEvents::STORAGE_CHANGE,
+                            new StorageChangeEvent( $_watchEvent )
+                        );
                     }
                 }
             }
@@ -206,4 +191,21 @@ class PathWatcher implements WatcherLike
         return $_result;
     }
 
+    /**
+     * @param int $timeout
+     *
+     * @return int
+     */
+    protected function _processStream( $timeout = 0 )
+    {
+        if ( !$this->streamValid( $this->_stream ) )
+        {
+            return array();
+        }
+
+        $_read = array($this->_stream);
+        $_except = $_write = array();
+
+        return stream_select( $_read, $_write, $_except, $timeout );
+    }
 }

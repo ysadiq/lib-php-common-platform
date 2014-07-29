@@ -38,10 +38,6 @@ class PathWatcherTest extends \PHPUnit_Framework_TestCase
      * @var string
      */
     protected static $_testFile;
-    /**
-     * @var PathWatcher
-     */
-    protected $_watcher;
 
     //*************************************************************************
     //	Methods
@@ -54,7 +50,7 @@ class PathWatcherTest extends \PHPUnit_Framework_TestCase
      */
     public static function rmdir_recursive( $dir )
     {
-        $_files = array_diff( scandir( $dir ), array( '.', '..' ) );
+        $_files = array_diff( scandir( $dir ), array('.', '..') );
 
         foreach ( $_files as $_file )
         {
@@ -105,19 +101,12 @@ class PathWatcherTest extends \PHPUnit_Framework_TestCase
         parent::tearDownAfterClass();
     }
 
-    protected function setUp()
-    {
-        parent::setUp();
-
-        $this->_watcher = new PathWatcher();
-    }
-
     /**
      * Watch a file/path
      *
      * @covers PathWatcher::watch
      * @covers PathWatcher::unwatch
-     * @covers PathWatcher::checkForEvents
+     * @covers PathWatcher::ProcessEvents
      *
      * @return int The ID of this watch
      */
@@ -131,7 +120,7 @@ class PathWatcherTest extends \PHPUnit_Framework_TestCase
      *
      * @covers PathWatcher::watch
      * @covers PathWatcher::unwatch
-     * @covers PathWatcher::checkForEvents
+     * @covers PathWatcher::processEvents
      *
      * @return int The ID of this watch
      */
@@ -145,7 +134,7 @@ class PathWatcherTest extends \PHPUnit_Framework_TestCase
      *
      * @covers PathWatcher::watch
      * @covers PathWatcher::unwatch
-     * @covers PathWatcher::checkForEvents
+     * @covers PathWatcher::processEvents
      *
      * @param string $path /path/to/dir/or/file to watch
      *
@@ -153,29 +142,35 @@ class PathWatcherTest extends \PHPUnit_Framework_TestCase
      */
     protected function _watchTest( $path )
     {
-        $_id = $this->_watcher->watch( $path, INotify::IN_MODIFY | INotify::IN_ATTRIB, true );
+        $_watcher = new PathWatcher();
+        $_id = $_watcher->watch( $path, INotify::IN_CREATE + INotify::IN_DELETE + INotify::IN_MODIFY + INotify::IN_ATTRIB );
 
-        $this->assertTrue( false !== $_id );
+        $this->assertTrue( $_id > 0 );
 
         //  Make a change
         if ( is_dir( $path ) )
         {
             $path .= '/watch.test.path';
-            mkdir( $path, 0777, true );
+
+            if ( !is_dir( $path ) )
+            {
+                mkdir( $path, 0777, true );
+            }
 
             $path .= '/test.file.txt';
         }
 
         //  change the file
-        file_put_contents( $path, time() );
+        file_put_contents( $path, md5( time() ) );
 
-        //  Check for a change...
-        $_changes = $this->_watcher->checkForEvents( false );
+        //  Check for a change, don't fire events
+        $_changes = $_watcher->processEvents( false );
 
         $this->assertTrue( !empty( $_changes ) );
+
         echo count( $_changes ) . ' change(s) detected.' . PHP_EOL;
 
         //  Unwatch the file
-        $this->assertTrue( $this->_watcher->unwatch( $path ) );
+        $this->assertTrue( $_watcher->unwatch( $path ) );
     }
 }

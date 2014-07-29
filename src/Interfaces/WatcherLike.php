@@ -66,5 +66,5 @@ interface WatcherLike
      *
      * @return array The array of triggered events
      */
-    public function checkForEvents( $trigger = true );
+    public function processEvents( $trigger = true );
 }
