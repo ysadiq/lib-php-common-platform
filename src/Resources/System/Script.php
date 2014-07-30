@@ -184,8 +184,7 @@ class Script extends BaseSystemRestResource
     }
 
     /**
-     * @param bool  $includeUserScripts If true, any user scripts are included in the list
-     * @param array $extensions         The allowed script extensions
+     * @param bool $includeUserScripts If true, any user scripts are included in the list
      *
      * @return array|bool
      */

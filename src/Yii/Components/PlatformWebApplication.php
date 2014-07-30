@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Yii\Components;
 
 use Composer\Autoload\ClassLoader;
-use DreamFactory\Platform\Components\DirectoryStorage;
 use DreamFactory\Platform\Components\Profiler;
 use DreamFactory\Platform\Enums\NamespaceTypes;
 use DreamFactory\Platform\Events\Enums\DspEvents;
@@ -29,7 +28,6 @@ use DreamFactory\Platform\Events\PlatformEvent;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Scripting\ScriptEvent;
-use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\CoreSettings;
@@ -102,10 +100,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @var string The default path (sub-path) of installed plug-ins
      */
     const DEFAULT_PLUGINS_PATH = '/storage/plugins';
-    /**
-     * @type string The persistent storage ID
-     */
-    const PSTORE_ID = 'storage';
 
     //*************************************************************************
     //	Members
@@ -119,10 +113,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @var bool If true, profiling information is output to the log
      */
     protected static $_enableProfiler = false;
-    /**
-     * @type DirectoryStorage
-     */
-    protected static $_store = null;
     /**
      * @var array[] The namespaces in use by this system. Used by the routing engine
      */
@@ -173,14 +163,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      * @var bool If true, CORS info will be logged
      */
     protected $_logCorsInfo = false;
-    /**
-     * @type bool If true, /storage will be backup/restored to/from the database
-     */
-    protected $_persistStorage = false;
-    /**
-     * @type bool True if storage directory has been changed
-     */
-    protected $_storageDirty = false;
 
     //*************************************************************************
     //	Methods
@@ -197,17 +179,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $this->_logCorsInfo = Pii::getParam( 'dsp.log_cors_info', false );
         static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
 
-        //  Load the CORS config file
-        if ( 'cli' != PHP_SAPI )
-        {
-            $this->_loadCorsConfig();
-        }
-
         $this->_localInit();
 
         //	Setup the request handler and events
-        $this->onBeginRequest = array( $this, '_onBeginRequest' );
-        $this->onEndRequest = array( $this, '_onEndRequest' );
+        $this->onBeginRequest = array($this, '_onBeginRequest');
+        $this->onEndRequest = array($this, '_onEndRequest');
     }
 
     /**
@@ -217,39 +193,14 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _localInit()
     {
+        //  Load the CORS config file
+        if ( 'cli' != PHP_SAPI )
+        {
+            $this->_loadCorsConfig();
+        }
+
         //  Load any user config files...
         $this->_loadLocalConfig();
-
-        //  Load persistent storage if available/needed
-        if ( null === static::$_store )
-        {
-            if ( Fabric::fabricHosted() || !Pii::getParam( 'dsp.no_persistent_storage', false ) )
-            {
-                static::$_store = false;
-            }
-            else
-            {
-                static::$_store = new DirectoryStorage( static::PSTORE_ID, Pii::pdo() );
-
-                //  Delete the marker file on any changes...
-                Platform::on(
-                    DspEvents::STORAGE_CHANGE,
-                    function ()
-                    {
-                        Log::debug( 'Dirty flag set' );
-                        $this->setStorageDirty( true );
-                    }
-                );
-
-                //  If we have no copy, make one...
-                if ( false === $this->_restoreStorage( static::PSTORE_ID, Platform::getStoragePath() ) )
-                {
-                    $this->_backupStorage( static::PSTORE_ID, Platform::getStoragePath() );
-                }
-
-                $this->_storageDirty = false;
-            }
-        }
 
         //	Load any plug-ins
         $this->_loadPlugins();
@@ -305,8 +256,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         if ( null === ( $_autoloadPath = Platform::storeGet( 'dsp.plugin_autoload_path' ) ) )
         {
             //	Locate plug-in directory...
-            $_path =
-                Pii::getParam( 'dsp.plugins_path', Pii::getParam( 'dsp.base_path' ) . static::DEFAULT_PLUGINS_PATH );
+            $_path = Pii::getParam( 'dsp.plugins_path', Pii::getParam( 'dsp.base_path' ) . static::DEFAULT_PLUGINS_PATH );
 
             if ( !is_dir( $_path ) )
             {
@@ -405,12 +355,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _onEndRequest( \CEvent $event )
     {
-        if ( static::$_store && $this->_storageDirty )
-        {
-            static::$_store->backup( static::PSTORE_ID, Platform::getStoragePath() );
-            Log::debug( '  * triggered by dirty flag' );
-        }
-
         $this->stopProfiler( 'app.request' );
     }
 
@@ -647,8 +591,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
             if ( $_origin )
             {
-                $_headers['X-DreamFactory-Origin-Whitelisted'] =
-                    preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
+                $_headers['X-DreamFactory-Origin-Whitelisted'] = preg_match( '#^([\w_-]+\.)*' . preg_quote( $_requestUri ) . '$#', $_originUri );
             }
         }
 
@@ -768,10 +711,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _compareUris( $first, $second )
     {
-        $_match =
-            ( ( $first['scheme'] == $second['scheme'] ) &&
-                ( $first['host'] == $second['host'] ) &&
-                ( $first['port'] == $second['port'] ) );
+        $_match = ( ( $first['scheme'] == $second['scheme'] ) && ( $first['host'] == $second['host'] ) && ( $first['port'] == $second['port'] ) );
 
         if ( $this->_logCorsInfo )
         {
@@ -796,14 +736,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             return false;
         }
 
-        $_parts['scheme'] =
-            Option::get( $_parts, 'scheme', 'http' . ( Option::getBool( $_SERVER, 'HTTPS', false ) ? 's' : null ) );
+        $_parts['scheme'] = Option::get( $_parts, 'scheme', 'http' . ( Option::getBool( $_SERVER, 'HTTPS', false ) ? 's' : null ) );
         $_parts['port'] = Option::get( $_parts, 'port', Option::server( 'SERVER_PORT' ) );
 
         //  If standard port 80 or 443 and there is no port in uri, clear from parse...
-        if ( !empty( $_parts['port'] ) &&
-            ( $_parts['port'] == 80 || $_parts['port'] == 443 ) &&
-            false === strpos( $uri, ':' . $_parts['port'] )
+        if ( !empty( $_parts['port'] ) && ( $_parts['port'] == 80 || $_parts['port'] == 443 ) && false === strpos( $uri, ':' . $_parts['port'] )
         )
         {
             $_parts['port'] = null;
@@ -844,13 +781,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _normalizeUri( $parts )
     {
-        return !is_array( $parts )
-            ? $parts
-            :
-            ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) .
-            '://' .
-            $parts['host'] .
-            ( isset( $parts['port'] ) ? ':' . $parts['port'] : null );
+        return !is_array( $parts ) ? $parts
+            : ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null );
     }
 
     /**
@@ -908,50 +840,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
         //  Don't reset if they're the same.
         return $this->_corsWhitelist === $_whitelist ? null : $this->setCorsWhitelist( $_whitelist );
-    }
-
-    public function isStorageDirty()
-    {
-        return $this->_storageDirty;
-    }
-
-    public function setStorageDirty( $dirty = false )
-    {
-        $this->_storageDirty = $dirty;
-
-        return $this;
-    }
-
-    /**
-     * @param string $storageId The id for this store
-     * @param string $sourcePath
-     *
-     * @return bool
-     */
-    protected function _backupStorage( $storageId = 'storage', $sourcePath = null )
-    {
-        if ( static::$_store && $this->_storageDirty )
-        {
-            return static::$_store->backup( $storageId, $sourcePath ?: Platform::getStorageBasePath() );
-        }
-
-        return false;
-    }
-
-    /**
-     * @param string $storageId  The id for this store
-     * @param string $targetPath Where to restore the data
-     *
-     * @return bool
-     */
-    public function _restoreStorage( $storageId = 'storage', $targetPath = null )
-    {
-        if ( static::$_store && !$this->_storageDirty )
-        {
-            return static::$_store->restore( $storageId, $targetPath ?: Platform::getStorageBasePath() );
-        }
-
-        return false;
     }
 
     /**
@@ -1203,7 +1091,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         if ( $prepend )
         {
-            array_unshift( static::$_namespaceMap[$which], array( $namespace, $path ) );
+            array_unshift( static::$_namespaceMap[$which], array($namespace, $path) );
         }
         else
         {
