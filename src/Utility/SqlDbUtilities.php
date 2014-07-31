@@ -30,8 +30,6 @@ use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\Scalar;
-use Kisma\Core\Utility\Sql;
 
 /**
  * SqlDbUtilities
@@ -518,7 +516,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             throw new InternalServerErrorException( "Failed to query table field schema.\n{$ex->getMessage()}" );
         }
 
-        if ( empty( $field ) )
+        if ( empty( $_out ) )
         {
             throw new NotFoundException( "No requested fields found in table '$table_name'." );
         }
@@ -809,15 +807,15 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 return 'pk'; // simple primary key
             }
 
-            $allowNull = Utilities::getArrayValue( 'allow_null', $field, true );
-            $length = Utilities::getArrayValue( 'length', $field, null );
+            $allowNull = Option::getBool( $field, 'allow_null', true );
+            $length = Option::get( $field, 'length' );
             if ( !isset( $length ) )
             {
-                $length = Utilities::getArrayValue( 'size', $field, null ); // alias
+                $length = Option::get( $field, 'size' ); // alias
             }
-            $default = Utilities::getArrayValue( 'default', $field, null );
+            $default = Option::get( $field, 'default' );
             $quoteDefault = false;
-            $isPrimaryKey = Utilities::getArrayValue( 'is_primary_key', $field, false );
+            $isPrimaryKey = Option::getBool( $field, 'is_primary_key', false );
 
             switch ( strtolower( $type ) )
             {
@@ -906,7 +904,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                     $definition = 'decimal';
                     if ( !isset( $length ) )
                     {
-                        $length = Utilities::getArrayValue( 'precision', $field, null ); // alias
+                        $length = Option::get( $field, 'precision' ); // alias
                     }
                     if ( isset( $length ) )
                     {
@@ -918,10 +916,10 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                         {
                             throw new BadRequestException( "Decimal precision '$length' is out of valid range." );
                         }
-                        $scale = Utilities::getArrayValue( 'scale', $field, null );
+                        $scale = Option::get( $field, 'scale' );
                         if ( empty( $scale ) )
                         {
-                            $scale = Utilities::getArrayValue( 'decimals', $field, null ); // alias
+                            $scale = Option::get( $field, 'decimals' ); // alias
                         }
                         if ( !empty( $scale ) )
                         {
@@ -950,7 +948,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                             ( SqlDbUtilities::DRV_DBLIB == $driver_type ) ) ) ? 'float' : $type;
                     if ( !isset( $length ) )
                     {
-                        $length = Utilities::getArrayValue( 'precision', $field, null ); // alias
+                        $length = Option::get( $field, 'precision' ); // alias
                     }
                     if ( isset( $length ) )
                     {
@@ -962,10 +960,10 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                         {
                             throw new BadRequestException( "Decimal precision '$length' is out of valid range." );
                         }
-                        $scale = Utilities::getArrayValue( 'scale', $field, null );
+                        $scale = Option::get( $field, 'scale' );
                         if ( empty( $scale ) )
                         {
-                            $scale = Utilities::getArrayValue( 'decimals', $field, null ); // alias
+                            $scale = Option::get( $field, 'decimals' ); // alias
                         }
                         if ( !empty( $scale ) &&
                              !( ( SqlDbUtilities::DRV_SQLSRV == $driver_type ) ||
@@ -1004,8 +1002,8 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 case 'varchar':
                 case 'nchar':
                 case 'nvarchar':
-                    $fixed = Utilities::boolval( Utilities::getArrayValue( 'fixed_length', $field, false ) );
-                    $national = Utilities::boolval( Utilities::getArrayValue( 'supports_multibyte', $field, false ) );
+                    $fixed = Option::getBool( $field, 'fixed_length' );
+                    $national = Option::getBool( $field, 'supports_multibyte' );
                     if ( 0 == strcasecmp( 'string', $type ) )
                     {
                         if ( $fixed )
@@ -1218,12 +1216,12 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         {
             try
             {
-                $name = Utilities::getArrayValue( 'name', $field, '' );
+                $name = Option::get( $field, 'name' );
                 if ( empty( $name ) )
                 {
                     throw new BadRequestException( "Invalid schema detected - no name element." );
                 }
-                $type = Utilities::getArrayValue( 'type', $field, '' );
+                $type = Option::get( $field, 'type', '' );
                 $colSchema = ( isset( $schema ) ) ? $schema->getColumn( $name ) : null;
                 $isAlter = false;
                 if ( isset( $colSchema ) )
@@ -1234,8 +1232,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                     }
                     if ( ( ( 0 == strcasecmp( 'id', $type ) ) ||
                            ( 0 == strcasecmp( 'pk', $type ) ) ||
-                           Utilities::boolval( Utilities::getArrayValue( 'is_primary_key', $field, false ) ) ) &&
-                         ( $colSchema->isPrimaryKey )
+                           Option::getBool( $field, 'is_primary_key' ) ) && ( $colSchema->isPrimaryKey )
                     )
                     {
                         // don't try to alter
@@ -1280,7 +1277,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                     }
                     $primaryKey = $name;
                 }
-                elseif ( Utilities::boolval( Utilities::getArrayValue( 'is_primary_key', $field, false ) ) )
+                elseif ( Option::getBool( $field, 'is_primary_key' ) )
                 {
                     if ( !empty( $primaryKey ) && ( 0 != strcasecmp( $primaryKey, $name ) ) )
                     {
@@ -1288,19 +1285,18 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                     }
                     $primaryKey = $name;
                 }
-                elseif ( ( 0 == strcasecmp( 'reference', $type ) ) ||
-                         Utilities::boolval( Utilities::getArrayValue( 'is_foreign_key', $field, false ) )
+                elseif ( ( 0 == strcasecmp( 'reference', $type ) ) || Option::getBool( $field, 'is_foreign_key' )
                 )
                 {
                     // special case for references because the table referenced may not be created yet
-                    $refTable = Utilities::getArrayValue( 'ref_table', $field, '' );
+                    $refTable = Option::get( $field, 'ref_table' );
                     if ( empty( $refTable ) )
                     {
                         throw new BadRequestException( "Invalid schema detected - no table element for reference type of $name." );
                     }
-                    $refColumns = Utilities::getArrayValue( 'ref_fields', $field, 'id' );
-                    $refOnDelete = Utilities::getArrayValue( 'ref_on_delete', $field, null );
-                    $refOnUpdate = Utilities::getArrayValue( 'ref_on_update', $field, null );
+                    $refColumns = Option::get( $field, 'ref_fields', 'id' );
+                    $refOnDelete = Option::get( $field, 'ref_on_delete' );
+                    $refOnUpdate = Option::get( $field, 'ref_on_update' );
 
                     // will get to it later, $refTable may not be there
                     $keyName = 'fk_' . $table_name . '_' . $name;
@@ -1380,7 +1376,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                     $temp['timestamp_on_update'] = true;
                 }
                 // regardless of type
-                if ( Utilities::boolval( Utilities::getArrayValue( 'is_unique', $field, false ) ) )
+                if ( Option::getBool( $field, 'is_unique' ) )
                 {
                     // will get to it later, create after table built
                     $keyName = 'undx_' . $table_name . '_' . $name;
@@ -1392,7 +1388,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                         'drop'   => $isAlter
                     );
                 }
-                elseif ( Utilities::boolval( Utilities::getArrayValue( 'is_index', $field, false ) ) )
+                elseif ( Option::get( $field, 'is_index' ) )
                 {
                     // will get to it later, create after table built
                     $keyName = 'ndx_' . $table_name . '_' . $name;
@@ -1405,7 +1401,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 }
 
                 $picklist = '';
-                $values = Utilities::getArrayValue( 'value', $field, '' );
+                $values = Option::get( $field, 'value' );
                 if ( empty( $values ) )
                 {
                     $values = ( isset( $field['values']['value'] ) ) ? $field['values']['value'] : array();
@@ -1431,13 +1427,13 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 }
 
                 // labels
-                $label = Utilities::getArrayValue( 'label', $field, '' );
+                $label = Option::get( $field, 'label' );
                 if ( !empty( $label ) )
                 {
                     $temp['label'] = $label;
                 }
 
-                $validation = Utilities::getArrayValue( 'validation', $field );
+                $validation = Option::get( $field, 'validation' );
                 if ( !empty( $validation ) )
                 {
                     $temp['validation'] = json_encode( $validation );
@@ -1475,7 +1471,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     protected static function createFieldExtras( $db, $extras )
     {
         $command = $db->createCommand();
-        $references = Utilities::getArrayValue( 'references', $extras, array() );
+        $references = Option::get( $extras, 'references', array() );
         if ( !empty( $references ) )
         {
             foreach ( $references as $reference )
@@ -1483,7 +1479,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 $command->reset();
                 $name = $reference['name'];
                 $table = $reference['table'];
-                $drop = Utilities::boolval( Utilities::getArrayValue( 'drop', $reference, false ) );
+                $drop = Option::getBool( $reference, 'drop' );
                 if ( $drop )
                 {
                     try
@@ -1496,7 +1492,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                     }
                 }
                 // add new reference
-                $refTable = Utilities::getArrayValue( 'ref_table', $reference, null );
+                $refTable = Option::get( $reference, 'ref_table' );
                 if ( !empty( $refTable ) )
                 {
                     if ( ( 0 == strcasecmp( 'df_sys_user', $refTable ) ) && ( $db != Pii::db() ) )
@@ -1517,7 +1513,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 }
             }
         }
-        $indexes = Utilities::getArrayValue( 'indexes', $extras, array() );
+        $indexes = Option::get( $extras, 'indexes', array() );
         if ( !empty( $indexes ) )
         {
             foreach ( $indexes as $index )
@@ -1525,7 +1521,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 $command->reset();
                 $name = $index['name'];
                 $table = $index['table'];
-                $drop = Utilities::boolval( Utilities::getArrayValue( 'drop', $index, false ) );
+                $drop = Option::getBool( $index, 'drop' );
                 if ( $drop )
                 {
                     try
@@ -1537,18 +1533,11 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                         \Yii::log( $ex->getMessage() );
                     }
                 }
-                $unique = Utilities::boolval( Utilities::getArrayValue( 'unique', $index, false ) );
+                $unique = Option::getBool( $index, 'unique' );
 
                 /** @noinspection PhpUnusedLocalVariableInspection */
                 $rows = $command->createIndex( $name, $table, $index['column'], $unique );
             }
-        }
-
-        $labels = Utilities::getArrayValue( 'labels', $extras, array() );
-
-        if ( !empty( $labels ) )
-        {
-            static::setSchemaExtras( 0, $labels );
         }
     }
 
@@ -1584,21 +1573,21 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             $names = array();
             $results = static::buildTableFields( $db, $table_name, $fields, $schema, $allow_update, $allow_delete );
             $command = $db->createCommand();
-            $columns = Utilities::getArrayValue( 'columns', $results, array() );
+            $columns = Option::get( $results, 'columns', array() );
             foreach ( $columns as $name => $definition )
             {
                 $command->reset();
                 $command->addColumn( $table_name, $name, $definition );
                 $names[] = $name;
             }
-            $columns = Utilities::getArrayValue( 'alter_columns', $results, array() );
+            $columns = Option::get( $results, 'alter_columns', array() );
             foreach ( $columns as $name => $definition )
             {
                 $command->reset();
                 $command->alterColumn( $table_name, $name, $definition );
                 $names[] = $name;
             }
-            $columns = Utilities::getArrayValue( 'drop_columns', $results, array() );
+            $columns = Option::get( $results, 'drop_columns', array() );
             foreach ( $columns as $name )
             {
                 $command->reset();
@@ -1607,11 +1596,13 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             }
             static::createFieldExtras( $db, $results );
 
+            $labels = Option::get( $results, 'labels', array() );
+
             // refresh the schema that we just added
             $db->schema->refresh();
             static::_getCachedTables( $db, true );
 
-            return $names;
+            return array('names' => $names, 'labels' => $labels);
         }
         catch ( \Exception $ex )
         {
@@ -1624,14 +1615,13 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      * @param \CDbConnection $db
      * @param string         $table_name
      * @param array          $data
-     * @param bool           $return_labels_refs
      * @param bool           $checkExist
      *
      * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @throws \Exception
      * @return array
      */
-    public static function createTable( $db, $table_name, $data, $return_labels_refs = false, $checkExist = true )
+    protected static function createTable( $db, $table_name, $data, $checkExist = true )
     {
         if ( empty( $table_name ) )
         {
@@ -1644,7 +1634,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             throw new BadRequestException( "A table with name '$table_name' already exist in the database." );
         }
 
-        $fields = Utilities::getArrayValue( 'field', $data, array() );
+        $fields = Option::get( $data, 'field', array() );
 
         if ( empty( $fields ) )
         {
@@ -1664,7 +1654,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         try
         {
             $results = static::buildTableFields( $db, $table_name, $fields );
-            $columns = Utilities::getArrayValue( 'columns', $results, array() );
+            $columns = Option::get( $results, 'columns', array() );
 
             if ( empty( $columns ) )
             {
@@ -1674,10 +1664,10 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             $command = $db->createCommand();
             $command->createTable( $table_name, $columns );
 
-            $labels = Utilities::getArrayValue( 'labels', $results, array() );
+            $labels = Option::get( $results, 'labels', array() );
             // add table labels
-            $label = Utilities::getArrayValue( 'label', $data, '' );
-            $plural = Utilities::getArrayValue( 'plural', $data, '' );
+            $label = Option::get( $data, 'label' );
+            $plural = Option::get( $data, 'plural' );
             if ( !empty( $label ) || !empty( $plural ) )
             {
                 $labels[] = array(
@@ -1688,14 +1678,8 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 );
             }
             $results['labels'] = $labels;
-            if ( $return_labels_refs )
-            {
-                return $results;
-            }
 
-            static::createFieldExtras( $db, $results );
-
-            return array('name' => $table_name);
+            return $results;
         }
         catch ( \Exception $ex )
         {
@@ -1708,13 +1692,12 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      * @param \CDbConnection $db
      * @param string         $table_name
      * @param array          $data
-     * @param bool           $return_labels_refs
      * @param bool           $allow_delete
      *
      * @throws \Exception
      * @return array
      */
-    public static function updateTable( $db, $table_name, $data, $return_labels_refs = false, $allow_delete = false )
+    protected static function updateTable( $db, $table_name, $data, $allow_delete = false )
     {
         if ( empty( $table_name ) )
         {
@@ -1727,7 +1710,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         }
 
         //  Is there a name update
-        $newName = Utilities::getArrayValue( 'new_name', $data, '' );
+        $newName = Option::get( $data, 'new_name' );
 
         if ( !empty( $newName ) )
         {
@@ -1735,7 +1718,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         }
 
         // update column types
-        $fields = Utilities::getArrayValue( 'field', $data, array() );
+        $fields = Option::get( $data, 'field', array() );
         if ( empty( $fields ) )
         {
             $fields = ( isset( $data['fields']['field'] ) ) ? $data['fields']['field'] : array();
@@ -1760,26 +1743,26 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                     $command->reset();
                     $command->addColumn( $table_name, $name, $definition );
                 }
-                $columns = Utilities::getArrayValue( 'alter_columns', $results, array() );
+                $columns = Option::get( $results, 'alter_columns', array() );
                 foreach ( $columns as $name => $definition )
                 {
                     $command->reset();
                     $command->alterColumn( $table_name, $name, $definition );
                 }
-                $columns = Utilities::getArrayValue( 'drop_columns', $results, array() );
+                $columns = Option::get( $results, 'drop_columns', array() );
                 foreach ( $columns as $name )
                 {
                     $command->reset();
                     $command->dropColumn( $table_name, $name );
                 }
 
-                $labels = Utilities::getArrayValue( 'labels', $results, array() );
-                $references = Utilities::getArrayValue( 'references', $results, array() );
-                $indexes = Utilities::getArrayValue( 'indexes', $results, array() );
+                $labels = Option::get( $results, 'labels', array() );
+                $references = Option::get( $results, 'references', array() );
+                $indexes = Option::get( $results, 'indexes', array() );
             }
             // add table labels
-            $label = Utilities::getArrayValue( 'label', $data, '' );
-            $plural = Utilities::getArrayValue( 'plural', $data, '' );
+            $label = Option::get( $data, 'label' );
+            $plural = Option::get( $data, 'plural' );
             if ( !empty( $label ) || !empty( $plural ) )
             {
                 $labels[] = array(
@@ -1791,14 +1774,8 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             }
 
             $results = array('references' => $references, 'indexes' => $indexes, 'labels' => $labels);
-            if ( $return_labels_refs )
-            {
-                return $results;
-            }
 
-            static::createFieldExtras( $db, $results );
-
-            return array('name' => $table_name);
+            return $results;
         }
         catch ( \Exception $ex )
         {
@@ -1848,13 +1825,13 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
                     Log::debug( 'Schema update: ' . $_tableName );
 
-                    $_results = static::updateTable( $db, $_tableName, $_table, !$_singleTable, $allow_delete );
+                    $_results = static::updateTable( $db, $_tableName, $_table, $allow_delete );
                 }
                 else
                 {
                     Log::debug( 'Creating table: ' . $_tableName );
 
-                    $_results = static::createTable( $db, $_tableName, $_table, !$_singleTable, false );
+                    $_results = static::createTable( $db, $_tableName, $_table, false );
 
                     if ( !$_singleTable && $rollback )
                     {
@@ -1862,17 +1839,10 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                     }
                 }
 
-                if ( $_singleTable )
-                {
-                    $_out[] = $_results;
-                }
-                else
-                {
-                    $_labels = array_merge( $_labels, Option::get( $_results, 'labels', array() ) );
-                    $_references = array_merge( $_references, Option::get( $_results, 'references', array() ) );
-                    $_indexes = array_merge( $_indexes, Option::get( $_results, 'indexes', array() ) );
-                    $_out[$_count] = array('name' => $_tableName);
-                }
+                $_labels = array_merge( $_labels, Option::get( $_results, 'labels', array() ) );
+                $_references = array_merge( $_references, Option::get( $_results, 'references', array() ) );
+                $_indexes = array_merge( $_indexes, Option::get( $_results, 'indexes', array() ) );
+                $_out[$_count] = array('name' => $_tableName);
             }
             catch ( \Exception $ex )
             {
@@ -1897,12 +1867,10 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         $db->schema->refresh();
         static::_getCachedTables( $db, true );
 
-        if ( !$_singleTable )
-        {
-            $_results = array('references' => $_references, 'indexes' => $_indexes, 'labels' => $_labels);
+        $_results = array('references' => $_references, 'indexes' => $_indexes);
+        static::createFieldExtras( $db, $_results );
 
-            static::createFieldExtras( $db, $_results );
-        }
+        $_out['labels'] = $_labels;
 
         return $_out;
     }
@@ -2056,7 +2024,8 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      *
      * @return int | null
      */
-    public static function determinePdoBindingType( $type, $db_type = null )
+    public static function determinePdoBindingType( $type, /** @noinspection PhpUnusedParameterInspection */
+        $db_type = null )
     {
         switch ( $type )
         {

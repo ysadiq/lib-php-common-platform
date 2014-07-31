@@ -3093,7 +3093,15 @@ class SqlDbSvc extends BaseDbSvc
             $this->checkForNativeSystemTable( $_name, false );
         }
 
-        return SqlDbUtilities::updateTables( $this->_dbConn, $tables );
+        $_result = SqlDbUtilities::updateTables( $this->_dbConn, $tables );
+        $_labels = Option::get( $_result, 'labels', true );
+
+        if ( !empty( $_labels ) )
+        {
+            SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
+        }
+
+        return $_result;
     }
 
     /**
@@ -3108,6 +3116,12 @@ class SqlDbSvc extends BaseDbSvc
 
         $_tables = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
         $_result = SqlDbUtilities::updateTables( $this->_dbConn, $_tables );
+        $_labels = Option::get( $_result, 'labels', true );
+
+        if ( !empty( $_labels ) )
+        {
+            SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
+        }
 
         return Option::get( $_result, 0, array() );
     }
@@ -3124,7 +3138,13 @@ class SqlDbSvc extends BaseDbSvc
 
         $_fields = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
 
-        SqlDbUtilities::updateFields( $this->_dbConn, $table, $_fields );
+        $_result = SqlDbUtilities::updateFields( $this->_dbConn, $table, $_fields );
+        $_labels = Option::get( $_result, 'labels', array(), true );
+
+        if ( !empty( $_labels ) )
+        {
+            SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
+        }
 
         return $this->describeField( $table, $field );
     }
@@ -3146,7 +3166,15 @@ class SqlDbSvc extends BaseDbSvc
             $this->checkForNativeSystemTable( $_name, false );
         }
 
-        return SqlDbUtilities::updateTables( $this->_dbConn, $tables, true, $allow_delete_fields );
+        $_out = SqlDbUtilities::updateTables( $this->_dbConn, $tables, true, $allow_delete_fields );
+        $_labels = Option::get( $_out, 'labels', true );
+
+        if ( !empty( $_labels ) )
+        {
+            SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
+        }
+
+        return $_out;
     }
 
     /**
@@ -3162,6 +3190,12 @@ class SqlDbSvc extends BaseDbSvc
         $_tables = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
 
         $_result = SqlDbUtilities::updateTables( $this->_dbConn, $_tables, true, $allow_delete_fields );
+        $_labels = Option::get( $_result, 'labels', true );
+
+        if ( !empty( $_labels ) )
+        {
+            SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
+        }
 
         return Option::get( $_result, 0, array() );
     }
@@ -3183,7 +3217,13 @@ class SqlDbSvc extends BaseDbSvc
 
         $_fields = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
 
-        SqlDbUtilities::updateFields( $this->_dbConn, $table, $_fields, true );
+        $_result = SqlDbUtilities::updateFields( $this->_dbConn, $table, $_fields, true );
+        $_labels = Option::get( $_result, 'labels', array(), true );
+
+        if ( !empty( $_labels ) )
+        {
+            SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
+        }
 
         return $this->describeField( $table, $field );
     }

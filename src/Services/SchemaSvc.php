@@ -590,7 +590,15 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
             }
         }
 
-        return SqlDbUtilities::updateTables( $this->_dbConn, $tables, $allow_merge, $allow_delete );
+        $_result = SqlDbUtilities::updateTables( $this->_dbConn, $tables, $allow_merge, $allow_delete );
+        $_labels = Option::get( $_result, 'labels', true );
+
+        if ( !empty( $_labels ) )
+        {
+            SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
+        }
+
+        return $_result;
     }
 
     /**
@@ -641,10 +649,18 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
 
         try
         {
-            $names = SqlDbUtilities::updateFields( $this->_dbConn, $table, $fields, $allow_merge, $allow_delete );
-            $_extras = SqlDbUtilities::getSchemaExtrasForFields( 0, $table, $names );
+            $_result = SqlDbUtilities::updateFields( $this->_dbConn, $table, $fields, $allow_merge, $allow_delete );
+            $_labels = Option::get( $_result, 'labels', array(), true );
 
-            return SqlDbUtilities::describeTableFields( $this->_dbConn, $table, $names, $_extras );
+            if ( !empty( $_labels ) )
+            {
+                SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
+            }
+
+            $_names = Option::get( $_result, 'names' );
+            $_extras = SqlDbUtilities::getSchemaExtrasForFields( $this->getServiceId(), $table, $_names );
+
+            return SqlDbUtilities::describeTableFields( $this->_dbConn, $table, $_names, $_extras );
         }
         catch ( RestException $ex )
         {

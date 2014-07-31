@@ -24,7 +24,6 @@ use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
-use Kisma\Core\Utility\Sql;
 
 /**
  * DbUtilities
@@ -395,8 +394,12 @@ class DbUtilities
      */
     public static function reformatFieldLabelArray( $original )
     {
-        $_new = array();
+        if ( empty( $original ) )
+        {
+            return array();
+        }
 
+        $_new = array();
         foreach ( $original as $_label )
         {
             $_new[Option::get( $_label, 'field' )] = $_label;
