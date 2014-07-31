@@ -652,8 +652,13 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     {
         $_namesOnly = Option::getBool( $options, 'names_only' );
         $_includeSchemas = Option::getBool( $options, 'include_schemas' );
+        $_asComponents = Option::getBool( $options, 'as_access_components' );
         $_resources = array();
 
+        if ( $_asComponents )
+        {
+            $_resources = array('', '*');
+        }
         try
         {
             $_result = static::_listTables();
@@ -664,7 +669,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                     $_access = $this->getPermissions( $_name );
                     if ( !empty( $_access ) )
                     {
-                        if ( $_namesOnly )
+                        if ( $_asComponents || $_namesOnly )
                         {
                             $_resources[] = $_name;
                         }
@@ -677,15 +682,19 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 }
             }
 
-            if ( $_includeSchemas )
+            if ( $_includeSchemas || $_asComponents )
             {
                 $_name = static::SCHEMA_RESOURCE . '/';
                 $_access = $this->getPermissions( $_name );
                 if ( !empty( $_access ) )
                 {
-                    if ( $_namesOnly )
+                    if ( $_namesOnly || $_asComponents )
                     {
                         $_resources[] = $_name;
+                        if ( $_asComponents )
+                        {
+                            $_resources[] = $_name . '*';
+                        }
                     }
                     else
                     {
@@ -700,7 +709,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         $_access = $this->getPermissions( $_name );
                         if ( !empty( $_access ) )
                         {
-                            if ( $_namesOnly )
+                            if ( $_namesOnly || $_asComponents )
                             {
                                 $_resources[] = $_name;
                             }

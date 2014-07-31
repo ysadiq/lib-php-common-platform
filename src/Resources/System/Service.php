@@ -21,7 +21,10 @@ namespace DreamFactory\Platform\Resources\System;
 
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
+use DreamFactory\Platform\Scripting\ScriptEngine;
 use DreamFactory\Platform\Services\SwaggerManager;
+use Kisma\Core\Enums\HttpMethod;
+use Kisma\Core\Utility\Option;
 
 /**
  * Service
@@ -30,42 +33,60 @@ use DreamFactory\Platform\Services\SwaggerManager;
  */
 class Service extends BaseSystemRestResource
 {
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * Creates a new Service
-	 *
-	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
-	 * @param array                                               $resources
-	 */
-	public function __construct( $consumer, $resources = array() )
-	{
-		$_config = array(
-			'service_name' => 'system',
-			'name'         => 'Service',
-			'api_name'     => 'service',
-			'type'         => 'System',
-			'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
-			'description'  => 'System service administration.',
-			'is_active'    => true,
-		);
+    /**
+     * Creates a new Service
+     *
+     * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+     * @param array                                               $resources
+     */
+    public function __construct( $consumer, $resources = array() )
+    {
+        $_config = array(
+            'service_name' => 'system',
+            'name'         => 'Service',
+            'api_name'     => 'service',
+            'type'         => 'System',
+            'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
+            'description'  => 'System service administration.',
+            'is_active'    => true,
+        );
 
-		parent::__construct( $consumer, $_config, $resources );
-	}
+        parent::__construct( $consumer, $_config, $resources );
+    }
 
-	/**
-	 * @param mixed $results
-	 */
-	protected function _postProcess()
-	{
-		if ( static::GET != $this->_action )
-		{
-			// clear swagger cache upon any service changes.
-			SwaggerManager::clearCache();
-		}
+    /**
+     * @param mixed $results
+     */
+    protected function _postProcess()
+    {
+        if ( static::GET != $this->_action )
+        {
+            // clear swagger cache upon any service changes.
+            SwaggerManager::clearCache();
+        }
+        else
+        {
+            if ( Option::getBool( $this->_requestPayload, 'include_components' ) )
+            {
+                $_response = $this->_response;
+                $_services = Option::get( $_response, 'record' );
+                foreach ( $_services as &$_item )
+                {
+                    $_apiName = Option::get( $_item, 'api_name' );
+                    $_payload = array('as_access_components' => true);
+                    $_result = ScriptEngine::inlineRequest( HttpMethod::GET, $_apiName, $_payload );
+                    $_components = Option::clean( Option::get( $_result, 'resource' ) );
+                    $_item['components'] = (!empty($_components)) ? $_components : array('','*');
+                }
+                $_response['record'] = $_services;
+                $this->_response = $_response;
+            }
+        }
 
-		parent::_postProcess();
-	}
+        parent::_postProcess();
+    }
 }

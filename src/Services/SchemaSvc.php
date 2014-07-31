@@ -66,10 +66,6 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
      * @var array
      */
     protected $_fields;
-    /**
-     * @var array
-     */
-    protected $_payload;
 
     //*************************************************************************
     //	Methods
@@ -159,6 +155,14 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
     }
 
+    protected function _detectRequestMembers()
+    {
+        $_posted = RestData::getPostedData( true, true );
+        $this->_requestPayload = array_merge( $_REQUEST, $_posted );
+
+        return $this;
+    }
+
     /**
      * {@InheritDoc}
      */
@@ -179,13 +183,12 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
     {
         parent::_preProcess();
 
-        $this->_payload = RestData::getPostedData( true, true );
-        $this->_tables = Option::get( $this->_payload, 'table' );
+        $this->_tables = Option::get( $this->_requestPayload, 'table' );
 
         //	Create fields in existing table
         if ( !empty( $this->_tableName ) )
         {
-            $this->_fields = Option::get( $this->_payload, 'field' );
+            $this->_fields = Option::get( $this->_requestPayload, 'field' );
 
             $this->checkPermission( $this->_action, $this->_tableName );
         }
@@ -228,7 +231,14 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( empty( $this->_tables ) )
             {
-                return array('resource' => $this->describeDatabase());
+                $_namesOnly = Option::getBool( $this->_requestPayload, 'as_access_components' );
+                $_result = $this->describeDatabase( $_namesOnly );
+                if ( $_namesOnly )
+                {
+                    $_result = array_merge( array('', '*'), $_result );
+                }
+
+                return array('resource' => $_result);
             }
 
             return array('table' => $this->describeTables( $this->_tables ));
@@ -251,7 +261,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( empty( $this->_tables ) )
             {
-                return $this->updateTable( $this->_payload );
+                return $this->updateTable( $this->_requestPayload );
             }
 
             return array('table' => $this->updateTables( $this->_tables ));
@@ -259,7 +269,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
 
         if ( empty( $this->_fields ) )
         {
-            return $this->createField( $this->_tableName, $this->_payload );
+            return $this->createField( $this->_tableName, $this->_requestPayload );
         }
 
         return array('field' => $this->updateFields( $this->_tableName, $this->_fields ));
@@ -274,7 +284,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( empty( $this->_tables ) )
             {
-                return $this->updateTable( $this->_payload, true, true );
+                return $this->updateTable( $this->_requestPayload, true, true );
             }
 
             return array('table' => $this->updateTables( $this->_tables, true, true ));
@@ -284,19 +294,19 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( empty( $this->_fields ) )
             {
-                return $this->updateField( $this->_tableName, null, $this->_payload, true );
+                return $this->updateField( $this->_tableName, null, $this->_requestPayload, true );
             }
 
             return array('field' => $this->updateFields( $this->_tableName, $this->_fields, true, true ));
         }
 
         //	Create new field in existing table
-        if ( empty( $this->_payload ) )
+        if ( empty( $this->_requestPayload ) )
         {
             throw new BadRequestException( 'No data in schema update request.' );
         }
 
-        return $this->updateField( $this->_tableName, $this->_fieldName, $this->_payload, true );
+        return $this->updateField( $this->_tableName, $this->_fieldName, $this->_requestPayload, true );
     }
 
     /**
@@ -308,7 +318,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( empty( $this->_tables ) )
             {
-                return $this->updateTable( $this->_payload, true );
+                return $this->updateTable( $this->_requestPayload, true );
             }
 
             return array('table' => $this->updateTables( $this->_tables, true ));
@@ -318,19 +328,19 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( empty( $this->_fields ) )
             {
-                return $this->updateField( $this->_tableName, null, $this->_payload );
+                return $this->updateField( $this->_tableName, null, $this->_requestPayload );
             }
 
             return array('field' => $this->updateFields( $this->_tableName, $this->_fields, true ));
         }
 
         //	Create new field in existing table
-        if ( empty( $this->_payload ) )
+        if ( empty( $this->_requestPayload ) )
         {
             throw new BadRequestException( 'No data in schema create request.' );
         }
 
-        return $this->updateField( $this->_tableName, $this->_fieldName, $this->_payload );
+        return $this->updateField( $this->_tableName, $this->_fieldName, $this->_requestPayload );
     }
 
     /**
@@ -355,7 +365,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
      * @return array
      * @throws \Exception
      */
-    public function describeDatabase()
+    public function describeDatabase( $names_only = false )
     {
         // 	Exclude system tables
         $_exclude = $this->_isNative ? SystemManager::SYSTEM_TABLE_PREFIX : null;
@@ -372,29 +382,37 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
                 $_access = $this->getPermissions( $_name );
                 if ( !empty( $_access ) )
                 {
-                    $label = '';
-                    $plural = '';
-                    foreach ( $_extras as $_each )
+                    if ( $names_only )
                     {
-                        if ( 0 == strcasecmp( $_name, Option::get( $_each, 'table', '' ) ) )
+                        $_tables[] = $_name;
+                    }
+                    else
+                    {
+                        $label = '';
+                        $plural = '';
+                        foreach ( $_extras as $_each )
                         {
-                            $label = Option::get( $_each, 'label' );
-                            $plural = Option::get( $_each, 'plural' );
-                            break;
+                            if ( 0 == strcasecmp( $_name, Option::get( $_each, 'table', '' ) ) )
+                            {
+                                $label = Option::get( $_each, 'label' );
+                                $plural = Option::get( $_each, 'plural' );
+                                break;
+                            }
                         }
-                    }
 
-                    if ( empty( $label ) )
-                    {
-                        $label = Inflector::camelize( $_name, '_', true );
-                    }
+                        if ( empty( $label ) )
+                        {
+                            $label = Inflector::camelize( $_name, '_', true );
+                        }
 
-                    if ( empty( $plural ) )
-                    {
-                        $plural = Inflector::pluralize( $label );
-                    }
+                        if ( empty( $plural ) )
+                        {
+                            $plural = Inflector::pluralize( $label );
+                        }
 
-                    $_tables[] = array('name' => $_name, 'label' => $label, 'plural' => $plural, 'access' => $_access);
+                        $_tables[] =
+                            array('name' => $_name, 'label' => $label, 'plural' => $plural, 'access' => $_access);
+                    }
                 }
             }
 

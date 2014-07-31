@@ -152,10 +152,25 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
     {
         if ( empty( $this->_container ) )
         {
+            // see if there is any direction from the wire
+            $data = RestData::getPostedData( false, true );
+            $data = array_merge($data, $_REQUEST);
+
             // no resource
-            $includeProperties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
-            if ( !$includeProperties )
+            if ( !Option::getBool($data, 'include_properties') )
             {
+                if (Option::getBool($data, 'as_access_components' ))
+                {
+                    $tmp = array('', '*');
+                    $result = $this->listContainers();
+                    foreach ($result as $each)
+                    {
+                        $tmp[] = Option::get($each, 'name');
+                    }
+
+                    return array('resource' => $tmp);
+                }
+
                 return $this->_listResources();
             }
             $result = $this->listContainers( true );
