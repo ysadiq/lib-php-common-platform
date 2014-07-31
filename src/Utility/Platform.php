@@ -20,7 +20,6 @@
 namespace DreamFactory\Platform\Utility;
 
 use Doctrine\Common\Cache\CacheProvider;
-use DreamFactory\Platform\Components\DirectoryStorage;
 use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\LocalStorageTypes;
 use DreamFactory\Platform\Events\EventDispatcher;
@@ -313,18 +312,7 @@ class Platform
             )
         );
 
-        $_uuid =
-            '{' .
-            substr( $_hash, 0, 8 ) .
-            '-' .
-            substr( $_hash, 8, 4 ) .
-            '-' .
-            substr( $_hash, 12, 4 ) .
-            '-' .
-            substr( $_hash, 16, 4 ) .
-            '-' .
-            substr( $_hash, 20, 12 ) .
-            '}';
+        $_uuid = '{' . substr( $_hash, 0, 8 ) . '-' . substr( $_hash, 8, 4 ) . '-' . substr( $_hash, 12, 4 ) . '-' . substr( $_hash, 16, 4 ) . '-' . substr( $_hash, 20, 12 ) . '}';
 
         return $_uuid;
     }
