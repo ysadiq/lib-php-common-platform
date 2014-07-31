@@ -18,7 +18,6 @@ namespace DreamFactory\Platform\Yii\Models;
 
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Utility\ResourceStore;
-use DreamFactory\Platform\Utility\Utilities;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Option;
 
@@ -33,8 +32,8 @@ use Kisma\Core\Utility\Option;
  *
  * Base Relations:
  *
- * @property PlatformUser    $created_by
- * @property PlatformUser    $last_modified_by
+ * @property User    $created_by
+ * @property User    $last_modified_by
  */
 abstract class BasePlatformSystemModel extends BasePlatformModel
 {
@@ -211,16 +210,6 @@ abstract class BasePlatformSystemModel extends BasePlatformModel
 
 		try
 		{
-			$_sql = <<<MYSQL
-SELECT
-	id,
-	$mapColumn
-FROM
-	$mapTable
-WHERE
-	$mapColumn = :id
-MYSQL;
-
 			$_manyModel = ResourceStore::model( $mapTable );
 			$_primaryKey = $_manyModel->tableSchema->primaryKey;
 			$mapTable = $_manyModel->tableName();
@@ -235,11 +224,11 @@ MYSQL;
 			$toDelete = array();
 			foreach ( $maps as $map )
 			{
-				$id = Utilities::getArrayValue( $_primaryKey, $map, '' );
+				$id = Option::get( $map, $_primaryKey, '' );
 				$found = false;
 				foreach ( $targetRows as $key => $item )
 				{
-					$assignId = Utilities::getArrayValue( $_primaryKey, $item, '' );
+					$assignId = Option::get( $item, $_primaryKey, '' );
 					if ( $id == $assignId )
 					{
 						// found it, keeping it, so remove it from the list, as this becomes adds
@@ -269,7 +258,7 @@ MYSQL;
 				$toAdd = array();
 				foreach ( $targetRows as $item )
 				{
-					$itemId = Utilities::getArrayValue( $_primaryKey, $item, '' );
+					$itemId = Option::get( $item, $_primaryKey, '' );
 					if ( !empty( $itemId ) )
 					{
 						$toAdd[] = $itemId;
@@ -330,12 +319,12 @@ MYSQL;
 			$toDelete = array();
 			foreach ( $maps as $map )
 			{
-				$manyId = Utilities::getArrayValue( $mapColumn, $map, '' );
-				$id = Utilities::getArrayValue( $pkMapField, $map, '' );
+				$manyId = Option::get( $map, $mapColumn, '' );
+				$id = Option::get( $map, $pkMapField, '' );
 				$found = false;
 				foreach ( $targetRows as $key => $item )
 				{
-					$assignId = Utilities::getArrayValue( $pkManyField, $item, '' );
+					$assignId = Option::get( $item, $pkManyField, '' );
 					if ( $assignId == $manyId )
 					{
 						// found it, keeping it, so remove it from the list, as this becomes adds
@@ -364,7 +353,7 @@ MYSQL;
 			{
 				foreach ( $targetRows as $item )
 				{
-					$itemId = Utilities::getArrayValue( $pkManyField, $item, '' );
+					$itemId = Option::get( $item, $pkManyField, '' );
 					$record = array( $mapColumn => $itemId, $sourceColumn => $sourceId );
 					// simple update request
 					$command->reset();

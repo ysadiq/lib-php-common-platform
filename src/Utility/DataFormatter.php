@@ -1014,38 +1014,6 @@ class DataFormatter
     }
 
     /**
-     * @param string       $key
-     * @param array|object $array
-     * @param mixed        $defaultValue
-     * @param bool         $unsetIfFound
-     *
-     * @return mixed
-     */
-    public static function getArrayValue( $key, $array, $defaultValue = null, $unsetIfFound = false )
-    {
-        return Option::get( $array, $key, $defaultValue, $unsetIfFound );
-    }
-
-    /**
-     * @param string       $key
-     * @param array|object $array
-     * @param bool         $strict
-     *
-     * @return mixed
-     */
-    public static function removeOneFromArray( $key, $array, $strict = false )
-    {
-        $_orig = Option::remove( $array, $key );
-
-        if ( is_null( $_orig ) && $strict )
-        {
-            // need to look harder?
-        }
-
-        return $array;
-    }
-
-    /**
      * @param string $list
      * @param string $find
      * @param string $delimiter
@@ -1120,15 +1088,5 @@ class DataFormatter
         unset( $fieldarr[$pos] );
 
         return implode( $delimiter, array_values( $fieldarr ) );
-    }
-
-    /**
-     * @param mixed $value
-     *
-     * @return bool
-     */
-    public static function boolval( $value )
-    {
-        return Scalar::boolval( $value );
     }
 }
