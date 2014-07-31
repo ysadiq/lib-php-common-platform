@@ -26,6 +26,7 @@ use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
@@ -93,7 +94,7 @@ class SqlDbSvc extends BaseDbSvc
      * @param array $config
      * @param bool  $native
      *
-     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \InvalidArgumentException
      */
     public function __construct( $config, $native = false )
     {
@@ -112,17 +113,17 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( null === ( $dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn' ), true ) ) )
             {
-                throw new InternalServerErrorException( 'DB connection string (DSN) can not be empty.' );
+                throw new \InvalidArgumentException( 'DB connection string (DSN) can not be empty.' );
             }
 
             if ( null === ( $user = Session::replaceLookup( Option::get( $_credentials, 'user' ), true ) ) )
             {
-                throw new InternalServerErrorException( 'DB admin name can not be empty.' );
+                throw new \InvalidArgumentException( 'DB admin name can not be empty.' );
             }
 
             if ( null === ( $password = Session::replaceLookup( Option::get( $_credentials, 'pwd' ), true ) ) )
             {
-                throw new InternalServerErrorException( 'DB admin password can not be empty.' );
+                throw new \InvalidArgumentException( 'DB admin password can not be empty.' );
             }
 
             /** @var \CDbConnection $_db */
@@ -180,15 +181,15 @@ class SqlDbSvc extends BaseDbSvc
         {
             case SqlDbUtilities::DRV_MYSQL:
                 $this->_dbConn->setAttribute( \PDO::ATTR_EMULATE_PREPARES, true );
-//				$this->_sqlConn->setAttribute( 'charset', 'utf8' );
+//				$this->_dbConn->setAttribute( 'charset', 'utf8' );
                 break;
 
             case SqlDbUtilities::DRV_SQLSRV:
-//				$this->_sqlConn->setAttribute( constant( '\\PDO::SQLSRV_ATTR_DIRECT_QUERY' ), true );
+//				$this->_dbConn->setAttribute( constant( '\\PDO::SQLSRV_ATTR_DIRECT_QUERY' ), true );
                 //	These need to be on the dsn
-//				$this->_sqlConn->setAttribute( 'MultipleActiveResultSets', false );
-//				$this->_sqlConn->setAttribute( 'ReturnDatesAsStrings', true );
-//				$this->_sqlConn->setAttribute( 'CharacterSet', 'UTF-8' );
+//				$this->_dbConn->setAttribute( 'MultipleActiveResultSets', false );
+//				$this->_dbConn->setAttribute( 'ReturnDatesAsStrings', true );
+//				$this->_dbConn->setAttribute( 'CharacterSet', 'UTF-8' );
                 break;
 
             case SqlDbUtilities::DRV_DBLIB:
@@ -288,8 +289,16 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function correctTableName( $name )
     {
+        $this->checkForNativeSystemTable( $name );
+
+        return SqlDbUtilities::correctTableName( $this->_dbConn, $name );
+    }
+
+    protected function checkForNativeSystemTable( $name, $for_query = true )
+    {
         if ( $this->_isNative )
         {
+            // check for system tables and deny
             static $_length;
 
             if ( !$_length )
@@ -299,11 +308,16 @@ class SqlDbSvc extends BaseDbSvc
 
             if ( 0 === substr_compare( $name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
             {
-                throw new NotFoundException( "Table '$name' not found." );
+                if ( $for_query )
+                {
+                    throw new NotFoundException( "Table '$name' not found." );
+                }
+
+                throw new BadRequestException( "Use of the prefix '" .
+                                               SystemManager::SYSTEM_TABLE_PREFIX .
+                                               "' is not allowed." );
             }
         }
-
-        return SqlDbUtilities::correctTableName( $this->_dbConn, $name );
     }
 
     /**
@@ -417,14 +431,42 @@ class SqlDbSvc extends BaseDbSvc
      */
     protected function _listTables()
     {
-        $_exclude = '';
-        if ( $this->_isNative )
+        // check for system tables
+        $_exclude = ( $this->_isNative ) ? SystemManager::SYSTEM_TABLE_PREFIX : null;
+
+        $_names = SqlDbUtilities::describeDatabase( $this->_dbConn, null, $_exclude );
+        $_extras =
+            SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $_names, false, 'table,label,plural' );
+
+        $_tables = array();
+        foreach ( $_names as $name )
         {
-            // check for system tables
-            $_exclude = SystemManager::SYSTEM_TABLE_PREFIX;
+            $label = '';
+            $plural = '';
+            foreach ( $_extras as $each )
+            {
+                if ( 0 == strcasecmp( $name, Option::get( $each, 'table', '' ) ) )
+                {
+                    $label = Option::get( $each, 'label' );
+                    $plural = Option::get( $each, 'plural' );
+                    break;
+                }
+            }
+
+            if ( empty( $label ) )
+            {
+                $label = Inflector::camelize( $name, '_', true );
+            }
+
+            if ( empty( $plural ) )
+            {
+                $plural = Inflector::pluralize( $label );
+            }
+
+            $_tables[] = array('name' => $name, 'label' => $label, 'plural' => $plural);
         }
 
-        return SqlDbUtilities::describeDatabase( $this->_dbConn, '', $_exclude );
+        return $_tables;
     }
 
     /**
@@ -595,61 +637,6 @@ class SqlDbSvc extends BaseDbSvc
     public function callProcedure( $name, $params = null, $schema = null, $wrapper = null )
     {
         return SqlDbUtilities::callProcedure( $this->_dbConn, $name, $params, $schema, $wrapper );
-    }
-
-    // Handle administrative options, table add, delete, etc
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getTable( $table )
-    {
-        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
-        if ( empty( $_name ) )
-        {
-            throw new BadRequestException( 'Table name can not be empty.' );
-        }
-
-        try
-        {
-            $_out = SqlDbUtilities::describeTable( $this->_dbConn, $_name );
-            $_out['access'] = $this->getPermissions( $_name );
-
-            return $_out;
-        }
-        catch ( RestException $_ex )
-        {
-            throw $_ex;
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage(
-            )}" );
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function createTable( $properties = array() )
-    {
-        throw new BadRequestException( 'Editing table properties is only allowed through a SQL DB Schema service.' );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function updateTable( $properties = array() )
-    {
-        throw new BadRequestException( 'Creating table properties is only allowed through a SQL DB Schema service.' );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteTable( $table, $check_empty = false )
-    {
-        throw new BadRequestException( 'Editing table properties is only allowed through a SQL DB Schema service.' );
     }
 
     //-------- Table Records Operations ---------------------
@@ -959,7 +946,7 @@ class SqlDbSvc extends BaseDbSvc
 
         if ( Option::getBool( $extras, 'include_schema', false ) )
         {
-            $_meta['schema'] = SqlDbUtilities::describeTable( $this->_dbConn, $table );
+            $_meta['schema'] = $this->describeTable( $table );
         }
 
         $_related = Option::get( $extras, 'related' );
@@ -993,10 +980,11 @@ class SqlDbSvc extends BaseDbSvc
             return $this->_fieldCache[$name];
         }
 
-        $fields = SqlDbUtilities::describeTableFields( $this->_dbConn, $name );
-        $this->_fieldCache[$name] = $fields;
+        $_extras = SqlDbUtilities::getSchemaExtrasForTables( 0, $name );
+        $_fields = SqlDbUtilities::describeTableFields( $this->_dbConn, $name, null, $_extras );
+        $this->_fieldCache[$name] = $_fields;
 
-        return $fields;
+        return $_fields;
     }
 
     /**
@@ -2984,4 +2972,273 @@ class SqlDbSvc extends BaseDbSvc
         return true;
     }
 
+    // Handle schema options, table add, delete, etc
+
+    /**
+     * {@inheritdoc}
+     */
+    public function describeTables( $tables )
+    {
+        $_tables = SqlDbUtilities::validateAsArray( $tables, ',', true );
+
+        try
+        {
+            $_resources = array();
+            foreach ( $_tables as $_table )
+            {
+                if ( null != $_name = Option::get( $_table, 'name', $_table, false, true ) )
+                {
+                    $this->checkForNativeSystemTable( $_name );
+
+                    $_access = $this->getPermissions( $_name );
+                    if ( !empty( $_access ) )
+                    {
+                        $_extras = SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $_name );
+                        $_result = SqlDbUtilities::describeTable( $this->_dbConn, $_name, null, $_extras );
+                        $_result['access'] = $_access;
+                        $_resources[] = $_result;
+                    }
+                }
+            }
+
+            return $_resources;
+        }
+        catch ( RestException $ex )
+        {
+            throw $ex;
+        }
+        catch ( \Exception $ex )
+        {
+            throw new InternalServerErrorException( "Error describing database tables.\n" .
+                                                    $ex->getMessage(), $ex->getCode() );
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function describeTable( $table )
+    {
+        if ( empty( $table ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        $this->checkForNativeSystemTable( $table );
+
+        try
+        {
+            $_extras = SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $table );
+            $_result = SqlDbUtilities::describeTable( $this->_dbConn, $table, null, $_extras );
+            $_result['access'] = $this->getPermissions( $table );
+
+            return $_result;
+        }
+        catch ( RestException $ex )
+        {
+            throw $ex;
+        }
+        catch ( \Exception $ex )
+        {
+            throw new InternalServerErrorException( "Error describing database table '$table'.\n" .
+                                                    $ex->getMessage(), $ex->getCode() );
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function describeField( $table, $field )
+    {
+        if ( empty( $table ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        $this->checkForNativeSystemTable( $table );
+
+        try
+        {
+            $_extras = SqlDbUtilities::getSchemaExtrasForFields( 0, $table, $field );
+            $_result = SqlDbUtilities::describeTableFields( $this->_dbConn, $table, $field, $_extras );
+
+            return Option::get( $_result, 0 );
+        }
+        catch ( RestException $ex )
+        {
+            throw $ex;
+        }
+        catch ( \Exception $ex )
+        {
+            throw new InternalServerErrorException( "Error describing database table '$table' field '$field'.\n" .
+                                                    $ex->getMessage(), $ex->getCode() );
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function createTables( $tables, $check_exist = false )
+    {
+        $tables = SqlDbUtilities::validateAsArray( $tables, null, true, 'There are no table sets in the request.' );
+
+        // check for system tables and deny
+        foreach ( $tables as $_table )
+        {
+            if ( null === ( $_name = Option::get( $_table, 'name' ) ) )
+            {
+                throw new BadRequestException( "Table schema received does not have a valid name." );
+            }
+
+            $this->checkForNativeSystemTable( $_name, false );
+        }
+
+        return SqlDbUtilities::updateTables( $this->_dbConn, $tables );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function createTable( $table, $properties = array(), $check_exist = false )
+    {
+        $this->checkForNativeSystemTable( $table, false );
+
+        $properties = Option::clean( $properties );
+        $properties['name'] = $table;
+
+        $_tables = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
+        $_result = SqlDbUtilities::updateTables( $this->_dbConn, $_tables );
+
+        return Option::get( $_result, 0, array() );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function createField( $table, $field, $properties = array(), $check_exist = false )
+    {
+        $this->checkForNativeSystemTable( $table, false );
+
+        $properties = Option::clean( $properties );
+        $properties['name'] = $field;
+
+        $_fields = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
+
+        SqlDbUtilities::updateFields( $this->_dbConn, $table, $_fields );
+
+        return $this->describeField( $table, $field );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateTables( $tables, $allow_delete_fields = false )
+    {
+        $tables = SqlDbUtilities::validateAsArray( $tables, null, true, 'There are no table sets in the request.' );
+
+        foreach ( $tables as $_table )
+        {
+            if ( null === ( $_name = Option::get( $_table, 'name' ) ) )
+            {
+                throw new BadRequestException( "Table schema received does not have a valid name." );
+            }
+
+            $this->checkForNativeSystemTable( $_name, false );
+        }
+
+        return SqlDbUtilities::updateTables( $this->_dbConn, $tables, true, $allow_delete_fields );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateTable( $table, $properties, $allow_delete_fields = false )
+    {
+        $this->checkForNativeSystemTable( $table, false );
+
+        $properties = Option::clean( $properties );
+        $properties['name'] = $table;
+
+        $_tables = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
+
+        $_result = SqlDbUtilities::updateTables( $this->_dbConn, $_tables, true, $allow_delete_fields );
+
+        return Option::get( $_result, 0, array() );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateField( $table, $field, $properties = array(), $allow_delete_parts = false )
+    {
+        if ( empty( $table ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        $this->checkForNativeSystemTable( $table );
+
+        $properties = Option::clean( $properties );
+        $properties['name'] = $field;
+
+        $_fields = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
+
+        SqlDbUtilities::updateFields( $this->_dbConn, $table, $_fields, true );
+
+        return $this->describeField( $table, $field );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function deleteTable( $table, $check_empty = false )
+    {
+        if ( empty( $table ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        $this->checkForNativeSystemTable( $table );
+
+        SqlDbUtilities::dropTable( $this->_dbConn, $table );
+
+        SqlDbUtilities::removeSchemaExtrasForTables( $this->getServiceId(), $table );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function deleteField( $table, $field )
+    {
+        if ( empty( $table ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        $this->checkForNativeSystemTable( $table );
+
+        SqlDbUtilities::dropField( $this->_dbConn, $table, $field );
+
+        SqlDbUtilities::removeSchemaExtrasForFields( $this->getServiceId(), $table, $field );
+    }
+
+    /**
+     * @param boolean $isNative
+     *
+     * @return SchemaSvc
+     */
+    public function setIsNative( $isNative )
+    {
+        $this->_isNative = $isNative;
+
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getIsNative()
+    {
+        return $this->_isNative;
+    }
 }

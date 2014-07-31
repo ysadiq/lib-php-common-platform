@@ -129,78 +129,129 @@ class DbUtilities
     }
 
     /**
-     * @param string | array $where
-     * @param array          $params
-     * @param string         $select
+     * @param int            $service_id
+     * @param string | array $table_names
+     * @param bool           $include_fields
+     * @param string | array $select
      *
+     * @throws \InvalidArgumentException
      * @return array
      */
-    public static function getLabels( $where, $params = array(), $select = '*' )
+    public static function getSchemaExtrasForTables( $service_id, $table_names, $include_fields = true, $select = '*' )
     {
-        $labels = array();
+        $_db = Pii::db();
+        $_params = array();
+        $_where = array('and');
+
+        $_where[] = $_db->quoteColumnName( 'service_id' ) . ' = :id';
+        $_params[':id'] = $service_id;
+
+        if ( false === $_values = static::validateAsArray( $table_names, ',', true ) )
+        {
+            throw new \InvalidArgumentException( 'Invalid table list. ' . $table_names );
+        }
+
+        $_where[] = array('in', 'table', $_values);
+
+        if ( !$include_fields )
+        {
+            $_where[] = $_db->quoteColumnName( 'field' ) . " = ''";
+        }
+
+        return static::_querySchemaExtras( $_where, $_params, $select );
+    }
+
+    /**
+     * @param int            $service_id
+     * @param string         $table_name
+     * @param string | array $field_names
+     * @param string | array $select
+     *
+     * @throws \InvalidArgumentException
+     * @return array
+     */
+    public static function getSchemaExtrasForFields( $service_id, $table_name, $field_names, $select = '*' )
+    {
+        $_db = Pii::db();
+        $_params = array();
+        $_where = array('and');
+
+        $_where[] = $_db->quoteColumnName( 'service_id' ) . ' = :id';
+        $_params[':id'] = $service_id;
+
+        $_where[] = $_db->quoteColumnName( 'table' ) . ' = :tn';
+        $_params[':tn'] = $table_name;
+
+        if ( false === $_values = static::validateAsArray( $field_names, ',', true ) )
+        {
+            throw new \InvalidArgumentException( 'Invalid field list. ' . $field_names );
+        }
+
+        $_where[] = array('in', 'field', $_values);
+
+        return static::_querySchemaExtras( $_where, $_params, $select );
+    }
+
+    protected static function _querySchemaExtras( $where, $params, $select = '*' )
+    {
+        $_extras = array();
         try
         {
             $_db = Pii::db();
-            $command = $_db->createCommand();
-            $command->select( $select );
-            $command->from( 'df_sys_schema_extras' );
-            $command->where( $where, $params );
-            $labels = $command->queryAll();
+            $_cmd = $_db->createCommand();
+            $_cmd->select( $select );
+            $_cmd->from( 'df_sys_schema_extras' );
+            $_cmd->where( $where, $params );
+            $_extras = $_cmd->queryAll();
         }
         catch ( \Exception $_ex )
         {
             Log::error( 'Failed to query df_sys_schema_extras. ' . $_ex->getMessage() );
         }
 
-        return $labels;
+        return $_extras;
     }
 
     /**
+     * @param int   $service_id
      * @param array $labels
      *
-     * @throws \CDbException
      * @return void
      */
-    public static function setLabels( $labels )
+    public static function setSchemaExtras( $service_id, $labels )
     {
         if ( empty( $labels ) )
         {
             return;
         }
 
+        $_tables = array();
+        foreach ( $labels as $_label )
+        {
+            $_tables[] = Option::get( $_label, 'table' );
+        }
+
+        $_tables = array_unique( $_tables );
+        $_oldRows = static::getSchemaExtrasForTables( $service_id, $_tables );
+
         try
         {
             $_db = Pii::db();
 
-            // todo batch this for speed
-            //@TODO Batched it a bit... still probably slow...
-            $_tableColumn = $_db->quoteColumnName( 'table' );
-            $_fieldColumn = $_db->quoteColumnName( 'field' );
-
-            $_sql = <<<SQL
-SELECT
-	id
-FROM
-	df_sys_schema_extras
-WHERE
-	$_tableColumn = :table_value AND
-	$_fieldColumn = :field_value
-SQL;
-
             $_inserts = $_updates = array();
-
-            Sql::setConnection( Pii::pdo() );
 
             foreach ( $labels as $_label )
             {
-                $_id = Sql::scalar(
-                    $_sql,
-                    0,
-                    array(
-                        ':table_value' => Option::get( $_label, 'table' ),
-                        ':field_value' => Option::get( $_label, 'field' ),
-                    )
-                );
+                $_table = Option::get( $_label, 'table' );
+                $_field = Option::get( $_label, 'field' );
+                $_id = null;
+                foreach ( $_oldRows as $_row )
+                {
+                    if ( ( Option::get( $_row, 'table' ) == $_table ) && ( Option::get( $_row, 'field' ) == $_field ) )
+                    {
+                        $_id = Option::get( $_row, 'id' );
+                    }
+                }
 
                 if ( empty( $_id ) )
                 {
@@ -268,16 +319,68 @@ SQL;
     }
 
     /**
-     * @param      $where
-     * @param null $params
+     * @param int            $service_id
+     * @param string | array $table_names
+     *
      */
-    public static function removeLabels( $where, $params = null )
+    public static function removeSchemaExtrasForTables( $service_id, $table_names, $include_fields = true )
     {
         try
         {
             $_db = Pii::db();
-            $command = $_db->createCommand();
-            $command->delete( 'df_sys_schema_extras', $where, $params );
+            $_params = array();
+            $_where = array('and');
+
+            $_where[] = $_db->quoteColumnName( 'service_id' ) . ' = :id';
+            $_params[':id'] = $service_id;
+
+            if ( false === $_values = static::validateAsArray( $table_names, ',', true ) )
+            {
+                throw new \InvalidArgumentException( 'Invalid table list. ' . $table_names );
+            }
+
+            $_where[] = array('in', 'table', $_values);
+
+            if ( !$include_fields )
+            {
+                $_where[] = $_db->quoteColumnName( 'field' ) . " = ''";
+            }
+
+            $_db->createCommand()->delete( 'df_sys_schema_extras', $_where, $_params );
+        }
+        catch ( \Exception $_ex )
+        {
+            Log::error( 'Failed to delete from df_sys_schema_extras. ' . $_ex->getMessage() );
+        }
+    }
+
+    /**
+     * @param int            $service_id
+     * @param string         $table_name
+     * @param string | array $field_names
+     */
+    public static function removeSchemaExtrasForFields( $service_id, $table_name, $field_names )
+    {
+        try
+        {
+            $_db = Pii::db();
+            $_params = array();
+            $_where = array('and');
+
+            $_where[] = $_db->quoteColumnName( 'service_id' ) . ' = :id';
+            $_params[':id'] = $service_id;
+
+            $_where[] = $_db->quoteColumnName( 'table' ) . ' = :tn';
+            $_params[':tn'] = $table_name;
+
+            if ( false === $_values = static::validateAsArray( $field_names, ',', true ) )
+            {
+                throw new \InvalidArgumentException( 'Invalid field list. ' . $field_names );
+            }
+
+            $_where[] = array('in', 'field', $_values);
+
+            $_db->createCommand()->delete( 'df_sys_schema_extras', $_where, $_params );
         }
         catch ( \Exception $_ex )
         {

@@ -54,4 +54,36 @@ abstract class NoSqlDbSvc extends BaseDbSvc
 
         return $_generateId . $_randSmall;
     }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function describeField( $table, $field )
+    {
+
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function createField( $table, $field, $properties = array(), $check_exist = false )
+    {
+
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateField( $table, $field, $properties = array(), $allow_delete_parts = false )
+    {
+
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function deleteField( $table, $field )
+    {
+
+    }
 }

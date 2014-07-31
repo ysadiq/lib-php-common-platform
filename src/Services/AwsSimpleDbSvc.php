@@ -191,7 +191,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function getTable( $table )
+    public function describeTable( $table )
     {
         static $_existing = null;
 
@@ -239,10 +239,13 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function createTable( $properties = array() )
+    public function createTable( $table, $properties = array(), $check_exist = false )
     {
-        $_name = Option::get( $properties, 'name', Option::get( $properties, static::TABLE_INDICATOR ) );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
+        {
+            $table = Option::get( $properties, static::TABLE_INDICATOR );
+        }
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }
@@ -250,28 +253,31 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         try
         {
             $_properties = array_merge(
-                array(static::TABLE_INDICATOR => $_name),
+                array(static::TABLE_INDICATOR => $table),
                 $properties
             );
             $_result = $this->_dbConn->createDomain( $_properties );
 
-            $_out = array_merge( array('name' => $_name, static::TABLE_INDICATOR => $_name), $_result->toArray() );
+            $_out = array_merge( array('name' => $table, static::TABLE_INDICATOR => $table), $_result->toArray() );
 
             return $_out;
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to create table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to create table '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function updateTable( $properties = array() )
+    public function updateTable( $table, $properties = array(), $allow_delete_fields = false )
     {
-        $_name = Option::get( $properties, 'name', Option::get( $properties, static::TABLE_INDICATOR ) );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
+        {
+            $table = Option::get( $properties, static::TABLE_INDICATOR );
+        }
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }

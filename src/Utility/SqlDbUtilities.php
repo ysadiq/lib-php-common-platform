@@ -307,7 +307,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                         {
                             if ( null !== $_type = Option::get( $schema, $_key, null, false, true ) )
                             {
-                                $_row[$_key] = static::formatValue($_value, $_type);
+                                $_row[$_key] = static::formatValue( $_value, $_type );
                             }
                         }
                     }
@@ -334,7 +334,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                             $_type = $_param['type'];
                             if ( null !== $_value = Option::get( $_param, 'value', null ) )
                             {
-                                $_value = static::formatValue($_value, $_type);
+                                $_value = static::formatValue( $_value, $_type );
                             }
                             $_result[$_name] = $_value;
                             break;
@@ -355,10 +355,10 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      * @param string         $include_prefix
      * @param string         $exclude_prefix
      *
-     * @throws \Exception
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return array
      */
-    public static function describeDatabase( $db, $include_prefix = '', $exclude_prefix = '' )
+    public static function describeDatabase( $db, $include_prefix = null, $exclude_prefix = null )
     {
         try
         {
@@ -382,42 +382,10 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 }
                 $temp[] = $name;
             }
-            $_names = $temp;
+
             natcasesort( $_names );
-            $labels = static::getLabels(
-                array('and', "field=''", array('in', 'table', $_names)),
-                array(),
-                'table,label,plural'
-            );
-            $tables = array();
-            foreach ( $_names as $name )
-            {
-                $label = '';
-                $plural = '';
-                foreach ( $labels as $each )
-                {
-                    if ( 0 == strcasecmp( $name, $each['table'] ) )
-                    {
-                        $label = Option::get( $each, 'label' );
-                        $plural = Option::get( $each, 'plural' );
-                        break;
-                    }
-                }
 
-                if ( empty( $label ) )
-                {
-                    $label = Inflector::camelize( $name, '_', true );
-                }
-
-                if ( empty( $plural ) )
-                {
-                    $plural = Inflector::pluralize( $label );
-                }
-
-                $tables[] = array('name' => $name, 'label' => $label, 'plural' => $plural);
-            }
-
-            return $tables;
+            return $temp;
         }
         catch ( \Exception $ex )
         {
@@ -427,32 +395,16 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
     /**
      * @param \CDbConnection $db
-     * @param null           $names
-     * @param string         $remove_prefix
-     *
-     * @throws \Exception
-     * @return array|string
-     */
-    public static function describeTables( $db, $names = null, $remove_prefix = '' )
-    {
-        $out = array();
-        foreach ( $names as $table )
-        {
-            $out[] = static::describeTable( $db, $table, $remove_prefix );
-        }
-
-        return $out;
-    }
-
-    /**
-     * @param \CDbConnection $db
      * @param string         $name
      * @param string         $remove_prefix
+     * @param null | array   $extras
      *
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
      * @throws \Exception
      * @return array
      */
-    public static function describeTable( $db, $name, $remove_prefix = '' )
+    public static function describeTable( $db, $name, $remove_prefix = '', $extras = null )
     {
         $name = static::correctTableName( $db, $name );
         try
@@ -464,11 +416,8 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             }
 
             $_driverType = static::getDbDriverType( $db );
-            $localdb = Pii::db();
-            $query = $localdb->quoteColumnName( 'table' ) . ' = :tn';
-            $labels = static::getLabels( $query, array(':tn' => $name) );
-            $labels = static::reformatFieldLabelArray( $labels );
-            $labelInfo = Option::get( $labels, '', array() );
+            $extras = static::reformatFieldLabelArray( $extras );
+            $labelInfo = Option::get( $extras, '', array() );
 
             $publicName = $table->name;
             $schemaName = $table->schemaName;
@@ -512,7 +461,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 'plural'      => $plural,
                 'primary_key' => $table->primaryKey,
                 'name_field'  => $name_field,
-                'field'       => static::describeTableFields( $db, $name, $labels ),
+                'field'       => static::describeTableFields( $db, $name, null, $extras ),
                 'related'     => static::describeTableRelated( $db, $name )
             );
         }
@@ -527,83 +476,41 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     }
 
     /**
-     * @param \CDbConnection $db
-     * @param                $name
-     * @param array          $labels
+     * @param \CDbConnection        $db
+     * @param string                $table_name
+     * @param null | string | array $field_names
+     * @param null | array          $extras
      *
-     * @throws \Exception
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return array
      */
-    public static function describeTableFields( $db, $name, $labels = array() )
-    {
-        $name = static::correctTableName( $db, $name );
-        $table = $db->schema->getTable( $name );
-        if ( !$table )
-        {
-            throw new NotFoundException( "Table '$name' does not exist in the database." );
-        }
-
-        try
-        {
-            if ( empty( $labels ) )
-            {
-                $localdb = Pii::db();
-                $query = $localdb->quoteColumnName( 'table' ) . ' = :tn';
-                $labels = static::getLabels( $query, array(':tn' => $name) );
-                $labels = static::reformatFieldLabelArray( $labels );
-            }
-            $fields = array();
-            foreach ( $table->columns as $column )
-            {
-                $labelInfo = Option::get( $labels, $column->name, array() );
-                $field = static::describeFieldInternal( $column, $table->foreignKeys, $labelInfo );
-                $fields[] = $field;
-            }
-
-            return $fields;
-        }
-        catch ( \Exception $ex )
-        {
-            throw new InternalServerErrorException( "Failed to query table schema.\n{$ex->getMessage()}" );
-        }
-    }
-
-    /**
-     * @param \CDbConnection $db
-     * @param string         $table_name
-     * @param array          $field_names
-     *
-     * @throws \Exception
-     * @return array
-     */
-    public static function describeFields( $db, $table_name, $field_names )
+    public static function describeTableFields( $db, $table_name, $field_names = null, $extras = null )
     {
         $table_name = static::correctTableName( $db, $table_name );
-        $table = $db->schema->getTable( $table_name );
-        if ( !$table )
+        $_table = $db->schema->getTable( $table_name );
+        if ( !$_table )
         {
             throw new NotFoundException( "Table '$table_name' does not exist in the database." );
         }
 
-        $field = array();
+        if ( !empty( $field_names ) )
+        {
+            $field_names = static::validateAsArray( $field_names, ',', true, 'No valid field names given.' );
+        }
+        $extras = static::reformatFieldLabelArray( $extras );
+
+        $_out = array();
         try
         {
-            foreach ( $table->columns as $column )
+            foreach ( $_table->columns as $column )
             {
-                if ( false === array_search( $column->name, $field_names ) )
+
+                if ( empty( $field_names ) || ( false !== array_search( $column->name, $field_names ) ) )
                 {
-                    continue;
+                    $_info = Option::get( $extras, $column->name, array() );
+                    $_out[] = static::describeFieldInternal( $column, $_table->foreignKeys, $_info );
                 }
-                $localdb = Pii::db();
-                $query =
-                    $localdb->quoteColumnName( 'table' ) .
-                    ' = :tn and ' .
-                    $localdb->quoteColumnName( 'field' ) .
-                    ' = :fn';
-                $labels = static::getLabels( $query, array(':tn' => $table_name, ':fn' => $column->name) );
-                $labelInfo = Option::get( $labels, 0, array() );
-                $field[] = static::describeFieldInternal( $column, $table->foreignKeys, $labelInfo );
-                break;
             }
         }
         catch ( \Exception $ex )
@@ -613,60 +520,10 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
         if ( empty( $field ) )
         {
-            throw new NotFoundException( "Fields not found in table '$table_name'." );
+            throw new NotFoundException( "No requested fields found in table '$table_name'." );
         }
 
-        return $field;
-    }
-
-    /**
-     * @param \CDbConnection $db
-     * @param                $table_name
-     * @param                $field_name
-     *
-     * @throws \Exception
-     * @return array
-     */
-    public static function describeField( $db, $table_name, $field_name )
-    {
-        $table_name = static::correctTableName( $db, $table_name );
-        $table = $db->schema->getTable( $table_name );
-        if ( !$table )
-        {
-            throw new NotFoundException( "Table '$table_name' does not exist in the database." );
-        }
-        $field = array();
-        try
-        {
-            foreach ( $table->columns as $column )
-            {
-                if ( 0 != strcasecmp( $column->name, $field_name ) )
-                {
-                    continue;
-                }
-                $localdb = Pii::db();
-                $query =
-                    $localdb->quoteColumnName( 'table' ) .
-                    ' = :tn and ' .
-                    $localdb->quoteColumnName( 'field' ) .
-                    ' = :fn';
-                $labels = static::getLabels( $query, array(':tn' => $table_name, ':fn' => $field_name) );
-                $labelInfo = Option::get( $labels, 0, array() );
-                $field = static::describeFieldInternal( $column, $table->foreignKeys, $labelInfo );
-                break;
-            }
-        }
-        catch ( \Exception $ex )
-        {
-            throw new InternalServerErrorException( "Failed to query table field schema.\n{$ex->getMessage()}" );
-        }
-
-        if ( empty( $field ) )
-        {
-            throw new NotFoundException( "Field '$field_name' not found in table '$table_name'." );
-        }
-
-        return $field;
+        return $_out;
     }
 
     /**
@@ -677,7 +534,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      * @throws \Exception
      * @return array
      */
-    public static function describeFieldInternal( $column, $foreign_keys, $label_info )
+    protected static function describeFieldInternal( $column, $foreign_keys, $label_info )
     {
         $label = Option::get( $label_info, 'label', Inflector::camelize( $column->name, '_', true ) );
         $validation = json_decode( Option::get( $label_info, 'validation' ), true );
@@ -1691,7 +1548,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
         if ( !empty( $labels ) )
         {
-            static::setLabels( $labels );
+            static::setSchemaExtras( 0, $labels );
         }
     }
 
@@ -2073,11 +1930,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         }
         try
         {
-            $command = $db->createCommand();
-            $command->dropTable( $table_name );
-
-            $_column = Pii::db()->quoteColumnName( 'table' );
-            static::removeLabels( $_column . ' = :table_name', array(':table_name' => $table_name) );
+            $db->createCommand()->dropTable( $table_name );
 
             //  Refresh the schema that we just added
             $db->schema->refresh();
@@ -2111,13 +1964,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         }
         try
         {
-            $command = $db->createCommand();
-            $command->dropColumn( $table_name, $field_name );
-            /** @var \CDbConnection $_dbLocal Local connection */
-            $_dbLocal = Pii::db();
-            $where = $_dbLocal->quoteColumnName( 'table' ) . ' = :tn';
-            $where .= ' and ' . $_dbLocal->quoteColumnName( 'field' ) . ' = :fn';
-            static::removeLabels( $where, array(':tn' => $table_name, ':fn' => $field_name) );
+            $db->createCommand()->dropColumn( $table_name, $field_name );
 
             // refresh the schema that we just added
             $db->schema->refresh();
