@@ -153,7 +153,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
         if ( empty( $this->_container ) )
         {
             // see if there is any direction from the wire
-            $data = RestData::getPostedData( false, true );
+            $data = Option::clean(RestData::getPostedData( false, true ));
             $data = array_merge($data, $_REQUEST);
 
             // no resource
