@@ -30,6 +30,7 @@ use Kisma\Core\Exceptions\StorageException;
 use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Scalar;
 
 /**
  * SqlDbUtilities
@@ -873,7 +874,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 case 'boolean': // alias
                     $definition = 'boolean';
                     // convert to bit 0 or 1
-                    $default = ( isset( $default ) ) ? intval( Utilities::boolval( $default ) ) : $default;
+                    $default = ( isset( $default ) ) ? intval( Scalar::boolval( $default ) ) : $default;
                     break;
                 case 'tinyint':
                 case 'smallint':
@@ -1131,7 +1132,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             }
 
             // additional properties
-            if ( !Utilities::boolval( $allowNull ) )
+            if ( !Scalar::boolval( $allowNull ) )
             {
                 $definition .= ' NOT';
             }
