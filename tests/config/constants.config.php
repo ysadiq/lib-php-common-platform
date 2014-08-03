@@ -28,34 +28,30 @@ if ( defined( 'DSP_VERSION' ) )
 //*************************************************************************
 
 /**
- * @var string
+ * @type string
  */
 const DSP_VERSION = '1.5.x-dev';
 /**
- * @var string
+ * @type string
  */
 const API_VERSION = '1.0';
 /**
- * @var string
+ * @type string
  */
 const ALIASES_CONFIG_PATH = '/aliases.config.php';
 /**
- * @var string
+ * @type string
  */
 const SERVICES_CONFIG_PATH = '/services.config.php';
 /**
- * @var string
+ * @type string
  */
 const DEFAULT_CLOUD_API_ENDPOINT = 'http://api.cloud.dreamfactory.com';
 /**
- * @var string
+ * @type string
  */
 const DEFAULT_INSTANCE_AUTH_ENDPOINT = 'http://cerberus.fabric.dreamfactory.com/api/instance/credentials';
 /**
- * @var string
+ * @type string
  */
 const DEFAULT_SUPPORT_EMAIL = 'support@dreamfactory.com';
-/**
- * @var string
- */
-const DEFAULT_ADMIN_RESOURCE_SCHEMA = '/admin.resource_schema.config.php';
