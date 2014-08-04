@@ -582,7 +582,7 @@ JS;
         }
         catch ( \Exception $_ex )
         {
-            $_result = RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false );
+            $_result = RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false, false );
 
             Log::error( 'Exception: ' . $_ex->getMessage(), array(), array('response' => $_result) );
         }
