@@ -48,7 +48,7 @@ $_base['apis'] = array(
                         'name'          => 'tables',
                         'description'   => 'Array of table definitions.',
                         'allowMultiple' => false,
-                        'type'          => 'Tables',
+                        'type'          => 'TableSchemas',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -67,7 +67,7 @@ $_base['apis'] = array(
                         'name'          => 'tables',
                         'description'   => 'Array of table definitions.',
                         'allowMultiple' => false,
-                        'type'          => 'Tables',
+                        'type'          => 'TableSchemas',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -86,7 +86,7 @@ $_base['apis'] = array(
                         'name'          => 'tables',
                         'description'   => 'Array of table definitions.',
                         'allowMultiple' => false,
-                        'type'          => 'Tables',
+                        'type'          => 'TableSchemas',
                         'paramType'     => 'body',
                         'required'      => true,
                     ),
@@ -375,8 +375,8 @@ $_base['apis'] = array(
 );
 
 $_models = array(
-    'Tables'        => array(
-        'id'         => 'Tables',
+    'TableSchemas'        => array(
+        'id'         => 'TableSchemas',
         'properties' => array(
             'field' => array(
                 'type'        => 'Array',
@@ -426,8 +426,8 @@ $_models = array(
             ),
         ),
     ),
-    'Fields'        => array(
-        'id'         => 'Fields',
+    'FieldSchemas'        => array(
+        'id'         => 'FieldSchemas',
         'properties' => array(
             'field' => array(
                 'type'        => 'Array',

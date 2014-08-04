@@ -196,68 +196,6 @@ class Utilities
     }
 
     /**
-     * @param        $key
-     * @param        $array
-     * @param string $if_not_found
-     *
-     * @return array|string
-     */
-    public static function getArrayValue( $key, $array, $if_not_found = '' )
-    {
-        $val = $if_not_found;
-        if ( isset( $array ) && !empty( $array ) )
-        {
-            if ( isset( $array[ $key ] ) )
-            {
-                $val = $array[ $key ];
-                // due to conversion from XML to array, null or empty xml elements have the array value of an empty array
-                if ( is_array( $val ) && empty( $val ) )
-                {
-                    $val = $if_not_found;
-                }
-            }
-            else
-            {
-                $array = static::array_key_lower( $array );
-                $key = strtolower( $key );
-                if ( isset( $array[ $key ] ) )
-                {
-                    $val = $array[ $key ];
-                    // due to conversion from XML to array, null or empty xml elements have the array value of an empty array
-                    if ( is_array( $val ) && empty( $val ) )
-                    {
-                        $val = $if_not_found;
-                    }
-                }
-            }
-        }
-
-        return $val;
-    }
-
-    /**
-     * @param      $key
-     * @param      $array
-     * @param bool $strict
-     *
-     * @return mixed
-     */
-    public static function removeOneFromArray( $key, $array, $strict = false )
-    {
-        $keys = array_keys( $array );
-        $pos = array_search( strtolower( $key ), array_change_key_case( $keys, CASE_LOWER ), $strict );
-        if ( false !== $pos )
-        {
-            $realKey = $keys[ $pos ];
-            unset( $array[ $realKey ] );
-
-            return $array;
-        }
-
-        return $array;
-    }
-
-    /**
      * @param        $list
      * @param        $find
      * @param string $delim
@@ -330,16 +268,6 @@ class Utilities
         unset( $fieldarr[ $pos ] );
 
         return implode( $delim, array_values( $fieldarr ) );
-    }
-
-    public static function boolval( $var )
-    {
-        if ( is_bool( $var ) )
-        {
-            return $var;
-        }
-
-        return filter_var( mb_strtolower( strval( $var ) ), FILTER_VALIDATE_BOOLEAN );
     }
 
     /**

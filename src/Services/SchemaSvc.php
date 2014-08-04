@@ -28,6 +28,7 @@ use DreamFactory\Platform\Resources\User\Session;
 use DreamFactory\Platform\Utility\RestData;
 use DreamFactory\Platform\Utility\SqlDbUtilities;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Inflector;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -65,10 +66,6 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
      * @var array
      */
     protected $_fields;
-    /**
-     * @var array
-     */
-    protected $_payload;
 
     //*************************************************************************
     //	Methods
@@ -158,6 +155,14 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
     }
 
+    protected function _detectRequestMembers()
+    {
+        $_posted = RestData::getPostedData( true, true );
+        $this->_requestPayload = array_merge( $_REQUEST, $_posted );
+
+        return $this;
+    }
+
     /**
      * {@InheritDoc}
      */
@@ -178,13 +183,12 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
     {
         parent::_preProcess();
 
-        $this->_payload = RestData::getPostedData( true, true );
-        $this->_tables = Option::get( $this->_payload, 'table' );
+        $this->_tables = Option::get( $this->_requestPayload, 'table' );
 
         //	Create fields in existing table
         if ( !empty( $this->_tableName ) )
         {
-            $this->_fields = Option::get( $this->_payload, 'field' );
+            $this->_fields = Option::get( $this->_requestPayload, 'field' );
 
             $this->checkPermission( $this->_action, $this->_tableName );
         }
@@ -227,10 +231,17 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( empty( $this->_tables ) )
             {
-                return array( 'resource' => $this->describeDatabase() );
+                $_namesOnly = Option::getBool( $this->_requestPayload, 'as_access_components' );
+                $_result = $this->describeDatabase( $_namesOnly );
+                if ( $_namesOnly )
+                {
+                    $_result = array_merge( array('', '*'), $_result );
+                }
+
+                return array('resource' => $_result);
             }
 
-            return array( 'table' => $this->describeTables( $this->_tables ) );
+            return array('table' => $this->describeTables( $this->_tables ));
         }
 
         if ( empty( $this->_fieldName ) )
@@ -250,18 +261,18 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( empty( $this->_tables ) )
             {
-                return $this->updateTable( $this->_payload );
+                return $this->updateTable( $this->_requestPayload );
             }
 
-            return array( 'table' => $this->updateTables( $this->_tables ) );
+            return array('table' => $this->updateTables( $this->_tables ));
         }
 
         if ( empty( $this->_fields ) )
         {
-            return $this->createField( $this->_tableName, $this->_payload );
+            return $this->createField( $this->_tableName, $this->_requestPayload );
         }
 
-        return array( 'field' => $this->updateFields( $this->_tableName, $this->_fields ) );
+        return array('field' => $this->updateFields( $this->_tableName, $this->_fields ));
     }
 
     /**
@@ -273,29 +284,29 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( empty( $this->_tables ) )
             {
-                return $this->updateTable( $this->_payload, true, true );
+                return $this->updateTable( $this->_requestPayload, true, true );
             }
 
-            return array( 'table' => $this->updateTables( $this->_tables, true, true ) );
+            return array('table' => $this->updateTables( $this->_tables, true, true ));
         }
 
         if ( empty( $this->_fieldName ) )
         {
             if ( empty( $this->_fields ) )
             {
-                return $this->updateField( $this->_tableName, null, $this->_payload, true );
+                return $this->updateField( $this->_tableName, null, $this->_requestPayload, true );
             }
 
-            return array( 'field' => $this->updateFields( $this->_tableName, $this->_fields, true, true ) );
+            return array('field' => $this->updateFields( $this->_tableName, $this->_fields, true, true ));
         }
 
         //	Create new field in existing table
-        if ( empty( $this->_payload ) )
+        if ( empty( $this->_requestPayload ) )
         {
             throw new BadRequestException( 'No data in schema update request.' );
         }
 
-        return $this->updateField( $this->_tableName, $this->_fieldName, $this->_payload, true );
+        return $this->updateField( $this->_tableName, $this->_fieldName, $this->_requestPayload, true );
     }
 
     /**
@@ -307,29 +318,29 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( empty( $this->_tables ) )
             {
-                return $this->updateTable( $this->_payload, true );
+                return $this->updateTable( $this->_requestPayload, true );
             }
 
-            return array( 'table' => $this->updateTables( $this->_tables, true ) );
+            return array('table' => $this->updateTables( $this->_tables, true ));
         }
 
         if ( empty( $this->_fieldName ) )
         {
             if ( empty( $this->_fields ) )
             {
-                return $this->updateField( $this->_tableName, null, $this->_payload );
+                return $this->updateField( $this->_tableName, null, $this->_requestPayload );
             }
 
-            return array( 'field' => $this->updateFields( $this->_tableName, $this->_fields, true ) );
+            return array('field' => $this->updateFields( $this->_tableName, $this->_fields, true ));
         }
 
         //	Create new field in existing table
-        if ( empty( $this->_payload ) )
+        if ( empty( $this->_requestPayload ) )
         {
             throw new BadRequestException( 'No data in schema create request.' );
         }
 
-        return $this->updateField( $this->_tableName, $this->_fieldName, $this->_payload );
+        return $this->updateField( $this->_tableName, $this->_fieldName, $this->_requestPayload );
     }
 
     /**
@@ -342,42 +353,70 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             $this->deleteTable( $this->_tableName );
 
-            return array( 'table' => $this->_tableName );
+            return array('table' => $this->_tableName);
         }
 
         $this->deleteField( $this->_tableName, $this->_fieldName );
 
-        return array( 'field' => $this->_fieldName );
+        return array('field' => $this->_fieldName);
     }
 
     /**
      * @return array
      * @throws \Exception
      */
-    public function describeDatabase()
+    public function describeDatabase( $names_only = false )
     {
         // 	Exclude system tables
         $_exclude = $this->_isNative ? SystemManager::SYSTEM_TABLE_PREFIX : null;
 
         try
         {
-            $_result = SqlDbUtilities::describeDatabase( $this->_dbConn, null, $_exclude );
+            $_names = SqlDbUtilities::describeDatabase( $this->_dbConn, null, $_exclude );
+            $_extras =
+                SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $_names, false, 'table,label,plural' );
 
-            $_resources = array();
-            foreach ( $_result as $_table )
+            $_tables = array();
+            foreach ( $_names as $_name )
             {
-                if ( null != $_name = Option::get( $_table, 'name' ) )
+                $_access = $this->getPermissions( $_name );
+                if ( !empty( $_access ) )
                 {
-                    $_access = $this->getPermissions( $_name );
-                    if ( !empty( $_access ) )
+                    if ( $names_only )
                     {
-                        $_table['access'] = $_access;
-                        $_resources[] = $_table;
+                        $_tables[] = $_name;
+                    }
+                    else
+                    {
+                        $label = '';
+                        $plural = '';
+                        foreach ( $_extras as $_each )
+                        {
+                            if ( 0 == strcasecmp( $_name, Option::get( $_each, 'table', '' ) ) )
+                            {
+                                $label = Option::get( $_each, 'label' );
+                                $plural = Option::get( $_each, 'plural' );
+                                break;
+                            }
+                        }
+
+                        if ( empty( $label ) )
+                        {
+                            $label = Inflector::camelize( $_name, '_', true );
+                        }
+
+                        if ( empty( $plural ) )
+                        {
+                            $plural = Inflector::pluralize( $label );
+                        }
+
+                        $_tables[] =
+                            array('name' => $_name, 'label' => $label, 'plural' => $plural, 'access' => $_access);
                     }
                 }
             }
 
-            return $_resources;
+            return $_tables;
         }
         catch ( RestException $ex )
         {
@@ -385,9 +424,8 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException(
-                "Error describing database tables.\n" . $ex->getMessage(), $ex->getCode()
-            );
+            throw new InternalServerErrorException( "Error describing database tables.\n" .
+                                                    $ex->getMessage(), $ex->getCode() );
         }
     }
 
@@ -405,30 +443,28 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         $_sysPrefix = SystemManager::SYSTEM_TABLE_PREFIX;
         $_length = strlen( $_sysPrefix );
 
-        foreach ( $_tables as $_table )
-        {
-            if ( $this->_isNative )
-            {
-                if ( 0 === substr_compare( $_table, $_sysPrefix, 0, $_length ) )
-                {
-                    throw new NotFoundException( "Table '$_table' not found." );
-                }
-            }
-        }
-
         try
         {
-            $_result = SqlDbUtilities::describeTables( $this->_dbConn, $_tables );
             $_resources = array();
-            foreach ( $_result as $_table )
+            foreach ( $_tables as $_table )
             {
-                if ( null != $_name = Option::get( $_table, 'name' ) )
+                if ( null != $_name = Option::get( $_table, 'name', $_table, false, true ) )
                 {
+                    if ( $this->_isNative )
+                    {
+                        if ( 0 === substr_compare( $_name, $_sysPrefix, 0, $_length ) )
+                        {
+                            throw new NotFoundException( "Table '$_name' not found." );
+                        }
+                    }
+
                     $_access = $this->getPermissions( $_name );
                     if ( !empty( $_access ) )
                     {
-                        $_table['access'] = $_access;
-                        $_resources[] = $_table;
+                        $_extras = SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $_name );
+                        $_result = SqlDbUtilities::describeTable( $this->_dbConn, $_name, null, $_extras );
+                        $_result['access'] = $_access;
+                        $_resources[] = $_result;
                     }
                 }
             }
@@ -441,9 +477,8 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException(
-                "Error describing database tables '$table_list'.\n" . $ex->getMessage(), $ex->getCode()
-            );
+            throw new InternalServerErrorException( "Error describing database tables '$table_list'.\n" .
+                                                    $ex->getMessage(), $ex->getCode() );
         }
     }
 
@@ -477,7 +512,8 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
 
         try
         {
-            $_result = SqlDbUtilities::describeTable( $this->_dbConn, $table );
+            $_extras = SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $table );
+            $_result = SqlDbUtilities::describeTable( $this->_dbConn, $table, null, $_extras );
             $_result['access'] = $this->getPermissions( $table );
 
             return $_result;
@@ -488,9 +524,8 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException(
-                "Error describing database table '$table'.\n" . $ex->getMessage(), $ex->getCode()
-            );
+            throw new InternalServerErrorException( "Error describing database table '$table'.\n" .
+                                                    $ex->getMessage(), $ex->getCode() );
         }
     }
 
@@ -525,7 +560,10 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
 
         try
         {
-            return SqlDbUtilities::describeField( $this->_dbConn, $table, $field );
+            $_extras = SqlDbUtilities::getSchemaExtrasForFields( 0, $table, $field );
+            $_result = SqlDbUtilities::describeTableFields( $this->_dbConn, $table, $field, $_extras );
+
+            return Option::get( $_result, 0 );
         }
         catch ( RestException $ex )
         {
@@ -533,9 +571,8 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException(
-                "Error describing database table '$table' field '$field'.\n" . $ex->getMessage(), $ex->getCode()
-            );
+            throw new InternalServerErrorException( "Error describing database table '$table' field '$field'.\n" .
+                                                    $ex->getMessage(), $ex->getCode() );
         }
     }
 
@@ -566,14 +603,20 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
 
                 if ( 0 === substr_compare( $_name, SystemManager::SYSTEM_TABLE_PREFIX, 0, $_length ) )
                 {
-                    throw new BadRequestException(
-                        "Tables can not use the prefix '$_sysPrefix'. '$_name' can not be created."
-                    );
+                    throw new BadRequestException( "Tables can not use the prefix '$_sysPrefix'. '$_name' can not be created." );
                 }
             }
         }
 
-        return SqlDbUtilities::updateTables( $this->_dbConn, $tables, $allow_merge, $allow_delete );
+        $_result = SqlDbUtilities::updateTables( $this->_dbConn, $tables, $allow_merge, $allow_delete );
+        $_labels = Option::get( $_result, 'labels', true );
+
+        if ( !empty( $_labels ) )
+        {
+            SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
+        }
+
+        return $_result;
     }
 
     /**
@@ -624,9 +667,18 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
 
         try
         {
-            $names = SqlDbUtilities::updateFields( $this->_dbConn, $table, $fields, $allow_merge, $allow_delete );
+            $_result = SqlDbUtilities::updateFields( $this->_dbConn, $table, $fields, $allow_merge, $allow_delete );
+            $_labels = Option::get( $_result, 'labels', array(), true );
 
-            return SqlDbUtilities::describeFields( $this->_dbConn, $table, $names );
+            if ( !empty( $_labels ) )
+            {
+                SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
+            }
+
+            $_names = Option::get( $_result, 'names' );
+            $_extras = SqlDbUtilities::getSchemaExtrasForFields( $this->getServiceId(), $table, $_names );
+
+            return SqlDbUtilities::describeTableFields( $this->_dbConn, $table, $_names, $_extras );
         }
         catch ( RestException $ex )
         {
@@ -634,9 +686,8 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
         catch ( \Exception $ex )
         {
-            throw new InternalServerErrorException(
-                "Error creating database fields for table '$table'.\n" . $ex->getMessage(), $ex->getCode()
-            );
+            throw new InternalServerErrorException( "Error creating database fields for table '$table'.\n" .
+                                                    $ex->getMessage(), $ex->getCode() );
         }
     }
 
@@ -697,6 +748,8 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
 
         SqlDbUtilities::dropTable( $this->_dbConn, $table );
+
+        SqlDbUtilities::removeSchemaExtrasForTables( $this->getServiceId(), $table );
     }
 
     /**
@@ -723,26 +776,8 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
 
         SqlDbUtilities::dropField( $this->_dbConn, $table, $field );
-    }
 
-    /**
-     * @param string $fieldName
-     *
-     * @return SchemaSvc
-     */
-    public function setFieldName( $fieldName )
-    {
-        $this->_fieldName = $fieldName;
-
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getFieldName()
-    {
-        return $this->_fieldName;
+        SqlDbUtilities::removeSchemaExtrasForFields( $this->getServiceId(), $table, $field );
     }
 
     /**
@@ -763,105 +798,5 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
     public function getIsNative()
     {
         return $this->_isNative;
-    }
-
-    /**
-     * @param array $payload
-     *
-     * @return SchemaSvc
-     */
-    public function setPayload( $payload )
-    {
-        $this->_payload = $payload;
-
-        return $this;
-    }
-
-    /**
-     * @return array
-     */
-    public function getPayload()
-    {
-        return $this->_payload;
-    }
-
-    /**
-     * @param \CDbConnection $db_conn
-     *
-     * @return SchemaSvc
-     */
-    public function setDbConn( $db_conn )
-    {
-        $this->_dbConn = $db_conn;
-
-        return $this;
-    }
-
-    /**
-     * @return \CDbConnection
-     */
-    public function getDbConn()
-    {
-        return $this->_dbConn;
-    }
-
-    /**
-     * @param string $tableName
-     *
-     * @return SchemaSvc
-     */
-    public function setTableName( $tableName )
-    {
-        $this->_tableName = $tableName;
-
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getTableName()
-    {
-        return $this->_tableName;
-    }
-
-    /**
-     * @param mixed $tables
-     *
-     * @return SchemaSvc
-     */
-    public function setTables( $tables )
-    {
-        $this->_tables = $tables;
-
-        return $this;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getTables()
-    {
-        return $this->_tables;
-    }
-
-    /**
-     * @param array $fields
-     *
-     * @return SchemaSvc
-     */
-    public function setFields( $fields )
-    {
-        $this->_fields = $fields;
-
-        return $this;
-    }
-
-    /**
-     * @return array
-     */
-    public function getFields()
-    {
-        return $this->_fields;
     }
 }

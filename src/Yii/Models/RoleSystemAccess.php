@@ -238,6 +238,7 @@ class RoleSystemAccess extends BasePlatformSystemModel
                 }
             }
 
+            /** @var RoleSystemAccess[] $_oldMaps */
             $_oldMaps = static::model()->findAll( 'role_id = :id', array(':id' => $role_id) );
             $_toDelete = array();
             foreach ( $_oldMaps as $_map )

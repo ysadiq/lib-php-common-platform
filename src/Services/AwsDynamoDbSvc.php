@@ -214,7 +214,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function getTable( $table )
+    public function describeTable( $table )
     {
         static $_existing = null;
 
@@ -257,10 +257,13 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function createTable( $properties = array() )
+    public function createTable( $table, $properties = array(), $check_exist = false )
     {
-        $_name = Option::get( $properties, 'name', Option::get( $properties, static::TABLE_INDICATOR ) );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
+        {
+            $table = Option::get( $properties, static::TABLE_INDICATOR );
+        }
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }
@@ -268,32 +271,35 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         try
         {
             $_properties = array_merge(
-                array(static::TABLE_INDICATOR => $_name),
+                array(static::TABLE_INDICATOR => $table),
                 $this->_defaultCreateTable,
                 $properties
             );
             $_result = $this->_dbConn->createTable( $_properties );
 
             // Wait until the table is created and active
-            $this->_dbConn->waitUntilTableExists( array(static::TABLE_INDICATOR => $_name) );
+            $this->_dbConn->waitUntilTableExists( array(static::TABLE_INDICATOR => $table) );
 
-            $_out = array_merge( array('name' => $_name), $_result['TableDescription'] );
+            $_out = array_merge( array('name' => $table), $_result['TableDescription'] );
 
             return $_out;
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to create table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to create table '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function updateTable( $properties = array() )
+    public function updateTable( $table, $properties = array(), $allow_delete_fields = false )
     {
-        $_name = Option::get( $properties, 'name', Option::get( $properties, static::TABLE_INDICATOR ) );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
+        {
+            $table = Option::get( $properties, static::TABLE_INDICATOR );
+        }
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }
@@ -302,19 +308,19 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         {
             // Update the provisioned throughput capacity of the table
             $_properties = array_merge(
-                array(static::TABLE_INDICATOR => $_name),
+                array(static::TABLE_INDICATOR => $table),
                 $properties
             );
             $_result = $this->_dbConn->updateTable( $_properties );
 
             // Wait until the table is active again after updating
-            $this->_dbConn->waitUntilTableExists( array(static::TABLE_INDICATOR => $_name) );
+            $this->_dbConn->waitUntilTableExists( array(static::TABLE_INDICATOR => $table) );
 
-            return array_merge( array('name' => $_name), $_result['TableDescription'] );
+            return array_merge( array('name' => $table), $_result['TableDescription'] );
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to update table '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -591,7 +597,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
         $requested_fields = array();
-        $_result = $this->getTable( $table );
+        $_result = $this->deleteTable( $table );
         $_keys = Option::get( $_result, 'KeySchema', array() );
         $_definitions = Option::get( $_result, 'AttributeDefinitions', array() );
         $_fields = array();

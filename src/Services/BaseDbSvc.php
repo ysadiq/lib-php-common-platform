@@ -222,8 +222,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             }
 
             // look for limit, accept top as well as limit
-            if ( !isset( $this->_requestPayload['limit'] ) &&
-                 ( $_limit = Option::get( $this->_requestPayload, 'top' ) )
+            if ( !isset( $this->_requestPayload['limit'] ) && ( $_limit = Option::get( $this->_requestPayload, 'top' ) )
             )
             {
                 $this->_requestPayload['limit'] = $_limit;
@@ -350,10 +349,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     {
         if ( empty( $this->_resource ) )
         {
-            $_result = $this->_handleAdmin();
+            $_result = $this->retrieveResources( $this->_requestPayload );
+
             $this->_triggerActionEvent( $_result );
 
-            return $_result;
+            return array('resource' => $_result);
         }
 
         switch ( $this->_resource )
@@ -652,8 +652,13 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     {
         $_namesOnly = Option::getBool( $options, 'names_only' );
         $_includeSchemas = Option::getBool( $options, 'include_schemas' );
+        $_asComponents = Option::getBool( $options, 'as_access_components' );
         $_resources = array();
 
+        if ( $_asComponents )
+        {
+            $_resources = array('', '*');
+        }
         try
         {
             $_result = static::_listTables();
@@ -664,7 +669,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                     $_access = $this->getPermissions( $_name );
                     if ( !empty( $_access ) )
                     {
-                        if ( $_namesOnly )
+                        if ( $_asComponents || $_namesOnly )
                         {
                             $_resources[] = $_name;
                         }
@@ -677,15 +682,19 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 }
             }
 
-            if ( $_includeSchemas )
+            if ( $_includeSchemas || $_asComponents )
             {
                 $_name = static::SCHEMA_RESOURCE . '/';
                 $_access = $this->getPermissions( $_name );
                 if ( !empty( $_access ) )
                 {
-                    if ( $_namesOnly )
+                    if ( $_namesOnly || $_asComponents )
                     {
                         $_resources[] = $_name;
+                        if ( $_asComponents )
+                        {
+                            $_resources[] = $_name . '*';
+                        }
                     }
                     else
                     {
@@ -700,7 +709,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         $_access = $this->getPermissions( $_name );
                         if ( !empty( $_access ) )
                         {
-                            if ( $_namesOnly )
+                            if ( $_namesOnly || $_asComponents )
                             {
                                 $_resources[] = $_name;
                             }
@@ -844,7 +853,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             if ( $_ex instanceof RestException )
             {
                 throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(
-                                                              ), $_context );
+                ), $_context );
             }
 
             throw new InternalServerErrorException( "Failed to create records in '$table'.\n$_msg", null, null, $_context );
@@ -981,7 +990,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             if ( $_ex instanceof RestException )
             {
                 throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(
-                                                              ), $_context );
+                ), $_context );
             }
 
             throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
@@ -1161,7 +1170,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             if ( $_ex instanceof RestException )
             {
                 throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(
-                                                              ), $_context );
+                ), $_context );
             }
 
             throw new InternalServerErrorException( "Failed to update records in '$table'.\n$_msg", null, null, $_context );
@@ -1299,7 +1308,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             if ( $_ex instanceof RestException )
             {
                 throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(
-                                                              ), $_context );
+                ), $_context );
             }
 
             throw new InternalServerErrorException( "Failed to patch records in '$table'.\n$_msg", null, null, $_context );
@@ -1477,7 +1486,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             if ( $_ex instanceof RestException )
             {
                 throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(
-                                                              ), $_context );
+                ), $_context );
             }
 
             throw new InternalServerErrorException( "Failed to patch records in '$table'.\n$_msg", null, null, $_context );
@@ -1695,7 +1704,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             if ( $_ex instanceof RestException )
             {
                 throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(
-                                                              ), $_context );
+                ), $_context );
             }
 
             throw new InternalServerErrorException( "Failed to delete records from '$table'.\n$_msg", null, null, $_context );
@@ -1880,7 +1889,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 $_temp = $_ex->getContext();
                 $_context = ( empty( $_temp ) ) ? $_context : $_temp;
                 throw new RestException( $_ex->getStatusCode(), $_msg, $_ex->getCode(), $_ex->getPrevious(
-                                                              ), $_context );
+                ), $_context );
             }
 
             throw new InternalServerErrorException( "Failed to retrieve records from '$table'.\n$_msg", null, null, $_context );
@@ -2961,156 +2970,189 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     {
         $_result = false;
 
+        $_tableName = $this->_resourceId;
+        $_fieldName = Option::get( $this->_resourceArray, 2 );
+
         switch ( $this->_action )
         {
             case static::GET:
-                $_ids = Option::get( $this->_requestPayload, 'names' );
-                if ( empty( $_ids ) )
+                if ( empty( $_tableName ) )
                 {
-                    $_result = $this->retrieveResources( $this->_requestPayload );
+                    $_tables = Option::get( $this->_requestPayload, 'names' );
+                    if ( empty( $_tables ) )
+                    {
+                        $_tables = Option::get( $this->_requestPayload, 'table' );
+                    }
 
-                    return array('resource' => $_result);
+                    if ( !empty( $_tables ) )
+                    {
+                        return array('table' => $this->describeTables( $_tables ));
+                    }
+
+                    return array('resource' => $this->describeDatabase( $this->_requestPayload ));
                 }
 
-                $_result = $this->getTables( $_ids );
-                $_result = array('table' => $_result);
+                if ( empty( $_fieldName ) )
+                {
+                    return $this->describeTable( $_tableName );
+                }
+
+                return $this->describeField( $_tableName, $_fieldName );
                 break;
 
             case static::POST:
-                $_tables = Option::get( $this->_requestPayload, 'table' );
+                $_checkExist = Option::getBool( $this->_requestPayload, 'check_exist' );
+                if ( empty( $_tableName ) )
+                {
+                    $_tables = Option::get( $this->_requestPayload, 'table' );
+                    if ( empty( $_tables ) )
+                    {
+                        throw new BadRequestException( 'No data in schema create request.' );
+                    }
 
-                if ( empty( $_tables ) )
-                {
-                    $_result = $this->createTable( $this->_requestPayload );
+                    return array('table' => $this->createTables( $_tables, $_checkExist ));
                 }
-                else
+
+                if ( empty( $_fieldName ) )
                 {
-                    $_result = $this->createTables( $_tables );
-                    $_result = array('table' => $_result);
+                    return $this->createTable( $_tableName, $this->_requestPayload, $_checkExist );
                 }
+
+                if ( empty( $this->_requestPayload ) )
+                {
+                    throw new BadRequestException( 'No data in schema create request.' );
+                }
+
+                return $this->createField( $_tableName, $_fieldName, $this->_requestPayload, $_checkExist );
                 break;
 
             case static::PUT:
+                if ( empty( $_tableName ) )
+                {
+                    $_tables = Option::get( $this->_requestPayload, 'table' );
+                    if ( empty( $_tables ) )
+                    {
+                        throw new BadRequestException( 'No data in schema update request.' );
+                    }
+
+                    return array('table' => $this->updateTables( $_tables, true ));
+                }
+
+                if ( empty( $_fieldName ) )
+                {
+                    return $this->updateTable( $_tableName, $this->_requestPayload, true );
+                }
+
+                if ( empty( $this->_requestPayload ) )
+                {
+                    throw new BadRequestException( 'No data in schema update request.' );
+                }
+
+                return $this->updateField( $_tableName, $_fieldName, $this->_requestPayload, true );
+                break;
+
             case static::PATCH:
             case static::MERGE:
-                $_tables = Option::get( $this->_requestPayload, 'table' );
+                if ( empty( $_tableName ) )
+                {
+                    $_tables = Option::get( $this->_requestPayload, 'table' );
+                    if ( empty( $_tables ) )
+                    {
+                        throw new BadRequestException( 'No data in schema update request.' );
+                    }
 
-                if ( empty( $_tables ) )
-                {
-                    $_result = $this->updateTable( $this->_requestPayload );
+                    return array('table' => $this->updateTables( $_tables ));
                 }
-                else
+
+                if ( empty( $_fieldName ) )
                 {
-                    $_result = $this->updateTables( $_tables );
-                    $_result = array('table' => $_result);
+                    return $this->updateTable( $_tableName, $this->_requestPayload );
                 }
+
+                //	Create new field in existing table
+                if ( empty( $this->_requestPayload ) )
+                {
+                    throw new BadRequestException( 'No data in schema create request.' );
+                }
+
+                return $this->updateField( $_tableName, $_fieldName, $this->_requestPayload );
                 break;
 
             case static::DELETE:
-                $_ids = Option::get( $this->_requestPayload, 'names' );
-                if ( !empty( $_ids ) )
+                if ( empty( $_tableName ) )
                 {
-                    $_result = $this->deleteTables( $_ids );
-                    $_result = array('table' => $_result);
-                }
-                else
-                {
-                    $_tables = Option::get( $this->_requestPayload, 'table' );
+                    $_tables = Option::get( $this->_requestPayload, 'names' );
+                    if ( empty( $_tables ) )
+                    {
+                        $_tables = Option::get( $this->_requestPayload, 'table' );
+                    }
 
                     if ( empty( $_tables ) )
                     {
-                        $_result = $this->deleteTable( $this->_requestPayload );
+                        throw new BadRequestException( 'No data in schema create request.' );
                     }
-                    else
-                    {
-                        $_result = $this->deleteTables( $_tables );
-                        $_result = array('table' => $_result);
-                    }
+
+                    $_result = $this->deleteTables( $_tables );
+
+                    return array('table' => $_result);
                 }
+
+                if ( empty( $_fieldName ) )
+                {
+                    $this->deleteTable( $_tableName );
+
+                    return array('success' => true);
+                }
+
+                $this->deleteField( $_tableName, $_fieldName );
+
+                return array('success' => true);
                 break;
         }
 
         return $_result;
     }
 
-    /**
-     * @return array|bool
-     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
-     */
-    protected function _handleAdmin()
+    public function describeDatabase( $options = null )
     {
-        $_result = false;
+        $_namesOnly = Option::getBool( $options, 'names_only' );
+        $_resources = array();
 
-        switch ( $this->_action )
+        try
         {
-            case static::GET:
-                $_ids = Option::get( $this->_requestPayload, 'names' );
-                if ( empty( $_ids ) )
+            $_result = static::_listTables();
+            foreach ( $_result as $_table )
+            {
+                if ( null != $_name = Option::get( $_table, 'name' ) )
                 {
-                    $_result = $this->retrieveResources( $this->_requestPayload );
-
-                    return array('resource' => $_result);
-                }
-
-                $_result = $this->getTables( $_ids );
-                $_result = array('table' => $_result);
-                break;
-
-            case static::POST:
-                $_tables = Option::get( $this->_requestPayload, 'table' );
-
-                if ( empty( $_tables ) )
-                {
-                    $_result = $this->createTable( $this->_requestPayload );
-                }
-                else
-                {
-                    $_result = $this->createTables( $_tables );
-                    $_result = array('table' => $_result);
-                }
-                break;
-
-            case static::PUT:
-            case static::PATCH:
-            case static::MERGE:
-                $_tables = Option::get( $this->_requestPayload, 'table' );
-
-                if ( empty( $_tables ) )
-                {
-                    $_result = $this->updateTable( $this->_requestPayload );
-                }
-                else
-                {
-                    $_result = $this->updateTables( $_tables );
-                    $_result = array('table' => $_result);
-                }
-                break;
-
-            case static::DELETE:
-                $_ids = Option::get( $this->_requestPayload, 'names' );
-                if ( !empty( $_ids ) )
-                {
-                    $_result = $this->deleteTables( $_ids );
-                    $_result = array('table' => $_result);
-                }
-                else
-                {
-                    $_tables = Option::get( $this->_requestPayload, 'table' );
-
-                    if ( empty( $_tables ) )
+                    $_access = $this->getPermissions( static::SCHEMA_RESOURCE . '/' . $_name );
+                    if ( !empty( $_access ) )
                     {
-                        $_result = $this->deleteTable( $this->_requestPayload );
-                    }
-                    else
-                    {
-                        $_result = $this->deleteTables( $_tables );
-                        $_result = array('table' => $_result);
+                        if ( $_namesOnly )
+                        {
+                            $_resources[] = $_name;
+                        }
+                        else
+                        {
+                            $_table['name'] = $_name;
+                            $_table['access'] = $_access;
+                            $_resources[] = $_table;
+                        }
                     }
                 }
-                break;
+            }
+
+            return $_resources;
         }
-
-        return $_result;
+        catch ( RestException $_ex )
+        {
+            throw $_ex;
+        }
+        catch ( \Exception $_ex )
+        {
+            throw new InternalServerErrorException( "Failed to list schema resources for this service.\n{$_ex->getMessage(
+            )}" );
+        }
     }
 
     /**
@@ -3121,10 +3163,14 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @return array
      * @throws \Exception
      */
-    public function getTables( $tables = array() )
+    public function describeTables( $tables )
     {
-        $tables =
-            DbUtilities::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+        $tables = DbUtilities::validateAsArray(
+            $tables,
+            ',',
+            true,
+            'The request contains no valid table names or properties.'
+        );
 
         $_out = array();
         foreach ( $tables as $_table )
@@ -3132,7 +3178,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
             $this->validateTableAccess( $_name );
 
-            $_out[] = $this->getTable( $_table );
+            $_out[] = $this->describeTable( $_table );
         }
 
         return $_out;
@@ -3146,25 +3192,42 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @return array
      * @throws \Exception
      */
-    abstract public function getTable( $table );
+    abstract public function describeTable( $table );
 
     /**
-     * Create one or more tables by array of table properties
+     * Get any properties related to the table field
      *
-     * @param array $tables
+     * @param string $table Table name
+     * @param string $field Table field name
      *
      * @return array
      * @throws \Exception
      */
-    public function createTables( $tables = array() )
+    abstract public function describeField( $table, $field );
+
+    /**
+     * Create one or more tables by array of table properties
+     *
+     * @param string|array $tables
+     * @param bool         $check_exist
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public function createTables( $tables, $check_exist = false )
     {
-        $tables =
-            DbUtilities::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+        $tables = DbUtilities::validateAsArray(
+            $tables,
+            ',',
+            true,
+            'The request contains no valid table names or properties.'
+        );
 
         $_out = array();
         foreach ( $tables as $_table )
         {
-            $_out[] = $this->createTable( $_table );
+            $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
+            $_out[] = $this->createTable( $_name, $_table, $check_exist );
         }
 
         return $_out;
@@ -3173,31 +3236,45 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     /**
      * Create a single table by name and additional properties
      *
-     * @param array $properties
-     *
-     * @throws \Exception
+     * @param string $table
+     * @param array  $properties
+     * @param bool   $check_exist
      */
-    abstract public function createTable( $properties = array() );
+    abstract public function createTable( $table, $properties = array(), $check_exist = false );
+
+    /**
+     * Create a single table field by name and additional properties
+     *
+     * @param string $table
+     * @param string $field
+     * @param array  $properties
+     * @param bool   $check_exist
+     */
+    abstract public function createField( $table, $field, $properties = array(), $check_exist = false );
 
     /**
      * Update one or more tables by array of table properties
      *
      * @param array $tables
+     * @param bool  $allow_delete_fields
      *
      * @return array
-     * @throws \Exception
      */
-    public function updateTables( $tables = array() )
+    public function updateTables( $tables, $allow_delete_fields = false )
     {
-        $tables =
-            DbUtilities::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+        $tables = DbUtilities::validateAsArray(
+            $tables,
+            null,
+            true,
+            'The request contains no valid table properties.'
+        );
 
         $_out = array();
         foreach ( $tables as $_table )
         {
             $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
             $this->validateTableAccess( $_name );
-            $_out[] = $this->updateTable( $_table );
+            $_out[] = $this->updateTable( $_name, $_table, $allow_delete_fields );
         }
 
         return $_out;
@@ -3206,12 +3283,27 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     /**
      * Update properties related to the table
      *
-     * @param array $properties
+     * @param string $table
+     * @param array  $properties
+     * @param bool   $allow_delete_fields
      *
      * @return array
      * @throws \Exception
      */
-    abstract public function updateTable( $properties = array() );
+    abstract public function updateTable( $table, $properties, $allow_delete_fields = false );
+
+    /**
+     * Update properties related to the table
+     *
+     * @param string $table
+     * @param string $field
+     * @param array  $properties
+     * @param bool   $allow_delete_parts
+     *
+     * @return array
+     * @throws \Exception
+     */
+    abstract public function updateField( $table, $field, $properties, $allow_delete_parts = false );
 
     /**
      * Delete multiple tables and all of their contents
@@ -3222,10 +3314,14 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @return array
      * @throws \Exception
      */
-    public function deleteTables( $tables = array(), $check_empty = false )
+    public function deleteTables( $tables, $check_empty = false )
     {
-        $tables =
-            DbUtilities::validateAsArray( $tables, ',', true, 'The request contains no valid table names or properties.' );
+        $tables = DbUtilities::validateAsArray(
+            $tables,
+            ',',
+            true,
+            'The request contains no valid table names or properties.'
+        );
 
         $_out = array();
         foreach ( $tables as $_table )
@@ -3248,6 +3344,17 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
      * @return array
      */
     abstract public function deleteTable( $table, $check_empty = false );
+
+    /**
+     * Delete a table field
+     *
+     * @param string $table
+     * @param string $field
+     *
+     * @throws \Exception
+     * @return array
+     */
+    abstract public function deleteField( $table, $field );
 
     /**
      * Delete all table entries but keep the table

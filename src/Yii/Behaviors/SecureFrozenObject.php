@@ -52,11 +52,7 @@ class SecureFrozenObject extends SecureString
                     switch ( $from )
                     {
                         case true:
-                            if ( empty( $_value ) )
-                            {
-                                $_value = null;
-                            }
-                            else
+                            if ( !empty( $_value ) )
                             {
                                 $_workData = $_value;
 
@@ -74,7 +70,7 @@ class SecureFrozenObject extends SecureString
                                     //	Try decoding raw string
                                     $_decoded = Storage::defrost( $_value );
                                 }
-                                elseif ( is_string( $_decoded) && ( $_decoded === $_value ) )
+                                elseif ( is_string( $_decoded ) && ( $_decoded === $_value ) )
                                 {
                                     $_decoded = @gzuncompress( @base64_decode( $_value ) );
                                 }
@@ -85,18 +81,21 @@ class SecureFrozenObject extends SecureString
                             break;
 
                         case false:
-                            //	Make sure we can serialize...
-                            if ( is_string( $_value ) )
+                            if ( !empty( $_value ) )
                             {
-                                $_encoded = base64_encode( gzcompress( $_value ) );
-                            }
-                            else
-                            {
-                                $_encoded = Storage::freeze( $_value );
-                            }
+                                //	Make sure we can serialize...
+                                if ( is_string( $_value ) )
+                                {
+                                    $_encoded = base64_encode( gzcompress( $_value ) );
+                                }
+                                else
+                                {
+                                    $_encoded = Storage::freeze( $_value );
+                                }
 
-                            //	Encrypt it...
-                            $_value = ( $secure ) ? Hasher::encryptString( $_encoded, $this->_salt ) : $_encoded;
+                                //	Encrypt it...
+                                $_value = ( $secure ) ? Hasher::encryptString( $_encoded, $this->_salt ) : $_encoded;
+                            }
                             break;
                     }
 

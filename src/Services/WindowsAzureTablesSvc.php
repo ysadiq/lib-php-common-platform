@@ -223,7 +223,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function getTable( $table )
+    public function describeTable( $table )
     {
         static $_existing = null;
 
@@ -260,40 +260,38 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function createTable( $properties = array() )
+    public function createTable( $table, $properties = array(), $check_exist = false )
     {
-        $_name = Option::get( $properties, 'name' );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }
 
         try
         {
-            $this->_dbConn->createTable( $_name );
-            $_out = array('name' => $_name);
+            $this->_dbConn->createTable( $table );
+            $_out = array('name' => $table);
 
             return $_out;
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to create table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to create table '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function updateTable( $properties = array() )
+    public function updateTable( $table, $properties = array(), $allow_delete_fields = false )
     {
-        $_name = Option::get( $properties, 'name' );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }
 
 //        throw new InternalServerErrorException( "Failed to update table '$_name'." );
-        return array('name' => $_name);
+        return array('name' => $table);
     }
 
     /**
