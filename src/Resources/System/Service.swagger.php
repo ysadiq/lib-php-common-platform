@@ -107,6 +107,14 @@ $_service['apis'] = array(
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
+                    array(
+                        'name'          => 'include_components',
+                        'description'   => 'Include the components of the service, as used by role service accesses.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
                 ),
                 'responseMessages' => array(
                     array(

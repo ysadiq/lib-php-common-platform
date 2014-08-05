@@ -175,10 +175,5 @@ return array_merge(
          * The default number of records to return at once for database queries
          */
         'dsp.db_max_records_returned'   => 1000,
-        /**
-         * The default admin resource schema
-         */
-        'admin.resource_schema'         => require( __DIR__ . DEFAULT_ADMIN_RESOURCE_SCHEMA ),
-        'admin.default_theme'           => 'united',
     )
 );

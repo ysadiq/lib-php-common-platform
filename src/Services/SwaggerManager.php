@@ -181,45 +181,14 @@ SQL;
         //	Spin through services and pull the configs
         foreach ( $_result as $_service )
         {
-            $_content = null;
             $_apiName = Option::get( $_service, 'api_name' );
-            $_typeId = (int)Option::get( $_service, 'type_id', PlatformServiceTypes::SYSTEM_SERVICE );
-            $_storageTypeId = (int)Option::get( $_service, 'storage_type_id' );
-            $_fileName = PlatformServiceTypes::getFileName( $_typeId, $_storageTypeId, $_apiName );
-
-            $_filePath = $_scanPath . '/' . $_fileName . '.swagger.php';
-
-            //	Check php file path, then custom...
-            if ( file_exists( $_filePath ) )
-            {
-                $_fromFile = static::_getSwaggerFile( $_filePath );
-
-                if ( is_array( $_fromFile ) && !empty( $_fromFile ) )
-                {
-                    $_content = json_encode( array_merge( $_baseSwagger, $_fromFile ), JSON_UNESCAPED_SLASHES );
-                }
-            }
-            else //	Check custom path, uses api name
-            {
-                // check the database records for swagger, raml, etc.
-                $_id = Option::get( $_service, 'id' );
-                foreach ( $_customs as $_custom )
-                {
-                    if ( $_id == $_custom->service_id )
-                    {
-                        $_content = $_custom->content;
-                    }
-                }
-            }
+            $_content = static::getStoredContentForService( $_service, $_customs );
 
             if ( empty( $_content ) )
             {
                 Log::info( '  * No Swagger content found for service "' . $_apiName . '"' );
                 continue;
             }
-
-            // replace service type placeholder with api name for this service instance
-            $_content = str_replace( '/{api_name}', '/' . $_apiName, $_content );
 
             if ( !isset( static::$_eventMap[$_apiName] ) ||
                 !is_array( static::$_eventMap[$_apiName] ) ||
@@ -229,9 +198,13 @@ SQL;
                 static::$_eventMap[$_apiName] = array();
             }
 
-            $_chunk = json_decode( $_content, true );
-            $_serviceEvents = static::_parseSwaggerEvents( $_apiName, $_chunk );
-            $_content = json_encode( $_chunk, JSON_UNESCAPED_SLASHES );
+            $_serviceEvents = static::_parseSwaggerEvents( $_apiName, $_content );
+
+            $_content = array_merge( $_baseSwagger, $_content );
+            $_content = json_encode( $_content, JSON_UNESCAPED_SLASHES );
+
+            // replace service type placeholder with api name for this service instance
+            $_content = str_replace( '/{api_name}', '/' . $_apiName, $_content );
 
             // cache it for later access
             if ( false === Platform::storeSet( $_apiName . '.json', $_content ) )
@@ -279,6 +252,41 @@ SQL;
         Platform::trigger( SwaggerEvents::CACHE_REBUILT );
 
         return $_out;
+    }
+
+    public static function getStoredContentForService( $service, $customs = array() )
+    {
+        $_apiName = Option::get( $service, 'api_name' );
+        $_typeId = (int)Option::get( $service, 'type_id', PlatformServiceTypes::SYSTEM_SERVICE );
+        $_storageTypeId = (int)Option::get( $service, 'storage_type_id' );
+
+        $_fileName = PlatformServiceTypes::getFileName( $_typeId, $_storageTypeId, $_apiName );
+        $_filePath = __DIR__ . '/' . $_fileName . '.swagger.php';
+
+        //	Check php file path, then custom...
+        $_content = array();
+        if ( file_exists( $_filePath ) )
+        {
+            $_content = static::_getSwaggerFile( $_filePath );
+        }
+        else
+        {
+            // check the database records for custom doc in swagger, raml, etc.
+            $_id = Option::get( $service, 'id' );
+            foreach ( $customs as $_custom )
+            {
+                if ( $_id == $_custom->service_id )
+                {
+                    $_content = $_custom->content;
+                    if ( is_string( $_content ) )
+                    {
+                        $_content = json_decode( $_content, true );
+                    }
+                }
+            }
+        }
+
+        return $_content;
     }
 
     /**

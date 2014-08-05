@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Yii\Models;
 
+use DreamFactory\Platform\Enums\ApiDocFormatTypes;
 use DreamFactory\Platform\Exceptions\BadRequestException;
 use Kisma\Core\Utility\Option;
 
@@ -132,6 +133,20 @@ class ServiceDoc extends BasePlatformSystemModel
             ),
             $hidden
         );
+    }
+
+    /**
+     * {@InheritDoc}
+     */
+    public function afterFind()
+    {
+        parent::afterFind();
+
+        if ( empty( $this->content ) && ( ApiDocFormatTypes::SWAGGER === $this->format ) )
+        {
+            $this->content =
+                '{\"resourcePath\":\"\/{api_name}\",\"produces\":[\"application\/json\",\"application\/xml\"],\"consumes\":[\"application\/json\",\"application\/xml\"],\"apis\":[],\"models\":{}}';
+        }
     }
 
     /**

@@ -353,6 +353,12 @@ MYSQL;
 
         if ( null !== ( $_docs = Option::get( $values, 'docs' ) ) )
         {
+            // currently only for remote web services
+            if ( PlatformServiceTypes::REMOTE_WEB_SERVICE !== $this->type_id )
+            {
+                throw new BadRequestException( 'Service documentation currently can not be modified for this service type.' );
+            }
+
             ServiceDoc::assignServiceDocs( $id, $_docs );
         }
     }
@@ -571,7 +577,7 @@ MYSQL;
                     $_creds['transport_type'] = EmailTransportTypes::SERVER_DEFAULT;
                     if ( !empty( $this->storage_type ) )
                     {
-                        switch ( strtoupper($this->storage_type) )
+                        switch ( strtoupper( $this->storage_type ) )
                         {
                             case 'SMTP': // SMTP
                                 $_creds['transport_type'] = EmailTransportTypes::SMTP;

@@ -652,8 +652,13 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     {
         $_namesOnly = Option::getBool( $options, 'names_only' );
         $_includeSchemas = Option::getBool( $options, 'include_schemas' );
+        $_asComponents = Option::getBool( $options, 'as_access_components' );
         $_resources = array();
 
+        if ( $_asComponents )
+        {
+            $_resources = array('', '*');
+        }
         try
         {
             $_result = static::_listTables();
@@ -664,7 +669,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                     $_access = $this->getPermissions( $_name );
                     if ( !empty( $_access ) )
                     {
-                        if ( $_namesOnly )
+                        if ( $_asComponents || $_namesOnly )
                         {
                             $_resources[] = $_name;
                         }
@@ -677,15 +682,19 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 }
             }
 
-            if ( $_includeSchemas )
+            if ( $_includeSchemas || $_asComponents )
             {
                 $_name = static::SCHEMA_RESOURCE . '/';
                 $_access = $this->getPermissions( $_name );
                 if ( !empty( $_access ) )
                 {
-                    if ( $_namesOnly )
+                    if ( $_namesOnly || $_asComponents )
                     {
                         $_resources[] = $_name;
+                        if ( $_asComponents )
+                        {
+                            $_resources[] = $_name . '*';
+                        }
                     }
                     else
                     {
@@ -700,7 +709,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         $_access = $this->getPermissions( $_name );
                         if ( !empty( $_access ) )
                         {
-                            if ( $_namesOnly )
+                            if ( $_namesOnly || $_asComponents )
                             {
                                 $_resources[] = $_name;
                             }
@@ -2995,7 +3004,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 $_checkExist = Option::getBool( $this->_requestPayload, 'check_exist' );
                 if ( empty( $_tableName ) )
                 {
-                    $_tables = Option::get( $this->_requestPayload, 'table' );
+                    $_tables = Option::get( $this->_requestPayload, 'table', $this->_requestPayload );
                     if ( empty( $_tables ) )
                     {
                         throw new BadRequestException( 'No data in schema create request.' );
@@ -3020,7 +3029,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             case static::PUT:
                 if ( empty( $_tableName ) )
                 {
-                    $_tables = Option::get( $this->_requestPayload, 'table' );
+                    $_tables = Option::get( $this->_requestPayload, 'table', $this->_requestPayload );
                     if ( empty( $_tables ) )
                     {
                         throw new BadRequestException( 'No data in schema update request.' );
@@ -3046,7 +3055,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             case static::MERGE:
                 if ( empty( $_tableName ) )
                 {
-                    $_tables = Option::get( $this->_requestPayload, 'table' );
+                    $_tables = Option::get( $this->_requestPayload, 'table', $this->_requestPayload );
                     if ( empty( $_tables ) )
                     {
                         throw new BadRequestException( 'No data in schema update request.' );

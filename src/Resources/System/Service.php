@@ -19,9 +19,13 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
+use DreamFactory\Platform\Enums\ApiDocFormatTypes;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
+use DreamFactory\Platform\Scripting\ScriptEngine;
 use DreamFactory\Platform\Services\SwaggerManager;
+use Kisma\Core\Enums\HttpMethod;
+use Kisma\Core\Utility\Option;
 
 /**
  * Service
@@ -30,42 +34,101 @@ use DreamFactory\Platform\Services\SwaggerManager;
  */
 class Service extends BaseSystemRestResource
 {
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	/**
-	 * Creates a new Service
-	 *
-	 * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
-	 * @param array                                               $resources
-	 */
-	public function __construct( $consumer, $resources = array() )
-	{
-		$_config = array(
-			'service_name' => 'system',
-			'name'         => 'Service',
-			'api_name'     => 'service',
-			'type'         => 'System',
-			'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
-			'description'  => 'System service administration.',
-			'is_active'    => true,
-		);
+    /**
+     * Creates a new Service
+     *
+     * @param \DreamFactory\Platform\Services\BasePlatformService $consumer
+     * @param array                                               $resources
+     */
+    public function __construct( $consumer, $resources = array() )
+    {
+        $_config = array(
+            'service_name' => 'system',
+            'name'         => 'Service',
+            'api_name'     => 'service',
+            'type'         => 'System',
+            'type_id'      => PlatformServiceTypes::SYSTEM_SERVICE,
+            'description'  => 'System service administration.',
+            'is_active'    => true,
+        );
 
-		parent::__construct( $consumer, $_config, $resources );
-	}
+        parent::__construct( $consumer, $_config, $resources );
+    }
 
-	/**
-	 * @param mixed $results
-	 */
-	protected function _postProcess()
-	{
-		if ( static::GET != $this->_action )
-		{
-			// clear swagger cache upon any service changes.
-			SwaggerManager::clearCache();
-		}
+    /**
+     * @param mixed $results
+     */
+    protected function _postProcess()
+    {
+        if ( static::GET != $this->_action )
+        {
+            // clear swagger cache upon any service changes.
+            SwaggerManager::clearCache();
+        }
+        else
+        {
+            $_response = $this->_response;
+            $_includeComponents = Option::getBool( $this->_requestPayload, 'include_components' );
+            if (isset( $_response['record'] ) )
+            {
+                $_services = Option::clean(Option::get( $_response, 'record' ));
+                foreach ( $_services as &$_item )
+                {
+                    if ( $_includeComponents )
+                    {
+                        $_item['components'] = static::_getComponents($_item);
+                    }
+                    if ( isset($_item['docs'] ) && empty($_item['docs']))
+                    {
+                        $_item['docs'] = static::_getDocs($_item);
+                    }
+                }
+                $_response['record'] = $_services;
+            }
+            else
+            {
+                if ( $_includeComponents )
+                {
+                    $_response['components'] = static::_getComponents($_response);
+                }
+                if ( isset($_response['docs'] ) && empty($_response['docs']))
+                {
+                    $_response['docs'] = static::_getDocs($_response);
+                }
+            }
+            $this->_response = $_response;
+        }
 
-		parent::_postProcess();
-	}
+        parent::_postProcess();
+    }
+
+    protected static function _getComponents( array $item )
+    {
+        $_apiName = Option::get( $item, 'api_name' );
+        $_payload = array('as_access_components' => true);
+        $_result = ScriptEngine::inlineRequest( HttpMethod::GET, $_apiName, $_payload );
+        $_components = Option::clean( Option::get( $_result, 'resource' ) );
+
+        return ( !empty( $_components ) ) ? $_components : array('', '*');
+    }
+
+    protected static function _getDocs( array $item )
+    {
+        $_content = SwaggerManager::getStoredContentForService( $item );
+        if ( empty( $_content ) )
+        {
+            $_content =
+                '{"resourcePath":"/{api_name}","produces":["application/json","application/xml"],"consumes":["application/json","application/xml"],"apis":[],"models":{}}';
+        }
+        else
+        {
+            $_content = json_encode( $_content, JSON_UNESCAPED_SLASHES );
+        }
+
+        return array(array('format' => ApiDocFormatTypes::SWAGGER, 'content' => $_content));
+    }
 }

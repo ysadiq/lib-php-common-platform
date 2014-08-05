@@ -38,7 +38,7 @@ class InstallationTypes extends SeedEnum
      * @var string All packages have this doc root
      */
     const DEFAULT_PACKAGE_DOCUMENT_ROOT = '/opt/dreamfactory/platform/var/www/launchpad';
-
+    
     /**
      * Package Types
      */
