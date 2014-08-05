@@ -3099,7 +3099,7 @@ class SqlDbSvc extends BaseDbSvc
         }
 
         $_result = SqlDbUtilities::updateTables( $this->_dbConn, $tables );
-        $_labels = Option::get( $_result, 'labels', true );
+        $_labels = Option::get( $_result, 'labels', null, true );
 
         if ( !empty( $_labels ) )
         {
@@ -3121,7 +3121,7 @@ class SqlDbSvc extends BaseDbSvc
 
         $_tables = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
         $_result = SqlDbUtilities::updateTables( $this->_dbConn, $_tables );
-        $_labels = Option::get( $_result, 'labels', true );
+        $_labels = Option::get( $_result, 'labels', null, true );
 
         if ( !empty( $_labels ) )
         {
@@ -3144,7 +3144,7 @@ class SqlDbSvc extends BaseDbSvc
         $_fields = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
 
         $_result = SqlDbUtilities::updateFields( $this->_dbConn, $table, $_fields );
-        $_labels = Option::get( $_result, 'labels', array(), true );
+        $_labels = Option::get( $_result, 'labels', null, true );
 
         if ( !empty( $_labels ) )
         {
@@ -3172,7 +3172,7 @@ class SqlDbSvc extends BaseDbSvc
         }
 
         $_out = SqlDbUtilities::updateTables( $this->_dbConn, $tables, true, $allow_delete_fields );
-        $_labels = Option::get( $_out, 'labels', true );
+        $_labels = Option::get( $_out, 'labels', null, true );
 
         if ( !empty( $_labels ) )
         {
@@ -3195,7 +3195,7 @@ class SqlDbSvc extends BaseDbSvc
         $_tables = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
 
         $_result = SqlDbUtilities::updateTables( $this->_dbConn, $_tables, true, $allow_delete_fields );
-        $_labels = Option::get( $_result, 'labels', true );
+        $_labels = Option::get( $_result, 'labels', null, true );
 
         if ( !empty( $_labels ) )
         {
@@ -3223,7 +3223,7 @@ class SqlDbSvc extends BaseDbSvc
         $_fields = SqlDbUtilities::validateAsArray( $properties, null, true, 'Bad data format in request.' );
 
         $_result = SqlDbUtilities::updateFields( $this->_dbConn, $table, $_fields, true );
-        $_labels = Option::get( $_result, 'labels', array(), true );
+        $_labels = Option::get( $_result, 'labels', null, true );
 
         if ( !empty( $_labels ) )
         {

@@ -3004,7 +3004,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 $_checkExist = Option::getBool( $this->_requestPayload, 'check_exist' );
                 if ( empty( $_tableName ) )
                 {
-                    $_tables = Option::get( $this->_requestPayload, 'table' );
+                    $_tables = Option::get( $this->_requestPayload, 'table', $this->_requestPayload );
                     if ( empty( $_tables ) )
                     {
                         throw new BadRequestException( 'No data in schema create request.' );
@@ -3029,7 +3029,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             case static::PUT:
                 if ( empty( $_tableName ) )
                 {
-                    $_tables = Option::get( $this->_requestPayload, 'table' );
+                    $_tables = Option::get( $this->_requestPayload, 'table', $this->_requestPayload );
                     if ( empty( $_tables ) )
                     {
                         throw new BadRequestException( 'No data in schema update request.' );
@@ -3055,7 +3055,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             case static::MERGE:
                 if ( empty( $_tableName ) )
                 {
-                    $_tables = Option::get( $this->_requestPayload, 'table' );
+                    $_tables = Option::get( $this->_requestPayload, 'table', $this->_requestPayload );
                     if ( empty( $_tables ) )
                     {
                         throw new BadRequestException( 'No data in schema update request.' );
