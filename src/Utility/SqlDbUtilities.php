@@ -1600,8 +1600,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             $labels = Option::get( $results, 'labels', array() );
 
             // refresh the schema that we just added
-            $db->schema->refresh();
-            static::_getCachedTables( $db, true );
+            static::refreshCachedTables( $db );
 
             return array('names' => $names, 'labels' => $labels);
         }
@@ -1636,12 +1635,6 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         }
 
         $fields = Option::get( $data, 'field', array() );
-
-        if ( empty( $fields ) )
-        {
-            $fields = ( isset( $data['fields']['field'] ) ) ? $data['fields']['field'] : array();
-        }
-
         if ( empty( $fields ) )
         {
             throw new BadRequestException( "No valid fields exist in the received table schema." );
@@ -1720,10 +1713,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
         // update column types
         $fields = Option::get( $data, 'field', array() );
-        if ( empty( $fields ) )
-        {
-            $fields = ( isset( $data['fields']['field'] ) ) ? $data['fields']['field'] : array();
-        }
+
         try
         {
             $command = $db->createCommand();
@@ -1800,8 +1790,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         $tables = static::validateAsArray( $tables, null, true, 'There are no table sets in the request.' );
 
         //  Refresh the schema so we have the latest
-        $db->schema->refresh();
-        static::_getCachedTables( $db, true );
+        static::refreshCachedTables( $db );
 
         $_created = $_references = $_indexes = $_labels = $_out = array();
         $_count = 0;
@@ -1865,8 +1854,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         }
 
         //  Refresh the schema that we just added
-        $db->schema->refresh();
-        static::_getCachedTables( $db, true );
+        static::refreshCachedTables( $db );
 
         $_results = array('references' => $_references, 'indexes' => $_indexes);
         static::createFieldExtras( $db, $_results );
@@ -1901,9 +1889,8 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         {
             $db->createCommand()->dropTable( $table_name );
 
-            //  Refresh the schema that we just added
-            $db->schema->refresh();
-            static::_getCachedTables( $db, true );
+            // refresh the schema that we just added
+            static::refreshCachedTables( $db );
         }
         catch ( \Exception $_ex )
         {
@@ -1935,9 +1922,8 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         {
             $db->createCommand()->dropColumn( $table_name, $field_name );
 
-            // refresh the schema that we just added
-            $db->schema->refresh();
-            static::_getCachedTables( $db, true );
+            //  Refresh the schema
+            static::refreshCachedTables( $db );
         }
         catch ( \Exception $ex )
         {
@@ -2090,5 +2076,34 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         }
 
         return static::$_tableNameCache[$_hash];
+    }
+
+    /**
+     * Refreshes all schema associated with this db connection:
+     *
+     * @param \CDbConnection $db
+     *
+     * @return array
+     */
+    public static function refreshCachedTables( $db )
+    {
+        // let Yii clear out as much as it can (doesn't currently get each table schema for some reason)
+        $db->schema->refresh();
+
+        $_tables = array();
+        foreach ( $db->getSchema()->getTableNames() as $_table )
+        {
+            $_tables[$_table] = $_table;
+            // lookup by lowercase
+            $_tables[strtolower( $_table )] = $_table;
+
+            // get each tables schema, to be ready for next call
+            $db->getSchema()->getTable($_table);
+        }
+
+        // make a quick lookup for table names for this db
+        $_hash = spl_object_hash( $db );
+        static::$_tableNameCache[$_hash] = $_tables;
+        unset( $_tables );
     }
 }

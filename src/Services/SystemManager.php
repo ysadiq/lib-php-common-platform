@@ -255,7 +255,7 @@ class SystemManager extends BaseSystemRestService
 
             //	Refresh the schema that we just added
             \Yii::app()->getCache()->flush();
-            $_db->getSchema()->refresh();
+            SqlDbUtilities::refreshCachedTables($_db);
         }
         catch ( \Exception $ex )
         {
@@ -374,7 +374,7 @@ SQL;
 
             //	Refresh the schema that we just added
             \Yii::app()->getCache()->flush();
-            $_db->getSchema()->refresh();
+            SqlDbUtilities::refreshCachedTables($_db);
         }
         catch ( \Exception $ex )
         {

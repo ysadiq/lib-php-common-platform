@@ -985,7 +985,7 @@ class SqlDbSvc extends BaseDbSvc
             return $this->_fieldCache[$name];
         }
 
-        $_extras = SqlDbUtilities::getSchemaExtrasForTables( 0, $name );
+        $_extras = SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $name );
         $_fields = SqlDbUtilities::describeTableFields( $this->_dbConn, $name, null, $_extras );
         $this->_fieldCache[$name] = $_fields;
 
