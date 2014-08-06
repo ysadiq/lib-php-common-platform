@@ -9,14 +9,6 @@
 			"description": "Local database access"
 		},
 		{
-			"api_name":    "schema",
-			"name":        "Schema",
-			"is_active":   1,
-			"type":        "Local SQL DB Schema",
-			"type_id":     8,
-			"description": "Local database schema access"
-		},
-		{
 			"api_name":    "files",
 			"name":        "Local File Storage",
 			"is_active":   1,
@@ -87,16 +79,16 @@
 	],
 	"df_sys_app":            [
 		{
-			"url": "https://raw.github.com/dreamfactorysoftware/app-todo-jquery/master/todojquery.dfpkg"
+			"import_url": "https://raw.github.com/dreamfactorysoftware/app-todo-jquery/master/todojquery.dfpkg"
 		},
 		{
-			"url": "https://raw.github.com/dreamfactorysoftware/app-todo-angular/master/todoangular.dfpkg"
+			"import_url": "https://raw.github.com/dreamfactorysoftware/app-todo-angular/master/todoangular.dfpkg"
 		},
 		{
-			"url": "https://raw.github.com/dreamfactorysoftware/app-todo-sencha/master/todosencha.dfpkg"
+			"import_url": "https://raw.github.com/dreamfactorysoftware/app-todo-sencha/master/todosencha.dfpkg"
 		},
 		{
-			"url": "https://raw.github.com/dreamfactorysoftware/app-calendar/master/calendar.dfpkg"
+			"import_url": "https://raw.github.com/dreamfactorysoftware/app-calendar/master/calendar.dfpkg"
 		}
 	]
 }

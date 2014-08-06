@@ -30,7 +30,6 @@ use DreamFactory\Platform\Utility\Packager;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Platform\Utility\ServiceHandler;
 use Kisma\Core\Utility\Curl;
-use Kisma\Core\Utility\FilterInput;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -79,7 +78,13 @@ class App extends BaseSystemRestResource
                 $_includeSchema = Option::getBool( $_REQUEST, 'include_schema' );
                 $_includeData = Option::getBool( $_REQUEST, 'include_data' );
 
-                return Packager::exportAppAsPackage( $this->_resourceId, $_includeFiles, $_includeServices, $_includeSchema, $_includeData );
+                return Packager::exportAppAsPackage(
+                    $this->_resourceId,
+                    $_includeFiles,
+                    $_includeServices,
+                    $_includeSchema,
+                    $_includeData
+                );
             }
 
             // Export the sdk amended for this app
@@ -100,41 +105,7 @@ class App extends BaseSystemRestResource
     protected function _handlePost()
     {
         //	You can import an application package file, local or remote, but nothing else
-        $_importUrl = FilterInput::request( 'url' );
-
-        if ( !empty( $_importUrl ) )
-        {
-            $_extension = strtolower( pathinfo( $_importUrl, PATHINFO_EXTENSION ) );
-            if ( 'dfpkg' == $_extension )
-            {
-                $_filename = null;
-                try
-                {
-                    // need to download and extract zip file and move contents to storage
-                    $_filename = FileUtilities::importUrlFileToTemp( $_importUrl );
-                    $_results = Packager::importAppFromPackage( $_filename, $_importUrl );
-                }
-                catch ( \Exception $ex )
-                {
-                    if ( !empty( $_filename ) )
-                    {
-                        unlink( $_filename );
-                    }
-
-                    throw new InternalServerErrorException( "Failed to import application package $_importUrl.\n{$ex->getMessage()}" );
-                }
-
-                if ( !empty( $_filename ) )
-                {
-                    unlink( $_filename );
-                }
-            }
-            else
-            {
-                throw new BadRequestException( "Only application package files ending with 'dfpkg' are allowed for import." );
-            }
-        }
-        elseif ( null !== ( $_files = Option::get( $_FILES, 'files' ) ) )
+        if ( null !== ( $_files = Option::get( $_FILES, 'files' ) ) )
         {
             //	Older html multi-part/form-data post, single or multiple files
             if ( is_array( $_files['error'] ) )
@@ -144,26 +115,68 @@ class App extends BaseSystemRestResource
 
             if ( UPLOAD_ERR_OK !== ( $_error = $_files['error'] ) )
             {
-                throw new InternalServerErrorException( 'Failed to receive upload of "' . $_files['name'] . '": ' . $_error );
+                throw new InternalServerErrorException( "Failed to receive upload of '" .
+                                                        $_files['name'] .
+                                                        "': " .
+                                                        $_error );
+            }
+
+            $_extension = strtolower( pathinfo( $_files['name'], PATHINFO_EXTENSION ) );
+            if ( 'dfpkg' != $_extension )
+            {
+                throw new BadRequestException( "Only package files ending with 'dfpkg' are allowed for import." );
             }
 
             $_filename = $_files['tmp_name'];
-            $_extension = strtolower( pathinfo( $_files['name'], PATHINFO_EXTENSION ) );
-            if ( 'dfpkg' == $_extension )
+            try
             {
-                try
-                {
-                    $_results = Packager::importAppFromPackage( $_filename );
-                }
-                catch ( \Exception $ex )
-                {
-                    throw new InternalServerErrorException( "Failed to import application package " . $_files['name'] . "\n{$ex->getMessage()}" );
-                }
+                $_results = Packager::importAppFromPackage( $_filename );
             }
-            else
+            catch ( \Exception $ex )
             {
-                throw new BadRequestException( "Only application package files ending with 'dfpkg' are allowed for import." );
+                throw new InternalServerErrorException( "Failed to import application package.\n{$ex->getMessage()}" );
             }
+
+            //  Fire specialized event
+            $this->_triggerActionEvent( $_results, 'app.import' );
+        }
+        elseif ( null !=
+                   $_importUrl =
+                       Option::get(
+                           $this->_requestPayload,
+                           'import_url',
+                           Option::get( $this->_requestPayload, 'url' )
+                       )
+        )
+        {
+            $_extension = strtolower( pathinfo( $_importUrl, PATHINFO_EXTENSION ) );
+            if ( 'dfpkg' != $_extension )
+            {
+                throw new BadRequestException( "Only package files ending with 'dfpkg' are allowed for import." );
+            }
+
+            try
+            {
+                // need to download and extract zip file and move contents to storage
+                $_filename = FileUtilities::importUrlFileToTemp( $_importUrl );
+            }
+            catch ( \Exception $ex )
+            {
+                throw new InternalServerErrorException( "Failed to import package $_importUrl.\n{$ex->getMessage()}" );
+            }
+
+            try
+            {
+                $_results = Packager::importAppFromPackage( $_filename, $this->_requestPayload );
+            }
+            catch ( \Exception $ex )
+            {
+                @unlink( $_filename );
+
+                throw new InternalServerErrorException( "Failed to import app from package.\n{$ex->getMessage()}" );
+            }
+
+            @unlink( $_filename );
 
             //  Fire specialized event
             $this->_triggerActionEvent( $_results, 'app.import' );
@@ -263,7 +276,7 @@ class App extends BaseSystemRestResource
         }
         if ( !$_service->containerExists( $_container ) )
         {
-            $_service->createContainer( array( 'name' => $_container ) );
+            $_service->createContainer( array('name' => $_container) );
         }
         else
         {
@@ -290,7 +303,7 @@ class App extends BaseSystemRestResource
         {
             $_files = array_diff(
                 scandir( $_templateBaseDir ),
-                array( '.', '..', '.gitignore', 'composer.json', 'README.md' )
+                array('.', '..', '.gitignore', 'composer.json', 'README.md')
             );
             if ( !empty( $_files ) )
             {
@@ -301,7 +314,7 @@ class App extends BaseSystemRestResource
                     {
                         $_storePath = ( empty( $_rootFolder ) ? : $_rootFolder . '/' ) . $_file;
                         $_service->createFolder( $_container, $_storePath );
-                        $_subFiles = array_diff( scandir( $_templatePath ), array( '.', '..' ) );
+                        $_subFiles = array_diff( scandir( $_templatePath ), array('.', '..') );
                         if ( !empty( $_subFiles ) )
                         {
                             foreach ( $_subFiles as $_subFile )
@@ -317,10 +330,16 @@ class App extends BaseSystemRestResource
                                     if ( 'sdk-init.js' == $_subFile )
                                     {
                                         $_dspHost = Curl::currentUrl( false, false );
-                                        $_content = str_replace( 'https://_your_dsp_hostname_here_', $_dspHost, $_content );
+                                        $_content =
+                                            str_replace( 'https://_your_dsp_hostname_here_', $_dspHost, $_content );
                                         $_content = str_replace( '_your_app_api_name_here_', $_apiName, $_content );
                                     }
-                                    $_service->writeFile( $_container, $_storePath . '/' . $_subFile, $_content, false );
+                                    $_service->writeFile(
+                                        $_container,
+                                        $_storePath . '/' . $_subFile,
+                                        $_content,
+                                        false
+                                    );
                                 }
                             }
                         }
@@ -396,7 +415,7 @@ class App extends BaseSystemRestResource
             throw new NotFoundException( "No database entry exists for this application with id '$app_id'." );
         }
 
-        $_record = $_app->getAttributes( array( 'api_name', 'name' ) );
+        $_record = $_app->getAttributes( array('api_name', 'name') );
         $_apiName = Option::get( $_record, 'api_name' );
 
         try
@@ -417,7 +436,7 @@ class App extends BaseSystemRestResource
 
             $_files = array_diff(
                 scandir( $_templateBaseDir ),
-                array( '.', '..', '.gitignore', 'composer.json', 'README.md' )
+                array('.', '..', '.gitignore', 'composer.json', 'README.md')
             );
             if ( !empty( $_files ) )
             {
@@ -426,7 +445,7 @@ class App extends BaseSystemRestResource
                     $_templatePath = $_templateBaseDir . '/' . $_file;
                     if ( is_dir( $_templatePath ) )
                     {
-                        $_subFiles = array_diff( scandir( $_templatePath ), array( '.', '..' ) );
+                        $_subFiles = array_diff( scandir( $_templatePath ), array('.', '..') );
                         if ( !empty( $_subFiles ) )
                         {
                             foreach ( $_subFiles as $_subFile )
@@ -442,7 +461,8 @@ class App extends BaseSystemRestResource
                                     {
                                         $_content = file_get_contents( $_templateSubPath );
                                         $_dspHost = Curl::currentUrl( false, false );
-                                        $_content = str_replace( 'https://_your_dsp_hostname_here_', $_dspHost, $_content );
+                                        $_content =
+                                            str_replace( 'https://_your_dsp_hostname_here_', $_dspHost, $_content );
                                         $_content = str_replace( '_your_app_api_name_here_', $_apiName, $_content );
                                         $_zip->addFromString( $_file . '/' . $_subFile, $_content );
                                     }
