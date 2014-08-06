@@ -27,6 +27,8 @@ use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
 use DreamFactory\Yii\Utility\Pii;
+use Kisma\Core\Utility\Option;
+use Kisma\Core\Utility\Scalar;
 
 /**
  * Config
@@ -117,24 +119,23 @@ class Environment extends BaseSystemRestResource
             }
         }
 
-        phpinfo();
-
         $_response = array(
-            'release'    => $_release,
-            'server'     => array(
-                'server_os' => strtolower( php_uname( 's' ) ),
-                'uname'     => php_uname( 'a' ),
-            ),
-            'web_server' => array(),
-            'php'        => $_phpInfo,
-            'platform'   => array(
+            'php_info' => $_phpInfo,
+            'platform' => array(
                 'is_hosted'           => $_fabricHosted = Pii::getParam( 'dsp.fabric_hosted', false ),
                 'is_private'          => Fabric::hostedPrivatePlatform(),
                 'dsp_version_current' => $_currentVersion = SystemManager::getCurrentVersion(),
                 'dsp_version_latest'  => $_latestVersion = ( $_fabricHosted ? $_currentVersion : SystemManager::getLatestVersion() ),
                 'upgrade_available'   => version_compare( $_currentVersion, $_latestVersion, '<' ),
             ),
+            'release'  => $_release,
+            'server'   => array(
+                'server_os' => strtolower( php_uname( 's' ) ),
+                'uname'     => php_uname( 'a' ),
+            ),
         );
+
+        array_multisort( $_response );
 
         //	Cache configuration
         Platform::storeSet( static::CACHE_KEY, $_response, static::CONFIG_CACHE_TTL );
@@ -152,14 +153,15 @@ class Environment extends BaseSystemRestResource
      */
     protected function _getPhpInfo()
     {
+        $_html = null;
         $_info = array();
         $_pattern =
             '#(?:<h2>(?:<a name=".*?">)?(.*?)(?:</a>)?</h2>)|(?:<tr(?: class=".*?")?><t[hd](?: class=".*?")?>(.*?)\s*</t[hd]>(?:<t[hd](?: class=".*?")?>(.*?)\s*</t[hd]>(?:<t[hd](?: class=".*?")?>(.*?)\s*</t[hd]>)?)?</tr>)#s';
 
         \ob_start();
-        @phpinfo();
-        $_html = ob_end_clean();
-        ob_clean();
+        @\phpinfo();
+        $_html = \ob_get_contents();
+        \ob_end_clean();
 
         if ( preg_match_all( $_pattern, $_html, $_matches, PREG_SET_ORDER ) )
         {
@@ -174,7 +176,7 @@ class Environment extends BaseSystemRestResource
                 }
                 elseif ( isset( $_match[3] ) )
                 {
-                    $_info[$_lastKey][$_match[2]] = isset( $_match[4] ) ? array($_match[3], $_match[4]) : $_match[3];
+                    $_info[$_lastKey][$_match[2]] = isset( $_match[4] ) ? array( $_match[3], $_match[4] ) : $_match[3];
                 }
                 else
                 {
@@ -185,6 +187,87 @@ class Environment extends BaseSystemRestResource
             }
         }
 
-        return $_info;
+        return $this->_cleanPhpInfo( $_info );
+    }
+
+    /**
+     * @param array $info
+     *
+     * @return array
+     */
+    protected function _cleanPhpInfo( $info, $recursive = false )
+    {
+        static $_excludeKeys = array( 'directive', 'variable', );
+
+        $_clean = array();
+
+        //  Remove images and move nested args to root
+        if ( !$recursive && isset( $info[0], $info[0][0] ) && is_array( $info[0] ) )
+        {
+            $info['general'] = array();
+
+            foreach ( $info[0] as $_key => $_value )
+            {
+                if ( is_numeric( $_key ) || in_array( strtolower( $_key ), $_excludeKeys ) )
+                {
+                    continue;
+                }
+
+                $info['general'][$_key] = $_value;
+                unset( $info[0][$_key] );
+            }
+
+            unset( $info[0] );
+        }
+
+        foreach ( $info as $_key => $_value )
+        {
+            if ( in_array( strtolower( $_key ), $_excludeKeys ) )
+            {
+                continue;
+            }
+
+            $_key = strtolower( str_replace( ' ', '_', $_key ) );
+
+            if ( is_array( $_value ) && 2 == count( $_value ) && isset( $_value[0], $_value[1] ) )
+            {
+                $_v1 = Option::get( $_value, 0 );
+                $_v2 = Option::get( $_value, 1 );
+
+                if ( $_v1 == '<i>no value</i>' )
+                {
+                    $_v1 = null;
+                }
+
+                if ( $_v2 == '<i>no value</i>' )
+                {
+                    $_v2 = null;
+                }
+
+                if ( Scalar::in( strtolower( $_v1 ), 'on', 'off', '0', '1' ) )
+                {
+                    $_v1 = Option::getBool( $_value, 0 );
+                }
+
+                if ( Scalar::in( strtolower( $_v2 ), 'on', 'off', '0', '1' ) )
+                {
+                    $_v2 = Option::getBool( $_value, 1 );
+                }
+
+                $_value = array(
+                    'current' => $_v1,
+                    'default' => $_v2,
+                );
+            }
+
+            if ( is_array( $_value ) )
+            {
+                $_value = $this->_cleanPhpInfo( $_value, true );
+            }
+
+            $_clean[$_key] = $_value;
+        }
+
+        return $_clean;
     }
 }

@@ -45,9 +45,68 @@ return array(
     //-------------------------------------------------------------------------
 
     'models' => array(
+        'ServerSection'       => array(
+            'id'         => 'ServerSection',
+            'properties' => array(
+                'server_os' => array(
+                    'type' => 'string',
+                ),
+                'uname'     => array(
+                    'type' => 'string',
+                ),
+            ),
+        ),
+        'ReleaseSection'      => array(
+            'id'         => 'ReleaseSection',
+            'properties' => array(
+                'id'          => array(
+                    'type' => 'string',
+                ),
+                'release'     => array(
+                    'type' => 'string',
+                ),
+                'codename'    => array(
+                    'type' => 'string',
+                ),
+                'description' => array(
+                    'type' => 'string',
+                ),
+            ),
+        ),
+        'PlatformSection'     => array(
+            'id'         => 'PlatformSection',
+            'properties' => array(
+                'is_hosted'           => array(
+                    'type' => 'boolean',
+                ),
+                'is_private'          => array(
+                    'type' => 'boolean',
+                ),
+                'dsp_version_current' => array(
+                    'type' => 'string',
+                ),
+                'dsp_version_latest'  => array(
+                    'type' => 'string',
+                ),
+                'upgrade_available'   => array(
+                    'type' => 'boolean',
+                ),
+            ),
+        ),
         'EnvironmentResponse' => array(
             'id'         => 'EnvironmentResponse',
-            'properties' => array(),
+            'properties' => array(
+                'server'   => array(
+                    'type' => 'ServerSection',
+                ),
+                'release'  => array(
+                    'type' => 'ReleaseSection',
+                ),
+                'platform' => array(
+                    'type' => 'PlatformSection',
+                ),
+                'php_info' => array(),
+            ),
         ),
     )
 );
