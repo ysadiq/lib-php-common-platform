@@ -528,6 +528,20 @@ MYSQL;
                 }
             }
         }
+        elseif ( ( 'mongohq' == $this->storage_type ) )
+        {
+            if ( $this->update(
+                array('storage_type_id' => PlatformStorageTypes::MONGODB, 'storage_type' => 'mongodb')
+            )
+            )
+            {
+                Log::debug( '  * Convert MongoHQ to MongoDB service on "' . $this->api_name . '"' );
+            }
+            else
+            {
+                Log::notice( '  * Unable to convert MongoHQ to MongoDB in row ID#' . $this->id );
+            }
+        }
 
         //	Add fake field for client
         switch ( $this->type_id )

@@ -62,10 +62,6 @@ class PlatformStorageTypes extends SeedEnum
     /**
      * @var int
      */
-    const MONGOHQ = 9;
-    /**
-     * @var int
-     */
     const OPENSTACK_OBJECT_STORAGE = 7;
     /**
      * @var int
@@ -86,7 +82,6 @@ class PlatformStorageTypes extends SeedEnum
         self::AZURE_TABLES             => 'WindowsAzureTablesSvc',
         self::COUCHDB                  => 'CouchDbSvc',
         self::MONGODB                  => 'MongoDbSvc',
-        self::MONGOHQ                  => 'MongoDbSvc',
         self::OPENSTACK_OBJECT_STORAGE => 'OpenStackObjectStoreSvc',
         self::RACKSPACE_CLOUDFILES     => 'OpenStackObjectStoreSvc',
     );
