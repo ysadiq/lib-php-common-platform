@@ -180,7 +180,8 @@ class OpenStackObjectStoreSvc extends RemoteFileSvc
             /** @var Container $_container */
             while ( ( $_container = $_containers->Next() ) )
             {
-                $out[] = array('name' => rtrim( $_container->name ));
+                $_name = rtrim( $_container->name );
+                $out[] = array('name' => $_name, 'path' => $_name);
             }
 
             return $out;
