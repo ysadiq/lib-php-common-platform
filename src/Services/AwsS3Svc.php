@@ -109,7 +109,8 @@ class AwsS3Svc extends RemoteFileSvc
         $_out = array();
         foreach ( $_buckets as $_bucket )
         {
-            $_out[] = array('name' => rtrim( $_bucket['Name'] ));
+            $_name = rtrim( $_bucket['Name'] );
+            $_out[] = array('name' => $_name, 'path' => $_name);
         }
 
         return $_out;
