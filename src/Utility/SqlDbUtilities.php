@@ -397,18 +397,19 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      * @param string         $name
      * @param string         $remove_prefix
      * @param null | array   $extras
+     * @param bool           $refresh
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @throws \DreamFactory\Platform\Exceptions\RestException
      * @throws \Exception
      * @return array
      */
-    public static function describeTable( $db, $name, $remove_prefix = '', $extras = null )
+    public static function describeTable( $db, $name, $remove_prefix = '', $extras = null, $refresh = false )
     {
         $name = static::correctTableName( $db, $name );
         try
         {
-            $table = $db->schema->getTable( $name );
+            $table = $db->schema->getTable( $name, $refresh );
             if ( !$table )
             {
                 throw new NotFoundException( "Table '$name' does not exist in the database." );
@@ -479,15 +480,16 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
      * @param string                $table_name
      * @param null | string | array $field_names
      * @param null | array          $extras
+     * @param bool                  $refresh
      *
      * @throws \DreamFactory\Platform\Exceptions\NotFoundException
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @return array
      */
-    public static function describeTableFields( $db, $table_name, $field_names = null, $extras = null )
+    public static function describeTableFields( $db, $table_name, $field_names = null, $extras = null, $refresh = false )
     {
         $table_name = static::correctTableName( $db, $table_name );
-        $_table = $db->schema->getTable( $table_name );
+        $_table = $db->schema->getTable( $table_name, $refresh );
         if ( !$_table )
         {
             throw new NotFoundException( "Table '$table_name' does not exist in the database." );
@@ -1599,9 +1601,6 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
 
             $labels = Option::get( $results, 'labels', array() );
 
-            // refresh the schema that we just added
-            static::refreshCachedTables( $db );
-
             return array('names' => $names, 'labels' => $labels);
         }
         catch ( \Exception $ex )
@@ -1789,9 +1788,6 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
     {
         $tables = static::validateAsArray( $tables, null, true, 'There are no table sets in the request.' );
 
-        //  Refresh the schema so we have the latest
-        static::refreshCachedTables( $db );
-
         $_created = $_references = $_indexes = $_labels = $_out = array();
         $_count = 0;
         $_singleTable = ( 1 == count( $tables ) );
@@ -1853,9 +1849,6 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             $_count++;
         }
 
-        //  Refresh the schema that we just added
-        static::refreshCachedTables( $db );
-
         $_results = array('references' => $_references, 'indexes' => $_indexes);
         static::createFieldExtras( $db, $_results );
 
@@ -1888,9 +1881,6 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         try
         {
             $db->createCommand()->dropTable( $table_name );
-
-            // refresh the schema that we just added
-            static::refreshCachedTables( $db );
         }
         catch ( \Exception $_ex )
         {
@@ -1921,9 +1911,6 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
         try
         {
             $db->createCommand()->dropColumn( $table_name, $field_name );
-
-            //  Refresh the schema
-            static::refreshCachedTables( $db );
         }
         catch ( \Exception $ex )
         {
@@ -2098,7 +2085,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             $_tables[strtolower( $_table )] = $_table;
 
             // get each tables schema, to be ready for next call
-            $db->getSchema()->getTable($_table);
+            $db->getSchema()->getTable( $_table, true );
         }
 
         // make a quick lookup for table names for this db

@@ -437,7 +437,6 @@ MYSQL;
         switch ( $this->getServiceTypeId() )
         {
             case PlatformServiceTypes::LOCAL_SQL_DB:
-            case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
                 throw new BadRequestException( 'System generated database services can not be deleted.' );
                 break;
 
@@ -547,7 +546,6 @@ MYSQL;
         switch ( $this->type_id )
         {
             case PlatformServiceTypes::LOCAL_SQL_DB:
-            case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
             case PlatformServiceTypes::LOCAL_FILE_STORAGE:
                 $this->is_system = true;
                 break;
@@ -563,10 +561,6 @@ MYSQL;
         // backwards compatibility helper
         switch ( $this->type_id )
         {
-            case PlatformServiceTypes::LOCAL_SQL_DB:
-            case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
-                break;
-
             case PlatformServiceTypes::LOCAL_FILE_STORAGE:
             case PlatformServiceTypes::REMOTE_FILE_STORAGE:
                 $_creds = $this->credentials;

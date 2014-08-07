@@ -2439,7 +2439,7 @@ class SqlDbSvc extends BaseDbSvc
         }
         else
         {
-            $_where = $_where[0];
+            $_where = Option::get( $_where, 0, null );
         }
 
         /** @var \CDbCommand $_command */
@@ -2979,10 +2979,15 @@ class SqlDbSvc extends BaseDbSvc
 
     // Handle schema options, table add, delete, etc
 
+    public function refreshSchemaCache()
+    {
+        SqlDbUtilities::refreshCachedTables( $this->_dbConn );
+    }
+
     /**
      * {@inheritdoc}
      */
-    public function describeTables( $tables )
+    public function describeTables( $tables, $refresh = false )
     {
         $_tables = SqlDbUtilities::validateAsArray( $tables, ',', true );
 
@@ -2999,7 +3004,7 @@ class SqlDbSvc extends BaseDbSvc
                     if ( !empty( $_access ) )
                     {
                         $_extras = SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $_name );
-                        $_result = SqlDbUtilities::describeTable( $this->_dbConn, $_name, null, $_extras );
+                        $_result = SqlDbUtilities::describeTable( $this->_dbConn, $_name, null, $_extras, $refresh );
                         $_result['access'] = $_access;
                         $_resources[] = $_result;
                     }
@@ -3022,7 +3027,7 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function describeTable( $table )
+    public function describeTable( $table, $refresh = false )
     {
         if ( empty( $table ) )
         {
@@ -3034,7 +3039,7 @@ class SqlDbSvc extends BaseDbSvc
         try
         {
             $_extras = SqlDbUtilities::getSchemaExtrasForTables( $this->getServiceId(), $table );
-            $_result = SqlDbUtilities::describeTable( $this->_dbConn, $table, null, $_extras );
+            $_result = SqlDbUtilities::describeTable( $this->_dbConn, $table, null, $_extras, $refresh );
             $_result['access'] = $this->getPermissions( $table );
 
             return $_result;
@@ -3053,7 +3058,7 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function describeField( $table, $field )
+    public function describeField( $table, $field, $refresh = false )
     {
         if ( empty( $table ) )
         {

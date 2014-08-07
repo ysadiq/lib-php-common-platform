@@ -254,6 +254,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         return $this;
     }
 
+    /**
+     * @param $resource
+     *
+     * @return bool
+     */
     protected function resourceIsTable( $resource )
     {
         return !( empty( $resource ) || static::SCHEMA_RESOURCE == $resource );
@@ -766,10 +771,6 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
         $_fieldsInfo = $this->getFieldsInfo( $table );
         $_idsInfo = $this->getIdsInfo( $table, $_fieldsInfo, $_idFields, $_idTypes );
-        if ( empty( $_idsInfo ) )
-        {
-            throw new InternalServerErrorException( "Identifying field(s) could not be determined." );
-        }
 
         $extras['ids_info'] = $_idsInfo;
         $extras['id_fields'] = $_idFields;
@@ -2942,11 +2943,23 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         return $record;
     }
 
+    /**
+     * @param $haystack
+     * @param $needle
+     *
+     * @return bool
+     */
     public static function startsWith( $haystack, $needle )
     {
         return ( substr( $haystack, 0, strlen( $needle ) ) === $needle );
     }
 
+    /**
+     * @param $haystack
+     * @param $needle
+     *
+     * @return bool
+     */
     public static function endsWith( $haystack, $needle )
     {
         return ( substr( $haystack, -strlen( $needle ) ) === $needle );
@@ -2976,6 +2989,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         switch ( $this->_action )
         {
             case static::GET:
+                $_refresh = Option::get( $this->_requestPayload, 'refresh' );
                 if ( empty( $_tableName ) )
                 {
                     $_tables = Option::get( $this->_requestPayload, 'names' );
@@ -2986,18 +3000,22 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
                     if ( !empty( $_tables ) )
                     {
-                        return array('table' => $this->describeTables( $_tables ));
+                        $_result = array('table' => $this->describeTables( $_tables, $_refresh ));
                     }
-
-                    return array('resource' => $this->describeDatabase( $this->_requestPayload ));
+                    else
+                    {
+                        $_result = array('resource' => $this->describeDatabase( $this->_requestPayload, $_refresh ));
+                    }
                 }
-
-                if ( empty( $_fieldName ) )
+                elseif ( empty( $_fieldName ) )
                 {
-                    return $this->describeTable( $_tableName );
+                    $_result = $this->describeTable( $_tableName, $_refresh );
+                }
+                else
+                {
+                    $_result = $this->describeField( $_tableName, $_fieldName, $_refresh );
                 }
 
-                return $this->describeField( $_tableName, $_fieldName );
                 break;
 
             case static::POST:
@@ -3010,20 +3028,21 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         throw new BadRequestException( 'No data in schema create request.' );
                     }
 
-                    return array('table' => $this->createTables( $_tables, $_checkExist ));
+                    $_result = array('table' => $this->createTables( $_tables, $_checkExist ));
                 }
-
-                if ( empty( $_fieldName ) )
+                elseif ( empty( $_fieldName ) )
                 {
-                    return $this->createTable( $_tableName, $this->_requestPayload, $_checkExist );
+                    $_result = $this->createTable( $_tableName, $this->_requestPayload, $_checkExist );
                 }
-
-                if ( empty( $this->_requestPayload ) )
+                elseif ( empty( $this->_requestPayload ) )
                 {
                     throw new BadRequestException( 'No data in schema create request.' );
                 }
+                else
+                {
+                    $_result = $this->createField( $_tableName, $_fieldName, $this->_requestPayload, $_checkExist );
+                }
 
-                return $this->createField( $_tableName, $_fieldName, $this->_requestPayload, $_checkExist );
                 break;
 
             case static::PUT:
@@ -3035,20 +3054,21 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         throw new BadRequestException( 'No data in schema update request.' );
                     }
 
-                    return array('table' => $this->updateTables( $_tables, true ));
+                    $_result = array('table' => $this->updateTables( $_tables, true ));
                 }
-
-                if ( empty( $_fieldName ) )
+                elseif ( empty( $_fieldName ) )
                 {
-                    return $this->updateTable( $_tableName, $this->_requestPayload, true );
+                    $_result = $this->updateTable( $_tableName, $this->_requestPayload, true );
                 }
-
-                if ( empty( $this->_requestPayload ) )
+                elseif ( empty( $this->_requestPayload ) )
                 {
                     throw new BadRequestException( 'No data in schema update request.' );
                 }
+                else
+                {
+                    $_result = $this->updateField( $_tableName, $_fieldName, $this->_requestPayload, true );
+                }
 
-                return $this->updateField( $_tableName, $_fieldName, $this->_requestPayload, true );
                 break;
 
             case static::PATCH:
@@ -3061,21 +3081,21 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                         throw new BadRequestException( 'No data in schema update request.' );
                     }
 
-                    return array('table' => $this->updateTables( $_tables ));
+                    $_result = array('table' => $this->updateTables( $_tables ));
                 }
-
-                if ( empty( $_fieldName ) )
+                elseif ( empty( $_fieldName ) )
                 {
-                    return $this->updateTable( $_tableName, $this->_requestPayload );
+                    $_result = $this->updateTable( $_tableName, $this->_requestPayload );
                 }
-
-                //	Create new field in existing table
-                if ( empty( $this->_requestPayload ) )
+                elseif ( empty( $this->_requestPayload ) )
                 {
                     throw new BadRequestException( 'No data in schema create request.' );
                 }
+                else
+                {
+                    $_result = $this->updateField( $_tableName, $_fieldName, $this->_requestPayload );
+                }
 
-                return $this->updateField( $_tableName, $_fieldName, $this->_requestPayload );
                 break;
 
             case static::DELETE:
@@ -3094,27 +3114,50 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
 
                     $_result = $this->deleteTables( $_tables );
 
-                    return array('table' => $_result);
+                    $_result = array('table' => $_result);
                 }
-
-                if ( empty( $_fieldName ) )
+                elseif ( empty( $_fieldName ) )
                 {
                     $this->deleteTable( $_tableName );
 
-                    return array('success' => true);
+                    $_result = array('success' => true);
                 }
+                else
+                {
+                    $this->deleteField( $_tableName, $_fieldName );
 
-                $this->deleteField( $_tableName, $_fieldName );
-
-                return array('success' => true);
+                    $_result = array('success' => true);
+                }
                 break;
+        }
+
+        if ( static::GET != $this->_action )
+        {
+            //  Any changes here should refresh cached schema
+            $this->refreshSchemaCache();
         }
 
         return $_result;
     }
 
-    public function describeDatabase( $options = null )
+    public function refreshSchemaCache()
     {
+        // do nothing by default
+    }
+
+    /**
+     * @param array | null $options
+     * @param bool         $refresh Force a refresh of the schema from the database
+     *
+     * @return array
+     * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
+     * @throws \DreamFactory\Platform\Exceptions\RestException
+     * @throws \Exception
+     */
+    public function describeDatabase( $options = null, /** @noinspection PhpUnusedParameterInspection */
+        $refresh = false )
+    {
+
         $_namesOnly = Option::getBool( $options, 'names_only' );
         $_resources = array();
 
@@ -3158,12 +3201,13 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     /**
      * Get multiple tables and their properties
      *
-     * @param string | array $tables Table names comma-delimited string or array
+     * @param string | array $tables  Table names comma-delimited string or array
+     * @param bool           $refresh Force a refresh of the schema from the database
      *
      * @return array
      * @throws \Exception
      */
-    public function describeTables( $tables )
+    public function describeTables( $tables, $refresh = false )
     {
         $tables = DbUtilities::validateAsArray(
             $tables,
@@ -3178,7 +3222,7 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             $_name = ( is_array( $_table ) ) ? Option::get( $_table, 'name' ) : $_table;
             $this->validateTableAccess( $_name );
 
-            $_out[] = $this->describeTable( $_table );
+            $_out[] = $this->describeTable( $_table, $refresh );
         }
 
         return $_out;
@@ -3187,23 +3231,25 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     /**
      * Get any properties related to the table
      *
-     * @param string | array $table Table name or defining properties
+     * @param string | array $table   Table name or defining properties
+     * @param bool           $refresh Force a refresh of the schema from the database
      *
      * @return array
      * @throws \Exception
      */
-    abstract public function describeTable( $table );
+    abstract public function describeTable( $table, $refresh = false );
 
     /**
      * Get any properties related to the table field
      *
-     * @param string $table Table name
-     * @param string $field Table field name
+     * @param string $table   Table name
+     * @param string $field   Table field name
+     * @param bool   $refresh Force a refresh of the schema from the database
      *
      * @return array
      * @throws \Exception
      */
-    abstract public function describeField( $table, $field );
+    abstract public function describeField( $table, $field, $refresh = false );
 
     /**
      * Create one or more tables by array of table properties
