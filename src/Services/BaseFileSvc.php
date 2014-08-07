@@ -42,9 +42,9 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
     //*************************************************************************
 
     /**
-     * @var array Array of public path strings
+     * @var array Array of private path strings
      */
-    public $publicPaths = array();
+    public $privatePaths = array();
 
     /**
      * @var string Storage container name
@@ -81,7 +81,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 
         parent::__construct( $settings );
 
-        $this->publicPaths = Option::getDeep( $settings, 'credentials', 'public_paths' );
+        $this->privatePaths = Option::getDeep( $settings, 'credentials', 'private_paths' );
     }
 
     /**

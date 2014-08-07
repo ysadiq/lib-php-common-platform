@@ -555,11 +555,10 @@ MYSQL;
 
             case PlatformServiceTypes::LOCAL_FILE_STORAGE:
             case PlatformServiceTypes::REMOTE_FILE_STORAGE:
-                // new public paths feature needs to allow at least applications by default
                 $_creds = $this->credentials;
-                if ( is_array( $_creds ) && !array_key_exists( 'public_paths', $_creds ) )
+                if ( is_array( $_creds ) && !array_key_exists( 'private_paths', $_creds ) )
                 {
-                    $_creds['public_paths'] = array('applications/');
+                    $_creds['private_paths'] = array();
                     $this->credentials = $_creds;
                 }
                 break;
