@@ -157,7 +157,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
 
     protected function _detectRequestMembers()
     {
-        $_posted = RestData::getPostedData( true, true );
+        $_posted = Option::clean( RestData::getPostedData( true, true ) );
         $this->_requestPayload = array_merge( $_REQUEST, $_posted );
 
         return $this;

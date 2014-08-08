@@ -109,7 +109,8 @@ class AwsS3Svc extends RemoteFileSvc
         $_out = array();
         foreach ( $_buckets as $_bucket )
         {
-            $_out[] = array('name' => rtrim( $_bucket['Name'] ));
+            $_name = rtrim( $_bucket['Name'] );
+            $_out[] = array('name' => $_name, 'path' => $_name);
         }
 
         return $_out;
@@ -597,7 +598,8 @@ class AwsS3Svc extends RemoteFileSvc
         {
             if ( 'Resource could not be accessed.' == $ex->getMessage() )
             {
-                header( 'The specified file "' . $name . '" does not exist.' );
+                $status_header = "HTTP/1.1 404 The specified file '$name' does not exist.";
+                header( $status_header );
                 header( 'Content-Type: text/html' );
             }
             else

@@ -255,7 +255,7 @@ class SystemManager extends BaseSystemRestService
 
             //	Refresh the schema that we just added
             \Yii::app()->getCache()->flush();
-            $_db->getSchema()->refresh();
+            SqlDbUtilities::refreshCachedTables($_db);
         }
         catch ( \Exception $ex )
         {
@@ -374,7 +374,7 @@ SQL;
 
             //	Refresh the schema that we just added
             \Yii::app()->getCache()->flush();
-            $_db->getSchema()->refresh();
+            SqlDbUtilities::refreshCachedTables($_db);
         }
         catch ( \Exception $ex )
         {
@@ -1244,7 +1244,8 @@ SQL
 
             if ( empty( $_count ) )
             {
-                if ( null !== ( $_fileUrl = Option::get( $_row, 'url' ) ) )
+                // old url or import_url
+                if ( null !== ( $_fileUrl = Option::get( $_row, 'import_url', Option::get( $_row, 'url' ) ) ) )
                 {
                     if ( 0 === strcasecmp( 'dfpkg', FileUtilities::getFileExtension( $_fileUrl ) ) )
                     {
@@ -1253,7 +1254,7 @@ SQL
                         try
                         {
                             $_filename = FileUtilities::importUrlFileToTemp( $_fileUrl );
-                            Packager::importAppFromPackage( $_filename, $_fileUrl );
+                            Packager::importAppFromPackage( $_filename, $_row );
 
                             $_added++;
                         }

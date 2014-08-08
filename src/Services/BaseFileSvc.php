@@ -42,9 +42,9 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
     //*************************************************************************
 
     /**
-     * @var array Array of public path strings
+     * @var array Array of private path strings
      */
-    public $publicPaths = array();
+    public $privatePaths = array();
 
     /**
      * @var string Storage container name
@@ -81,7 +81,13 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 
         parent::__construct( $settings );
 
-        $this->publicPaths = Option::getDeep( $settings, 'credentials', 'public_paths' );
+        $_paths = Option::clean( Option::getDeep( $settings, 'credentials', 'private_paths' ) );
+        foreach ( $_paths as &$_path )
+        {
+            // trim here for easy comparison later
+            $_path = ltrim( $_path, '/' );
+        }
+        $this->privatePaths = $_paths;
     }
 
     /**
@@ -153,19 +159,19 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
         if ( empty( $this->_container ) )
         {
             // see if there is any direction from the wire
-            $data = Option::clean(RestData::getPostedData( false, true ));
-            $data = array_merge($data, $_REQUEST);
+            $data = Option::clean( RestData::getPostedData( false, true ) );
+            $data = array_merge( $data, $_REQUEST );
 
             // no resource
-            if ( !Option::getBool($data, 'include_properties') )
+            if ( !Option::getBool( $data, 'include_properties' ) )
             {
-                if (Option::getBool($data, 'as_access_components' ))
+                if ( Option::getBool( $data, 'as_access_components' ) )
                 {
                     $tmp = array('', '*');
                     $result = $this->listContainers();
-                    foreach ($result as $each)
+                    foreach ( $result as $each )
                     {
-                        $tmp[] = Option::get($each, 'name');
+                        $tmp[] = Option::get( $each, 'name' );
                     }
 
                     return array('resource' => $tmp);
@@ -715,7 +721,10 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
      *
      * @return array
      */
-    protected function _handleFolderContentFromData( $data, $extract = false, $clean = false, $checkExist = false )
+    protected function _handleFolderContentFromData( $data, /** @noinspection PhpUnusedParameterInspection */
+        $extract = false, /** @noinspection PhpUnusedParameterInspection */
+        $clean = false, /** @noinspection PhpUnusedParameterInspection */
+        $checkExist = false )
     {
         $out = array('folder' => array(), 'file' => array());
         $folders = Option::get( $data, 'folder' );

@@ -145,7 +145,8 @@ class WindowsAzureBlobSvc extends RemoteFileSvc
         $result = array();
         foreach ( $_items as $_item )
         {
-            $out = array( 'name' => $_item->getName() );
+            $_name = $_item->getName();
+            $out = array( 'name' => $_name, 'path' => $_name );
             if ( $include_properties )
             {
                 $props = $_item->getProperties();

@@ -147,7 +147,7 @@ class DbUtilities
 
         if ( false === $_values = static::validateAsArray( $table_names, ',', true ) )
         {
-            throw new \InvalidArgumentException( 'Invalid table list. ' . $table_names );
+            throw new \InvalidArgumentException( 'Invalid table list provided.' );
         }
 
         $_where[] = array('in', 'table', $_values);

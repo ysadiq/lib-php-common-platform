@@ -333,7 +333,7 @@ class ScriptEngine
         if ( !$_script || !$_fullScriptPath )
         {
             throw new InternalServerErrorException(
-                'The module "' . $module . '" could not be found in any known locations . '
+                'The module "' . $module . '" could not be found in any known locations.'
             );
         }
 
@@ -362,7 +362,7 @@ class ScriptEngine
         if ( empty( static::$_libraryScriptPath ) || !is_dir( static::$_libraryScriptPath ) )
         {
             throw new RestException(
-                HttpResponse::ServiceUnavailable, 'This service is not available . Storage path and/or required libraries not available . '
+                HttpResponse::ServiceUnavailable, 'This service is not available. Storage path and/or required libraries not available.'
             );
         }
 
@@ -537,7 +537,7 @@ JS;
             if ( !empty( $_resource ) )
             {
                 if ( ( false === strpos( $_requestUri, '?' ) && '/' === substr( $_requestUri, strlen( $_requestUri ) - 1, 1 ) ) ||
-                     ( '/' === substr( $_requestUri, strpos( $_requestUri, '?' ) - 1, 1 ) )
+                    ( '/' === substr( $_requestUri, strpos( $_requestUri, '?' ) - 1, 1 ) )
                 )
                 {
                     $_resource .= '/';
@@ -582,7 +582,7 @@ JS;
         }
         catch ( \Exception $_ex )
         {
-            $_result = RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false, false );
+            $_result = RestResponse::sendErrors( $_ex, DataFormats::PHP_ARRAY, false, false, true );
 
             Log::error( 'Exception: ' . $_ex->getMessage(), array(), array('response' => $_result) );
         }

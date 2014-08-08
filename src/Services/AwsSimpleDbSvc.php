@@ -191,7 +191,7 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function describeTable( $table )
+    public function describeTable( $table, $refresh = true  )
     {
         static $_existing = null;
 

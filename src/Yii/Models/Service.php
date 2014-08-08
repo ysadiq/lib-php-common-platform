@@ -353,6 +353,12 @@ MYSQL;
 
         if ( null !== ( $_docs = Option::get( $values, 'docs' ) ) )
         {
+            // currently only for remote web services
+            if ( PlatformServiceTypes::REMOTE_WEB_SERVICE !== $this->type_id )
+            {
+                throw new BadRequestException( 'Service documentation currently can not be modified for this service type.' );
+            }
+
             ServiceDoc::assignServiceDocs( $id, $_docs );
         }
     }
@@ -431,7 +437,6 @@ MYSQL;
         switch ( $this->getServiceTypeId() )
         {
             case PlatformServiceTypes::LOCAL_SQL_DB:
-            case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
                 throw new BadRequestException( 'System generated database services can not be deleted.' );
                 break;
 
@@ -522,12 +527,25 @@ MYSQL;
                 }
             }
         }
+        elseif ( ( 'mongohq' == $this->storage_type ) )
+        {
+            if ( $this->update(
+                array('storage_type_id' => PlatformStorageTypes::MONGODB, 'storage_type' => 'mongodb')
+            )
+            )
+            {
+                Log::debug( '  * Convert MongoHQ to MongoDB service on "' . $this->api_name . '"' );
+            }
+            else
+            {
+                Log::notice( '  * Unable to convert MongoHQ to MongoDB in row ID#' . $this->id );
+            }
+        }
 
         //	Add fake field for client
         switch ( $this->type_id )
         {
             case PlatformServiceTypes::LOCAL_SQL_DB:
-            case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
             case PlatformServiceTypes::LOCAL_FILE_STORAGE:
                 $this->is_system = true;
                 break;
@@ -543,17 +561,12 @@ MYSQL;
         // backwards compatibility helper
         switch ( $this->type_id )
         {
-            case PlatformServiceTypes::LOCAL_SQL_DB:
-            case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
-                break;
-
             case PlatformServiceTypes::LOCAL_FILE_STORAGE:
             case PlatformServiceTypes::REMOTE_FILE_STORAGE:
-                // new public paths feature needs to allow at least applications by default
                 $_creds = $this->credentials;
-                if ( is_array( $_creds ) && !array_key_exists( 'public_paths', $_creds ) )
+                if ( is_array( $_creds ) && !array_key_exists( 'private_paths', $_creds ) )
                 {
-                    $_creds['public_paths'] = array('applications/');
+                    $_creds['private_paths'] = array();
                     $this->credentials = $_creds;
                 }
                 break;
@@ -571,7 +584,7 @@ MYSQL;
                     $_creds['transport_type'] = EmailTransportTypes::SERVER_DEFAULT;
                     if ( !empty( $this->storage_type ) )
                     {
-                        switch ( strtoupper($this->storage_type) )
+                        switch ( strtoupper( $this->storage_type ) )
                         {
                             case 'SMTP': // SMTP
                                 $_creds['transport_type'] = EmailTransportTypes::SMTP;

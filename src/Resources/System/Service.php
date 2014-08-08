@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Resources\System;
 
+use DreamFactory\Platform\Enums\ApiDocFormatTypes;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
 use DreamFactory\Platform\Scripting\ScriptEngine;
@@ -70,23 +71,64 @@ class Service extends BaseSystemRestResource
         }
         else
         {
-            if ( Option::getBool( $this->_requestPayload, 'include_components' ) )
+            $_response = $this->_response;
+            $_includeComponents = Option::getBool( $this->_requestPayload, 'include_components' );
+            if (isset( $_response['record'] ) )
             {
-                $_response = $this->_response;
-                $_services = Option::get( $_response, 'record' );
+                $_services = Option::clean(Option::get( $_response, 'record' ));
                 foreach ( $_services as &$_item )
                 {
-                    $_apiName = Option::get( $_item, 'api_name' );
-                    $_payload = array('as_access_components' => true);
-                    $_result = ScriptEngine::inlineRequest( HttpMethod::GET, $_apiName, $_payload );
-                    $_components = Option::clean( Option::get( $_result, 'resource' ) );
-                    $_item['components'] = (!empty($_components)) ? $_components : array('','*');
+                    if ( $_includeComponents )
+                    {
+                        $_item['components'] = static::_getComponents($_item);
+                    }
+                    if ( isset($_item['docs'] ) && empty($_item['docs']))
+                    {
+                        $_item['docs'] = static::_getDocs($_item);
+                    }
                 }
                 $_response['record'] = $_services;
-                $this->_response = $_response;
             }
+            else
+            {
+                if ( $_includeComponents )
+                {
+                    $_response['components'] = static::_getComponents($_response);
+                }
+                if ( isset($_response['docs'] ) && empty($_response['docs']))
+                {
+                    $_response['docs'] = static::_getDocs($_response);
+                }
+            }
+            $this->_response = $_response;
         }
 
         parent::_postProcess();
+    }
+
+    protected static function _getComponents( array $item )
+    {
+        $_apiName = Option::get( $item, 'api_name' );
+        $_payload = array('as_access_components' => true);
+        $_result = ScriptEngine::inlineRequest( HttpMethod::GET, $_apiName, $_payload );
+        $_components = Option::clean( Option::get( $_result, 'resource' ) );
+
+        return ( !empty( $_components ) ) ? $_components : array('', '*');
+    }
+
+    protected static function _getDocs( array $item )
+    {
+        $_content = SwaggerManager::getStoredContentForService( $item );
+        if ( empty( $_content ) )
+        {
+            $_content =
+                '{"resourcePath":"/{api_name}","produces":["application/json","application/xml"],"consumes":["application/json","application/xml"],"apis":[],"models":{}}';
+        }
+        else
+        {
+            $_content = json_encode( $_content, JSON_UNESCAPED_SLASHES );
+        }
+
+        return array(array('format' => ApiDocFormatTypes::SWAGGER, 'content' => $_content));
     }
 }
