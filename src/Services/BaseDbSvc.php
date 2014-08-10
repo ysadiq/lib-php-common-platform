@@ -264,6 +264,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         return !( empty( $resource ) || static::SCHEMA_RESOURCE == $resource );
     }
 
+    public function correctTableName( $name )
+    {
+        return $name;
+    }
+
     /**
      * @param string $resource
      * @param string $resource_id
@@ -280,10 +285,12 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                 case static::SCHEMA_RESOURCE:
                     if ( !empty( $resource_id ) )
                     {
+                        $resource_id = $this->correctTableName( $resource_id );
                         $resource = $resource . '/' . $resource_id;
                     }
                     break;
                 default:
+                    $resource = $this->correctTableName( $resource );
                     break;
             }
 

@@ -169,6 +169,23 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
      */
     public function correctTableName( $name )
     {
+        static $_existing = null;
+
+        if ( !$_existing )
+        {
+            $_existing = $this->_getTablesAsArray();
+        }
+
+        if ( empty( $name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        if ( false === array_search( $name, $_existing ) )
+        {
+            throw new NotFoundException( "Table '$name' not found." );
+        }
+
         return $name;
     }
 
@@ -216,26 +233,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
      */
     public function describeTable( $table, $refresh = true  )
     {
-        static $_existing = null;
-
-        if ( !$_existing )
-        {
-            $_existing = $this->_getTablesAsArray();
-        }
-
         $_name =
             ( is_array( $table ) ) ? Option::get( $table, 'name', Option::get( $table, static::TABLE_INDICATOR ) )
                 : $table;
-        if ( empty( $_name ) )
-        {
-            throw new BadRequestException( 'Table name can not be empty.' );
-        }
-
-        if ( false === array_search( $_name, $_existing ) )
-        {
-            throw new NotFoundException( "Table '$_name' not found." );
-        }
-
         try
         {
             $_result = $this->_dbConn->describeTable( array(static::TABLE_INDICATOR => $_name) );

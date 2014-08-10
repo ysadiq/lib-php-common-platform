@@ -338,18 +338,10 @@ class SqlDbSvc extends BaseDbSvc
                     {
                         $resource = $resource . '/' . $resource_id;
                     }
-                    break;
-                case static::SCHEMA_RESOURCE:
-                    if ( !empty( $resource_id ) )
-                    {
-                        $resource_id = $this->correctTableName( $resource_id );
-                    }
-                    break;
-                default:
-                    $resource = $this->correctTableName( $resource );
-                    break;
-            }
 
+                    $this->checkPermission( $action, $resource );
+                    return;
+            }
         }
 
         parent::validateResourceAccess( $resource, $resource_id, $action );
