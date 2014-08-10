@@ -189,6 +189,31 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         return $this;
     }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function correctTableName( $name  )
+    {
+        static $_existing = null;
+
+        if ( !$_existing )
+        {
+            $_existing = $this->_getTablesAsArray();
+        }
+
+        if ( empty( $name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        if ( false === array_search( $name, $_existing ) )
+        {
+            throw new NotFoundException( "Table '$name' not found." );
+        }
+
+        return $name;
+    }
+
     protected function _getTablesAsArray()
     {
         /** @var QueryTablesResult $_result */
@@ -225,23 +250,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
      */
     public function describeTable( $table, $refresh = true  )
     {
-        static $_existing = null;
-
-        if ( !$_existing )
-        {
-            $_existing = $this->_getTablesAsArray();
-        }
-
         $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
-        if ( empty( $_name ) )
-        {
-            throw new BadRequestException( 'Table name can not be empty.' );
-        }
-
-        if ( false === array_search( $_name, $_existing ) )
-        {
-            throw new NotFoundException( "Table '$_name' not found." );
-        }
 
         try
         {

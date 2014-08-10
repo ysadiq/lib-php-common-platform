@@ -163,9 +163,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param $name
-     *
-     * @return string
+     * {@InheritDoc}
      */
     public function correctTableName( $name )
     {
@@ -360,8 +358,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
      */
     public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
     {
-        $table = $this->correctTableName( $table );
-
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
@@ -597,7 +593,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
         $requested_fields = array();
-        $_result = $this->deleteTable( $table );
+        $_result = $this->describeTable( $table );
         $_keys = Option::get( $_result, 'KeySchema', array() );
         $_definitions = Option::get( $_result, 'AttributeDefinitions', array() );
         $_fields = array();

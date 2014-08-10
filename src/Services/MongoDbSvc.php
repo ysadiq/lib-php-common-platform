@@ -1264,7 +1264,7 @@ class MongoDbSvc extends NoSqlDbSvc
 
                 if ( $rollback )
                 {
-                    $this->addToRollback( static::recordAsId( $record, static::DEFAULT_ID_FIELD ) );
+                    $this->addToRollback( static::recordAsId( $_parsed, static::DEFAULT_ID_FIELD ) );
                 }
                 break;
 

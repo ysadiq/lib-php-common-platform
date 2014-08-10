@@ -264,6 +264,13 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
         return !( empty( $resource ) || static::SCHEMA_RESOURCE == $resource );
     }
 
+    /**
+     * @param string $name
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return string
+     */
     public function correctTableName( $name )
     {
         return $name;

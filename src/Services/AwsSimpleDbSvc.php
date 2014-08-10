@@ -134,14 +134,30 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param $name
-     *
-     * @return string
+     * {@InheritDoc}
      */
     public function correctTableName( $name )
     {
+        static $_existing = null;
+
+        if ( !$_existing )
+        {
+            $_existing = $this->_getTablesAsArray();
+        }
+
+        if ( empty( $name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        if ( false === array_search( $name, $_existing ) )
+        {
+            throw new NotFoundException( "Table '$name' not found." );
+        }
+
         return $name;
     }
+
 
     protected function _getTablesAsArray()
     {
@@ -193,25 +209,9 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
      */
     public function describeTable( $table, $refresh = true  )
     {
-        static $_existing = null;
-
-        if ( !$_existing )
-        {
-            $_existing = $this->_getTablesAsArray();
-        }
-
         $_name =
             ( is_array( $table ) ) ? Option::get( $table, 'name', Option::get( $table, static::TABLE_INDICATOR ) )
                 : $table;
-        if ( empty( $_name ) )
-        {
-            throw new BadRequestException( 'Table name can not be empty.' );
-        }
-
-        if ( false === array_search( $_name, $_existing ) )
-        {
-            throw new NotFoundException( "Table '$_name' not found." );
-        }
 
         try
         {
@@ -322,8 +322,6 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
      */
     public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
     {
-        $table = $this->correctTableName( $table );
-
         $_idField = Option::get( $extras, 'id_field', static::DEFAULT_ID_FIELD );
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );

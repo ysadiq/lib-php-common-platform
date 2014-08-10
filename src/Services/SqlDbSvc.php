@@ -281,11 +281,7 @@ class SqlDbSvc extends BaseDbSvc
     /**
      * Corrects capitalization, etc. on table names, ensures it is not a system table
      *
-     * @param $name
-     *
-     * @return string
-     * @throws \InvalidArgumentException
-     * @throws \Exception
+     * {@InheritDoc}
      */
     public function correctTableName( $name )
     {
@@ -321,11 +317,7 @@ class SqlDbSvc extends BaseDbSvc
     }
 
     /**
-     * @param string $resource
-     * @param string $resource_id
-     * @param string $action
-     *
-     * @internal param string $resourceId
+     * {@InheritDoc}
      */
     protected function validateResourceAccess( $resource, $resource_id, $action )
     {
@@ -360,7 +352,7 @@ class SqlDbSvc extends BaseDbSvc
     }
 
     /**
-     * @return array|bool
+     * {@InheritDoc}
      */
     protected function _handleResource()
     {
@@ -645,7 +637,6 @@ class SqlDbSvc extends BaseDbSvc
     public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
         $record = SqlDbUtilities::validateAsArray( $record, null, false, 'There are no fields in the record.' );
-        $table = $this->correctTableName( $table );
 
         $_idFields = Option::get( $extras, 'id_field' );
         $_idTypes = Option::get( $extras, 'id_type' );
@@ -723,7 +714,6 @@ class SqlDbSvc extends BaseDbSvc
     public function truncateTable( $table, $extras = array() )
     {
         // truncate the table, return success
-        $table = $this->correctTableName( $table );
         try
         {
             /** @var \CDbCommand $_command */
@@ -762,8 +752,6 @@ class SqlDbSvc extends BaseDbSvc
         {
             throw new BadRequestException( "Filter for delete request can not be empty." );
         }
-
-        $table = $this->correctTableName( $table );
 
         $_idFields = Option::get( $extras, 'id_field' );
         $_idTypes = Option::get( $extras, 'id_type' );
@@ -809,8 +797,6 @@ class SqlDbSvc extends BaseDbSvc
      */
     public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
     {
-        $table = $this->correctTableName( $table );
-
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
