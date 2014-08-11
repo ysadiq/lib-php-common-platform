@@ -471,16 +471,16 @@
         },
         {
             "name": "dreamfactory/yii",
-            "version": "1.1.13.2",
+            "version": "1.1.13.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/yii.git",
-                "reference": "8cf385458278df6948a5f7e934db742b69bd4ea5"
+                "reference": "dbf877d565ff08dc1d4d22cc6e4235a63e939080"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/8cf385458278df6948a5f7e934db742b69bd4ea5",
-                "reference": "8cf385458278df6948a5f7e934db742b69bd4ea5",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/yii/zipball/dbf877d565ff08dc1d4d22cc6e4235a63e939080",
+                "reference": "dbf877d565ff08dc1d4d22cc6e4235a63e939080",
                 "shasum": ""
             },
             "require": {
@@ -522,23 +522,21 @@
                 },
                 {
                     "name": "Sebastián Thierer",
-                    "email": "sebas@artfos.com",
                     "role": "Component development"
                 },
                 {
                     "name": "Jeffrey Winesett",
-                    "email": "jefftulsa@gmail.com",
                     "role": "Documentation and marketing"
                 },
                 {
                     "name": "Jerry Ablan",
                     "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side"
+                    "role": "Exterminator"
                 },
                 {
                     "name": "Lee Hicks",
                     "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Developer, server-side"
+                    "role": "Exterminator"
                 }
             ],
             "description": "Yii Web Programming Framework",
@@ -547,7 +545,7 @@
                 "framework",
                 "yii"
             ],
-            "time": "2014-07-10 20:38:08"
+            "time": "2014-08-11 00:12:50"
         },
         {
             "name": "guzzle/guzzle",
