@@ -537,15 +537,16 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
      */
     protected function parseRecord( $record, $fields_info, $filter_info = null, $for_update = false, $old_record = null )
     {
-//        $record = DataFormat::arrayKeyLower( $record );
         $_parsed = ( empty( $fields_info ) ) ? $record : array();
+
+        unset($_parsed['Timestamp']); // not set-able
+
         if ( !empty( $fields_info ) )
         {
             $_keys = array_keys( $record );
             $_values = array_values( $record );
             foreach ( $fields_info as $_fieldInfo )
             {
-//            $name = strtolower( Option::get( $field_info, 'name', '' ) );
                 $_name = Option::get( $_fieldInfo, 'name', '' );
                 $_type = Option::get( $_fieldInfo, 'type' );
                 $_pos = array_search( $_name, $_keys );
