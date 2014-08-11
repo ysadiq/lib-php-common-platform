@@ -26,7 +26,6 @@ use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Services\BaseDbSvc;
 use DreamFactory\Platform\Services\BaseFileSvc;
 use DreamFactory\Platform\Services\SchemaSvc;
-use DreamFactory\Platform\Services\SqlDbSvc;
 use DreamFactory\Platform\Services\SwaggerManager;
 use DreamFactory\Platform\Yii\Models\Service;
 use Kisma\Core\Interfaces\HttpMethod;
@@ -154,6 +153,18 @@ class Packager
                                         case PlatformServiceTypes::LOCAL_SQL_DB_SCHEMA:
                                         case PlatformServiceTypes::REMOTE_SQL_DB_SCHEMA:
                                             /** @var $_schema SchemaSvc */
+                                            $_schema = ServiceHandler::getServiceObject( $_serviceName );
+                                            $_describe = $_schema->describeTables( implode( ',', $_component ) );
+                                            $_temp = array(
+                                                'api_name' => $_serviceName,
+                                                'table'    => $_describe
+                                            );
+                                            $_schemas[] = $_temp;
+                                            break;
+                                        case PlatformServiceTypes::LOCAL_SQL_DB:
+                                        case PlatformServiceTypes::REMOTE_SQL_DB:
+                                        case PlatformServiceTypes::NOSQL_DB:
+                                            /** @var $_schema BaseDbSvc */
                                             $_schema = ServiceHandler::getServiceObject( $_serviceName );
                                             $_describe = $_schema->describeTables( implode( ',', $_component ) );
                                             $_temp = array(
