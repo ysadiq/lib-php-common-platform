@@ -22,11 +22,8 @@ namespace DreamFactory\Platform\Resources\System;
 use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Enums\PlatformServiceTypes;
 use DreamFactory\Platform\Resources\BaseSystemRestResource;
-use DreamFactory\Platform\Services\SystemManager;
-use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Platform\Utility\ResourceStore;
-use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Option;
 use Kisma\Core\Utility\Scalar;
 
@@ -115,19 +112,13 @@ class Environment extends BaseSystemRestResource
             foreach ( $_raw as $_line )
             {
                 $_fields = explode( '=', $_line );
-                $_release[str_replace( 'distrib_', null, strtolower( $_fields[0] ) )] = trim( $_fields[1], PHP_EOL . '"' );
+                $_release[ str_replace( 'distrib_', null, strtolower( $_fields[0] ) ) ] = trim( $_fields[1], PHP_EOL . '"' );
             }
         }
 
         $_response = array(
             'php_info' => $_phpInfo,
-            'platform' => array(
-                'is_hosted'           => $_fabricHosted = Pii::getParam( 'dsp.fabric_hosted', false ),
-                'is_private'          => Fabric::hostedPrivatePlatform(),
-                'dsp_version_current' => $_currentVersion = SystemManager::getCurrentVersion(),
-                'dsp_version_latest'  => $_latestVersion = ( $_fabricHosted ? $_currentVersion : SystemManager::getLatestVersion() ),
-                'upgrade_available'   => version_compare( $_currentVersion, $_latestVersion, '<' ),
-            ),
+            'platform' => Config::getCurrentConfig(),
             'release'  => $_release,
             'server'   => array(
                 'server_os' => strtolower( php_uname( 's' ) ),
@@ -172,15 +163,15 @@ class Environment extends BaseSystemRestResource
 
                 if ( strlen( $_match[1] ) )
                 {
-                    $_info[$_match[1]] = array();
+                    $_info[ $_match[1] ] = array();
                 }
                 elseif ( isset( $_match[3] ) )
                 {
-                    $_info[$_lastKey][$_match[2]] = isset( $_match[4] ) ? array( $_match[3], $_match[4] ) : $_match[3];
+                    $_info[ $_lastKey ][ $_match[2] ] = isset( $_match[4] ) ? array($_match[3], $_match[4]) : $_match[3];
                 }
                 else
                 {
-                    $_info[$_lastKey][] = $_match[2];
+                    $_info[ $_lastKey ][] = $_match[2];
                 }
 
                 unset( $_keys, $_match );
@@ -197,7 +188,7 @@ class Environment extends BaseSystemRestResource
      */
     protected function _cleanPhpInfo( $info, $recursive = false )
     {
-        static $_excludeKeys = array( 'directive', 'variable', );
+        static $_excludeKeys = array('directive', 'variable',);
 
         $_clean = array();
 
@@ -213,8 +204,8 @@ class Environment extends BaseSystemRestResource
                     continue;
                 }
 
-                $info['general'][$_key] = $_value;
-                unset( $info[0][$_key] );
+                $info['general'][ $_key ] = $_value;
+                unset( $info[0][ $_key ] );
             }
 
             unset( $info[0] );
@@ -254,10 +245,7 @@ class Environment extends BaseSystemRestResource
                     $_v2 = Option::getBool( $_value, 1 );
                 }
 
-                $_value = array(
-                    'current' => $_v1,
-                    'default' => $_v2,
-                );
+                $_value = $_v1;
             }
 
             if ( is_array( $_value ) )
@@ -265,7 +253,7 @@ class Environment extends BaseSystemRestResource
                 $_value = $this->_cleanPhpInfo( $_value, true );
             }
 
-            $_clean[$_key] = $_value;
+            $_clean[ $_key ] = $_value;
         }
 
         return $_clean;
