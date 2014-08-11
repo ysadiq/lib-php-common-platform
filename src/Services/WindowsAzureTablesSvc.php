@@ -189,6 +189,31 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         return $this;
     }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function correctTableName( $name  )
+    {
+        static $_existing = null;
+
+        if ( !$_existing )
+        {
+            $_existing = $this->_getTablesAsArray();
+        }
+
+        if ( empty( $name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        if ( false === array_search( $name, $_existing ) )
+        {
+            throw new NotFoundException( "Table '$name' not found." );
+        }
+
+        return $name;
+    }
+
     protected function _getTablesAsArray()
     {
         /** @var QueryTablesResult $_result */
@@ -225,23 +250,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
      */
     public function describeTable( $table, $refresh = true  )
     {
-        static $_existing = null;
-
-        if ( !$_existing )
-        {
-            $_existing = $this->_getTablesAsArray();
-        }
-
         $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
-        if ( empty( $_name ) )
-        {
-            throw new BadRequestException( 'Table name can not be empty.' );
-        }
-
-        if ( false === array_search( $_name, $_existing ) )
-        {
-            throw new NotFoundException( "Table '$_name' not found." );
-        }
 
         try
         {
@@ -528,15 +537,16 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
      */
     protected function parseRecord( $record, $fields_info, $filter_info = null, $for_update = false, $old_record = null )
     {
-//        $record = DataFormat::arrayKeyLower( $record );
         $_parsed = ( empty( $fields_info ) ) ? $record : array();
+
+        unset($_parsed['Timestamp']); // not set-able
+
         if ( !empty( $fields_info ) )
         {
             $_keys = array_keys( $record );
             $_values = array_values( $record );
             foreach ( $fields_info as $_fieldInfo )
             {
-//            $name = strtolower( Option::get( $field_info, 'name', '' ) );
                 $_name = Option::get( $_fieldInfo, 'name', '' );
                 $_type = Option::get( $_fieldInfo, 'type' );
                 $_pos = array_search( $_name, $_keys );

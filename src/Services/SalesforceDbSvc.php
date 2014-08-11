@@ -174,7 +174,7 @@ class SalesforceDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function describeTable( $table )
+    public function correctTableName( $name  )
     {
         static $_existing = null;
 
@@ -183,16 +183,25 @@ class SalesforceDbSvc extends BaseDbSvc
             $_existing = $this->_getSObjectsArray( true );
         }
 
-        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
-        if ( empty( $_name ) )
+        if ( empty( $name ) )
         {
             throw new BadRequestException( 'Table name can not be empty.' );
         }
 
-        if ( false === array_search( $_name, $_existing ) )
+        if ( false === array_search( $name, $_existing ) )
         {
-            throw new NotFoundException( "Table '$_name' not found." );
+            throw new NotFoundException( "Table '$name' not found." );
         }
+
+        return $name;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function describeTable( $table, $refresh = false )
+    {
+        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
 
         try
         {
@@ -213,7 +222,7 @@ class SalesforceDbSvc extends BaseDbSvc
     /**
      * {@inheritdoc}
      */
-    public function describeField( $table, $field )
+    public function describeField( $table, $field, $refresh = false )
     {
         $_result = $this->describeTable( $table );
         $_fields = Option::get( $_result, 'fields' );

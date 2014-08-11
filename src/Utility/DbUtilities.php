@@ -283,6 +283,7 @@ class DbUtilities
                     foreach ( $_inserts as $_insert )
                     {
                         $_command->reset();
+                        $_insert['service_id'] = $service_id;
                         $_command->insert( 'df_sys_schema_extras', $_insert );
                     }
                 }
