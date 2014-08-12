@@ -326,12 +326,14 @@ class SqlDbSvc extends BaseDbSvc
             switch ( $resource )
             {
                 case static::STORED_PROC_RESOURCE:
+                    $resource = rtrim( $resource, '/' ) . '/';
                     if ( !empty( $resource_id ) )
                     {
-                        $resource = $resource . '/' . $resource_id;
+                        $resource .= $resource_id;
                     }
 
                     $this->checkPermission( $action, $resource );
+
                     return;
             }
         }
@@ -2192,7 +2194,7 @@ class SqlDbSvc extends BaseDbSvc
                 $_value = ( is_null( $_value ) ) ? 'NULL' : $this->_dbConn->quoteValue( $_value );
             }
 
-            $_sql .= $this->_dbConn->quoteColumnName($_name) . " $_op $_value";
+            $_sql .= $this->_dbConn->quoteColumnName( $_name ) . " $_op $_value";
         }
 
         return array('filter' => $_sql, 'params' => $_params);
