@@ -23,6 +23,7 @@ use DreamFactory\Platform\Exceptions\BadRequestException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\DbUtilities;
 use Kisma\Core\Utility\Option;
 use WindowsAzure\Common\ServiceException;
 use WindowsAzure\Common\ServicesBuilder;
@@ -188,6 +189,31 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
         return $this;
     }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function correctTableName( $name  )
+    {
+        static $_existing = null;
+
+        if ( !$_existing )
+        {
+            $_existing = $this->_getTablesAsArray();
+        }
+
+        if ( empty( $name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        if ( false === array_search( $name, $_existing ) )
+        {
+            throw new NotFoundException( "Table '$name' not found." );
+        }
+
+        return $name;
+    }
+
     protected function _getTablesAsArray()
     {
         /** @var QueryTablesResult $_result */
@@ -205,28 +231,16 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
      * @throws \Exception
      * @return array
      */
-    protected function _listResources()
+    protected function _listTables()
     {
-        try
+        $_resources = array();
+        $_result = $this->_getTablesAsArray();
+        foreach ( $_result as $_table )
         {
-            $_resources = array();
-            $_result = $this->_getTablesAsArray();
-            foreach ( $_result as $_table )
-            {
-                $_access = $this->getPermissions( $_table );
-                if ( !empty( $_access ) )
-                {
-                    $_resources[] = array('name' => $_table, 'access' => $_access);
-                }
-            }
+            $_resources[] = array('name' => $_table);
+        }
 
-            return array('resource' => $_resources);
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
-            )}" );
-        }
+        return $_resources;
     }
 
     // Handle administrative options, table add, delete, etc
@@ -234,25 +248,9 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function getTable( $table )
+    public function describeTable( $table, $refresh = true  )
     {
-        static $_existing = null;
-
-        if ( !$_existing )
-        {
-            $_existing = $this->_getTablesAsArray();
-        }
-
         $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
-        if ( empty( $_name ) )
-        {
-            throw new BadRequestException( 'Table name can not be empty.' );
-        }
-
-        if ( false === array_search( $_name, $_existing ) )
-        {
-            throw new NotFoundException( "Table '$_name' not found." );
-        }
 
         try
         {
@@ -271,40 +269,38 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function createTable( $properties = array() )
+    public function createTable( $table, $properties = array(), $check_exist = false )
     {
-        $_name = Option::get( $properties, 'name' );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }
 
         try
         {
-            $this->_dbConn->createTable( $_name );
-            $_out = array('name' => $_name);
+            $this->_dbConn->createTable( $table );
+            $_out = array('name' => $table);
 
             return $_out;
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to create table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to create table '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function updateTable( $properties = array() )
+    public function updateTable( $table, $properties = array(), $allow_delete_fields = false )
     {
-        $_name = Option::get( $properties, 'name' );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }
 
 //        throw new InternalServerErrorException( "Failed to update table '$_name'." );
-        return array('name' => $_name);
+        return array('name' => $table);
     }
 
     /**
@@ -338,7 +334,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
      */
     public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
@@ -369,7 +365,7 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
      */
     public function patchRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'There are no fields in the record.' );
 
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
@@ -541,15 +537,16 @@ class WindowsAzureTablesSvc extends NoSqlDbSvc
      */
     protected function parseRecord( $record, $fields_info, $filter_info = null, $for_update = false, $old_record = null )
     {
-//        $record = DataFormat::arrayKeyLower( $record );
         $_parsed = ( empty( $fields_info ) ) ? $record : array();
+
+        unset($_parsed['Timestamp']); // not set-able
+
         if ( !empty( $fields_info ) )
         {
             $_keys = array_keys( $record );
             $_values = array_values( $record );
             foreach ( $fields_info as $_fieldInfo )
             {
-//            $name = strtolower( Option::get( $field_info, 'name', '' ) );
                 $_name = Option::get( $_fieldInfo, 'name', '' );
                 $_type = Option::get( $_fieldInfo, 'type' );
                 $_pos = array_search( $_name, $_keys );

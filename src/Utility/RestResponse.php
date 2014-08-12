@@ -166,10 +166,12 @@ class RestResponse extends HttpResponse
      * @param int|string $desired_format
      * @param string     $as_file
      * @param bool       $exitAfterSend
+     * @param bool       $returnDataOnly if true, the data is returned and not sent out on the wire
      *
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
      * @return bool
      */
-    public static function sendErrors( $exception, $desired_format = DataFormats::JSON, $as_file = null, $exitAfterSend = true )
+    public static function sendErrors( $exception, $desired_format = DataFormats::JSON, $as_file = null, $exitAfterSend = true, $returnDataOnly = false )
     {
         //  Default to internal error
         $_errorInfo = array();
@@ -214,6 +216,11 @@ class RestResponse extends HttpResponse
         );
 
         $_result = DataFormatter::reformatData( $_result, null, $desired_format );
+
+        if ( $returnDataOnly )
+        {
+            return $_result;
+        }
 
         return static::sendResults( $_result, $_status, $desired_format, $as_file, $exitAfterSend );
     }
@@ -417,7 +424,7 @@ class RestResponse extends HttpResponse
 
         if ( !( $_response instanceof JsonResponse ) )
         {
-            $_response->setContent( $_content ? : $result );
+            $_response->setContent( $_content ?: $result );
         }
 
         //	Send it out!
@@ -504,8 +511,6 @@ class RestResponse extends HttpResponse
             'false'
         );
 
-        return
-            preg_match( $identifier_syntax, $subject ) &&
-            !in_array( mb_strtolower( $subject, 'UTF-8' ), $reserved_words );
+        return preg_match( $identifier_syntax, $subject ) && !in_array( mb_strtolower( $subject, 'UTF-8' ), $reserved_words );
     }
 }

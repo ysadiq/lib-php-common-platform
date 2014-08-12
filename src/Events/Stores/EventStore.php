@@ -19,13 +19,11 @@
  */
 namespace DreamFactory\Platform\Events\Stores;
 
-use Doctrine\Common\Cache\Cache;
 use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\Interfaces\EventStoreLike;
-use Kisma\Core\Utility\Inflector;
+use DreamFactory\Platform\Utility\Platform;
 use Kisma\Core\Utility\Option;
-use Kisma\Core\Utility\System;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
@@ -38,22 +36,6 @@ class EventStore implements EventStoreLike
     //*************************************************************************
 
     /**
-     * @type string
-     */
-    const DEFAULT_NAMESPACE = 'dsp.event_store';
-    /**
-     * @type string
-     */
-    const STATS_CACHE_KEY = 'stats';
-    /**
-     * @type string
-     */
-    const CACHE_PATH = PlatformStore::STORE_CACHE_PATH;
-    /**
-     * @type string
-     */
-    const CACHE_EXTENSION = '.dfec';
-    /**
      * @type int Event store caches for 5 minutes max!
      */
     const CACHE_TTL = 300;
@@ -63,21 +45,9 @@ class EventStore implements EventStoreLike
     //*************************************************************************
 
     /**
-     * @var string
-     */
-    protected $_storeId = null;
-    /**
-     * @var EventStoreLike
-     */
-    protected $_store = null;
-    /**
      * @var EventDispatcher
      */
     protected $_dispatcher = null;
-    /**
-     * @var array Statistics for the cache
-     */
-    protected $_cacheStats = null;
 
     //*************************************************************************
     //	Methods
@@ -91,64 +61,6 @@ class EventStore implements EventStoreLike
     public function __construct( EventDispatcherInterface $dispatcher )
     {
         $this->_dispatcher = $dispatcher;
-
-        $this->_initializeStore();
-    }
-
-    /**
-     * Initialize the store
-     */
-    protected function _initializeStore()
-    {
-        $this->_store = new PlatformStore();
-        /** @noinspection PhpUndefinedMethodInspection */
-        $this->_store->setNamespace( static::DEFAULT_NAMESPACE );
-
-        //  Get set up...
-        $this->save(
-            $this->_storeId,
-            array(
-                'dispatcher.id' => $this->_storeId = hash(
-                    'sha256',
-                    Inflector::neutralize( get_class( $this->_dispatcher ) )
-                ),
-            )
-        );
-
-        $this->_initializeStatistics();
-    }
-
-    /**
-     * Initialize the statistics for the cache
-     */
-    protected function _initializeStatistics()
-    {
-        $this->_cacheStats = array(
-            Cache::STATS_HITS             => 0,
-            Cache::STATS_MISSES           => 0,
-            Cache::STATS_UPTIME           => microtime( true ),
-            Cache::STATS_MEMORY_USAGE     => 0,
-            Cache::STATS_MEMORY_AVAILABLE => 0,
-        );
-
-        $_mem = System::memory();
-
-        if ( false !== ( $_cacheStats = $this->_store->fetch( static::STATS_CACHE_KEY ) ) )
-        {
-            Option::set( $this->_cacheStats, Cache::STATS_HITS, Option::get( $_cacheStats, Cache::STATS_HITS, 0 ) );
-            Option::set( $this->_cacheStats, Cache::STATS_MISSES, Option::get( $_cacheStats, Cache::STATS_MISSES, 0 ) );
-
-            $this->_cacheStats[ Cache::STATS_UPTIME ] = $_mem[ Cache::STATS_UPTIME ];
-            $this->_cacheStats[ Cache::STATS_MEMORY_USAGE ] = $_mem[ Cache::STATS_MEMORY_USAGE ];
-            $this->_cacheStats[ Cache::STATS_MEMORY_AVAILABLE ] = $_mem[ Cache::STATS_MEMORY_AVAILABLE ];
-            $this->_cacheStats['memory_pct_available'] = $_mem['memory_pct_free'];
-            $this->_cacheStats['memory_total'] = $_mem['memory_total'];
-            $this->_cacheStats['php_memory_limit'] = ini_get( 'memory_limit' );
-        }
-
-        $this->_store->save( 'event_store.stats', $this->_cacheStats );
-
-        return $this->_cacheStats;
     }
 
     /**
@@ -156,10 +68,7 @@ class EventStore implements EventStoreLike
      */
     public function loadAll()
     {
-        if ( false === ( $_data = $this->fetch( $this->_storeId, array(), false ) ) || empty( $_data ) )
-        {
-            $this->_cacheStats[ Cache::STATS_MISSES ]++;
-        }
+        $_data = Platform::storeGet( 'event.config', array() );
 
         //  Listeners
         foreach ( Option::get( $_data, 'listeners', array() ) as $_eventName => $_callables )
@@ -174,7 +83,6 @@ class EventStore implements EventStoreLike
                 foreach ( $_listeners as $_listener )
                 {
                     $this->_dispatcher->addListener( $_eventName, $_listener, $_priority, true );
-                    $this->_cacheStats[ Cache::STATS_HITS ]++;
                 }
             }
         }
@@ -183,12 +91,10 @@ class EventStore implements EventStoreLike
         foreach ( ( $_scripts = Option::get( $_data, 'scripts', array() ) ) as $_eventName => $_scripts )
         {
             $this->_dispatcher->addScript( $_eventName, $_scripts, true );
-            $this->_cacheStats[ Cache::STATS_HITS ] += is_string( $_scripts ) ? 1 : count( $_scripts );
         }
 
         //  Observers
         $this->_dispatcher->addObserver( $_observers = Option::get( $_data, 'observers', array() ), true );
-        $this->_cacheStats[ Cache::STATS_HITS ] += is_string( $_observers ) ? 1 : count( $_observers );
 
         return true;
     }
@@ -204,7 +110,7 @@ class EventStore implements EventStoreLike
             'scripts'   => $this->_dispatcher->getScripts(),
         );
 
-        $this->save( $this->_storeId, $_data );
+        Platform::storeSet( 'event.config', $_data );
     }
 
     /**
@@ -215,7 +121,7 @@ class EventStore implements EventStoreLike
     public function flushAll()
     {
         //  drop a null in for 1 second
-        return $this->save( $this->_storeId, null, 1 );
+        return Platform::storeDelete( 'event.config' );
     }
 
     /**
@@ -237,9 +143,9 @@ class EventStore implements EventStoreLike
      *
      * @return array|null An associative array with server's statistics if available, NULL otherwise.
      */
-    function getStats()
+    public function getStats()
     {
-        return $this->_cacheStats;
+        return Platform::getStore()->getStats();
     }
 
     /**
@@ -249,9 +155,10 @@ class EventStore implements EventStoreLike
      *
      * @return mixed The cached data or FALSE, if no cache entry exists for the given id.
      */
-    function fetch( $id )
+    public function fetch( $id )
     {
-        return $this->_store->fetch( $id );
+        return Platform::getStore()->fetch( $id );
+
     }
 
     /**
@@ -261,9 +168,9 @@ class EventStore implements EventStoreLike
      *
      * @return boolean TRUE if a cache entry exists for the given cache id, FALSE otherwise.
      */
-    function contains( $id )
+    public function contains( $id )
     {
-        return $this->_store->contains( $id );
+        return Platform::storeContains( $id );
     }
 
     /**
@@ -273,9 +180,9 @@ class EventStore implements EventStoreLike
      *
      * @return boolean TRUE if the cache entry was successfully deleted, FALSE otherwise.
      */
-    function delete( $id )
+    public function delete( $id )
     {
-        return $this->_store->delete( $id );
+        return Platform::storeDelete( $id );
     }
 
     /**
@@ -288,8 +195,8 @@ class EventStore implements EventStoreLike
      *
      * @return boolean TRUE if the entry was successfully stored in the cache, FALSE otherwise.
      */
-    function save( $id, $data, $lifeTime = self::CACHE_TTL )
+    public function save( $id, $data, $lifeTime = self::CACHE_TTL )
     {
-        $this->_store->save( $id, $data, $lifeTime );
+        return Platform::storeSet( $id, $data, $lifeTime );
     }
 }

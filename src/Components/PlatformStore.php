@@ -19,7 +19,6 @@
  */
 namespace DreamFactory\Platform\Components;
 
-use DreamFactory\Platform\Utility\Platform;
 use Kisma\Core\Components\Flexistore;
 use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Utility\Option;
@@ -41,7 +40,7 @@ class PlatformStore extends Flexistore
     /**
      * @type string
      */
-    const STORE_CACHE_PATH = '/store.cache';
+    const STORE_CACHE_PATH = '/app.store';
     /**
      * @type string The session key
      */
@@ -67,7 +66,7 @@ class PlatformStore extends Flexistore
             $type,
             array(
                 'namespace' => static::DEFAULT_NAMESPACE,
-                'arguments' => array( Platform::getPrivatePath( static::STORE_CACHE_PATH ), '.dfcc' )
+                'arguments' => array( sys_get_temp_dir() . static::STORE_CACHE_PATH, '.df' ),
             ),
             false
         );

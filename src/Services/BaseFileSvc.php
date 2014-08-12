@@ -42,6 +42,11 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
     //*************************************************************************
 
     /**
+     * @var array Array of private path strings
+     */
+    public $privatePaths = array();
+
+    /**
      * @var string Storage container name
      */
     protected $_container = null;
@@ -75,6 +80,14 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
         }
 
         parent::__construct( $settings );
+
+        $_paths = Option::clean( Option::getDeep( $settings, 'credentials', 'private_paths' ) );
+        foreach ( $_paths as &$_path )
+        {
+            // trim here for easy comparison later
+            $_path = ltrim( $_path, '/' );
+        }
+        $this->privatePaths = $_paths;
     }
 
     /**
@@ -124,7 +137,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
     {
         $result = $this->listContainers();
 
-        return array( 'resource' => $result );
+        return array('resource' => $result);
     }
 
     /**
@@ -145,14 +158,29 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
     {
         if ( empty( $this->_container ) )
         {
+            // see if there is any direction from the wire
+            $data = Option::clean( RestData::getPostedData( false, true ) );
+            $data = array_merge( $data, $_REQUEST );
+
             // no resource
-            $includeProperties = FilterInput::request( 'include_properties', false, FILTER_VALIDATE_BOOLEAN );
-            if ( !$includeProperties )
+            if ( !Option::getBool( $data, 'include_properties' ) )
             {
+                if ( Option::getBool( $data, 'as_access_components' ) )
+                {
+                    $tmp = array('', '*');
+                    $result = $this->listContainers();
+                    foreach ( $result as $each )
+                    {
+                        $tmp[] = Option::get( $each, 'name' );
+                    }
+
+                    return array('resource' => $tmp);
+                }
+
                 return $this->_listResources();
             }
             $result = $this->listContainers( true );
-            $result = array( 'container' => $result );
+            $result = array('container' => $result);
         }
         else if ( empty( $this->_folderPath ) )
         {
@@ -166,21 +194,9 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
             if ( !empty( $asZip ) )
             {
                 $zipFileName = $this->getFolderAsZip( $this->_container, '' );
-                $fd = fopen( $zipFileName, "r" );
-                if ( $fd )
-                {
-                    header( 'Content-Type: application/zip' );
-                    header( 'Content-Disposition: filename=" ' . basename( $zipFileName ) . '"' );
-                    header( 'Content-Length: ' . filesize( $zipFileName ) );
-                    header( 'Cache-Control: private' ); //use this to open files directly
-                    while ( !feof( $fd ) )
-                    {
-                        $buffer = fread( $fd, 2048 );
-                        echo $buffer;
-                    }
-                }
-                fclose( $fd );
+                FileUtilities::sendFile( $zipFileName, true );
                 unlink( $zipFileName );
+
                 // output handled by file handler, short the response here
                 $this->setOutputFormat( null );
                 $result = null;
@@ -207,21 +223,9 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
             if ( $asZip )
             {
                 $zipFileName = $this->getFolderAsZip( $this->_container, $this->_folderPath );
-                $fd = fopen( $zipFileName, "r" );
-                if ( $fd )
-                {
-                    header( 'Content-Type: application/zip' );
-                    header( 'Content-Disposition: filename=" ' . basename( $zipFileName ) . '"' );
-                    header( 'Content-Length: ' . filesize( $zipFileName ) );
-                    header( 'Cache-Control: private' ); //use this to open files directly
-                    while ( !feof( $fd ) )
-                    {
-                        $buffer = fread( $fd, 2048 );
-                        echo $buffer;
-                    }
-                }
-                fclose( $fd );
+                FileUtilities::sendFile( $zipFileName, true );
                 unlink( $zipFileName );
+
                 // output handled by file handler, short the response here
                 $this->setOutputFormat( null );
                 $result = null;
@@ -253,6 +257,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                 $download = FilterInput::request( 'download', false, FILTER_VALIDATE_BOOLEAN );
                 // stream the file, exits processing
                 $this->streamFile( $this->_container, $this->_filePath, $download );
+
                 // output handled by file handler, short the response here
                 $this->setOutputFormat( null );
                 $result = null;
@@ -281,7 +286,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
             if ( !empty( $containers ) )
             {
                 $result = $this->createContainers( $containers, $checkExist );
-                $result = array( 'container' => $result );
+                $result = array('container' => $result);
             }
             else
             {
@@ -369,7 +374,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                 {
                     // create folder from resource path
                     $this->createFolder( $this->_container, $this->_folderPath );
-                    $result = array( 'folder' => array( array( 'path' => $this->_container . '/' . $this->_folderPath ) ) );
+                    $result = array('folder' => array(array('path' => $this->_container . '/' . $this->_folderPath)));
                 }
                 else
                 {
@@ -457,7 +462,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
             // update container properties
             $content = RestData::getPostedData( false, true );
             $this->updateContainerProperties( $this->_container, $content );
-            $result = array( 'container' => array( 'name' => $this->_container ) );
+            $result = array('container' => array('name' => $this->_container));
         }
         else if ( empty( $this->_filePath ) )
         {
@@ -506,7 +511,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
             {
                 // delete multiple containers
                 $result = $this->deleteContainers( $containers, $force );
-                $result = array( 'container' => $result );
+                $result = array('container' => $result);
             }
             else
             {
@@ -516,7 +521,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     throw new BadRequestException( 'No name found for container in delete request.' );
                 }
                 $this->deleteContainer( $_name, $force );
-                $result = array( 'name' => $_name, 'path' => $_name );
+                $result = array('name' => $_name, 'path' => $_name);
             }
         }
         else if ( empty( $this->_folderPath ) )
@@ -526,7 +531,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
             if ( empty( $content ) )
             {
                 $this->deleteContainer( $this->_container, $force );
-                $result = array( 'name' => $this->_container );
+                $result = array('name' => $this->_container);
             }
             else
             {
@@ -540,7 +545,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
             if ( empty( $content ) )
             {
                 $this->deleteFolder( $this->_container, $this->_folderPath, $force );
-                $result = array( 'folder' => array( array( 'path' => $this->_container . '/' . $this->_folderPath ) ) );
+                $result = array('folder' => array(array('path' => $this->_container . '/' . $this->_folderPath)));
             }
             else
             {
@@ -551,7 +556,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
         {
             // delete file from permanent storage
             $this->deleteFile( $this->_container, $this->_filePath );
-            $result = array( 'file' => array( array( 'path' => $this->_container . '/' . $this->_filePath ) ) );
+            $result = array('file' => array(array('path' => $this->_container . '/' . $this->_filePath)));
         }
 
         return $result;
@@ -691,7 +696,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     $clean,
                     $checkExist
                 );
-                $out[ $key ] = ( isset( $tmp['file'] ) ? $tmp['file'] : array() );
+                $out[$key] = ( isset( $tmp['file'] ) ? $tmp['file'] : array() );
             }
             else
             {
@@ -700,11 +705,12 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
         }
         if ( !empty( $err ) )
         {
-            $msg = 'Failed to upload the following files to folder ' . $this->_folderPath . ': ' . implode( ', ', $err );
+            $msg =
+                'Failed to upload the following files to folder ' . $this->_folderPath . ': ' . implode( ', ', $err );
             throw new InternalServerErrorException( $msg );
         }
 
-        return array( 'file' => $out );
+        return array('file' => $out);
     }
 
     /**
@@ -715,9 +721,12 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
      *
      * @return array
      */
-    protected function _handleFolderContentFromData( $data, $extract = false, $clean = false, $checkExist = false )
+    protected function _handleFolderContentFromData( $data, /** @noinspection PhpUnusedParameterInspection */
+        $extract = false, /** @noinspection PhpUnusedParameterInspection */
+        $clean = false, /** @noinspection PhpUnusedParameterInspection */
+        $checkExist = false )
     {
-        $out = array( 'folder' => array(), 'file' => array() );
+        $out = array('folder' => array(), 'file' => array());
         $folders = Option::get( $data, 'folder' );
         if ( empty( $folders ) )
         {
@@ -728,7 +737,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
             if ( !isset( $folders[0] ) )
             {
                 // single folder, make into array
-                $folders = array( $folders );
+                $folders = array($folders);
             }
             foreach ( $folders as $key => $folder )
             {
@@ -743,7 +752,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                         $name = FileUtilities::getNameFromPath( $srcPath );
                     }
                     $fullPathName = $this->_folderPath . $name . '/';
-                    $out['folder'][ $key ] = array( 'name' => $name, 'path' => $this->_container . '/' . $fullPathName );
+                    $out['folder'][$key] = array('name' => $name, 'path' => $this->_container . '/' . $fullPathName);
                     try
                     {
                         $this->copyFolder( $this->_container, $fullPathName, $srcContainer, $srcPath, true );
@@ -755,7 +764,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     }
                     catch ( \Exception $ex )
                     {
-                        $out['folder'][ $key ]['error'] = array( 'message' => $ex->getMessage() );
+                        $out['folder'][$key]['error'] = array('message' => $ex->getMessage());
                     }
                 }
                 else
@@ -767,14 +776,14 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     {
                         $content = base64_decode( $content );
                     }
-                    $out['folder'][ $key ] = array( 'name' => $name, 'path' => $this->_container . '/' . $fullPathName );
+                    $out['folder'][$key] = array('name' => $name, 'path' => $this->_container . '/' . $fullPathName);
                     try
                     {
                         $this->createFolder( $this->_container, $fullPathName, true, $content );
                     }
                     catch ( \Exception $ex )
                     {
-                        $out['folder'][ $key ]['error'] = array( 'message' => $ex->getMessage() );
+                        $out['folder'][$key]['error'] = array('message' => $ex->getMessage());
                     }
                 }
             }
@@ -789,7 +798,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
             if ( !isset( $files[0] ) )
             {
                 // single file, make into array
-                $files = array( $files );
+                $files = array($files);
             }
             foreach ( $files as $key => $file )
             {
@@ -804,7 +813,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                         $name = FileUtilities::getNameFromPath( $srcPath );
                     }
                     $fullPathName = $this->_folderPath . $name;
-                    $out['file'][ $key ] = array( 'name' => $name, 'path' => $this->_container . '/' . $fullPathName );
+                    $out['file'][$key] = array('name' => $name, 'path' => $this->_container . '/' . $fullPathName);
                     try
                     {
                         $this->copyFile( $this->_container, $fullPathName, $srcContainer, $srcPath, true );
@@ -816,13 +825,13 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     }
                     catch ( \Exception $ex )
                     {
-                        $out['file'][ $key ]['error'] = array( 'message' => $ex->getMessage() );
+                        $out['file'][$key]['error'] = array('message' => $ex->getMessage());
                     }
                 }
                 elseif ( isset( $file['content'] ) )
                 {
                     $fullPathName = $this->_folderPath . $name;
-                    $out['file'][ $key ] = array( 'name' => $name, 'path' => $this->_container . '/' . $fullPathName );
+                    $out['file'][$key] = array('name' => $name, 'path' => $this->_container . '/' . $fullPathName);
                     $content = Option::get( $file, 'content', '' );
                     $isBase64 = Option::getBool( $file, 'is_base64' );
                     if ( $isBase64 )
@@ -835,7 +844,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                     }
                     catch ( \Exception $ex )
                     {
-                        $out['file'][ $key ]['error'] = array( 'message' => $ex->getMessage() );
+                        $out['file'][$key]['error'] = array('message' => $ex->getMessage());
                     }
                 }
             }
@@ -853,7 +862,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
      */
     protected function _deleteFolderContent( $data, $root = '', $force = false )
     {
-        $out = array( 'folder' => array(), 'file' => array() );
+        $out = array('folder' => array(), 'file' => array());
         $folders = Option::get( $data, 'folder' );
         if ( empty( $folders ) )
         {
@@ -864,7 +873,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
             if ( !isset( $folders[0] ) )
             {
                 // single folder, make into array
-                $folders = array( $folders );
+                $folders = array($folders);
             }
             $out['folder'] = $this->deleteFolders( $this->_container, $folders, $root, $force );
         }
@@ -878,7 +887,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
             if ( !isset( $files[0] ) )
             {
                 // single file, make into array
-                $files = array( $files );
+                $files = array($files);
             }
             $out['files'] = $this->deleteFiles( $this->_container, $files, $root );
         }
@@ -887,11 +896,11 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
     }
 
     /**
-     * @param string        $eventName
-     * @param PlatformEvent $event
-     * @param int           $priority
+     * @param string               $eventName
+     * @param PlatformServiceEvent $event
+     * @param int                  $priority
      *
-     * @return bool|PlatformEvent
+     * @return bool|PlatformServiceEvent
      */
     public function trigger( $eventName, $event = null, $priority = 0 )
     {
@@ -902,7 +911,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
 
         return Platform::trigger(
             str_ireplace(
-                array( '{api_name}', '{action}', '{container}', '{folder_path}', '{file_path}', ),
+                array('{api_name}', '{action}', '{container}', '{folder_path}', '{file_path}',),
                 array(
                     $this->_apiName == 'system' ? $this->_resource : $this->_apiName,
                     strtolower( $this->_action ),
@@ -912,7 +921,7 @@ abstract class BaseFileSvc extends BasePlatformRestService implements FileServic
                 ),
                 $eventName
             ),
-            $event ?: new PlatformServiceEvent( $this->_apiName, $this->_resource, $this->_response ),
+            $event ? : new PlatformServiceEvent( $this->_apiName, $this->_resource, $this->_response ),
             $priority
         );
     }

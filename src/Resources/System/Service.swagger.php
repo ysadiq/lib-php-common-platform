@@ -107,6 +107,14 @@ $_service['apis'] = array(
                         'paramType'     => 'query',
                         'required'      => false,
                     ),
+                    array(
+                        'name'          => 'include_components',
+                        'description'   => 'Include the components of the service, as used by role service accesses.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => false,
+                    ),
                 ),
                 'responseMessages' => array(
                     array(
@@ -502,10 +510,6 @@ $_commonProperties = array(
         'type'        => 'integer',
         'format'      => 'int32',
         'description' => 'One of the supported enumerated service types.',
-    ),
-    'storage_name'    => array(
-        'type'        => 'string',
-        'description' => 'The local or remote storage name (i.e. root folder).',
     ),
     'storage_type'    => array(
         'type'        => 'string',

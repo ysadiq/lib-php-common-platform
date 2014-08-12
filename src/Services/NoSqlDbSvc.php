@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Services;
 
+use DreamFactory\Platform\Exceptions\NotImplementedException;
 
 /**
  * NoSqlDbSvc.php
@@ -53,5 +54,37 @@ abstract class NoSqlDbSvc extends BaseDbSvc
         $_randSmall = rand( 10, 99 );
 
         return $_generateId . $_randSmall;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function describeField( $table, $field, $refresh = false )
+    {
+        throw new NotImplementedException( 'Not currently supported for NoSQL database services.' );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function createField( $table, $field, $properties = array(), $check_exist = false )
+    {
+        throw new NotImplementedException( 'Not currently supported for NoSQL database services.' );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateField( $table, $field, $properties = array(), $allow_delete_parts = false )
+    {
+        throw new NotImplementedException( 'Not currently supported for NoSQL database services.' );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function deleteField( $table, $field )
+    {
+        throw new NotImplementedException( 'Not currently supported for NoSQL database services.' );
     }
 }

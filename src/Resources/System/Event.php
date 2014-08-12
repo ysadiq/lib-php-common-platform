@@ -101,32 +101,24 @@ class Event extends BaseSystemRestResource
      */
     protected function _getAllEvents( $as_cached = false )
     {
-        //  Make sure the file exists.
-        $_cacheFile =
-            Platform::getSwaggerPath(
-                SwaggerManager::SWAGGER_CACHE_DIR . SwaggerManager::SWAGGER_EVENT_CACHE_FILE,
-                true,
-                true
-            );
-
-        //  If not, rebuild the swagger cache
-        if ( !file_exists( $_cacheFile ) )
+        //  Make sure the cache exists. If not, rebuild the swagger cache.
+        if ( !Platform::storeContains( SwaggerManager::SWAGGER_EVENT_CACHE_FILE ) )
         {
             //  This will trigger the event dispatcher to flush as well
             SwaggerManager::clearCache();
 
             //  Still not here? No events then
-            if ( !file_exists( $_cacheFile ) )
+            if ( !Platform::storeContains( SwaggerManager::SWAGGER_EVENT_CACHE_FILE ) )
             {
                 return array();
             }
         }
 
-        $_json = json_decode( file_get_contents( $_cacheFile ), true );
+        $_json = json_decode( Platform::storeGet( SwaggerManager::SWAGGER_EVENT_CACHE_FILE ), true );
 
         if ( false === $_json || JSON_ERROR_NONE !== json_last_error() )
         {
-            Log::error( 'Error reading contents of "' . $_cacheFile . '"' );
+            Log::error( 'Error reading contents of "' . SwaggerManager::SWAGGER_EVENT_CACHE_FILE . '"' );
 
             return array();
         }

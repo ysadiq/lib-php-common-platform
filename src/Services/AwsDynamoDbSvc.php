@@ -163,12 +163,27 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param $name
-     *
-     * @return string
+     * {@InheritDoc}
      */
     public function correctTableName( $name )
     {
+        static $_existing = null;
+
+        if ( !$_existing )
+        {
+            $_existing = $this->_getTablesAsArray();
+        }
+
+        if ( empty( $name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        if ( false === array_search( $name, $_existing ) )
+        {
+            throw new NotFoundException( "Table '$name' not found." );
+        }
+
         return $name;
     }
 
@@ -197,28 +212,16 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
      * @throws \Exception
      * @return array
      */
-    protected function _listResources()
+    protected function _listTables()
     {
-        try
+        $_resources = array();
+        $_result = $this->_getTablesAsArray();
+        foreach ( $_result as $_table )
         {
-            $_resources = array();
-            $_result = $this->_getTablesAsArray();
-            foreach ( $_result as $_table )
-            {
-                $_access = $this->getPermissions( $_table );
-                if ( !empty( $_access ) )
-                {
-                    $_resources[] = array('name' => $_table, 'access' => $_access, static::TABLE_INDICATOR => $_table);
-                }
-            }
+            $_resources[] = array('name' => $_table, static::TABLE_INDICATOR => $_table);
+        }
 
-            return array('resource' => $_resources);
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
-            )}" );
-        }
+        return $_resources;
     }
 
     // Handle administrative options, table add, delete, etc
@@ -226,28 +229,11 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function getTable( $table )
+    public function describeTable( $table, $refresh = true  )
     {
-        static $_existing = null;
-
-        if ( !$_existing )
-        {
-            $_existing = $this->_getTablesAsArray();
-        }
-
         $_name =
             ( is_array( $table ) ) ? Option::get( $table, 'name', Option::get( $table, static::TABLE_INDICATOR ) )
                 : $table;
-        if ( empty( $_name ) )
-        {
-            throw new BadRequestException( 'Table name can not be empty.' );
-        }
-
-        if ( false === array_search( $_name, $_existing ) )
-        {
-            throw new NotFoundException( "Table '$_name' not found." );
-        }
-
         try
         {
             $_result = $this->_dbConn->describeTable( array(static::TABLE_INDICATOR => $_name) );
@@ -269,10 +255,13 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function createTable( $properties = array() )
+    public function createTable( $table, $properties = array(), $check_exist = false )
     {
-        $_name = Option::get( $properties, 'name', Option::get( $properties, static::TABLE_INDICATOR ) );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
+        {
+            $table = Option::get( $properties, static::TABLE_INDICATOR );
+        }
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }
@@ -280,32 +269,35 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         try
         {
             $_properties = array_merge(
-                array(static::TABLE_INDICATOR => $_name),
+                array(static::TABLE_INDICATOR => $table),
                 $this->_defaultCreateTable,
                 $properties
             );
             $_result = $this->_dbConn->createTable( $_properties );
 
             // Wait until the table is created and active
-            $this->_dbConn->waitUntilTableExists( array(static::TABLE_INDICATOR => $_name) );
+            $this->_dbConn->waitUntilTableExists( array(static::TABLE_INDICATOR => $table) );
 
-            $_out = array_merge( array('name' => $_name), $_result['TableDescription'] );
+            $_out = array_merge( array('name' => $table), $_result['TableDescription'] );
 
             return $_out;
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to create table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to create table '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function updateTable( $properties = array() )
+    public function updateTable( $table, $properties = array(), $allow_delete_fields = false )
     {
-        $_name = Option::get( $properties, 'name', Option::get( $properties, static::TABLE_INDICATOR ) );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
+        {
+            $table = Option::get( $properties, static::TABLE_INDICATOR );
+        }
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }
@@ -314,19 +306,19 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
         {
             // Update the provisioned throughput capacity of the table
             $_properties = array_merge(
-                array(static::TABLE_INDICATOR => $_name),
+                array(static::TABLE_INDICATOR => $table),
                 $properties
             );
             $_result = $this->_dbConn->updateTable( $_properties );
 
             // Wait until the table is active again after updating
-            $this->_dbConn->waitUntilTableExists( array(static::TABLE_INDICATOR => $_name) );
+            $this->_dbConn->waitUntilTableExists( array(static::TABLE_INDICATOR => $table) );
 
-            return array_merge( array('name' => $_name), $_result['TableDescription'] );
+            return array_merge( array('name' => $table), $_result['TableDescription'] );
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to update table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to update table '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
@@ -366,8 +358,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
      */
     public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
     {
-        $table = $this->correctTableName( $table );
-
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
@@ -603,7 +593,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
         $requested_fields = array();
-        $_result = $this->getTable( $table );
+        $_result = $this->describeTable( $table );
         $_keys = Option::get( $_result, 'KeySchema', array() );
         $_definitions = Option::get( $_result, 'AttributeDefinitions', array() );
         $_fields = array();

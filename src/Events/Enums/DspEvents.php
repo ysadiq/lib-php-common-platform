@@ -32,4 +32,8 @@ class DspEvents
      * @var string Triggered when a local config file is loaded
      */
     const LOCAL_CONFIG_LOADED = 'dsp.local_config_loaded';
+    /**
+     * @type string Triggered when/if something has changed in the /storage path
+     */
+    const STORAGE_CHANGE = 'dsp.storage_change';
 }

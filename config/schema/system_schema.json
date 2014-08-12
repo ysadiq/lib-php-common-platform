@@ -1,5 +1,5 @@
 {
-	"version": "1.5.0",
+	"version": "1.7.0",
 	"scripts": {
 		"install": null,
 		"update":  "1.5.0-update.sql"
@@ -443,12 +443,6 @@
 					"type":       "integer",
 					"allow_null": false,
 					"default":    0
-				},
-				{
-					"name":       "storage_name",
-					"type":       "string",
-					"length":     80,
-					"allow_null": true
 				},
 				{
 					"name":       "storage_type",
@@ -1543,6 +1537,35 @@
 							"on_fail": "ignore_field"
 						}
 					}
+				}
+			]
+		},
+		{
+			"name":  "df_sys_service_doc",
+			"field": [
+				{
+					"name": "id",
+					"type": "id"
+				},
+				{
+					"name":          "service_id",
+					"type":          "reference",
+					"ref_table":     "df_sys_service",
+					"ref_fields":    "id",
+					"ref_on_update": "CASCADE",
+					"ref_on_delete": "CASCADE",
+					"allow_null":    true
+				},
+				{
+					"name":       "format",
+					"type":       "integer",
+					"default":    0,
+					"allow_null": false
+				},
+				{
+					"name":       "content",
+					"type":       "mediumtext",
+					"allow_null": true
 				}
 			]
 		}

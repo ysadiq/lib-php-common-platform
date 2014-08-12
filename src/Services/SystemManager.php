@@ -186,11 +186,6 @@ class SystemManager extends BaseSystemRestService
             }
 
             Pii::setState( 'dsp.init_check_complete', true );
-            Log::debug( 'Platform state validation complete.' );
-        }
-        else
-        {
-//			Log::debug( 'Platform state previously validated.' );
         }
 
         //	And redirect to welcome screen
@@ -223,7 +218,13 @@ class SystemManager extends BaseSystemRestService
 
             Log::debug( 'Checking database schema' );
 
-            SqlDbUtilities::updateTables( $_db, $_tables, true );
+            $_result = SqlDbUtilities::updateTables( $_db, $_tables, true );
+            $_labels = Option::get( $_result, 'labels', true );
+
+            if ( !empty( $_labels ) )
+            {
+//                SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
+            }
 
             try
             {
@@ -231,7 +232,7 @@ class SystemManager extends BaseSystemRestService
                 $command->reset();
 
                 // first time is troublesome with session user id
-                $rows = $command->insert( 'df_sys_config', array('db_version' => $_schemaVersion) );
+                $rows = $command->insert( 'df_sys_config', array( 'db_version' => $_schemaVersion ) );
 
                 if ( 0 >= $rows )
                 {
@@ -254,7 +255,7 @@ class SystemManager extends BaseSystemRestService
 
             //	Refresh the schema that we just added
             \Yii::app()->getCache()->flush();
-            $_db->getSchema()->refresh();
+            SqlDbUtilities::refreshCachedTables($_db);
         }
         catch ( \Exception $ex )
         {
@@ -289,7 +290,13 @@ class SystemManager extends BaseSystemRestService
             // create system tables
             Log::debug( 'Analyzing current schema for migration.' );
 
-            SqlDbUtilities::updateTables( $_db, $_tables, true );
+            $_result = SqlDbUtilities::updateTables( $_db, $_tables, true );
+            $_labels = Option::get( $_result, 'labels', true );
+
+            if ( !empty( $_labels ) )
+            {
+//                SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
+            }
 
             if ( !empty( $_currentVersion ) )
             {
@@ -300,7 +307,7 @@ class SystemManager extends BaseSystemRestService
                     {
                         $command->reset();
 
-                        $serviceId = $command->select( 'id' )->from( 'df_sys_service' )->where( 'api_name = :name', array(':name' => 'app') )->queryScalar();
+                        $serviceId = $command->select( 'id' )->from( 'df_sys_service' )->where( 'api_name = :name', array( ':name' => 'app' ) )->queryScalar();
 
                         if ( false === $serviceId )
                         {
@@ -308,9 +315,9 @@ class SystemManager extends BaseSystemRestService
                         }
 
                         $command->reset();
-                        $attributes = array('storage_service_id' => $serviceId, 'storage_container' => 'applications');
+                        $attributes = array( 'storage_service_id' => $serviceId, 'storage_container' => 'applications' );
                         $condition = 'is_url_external = :external and storage_service_id is null';
-                        $params = array(':external' => 0);
+                        $params = array( ':external' => 0 );
                         $command->update( 'df_sys_app', $attributes, $condition, $params );
                     }
                     catch ( \Exception $_ex )
@@ -323,8 +330,7 @@ class SystemManager extends BaseSystemRestService
 UPDATE df_sys_config SET
 	db_version = :db_version
 SQL;
-            }
-            else
+            } else
             {
                 $_sql = <<<SQL
 INSERT INTO {$_configTableName}
@@ -343,11 +349,11 @@ SQL;
             {
                 $command->reset();
 
-                $_params = array(':db_version' => $_schemaVersion);
+                $_params = array( ':db_version' => $_schemaVersion );
 
                 if ( 0 >= ( $_count = Sql::execute( $_sql, $_params ) ) && $_currentVersion != $_schemaVersion )
                 {
-                    Log::error( 'Error updating system config db_version.', array('from_version' => $_currentVersion, 'to_version' => $_schemaVersion) );
+                    Log::error( 'Error updating system config db_version.', array( 'from_version' => $_currentVersion, 'to_version' => $_schemaVersion ) );
 
                     throw new \Exception( 'Upsert failed. From v' . $_currentVersion . ' to v' . $_schemaVersion );
                 }
@@ -368,7 +374,7 @@ SQL;
 
             //	Refresh the schema that we just added
             \Yii::app()->getCache()->flush();
-            $_db->getSchema()->refresh();
+            SqlDbUtilities::refreshCachedTables($_db);
         }
         catch ( \Exception $ex )
         {
@@ -473,7 +479,7 @@ SQL;
                 $_lastName = Pii::getState( 'last_name', Option::get( $attributes, 'lastName' ) );
                 $_displayName = Pii::getState(
                     'display_name',
-                    Option::get( $attributes, 'displayName', $_firstName . ( $_lastName ? : ' ' . $_lastName ) )
+                    Option::get( $attributes, 'displayName', $_firstName . ( $_lastName ?: ' ' . $_lastName ) )
                 );
 
                 $_fields = array(
@@ -486,8 +492,7 @@ SQL;
                     'is_sys_admin' => true,
                     'confirm_code' => 'y'
                 );
-            }
-            else
+            } else
             {
                 //	in case something is messed up
                 $_fields = array(
@@ -572,22 +577,22 @@ SQL;
         // copy current directory to backup
         $_upgradeDir = Pii::getParam( 'base_path' ) . '/';
         $_backupDir = Platform::getStoragePath( '/backups/' );
-        
+
         if ( !file_exists( $_backupDir ) )
         {
             @\mkdir( $_backupDir, 0777, true );
         }
-        
+
         $_backupZipFile = $_backupDir . 'dsp_' . Pii::getParam( 'dsp.version' ) . '-' . time() . '.zip';
         $_backupZip = new \ZipArchive();
-        
+
         if ( true !== $_backupZip->open( $_backupZipFile, \ZIPARCHIVE::CREATE ) )
         {
             throw new \Exception( 'Error opening zip file.' );
         }
-        
-        $_skip = array('.', '..', '.git', '.idea', 'log', 'vendor', 'shared', 'storage');
-        
+
+        $_skip = array( '.', '..', '.git', '.idea', 'log', 'vendor', 'shared', 'storage' );
+
         try
         {
             FileUtilities::addTreeToZip( $_backupZip, $_upgradeDir, '', $_skip );
@@ -605,17 +610,17 @@ SQL;
         // need to download and extract zip file of latest version
         $_tempDir = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) . DIRECTORY_SEPARATOR;
         $_tempZip = null;
-        
+
         try
         {
             $_tempZip = FileUtilities::importUrlFileToTemp( $_versionUrl );
             $zip = new \ZipArchive();
-            
+
             if ( true !== $zip->open( $_tempZip ) )
             {
                 throw new \Exception( 'Error opening zip file.' );
             }
-            
+
             if ( !$zip->extractTo( $_tempDir ) )
             {
                 throw new \Exception( "Error extracting zip contents to temp directory - $_tempDir." );
@@ -638,7 +643,7 @@ SQL;
 
         // now copy over
         $_tempDir .= 'dsp-core-' . $version;
-        
+
         if ( !file_exists( $_tempDir ) )
         {
             throw new \Exception( "Failed to find new dsp package $_tempDir." );
@@ -649,7 +654,7 @@ SQL;
         // now run installer script
         $_oldWorkingDir = getcwd();
         chdir( $_upgradeDir );
-        
+
         $_installCommand = 'export COMPOSER_HOME=' . $_upgradeDir . '; /bin/bash ./scripts/installer.sh -cDf 2>&1';
         exec( $_installCommand, $_installOut );
         Log::info( implode( PHP_EOL, $_installOut ) );
@@ -677,7 +682,7 @@ SQL;
             static::VERSION_TAGS_URL,
             array(),
             array(
-                CURLOPT_HTTPHEADER => array('User-Agent: dreamfactory')
+                CURLOPT_HTTPHEADER => array( 'User-Agent: dreamfactory' )
             )
         );
 
@@ -830,7 +835,7 @@ SQL;
         }
 
         $_marker = $_privatePath . Drupal::REGISTRATION_MARKER . '.' . sha1( $_tag );
-        $paths = array('_privatePath' => $_privatePath, '_marker' => $_marker);
+        $paths = array( '_privatePath' => $_privatePath, '_marker' => $_marker );
 
         if ( !file_exists( $_marker ) )
         {
@@ -840,8 +845,7 @@ SQL;
                 Log::error( 'Unable to write marker file. Ignoring.' );
 
                 return true;
-            }
-            else
+            } else
             {
                 if ( false === @unlink( $_marker . '.test' ) )
                 {
@@ -883,8 +887,7 @@ SQL;
                     //	Log it
                     Log::error( 'System error removing registration marker: ' . $_marker );
                     //	But do nothing. Like the goggles...
-                }
-                else
+                } else
                 {
                     Log::info( 'Forced removal of registration marker: ' . $_marker );
                 }
@@ -918,18 +921,18 @@ SQL;
         //@todo Need to supply actual data from service table/config file. Maybe swagger?
         return array(
             'resource' => array(
-                array('name' => 'app', 'label' => 'Application'),
-                array('name' => 'app_group', 'label' => 'Application Group'),
-                array('name' => 'config', 'label' => 'Configuration'),
-                array('name' => 'custom', 'label' => 'Custom Settings'),
-                array('name' => 'device', 'label' => 'Device'),
-                array('name' => 'email_template', 'label' => 'Email Template'),
-                array('name' => 'event', 'label' => 'Event'),
-                array('name' => 'provider', 'label' => 'Provider'),
-                array('name' => 'provider_user', 'label' => 'Provider User'),
-                array('name' => 'role', 'label' => 'Role'),
-                array('name' => 'service', 'label' => 'Service'),
-                array('name' => 'user', 'label' => 'User'),
+                array( 'name' => 'app', 'label' => 'Application' ),
+                array( 'name' => 'app_group', 'label' => 'Application Group' ),
+                array( 'name' => 'config', 'label' => 'Configuration' ),
+                array( 'name' => 'custom', 'label' => 'Custom Settings' ),
+                array( 'name' => 'device', 'label' => 'Device' ),
+                array( 'name' => 'email_template', 'label' => 'Email Template' ),
+                array( 'name' => 'event', 'label' => 'Event' ),
+                array( 'name' => 'provider', 'label' => 'Provider' ),
+                array( 'name' => 'provider_user', 'label' => 'Provider User' ),
+                array( 'name' => 'role', 'label' => 'Role' ),
+                array( 'name' => 'service', 'label' => 'Service' ),
+                array( 'name' => 'user', 'label' => 'User' ),
             )
         );
     }
@@ -996,7 +999,7 @@ SQL;
     {
         if ( !empty( $id ) )
         {
-            if ( null !== ( $_app = App::model()->findByPk( $id, array('select' => 'api_name') ) ) )
+            if ( null !== ( $_app = App::model()->findByPk( $id, array( 'select' => 'api_name' ) ) ) )
             {
                 return $_app->getAttribute( 'api_name' );
             }
@@ -1077,9 +1080,9 @@ SQL
         {
             /** @var User $_user */
             $_user = $user
-                ? : User::model()->find(
+                ?: User::model()->find(
                     'is_sys_admin = :is_sys_admin and is_deleted = :is_deleted',
-                    array(':is_sys_admin' => 1, ':is_deleted' => 0)
+                    array( ':is_sys_admin' => 1, ':is_deleted' => 0 )
                 );
 
             if ( !empty( $_user ) )
@@ -1110,21 +1113,21 @@ SQL
     protected static function _loadSchema( $schemaPath = null, $checkTables = true )
     {
         $_schema = null;
-        $_schemaFilePath = static::$_configPath . ( $schemaPath ? : static::SCHEMA_FILE_PATH );
+        $_schemaFilePath = static::$_configPath . ( $schemaPath ?: static::SCHEMA_FILE_PATH );
 
         if ( false !== ( $_schema = Pii::getState( 'dsp.json_schema', false ) ) )
         {
             $_schema = Storage::defrost( $_schema );
 
-            if ( isset( $_schema, $_schema[$_schemaFilePath] ) )
+            if ( isset( $_schema, $_schema[ $_schemaFilePath ] ) )
             {
-                return $_schema[$_schemaFilePath];
+                return $_schema[ $_schemaFilePath ];
             }
         }
 
         if ( empty( $_schema ) )
         {
-            $_schema = array($_schemaFilePath => null);
+            $_schema = array( $_schemaFilePath => null );
         }
 
         if ( false === ( $_jsonSchema = file_get_contents( $_schemaFilePath ) ) )
@@ -1138,11 +1141,11 @@ SQL
             throw new InternalServerErrorException( static::BOGUS_INSTALL_MESSAGE );
         }
 
-        $_schema[$_schemaFilePath] = DataFormatter::jsonToArray( $_jsonSchema );
+        $_schema[ $_schemaFilePath ] = DataFormatter::jsonToArray( $_jsonSchema );
 
         if ( false !== $checkTables )
         {
-            $_tables = Option::get( $_schema[$_schemaFilePath], 'table' );
+            $_tables = Option::get( $_schema[ $_schemaFilePath ], 'table' );
 
             if ( empty( $_tables ) )
             {
@@ -1155,7 +1158,7 @@ SQL
             Storage::freeze( $_schema )
         );
 
-        return $_schema[$_schemaFilePath];
+        return $_schema[ $_schemaFilePath ];
     }
 
     /**
@@ -1211,7 +1214,7 @@ SQL
         {
             Log::debug(
                 'Database schema upgrade required.',
-                array('from_version' => $_currentVersion, 'to_version' => $_schemaVersion)
+                array( 'from_version' => $_currentVersion, 'to_version' => $_schemaVersion )
             );
 
             return PlatformStates::SCHEMA_REQUIRED;
@@ -1237,11 +1240,12 @@ SQL
 
         foreach ( $data as $_row )
         {
-            $_count = Sql::scalar( $_sql, 0, array(':' . $uniqueColumn => Option::get( $_row, $uniqueColumn )) );
+            $_count = Sql::scalar( $_sql, 0, array( ':' . $uniqueColumn => Option::get( $_row, $uniqueColumn ) ) );
 
             if ( empty( $_count ) )
             {
-                if ( null !== ( $_fileUrl = Option::get( $_row, 'url' ) ) )
+                // old url or import_url
+                if ( null !== ( $_fileUrl = Option::get( $_row, 'import_url', Option::get( $_row, 'url' ) ) ) )
                 {
                     if ( 0 === strcasecmp( 'dfpkg', FileUtilities::getFileExtension( $_fileUrl ) ) )
                     {
@@ -1250,7 +1254,7 @@ SQL
                         try
                         {
                             $_filename = FileUtilities::importUrlFileToTemp( $_fileUrl );
-                            Packager::importAppFromPackage( $_filename, $_fileUrl );
+                            Packager::importAppFromPackage( $_filename, $_row );
 
                             $_added++;
                         }
@@ -1264,8 +1268,7 @@ SQL
                             Log::error( 'Unable to remove package file "' . $_filename . '"' );
                         }
                     }
-                }
-                else
+                } else
                 {
                     try
                     {

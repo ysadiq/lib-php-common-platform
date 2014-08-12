@@ -77,7 +77,9 @@ class CouchDbSvc extends NoSqlDbSvc
 
         $_credentials = Session::replaceLookup( Option::get( $config, 'credentials' ), true );
 
-        if ( null === ( $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn', null, false, true ), true ) ) )
+        if ( null ===
+             ( $_dsn = Session::replaceLookup( Option::get( $_credentials, 'dsn', null, false, true ), true ) )
+        )
         {
             $_dsn = 'http://localhost:5984';
         }
@@ -119,6 +121,31 @@ class CouchDbSvc extends NoSqlDbSvc
     }
 
     /**
+     * {@InheritDoc}
+     */
+    public function correctTableName( $name )
+    {
+        static $_existing = null;
+
+        if ( !$_existing )
+        {
+            $_existing = $this->_dbConn->listDatabases();
+        }
+
+        if ( empty( $name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        if ( false === array_search( $name, $_existing ) )
+        {
+            throw new NotFoundException( "Table '$name' not found." );
+        }
+
+        return $name;
+    }
+
+    /**
      * @param $name
      *
      * @return string
@@ -137,32 +164,19 @@ class CouchDbSvc extends NoSqlDbSvc
      * @throws \Exception
      * @return array
      */
-    protected function _listResources()
+    protected function _listTables()
     {
-        try
+        $_resources = array();
+        $_result = $this->_dbConn->listDatabases();
+        foreach ( $_result as $_table )
         {
-            $_resources = array();
-            $_result = $this->_dbConn->listDatabases();
-            foreach ( $_result as $_table )
+            if ( '_' != substr( $_table, 0, 1 ) )
             {
-                if ( '_' != substr( $_table, 0, 1 ) )
-                {
-                    $_access = $this->getPermissions( $_table );
-                    if ( !empty( $_access ) )
-                    {
-                        $_resources[] = array('name' => $_table, 'access' => $_access);
-                    }
-                }
+                $_resources[] = array('name' => $_table);
             }
+        }
 
-            return array('resource' => $_resources);
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException(
-                "Failed to list resources for this service.\n{$_ex->getMessage()}"
-            );
-        }
+        return $_resources;
     }
 
     // Handle administrative options, table add, delete, etc
@@ -170,25 +184,9 @@ class CouchDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function getTable( $table )
+    public function describeTable( $table, $refresh = true )
     {
-        static $_existing = null;
-
-        if ( !$_existing )
-        {
-            $_existing = $this->_dbConn->listDatabases();
-        }
-
         $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
-        if ( empty( $_name ) )
-        {
-            throw new BadRequestException( 'Table name can not be empty.' );
-        }
-
-        if ( false === array_search( $_name, $_existing ) )
-        {
-            throw new NotFoundException( "Table '$_name' not found." );
-        }
 
         try
         {
@@ -201,54 +199,51 @@ class CouchDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException(
-                "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}"
-            );
+            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage(
+                                                    )}" );
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function createTable( $properties = array() )
+    public function createTable( $table, $properties = array(), $check_exist = false )
     {
-        $_name = Option::get( $properties, 'name' );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }
 
         try
         {
-            $this->selectTable( $_name );
+            $this->selectTable( $table );
             $this->_dbConn->asArray()->createDatabase();
             // $_result['ok'] = true
 
-            $_out = array('name' => $_name);
+            $_out = array('name' => $table);
 
             return $_out;
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to create table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to create table '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function updateTable( $properties = array() )
+    public function updateTable( $table, $properties = array(), $allow_delete_fields = false )
     {
-        $_name = Option::get( $properties, 'name' );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }
 
-        $this->selectTable( $_name );
+        $this->selectTable( $table );
 
 //		throw new InternalServerErrorException( "Failed to update table '$_name'." );
-        return array('name' => $_name);
+        return array('name' => $table);
     }
 
     /**
@@ -340,7 +335,8 @@ class CouchDbSvc extends NoSqlDbSvc
 
             $_rows = Option::get( $_result, 'rows' );
             $_out = static::cleanRecords( $_rows, $_fields, static::DEFAULT_ID_FIELD, $_includeDocs );
-            if ( Option::getBool( $extras, 'include_count', false ) || ( 0 != intval( Option::get( $_result, 'offset' ) ) )
+            if ( Option::getBool( $extras, 'include_count', false ) ||
+                 ( 0 != intval( Option::get( $_result, 'offset' ) ) )
             )
             {
                 $_out['meta']['count'] = intval( Option::get( $_result, 'total_rows' ) );
@@ -423,7 +419,7 @@ class CouchDbSvc extends NoSqlDbSvc
             {
                 continue;
             }
-            $_out[ $key ] = Option::get( $record, $key );
+            $_out[$key] = Option::get( $record, $key );
         }
 
         return $_out;
@@ -505,8 +501,8 @@ class CouchDbSvc extends NoSqlDbSvc
                 if ( !empty( $_updates ) )
                 {
                     // make sure record doesn't contain identifiers
-                    unset( $_updates[ static::DEFAULT_ID_FIELD ] );
-                    unset( $_updates[ static::REV_FIELD ] );
+                    unset( $_updates[static::DEFAULT_ID_FIELD] );
+                    unset( $_updates[static::REV_FIELD] );
                     $_parsed = $this->parseRecord( $_updates, $_fieldsInfo, $_ssFilters, true );
                     if ( empty( $_parsed ) )
                     {
@@ -531,11 +527,11 @@ class CouchDbSvc extends NoSqlDbSvc
                 }
 
                 $_old = null;
-                if ( !isset( $record[ static::REV_FIELD ] ) || $rollback )
+                if ( !isset( $record[static::REV_FIELD] ) || $rollback )
                 {
                     // unfortunately we need the rev, so go get the latest
                     $_old = $this->_dbConn->asArray()->getDoc( $id );
-                    $record[ static::REV_FIELD ] = Option::get( $_old, static::REV_FIELD );
+                    $record[static::REV_FIELD] = Option::get( $_old, static::REV_FIELD );
                 }
 
                 $_result = $this->_dbConn->asArray()->storeDoc( (object)$record );
@@ -563,8 +559,8 @@ class CouchDbSvc extends NoSqlDbSvc
                 }
 
                 // make sure record doesn't contain identifiers
-                unset( $record[ static::DEFAULT_ID_FIELD ] );
-                unset( $record[ static::REV_FIELD ] );
+                unset( $record[static::DEFAULT_ID_FIELD] );
+                unset( $record[static::REV_FIELD] );
                 $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
                 if ( empty( $_parsed ) )
                 {
@@ -700,9 +696,10 @@ class CouchDbSvc extends NoSqlDbSvc
                 break;
 
             case static::GET:
-                $_result = $this->_dbConn->setQueryParameters( $extras )->asArray()->include_docs( $_requireMore )->keys(
-                    $this->_batchIds
-                )->getAllDocs();
+                $_result =
+                    $this->_dbConn->setQueryParameters( $extras )->asArray()->include_docs( $_requireMore )->keys(
+                        $this->_batchIds
+                    )->getAllDocs();
                 $_rows = Option::get( $_result, 'rows' );
                 $_out = static::cleanRecords( $_rows, $_fields, static::DEFAULT_ID_FIELD, true );
 

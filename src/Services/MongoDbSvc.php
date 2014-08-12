@@ -24,6 +24,7 @@ use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
 use DreamFactory\Platform\Resources\User\Session;
+use DreamFactory\Platform\Utility\DbUtilities;
 use Kisma\Core\Utility\Option;
 
 /**
@@ -166,43 +167,7 @@ class MongoDbSvc extends NoSqlDbSvc
         return $_coll;
     }
 
-    // REST service implementation
-
-    /**
-     * @throws \Exception
-     * @return array
-     */
-    protected function _listResources()
-    {
-        try
-        {
-            $_resources = array();
-            $_result = $this->_dbConn->getCollectionNames();
-            foreach ( $_result as $_table )
-            {
-                $_access = $this->getPermissions( $_table );
-                if ( !empty( $_access ) )
-                {
-                    $_resources[] = array('name' => $_table, 'access' => $_access);
-                }
-            }
-
-            return array('resource' => $_resources);
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException(
-                "Failed to list resources for this service.\n{$_ex->getMessage()}"
-            );
-        }
-    }
-
-    // Handle administrative options, table add, delete, etc
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getTable( $table )
+    public function correctTableName( $name )
     {
         static $_existing = null;
 
@@ -211,16 +176,45 @@ class MongoDbSvc extends NoSqlDbSvc
             $_existing = $this->_dbConn->getCollectionNames();
         }
 
-        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
-        if ( empty( $_name ) )
+        if ( empty( $name ) )
         {
             throw new BadRequestException( 'Table name can not be empty.' );
         }
 
-        if ( false === array_search( $_name, $_existing ) )
+        if ( false === array_search( $name, $_existing ) )
         {
-            throw new NotFoundException( "Table '$_name' not found." );
+            throw new NotFoundException( "Table '$name' not found." );
         }
+
+        return $name;
+    }
+
+    // REST service implementation
+
+    /**
+     * @throws \Exception
+     * @return array
+     */
+    protected function _listTables()
+    {
+        $_resources = array();
+        $_result = $this->_dbConn->getCollectionNames();
+        foreach ( $_result as $_table )
+        {
+            $_resources[] = array('name' => $_table);
+        }
+
+        return $_resources;
+    }
+
+    // Handle administrative options, table add, delete, etc
+
+    /**
+     * {@inheritdoc}
+     */
+    public function describeTable( $table, $refresh = true )
+    {
+        $_name = ( is_array( $table ) ) ? Option::get( $table, 'name' ) : $table;
 
         try
         {
@@ -233,26 +227,24 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException(
-                "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}"
-            );
+            throw new InternalServerErrorException( "Failed to get table properties for table '$_name'.\n{$_ex->getMessage(
+            )}" );
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function createTable( $properties = array() )
+    public function createTable( $table, $properties = array(), $check_exist = false )
     {
-        $_name = Option::get( $properties, 'name' );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }
 
         try
         {
-            $_result = $this->_dbConn->createCollection( $_name );
+            $_result = $this->_dbConn->createCollection( $table );
             $_out = array('name' => $_result->getName());
             $_out['indexes'] = $_result->getIndexInfo();
 
@@ -260,25 +252,24 @@ class MongoDbSvc extends NoSqlDbSvc
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to create table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to create table '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function updateTable( $properties = array() )
+    public function updateTable( $table, $properties = array(), $allow_delete_fields = false )
     {
-        $_name = Option::get( $properties, 'name' );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }
 
-        $this->selectTable( $_name );
+        $this->selectTable( $table );
 
 //		throw new InternalServerErrorException( "Failed to update table '$_name'." );
-        return array('name' => $_name);
+        return array('name' => $table);
     }
 
     /**
@@ -312,7 +303,7 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function updateRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'There are no fields in the record.' );
         $_coll = $this->selectTable( $table );
 
         $_fields = Option::get( $extras, 'fields' );
@@ -357,7 +348,7 @@ class MongoDbSvc extends NoSqlDbSvc
      */
     public function patchRecordsByFilter( $table, $record, $filter = null, $params = array(), $extras = array() )
     {
-        $record = static::validateAsArray( $record, null, false, 'There are no fields in the record.' );
+        $record = DbUtilities::validateAsArray( $record, null, false, 'There are no fields in the record.' );
         $_coll = $this->selectTable( $table );
 
         $_fields = Option::get( $extras, 'fields' );
@@ -587,7 +578,7 @@ class MongoDbSvc extends NoSqlDbSvc
         $_out = array();
         foreach ( $include as $key )
         {
-            $_out[ $key ] = true;
+            $_out[$key] = true;
         }
 
         return $_out;
@@ -675,7 +666,7 @@ class MongoDbSvc extends NoSqlDbSvc
             {
                 $_field = $_ops[0];
                 $_val = static::_determineValue( $_ops[1], $_field, $params );
-                $_mongoOp = $_mongoOperators[ $_key ];
+                $_mongoOp = $_mongoOperators[$_key];
                 switch ( $_mongoOp )
                 {
                     case '$eq':
@@ -698,7 +689,7 @@ class MongoDbSvc extends NoSqlDbSvc
 //			WHERE name LIKE "Joe%"	(array("name" => new MongoRegex("/^Joe/")));
 //			WHERE name LIKE "%Joe"	(array("name" => new MongoRegex("/Joe$/")));
                         $_val = static::_determineValue( $_ops[1], $_field, $params );
-                        if ( '%' == $_val[ strlen( $_val ) - 1 ] )
+                        if ( '%' == $_val[strlen( $_val ) - 1] )
                         {
                             if ( '%' == $_val[0] )
                             {
@@ -744,35 +735,38 @@ class MongoDbSvc extends NoSqlDbSvc
         // process parameter replacements
         if ( is_string( $value ) && !empty( $value ) && ( ':' == $value[0] ) )
         {
-            if ( isset( $replacements, $replacements[ $value ] ) )
+            if ( isset( $replacements, $replacements[$value] ) )
             {
-                $value = $replacements[ $value ];
+                $value = $replacements[$value];
             }
         }
 
         if ( $field && ( static::DEFAULT_ID_FIELD == $field ) )
         {
-            return static::idToMongoId( $value, true );
+            $value = static::idToMongoId( $value );
         }
 
-        if ( trim( $value, "'\"" ) !== $value )
+        if ( is_string( $value ) )
         {
-            return trim( $value, "'\"" ); // meant to be a string
-        }
+            if ( trim( $value, "'\"" ) !== $value )
+            {
+                return trim( $value, "'\"" ); // meant to be a string
+            }
 
-        if ( is_numeric( $value ) )
-        {
-            return ( $value == strval( intval( $value ) ) ) ? intval( $value ) : floatval( $value );
-        }
+            if ( is_numeric( $value ) )
+            {
+                return ( $value == strval( intval( $value ) ) ) ? intval( $value ) : floatval( $value );
+            }
 
-        if ( 0 == strcasecmp( $value, 'true' ) )
-        {
-            return true;
-        }
+            if ( 0 == strcasecmp( $value, 'true' ) )
+            {
+                return true;
+            }
 
-        if ( 0 == strcasecmp( $value, 'false' ) )
-        {
-            return false;
+            if ( 0 == strcasecmp( $value, 'false' ) )
+            {
+                return false;
+            }
         }
 
         return $value;
@@ -804,7 +798,8 @@ class MongoDbSvc extends NoSqlDbSvc
         $_serverCriteria = static::buildSSFilterArray( $ss_filters );
         if ( !empty( $_serverCriteria ) )
         {
-            $_criteria = ( !empty( $_criteria ) ) ? array('$and' => array($_criteria, $_serverCriteria)) : $_serverCriteria;
+            $_criteria =
+                ( !empty( $_criteria ) ) ? array('$and' => array($_criteria, $_serverCriteria)) : $_serverCriteria;
         }
 
         return $_criteria;
@@ -906,44 +901,11 @@ class MongoDbSvc extends NoSqlDbSvc
             }
             if ( !empty( $_field ) )
             {
-                $_out[ $_field ] = $_dir;
+                $_out[$_field] = $_dir;
             }
         }
 
         return $_out;
-    }
-
-    /**
-     * @param array $record
-     * @param bool  $for_update
-     *
-     * @return mixed
-     */
-    protected function formatRecordToNative( $record, $for_update = false )
-    {
-        if ( $for_update )
-        {
-
-        }
-
-        return static::idToMongoId( $record );
-    }
-
-    /**
-     * @param mixed $native
-     * @param bool  $for_update
-     *
-     * @return array
-     */
-    protected function formatRecordFromNative( $native, $for_update = false )
-    {
-        // base class does nothing so far
-        if ( $for_update )
-        {
-
-        }
-
-        return static::mongoIdToId( $native );
     }
 
     /**
@@ -957,150 +919,177 @@ class MongoDbSvc extends NoSqlDbSvc
     {
         $_out = parent::cleanRecord( $record, $include, $id_field );
 
-        return static::mongoIdToId( $_out );
+        return static::_fromMongoObjects( $_out );
+    }
+
+    /**
+     * @param array $record
+     *
+     * @return array|string
+     */
+    protected static function _fromMongoObjects( array $record )
+    {
+        if ( !empty( $record ) )
+        {
+            foreach ( $record as &$_data )
+            {
+                if ( is_object( $_data ) )
+                {
+                    if ( $_data instanceof \MongoId )
+                    {
+                        $_data = $_data->__toString();
+                    }
+                    elseif ( $_data instanceof \MongoDate )
+                    {
+//                        $_data = $data->__toString();
+                        $_data = array('$date' => date( DATE_ISO8601, $_data->sec ));
+                    }
+                    elseif ( $_data instanceof \MongoBinData )
+                    {
+                        $_data = (string)$_data;
+                    }
+                    elseif ( $_data instanceof \MongoDBRef )
+                    {
+                    }
+                }
+            }
+        }
+
+        return $record;
+    }
+
+    /**
+     * @param array $record
+     *
+     * @return array
+     */
+    protected static function _toMongoObjects( $record )
+    {
+        if ( !empty( $record ) )
+        {
+            foreach ( $record as $_key => $_data )
+            {
+                if ( !is_object( $_data ) )
+                {
+                    if ( is_string( $_data ) && ( static::DEFAULT_ID_FIELD == $_key ) )
+                    {
+                        $record[$_key] = static::idToMongoId( $_data );
+                    }
+                    elseif ( is_array( $_data ) && ( 1 === count( $_data ) ) )
+                    {
+                        // using typed definition, i.e. {"$date" : "2014-08-02T08:40:12.569Z" }
+                        if ( array_key_exists( '$date', $_data ) )
+                        {
+                            $_temp = $_data['$date'];
+                            if ( empty( $_temp ) )
+                            {
+                                $record[$_key] = new \MongoDate();
+                            }
+                            elseif ( is_string( $_temp ) )
+                            {
+                                $record[$_key] = new \MongoDate( strtotime( $_temp ) );
+                            }
+                            elseif ( is_int( $_temp ) )
+                            {
+                                $record[$_key] = new \MongoDate( $_temp );
+                            }
+                        }
+                        elseif ( isset( $_data['$id'] ) )
+                        {
+                            $record[$_key] = static::idToMongoId( $_data['$id'] );
+                        }
+                    }
+                }
+            }
+        }
+
+        return $record;
+    }
+
+    /**
+     * @param mixed $value
+     *
+     * @return array|string
+     */
+    protected static function mongoIdToId( $value )
+    {
+        if ( is_object( $value ) )
+        {
+            /** $record \MongoId */
+            $value = (string)$value;
+        }
+
+        return $value;
     }
 
     /**
      * @param array  $records
-     * @param string $id_field
      *
      * @return mixed
      */
-    protected static function mongoIdsToIds( $records, $id_field = null )
+    protected static function mongoIdsToIds( $records )
     {
         foreach ( $records as $key => $_record )
         {
-            $records[ $key ] = static::mongoIdToId( $_record, $id_field );
+            $records[$key] = static::mongoIdToId( $_record );
         }
 
         return $records;
     }
 
     /**
-     * @param mixed  $record
-     * @param string $id_field
-     *
-     * @return array|string
-     */
-    protected static function mongoIdToId( $record, $id_field = null )
-    {
-        if ( empty( $id_field ) )
-        {
-            $id_field = static::DEFAULT_ID_FIELD;
-        }
-        if ( !is_array( $record ) )
-        {
-            if ( is_object( $record ) )
-            {
-                /** $record \MongoId */
-                $record = (string)$record;
-            }
-        }
-        else
-        {
-            /** @var \MongoId $_id in record as '_id' or 'id' */
-            $_id = Option::get( $record, $id_field, Option::get( $record, 'id', null, true ) );
-            if ( is_object( $_id ) )
-            {
-                /** $_id \MongoId */
-                $_id = (string)$_id;
-            }
-            $record[ $id_field ] = $_id;
-        }
-
-        return $record;
-    }
-
-    /**
-     * @param mixed  $record
-     * @param bool   $determine_value
-     * @param string $id_field
+     * @param mixed $value
      *
      * @return array|bool|float|int|\MongoId|string
      */
-    protected static function idToMongoId( $record, $determine_value = false, $id_field = null )
+    protected static function idToMongoId( $value )
     {
-        if ( !is_array( $record ) )
+        if ( is_array( $value ) )
         {
-            if ( is_string( $record ) )
+            if ( array_key_exists( '$id', $value ) )
             {
-                $_isMongo = false;
-                if ( ( 24 == strlen( $record ) ) )
-                {
-                    // single id
-                    try
-                    {
-                        $record = new \MongoId( $record );
-                        $_isMongo = true;
-                    }
-                    catch ( \Exception $_ex )
-                    {
-                        // obviously not a Mongo created Id, let it be
-                    }
-                }
-                if ( !$_isMongo && $determine_value )
-                {
-                    $record = static::_determineValue( $record );
-                }
-            }
-        }
-        else
-        {
-            if ( empty( $id_field ) )
-            {
-                $id_field = static::DEFAULT_ID_FIELD;
-            }
-
-            // single record with fields
-            $_id = Option::get( $record, $id_field );
-            if ( is_string( $_id ) )
-            {
-                $_isMongo = false;
-                if ( ( 24 == strlen( $_id ) ) )
-                {
-                    try
-                    {
-                        $_id = new \MongoId( $_id );
-                        $_isMongo = true;
-                    }
-                    catch ( \Exception $_ex )
-                    {
-                        // obviously not a Mongo created Id, let it be
-                    }
-                }
-                if ( !$_isMongo && $determine_value )
-                {
-                    $_id = static::_determineValue( $_id );
-                }
-                $record[ $id_field ] = $_id;
+                $value = Option::get( $value, '$id' );
             }
         }
 
-        return $record;
+        if ( is_string( $value ) )
+        {
+            if ( ( 24 == strlen( $value ) ) )
+            {
+                try
+                {
+                    $_temp = new \MongoId( $value );
+                    $value = $_temp;
+                }
+                catch ( \Exception $_ex )
+                {
+                    // obviously not a Mongo created Id, let it be
+                }
+            }
+        }
+
+        return $value;
     }
 
     /**
-     * @param string|array $records
-     * @param string       $id_field
+     * @param string|array $ids
      *
      * @return array
      */
-    protected static function idsToMongoIds( $records, $id_field = null )
+    protected static function idsToMongoIds( $ids )
     {
-        $_determineValue = false;
-        if ( !is_array( $records ) )
+        if ( !is_array( $ids ) )
         {
             // comma delimited list of ids
-            $records = array_map( 'trim', explode( ',', trim( $records, ',' ) ) );
-            $_determineValue = true;
+            $ids = array_map( 'trim', explode( ',', trim( $ids, ',' ) ) );
         }
 
-        foreach ( $records as $key => $_record )
+        foreach ( $ids as &$_id )
         {
-            $records[ $key ] = static::idToMongoId( $_record, $_determineValue, $id_field );
+            $_id = static::idToMongoId( $_id );
         }
 
-        return $records;
+        return $ids;
     }
 
     /**
@@ -1128,7 +1117,6 @@ class MongoDbSvc extends NoSqlDbSvc
                 break;
         }
 
-//        $record = DataFormat::arrayKeyLower( $record );
         $_parsed = ( empty( $fields_info ) ) ? $record : array();
         if ( !empty( $fields_info ) )
         {
@@ -1136,7 +1124,6 @@ class MongoDbSvc extends NoSqlDbSvc
             $_values = array_values( $record );
             foreach ( $fields_info as $_fieldInfo )
             {
-//            $name = strtolower( Option::get( $field_info, 'name', '' ) );
                 $_name = Option::get( $_fieldInfo, 'name', '' );
                 $_type = Option::get( $_fieldInfo, 'type' );
                 $_pos = array_search( $_name, $_keys );
@@ -1155,14 +1142,14 @@ class MongoDbSvc extends NoSqlDbSvc
 
                     if ( !static::validateFieldValue( $_name, $_fieldVal, $_validations, $for_update, $_fieldInfo ) )
                     {
-                        unset( $_keys[ $_pos ] );
-                        unset( $_values[ $_pos ] );
+                        unset( $_keys[$_pos] );
+                        unset( $_values[$_pos] );
                         continue;
                     }
 
-                    $_parsed[ $_name ] = $_fieldVal;
-                    unset( $_keys[ $_pos ] );
-                    unset( $_values[ $_pos ] );
+                    $_parsed[$_name] = $_fieldVal;
+                    unset( $_keys[$_pos] );
+                    unset( $_values[$_pos] );
                 }
 
                 // add or override for specific fields
@@ -1171,11 +1158,11 @@ class MongoDbSvc extends NoSqlDbSvc
                     case 'timestamp_on_create':
                         if ( !$for_update )
                         {
-                            $_parsed[ $_name ] = new \MongoDate();
+                            $_parsed[$_name] = new \MongoDate();
                         }
                         break;
                     case 'timestamp_on_update':
-                        $_parsed[ $_name ] = new \MongoDate();
+                        $_parsed[$_name] = new \MongoDate();
                         break;
                     case 'user_id_on_create':
                         if ( !$for_update )
@@ -1183,7 +1170,7 @@ class MongoDbSvc extends NoSqlDbSvc
                             $userId = Session::getCurrentUserId();
                             if ( isset( $userId ) )
                             {
-                                $_parsed[ $_name ] = $userId;
+                                $_parsed[$_name] = $userId;
                             }
                         }
                         break;
@@ -1191,7 +1178,7 @@ class MongoDbSvc extends NoSqlDbSvc
                         $userId = Session::getCurrentUserId();
                         if ( isset( $userId ) )
                         {
-                            $_parsed[ $_name ] = $userId;
+                            $_parsed[$_name] = $userId;
                         }
                         break;
                 }
@@ -1203,7 +1190,8 @@ class MongoDbSvc extends NoSqlDbSvc
             $this->validateRecord( $_parsed, $filter_info, $for_update, $old_record );
         }
 
-        return $_parsed;
+        // convert to native format
+        return static::_toMongoObjects( $_parsed );
     }
 
     /**
@@ -1264,22 +1252,19 @@ class MongoDbSvc extends NoSqlDbSvc
                     throw new BadRequestException( 'No valid fields were found in record.' );
                 }
 
-                // convert to native format
-                $record = static::idToMongoId( $_parsed );
-
                 if ( !$continue && !$rollback && !$single )
                 {
-                    return parent::addToTransaction( $record, $id );
+                    return parent::addToTransaction( $_parsed, $id );
                 }
 
-                $_result = $this->_collection->insert( $record );
+                $_result = $this->_collection->insert( $_parsed );
                 static::processResult( $_result );
 
-                $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
+                $_out = static::cleanRecord( $_parsed, $_fields, static::DEFAULT_ID_FIELD );
 
                 if ( $rollback )
                 {
-                    $this->addToRollback( static::recordAsId( $record, static::DEFAULT_ID_FIELD ) );
+                    $this->addToRollback( static::recordAsId( $_parsed, static::DEFAULT_ID_FIELD ) );
                 }
                 break;
 
@@ -1292,8 +1277,6 @@ class MongoDbSvc extends NoSqlDbSvc
                 else
                 {
                     $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
-                    // convert to native format
-                    $record = static::idToMongoId( $_parsed );
                 }
                 if ( empty( $_parsed ) )
                 {
@@ -1310,13 +1293,13 @@ class MongoDbSvc extends NoSqlDbSvc
                 if ( empty( $_updates ) )
                 {
                     $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
-                    static::removeIds( $record, static::DEFAULT_ID_FIELD );
-                    $_updates = $record;
+                    static::removeIds( $_parsed, static::DEFAULT_ID_FIELD );
+                    $_updates = $_parsed;
                 }
                 else
                 {
                     $record = $_updates;
-                    $record[ static::DEFAULT_ID_FIELD ] = $id;
+                    $record[static::DEFAULT_ID_FIELD] = $id;
                     $_out = static::cleanRecord( $record, $_fields, static::DEFAULT_ID_FIELD );
                 }
 
@@ -1326,7 +1309,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 $_result = $this->_collection->findAndModify( $_criteria, $_updates, $_fieldArray, $_options );
                 if ( empty( $_result ) )
                 {
-                    throw new NotFoundException( "Record with id '" . static::mongoIdToId( $id ) . "' not found." );
+                    throw new NotFoundException( "Record with id '$id' not found." );
                 }
 
                 if ( $rollback )
@@ -1335,7 +1318,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 }
                 else
                 {
-                    $_out = static::mongoIdToId( $_result );
+                    $_out = static::_fromMongoObjects( $_result );
                 }
                 break;
 
@@ -1349,8 +1332,6 @@ class MongoDbSvc extends NoSqlDbSvc
                 else
                 {
                     $_parsed = $this->parseRecord( $record, $_fieldsInfo, $_ssFilters, true );
-                    // convert to native format
-                    $record = static::idToMongoId( $_parsed );
                 }
                 if ( empty( $_parsed ) )
                 {
@@ -1366,8 +1347,8 @@ class MongoDbSvc extends NoSqlDbSvc
                 $_options = array('new' => !$rollback);
                 if ( empty( $_updates ) )
                 {
-                    static::removeIds( $record, static::DEFAULT_ID_FIELD );
-                    $_updates = $record;
+                    static::removeIds( $_parsed, static::DEFAULT_ID_FIELD );
+                    $_updates = $_parsed;
                 }
 
                 $_updates = array('$set' => $_updates);
@@ -1378,7 +1359,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 $_result = $this->_collection->findAndModify( $_criteria, $_updates, $_fieldArray, $_options );
                 if ( empty( $_result ) )
                 {
-                    throw new NotFoundException( "Record with id '" . static::mongoIdToId( $id ) . "' not found." );
+                    throw new NotFoundException( "Record with id '$id' not found." );
                 }
 
                 if ( $rollback )
@@ -1390,17 +1371,14 @@ class MongoDbSvc extends NoSqlDbSvc
                     {
                         /** @var \MongoCursor $_result */
                         $_result = $this->_collection->findOne( $_criteria, $_fieldArray );
-                        $_out = static::mongoIdToId( $_result );
                     }
                     else
                     {
-                        $_out = array(static::DEFAULT_ID_FIELD => static::mongoIdToId( $id ));
+                        $_result = array(static::DEFAULT_ID_FIELD => $id);
                     }
                 }
-                else
-                {
-                    $_out = static::mongoIdToId( $_result );
-                }
+
+                $_out = static::_fromMongoObjects( $_result );
                 break;
 
             case static::DELETE:
@@ -1417,7 +1395,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 $_result = $this->_collection->findAndModify( $_criteria, null, $_fieldArray, $_options );
                 if ( empty( $_result ) )
                 {
-                    throw new NotFoundException( "Record with id '" . static::mongoIdToId( $id ) . "' not found." );
+                    throw new NotFoundException( "Record with id '$id' not found." );
                 }
 
                 if ( $rollback )
@@ -1427,7 +1405,7 @@ class MongoDbSvc extends NoSqlDbSvc
                 }
                 else
                 {
-                    $_out = static::mongoIdToId( $_result );
+                    $_out = static::_fromMongoObjects( $_result );
                 }
                 break;
 
@@ -1442,10 +1420,10 @@ class MongoDbSvc extends NoSqlDbSvc
                 $_result = $this->_collection->findOne( $_criteria, $_fieldArray );
                 if ( empty( $_result ) )
                 {
-                    throw new NotFoundException( "Record with id '" . static::mongoIdToId( $id ) . "' not found." );
+                    throw new NotFoundException( "Record with id '$id' not found." );
                 }
 
-                $_out = static::mongoIdToId( $_result );
+                $_out = static::_fromMongoObjects( $_result );
                 break;
         }
 
@@ -1572,7 +1550,7 @@ class MongoDbSvc extends NoSqlDbSvc
                             {
                                 if ( $_id == Option::get( $_record, static::DEFAULT_ID_FIELD ) )
                                 {
-                                    $_out[ $_index ] = $_record;
+                                    $_out[$_index] = $_record;
                                     $_found = true;
                                     continue;
                                 }
@@ -1580,7 +1558,7 @@ class MongoDbSvc extends NoSqlDbSvc
                             if ( !$_found )
                             {
                                 $_errors[] = $_index;
-                                $_out[ $_index ] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
+                                $_out[$_index] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
                             }
                         }
                     }
@@ -1630,7 +1608,7 @@ class MongoDbSvc extends NoSqlDbSvc
                         {
                             if ( $_id == Option::get( $_record, static::DEFAULT_ID_FIELD ) )
                             {
-                                $_out[ $_index ] = $_record;
+                                $_out[$_index] = $_record;
                                 $_found = true;
                                 continue;
                             }
@@ -1638,16 +1616,14 @@ class MongoDbSvc extends NoSqlDbSvc
                         if ( !$_found )
                         {
                             $_errors[] = $_index;
-                            $_out[ $_index ] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
+                            $_out[$_index] = "Record with identifier '" . print_r( $_id, true ) . "' not found.";
                         }
                     }
 
                     if ( !empty( $_errors ) )
                     {
                         $_context = array('error' => $_errors, 'record' => $_out);
-                        throw new NotFoundException(
-                            'Batch Error: Not all records could be retrieved.', null, null, $_context
-                        );
+                        throw new NotFoundException( 'Batch Error: Not all records could be retrieved.', null, null, $_context );
                     }
                 }
 

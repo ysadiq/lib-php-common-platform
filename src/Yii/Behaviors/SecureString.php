@@ -42,7 +42,7 @@ class SecureString extends BaseModelBehavior
      */
     protected $_salt;
     /**
-     * @var array The attributes which will be converted to string but not encrypted
+     * @var array The attributes which will be converted but not encrypted
      */
     protected $_insecureAttributes;
 
@@ -121,10 +121,10 @@ class SecureString extends BaseModelBehavior
     /**
      * @param \CModelEvent $event
      * @param array        $attributes
-     * @param bool         $fromDB
+     * @param bool         $from
      * @param bool         $secure
      */
-    protected function _convertAttributes( $event, $attributes, $fromDB = false, $secure = true )
+    protected function _convertAttributes( $event, $attributes, $from = false, $secure = true )
     {
         if ( !empty( $attributes ) && is_array( $attributes ) )
         {
@@ -133,15 +133,26 @@ class SecureString extends BaseModelBehavior
                 if ( $event->sender->hasAttribute( $_attribute ) )
                 {
                     $_value = $event->sender->getAttribute( $_attribute );
+                    if ( !isset( $_value ) )
+                    {
+                        $_value = '';
+                    }
 
-                    switch ( $fromDB )
+                    switch ( $from )
                     {
                         case true:
-                            $_value = $this->_fromSecureString( $_value, $secure ? $this->_salt : false );
+                            if ( $secure )
+                            {
+                                $_value = Hasher::decryptString( $_value, $this->_salt );
+                            }
                             break;
 
                         case false:
-                            $_value = $this->_toSecureString( $_value, $secure ? $this->_salt : false );
+                            //	Encrypt it...
+                            if ( $secure )
+                            {
+                                $_value = Hasher::encryptString( $_value, $this->_salt );
+                            }
                             break;
                     }
 
@@ -229,48 +240,5 @@ class SecureString extends BaseModelBehavior
     public function getInsecureAttributes()
     {
         return $this->_insecureAttributes;
-    }
-
-    /**
-     * @param mixed  $data
-     * @param string $salt The encrypting salt
-     * @param string $defaultValue
-     *
-     * @return bool|string Returns FALSE on error if $data cannot be serialized by json_encode
-     */
-    protected function _toSecureString( $data, $salt = null, $defaultValue = '' )
-    {
-        //	Make sure we can serialize...
-        if ( !isset( $data ) )
-        {
-            $data = $defaultValue;
-        }
-
-        //	Encrypt it...
-        return false === $salt ? $data : Hasher::encryptString( $data, $salt ? : $this->_salt );
-    }
-
-    /**
-     * @param string $data         The encrypted data
-     * @param string $salt         The salt used to encrypt the data
-     * @param string $defaultValue The value to return when $data is empty
-     *
-     * @return bool|string Returns FALSE on error if $data cannot be deserialized by json_decode
-     */
-    protected function _fromSecureString( $data, $salt = null, $defaultValue = '' )
-    {
-        if ( !isset( $data ) )
-        {
-            return $defaultValue;
-        }
-
-        $_workData = $data;
-
-        if ( false !== $salt )
-        {
-            $_workData = Hasher::decryptString( $_workData, $salt ? : $this->_salt );
-        }
-
-        return ( isset( $_workData )) ? $_workData : $defaultValue;
     }
 }

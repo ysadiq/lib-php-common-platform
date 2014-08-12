@@ -44,16 +44,15 @@ class StateStack
      *
      * @return int
      */
-    public static function push( $clear = true )
+    public static function push($clear = true)
     {
         $_state = static::current();
 
-        if ( $clear )
-        {
+        if ($clear) {
             static::clear();
         }
 
-        return array_push( static::$_states, $_state );
+        return array_push(static::$_states, $_state);
     }
 
     /**
@@ -62,12 +61,12 @@ class StateStack
     public static function current()
     {
         $_state = array(
-            'GET'             => isset( $_GET ) && !empty( $_GET ) ? $_GET : null,
-            'POST'            => isset( $_POST ) && !empty( $_POST ) ? $_POST : null,
-            'REQUEST'         => isset( $_REQUEST ) && !empty( $_REQUEST ) ? $_REQUEST : null,
-            'FILES'           => isset( $_FILES ) && !empty( $_FILES ) ? $_FILES : null,
-            'COOKIE'          => isset( $_COOKIE ) && !empty( $_COOKIE ) ? $_COOKIE : null,
-            'SERVER'          => isset( $_SERVER ) ? $_SERVER : null,
+            'GET' => isset($_GET) && !empty($_GET) ? $_GET : null,
+            'POST' => isset($_POST) && !empty($_POST) ? $_POST : null,
+            'REQUEST' => isset($_REQUEST) && !empty($_REQUEST) ? $_REQUEST : null,
+            'FILES' => isset($_FILES) && !empty($_FILES) ? $_FILES : null,
+            'COOKIE' => isset($_COOKIE) && !empty($_COOKIE) ? $_COOKIE : null,
+            'SERVER' => isset($_SERVER) ? $_SERVER : null,
             //  Store request object
             '_REQUEST_OBJECT' => Pii::requestObject(),
         );
@@ -80,24 +79,19 @@ class StateStack
      *
      * @return mixed
      */
-    public static function pop( $restore = true )
+    public static function pop($restore = true)
     {
-        $_state = array_pop( static::$_states );
+        $_state = array_pop(static::$_states);
 
-        if ( !empty( $_state ) && $restore )
-        {
+        if (!empty($_state) && $restore) {
             static::clear();
 
-            foreach ( $_state as $_key => $_value )
-            {
-                if ( '_REQUEST_OBJECT' == $_key )
-                {
+            foreach ($_state as $_key => $_value) {
+                if ('_REQUEST_OBJECT' == $_key) {
                     //  Restore request object
-                    Pii::app()->setRequestObject( $_value );
-                }
-                elseif ( null !== $_value && $GLOBALS[ '_' . $_key ] !== $_value )
-                {
-                    $GLOBALS[ '_' . $_key ] = $_value;
+                    Pii::app()->setRequestObject($_value);
+                } elseif (null !== $_value && $GLOBALS['_' . $_key] !== $_value) {
+                    $GLOBALS['_' . $_key] = $_value;
                 }
             }
         }
@@ -108,44 +102,35 @@ class StateStack
     /**
      * @param bool $keepServerStuff
      */
-    public static function clear( $keepServerStuff = true )
+    public static function clear($keepServerStuff = true)
     {
-        if ( isset( $GLOBALS['_GET'] ) )
-        {
+        if (isset($GLOBALS['_GET'])) {
             $GLOBALS['_GET'] = array();
         }
 
-        if ( isset( $GLOBALS['_POST'] ) )
-        {
+        if (isset($GLOBALS['_POST'])) {
             $GLOBALS['_POST'] = array();
         }
 
-        if ( isset( $GLOBALS['_REQUEST'] ) )
-        {
+        if (isset($GLOBALS['_REQUEST'])) {
             $GLOBALS['_REQUEST'] = array();
         }
 
-        if ( isset( $GLOBALS['_FILES'] ) )
-        {
+        if (isset($GLOBALS['_FILES'])) {
             $GLOBALS['_FILES'] = array();
         }
 
-        if ( isset( $GLOBALS['_COOKIE'] ) )
-        {
+        if (isset($GLOBALS['_COOKIE'])) {
             $GLOBALS['_COOKIE'] = array();
         }
 
-        if ( isset( $GLOBALS['_SERVER'] ) )
-        {
+        if (isset($GLOBALS['_SERVER'])) {
             $_server = array();
 
-            if ( $keepServerStuff )
-            {
-                foreach ( $_SERVER as $_key => $_value )
-                {
-                    if ( 'HTTP_' == substr( $_key, 0, 5 ) )
-                    {
-                        $_server[ $_key ] = $_value;
+            if ($keepServerStuff) {
+                foreach ($_SERVER as $_key => $_value) {
+                    if ('HTTP_' == substr($_key, 0, 5)) {
+                        $_server[$_key] = $_value;
                     }
                 }
             }

@@ -30,105 +30,123 @@ use Kisma\Core\Utility\Option;
  */
 class InstallationTypes extends SeedEnum
 {
-	//*************************************************************************
-	//	Constants
-	//*************************************************************************
+    //*************************************************************************
+    //	Constants
+    //*************************************************************************
 
-	/**
-	 * @var string All packages have this doc root
-	 */
-	const PACKAGE_DOCUMENT_ROOT = '/opt/dreamfactory/platform/var/www/launchpad';
+    /**
+     * @var string All packages have this doc root
+     */
+    const DEFAULT_PACKAGE_DOCUMENT_ROOT = '/opt/dreamfactory/platform/var/www/launchpad';
+    
+    /**
+     * Package Types
+     */
 
-	/**
-	 * Package Types
-	 */
+    /**
+     * @var int
+     */
+    const FABRIC_HOSTED = 0;
+    /**
+     * @var int
+     */
+    const STANDALONE_PACKAGE = 1;
+    /**
+     * @var int
+     */
+    const BITNAMI_PACKAGE = 2;
+    /**
+     * @var int
+     */
+    const DEB_PACKAGE = 3;
+    /**
+     * @var int
+     */
+    const RPM_PACKAGE = 4;
+    /**
+     * @var int
+     */
+    const PAAS_DEPLOYMENT = 1000;
+    /**
+     * @var int
+     */
+    const BLUEMIX_PACKAGE = 1001;
+    /**
+     * @var int
+     */
+    const PIVOTAL_PACKAGE = 1002;
 
-	/**
-	 * @var int
-	 */
-	const FABRIC_HOSTED = 0;
-	/**
-	 * @var int
-	 */
-	const STANDALONE_PACKAGE = 1;
-	/**
-	 * @var int
-	 */
-	const BITNAMI_PACKAGE = 2;
-	/**
-	 * @var int
-	 */
-	const DEB_PACKAGE = 3;
-	/**
-	 * @var int
-	 */
-	const RPM_PACKAGE = 4;
+    /**
+     * Package Markers
+     */
 
-	/**
-	 * Package Markers
-	 */
+    /**
+     * @var string
+     */
+    const BLUEMIX_PACKAGE_MARKER = '/home/vcap/app/htdocs';
+    /**
+     * @var string
+     */
+    const BITNAMI_PACKAGE_MARKER = '/apps/dreamfactory/htdocs/web';
+    /**
+     * @var string
+     */
+    const PIVOTAL_PACKAGE_MARKER = '/home/vcap/app/htdocs';
+    /**
+     * @var string
+     */
+    const DEB_PACKAGE_MARKER = '/opt/dreamfactory/platform/etc/apache2';
+    /**
+     * @var string
+     */
+    const RPM_PACKAGE_MARKER = '/opt/dreamfactory/platform/etc/httpd';
 
-	/**
-	 * @var string
-	 */
-	const BITNAMI_PACKAGE_MARKER = '/apps/dreamfactory/htdocs/web';
-	/**
-	 * @var string
-	 */
-	const DEB_PACKAGE_MARKER = '/opt/dreamfactory/platform/etc/apache2';
-	/**
-	 * @var string
-	 */
-	const RPM_PACKAGE_MARKER = '/opt/dreamfactory/platform/etc/httpd';
+    //*************************************************************************
+    //	Methods
+    //*************************************************************************
 
-	//*************************************************************************
-	//	Methods
-	//*************************************************************************
+    /**
+     * Determine the type of installation this is
+     *
+     * @param bool   $prettyPrint Return the pretty name instead of the id
+     * @param string $prettyName  Will contain the pretty name upon return
+     *
+     * @return int|string
+     */
+    public static function determineType( $prettyPrint = false, &$prettyName = null )
+    {
+        static $_markers = array(
+            //  Search occurs in this order if not fabric-hosted
+            self::BITNAMI_PACKAGE => self::BITNAMI_PACKAGE_MARKER,
+            self::DEB_PACKAGE     => self::DEB_PACKAGE_MARKER,
+            self::RPM_PACKAGE     => self::RPM_PACKAGE_MARKER,
+            self::BLUEMIX_PACKAGE => self::BLUEMIX_PACKAGE_MARKER,
+            self::PIVOTAL_PACKAGE => self::PIVOTAL_PACKAGE_MARKER,
+        );
 
-	/**
-	 * Determine the type of installation this is
-	 *
-	 * @param bool $prettyPrint
-	 *
-	 * @return int
-	 */
-	public static function determineType( $prettyPrint = false )
-	{
-		//	Default to stand-alone
-		$_type = static::STANDALONE_PACKAGE;
+        $_docRoot = Option::server( 'DOCUMENT_ROOT' );
 
-		//	Hosted?
-		if ( Fabric::fabricHosted() )
-		{
-			$_type = static::FABRIC_HOSTED;
-		}
-		//	BitNami?
-		else if ( false !== stripos( Option::server( 'DOCUMENT_ROOT' ), static::BITNAMI_PACKAGE_MARKER ) )
-		{
-			$_type = static::BITNAMI_PACKAGE;
-		}
-		//	Packaged?
-		else if ( false !== stripos( Option::server( 'DOCUMENT_ROOT' ), static::PACKAGE_DOCUMENT_ROOT ) )
-		{
-			//	DEB?
-			if ( is_dir( static::DEB_PACKAGE_MARKER ) && Option::server( 'DOCUMENT_ROOT' ) )
-			{
-				$_type = static::DEB_PACKAGE;
-			}
+        //	Default to stand-alone
+        $_type = static::FABRIC_HOSTED;
 
-			//	RPM?
-			if ( is_dir( static::RPM_PACKAGE_MARKER ) )
-			{
-				$_type = static::RPM_PACKAGE;
-			}
-		}
+        //	Hosted?
+        if ( !Fabric::fabricHosted() )
+        {
+            $_type = static::STANDALONE_PACKAGE;
 
-		//	Kajigger the name if wanted...
-		if ( $prettyPrint )
-		{
-			$_type = Inflector::display( strtolower( static::nameOf( $_type ) ) );
-		}
+            foreach ( $_markers as $_id => $_marker )
+            {
+                if ( false !== stripos( $_docRoot, $_marker ) )
+                {
+                    $_type = $_id;
+                    break;
+                }
+            }
+        }
 
-		return $_type;
-	}
+        //	Kajigger the name
+        $prettyName = Inflector::display( strtolower( static ::nameOf( $_type ) ) );
+
+        return $prettyPrint ? $prettyName : $_type;
+    }
 }

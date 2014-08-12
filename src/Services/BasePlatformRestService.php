@@ -604,17 +604,6 @@ abstract class BasePlatformRestService extends BasePlatformService implements Re
     }
 
     /**
-     * List all possible resources accessible via this service,
-     * return false if this is not applicable
-     *
-     * @return array|boolean
-     */
-    protected function _listResources()
-    {
-        return false;
-    }
-
-    /**
      * @param string $operation
      * @param string $resource
      *

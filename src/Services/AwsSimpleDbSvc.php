@@ -134,14 +134,30 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param $name
-     *
-     * @return string
+     * {@InheritDoc}
      */
     public function correctTableName( $name )
     {
+        static $_existing = null;
+
+        if ( !$_existing )
+        {
+            $_existing = $this->_getTablesAsArray();
+        }
+
+        if ( empty( $name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        if ( false === array_search( $name, $_existing ) )
+        {
+            throw new NotFoundException( "Table '$name' not found." );
+        }
+
         return $name;
     }
+
 
     protected function _getTablesAsArray()
     {
@@ -174,28 +190,16 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
      * @throws \Exception
      * @return array
      */
-    protected function _listResources()
+    protected function _listTables()
     {
-        try
+        $_resources = array();
+        $_result = $this->_getTablesAsArray();
+        foreach ( $_result as $_table )
         {
-            $_resources = array();
-            $_result = $this->_getTablesAsArray();
-            foreach ( $_result as $_table )
-            {
-                $_access = $this->getPermissions( $_table );
-                if ( !empty( $_access ) )
-                {
-                    $_resources[] = array('name' => $_table, 'access' => $_access, static::TABLE_INDICATOR => $_table);
-                }
-            }
+            $_resources[] = array('name' => $_table, static::TABLE_INDICATOR => $_table);
+        }
 
-            return array('resource' => $_resources);
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Failed to list resources for this service.\n{$_ex->getMessage(
-            )}" );
-        }
+        return $_resources;
     }
 
     // Handle administrative options, table add, delete, etc
@@ -203,27 +207,11 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function getTable( $table )
+    public function describeTable( $table, $refresh = true  )
     {
-        static $_existing = null;
-
-        if ( !$_existing )
-        {
-            $_existing = $this->_getTablesAsArray();
-        }
-
         $_name =
             ( is_array( $table ) ) ? Option::get( $table, 'name', Option::get( $table, static::TABLE_INDICATOR ) )
                 : $table;
-        if ( empty( $_name ) )
-        {
-            throw new BadRequestException( 'Table name can not be empty.' );
-        }
-
-        if ( false === array_search( $_name, $_existing ) )
-        {
-            throw new NotFoundException( "Table '$_name' not found." );
-        }
 
         try
         {
@@ -251,10 +239,13 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
     /**
      * {@inheritdoc}
      */
-    public function createTable( $properties = array() )
+    public function createTable( $table, $properties = array(), $check_exist = false )
     {
-        $_name = Option::get( $properties, 'name', Option::get( $properties, static::TABLE_INDICATOR ) );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
+        {
+            $table = Option::get( $properties, static::TABLE_INDICATOR );
+        }
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }
@@ -262,28 +253,31 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
         try
         {
             $_properties = array_merge(
-                array(static::TABLE_INDICATOR => $_name),
+                array(static::TABLE_INDICATOR => $table),
                 $properties
             );
             $_result = $this->_dbConn->createDomain( $_properties );
 
-            $_out = array_merge( array('name' => $_name, static::TABLE_INDICATOR => $_name), $_result->toArray() );
+            $_out = array_merge( array('name' => $table, static::TABLE_INDICATOR => $table), $_result->toArray() );
 
             return $_out;
         }
         catch ( \Exception $_ex )
         {
-            throw new InternalServerErrorException( "Failed to create table '$_name'.\n{$_ex->getMessage()}" );
+            throw new InternalServerErrorException( "Failed to create table '$table'.\n{$_ex->getMessage()}" );
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function updateTable( $properties = array() )
+    public function updateTable( $table, $properties = array(), $allow_delete_fields = false )
     {
-        $_name = Option::get( $properties, 'name', Option::get( $properties, static::TABLE_INDICATOR ) );
-        if ( empty( $_name ) )
+        if ( empty( $table ) )
+        {
+            $table = Option::get( $properties, static::TABLE_INDICATOR );
+        }
+        if ( empty( $table ) )
         {
             throw new BadRequestException( "No 'name' field in data." );
         }
@@ -328,8 +322,6 @@ class AwsSimpleDbSvc extends NoSqlDbSvc
      */
     public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
     {
-        $table = $this->correctTableName( $table );
-
         $_idField = Option::get( $extras, 'id_field', static::DEFAULT_ID_FIELD );
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );

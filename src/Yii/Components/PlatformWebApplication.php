@@ -116,14 +116,19 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @var array[] The namespaces in use by this system. Used by the routing engine
      */
-    protected static $_namespaceMap = array( NamespaceTypes::MODELS => array(), NamespaceTypes::SERVICES => array(), NamespaceTypes::RESOURCES => array() );
+    protected static $_namespaceMap = array(
+        NamespaceTypes::MODELS    => array(),
+        NamespaceTypes::SERVICES  => array(),
+        NamespaceTypes::RESOURCES => array()
+    );
     /**
      * @var array An indexed array of white-listed hosts (ajax.example.com or foo.bar.com or just bar.com)
      */
     protected $_corsWhitelist = array();
     /**
      * @var bool    If true, the CORS headers will be sent automatically before dispatching the action.
-     *              NOTE: "OPTIONS" calls will always get headers, regardless of the setting. All other requests respect the setting.
+     *              NOTE: "OPTIONS" calls will always get headers, regardless of the setting. All other requests
+     *              respect the setting.
      */
     protected $_autoAddHeaders = true;
     /**
@@ -170,17 +175,37 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         parent::init();
 
-        $this->_logCorsInfo = Pii::getParam( 'dsp.log_cors_info', false );
-
-        //  Load the CORS config file
-        $this->_loadCorsConfig();
-
         //	Debug options
+        $this->_logCorsInfo = Pii::getParam( 'dsp.log_cors_info', false );
         static::$_enableProfiler = Pii::getParam( 'dsp.enable_profiler', false );
 
+        $this->_localInit();
+
         //	Setup the request handler and events
-        $this->onBeginRequest = array( $this, '_onBeginRequest' );
-        $this->onEndRequest = array( $this, '_onEndRequest' );
+        $this->onBeginRequest = array($this, '_onBeginRequest');
+        $this->onEndRequest = array($this, '_onEndRequest');
+    }
+
+    /**
+     * Initializes all instance-specific/locally-added modules/configs
+     *
+     * @return mixed
+     */
+    protected function _localInit()
+    {
+        //  Load the CORS config file
+        if ( 'cli' != PHP_SAPI )
+        {
+            $this->_loadCorsConfig();
+        }
+
+        //  Load any user config files...
+        $this->_loadLocalConfig();
+
+        //	Load any plug-ins
+        $this->_loadPlugins();
+
+        return true;
     }
 
     /**
@@ -273,25 +298,6 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     //*************************************************************************
 
     /**
-     * Before any action is processed, load the local config and plugins...
-     *
-     * @param \CController $controller
-     * @param \CAction     $action
-     *
-     * @return bool
-     */
-    public function beforeControllerAction( $controller, $action )
-    {
-        //  Load any user config files...
-        $this->_loadLocalConfig();
-
-        //	Load any plug-ins
-        $this->_loadPlugins();
-
-        return parent::beforeControllerAction( $controller, $action );
-    }
-
-    /**
      * Handles an OPTIONS request to the server to allow CORS and optionally sends the CORS headers
      *
      * @param \CEvent $event
@@ -364,7 +370,10 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             $_config = array();
             $_configPath = Platform::getPrivatePath( '/config' );
 
-            $_files = FileSystem::glob( $_configPath . static::DEFAULT_LOCAL_CONFIG_PATTERN, GlobFlags::GLOB_NODIR | GlobFlags::GLOB_NODOTS );
+            $_files = FileSystem::glob(
+                $_configPath . static::DEFAULT_LOCAL_CONFIG_PATTERN,
+                GlobFlags::GLOB_NODIR | GlobFlags::GLOB_NODOTS
+            );
 
             if ( empty( $_files ) )
             {
@@ -430,7 +439,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      *
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
      * @throws \Exception
-     * @return DspEvent
+     * @return PlatformEvent
      */
     public function trigger( $eventName, $event = null )
     {
@@ -472,7 +481,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     /**
      * @param array|bool $whitelist     Set to "false" to reset the internal method cache.
      * @param bool       $returnHeaders If true, the headers are return in an array and NOT sent
-     * @param bool       $sendHeaders   If false, the headers will NOT be sent. Defaults to true. $returnHeaders takes precedence
+     * @param bool       $sendHeaders   If false, the headers will NOT be sent. Defaults to true. $returnHeaders takes
+     *                                  precedence
      *
      * @return bool|array
      */
@@ -495,15 +505,21 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
             return true;
         }
 
-        $_originUri = null;
-        $_requestUri = Pii::request( false )->getSchemeAndHttpHost();
         $_origin = trim( Option::server( 'HTTP_ORIGIN' ) );
 
         //	Was an origin header passed? If not, don't do CORS.
-        if ( empty( $_origin ) )
+        if ( 'file://' == $_origin || empty( $_origin ) )
         {
+            if ( !empty( $_origin ) )
+            {
+                Log::info( 'Local file resource origin received: ' . $_origin );
+            }
+
             return true;
         }
+
+        $_originUri = null;
+        $_requestUri = $this->_requestObject->getSchemeAndHttpHost();
 
         if ( $this->_logCorsInfo )
         {
@@ -531,7 +547,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         {
             if ( false === ( $_allowedMethods = $this->_allowedOrigin( $_originParts, $_requestUri, $_isStar ) ) )
             {
-                Log::error( 'Unauthorized origin rejected via CORS > Source: ' . $_requestUri . ' > Origin: ' . $_originUri );
+                Log::error(
+                    'Unauthorized origin rejected via CORS > Source: ' . $_requestUri . ' > Origin: ' . $_originUri
+                );
 
                 /**
                  * No sir, I didn't like it.
@@ -546,21 +564,20 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 return false;
             }
 
-//			Log::debug( 'Committing origin to the CORS cache > Source: ' . $_requestUri . ' > Origin: ' . $_originUri );
-            $_cache[ $_key ] = $_originUri;
-            $_cacheVerbs[ $_key ] = $_allowedMethods;
+            $_cache[$_key] = $_originUri;
+            $_cacheVerbs[$_key] = $_allowedMethods;
         }
         else
         {
-            $_originUri = trim( $_cache[ $_key ] );
-            $_allowedMethods = $_cacheVerbs[ $_key ];
+            $_originUri = trim( $_cache[$_key] );
+            $_allowedMethods = $_cacheVerbs[$_key];
         }
 
         $_headers = array();
 
-        if ( !empty( $_originUri ) || $_isStar )
+        if ( !empty( $_originUri ) )
         {
-            $_headers['Access-Control-Allow-Origin'] = ( $_isStar ? '*' : $_originUri );
+            $_headers['Access-Control-Allow-Origin'] = $_originUri;
         }
 
         $_headers['Access-Control-Allow-Credentials'] = 'true';
@@ -579,8 +596,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         //	Store in cache...
-        $_cache[ $_key ] = $_originUri;
-        $_cacheVerbs[ $_key ] = array(
+        $_cache[$_key] = $_originUri;
+        $_cacheVerbs[$_key] = array(
             'allowed_methods' => $_allowedMethods,
             'headers'         => $_headers
         );
@@ -723,7 +740,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         $_parts['port'] = Option::get( $_parts, 'port', Option::server( 'SERVER_PORT' ) );
 
         //  If standard port 80 or 443 and there is no port in uri, clear from parse...
-        if ( !empty( $_parts['port'] ) && ( $_parts['port'] == 80 || $_parts['port'] == 443 ) && false === strpos( $uri, ':' . $_parts['port'] ) )
+        if ( !empty( $_parts['port'] ) && ( $_parts['port'] == 80 || $_parts['port'] == 443 ) && false === strpos( $uri, ':' . $_parts['port'] )
+        )
         {
             $_parts['port'] = null;
         }
@@ -763,9 +781,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _normalizeUri( $parts )
     {
-        return !is_array( $parts )
-            ? $parts :
-            ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null );
+        return !is_array( $parts ) ? $parts
+            : ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null );
     }
 
     /**
@@ -778,7 +795,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         static $_whitelist = null;
 
-        if ( null === $_whitelist /*&& null === ( $_whitelist = Platform::storeGet( 'cors.whitelist' ) )*/ )
+        if ( null === $_whitelist && null === ( $_whitelist = Platform::storeGet( 'cors.whitelist' ) ) )
         {
             //  Empty whitelist...
             $_whitelist = array();
@@ -800,7 +817,9 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
 
                     if ( JSON_ERROR_NONE != json_last_error() )
                     {
-                        throw new InternalServerErrorException( 'The CORS configuration file is corrupt. Cannot continue.' );
+                        throw new InternalServerErrorException(
+                            'The CORS configuration file is corrupt. Cannot continue.'
+                        );
                     }
 
                     if ( $this->_logCorsInfo )
@@ -820,17 +839,8 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
         }
 
         //  Don't reset if they're the same.
-        if ( $this->_corsWhitelist === $_whitelist )
-        {
-            return;
-        }
-
-        return $this->setCorsWhitelist( $_whitelist );
+        return $this->_corsWhitelist === $_whitelist ? null : $this->setCorsWhitelist( $_whitelist );
     }
-
-    //*************************************************************************
-    //	Accessors
-    //*************************************************************************
 
     /**
      * @param array $corsWhitelist
@@ -973,7 +983,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function setResourceNamespaces( $resourceNamespaces )
     {
-        static::$_namespaceMap[ NamespaceTypes::RESOURCES ] = $resourceNamespaces;
+        static::$_namespaceMap[NamespaceTypes::RESOURCES] = $resourceNamespaces;
 
         return $this;
     }
@@ -983,7 +993,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function getResourceNamespaces()
     {
-        return static::$_namespaceMap[ NamespaceTypes::RESOURCES ];
+        return static::$_namespaceMap[NamespaceTypes::RESOURCES];
     }
 
     /**
@@ -1008,7 +1018,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function setModelNamespaces( $modelNamespaces )
     {
-        static::$_namespaceMap[ NamespaceTypes::MODELS ] = $modelNamespaces;
+        static::$_namespaceMap[NamespaceTypes::MODELS] = $modelNamespaces;
 
         return $this;
     }
@@ -1018,7 +1028,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public function getModelNamespaces()
     {
-        return static::$_namespaceMap[ NamespaceTypes::MODELS ];
+        return static::$_namespaceMap[NamespaceTypes::MODELS];
     }
 
     /**
@@ -1042,7 +1052,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     public static function getNamespaceMap( $which = null )
     {
-        return $which ? static::$_namespaceMap[ $which ] : static::$_namespaceMap;
+        return $which ? static::$_namespaceMap[$which] : static::$_namespaceMap;
     }
 
     /**
@@ -1081,11 +1091,11 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         if ( $prepend )
         {
-            array_unshift( static::$_namespaceMap[ $which ], array( $namespace, $path ) );
+            array_unshift( static::$_namespaceMap[$which], array($namespace, $path) );
         }
         else
         {
-            static::$_namespaceMap[ $which ][ $namespace ] = $path;
+            static::$_namespaceMap[$which][$namespace] = $path;
         }
     }
 
