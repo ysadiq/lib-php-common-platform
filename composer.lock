@@ -350,16 +350,16 @@
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
-            "version": "1.5.2",
+            "version": "1.5.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "e9662cd69555ffebb54229df5106dfeeb673d5f6"
+                "reference": "f62be332dcc2ecb3fa18351ca4ef89fd34e76465"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/e9662cd69555ffebb54229df5106dfeeb673d5f6",
-                "reference": "e9662cd69555ffebb54229df5106dfeeb673d5f6",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/f62be332dcc2ecb3fa18351ca4ef89fd34e76465",
+                "reference": "f62be332dcc2ecb3fa18351ca4ef89fd34e76465",
                 "shasum": ""
             },
             "require": {
@@ -392,23 +392,19 @@
             "authors": [
                 {
                     "name": "Jerry Ablan",
-                    "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
-                },
-                {
-                    "name": "Jason Sykes",
-                    "email": "jasonsykes@dreamfactory.com",
-                    "role": "Lead Engineer, client-side"
-                },
-                {
-                    "name": "Lee Hicks",
-                    "email": "leehicks@dreamfactory.com",
-                    "role": "Lead Developer, server-side/client-side"
+                    "email": "jerryablan@dreamfactory.com"
                 },
                 {
                     "name": "Todd Appleton",
-                    "email": "toddappleton@dreamfactory.com",
-                    "role": "Lead Engineer, client-side; UX/QA"
+                    "email": "toddappleton@dreamfactory.com"
+                },
+                {
+                    "name": "Lee Hicks",
+                    "email": "leehicks@dreamfactory.com"
+                },
+                {
+                    "name": "Jason Sykes",
+                    "email": "jasonsykes@dreamfactory.com"
                 }
             ],
             "description": "DreamFactory Services Platform(tm) Yii Components Library",
@@ -417,7 +413,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-06-23 18:59:17"
+            "time": "2014-08-13 20:25:01"
         },
         {
             "name": "dreamfactory/oasys",
