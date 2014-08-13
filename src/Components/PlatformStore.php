@@ -19,6 +19,7 @@
  */
 namespace DreamFactory\Platform\Components;
 
+use DreamFactory\Platform\Utility\Platform;
 use Kisma\Core\Components\Flexistore;
 use Kisma\Core\Enums\CacheTypes;
 use Kisma\Core\Utility\Option;
@@ -62,11 +63,13 @@ class PlatformStore extends Flexistore
      */
     public function __construct( $type = CacheTypes::FILE_SYSTEM, array $data = array() )
     {
+        $_storePath = Platform::getPrivatePath( static::STORE_CACHE_PATH );
+
         parent::__construct(
             $type,
             array(
                 'namespace' => static::DEFAULT_NAMESPACE,
-                'arguments' => array( sys_get_temp_dir() . static::STORE_CACHE_PATH, '.df' ),
+                'arguments' => array($_storePath, '.df'),
             ),
             false
         );
