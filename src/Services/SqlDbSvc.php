@@ -3049,7 +3049,7 @@ class SqlDbSvc extends BaseDbSvc
 
         try
         {
-            $_extras = SqlDbUtilities::getSchemaExtrasForFields( 0, $table, $field );
+            $_extras = SqlDbUtilities::getSchemaExtrasForFields( $this->getServiceId(), $table, $field );
             $_result = SqlDbUtilities::describeTableFields( $this->_dbConn, $table, $field, $_extras );
 
             return Option::get( $_result, 0 );
