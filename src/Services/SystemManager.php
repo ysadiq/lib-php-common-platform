@@ -1298,7 +1298,7 @@ MYSQL
                     catch ( \Exception $_ex )
                     {
                         throw new InternalServerErrorException(
-                            'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(), null, array(
+                            'System data creation failure (' . $_tableName . '): ' . $_ex->getMessage(), null, null, array(
                                 'data'          => $data,
                                 'bogus_row'     => $_row,
                                 'unique_column' => $uniqueColumn
