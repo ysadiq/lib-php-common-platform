@@ -678,17 +678,23 @@ class Session extends BasePlatformRestResource
         }
 
         $_services = Option::clean( Option::get( $_roleInfo, 'services' ) );
+        $service = strval( $service );
+        $component = strval( $component );
 
+        //  If exact match found take it, otherwise follow up the chain as necessary
+        //  All - Service - Component - Sub-component
         $_allAllowed = array();
         $_allFound = false;
         $_serviceAllowed = array();
         $_serviceFound = false;
         $_componentAllowed = array();
         $_componentFound = false;
-
+        $_exactAllowed = array();
+        $_exactFound = false;
         foreach ( $_services as $_svcInfo )
         {
-            $_tempService = Option::get( $_svcInfo, 'service' );
+            $_tempService = strval( Option::get( $_svcInfo, 'service' ) );
+            $_tempComponent = strval( Option::get( $_svcInfo, 'component' ) );
             if ( null === $_tempVerbs = Option::get( $_svcInfo, 'verbs' ) )
             {
                 // see if upgrade from access string
@@ -697,15 +703,20 @@ class Session extends BasePlatformRestResource
 
             if ( 0 == strcasecmp( $service, $_tempService ) )
             {
-                $_tempComponent = Option::get( $_svcInfo, 'component' );
                 if ( !empty( $component ) )
                 {
                     if ( 0 == strcasecmp( $component, $_tempComponent ) )
                     {
+                        // exact match
+                        $_exactAllowed = array_merge( $_exactAllowed, array_flip( $_tempVerbs ) );
+                        $_exactFound = true;
+                    }
+                    elseif (0 == strcasecmp( substr($component, 0, strpos($component, '/') + 1) . '*', $_tempComponent ) )
+                    {
                         $_componentAllowed = array_merge( $_componentAllowed, array_flip( $_tempVerbs ) );
                         $_componentFound = true;
                     }
-                    elseif ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
+                    elseif ( '*' == $_tempComponent )
                     {
                         $_serviceAllowed = array_merge( $_serviceAllowed, array_flip( $_tempVerbs ) );
                         $_serviceFound = true;
@@ -713,21 +724,26 @@ class Session extends BasePlatformRestResource
                 }
                 else
                 {
-                    if ( empty( $_tempComponent ) || ( '*' == $_tempComponent ) )
+                    if (empty($_tempComponent))
                     {
-                        $_serviceAllowed = array_merge( $_serviceAllowed, array_flip( $_tempVerbs ) );
-                        $_serviceFound = true;
+                        // exact match
+                        $_exactAllowed = array_merge( $_exactAllowed, array_flip( $_tempVerbs ) );
+                        $_exactFound = true;
+                    }
+                    elseif ( '*' == $_tempComponent)
+                    {
+                        $_allAllowed = array_merge( $_allAllowed, array_flip( $_tempVerbs ) );
+                        $_allFound = true;
                     }
                 }
             }
-            elseif ( empty( $_tempService ) || ( '*' == $_tempService ) )
-            {
-                $_allAllowed = array_merge( $_allAllowed, array_flip( $_tempVerbs ) );
-                $_allFound = true;
-            }
         }
 
-        if ( $_componentFound )
+        if ( $_exactFound )
+        {
+            return array_keys( $_exactAllowed );
+        }
+        elseif ( $_componentFound )
         {
             return array_keys( $_componentAllowed );
         }

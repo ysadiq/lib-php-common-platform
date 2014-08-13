@@ -290,10 +290,11 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             switch ( $resource )
             {
                 case static::SCHEMA_RESOURCE:
+                    $resource = rtrim( $resource, '/' ) . '/';
                     if ( !empty( $resource_id ) )
                     {
                         $resource_id = $this->correctTableName( $resource_id );
-                        $resource = $resource . '/' . $resource_id;
+                        $resource .= $resource_id;
                     }
                     break;
                 default:
@@ -301,16 +302,9 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
                     break;
             }
 
-            $this->checkPermission( $action, $resource );
         }
-        else
-        {
-            // listing and getting table properties are checked by table
-            if ( static::GET != $this->_action )
-            {
-                $this->checkPermission( $this->_action );
-            }
-        }
+
+        $this->checkPermission( $action, $resource );
     }
 
     /**

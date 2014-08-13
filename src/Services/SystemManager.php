@@ -598,7 +598,7 @@ SQL;
             throw new \Exception( 'Error opening zip file.' );
         }
 
-        $_skip = array('.', '..', '.git', '.idea', 'log', 'vendor', 'shared', 'storage');
+        $_skip = array( '.', '..', '.git', '.idea', 'log', 'vendor', 'storage' );
 
         try
         {
@@ -656,7 +656,7 @@ SQL;
             throw new \Exception( "Failed to find new dsp package $_tempDir." );
         }
         // blindly, or are there things we shouldn't touch here?
-        FileUtilities::copyTree( $_tempDir, $_upgradeDir, false, $_skip );
+        FileUtilities::copyTree( $_tempDir, $_upgradeDir, false );
 
         // now run installer script
         $_oldWorkingDir = getcwd();
