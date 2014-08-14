@@ -19,10 +19,10 @@
  */
 namespace DreamFactory\Platform\Events\Stores;
 
-use DreamFactory\Platform\Components\PlatformStore;
 use DreamFactory\Platform\Events\EventDispatcher;
 use DreamFactory\Platform\Events\Interfaces\EventStoreLike;
 use DreamFactory\Platform\Utility\Platform;
+use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\Option;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
@@ -68,7 +68,7 @@ class EventStore implements EventStoreLike
      */
     public function loadAll()
     {
-        $_data = Platform::storeGet( 'event.config', array() );
+        $_data = Pii::appStoreGet( 'event.config', array() );
 
         //  Listeners
         foreach ( Option::get( $_data, 'listeners', array() ) as $_eventName => $_callables )
@@ -110,7 +110,7 @@ class EventStore implements EventStoreLike
             'scripts'   => $this->_dispatcher->getScripts(),
         );
 
-        Platform::storeSet( 'event.config', $_data );
+        Pii::appStoreSet( 'event.config', $_data );
     }
 
     /**
@@ -121,19 +121,7 @@ class EventStore implements EventStoreLike
     public function flushAll()
     {
         //  drop a null in for 1 second
-        return Platform::storeDelete( 'event.config' );
-    }
-
-    /**
-     * Hashes the key for this store
-     *
-     * @param string $id
-     *
-     * @return string
-     */
-    protected function _obscureKey( $id )
-    {
-        return hash( 'sha256', parent::_obscureKey( $id ) );
+        return Pii::appStoreDelete( 'event.config' );
     }
 
     /**
@@ -170,7 +158,7 @@ class EventStore implements EventStoreLike
      */
     public function contains( $id )
     {
-        return Platform::storeContains( $id );
+        return Pii::appStoreContains( $id );
     }
 
     /**
@@ -182,7 +170,7 @@ class EventStore implements EventStoreLike
      */
     public function delete( $id )
     {
-        return Platform::storeDelete( $id );
+        return Pii::appStoreDelete( $id );
     }
 
     /**
@@ -197,6 +185,6 @@ class EventStore implements EventStoreLike
      */
     public function save( $id, $data, $lifeTime = self::CACHE_TTL )
     {
-        return Platform::storeSet( $id, $data, $lifeTime );
+        return Pii::appStoreSet( $id, $data, $lifeTime );
     }
 }
