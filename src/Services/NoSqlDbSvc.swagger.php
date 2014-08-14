@@ -18,101 +18,92 @@
  * limitations under the License.
  */
 
-use DreamFactory\Platform\Services\SwaggerManager;
-
-$_commonResponses = SwaggerManager::getCommonResponses();
-
-$_addDbOps = array(
-    array(
-        'method'           => 'POST',
-        'summary'          => 'createTables() - Create one or more tables.',
-        'nickname'         => 'createTables',
-        'notes'            => 'Post body should be a single table definition or an array of table definitions.',
-        'type'             => 'Tables',
-        'event_name'       => array( '{api_name}.tables.create', ),
-        'parameters'       => array(
-            array(
-                'name'          => 'tables',
-                'description'   => 'Array of tables to create.',
-                'allowMultiple' => false,
-                'type'          => 'Tables',
-                'paramType'     => 'body',
-                'required'      => true,
-            ),
-            array(
-                'name'          => 'check_exist',
-                'description'   => 'If true, the request fails when the table to create already exists.',
-                'allowMultiple' => false,
-                'type'          => 'boolean',
-                'paramType'     => 'query',
-                'required'      => false,
-            ),
-            array(
-                'name'          => 'X-HTTP-METHOD',
-                'description'   => 'Override request using POST to tunnel other http request, such as DELETE.',
-                'enum'          => array( 'GET', 'PUT', 'PATCH', 'DELETE' ),
-                'allowMultiple' => false,
-                'type'          => 'string',
-                'paramType'     => 'header',
-                'required'      => false,
+$_addModels = array(
+    'TableSchemas' => array(
+        'id'         => 'TableSchemas',
+        'properties' => array(
+            'table' => array(
+                'type'        => 'Array',
+                'description' => 'An array of table definitions.',
+                'items'       => array(
+                    '$ref' => 'TableSchema',
+                ),
             ),
         ),
-        'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
     ),
-    array(
-        'method'           => 'PATCH',
-        'summary'          => 'updateTableProperties() - Update properties of one or more tables.',
-        'nickname'         => 'updateTableProperties',
-        'notes'            => 'Post body should be a single table definition or an array of table definitions.',
-        'type'             => 'Tables',
-        'event_name'       => array( '{api_name}.tables.update' ),
-        'parameters'       => array(
-            array(
-                'name'          => 'body',
-                'description'   => 'Array of tables with properties to update.',
-                'allowMultiple' => false,
-                'type'          => 'Tables',
-                'paramType'     => 'body',
-                'required'      => true,
+    'TableSchema'  => array(
+        'id'         => 'TableSchema',
+        'properties' => array(
+            'name'        => array(
+                'type'        => 'string',
+                'description' => 'Identifier/Name for the table.',
+            ),
+            'label'       => array(
+                'type'        => 'string',
+                'description' => 'Displayable singular name for the table.',
+            ),
+            'plural'      => array(
+                'type'        => 'string',
+                'description' => 'Displayable plural name for the table.',
+            ),
+            'primary_key' => array(
+                'type'        => 'string',
+                'description' => 'Field(s), if any, that represent the primary key of each record.',
+            ),
+            'name_field'  => array(
+                'type'        => 'string',
+                'description' => 'Field(s), if any, that represent the name of each record.',
+            ),
+            'field'       => array(
+                'type'        => 'Array',
+                'description' => 'An array of available fields in each record.',
+                'items'       => array(
+                    '$ref' => 'FieldSchema',
+                ),
             ),
         ),
-        'responseMessages' => $_commonResponses,
     ),
-    array(
-        'method'           => 'DELETE',
-        'summary'          => 'deleteTables() - Delete one or more tables.',
-        'nickname'         => 'deleteTables',
-        'notes'            =>
-            'Set the <b>names</b> of the tables to delete or set <b>force</b> to true to clear the database.' .
-            'Alternatively, to delete by table definitions or a large list of names, ' .
-            'use the POST request with X-HTTP-METHOD = DELETE header and post array of definitions or names.',
-        'type'             => 'Tables',
-        'event_name'       => array( '{api_name}.tables.delete' ),
-        'parameters'       => array(
-            array(
-                'name'          => 'names',
-                'description'   => 'Comma-delimited list of the table names to delete.',
-                'allowMultiple' => true,
-                'type'          => 'string',
-                'paramType'     => 'query',
-                'required'      => false,
+    'FieldSchema'  => array(
+        'id'         => 'FieldSchema',
+        'properties' => array(
+            'name'           => array(
+                'type'        => 'string',
+                'description' => 'The API name of the field.',
             ),
-            array(
-                'name'          => 'force',
-                'description'   => 'Set force to true to delete all tables in this database, otherwise <b>names</b> parameter is required.',
-                'allowMultiple' => false,
-                'type'          => 'boolean',
-                'paramType'     => 'query',
-                'required'      => false,
-                'default'       => false,
+            'label'          => array(
+                'type'        => 'string',
+                'description' => 'The displayable label for the field.',
+            ),
+            'type'           => array(
+                'type'        => 'string',
+                'description' => 'The DSP abstract data type for this field.',
+            ),
+            'db_type'        => array(
+                'type'        => 'string',
+                'description' => 'The native database type used for this field.',
+            ),
+            'is_primary_key' => array(
+                'type'        => 'boolean',
+                'description' => 'Is this field used as/part of the primary key.',
+            ),
+            'validation'     => array(
+                'type'        => 'Array',
+                'description' => 'validations to be performed on this field.',
+                'items'       => array(
+                    'type' => 'string',
+                ),
+            ),
+            'value'          => array(
+                'type'        => 'Array',
+                'description' => 'Selectable string values for client menus and picklist validation.',
+                'items'       => array(
+                    'type' => 'string',
+                ),
             ),
         ),
-        'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
     ),
 );
 
 $_base = require( __DIR__ . '/BaseDbSvc.swagger.php' );
-
-unset( $_addDbOps );
 
 return $_base;

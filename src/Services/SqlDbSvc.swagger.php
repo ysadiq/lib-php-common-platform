@@ -21,7 +21,7 @@
 use DreamFactory\Platform\Services\SqlDbSvc;
 use DreamFactory\Platform\Services\SwaggerManager;
 
-$_commonResponses = SwaggerManager::getCommonResponses( array( 400, 401, 500 ) );
+$_commonResponses = SwaggerManager::getCommonResponses( array(400, 401, 500) );
 
 $_addTableParameters = array(
     array(
@@ -39,370 +39,6 @@ $_addTableNotes =
     'By default, no related records are returned.<br/> ';
 
 $_addApis = array(
-    array(
-        'path'        => '/{api_name}/' . SqlDbSvc::SCHEMA_RESOURCE,
-        'description' => 'Operations available for SQL DB Schemas.',
-        'operations'  => array(
-            array(
-                'method'           => 'GET',
-                'summary'          => 'getSchemas() - List resources available for database schema.',
-                'nickname'         => 'getSchemas',
-                'type'             => 'Resources',
-                'event_name'       => '{api_name}._schema.list',
-                'responseMessages' => $_commonResponses,
-                'notes'            => 'See listed operations for each resource available.',
-            ),
-            array(
-                'method'           => 'POST',
-                'summary'          => 'createTables() - Create one or more tables.',
-                'nickname'         => 'createTables',
-                'type'             => 'Resources',
-                'event_name'       => '{api_name}._schema.create',
-                'parameters'       => array(
-                    array(
-                        'name'          => 'tables',
-                        'description'   => 'Array of table definitions.',
-                        'allowMultiple' => false,
-                        'type'          => 'TableSchemas',
-                        'paramType'     => 'body',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => $_commonResponses,
-                'notes'            => 'Post data should be a single table definition or an array of table definitions.',
-            ),
-            array(
-                'method'           => 'PUT',
-                'summary'          => 'replaceTables() - Update (replace) one or more tables.',
-                'nickname'         => 'replaceTables',
-                'event_name'       => '{api_name}._schema.alter',
-                'type'             => 'Resources',
-                'parameters'       => array(
-                    array(
-                        'name'          => 'tables',
-                        'description'   => 'Array of table definitions.',
-                        'allowMultiple' => false,
-                        'type'          => 'TableSchemas',
-                        'paramType'     => 'body',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => $_commonResponses,
-                'notes'            => 'Post data should be a single table definition or an array of table definitions.',
-            ),
-            array(
-                'method'           => 'PATCH',
-                'summary'          => 'updateTables() - Update (patch) one or more tables.',
-                'nickname'         => 'updateTables',
-                'event_name'       => '{api_name}._schema.alter',
-                'type'             => 'Resources',
-                'parameters'       => array(
-                    array(
-                        'name'          => 'tables',
-                        'description'   => 'Array of table definitions.',
-                        'allowMultiple' => false,
-                        'type'          => 'TableSchemas',
-                        'paramType'     => 'body',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => $_commonResponses,
-                'notes'            => 'Post data should be a single table definition or an array of table definitions.',
-            ),
-        ),
-    ),
-    array(
-        'path'        => '/{api_name}/' . SqlDbSvc::SCHEMA_RESOURCE . '/{table_name}',
-        'description' => 'Operations for per table administration.',
-        'operations'  => array(
-            array(
-                'method'           => 'GET',
-                'summary'          => 'describeTable() - Retrieve table definition for the given table.',
-                'nickname'         => 'describeTable',
-                'event_name'       => array( '{api_name}._schema.{table_name}.describe', '{api_name}._schema.table_described' ),
-                'type'             => 'TableSchema',
-                'parameters'       => array(
-                    array(
-                        'name'          => 'table_name',
-                        'description'   => 'Name of the table to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                    array(
-                        'name'          => 'refresh',
-                        'description'   => 'Refresh any cached copy of the schema.',
-                        'allowMultiple' => false,
-                        'type'          => 'boolean',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                ),
-                'responseMessages' => $_commonResponses,
-                'notes'            => 'This describes the table, its fields and relations to other tables.',
-            ),
-            array(
-                'method'           => 'POST',
-                'summary'          => 'createTable() - Create a table with the given properties and fields.',
-                'nickname'         => 'createTable',
-                'type'             => 'Success',
-                'event_name'       => array(
-                    '{api_name}._schema.{table_name}.create',
-                    '{api_name}._schema.table_created'
-                ),
-                'parameters'       => array(
-                    array(
-                        'name'          => 'table_name',
-                        'description'   => 'Name of the table to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                    array(
-                        'name'          => 'schema',
-                        'description'   => 'Array of table properties and fields definitions.',
-                        'allowMultiple' => false,
-                        'type'          => 'TableSchema',
-                        'paramType'     => 'body',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => $_commonResponses,
-                'notes'            => 'Post data should be an array of field properties for a single record or an array of fields.',
-            ),
-            array(
-                'method'           => 'PUT',
-                'summary'          => 'replaceTable() - Update (replace) a table with the given properties.',
-                'nickname'         => 'replaceTable',
-                'type'             => 'Success',
-                'event_name'       => array(
-                    '{api_name}._schema.{table_name}.alter',
-                    '{api_name}._schema.table_altered'
-                ),
-                'parameters'       => array(
-                    array(
-                        'name'          => 'table_name',
-                        'description'   => 'Name of the table to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                    array(
-                        'name'          => 'schema',
-                        'description'   => 'Array of field definitions.',
-                        'allowMultiple' => false,
-                        'type'          => 'TableSchema',
-                        'paramType'     => 'body',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => $_commonResponses,
-                'notes'            => 'Post data should be an array of field properties for a single record or an array of fields.',
-            ),
-            array(
-                'method'           => 'PATCH',
-                'summary'          => 'updateTable() - Update (patch) a table with the given properties.',
-                'nickname'         => 'updateTable',
-                'type'             => 'Success',
-                'event_name'       => array(
-                    '{api_name}._schema.{table_name}.alter',
-                    '{api_name}._schema.table_altered'
-                ),
-                'parameters'       => array(
-                    array(
-                        'name'          => 'table_name',
-                        'description'   => 'Name of the table to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                    array(
-                        'name'          => 'schema',
-                        'description'   => 'Array of field definitions.',
-                        'allowMultiple' => false,
-                        'type'          => 'TableSchema',
-                        'paramType'     => 'body',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => $_commonResponses,
-                'notes'            => 'Post data should be an array of field properties for a single record or an array of fields.',
-            ),
-            array(
-                'method'           => 'DELETE',
-                'summary'          => 'deleteTable() - Delete (aka drop) the given table.',
-                'nickname'         => 'deleteTable',
-                'type'             => 'Success',
-                'event_name'       => array( '{api_name}._schema.{table_name}.drop', '{api_name}._schema.table_dropped' ),
-                'parameters'       => array(
-                    array(
-                        'name'          => 'table_name',
-                        'description'   => 'Name of the table to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => $_commonResponses,
-                'notes'            => 'Careful, this drops the database table and all of its contents.',
-            ),
-        ),
-    ),
-    array(
-        'path'        => '/{api_name}/' . SqlDbSvc::SCHEMA_RESOURCE . '/{table_name}/{field_name}',
-        'description' => 'Operations for single field administration.',
-        'operations'  => array(
-            array(
-                'method'           => 'GET',
-                'summary'          => 'describeField() - Retrieve the definition of the given field for the given table.',
-                'nickname'         => 'describeField',
-                'type'             => 'FieldSchema',
-                'event_name'       => array(
-                    '{api_name}._schema.{table_name}.{field_name}.describe',
-                    '{api_name}._schema.{table_name}.field_described'
-                ),
-                'parameters'       => array(
-                    array(
-                        'name'          => 'table_name',
-                        'description'   => 'Name of the table to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                    array(
-                        'name'          => 'field_name',
-                        'description'   => 'Name of the field to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                    array(
-                        'name'          => 'refresh',
-                        'description'   => 'Refresh any cached copy of the schema.',
-                        'allowMultiple' => false,
-                        'type'          => 'boolean',
-                        'paramType'     => 'query',
-                        'required'      => false,
-                    ),
-                ),
-                'responseMessages' => $_commonResponses,
-                'notes'            => 'This describes the field and its properties.',
-            ),
-            array(
-                'method'           => 'PUT',
-                'summary'          => 'replaceField() - Update one record by identifier.',
-                'nickname'         => 'replaceField',
-                'type'             => 'Success',
-                'event_name'       => array(
-                    '{api_name}._schema.{table_name}.{field_name}.alter',
-                    '{api_name}._schema.{table_name}.field_altered'
-                ),
-                'parameters'       => array(
-                    array(
-                        'name'          => 'table_name',
-                        'description'   => 'Name of the table to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                    array(
-                        'name'          => 'field_name',
-                        'description'   => 'Name of the field to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                    array(
-                        'name'          => 'properties',
-                        'description'   => 'Array of field properties.',
-                        'allowMultiple' => false,
-                        'type'          => 'FieldSchema',
-                        'paramType'     => 'body',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => $_commonResponses,
-                'notes'            => 'Post data should be an array of field properties for the given field.',
-            ),
-            array(
-                'method'           => 'PATCH',
-                'summary'          => 'updateField() - Update one record by identifier.',
-                'nickname'         => 'updateField',
-                'type'             => 'Success',
-                'event_name'       => array(
-                    '{api_name}._schema.{table_name}.{field_name}.alter',
-                    '{api_name}._schema.{table_name}.field_altered'
-                ),
-                'parameters'       => array(
-                    array(
-                        'name'          => 'table_name',
-                        'description'   => 'Name of the table to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                    array(
-                        'name'          => 'field_name',
-                        'description'   => 'Name of the field to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                    array(
-                        'name'          => 'properties',
-                        'description'   => 'Array of field properties.',
-                        'allowMultiple' => false,
-                        'type'          => 'FieldSchema',
-                        'paramType'     => 'body',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => $_commonResponses,
-                'notes'            => 'Post data should be an array of field properties for the given field.',
-            ),
-            array(
-                'method'           => 'DELETE',
-                'summary'          => 'deleteField() - Remove the given field from the given table.',
-                'nickname'         => 'deleteField',
-                'type'             => 'Success',
-                'event_name'       => array(
-                    '{api_name}._schema.{table_name}.{field_name}.drop',
-                    '{api_name}._schema.{table_name}.field_dropped'
-                ),
-                'parameters'       => array(
-                    array(
-                        'name'          => 'table_name',
-                        'description'   => 'Name of the table to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                    array(
-                        'name'          => 'field_name',
-                        'description'   => 'Name of the field to perform operations on.',
-                        'allowMultiple' => false,
-                        'type'          => 'string',
-                        'paramType'     => 'path',
-                        'required'      => true,
-                    ),
-                ),
-                'responseMessages' => $_commonResponses,
-                'notes'            => 'Careful, this drops the database table field/column and all of its contents.',
-            ),
-        ),
-    ),
     array(
         'path'        => '/{api_name}/' . SqlDbSvc::STORED_PROC_RESOURCE,
         'operations'  => array(
@@ -499,10 +135,10 @@ $_addApis = array(
 );
 
 $_addModels = array(
-    'TableSchemas'        => array(
+    'TableSchemas'           => array(
         'id'         => 'TableSchemas',
         'properties' => array(
-            'field' => array(
+            'table' => array(
                 'type'        => 'Array',
                 'description' => 'An array of table definitions.',
                 'items'       => array(
@@ -511,7 +147,7 @@ $_addModels = array(
             ),
         ),
     ),
-    'TableSchema'   => array(
+    'TableSchema'            => array(
         'id'         => 'TableSchema',
         'properties' => array(
             'name'        => array(
@@ -550,7 +186,7 @@ $_addModels = array(
             ),
         ),
     ),
-    'FieldSchema'   => array(
+    'FieldSchema'            => array(
         'id'         => 'FieldSchema',
         'properties' => array(
             'name'               => array(
@@ -640,7 +276,7 @@ $_addModels = array(
             ),
         ),
     ),
-    'RelatedSchema' => array(
+    'RelatedSchema'          => array(
         'id'         => 'RelatedSchema',
         'properties' => array(
             'name'      => array(
