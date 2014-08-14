@@ -24,7 +24,7 @@
 	],
 	"require":           {
 		"php":                               ">=5.3.18",
-		"kisma/kisma":                       "~0.2.51@stable",
+		"kisma/kisma":                       "~0.2.53@stable",
 		"swiftmailer/swiftmailer":           "~4.3@stable",
 		"aws/aws-sdk-php":                   "~2.4.0@stable",
 		"rackspace/php-opencloud":           "~1.5.0@stable",

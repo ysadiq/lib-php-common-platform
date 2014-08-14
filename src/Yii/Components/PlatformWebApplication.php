@@ -253,7 +253,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _loadPlugins()
     {
-        if ( null === ( $_autoloadPath = Platform::storeGet( 'dsp.plugin_autoload_path' ) ) )
+        if ( null === ( $_autoloadPath = Pii::appStoreGet( 'dsp.plugin_autoload_path' ) ) )
         {
             //	Locate plug-in directory...
             $_path = Pii::getParam( 'dsp.plugins_path', Pii::getParam( 'dsp.base_path' ) . static::DEFAULT_PLUGINS_PATH );
@@ -277,7 +277,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 return false;
             }
 
-            Platform::storeSet( 'dsp.plugin_autoload_path', $_autoloadPath );
+            Pii::appStoreSet( 'dsp.plugin_autoload_path', $_autoloadPath );
         }
 
         /** @noinspection PhpIncludeInspection */
@@ -363,7 +363,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _loadLocalConfig()
     {
-        $_config = Platform::storeGet( 'platform.local_config' );
+        $_config = Pii::appStoreGet( 'platform.local_config' );
 
         if ( empty( $_config ) )
         {
@@ -417,7 +417,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 }
             }
 
-            Platform::storeSet( 'platform.local_config', $_config );
+            Pii::appStoreSet( 'platform.local_config', $_config );
         }
 
         //  Merge config with our params...
@@ -781,8 +781,13 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
      */
     protected function _normalizeUri( $parts )
     {
-        return !is_array( $parts ) ? $parts
-            : ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : null );
+        return !is_array( $parts )
+            ? $parts
+            :
+            ( isset( $parts['scheme'] ) ? $parts['scheme'] : 'http' ) .
+            '://' .
+            $parts['host'] .
+            ( isset( $parts['port'] ) ? ':' . $parts['port'] : null );
     }
 
     /**
@@ -795,7 +800,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     {
         static $_whitelist = null;
 
-        if ( null === $_whitelist && null === ( $_whitelist = Platform::storeGet( 'cors.whitelist' ) ) )
+        if ( null === $_whitelist && null === ( $_whitelist = Pii::appStoreGet( 'cors.whitelist' ) ) )
         {
             //  Empty whitelist...
             $_whitelist = array();
@@ -829,7 +834,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
                 }
             }
 
-            if ( Platform::storeSet( 'cors.whitelist', $_whitelist ) )
+            if ( Pii::appStoreSet( 'cors.whitelist', $_whitelist ) )
             {
                 if ( $this->_logCorsInfo )
                 {
@@ -1069,7 +1074,7 @@ class PlatformWebApplication extends \CWebApplication implements PublisherLike, 
     public static function addNamespace( $prefix, $paths, $prepend = false )
     {
         /** @var ClassLoader $_loader */
-        if ( null === ( $_loader = Platform::storeGet( CoreSettings::AUTO_LOADER ) ) )
+        if ( null === ( $_loader = Pii::appStoreGet( CoreSettings::AUTO_LOADER ) ) )
         {
             throw new InternalServerErrorException( 'Unable to find auto-loader. :(' );
         }
