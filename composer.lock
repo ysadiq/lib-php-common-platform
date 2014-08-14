@@ -417,16 +417,16 @@
         },
         {
             "name": "dreamfactory/oasys",
-            "version": "0.4.12",
+            "version": "0.4.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/oasys.git",
-                "reference": "a0c513a6fc098b6f96604bf04436441bd9080117"
+                "reference": "9990f10cf20333b65277de6ed2a9608503e960f1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/a0c513a6fc098b6f96604bf04436441bd9080117",
-                "reference": "a0c513a6fc098b6f96604bf04436441bd9080117",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/9990f10cf20333b65277de6ed2a9608503e960f1",
+                "reference": "9990f10cf20333b65277de6ed2a9608503e960f1",
                 "shasum": ""
             },
             "require": {
@@ -462,7 +462,7 @@
                 "oauth",
                 "oauth2"
             ],
-            "time": "2014-08-14 05:09:01"
+            "time": "2014-08-14 05:56:33"
         },
         {
             "name": "dreamfactory/yii",
