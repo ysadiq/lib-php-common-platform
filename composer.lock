@@ -350,16 +350,16 @@
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
-            "version": "1.5.7",
+            "version": "1.5.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "5e7e0faf423d02e884741a6e857d33f2c33a59d2"
+                "reference": "b3aaf00eb57a90cf513628eca23d8ae1c3c8d39e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/5e7e0faf423d02e884741a6e857d33f2c33a59d2",
-                "reference": "5e7e0faf423d02e884741a6e857d33f2c33a59d2",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/b3aaf00eb57a90cf513628eca23d8ae1c3c8d39e",
+                "reference": "b3aaf00eb57a90cf513628eca23d8ae1c3c8d39e",
                 "shasum": ""
             },
             "require": {
@@ -413,7 +413,7 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-08-14 05:17:41"
+            "time": "2014-08-14 06:51:30"
         },
         {
             "name": "dreamfactory/oasys",
