@@ -350,16 +350,16 @@
         },
         {
             "name": "dreamfactory/lib-php-common-yii",
-            "version": "1.5.6",
+            "version": "1.5.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/lib-php-common-yii.git",
-                "reference": "98747ed38689729cdac78dc9954a8028156c4368"
+                "reference": "5e7e0faf423d02e884741a6e857d33f2c33a59d2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/98747ed38689729cdac78dc9954a8028156c4368",
-                "reference": "98747ed38689729cdac78dc9954a8028156c4368",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/lib-php-common-yii/zipball/5e7e0faf423d02e884741a6e857d33f2c33a59d2",
+                "reference": "5e7e0faf423d02e884741a6e857d33f2c33a59d2",
                 "shasum": ""
             },
             "require": {
@@ -413,20 +413,20 @@
                 "sdk",
                 "yii"
             ],
-            "time": "2014-08-14 04:35:06"
+            "time": "2014-08-14 05:17:41"
         },
         {
             "name": "dreamfactory/oasys",
-            "version": "0.4.11",
+            "version": "0.4.12",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dreamfactorysoftware/oasys.git",
-                "reference": "b1ae4a6310cc69adf398c05633219966bdd29681"
+                "reference": "a0c513a6fc098b6f96604bf04436441bd9080117"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/b1ae4a6310cc69adf398c05633219966bdd29681",
-                "reference": "b1ae4a6310cc69adf398c05633219966bdd29681",
+                "url": "https://api.github.com/repos/dreamfactorysoftware/oasys/zipball/a0c513a6fc098b6f96604bf04436441bd9080117",
+                "reference": "a0c513a6fc098b6f96604bf04436441bd9080117",
                 "shasum": ""
             },
             "require": {
@@ -450,8 +450,7 @@
             "authors": [
                 {
                     "name": "Jerry Ablan",
-                    "email": "jerryablan@dreamfactory.com",
-                    "role": "Lead Developer"
+                    "email": "jerryablan@dreamfactory.com"
                 }
             ],
             "description": "DreamFactory Oasys(tm) Open Authentication System",
@@ -463,7 +462,7 @@
                 "oauth",
                 "oauth2"
             ],
-            "time": "2014-04-19 17:50:52"
+            "time": "2014-08-14 05:09:01"
         },
         {
             "name": "dreamfactory/yii",
