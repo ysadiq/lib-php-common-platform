@@ -265,6 +265,18 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
     }
 
     /**
+     * @param string $name
+     *
+     * @throws \DreamFactory\Platform\Exceptions\NotFoundException
+     * @throws \DreamFactory\Platform\Exceptions\BadRequestException
+     * @return string
+     */
+    public function correctTableName( $name )
+    {
+        return $name;
+    }
+
+    /**
      * @param string $resource
      * @param string $resource_id
      * @param string $action
@@ -278,25 +290,21 @@ abstract class BaseDbSvc extends BasePlatformRestService implements ServiceOnlyR
             switch ( $resource )
             {
                 case static::SCHEMA_RESOURCE:
+                    $resource = rtrim( $resource, '/' ) . '/';
                     if ( !empty( $resource_id ) )
                     {
-                        $resource = $resource . '/' . $resource_id;
+                        $resource_id = $this->correctTableName( $resource_id );
+                        $resource .= $resource_id;
                     }
                     break;
                 default:
+                    $resource = $this->correctTableName( $resource );
                     break;
             }
 
-            $this->checkPermission( $action, $resource );
         }
-        else
-        {
-            // listing and getting table properties are checked by table
-            if ( static::GET != $this->_action )
-            {
-                $this->checkPermission( $this->_action );
-            }
-        }
+
+        $this->checkPermission( $action, $resource );
     }
 
     /**

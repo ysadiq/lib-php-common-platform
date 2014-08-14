@@ -157,7 +157,25 @@ class DbUtilities
             $_where[] = $_db->quoteColumnName( 'field' ) . " = ''";
         }
 
-        return static::_querySchemaExtras( $_where, $_params, $select );
+        $_results = static::_querySchemaExtras( $_where, $_params, $select );
+
+        if ( empty( $_results ) && ( 1 === $service_id ) )
+        {
+            // backwards compatible for native databases
+            $_params = array();
+            $_where = array('and');
+            $_where[] = $_db->quoteColumnName( 'service_id' ) . ' IS NULL';
+            $_where[] = array('in', 'table', $_values);
+
+            if ( !$include_fields )
+            {
+                $_where[] = $_db->quoteColumnName( 'field' ) . " = ''";
+            }
+
+            $_results = static::_querySchemaExtras( $_where, $_params, $select );
+        }
+
+        return $_results;
     }
 
     /**
@@ -188,7 +206,22 @@ class DbUtilities
 
         $_where[] = array('in', 'field', $_values);
 
-        return static::_querySchemaExtras( $_where, $_params, $select );
+        $_results = static::_querySchemaExtras( $_where, $_params, $select );
+
+        if ( empty( $_results ) && ( 1 === $service_id ) )
+        {
+            // backwards compatible for native databases
+            $_params = array();
+            $_where = array('and');
+            $_where[] = $_db->quoteColumnName( 'service_id' ) . ' IS NULL';
+            $_where[] = $_db->quoteColumnName( 'table' ) . ' = :tn';
+            $_params[':tn'] = $table_name;
+            $_where[] = array('in', 'field', $_values);
+
+            $_results = static::_querySchemaExtras( $_where, $_params, $select );
+        }
+
+        return $_results;
     }
 
     protected static function _querySchemaExtras( $where, $params, $select = '*' )
@@ -283,6 +316,7 @@ class DbUtilities
                     foreach ( $_inserts as $_insert )
                     {
                         $_command->reset();
+                        $_insert['service_id'] = $service_id;
                         $_command->insert( 'df_sys_schema_extras', $_insert );
                     }
                 }
@@ -292,6 +326,7 @@ class DbUtilities
                     foreach ( $_updates as $_id => $_update )
                     {
                         $_command->reset();
+                        $_update['service_id'] = $service_id;
                         $_command->update( 'df_sys_schema_extras', $_update, 'id = :id', array(':id' => $_id) );
                     }
                 }

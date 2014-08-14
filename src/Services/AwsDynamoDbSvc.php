@@ -163,12 +163,27 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     }
 
     /**
-     * @param $name
-     *
-     * @return string
+     * {@InheritDoc}
      */
     public function correctTableName( $name )
     {
+        static $_existing = null;
+
+        if ( !$_existing )
+        {
+            $_existing = $this->_getTablesAsArray();
+        }
+
+        if ( empty( $name ) )
+        {
+            throw new BadRequestException( 'Table name can not be empty.' );
+        }
+
+        if ( false === array_search( $name, $_existing ) )
+        {
+            throw new NotFoundException( "Table '$name' not found." );
+        }
+
         return $name;
     }
 
@@ -216,26 +231,9 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
      */
     public function describeTable( $table, $refresh = true  )
     {
-        static $_existing = null;
-
-        if ( !$_existing )
-        {
-            $_existing = $this->_getTablesAsArray();
-        }
-
         $_name =
             ( is_array( $table ) ) ? Option::get( $table, 'name', Option::get( $table, static::TABLE_INDICATOR ) )
                 : $table;
-        if ( empty( $_name ) )
-        {
-            throw new BadRequestException( 'Table name can not be empty.' );
-        }
-
-        if ( false === array_search( $_name, $_existing ) )
-        {
-            throw new NotFoundException( "Table '$_name' not found." );
-        }
-
         try
         {
             $_result = $this->_dbConn->describeTable( array(static::TABLE_INDICATOR => $_name) );
@@ -360,8 +358,6 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
      */
     public function retrieveRecordsByFilter( $table, $filter = null, $params = array(), $extras = array() )
     {
-        $table = $this->correctTableName( $table );
-
         $_fields = Option::get( $extras, 'fields' );
         $_ssFilters = Option::get( $extras, 'ss_filters' );
 
@@ -597,7 +593,7 @@ class AwsDynamoDbSvc extends NoSqlDbSvc
     protected function getIdsInfo( $table, $fields_info = null, &$requested_fields = null, $requested_types = null )
     {
         $requested_fields = array();
-        $_result = $this->deleteTable( $table );
+        $_result = $this->describeTable( $table );
         $_keys = Option::get( $_result, 'KeySchema', array() );
         $_definitions = Option::get( $_result, 'AttributeDefinitions', array() );
         $_fields = array();

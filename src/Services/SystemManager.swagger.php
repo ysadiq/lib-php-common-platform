@@ -62,7 +62,7 @@ $_base['models'] = array(
 
 //  Load resources
 $_namespaces = array('DreamFactory\\Platform\\Resources\\System'); //Pii::app()->getResourceNamespaces();
-Log::debug( '  * Discovering resources' );
+//Log::debug( '  * Discovering resources' );
 
 foreach ( $_namespaces as $_namespace )
 {
@@ -78,7 +78,7 @@ foreach ( $_namespaces as $_namespace )
         $_base['apis'] = array_merge( $_base['apis'], Option::get( $_load[ $_key ], 'apis', array() ) );
         $_base['models'] = array_merge( $_base['models'], Option::get( $_load[ $_key ], 'models', array() ) );
 
-        Log::debug( '    * Found ' . $_file );
+//        Log::debug( '    * Found ' . $_file );
         unset( $_load );
     }
 }

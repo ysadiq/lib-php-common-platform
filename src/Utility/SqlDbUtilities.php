@@ -778,11 +778,13 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 // raw sql definition, just pass it on
                 return $sql;
             }
+
             $type = Option::get( $field, 'type' );
             if ( empty( $type ) )
             {
                 throw new BadRequestException( "Invalid schema detected - no type element." );
             }
+
             /* abstract types handled by yii directly for each driver type
 
                 pk: a generic primary key type, will be converted into int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY for MySQL;
@@ -1212,6 +1214,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                 {
                     throw new BadRequestException( "Invalid schema detected - no name element." );
                 }
+
                 $type = Option::get( $field, 'type', '' );
                 $colSchema = ( isset( $schema ) ) ? $schema->getColumn( $name ) : null;
                 $isAlter = false;
@@ -1221,6 +1224,7 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
                     {
                         throw new BadRequestException( "Field '$name' already exists in table '$table_name'." );
                     }
+
                     if ( ( ( 0 == strcasecmp( 'id', $type ) ) ||
                             ( 0 == strcasecmp( 'pk', $type ) ) ||
                             Option::getBool( $field, 'is_primary_key' ) ) && ( $colSchema->isPrimaryKey )
@@ -1958,8 +1962,12 @@ class SqlDbUtilities extends DbUtilities implements SqlDbDriverTypes
             case 'largeblob':
                 return 'binary';
 
-            case 'datetimeoffset':
             case 'timestamp':
+            case 'timestamp with time zone': //  PGSQL
+            case 'timestamp without time zone': //  PGSQL
+            case 'datetimeoffset':  //  MSSQL
+                return 'timestamp';
+
             case 'datetime':
             case 'datetime2':
                 return 'datetime';

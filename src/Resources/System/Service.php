@@ -73,19 +73,24 @@ class Service extends BaseSystemRestResource
         {
             $_response = $this->_response;
             $_includeComponents = Option::getBool( $this->_requestPayload, 'include_components' );
-            if (isset( $_response['record'] ) )
+            if ( isset( $_response['record'] ) )
             {
-                $_services = Option::clean(Option::get( $_response, 'record' ));
+                $_services = Option::clean( Option::get( $_response, 'record' ) );
                 foreach ( $_services as &$_item )
                 {
                     if ( $_includeComponents )
                     {
-                        $_item['components'] = static::_getComponents($_item);
+                        $_item['components'] = static::_getComponents( $_item );
                     }
-                    if ( isset($_item['docs'] ) && empty($_item['docs']))
+                    if ( isset( $_item['docs'] ) && empty( $_item['docs'] ) )
                     {
-                        $_item['docs'] = static::_getDocs($_item);
+                        $_item['docs'] = static::_getDocs( $_item );
                     }
+                }
+                if ( $_includeComponents )
+                {
+                    $_all = array('id' => null, 'name' => 'All', 'components' => array('', '*'));
+                    array_unshift( $_services, $_all );
                 }
                 $_response['record'] = $_services;
             }
@@ -93,11 +98,11 @@ class Service extends BaseSystemRestResource
             {
                 if ( $_includeComponents )
                 {
-                    $_response['components'] = static::_getComponents($_response);
+                    $_response['components'] = static::_getComponents( $_response );
                 }
-                if ( isset($_response['docs'] ) && empty($_response['docs']))
+                if ( isset( $_response['docs'] ) && empty( $_response['docs'] ) )
                 {
-                    $_response['docs'] = static::_getDocs($_response);
+                    $_response['docs'] = static::_getDocs( $_response );
                 }
             }
             $this->_response = $_response;
