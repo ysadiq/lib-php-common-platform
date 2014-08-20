@@ -211,9 +211,12 @@ class Config extends BaseSystemRestResource
             $_config = array(
                 //  General settings
                 'allow_admin_remote_logins' => Pii::getParam( 'dsp.allow_admin_remote_logins', false ),
-                'allow_remote_logins'       => ( Pii::getParam( 'dsp.allow_remote_logins', false ) && Option::getBool( $this->_response, 'allow_open_registration' ) ),
+                'allow_remote_logins'       => ( Pii::getParam( 'dsp.allow_remote_logins', false ) &&
+                    Option::getBool( $this->_response, 'allow_open_registration' ) ),
                 'remote_login_providers'    => null,
                 'restricted_verbs'          => Pii::getParam( 'dsp.restricted_verbs', array() ),
+                'install_type'              => Pii::getParam( 'dsp.install_type' ),
+                'install_name'              => Pii::getParam( 'dsp.install_name' ),
                 'is_hosted'                 => $_fabricHosted = Pii::getParam( 'dsp.fabric_hosted', false ),
                 'is_private'                => Fabric::hostedPrivatePlatform(),
                 //  DSP version info
@@ -257,8 +260,7 @@ class Config extends BaseSystemRestResource
         }
 
         //	Only return a single row, not in an array
-        if ( is_array( $this->_response ) && !Pii::isEmpty( $_record = Option::get( $this->_response, 'record' ) ) && count( $_record ) >= 1
-        )
+        if ( is_array( $this->_response ) && !Pii::isEmpty( $_record = Option::get( $this->_response, 'record' ) ) && count( $_record ) >= 1 )
         {
             $this->_response = current( $_record );
         }
@@ -266,11 +268,14 @@ class Config extends BaseSystemRestResource
         $this->_response = array_merge( $this->_response, $_config );
         $this->_response['is_guest'] = Pii::guest();
 
+        @ksort( $this->_response );
+
         //	Cache configuration
         Platform::storeSet( static::CACHE_KEY, $_config, static::CONFIG_CACHE_TTL );
         Platform::storeSet( static::LAST_RESPONSE_CACHE_KEY, $this->_response, static::CONFIG_CACHE_TTL );
 
         unset( $_config );
+
         parent::_postProcess();
     }
 
