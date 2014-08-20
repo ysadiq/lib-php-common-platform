@@ -142,8 +142,15 @@ class DbUtilities
         $_params = array();
         $_where = array('and');
 
-        $_where[] = $_db->quoteColumnName( 'service_id' ) . ' = :id';
-        $_params[':id'] = $service_id;
+        if ( empty( $service_id ) )
+        {
+            $_where[] = $_db->quoteColumnName( 'service_id' ) . ' IS NULL';
+        }
+        else
+        {
+            $_where[] = $_db->quoteColumnName( 'service_id' ) . ' = :id';
+            $_params[':id'] = $service_id;
+        }
 
         if ( false === $_values = static::validateAsArray( $table_names, ',', true ) )
         {
@@ -193,8 +200,15 @@ class DbUtilities
         $_params = array();
         $_where = array('and');
 
-        $_where[] = $_db->quoteColumnName( 'service_id' ) . ' = :id';
-        $_params[':id'] = $service_id;
+        if ( empty( $service_id ) )
+        {
+            $_where[] = $_db->quoteColumnName( 'service_id' ) . ' IS NULL';
+        }
+        else
+        {
+            $_where[] = $_db->quoteColumnName( 'service_id' ) . ' = :id';
+            $_params[':id'] = $service_id;
+        }
 
         $_where[] = $_db->quoteColumnName( 'table' ) . ' = :tn';
         $_params[':tn'] = $table_name;
@@ -365,8 +379,15 @@ class DbUtilities
             $_params = array();
             $_where = array('and');
 
-            $_where[] = $_db->quoteColumnName( 'service_id' ) . ' = :id';
-            $_params[':id'] = $service_id;
+            if ( empty( $service_id ) )
+            {
+                $_where[] = $_db->quoteColumnName( 'service_id' ) . ' IS NULL';
+            }
+            else
+            {
+                $_where[] = $_db->quoteColumnName( 'service_id' ) . ' = :id';
+                $_params[':id'] = $service_id;
+            }
 
             if ( false === $_values = static::validateAsArray( $table_names, ',', true ) )
             {
@@ -401,8 +422,15 @@ class DbUtilities
             $_params = array();
             $_where = array('and');
 
-            $_where[] = $_db->quoteColumnName( 'service_id' ) . ' = :id';
-            $_params[':id'] = $service_id;
+            if ( empty( $service_id ) )
+            {
+                $_where[] = $_db->quoteColumnName( 'service_id' ) . ' IS NULL';
+            }
+            else
+            {
+                $_where[] = $_db->quoteColumnName( 'service_id' ) . ' = :id';
+                $_params[':id'] = $service_id;
+            }
 
             $_where[] = $_db->quoteColumnName( 'table' ) . ' = :tn';
             $_params[':tn'] = $table_name;

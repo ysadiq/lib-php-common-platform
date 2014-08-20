@@ -224,7 +224,7 @@ class SystemManager extends BaseSystemRestService
 
             if ( !empty( $_labels ) )
             {
-                //                SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
+                SqlDbUtilities::setSchemaExtras( null, $_labels );
             }
 
             try
@@ -296,7 +296,7 @@ class SystemManager extends BaseSystemRestService
 
             if ( !empty( $_labels ) )
             {
-                //                SqlDbUtilities::setSchemaExtras( $this->getServiceId(), $_labels );
+                SqlDbUtilities::setSchemaExtras( null, $_labels );
             }
 
             if ( !empty( $_currentVersion ) )
