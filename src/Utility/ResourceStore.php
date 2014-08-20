@@ -22,6 +22,7 @@ namespace DreamFactory\Platform\Utility;
 use Composer\Autoload\ClassLoader;
 use DreamFactory\Platform\Enums\ResponseFormats;
 use DreamFactory\Platform\Exceptions\BadRequestException;
+use DreamFactory\Platform\Exceptions\ForbiddenException;
 use DreamFactory\Platform\Exceptions\InternalServerErrorException;
 use DreamFactory\Platform\Exceptions\NotFoundException;
 use DreamFactory\Platform\Exceptions\RestException;
@@ -282,7 +283,7 @@ class ResourceStore implements UtilityLike
         }
         else
         {
-            $_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
+            $_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ?: static::$_resourceId ) );
         }
 
         $_model = static::model();
@@ -464,7 +465,7 @@ class ResourceStore implements UtilityLike
             throw new BadRequestException( 'There is no record in the request.' );
         }
 
-        $_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
+        $_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ?: static::$_resourceId ) );
 
         $_response = array();
         $_transaction = null;
@@ -636,7 +637,7 @@ class ResourceStore implements UtilityLike
      */
     public static function bulkDeleteById( $ids, $extras = null, $single_row = false )
     {
-        $_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ? : static::$_resourceId ) );
+        $_ids = is_array( $ids ) ? $ids : ( explode( ',', $ids ?: static::$_resourceId ) );
 
         return static::bulkDelete( $_ids, $extras, $single_row );
     }
@@ -850,8 +851,9 @@ class ResourceStore implements UtilityLike
      * @param bool   $returnResource If true, a RestResource-based class will returned instead of a model
      * @param array  $resources
      *
+     * @throws \DreamFactory\Platform\Exceptions\ForbiddenException
      * @throws \DreamFactory\Platform\Exceptions\InternalServerErrorException
-     *
+     * @throws \Exception
      * @return BasePlatformSystemModel
      */
     public static function model( $resourceName = null, $returnResource = false, $resources = array() )
@@ -872,7 +874,7 @@ class ResourceStore implements UtilityLike
             $_returnClass = true;
         }
 
-        $_resourceName = $resourceName ? : static::$_resourceName;
+        $_resourceName = $resourceName ?: static::$_resourceName;
 
         //	Try dynamic system models first
         $_className = \ucwords( $_resourceName );
@@ -905,7 +907,9 @@ class ResourceStore implements UtilityLike
         //	So, still not found, just let the SPL autoloader have a go and give up.
         if ( empty( $_className ) || ( !empty( $_className ) && !class_exists( $_className, false ) ) )
         {
-            throw new InternalServerErrorException( 'Invalid ' . ( $returnResource ? 'resource' : 'model' ) . ' type \'' . $_resourceName . '\' requested.' );
+            throw new \RuntimeException(
+                'Invalid ' . ( $returnResource ? 'resource' : 'model' ) . ' type \'' . $_resourceName . '\' requested.'
+            );
         }
 
         //	Return a resource
@@ -918,6 +922,11 @@ class ResourceStore implements UtilityLike
                 $_resource->setResponseFormat( static::$_responseFormat );
 
                 return $_resource;
+            }
+            catch ( ForbiddenException $_ex )
+            {
+                Log::error( 'Access to resource "' . $_resourceName . '" forbidden: ' . $_ex->getMessage() );
+                throw $_ex;
             }
             catch ( \Exception $_ex )
             {
@@ -933,6 +942,11 @@ class ResourceStore implements UtilityLike
             }
 
             return call_user_func( array($_className, 'model') );
+        }
+        catch ( ForbiddenException $_ex )
+        {
+            Log::error( 'Access to model "' . $_resourceName . '" forbidden: ' . $_ex->getMessage() );
+            throw $_ex;
         }
         catch ( \Exception $_ex )
         {
@@ -954,7 +968,7 @@ class ResourceStore implements UtilityLike
     public static function checkPermission( $operation, $service = null, $resource = null )
     {
         Session::checkAppPermission();
-        Session::checkServicePermission( $operation, $service ? : static::$_service, $resource );
+        Session::checkServicePermission( $operation, $service ?: static::$_service, $resource );
 
         return true;
     }
@@ -969,7 +983,7 @@ class ResourceStore implements UtilityLike
      */
     public static function getPermissions( $service = null, $resource = null )
     {
-        return Session::getServicePermissions( $service ? : static::$_service, $resource );
+        return Session::getServicePermissions( $service ?: static::$_service, $resource );
     }
 
     /**
@@ -1005,7 +1019,7 @@ class ResourceStore implements UtilityLike
      */
     protected static function _findByPk( $id = null, $criteria = null, $params = array() )
     {
-        if ( null === ( $_resource = static::model()->findByPk( $id ? : static::$_resourceId, $criteria, $params ) ) )
+        if ( null === ( $_resource = static::model()->findByPk( $id ?: static::$_resourceId, $criteria, $params ) ) )
         {
             throw new NotFoundException();
         }

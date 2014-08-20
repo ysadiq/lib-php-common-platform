@@ -38,7 +38,7 @@ class InstallationTypes extends SeedEnum
      * @var string All packages have this doc root
      */
     const DEFAULT_PACKAGE_DOCUMENT_ROOT = '/opt/dreamfactory/platform/var/www/launchpad';
-    
+
     /**
      * Package Types
      */
@@ -81,17 +81,19 @@ class InstallationTypes extends SeedEnum
      */
 
     /**
-     * @var string
+     * @var string I realize that this is the same as pivotal. Only affects restricted verbs at this time.
+     * @todo Find better bluemix marker
      */
-    const BLUEMIX_PACKAGE_MARKER = '/home/vcap/app/htdocs';
+    const BLUEMIX_PACKAGE_MARKER = '/home/vcap/app/web';
+    /**
+     * @var string I realize that this is the same as bluemix. Only affects restricted verbs at this time.
+     * @todo Find better pivotal marker
+     */
+    const PIVOTAL_PACKAGE_MARKER = '/home/vcap/app/web';
     /**
      * @var string
      */
     const BITNAMI_PACKAGE_MARKER = '/apps/dreamfactory/htdocs/web';
-    /**
-     * @var string
-     */
-    const PIVOTAL_PACKAGE_MARKER = '/home/vcap/app/htdocs';
     /**
      * @var string
      */
