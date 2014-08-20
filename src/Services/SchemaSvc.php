@@ -157,8 +157,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
 
     protected function _detectRequestMembers()
     {
-        $_posted = Option::clean( RestData::getPostedData( true, true ) );
-        $this->_requestPayload = array_merge( $_REQUEST, $_posted );
+        $this->_requestPayload = Option::clean( RestData::getPostedData( true, true ) );
 
         return $this;
     }
@@ -231,6 +230,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         {
             if ( empty( $this->_tables ) )
             {
+                $this->_requestPayload = array_merge( $_REQUEST, $this->_requestPayload );
                 $_namesOnly = Option::getBool( $this->_requestPayload, 'as_access_components' );
                 $_result = $this->describeDatabase( $_namesOnly );
                 if ( $_namesOnly )
@@ -609,7 +609,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
         }
 
         $_result = SqlDbUtilities::updateTables( $this->_dbConn, $tables, $allow_merge, $allow_delete );
-        $_labels = Option::get( $_result, 'labels', true );
+        $_labels = Option::get( $_result, 'labels', array(), true );
 
         if ( !empty( $_labels ) )
         {
@@ -678,7 +678,7 @@ class SchemaSvc extends BasePlatformRestService implements ServiceOnlyResourceLi
             $_names = Option::get( $_result, 'names' );
             $_extras = SqlDbUtilities::getSchemaExtrasForFields( $this->getServiceId(), $table, $_names );
 
-            return SqlDbUtilities::describeTableFields( $this->_dbConn, $table, $_names, $_extras );
+            return SqlDbUtilities::describeTableFields( $this->_dbConn, $table, $_names, $_extras, true );
         }
         catch ( RestException $ex )
         {
