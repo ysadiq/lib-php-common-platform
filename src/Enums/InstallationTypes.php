@@ -151,13 +151,13 @@ class InstallationTypes extends SeedEnum
 
         $_docRoot = Option::server( 'DOCUMENT_ROOT' );
         $_type = static::FABRIC_HOSTED;
+        $_cachedType = Platform::storeGet( INSTALL_TYPE_KEY );
 
         //	Hosted?
         if ( !Fabric::fabricHosted() )
         {
             //	Default to stand-alone
             $_type = static::STANDALONE_PACKAGE;
-            $_cachedType = Platform::storeGet( INSTALL_TYPE_KEY );
 
             foreach ( $_markers as $_id => $_marker )
             {
@@ -175,7 +175,9 @@ class InstallationTypes extends SeedEnum
             }
         }
 
+        $prettyName = Inflector::display( strtolower( static::nameOf( $_type ) ) );
+
         //	Kajigger the name
-        return $prettyPrint ? Inflector::display( strtolower( static::nameOf( $_type ) ) ) : $_type;
+        return $prettyPrint ? $prettyName : $_type;
     }
 }
