@@ -85,11 +85,11 @@ class InstallationTypes extends SeedEnum
     /**
      * @var string
      */
-    const BLUEMIX_PACKAGE_MARKER = false;
+    const BLUEMIX_PACKAGE_MARKER = '.bluemix';
     /**
      * @var string
      */
-    const PIVOTAL_PACKAGE_MARKER = false;
+    const PIVOTAL_PACKAGE_MARKER = '.pivotal';
     /**
      * @var string
      */
@@ -161,13 +161,13 @@ class InstallationTypes extends SeedEnum
 
             foreach ( $_markers as $_id => $_marker )
             {
-                if ( false === $_marker && null !== $_cachedType )
+                if ( '.' === $_marker[0] && null !== $_cachedType )
                 {
                     $_type = $_cachedType;
                     break;
                 }
 
-                if ( $_marker && false !== stripos( $_docRoot, $_marker ) )
+                if ( '.' !== $_marker[0] && false !== stripos( $_docRoot, $_marker ) )
                 {
                     $_type = $_id;
                     break;
