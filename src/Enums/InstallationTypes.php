@@ -160,19 +160,13 @@ class InstallationTypes extends SeedEnum
 
             foreach ( $_markers as $_id => $_marker )
             {
-                if ( false === $_marker )
+                if ( false === $_marker && null !== ( $_storeType = Platform::storeGet( INSTALL_TYPE_KEY ) ) )
                 {
-                    if ( null !== ( $_storeType = Platform::storeGet( INSTALL_TYPE_KEY ) ) )
-                    {
-                        $_type = $_storeType;
-                        break;
-                    }
-
-                    //  Nothing to compare, skip to next...
-                    continue;
+                    $_type = $_storeType;
+                    break;
                 }
 
-                if ( false !== stripos( $_docRoot, $_marker ) )
+                if ( $_marker && false !== stripos( $_docRoot, $_marker ) )
                 {
                     $_type = $_id;
                     break;
@@ -181,8 +175,6 @@ class InstallationTypes extends SeedEnum
         }
 
         //	Kajigger the name
-        $prettyName = Inflector::display( strtolower( static::nameOf( $_type ) ) );
-
-        return $prettyPrint ? $prettyName : $_type;
+        return $prettyPrint ? Inflector::display( strtolower( static::nameOf( $_type ) ) ) : $_type;
     }
 }
