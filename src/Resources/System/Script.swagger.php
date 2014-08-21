@@ -53,7 +53,7 @@ $_properties = array_merge(
             'type'        => 'string',
             'description' => 'The path where the script file lives',
         ),
-        'file_mtime' => array(
+        'file_mtime'     => array(
             'type'        => 'integer',
             'description' => 'The last modified time of the file in UNIX time.',
         ),
@@ -90,12 +90,30 @@ $_script = array(
                     'responseMessages' => $_commonResponses,
                     'parameters'       => array(
                         array(
-                            'name'          => 'is_user_script',
-                            'description'   => 'Set to true to return a list of user scripts. Otherwise, only event scripts are returned.',
+                            'name'          => 'include_script_body',
+                            'description'   => 'True if you would like the body of the scripts back as well',
                             'allowMultiple' => false,
                             'type'          => 'boolean',
                             'paramType'     => 'path',
                             'required'      => false,
+                        ),
+                        array(
+                            'name'          => 'include_user_scripts',
+                            'description'   => 'If true, user scripts will be returned along with the event scripts.',
+                            'allowMultiple' => false,
+                            'type'          => 'boolean',
+                            'paramType'     => 'path',
+                            'required'      => false,
+                            'defaultValue'  => 'true',
+                        ),
+                        array(
+                            'name'          => 'include_only_user_scripts',
+                            'description'   => 'If true, ONLY user scripts will be returned.',
+                            'allowMultiple' => false,
+                            'type'          => 'boolean',
+                            'paramType'     => 'path',
+                            'required'      => false,
+                            'defaultValue'  => 'false',
                         ),
                         array(
                             'name'          => 'language',
@@ -104,14 +122,7 @@ $_script = array(
                             'type'          => 'string',
                             'paramType'     => 'path',
                             'required'      => false,
-                        ),
-                        array(
-                            'name'          => 'include_script_body',
-                            'description'   => 'True if you would like the body of the scripts back as well',
-                            'allowMultiple' => false,
-                            'type'          => 'boolean',
-                            'paramType'     => 'path',
-                            'required'      => false,
+                            'defaultValue'  => '*',
                         ),
                     ),
                 ),
@@ -180,7 +191,7 @@ $_script = array(
                         ),
                         array(
                             'name'          => 'is_user_script',
-                            'description'   => 'True if you would like a user script to be returned',
+                            'description'   => 'True if this is a user script',
                             'allowMultiple' => false,
                             'type'          => 'boolean',
                             'paramType'     => 'path',
