@@ -157,12 +157,13 @@ class InstallationTypes extends SeedEnum
         {
             //	Default to stand-alone
             $_type = static::STANDALONE_PACKAGE;
+            $_cachedType = Platform::storeGet( INSTALL_TYPE_KEY );
 
             foreach ( $_markers as $_id => $_marker )
             {
-                if ( false === $_marker && null !== ( $_storeType = Platform::storeGet( INSTALL_TYPE_KEY ) ) )
+                if ( false === $_marker && null !== $_cachedType )
                 {
-                    $_type = $_storeType;
+                    $_type = $_cachedType;
                     break;
                 }
 
