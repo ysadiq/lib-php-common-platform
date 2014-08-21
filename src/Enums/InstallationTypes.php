@@ -162,7 +162,7 @@ class InstallationTypes extends SeedEnum
             {
                 if ( false === $_marker )
                 {
-                    if ( null !== ( $_storeType = Platform::storeGet( INSTALL_TYPE_KEY ) ) && static::contains( $_storeType ) )
+                    if ( null !== ( $_storeType = Platform::storeGet( INSTALL_TYPE_KEY ) ) )
                     {
                         $_type = $_storeType;
                         break;
