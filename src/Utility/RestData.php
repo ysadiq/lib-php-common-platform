@@ -81,6 +81,7 @@ class RestData
         {
             $_postData = $_data;
             $_data = array();
+
             if ( !empty( $_contentType ) )
             {
                 if ( false !== stripos( $_contentType, '/json' ) )
@@ -98,6 +99,17 @@ class RestData
                     // text/csv
                     $_data = DataFormatter::csvToArray( $_postData );
                 }
+                elseif ( false !== stripos( $_contentType, '/javascript' ) || false !== stripos( $_contentType, '/plain' ) )
+                {
+                    if ( false !== ( $_json = json_decode( $_postData, true ) ) && JSON_ERROR_NONE == json_last_error() )
+                    {
+                        $_data = $_json;
+                    }
+                    else
+                    {
+                        $_data = $_postData;
+                    }
+                }
             }
 
             if ( empty( $_data ) )
@@ -114,7 +126,10 @@ class RestData
             }
 
             // get rid of xml wrapper if present
-            $_data = Option::get( $_data, 'dfapi', $_data );
+            if ( !empty( $_data ) && isset( $_data['dfapi'] ) )
+            {
+                $_data = Option::get( $_data, 'dfapi', $_data );
+            }
         }
 
         return $_data;

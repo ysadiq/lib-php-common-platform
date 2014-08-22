@@ -74,7 +74,7 @@ $_properties = array_merge(
 
 $_script = array(
     'produces' => array('application/json'),
-    'consumes' => array('application/javascript', 'text/javascript', 'text/plain'),
+    'consumes' => array('application/javascript', 'text/plain'),
     'apis'     => array(
         array(
             'path'        => '/{api_name}/script',
@@ -217,6 +217,7 @@ $_script = array(
                     'nickname'         => 'writeScript',
                     'type'             => 'ScriptResponse',
                     'event_name'       => '{api_name}.script.write',
+                    'consumes'         => array('application/javascript', 'text/plain'),
                     'parameters'       => array(
                         array(
                             'name'          => 'script_id',
@@ -233,6 +234,7 @@ $_script = array(
                             'type'          => 'string',
                             'paramType'     => 'body',
                             'required'      => true,
+                            'consumes'      => array('application/javascript', 'text/plain'),
                         ),
                         array(
                             'name'          => 'is_user_script',
