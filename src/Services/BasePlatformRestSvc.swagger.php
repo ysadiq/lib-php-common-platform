@@ -37,6 +37,18 @@ return array(
         ),
     ),
     'models'       => array(
+        'ComponentList'  => array(
+            'id'         => 'ComponentList',
+            'properties' => array(
+                'resource' => array(
+                    'type'        => 'Array',
+                    'description' => 'Array of accessible components available by this service.',
+                    'items'       => array(
+                        '$ref' => 'string',
+                    ),
+                ),
+            ),
+        ),
         'Resource'  => array(
             'id'         => 'Resource',
             'properties' => array(
