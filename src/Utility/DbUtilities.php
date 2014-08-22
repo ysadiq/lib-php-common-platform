@@ -138,6 +138,11 @@ class DbUtilities
      */
     public static function getSchemaExtrasForTables( $service_id, $table_names, $include_fields = true, $select = '*' )
     {
+        if ( empty( $table_names ) )
+        {
+            return array();
+        }
+
         $_db = Pii::db();
         $_params = array();
         $_where = array('and');
