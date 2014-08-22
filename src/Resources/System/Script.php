@@ -36,6 +36,7 @@ use DreamFactory\Platform\Utility\Fabric;
 use DreamFactory\Platform\Utility\Platform;
 use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Enums\GlobFlags;
+use Kisma\Core\Exceptions\FileSystemException;
 use Kisma\Core\Interfaces\HttpResponse;
 use Kisma\Core\Utility\FileSystem;
 use Kisma\Core\Utility\Log;
@@ -134,8 +135,9 @@ class Script extends BaseSystemRestResource
 
         //  User scripts are stored here
         $this->_scriptPath = Platform::getPrivatePath( static::DEFAULT_SCRIPT_PATH );
+        $this->_userScriptPath = Platform::getPrivatePath( static::DEFAULT_USER_SCRIPT_PATH );
 
-        if ( empty( $this->_scriptPath ) )
+        if ( empty( $this->_scriptPath ) || empty( $this->_userScriptPath ) )
         {
             $_message = 'Empty script path';
         }
@@ -167,6 +169,13 @@ class Script extends BaseSystemRestResource
                     $_message = 'User scripts path not writable: ' . $this->_userScriptPath;
                 }
             }
+            else
+            {
+                if ( Option::get( $this->_requestPayload, 'is_user_script', false ) )
+                {
+                    throw new ForbiddenException( 'User scripts are not allowed on this server.' );
+                }
+            }
         }
 
         if ( $_message )
@@ -190,7 +199,7 @@ class Script extends BaseSystemRestResource
      *
      * @return array|bool
      */
-    protected function _getScriptList( $language = ScriptLanguages::ALL, $includeUserScripts = true, $onlyUserScripts = false )
+    protected function _getScriptList( $language = ScriptLanguages::JAVASCRIPT, $includeUserScripts = true, $onlyUserScripts = false )
     {
         $_resources = array(
             'event' => $this->_scriptPath . '/*' . ( ScriptLanguages::ALL === $language ? null : '.' . $language ),
@@ -355,9 +364,17 @@ class Script extends BaseSystemRestResource
         }
 
         $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
-        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::ALL );
-        $_path = ( $_user ? $this->_userScriptPath : $this->_scriptPath ) . '/' . trim( $this->_resourceId, '/ ' ) . '.' . $_language;
+        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
+        $_path = $this->_getScriptPath( trim( $this->_resourceId, '/ ' ), $_language, $_user );
         $_script = basename( $_path );
+
+        if ( !is_dir( dirname( $_path ) ) )
+        {
+            if ( false === @mkdir( dirname( $_path ) ) )
+            {
+                throw new FileSystemException( 'Unable to create storage area for scripts.' );
+            }
+        }
 
         $_scriptBody = Option::get( $this->_requestPayload, 'record' );
 
@@ -371,9 +388,9 @@ class Script extends BaseSystemRestResource
             throw new BadRequestException( 'You must supply a "script_body".' );
         }
 
-        if ( false === $_bytes = @file_put_contents( $_path, $_scriptBody ) )
+        if ( false === ( $_bytes = @file_put_contents( $_path, $_scriptBody ) ) )
         {
-            throw new InternalServerErrorException( 'Error writing file to storage area.' );
+            throw new FileSystemException( 'Error writing file to storage area: ' . $_path );
         }
 
         //  Clear the swagger cache...
@@ -410,8 +427,8 @@ class Script extends BaseSystemRestResource
         }
 
         $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
-        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::ALL );
-        $_path = ( $_user ? $this->_userScriptPath : $this->_scriptPath ) . '/' . trim( $this->_resourceId, '/ ' ) . '.' . $_language;
+        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
+        $_path = $this->_getScriptPath( trim( $this->_resourceId, '/ ' ), $_language, $_user );
         $_script = basename( $_path );
 
         if ( !file_exists( $_path ) )
@@ -465,7 +482,7 @@ class Script extends BaseSystemRestResource
         }
 
         $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
-        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::ALL );
+        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
 
         $_api = array(
             'api'     => Api::getScriptingObject(),
