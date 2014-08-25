@@ -25,7 +25,6 @@ use DreamFactory\Platform\Events\Exceptions\ScriptException;
 use DreamFactory\Platform\Events\Interfaces\EventObserverLike;
 use DreamFactory\Platform\Events\Stores\EventStore;
 use DreamFactory\Platform\Exceptions\BadRequestException;
-use DreamFactory\Platform\Resources\System\Config;
 use DreamFactory\Platform\Resources\System\Script;
 use DreamFactory\Platform\Scripting\ScriptEngine;
 use DreamFactory\Platform\Scripting\ScriptEvent;
@@ -262,7 +261,7 @@ class EventDispatcher implements EventDispatcherInterface
 
         if ( static::$_logAllEvents )
         {
-            Log::debug( 'Triggered: "' . $eventName . '" by ' . $this->getPathInfo() );
+            Log::debug( '[event] "' . $eventName . '"', array('trigger_path' => $this->getPathInfo()) );
         }
 
         //  Observers get the event first...
@@ -278,15 +277,20 @@ class EventDispatcher implements EventDispatcherInterface
         }
 
         //  Run any scripts
-        if ( !$this->_runEventScripts( $eventName, $event ) )
+        if ( static::$_enableEventScripts && !$this->_runEventScripts( $eventName, $event ) )
         {
             return true;
         }
 
         //  Notify the listeners
-        if ( !( $_dispatched = $this->_notifyListeners( $eventName, $event ) ) )
+        $_dispatched = false;
+
+        if ( static::$_enableRestEvents || static::$_enablePlatformEvents )
         {
-            return true;
+            if ( !( $_dispatched = $this->_notifyListeners( $eventName, $event ) ) )
+            {
+                return true;
+            }
         }
 
         return $_dispatched;
@@ -337,7 +341,8 @@ class EventDispatcher implements EventDispatcherInterface
 
                     $_hash = spl_object_hash( $_listener );
                     $_name = gettype( $_listener );
-                    $_listener = ( ( $_listener instanceof \Closure || $_listener instanceof SerializableClosure ) ? 'Closure' : $_name ) . 'id#' . $_hash;
+                    $_listener =
+                        ( ( $_listener instanceof \Closure || $_listener instanceof SerializableClosure ) ? 'Closure' : $_name ) . 'id#' . $_hash;
                 }
             }
 
@@ -968,7 +973,11 @@ class EventDispatcher implements EventDispatcherInterface
                 $_defaultPath = $event instanceof PlatformServiceEvent ? $event->getApiName() . '/' . $event->getResource() : null;
 
                 Log::debug(
-                    ( $_dispatched ? 'Dispatcher' : 'Unhandled' ) . ': event "' . $eventName . '" triggered by /' . Option::get( $_GET, 'path', $_defaultPath )
+                    ( $_dispatched ? 'Dispatcher' : 'Unhandled' ) .
+                    ': event "' .
+                    $eventName .
+                    '" triggered by /' .
+                    Option::get( $_GET, 'path', $_defaultPath )
                 );
             }
 

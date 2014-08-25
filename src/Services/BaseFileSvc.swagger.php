@@ -32,16 +32,36 @@ $_base['apis'] = array(
                 'summary'          => 'getResources() - List all resources.',
                 'nickname'         => 'getResources',
                 'type'             => 'Resources',
-                'event_name'       => array( '{api_name}.containers.list', ),
-                'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
+                'event_name'       => array('{api_name}.containers.list',),
+                'responseMessages' => SwaggerManager::getCommonResponses( array(400, 401, 500) ),
                 'notes'            => 'List the names of the available containers in this storage. ',
+            ),
+            array(
+                'method'           => 'GET',
+                'summary'          => 'getAccessComponents() - List all role accessible components.',
+                'nickname'         => 'getAccessComponents',
+                'notes'            => 'List the names of all the role accessible components.',
+                'type'             => 'ComponentList',
+                'event_name'       => array('{api_name}.list'),
+                'parameters'       => array(
+                    array(
+                        'name'          => 'as_access_components',
+                        'description'   => 'Return the names of all the accessible components.',
+                        'allowMultiple' => false,
+                        'type'          => 'boolean',
+                        'paramType'     => 'query',
+                        'required'      => true,
+                        'default'       => true,
+                    ),
+                ),
+                'responseMessages' => SwaggerManager::getCommonResponses( array(400, 401, 500) ),
             ),
             array(
                 'method'           => 'GET',
                 'summary'          => 'getContainers() - List all containers, optionally with properties.',
                 'nickname'         => 'getContainers',
                 'type'             => 'ContainersResponse',
-                'event_name'       => array( '{api_name}.containers.describe',),
+                'event_name'       => array('{api_name}.containers.describe',),
                 'parameters'       => array(
                     array(
                         'name'          => 'include_properties',
@@ -53,7 +73,7 @@ $_base['apis'] = array(
                         'defaultValue'  => true,
                     ),
                 ),
-                'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
+                'responseMessages' => SwaggerManager::getCommonResponses( array(400, 401, 500) ),
                 'notes'            => 'List the names and any properties of the available containers in this storage.',
             ),
             array(
@@ -61,7 +81,7 @@ $_base['apis'] = array(
                 'summary'          => 'createContainers() - Create one or more containers.',
                 'nickname'         => 'createContainers',
                 'type'             => 'ContainersResponse',
-                'event_name'       => array( '{api_name}.containers.create',),
+                'event_name'       => array('{api_name}.containers.create',),
                 'parameters'       => array(
                     array(
                         'name'          => 'body',
@@ -83,14 +103,14 @@ $_base['apis'] = array(
                     array(
                         'name'          => 'X-HTTP-METHOD',
                         'description'   => 'Override request using POST to tunnel other http request, such as DELETE.',
-                        'enum'          => array( 'GET', 'PUT', 'PATCH', 'DELETE' ),
+                        'enum'          => array('GET', 'PUT', 'PATCH', 'DELETE'),
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'header',
                         'required'      => false,
                     ),
                 ),
-                'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
+                'responseMessages' => SwaggerManager::getCommonResponses( array(400, 401, 500) ),
                 'notes'            =>
                     'Post data should be a single container definition or an array of container definitions. ' .
                     'Alternatively, override the HTTP Method to pass containers to other actions.',
@@ -100,7 +120,7 @@ $_base['apis'] = array(
                 'summary'          => 'deleteContainers() - Delete one or more containers.',
                 'nickname'         => 'deleteContainers',
                 'type'             => 'ContainersResponse',
-                'event_name'       => array( '{api_name}.containers.delete', ),
+                'event_name'       => array('{api_name}.containers.delete',),
                 'parameters'       => array(
                     array(
                         'name'          => 'names',
@@ -120,7 +140,7 @@ $_base['apis'] = array(
                         'default'       => false,
                     ),
                 ),
-                'responseMessages' => SwaggerManager::getCommonResponses( array( 400, 401, 500 ) ),
+                'responseMessages' => SwaggerManager::getCommonResponses( array(400, 401, 500) ),
                 'notes'            =>
                     'Pass a comma-delimited list of container names to delete. ' .
                     'Set \'force\' to true to delete all containers. ' .
@@ -138,7 +158,7 @@ $_base['apis'] = array(
                 'summary'          => 'getContainer() - List the container\'s content, including properties.',
                 'nickname'         => 'getContainer',
                 'type'             => 'ContainerResponse',
-                'event_name'       => array( '{api_name}.{container}.describe', '{api_name}.container_described' ),
+                'event_name'       => array('{api_name}.{container}.describe', '{api_name}.container_described'),
                 'parameters'       => array(
                     array(
                         'name'          => 'container',
@@ -204,7 +224,7 @@ $_base['apis'] = array(
                 'summary'          => 'createContainer() - Create container and/or add content.',
                 'nickname'         => 'createContainer',
                 'type'             => 'ContainerResponse',
-                'event_name'       => array( '{api_name}.{container}.create', '{api_name}.container_created' ),
+                'event_name'       => array('{api_name}.{container}.create', '{api_name}.container_created'),
                 'parameters'       => array(
                     array(
                         'name'          => 'container',
@@ -260,7 +280,7 @@ $_base['apis'] = array(
                     array(
                         'name'          => 'X-HTTP-METHOD',
                         'description'   => 'Override request using POST to tunnel other http request, such as DELETE.',
-                        'enum'          => array( 'GET', 'PUT', 'PATCH', 'DELETE' ),
+                        'enum'          => array('GET', 'PUT', 'PATCH', 'DELETE'),
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'header',
@@ -275,7 +295,7 @@ $_base['apis'] = array(
                 'summary'          => 'updateContainerProperties() - Update properties of the container.',
                 'nickname'         => 'updateContainerProperties',
                 'type'             => 'Container',
-                'event_name'       => array( '{api_name}.{container}.update', '{api_name}.container_updated' ),
+                'event_name'       => array('{api_name}.{container}.update', '{api_name}.container_updated'),
                 'parameters'       => array(
                     array(
                         'name'          => 'container',
@@ -302,7 +322,7 @@ $_base['apis'] = array(
                 'summary'          => 'deleteContainer() - Delete one container and/or its contents.',
                 'nickname'         => 'deleteContainer',
                 'type'             => 'ContainerResponse',
-                'event_name'       => array( '{api_name}.{container}.delete', '{api_name}.container_deleted' ),
+                'event_name'       => array('{api_name}.{container}.delete', '{api_name}.container_deleted'),
                 'parameters'       => array(
                     array(
                         'name'          => 'container',
@@ -347,7 +367,7 @@ $_base['apis'] = array(
                 'summary'          => 'getFolder() - List the folder\'s content, including properties.',
                 'nickname'         => 'getFolder',
                 'type'             => 'FolderResponse',
-                'event_name'       => array( '{api_name}.{container}.{folder_path}.describe' ),
+                'event_name'       => array('{api_name}.{container}.{folder_path}.describe'),
                 'parameters'       => array(
                     array(
                         'name'          => 'container',
@@ -488,7 +508,7 @@ $_base['apis'] = array(
                     array(
                         'name'          => 'X-HTTP-METHOD',
                         'description'   => 'Override request using POST to tunnel other http request, such as DELETE.',
-                        'enum'          => array( 'GET', 'PUT', 'PATCH', 'DELETE' ),
+                        'enum'          => array('GET', 'PUT', 'PATCH', 'DELETE'),
                         'allowMultiple' => false,
                         'type'          => 'string',
                         'paramType'     => 'header',
