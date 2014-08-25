@@ -190,11 +190,11 @@ class Script extends BaseSystemRestResource
      *
      * @return array|bool
      */
-    protected function _getScriptList( $language = ScriptLanguages::ALL, $includeUserScripts = true, $onlyUserScripts = false )
+    protected function _getScriptList( $language = ScriptLanguages::JAVASCRIPT, $includeUserScripts = true, $onlyUserScripts = false )
     {
         $_resources = array(
-            'event' => $this->_scriptPath . '/*' . ( ScriptLanguages::ALL === $language ? null : '.' . $language ),
-            'user'  => $this->_userScriptPath . '/*' . ( ScriptLanguages::ALL === $language ? null : '.' . $language ),
+            'event' => $this->_scriptPath . '/*' . ( ScriptLanguages::ALL == $language ? null : '.' . $language ),
+            'user'  => $this->_userScriptPath . '/*' . ( ScriptLanguages::ALL == $language ? null : '.' . $language ),
         );
 
         $_response = array();
@@ -277,8 +277,8 @@ class Script extends BaseSystemRestResource
     protected function _listResources()
     {
         $_includeUserScripts = Option::get( $this->_requestPayload, 'include_user_scripts', true );
-        $_onlyUserScripts = Option::get( $this->_requestPayload, 'include_only_user_scripts', true );
-        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::ALL );
+        $_onlyUserScripts = Option::get( $this->_requestPayload, 'include_only_user_scripts', false );
+        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
         $_includeBody = Option::get( $this->_requestPayload, 'include_script_body', false );
 
         $_scripts =
@@ -313,7 +313,7 @@ class Script extends BaseSystemRestResource
 
         $_includeBody = Option::get( $this->_requestPayload, 'include_body', false );
         $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
-        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::ALL );
+        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
         $_path = $this->_getScriptPath( null, $_language, $_user );
         $_script = basename( $_path );
 
@@ -355,7 +355,7 @@ class Script extends BaseSystemRestResource
         }
 
         $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
-        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::ALL );
+        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
         $_path = ( $_user ? $this->_userScriptPath : $this->_scriptPath ) . '/' . trim( $this->_resourceId, '/ ' ) . '.' . $_language;
         $_script = basename( $_path );
 
@@ -410,7 +410,7 @@ class Script extends BaseSystemRestResource
         }
 
         $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
-        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::ALL );
+        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
         $_path = ( $_user ? $this->_userScriptPath : $this->_scriptPath ) . '/' . trim( $this->_resourceId, '/ ' ) . '.' . $_language;
         $_script = basename( $_path );
 
@@ -465,7 +465,7 @@ class Script extends BaseSystemRestResource
         }
 
         $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
-        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::ALL );
+        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
 
         $_api = array(
             'api'     => Api::getScriptingObject(),
