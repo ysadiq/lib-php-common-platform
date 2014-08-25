@@ -750,7 +750,7 @@ SQL;
      */
     public static function getSwagger()
     {
-        if ( null === $_content = Platform::storeGet( static::SWAGGER_CACHE_FILE ) )
+        if ( null === ( $_content = Platform::storeGet( static::SWAGGER_CACHE_FILE ) ) )
         {
             static::_buildSwagger();
 
