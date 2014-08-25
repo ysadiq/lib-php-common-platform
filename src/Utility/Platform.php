@@ -100,7 +100,7 @@ class Platform
     {
         static $_cache = array();
 
-        $_appendage = ( $append ? DIRECTORY_SEPARATOR . ltrim( $append, DIRECTORY_SEPARATOR ) : null );
+        $_appendage = ( $append ? '/' . ltrim( $append, '/' ) : null );
 
         if ( !LocalStorageTypes::contains( $_tag = Inflector::neutralize( $type ) ) )
         {
@@ -108,7 +108,7 @@ class Platform
         }
 
         //	Make a cache tag that includes the requested path...
-        $_cacheTag = $_tag . DIRECTORY_SEPARATOR . Inflector::neutralize( $_appendage );
+        $_cacheTag = $_tag . '/' . Inflector::neutralize( $_appendage );
 
         if ( null === ( $_path = Option::get( $_cache, $_cacheTag ) ) )
         {
@@ -116,7 +116,7 @@ class Platform
 
             if ( empty( $_path ) )
             {
-                $_path = \Kisma::get( 'app.project_root' ) . DIRECTORY_SEPARATOR . 'storage';
+                $_path = \Kisma::get( 'app.project_root' ) . '/storage';
                 Log::notice( 'Empty path for platform path type "' . $type . '". Defaulting to "' . $_path . '"' );
             }
 
@@ -200,7 +200,7 @@ class Platform
      */
     public static function getLibraryConfigPath( $append = null )
     {
-        return SystemManager::getConfigPath() . ( $append ? DIRECTORY_SEPARATOR . ltrim( $append, DIRECTORY_SEPARATOR ) : null );
+        return SystemManager::getConfigPath() . ( $append ? '/' . ltrim( $append, '/' ) : null );
     }
 
     /**
@@ -212,7 +212,7 @@ class Platform
      */
     public static function getLibraryTemplatePath( $append = null )
     {
-        return static::getLibraryConfigPath( '/templates' ) . ( $append ? DIRECTORY_SEPARATOR . ltrim( $append, DIRECTORY_SEPARATOR ) : null );
+        return static::getLibraryConfigPath( '/templates' ) . ( $append ? '/' . ltrim( $append, '/' ) : null );
     }
 
     /**
@@ -224,7 +224,7 @@ class Platform
      */
     public static function getPlatformConfigPath( $append = null )
     {
-        return Pii::getPathOfAlias( 'application.config' ) . ( $append ? DIRECTORY_SEPARATOR . ltrim( $append, DIRECTORY_SEPARATOR ) : null );
+        return Pii::getPathOfAlias( 'application.config' ) . ( $append ? '/' . ltrim( $append, '/' ) : null );
     }
 
     /**
@@ -312,18 +312,7 @@ class Platform
             )
         );
 
-        $_uuid =
-            '{' .
-            substr( $_hash, 0, 8 ) .
-            '-' .
-            substr( $_hash, 8, 4 ) .
-            '-' .
-            substr( $_hash, 12, 4 ) .
-            '-' .
-            substr( $_hash, 16, 4 ) .
-            '-' .
-            substr( $_hash, 20, 12 ) .
-            '}';
+        $_uuid = '{' . substr( $_hash, 0, 8 ) . '-' . substr( $_hash, 8, 4 ) . '-' . substr( $_hash, 12, 4 ) . '-' . substr( $_hash, 16, 4 ) . '-' . substr( $_hash, 20, 12 ) . '}';
 
         return $_uuid;
     }
