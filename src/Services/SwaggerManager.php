@@ -268,10 +268,11 @@ SQL;
         $_storageTypeId = (int)Option::get( $service, 'storage_type_id' );
 
         $_fileName = PlatformServiceTypes::getFileName( $_typeId, $_storageTypeId, $_apiName );
-        $_filePath = __DIR__ . '/' . $_fileName . '.swagger.php';
+        $_filePath = __DIR__ . DIRECTORY_SEPARATOR . $_fileName . '.swagger.php';
 
         //	Check php file path, then custom...
         $_content = array();
+
         if ( file_exists( $_filePath ) )
         {
             $_content = static::_getSwaggerFile( $_filePath );
