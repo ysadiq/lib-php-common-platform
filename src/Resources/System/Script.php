@@ -208,8 +208,8 @@ class Script extends BaseSystemRestResource
     protected function _getScriptList( $language = ScriptLanguages::JAVASCRIPT, $includeUserScripts = true, $onlyUserScripts = false )
     {
         $_resources = array(
-            'event' => $this->_scriptPath . '/*' . ( ScriptLanguages::ALL == $language ? null : '.' . $language ),
-            'user'  => $this->_userScriptPath . '/*' . ( ScriptLanguages::ALL == $language ? null : '.' . $language ),
+            'event' => $this->_scriptPath . DIRECTORY_SEPARATOR . '*' . ( ScriptLanguages::ALL == $language ? null : '.' . $language ),
+            'user'  => $this->_userScriptPath . DIRECTORY_SEPARATOR . '*' . ( ScriptLanguages::ALL == $language ? null : '.' . $language ),
         );
 
         //  If user scripts are disabled, remove from list of paths to check
