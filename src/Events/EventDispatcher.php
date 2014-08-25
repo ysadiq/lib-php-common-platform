@@ -594,7 +594,7 @@ class EventDispatcher implements EventDispatcherInterface
         $_basePath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
         $_eventMap = SwaggerManager::getEventMap();
 
-        Log::debug( 'Script map check: ' . ( $_start = microtime( true ) ) );
+//        Log::debug( 'Script map check: ' . ( $_start = microtime( true ) ) );
 
         foreach ( $_eventMap as $_routes )
         {
@@ -655,7 +655,7 @@ class EventDispatcher implements EventDispatcherInterface
 
         static::_saveToStore( $this );
 
-        Log::debug( '  * Complete: ' . ( microtime( true ) - $_start ) . 's' );
+//        Log::debug( '  * Complete: ' . ( microtime( true ) - $_start ) . 's' );
     }
 
     /**
