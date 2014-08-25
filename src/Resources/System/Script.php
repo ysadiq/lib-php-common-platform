@@ -520,11 +520,14 @@ class Script extends BaseSystemRestResource
             GlobFlags::GLOB_NODOTS
         );
 
-        foreach ( $_scripts as $_script )
+        if ( !empty( $_scripts ) )
         {
-            if ( $eventName == str_replace( '.js', null, $_script ) )
+            foreach ( $_scripts as $_script )
             {
-                return $_script;
+                if ( $eventName == str_replace( '.js', null, $_script ) )
+                {
+                    return $_script;
+                }
             }
         }
 
