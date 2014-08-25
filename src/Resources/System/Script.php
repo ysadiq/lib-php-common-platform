@@ -335,7 +335,7 @@ class Script extends BaseSystemRestResource
             return $this->_listResources();
         }
 
-        $_includeBody = Option::get( $this->_requestPayload, 'include_script_body', false );
+        $_includeBody = Option::get( $this->_requestPayload, 'include_script_body', Option::get( $this->_requestPayload, 'include_body', true ) );
         $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
         $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
         $_path = $this->_getScriptPath( null, $_language, $_user );
