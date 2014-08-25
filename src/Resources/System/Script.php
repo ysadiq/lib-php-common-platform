@@ -208,8 +208,8 @@ class Script extends BaseSystemRestResource
     protected function _getScriptList( $language = ScriptLanguages::JAVASCRIPT, $includeUserScripts = true, $onlyUserScripts = false )
     {
         $_resources = array(
-            'event' => $this->_scriptPath . '/*' . ( ScriptLanguages::ALL == $language ? null : '.' . $language ),
-            'user'  => $this->_userScriptPath . '/*' . ( ScriptLanguages::ALL == $language ? null : '.' . $language ),
+            'event' => $this->_scriptPath . DIRECTORY_SEPARATOR . '*' . ( ScriptLanguages::ALL == $language ? null : '.' . $language ),
+            'user'  => $this->_userScriptPath . DIRECTORY_SEPARATOR . '*' . ( ScriptLanguages::ALL == $language ? null : '.' . $language ),
         );
 
         //  If user scripts are disabled, remove from list of paths to check
@@ -279,7 +279,7 @@ class Script extends BaseSystemRestResource
 
             if ( $includeBody )
             {
-                $_resource['script_body'] = @file_get_contents( $_scriptPath . '/' . $_script );
+                $_resource['script_body'] = @file_get_contents( $_scriptPath . DIRECTORY_SEPARATOR . $_script );
             }
 
             $_response[] = $_resource;
@@ -335,7 +335,7 @@ class Script extends BaseSystemRestResource
             return $this->_listResources();
         }
 
-        $_includeBody = Option::get( $this->_requestPayload, 'include_body', false );
+        $_includeBody = Option::get( $this->_requestPayload, 'include_script_body', false );
         $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
         $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
         $_path = $this->_getScriptPath( null, $_language, $_user );
@@ -382,7 +382,7 @@ class Script extends BaseSystemRestResource
 
         $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
         $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
-        $_path = $this->_getScriptPath( trim( $this->_resourceId, '/ ' ), $_language, $_user );
+        $_path = $this->_getScriptPath( trim( $this->_resourceId, DIRECTORY_SEPARATOR . ' ' ), $_language, $_user );
         $_script = basename( $_path );
 
 //        Log::debug( print_r( $_params, true ) . PHP_EOL . print_r( $_SERVER, true ) . PHP_EOL . print_r( $_REQUEST, true ) );
@@ -437,7 +437,7 @@ class Script extends BaseSystemRestResource
 
         $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
         $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
-        $_path = $this->_getScriptPath( trim( $this->_resourceId, '/ ' ), $_language, $_user );
+        $_path = $this->_getScriptPath( trim( $this->_resourceId, DIRECTORY_SEPARATOR . ' ' ), $_language, $_user );
         $_script = basename( $_path );
 
         if ( !file_exists( $_path ) )
@@ -581,12 +581,19 @@ class Script extends BaseSystemRestResource
      */
     protected function _getScriptPath( $scriptName = null, $language = ScriptLanguages::JAVASCRIPT, $userScript = false )
     {
-        return
+        $_path =
             ( $userScript ? $this->_userScriptPath : $this->_scriptPath ) .
-            '/' .
-            trim( $scriptName ?: $this->_resourceId, '/ ' ) .
+            DIRECTORY_SEPARATOR .
+            trim( $scriptName ?: $this->_resourceId, DIRECTORY_SEPARATOR . ' ' ) .
             '.' .
             $language;
+
+        if ( DIRECTORY_SEPARATOR == '\\' )
+        {
+            $_path = str_replace( DIRECTORY_SEPARATOR, '/', $_path );
+        }
+
+        return $_path;
     }
 
     /**

@@ -162,7 +162,7 @@ $_script = array(
                         //                            'required'      => false,
                         //                        ),
                         array(
-                            'name'          => 'include_body',
+                            'name'          => 'include_script_body',
                             'description'   => 'True if you would like the body of the scripts back as well',
                             'allowMultiple' => false,
                             'type'          => 'boolean',
