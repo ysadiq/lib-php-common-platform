@@ -68,9 +68,16 @@ Log::debug( '  * Discovering resources' );
 
 foreach ( $_namespaces as $_namespace )
 {
-    $_resourcePath = dirname( __DIR__ ) . str_replace( 'DreamFactory/Platform', null, str_replace( '\\', DIRECTORY_SEPARATOR, $_namespace ) );
+    $_resourcePath = dirname( __DIR__ ) . DIRECTORY_SEPARATOR . str_replace( 'DreamFactory/Platform', null, str_replace( '\\', '/', $_namespace ) );
 
-    foreach ( FileSystem::glob( $_resourcePath . DIRECTORY_SEPARATOR . '*.swagger.php' ) as $_file )
+    if ( false === ( $_files = FileSystem::glob( $_resourcePath . DIRECTORY_SEPARATOR . '*.swagger.php' ) ) )
+    {
+        continue;
+    }
+
+    Log::debug( 'Files: ' . print_r( $_files, true ) );
+
+    foreach ( $_files as $_file )
     {
         $_load = array();
         $_key = strtolower( str_replace( '.swagger.php', null, $_file ) );
