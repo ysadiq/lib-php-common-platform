@@ -179,7 +179,7 @@ SQL;
         $_services = array();
 
         //	Initialize the event map
-        static::$_eventMap = static::$_eventMap ? : array();
+        static::$_eventMap = static::$_eventMap ?: array();
 
         //	Spin through services and pull the configs
         foreach ( $_result as $_service )
@@ -193,9 +193,7 @@ SQL;
                 continue;
             }
 
-            if ( !isset( static::$_eventMap[$_apiName] ) ||
-                 !is_array( static::$_eventMap[$_apiName] ) ||
-                 empty( static::$_eventMap[$_apiName] )
+            if ( !isset( static::$_eventMap[$_apiName] ) || !is_array( static::$_eventMap[$_apiName] ) || empty( static::$_eventMap[$_apiName] )
             )
             {
                 static::$_eventMap[$_apiName] = array();
@@ -236,12 +234,11 @@ SQL;
         $_resourceListing = static::_getSwaggerFile( $_main );
         $_out = array_merge( $_resourceListing, array('apis' => $_services) );
 
-        if ( false ===
-             Platform::storeSet(
-                 static::SWAGGER_CACHE_FILE,
-                 json_encode( $_out, JSON_UNESCAPED_SLASHES ),
-                 static::SWAGGER_CACHE_TTL
-             )
+        if ( false === Platform::storeSet(
+                static::SWAGGER_CACHE_FILE,
+                json_encode( $_out, JSON_UNESCAPED_SLASHES ),
+                static::SWAGGER_CACHE_TTL
+            )
         )
         {
             Log::error( '  * System error creating swagger cache file: ' . static::SWAGGER_CACHE_FILE );
@@ -271,10 +268,11 @@ SQL;
         $_storageTypeId = (int)Option::get( $service, 'storage_type_id' );
 
         $_fileName = PlatformServiceTypes::getFileName( $_typeId, $_storageTypeId, $_apiName );
-        $_filePath = __DIR__ . '/' . $_fileName . '.swagger.php';
+        $_filePath = __DIR__ . DIRECTORY_SEPARATOR . $_fileName . '.swagger.php';
 
         //	Check php file path, then custom...
         $_content = array();
+
         if ( file_exists( $_filePath ) )
         {
             $_content = static::_getSwaggerFile( $_filePath );
@@ -435,16 +433,21 @@ SQL;
 
         //  Find standard pattern scripts: [api_name].[method].*.js
         $_scriptPattern = strtolower( $apiName ) . '.' . strtolower( $method ) . '.*.js';
-        $_scripts = FileSystem::glob( $_scriptPath . '/' . $_scriptPattern );
+
+        //  Check for false return...
+        if ( false === ( $_scripts = FileSystem::glob( $_scriptPath . DIRECTORY_SEPARATOR . $_scriptPattern ) ) )
+        {
+            $_scripts = array();
+        }
 
         if ( !empty( $eventName ) )
         {
             //  If an event name is given, look for the specific script [event_name].js
-            $_namedScripts = FileSystem::glob( $_scriptPath . '/' . $eventName . '.js' );
+            $_namedScripts = FileSystem::glob( $_scriptPath . DIRECTORY_SEPARATOR . $eventName . '.js' );
 
             //  Finally, glob any placeholders that are left in the event name...
             $_globbed = preg_replace( '/({.*})/', '*', $eventName );
-            $_globbedScripts = FileSystem::glob( $_scriptPath . '/' . $_globbed . '.js' );
+            $_globbedScripts = FileSystem::glob( $_scriptPath . DIRECTORY_SEPARATOR . $_globbed . '.js' );
 
             $_scripts = array_merge( $_scripts, $_globbedScripts, $_namedScripts );
         }
@@ -453,7 +456,7 @@ SQL;
         {
             if ( !empty( $eventName ) )
             {
-                $_scripts = FileSystem::glob( $_scriptPath . '/' . $eventName . '.js' );
+                $_scripts = FileSystem::glob( $_scriptPath . DIRECTORY_SEPARATOR . $eventName . '.js' );
             }
 
             if ( empty( $_scripts ) )
@@ -463,8 +466,7 @@ SQL;
         }
 
         $_response = array();
-        $_eventPattern =
-            '/^' . str_replace( array('.*.js', '.'), array(null, '\\.'), $_scriptPattern ) . '\\.(\w)\\.js$/i';
+        $_eventPattern = '/^' . str_replace( array('.*.js', '.'), array(null, '\\.'), $_scriptPattern ) . '\\.(\w)\\.js$/i';
 
         foreach ( $_scripts as $_script )
         {
@@ -577,8 +579,7 @@ SQL;
 
         if ( null === ( $_resources = Option::get( $_map, $_resource ) ) )
         {
-            if ( !method_exists( $service, 'getServiceName' ) ||
-                 null === ( $_resources = Option::get( $_map, $service->getServiceName() ) )
+            if ( !method_exists( $service, 'getServiceName' ) || null === ( $_resources = Option::get( $_map, $service->getServiceName() ) )
             )
             {
                 if ( null === ( $_resources = Option::get( $_map, 'system' ) ) )
@@ -675,8 +676,7 @@ SQL;
         }
 
         $_path = implode( '.', explode( '/', ltrim( $_path, '/' ) ) );
-        $_pattern =
-            '#^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$#';
+        $_pattern = '#^' . preg_replace( '/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote( $_path ) ) . '/?$#';
         $_matches = preg_grep( $_pattern, array_keys( $_resources ) );
 
         if ( empty( $_matches ) )
@@ -751,7 +751,7 @@ SQL;
      */
     public static function getSwagger()
     {
-        if ( null === $_content = Platform::storeGet( static::SWAGGER_CACHE_FILE ) )
+        if ( null === ( $_content = Platform::storeGet( static::SWAGGER_CACHE_FILE ) ) )
         {
             static::_buildSwagger();
 

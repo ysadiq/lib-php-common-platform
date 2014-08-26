@@ -594,27 +594,35 @@ class EventDispatcher implements EventDispatcherInterface
         $_basePath = Platform::getPrivatePath( Script::DEFAULT_SCRIPT_PATH );
         $_eventMap = SwaggerManager::getEventMap();
 
+//        Log::debug( 'Script map check: ' . ( $_start = microtime( true ) ) );
+
         foreach ( $_eventMap as $_routes )
         {
             foreach ( $_routes as $_routeInfo )
             {
-                foreach ( $_routeInfo as $_methodInfo )
+                foreach ( $_routeInfo as $_method => $_methodInfo )
                 {
-                    foreach ( Option::get( $_methodInfo, 'scripts', array() ) as $_script )
+                    if ( !isset( $_methodInfo['scripts'] ) || empty( $_methodInfo['scripts'] ) )
+                    {
+                        continue;
+                    }
+
+                    foreach ( $_methodInfo['scripts'] as $_script )
                     {
                         $_eventKey = str_ireplace( '.js', null, $_script );
 
                         //  Don't add bogus scripts
-                        $_scriptFile = $_basePath . '/' . $_script;
+                        $_scriptFile = $_basePath . DIRECTORY_SEPARATOR . $_script;
 
-                        if ( is_file( $_scriptFile ) && is_readable( $_scriptFile ) )
+                        if ( !is_file( $_scriptFile ) || !is_readable( $_scriptFile ) )
                         {
-                            if ( !isset( $this->_scripts[$_eventKey] ) || !Scalar::contains( $_scriptFile, $this->_scripts[$_eventKey] )
-                            )
-                            {
-                                $_found[] = str_replace( $_basePath, '.', $_scriptFile );
-                                $this->_scripts[$_eventKey][] = $_scriptFile;
-                            }
+                            continue;
+                        }
+
+                        if ( !isset( $this->_scripts[$_eventKey] ) || !Scalar::contains( $_scriptFile, $this->_scripts[$_eventKey] ) )
+                        {
+                            $_found[] = str_replace( $_basePath, '.', $_scriptFile );
+                            $this->_scripts[$_eventKey][] = $_scriptFile;
                         }
                     }
                 }
@@ -625,7 +633,7 @@ class EventDispatcher implements EventDispatcherInterface
         if ( $scanForNew )
         {
             $_scripts = FileSystem::glob(
-                $_basePath . '/*.js',
+                $_basePath . DIRECTORY_SEPARATOR . '*.js',
                 GlobFlags::GLOB_NODIR | GlobFlags::GLOB_NODOTS | GlobFlags::GLOB_RECURSE
             );
 
@@ -634,10 +642,9 @@ class EventDispatcher implements EventDispatcherInterface
                 foreach ( $_scripts as $_newScript )
                 {
                     $_eventKey = str_ireplace( '.js', null, $_newScript );
-                    $_scriptFile = $_basePath . '/' . $_newScript;
+                    $_scriptFile = $_basePath . DIRECTORY_SEPARATOR . $_newScript;
 
-                    if ( !array_key_exists( $_eventKey, $this->_scripts ) || !Scalar::contains( $_scriptFile, $this->_scripts[$_eventKey] )
-                    )
+                    if ( !array_key_exists( $_eventKey, $this->_scripts ) || !Scalar::contains( $_scriptFile, $this->_scripts[$_eventKey] ) )
                     {
                         $this->_scripts[$_eventKey][] = $_scriptFile;
                     }
@@ -647,6 +654,8 @@ class EventDispatcher implements EventDispatcherInterface
         }
 
         static::_saveToStore( $this );
+
+//        Log::debug( '  * Complete: ' . ( microtime( true ) - $_start ) . 's' );
     }
 
     /**
@@ -682,7 +691,7 @@ class EventDispatcher implements EventDispatcherInterface
         }
 
         //  Assume relative URL, add host and try again...
-        $_test = Pii::request( false )->getSchemeAndHttpHost() . '/' . ltrim( $listener, ' /' );
+        $_test = Pii::request( false )->getSchemeAndHttpHost() . DIRECTORY_SEPARATOR . ltrim( $listener, ' ' . DIRECTORY_SEPARATOR );
 
         if ( !filter_var( $_test, FILTER_VALIDATE_URL ) )
         {
@@ -970,7 +979,7 @@ class EventDispatcher implements EventDispatcherInterface
 
             if ( $_dispatched && static::$_logEvents && !static::$_logAllEvents )
             {
-                $_defaultPath = $event instanceof PlatformServiceEvent ? $event->getApiName() . '/' . $event->getResource() : null;
+                $_defaultPath = $event instanceof PlatformServiceEvent ? $event->getApiName() . DIRECTORY_SEPARATOR . $event->getResource() : null;
 
                 Log::debug(
                     ( $_dispatched ? 'Dispatcher' : 'Unhandled' ) .
