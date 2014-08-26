@@ -213,7 +213,7 @@ class Script extends BaseSystemRestResource
         );
 
         //  If user scripts are disabled, remove from list of paths to check
-        if ( !$this->_enableUserScripts )
+        if ( !$this->_enableUserScripts || !$includeUserScripts )
         {
             unset( $_resources['user'] );
         }
@@ -237,13 +237,13 @@ class Script extends BaseSystemRestResource
             }
         }
 
-        if ( $this->_enableUserScripts && ( $includeUserScripts && $onlyUserScripts ) )
-        {
-            unset( $_response['event'] );
-        }
-        else if ( !$this->_enableUserScripts || !$includeUserScripts )
+        if ( !$this->_enableUserScripts || !$includeUserScripts )
         {
             unset( $_response['user'] );
+        }
+        else if ( $this->_enableUserScripts && $includeUserScripts && $onlyUserScripts )
+        {
+            unset( $_response['event'] );
         }
 
         return $_response;
@@ -264,7 +264,7 @@ class Script extends BaseSystemRestResource
         foreach ( $scripts as $_script )
         {
             $_scriptId = rtrim( str_ireplace( $this->_extensions, null, $_script ), '.' );
-            $_fullScriptPath = $_scriptPath . '/' . $_script;
+            $_fullScriptPath = $_scriptPath . DIRECTORY_SEPARATOR . $_script;
 
             $_resource = array(
                 'script_id'      => $_scriptId,
@@ -279,7 +279,11 @@ class Script extends BaseSystemRestResource
 
             if ( $includeBody )
             {
-                $_resource['script_body'] = @file_get_contents( $_scriptPath . '/' . $_script );
+                if ( false !== ( $_body = @file_get_contents( $_fullScriptPath ) ) )
+                {
+                    $_resource['script_body'] = $_body;
+                    unset( $_body );
+                }
             }
 
             $_response[] = $_resource;
@@ -313,7 +317,7 @@ class Script extends BaseSystemRestResource
 
             if ( isset( $_scripts['user'] ) && !empty( $_scripts['user'] ) )
             {
-                $_response += $this->_buildScriptArray( Option::get( $_scripts, 'user', array() ), true, $_includeBody );
+                $_response = array_merge( $_response, $this->_buildScriptArray( Option::get( $_scripts, 'user', array() ), true, $_includeBody ) );
             }
         }
 
@@ -590,10 +594,8 @@ class Script extends BaseSystemRestResource
     {
         return
             ( $userScript ? $this->_userScriptPath : $this->_scriptPath ) .
-            '/' .
-            trim( $scriptName ?: $this->_resourceId, ' /' ) .
-            '.' .
-            $language;
+            ( $scriptName !== null && $language !== null ?
+                DIRECTORY_SEPARATOR . ( trim( $scriptName ?: $this->_resourceId, ' ' . DIRECTORY_SEPARATOR ) . '.' . $language ) : null );
     }
 
     /**
