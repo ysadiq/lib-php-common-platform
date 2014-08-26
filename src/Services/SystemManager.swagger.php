@@ -62,20 +62,17 @@ $_base['models'] = array(
 );
 
 //  Load resources
-$_namespaces = /*array('DreamFactory\\Platform\\Resources\\System');*/
-    Pii::app()->getResourceNamespaces();
-Log::debug( '  * Discovering resources' );
+$_namespaces = Pii::app()->getResourceNamespaces(); /*array('DreamFactory\\Platform\\Resources\\System');*/
+//Log::debug( '  * Discovering resources' );
 
 foreach ( $_namespaces as $_namespace )
 {
     $_resourcePath = dirname( __DIR__ ) . DIRECTORY_SEPARATOR . str_replace( 'DreamFactory/Platform', null, str_replace( '\\', '/', $_namespace ) );
 
-    if ( false === ( $_files = FileSystem::glob( $_resourcePath . DIRECTORY_SEPARATOR . '*.swagger.php' ) ) )
+    if ( false === ( $_files = FileSystem::glob( $_resourcePath . DIRECTORY_SEPARATOR . '*.swagger.php' ) ) || empty( $_files ) )
     {
         continue;
     }
-
-    Log::debug( 'Files: ' . print_r( $_files, true ) );
 
     foreach ( $_files as $_file )
     {
@@ -87,7 +84,7 @@ foreach ( $_namespaces as $_namespace )
         $_base['apis'] = array_merge( $_base['apis'], Option::get( $_load[$_key], 'apis', array() ) );
         $_base['models'] = array_merge( $_base['models'], Option::get( $_load[$_key], 'models', array() ) );
 
-        Log::debug( '    * Found ' . $_file );
+//        Log::debug( '    * Found ' . $_file );
         unset( $_load );
     }
 }
