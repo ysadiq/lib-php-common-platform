@@ -598,10 +598,14 @@ class Script extends BaseSystemRestResource
      */
     protected function _getScriptPath( $scriptName = null, $language = ScriptLanguages::JAVASCRIPT, $userScript = false )
     {
-        return
-            ( $userScript ? $this->_userScriptPath : $this->_scriptPath ) .
-            ( $scriptName !== null && $language !== null ?
-                DIRECTORY_SEPARATOR . ( trim( $scriptName ?: $this->_resourceId, ' ' . DIRECTORY_SEPARATOR ) . '.' . $language ) : null );
+        if ( null === $scriptName && null === $language )
+        {
+            return ( $userScript ? $this->_userScriptPath : $this->_scriptPath );
+        }
+
+        $scriptName = trim( $scriptName ?: $this->_resourceId, ' ' . DIRECTORY_SEPARATOR ) . ( $language ? '.' . $language : null );
+
+        return ( $userScript ? $this->_userScriptPath : $this->_scriptPath ) . DIRECTORY_SEPARATOR . $scriptName;
     }
 
     /**
