@@ -40,14 +40,11 @@ $_base['apis'] = array(
 );
 
 //  Load resources
-$_namespaces = array('DreamFactory\\Platform\\Resources\\User'); //Pii::app()->getResourceNamespaces();
-//Log::debug( '  * Discovering resources' );
-foreach ( $_namespaces as $_namespace )
-{
-    $_resourcePath =
-        dirname( __DIR__ ) . str_replace( 'DreamFactory' . DIRECTORY_SEPARATOR . 'Platform', null, str_replace( '\\', DIRECTORY_SEPARATOR, $_namespace ) );
+$_resourcePath = dirname( __DIR__ ) . DIRECTORY_SEPARATOR . 'Resources' . DIRECTORY_SEPARATOR . 'User';
 
-    foreach ( FileSystem::glob( $_resourcePath . DIRECTORY_SEPARATOR . '*.swagger.php' ) as $_file )
+if ( false !== ( $_files = FileSystem::glob( $_resourcePath . DIRECTORY_SEPARATOR . '*.swagger.php' ) ) && !empty( $_files ) )
+{
+    foreach ( $_files as $_file )
     {
         $_load = array();
         $_key = strtolower( str_replace( '.swagger.php', null, $_file ) );

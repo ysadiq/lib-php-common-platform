@@ -60,18 +60,10 @@ $_base['models'] = array(
 );
 
 //  Load resources
-$_namespaces = Pii::app()->getResourceNamespaces(); /*array('DreamFactory\\Platform\\Resources\\System');*/
-//Log::debug( '  * Discovering resources' );
+$_resourcePath = dirname( __DIR__ ) . DIRECTORY_SEPARATOR . 'Resources' . DIRECTORY_SEPARATOR . 'System';
 
-foreach ( $_namespaces as $_namespace )
+if ( false !== ( $_files = FileSystem::glob( $_resourcePath . DIRECTORY_SEPARATOR . '*.swagger.php' ) ) && !empty( $_files ) )
 {
-    $_resourcePath = dirname( __DIR__ ) . DIRECTORY_SEPARATOR . str_replace( 'DreamFactory/Platform', null, str_replace( '\\', '/', $_namespace ) );
-
-    if ( false === ( $_files = FileSystem::glob( $_resourcePath . DIRECTORY_SEPARATOR . '*.swagger.php' ) ) || empty( $_files ) )
-    {
-        continue;
-    }
-
     foreach ( $_files as $_file )
     {
         $_load = array();
