@@ -298,8 +298,8 @@ class Script extends BaseSystemRestResource
     protected function _listResources()
     {
         $_includeBody = Option::getBool( $this->_requestPayload, 'include_script_body', false );
-        $_includeUserScripts = Option::getBool( $this->_requestPayload, 'include_user_scripts', $this->_enableUserScripts );
-        $_onlyUserScripts = Option::getBool( $this->_requestPayload, 'include_only_user_scripts', true );
+        $_includeUserScripts = !$this->_enableUserScripts ? false : Option::getBool( $this->_requestPayload, 'include_user_scripts', true );
+        $_onlyUserScripts = Option::getBool( $this->_requestPayload, 'include_only_user_scripts', false );
         $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::ALL );
 
         $_scripts = $this->_getScriptList( $_language, $_includeUserScripts, $_onlyUserScripts );
@@ -335,9 +335,9 @@ class Script extends BaseSystemRestResource
             return $this->_listResources();
         }
 
-        $_includeBody = Option::get( $this->_requestPayload, 'include_body', false );
-        $_user = Option::get( $this->_requestPayload, 'is_user_script', false );
-        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::ALL );
+        $_includeBody = Option::getBool( $this->_requestPayload, 'include_script_body', true );
+        $_user = Option::getBool( $this->_requestPayload, 'is_user_script', false );
+        $_language = Option::get( $this->_requestPayload, 'language', ScriptLanguages::JAVASCRIPT );
         $_path = $this->_getScriptPath( null, $_language, $_user );
         $_script = basename( $_path );
 
@@ -540,7 +540,7 @@ class Script extends BaseSystemRestResource
         $_result = array(
             'is_user_script'            => Option::getBool( $_postData, 'is_user_script', false ),
             'include_script_body'       => Option::getBool( $_postData, 'include_script_body', false ),
-            'include_user_scripts'      => Option::getBool( $_postData, 'include_user_scripts', $this->_enableUserScripts ),
+            'include_user_scripts'      => !$this->_enableUserScripts ? false : Option::getBool( $_postData, 'include_user_scripts', true ),
             'include_only_user_scripts' => Option::getBool( $_postData, 'include_only_user_scripts', false ),
             'language'                  => Option::get( $_postData, 'language', ScriptLanguages::JAVASCRIPT ),
             'request_body'              => Option::getDeep( $_postData, 'record', 0 ),
