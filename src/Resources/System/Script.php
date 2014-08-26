@@ -284,7 +284,13 @@ class Script extends BaseSystemRestResource
                     $_resource['script_body'] = $_body;
                     unset( $_body );
                 }
+                else
+                {
+                    $_resource['script_body'] = null;
+                }
             }
+
+            ksort( $_resource );
 
             $_response[] = $_resource;
             unset( $_resource, $_eventName );
