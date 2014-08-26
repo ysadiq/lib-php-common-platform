@@ -93,34 +93,14 @@ return array(
                 ),
             ),
         ),
-        'PhpInfoItems'        => array(
-            'id'         => 'PhpInfoItems',
-            'properties' => array(
-                'type_name' => array(
-                    'type'  => 'array',
-                    'items' => array(
-                        '$ref' => 'PhpInfoItem',
-                    ),
-                ),
-            ),
-        ),
-        'PhpInfoItem'         => array(
-            'id'         => 'PhpInfoItem',
+        'PhpInfoSection'      => array(
+            'id'         => 'PhpInfoSection',
             'properties' => array(
                 'name' => array(
                     'type'  => 'array',
                     'items' => array(
                         'type' => 'string',
                     ),
-                ),
-            ),
-        ),
-        'PhpInfoSection'      => array(
-            'id'         => 'PhpInfoSection',
-            'properties' => array(
-                'type'  => 'array',
-                'items' => array(
-                    '$ref' => 'PhpInfoItems',
                 ),
             ),
         ),
@@ -137,7 +117,10 @@ return array(
                     'type' => 'PlatformSection',
                 ),
                 'php_info' => array(
-                    'type' => 'PhpInfoSection',
+                    'type'  => 'array',
+                    'items' => array(
+                        '$ref' => 'PhpInfoSection',
+                    ),
                 ),
             ),
         ),

@@ -19,19 +19,22 @@
  */
 use DreamFactory\Platform\Services\SwaggerManager;
 
-$_commonResponses = SwaggerManager::getCommonResponses( array( 400, 401, 500 ) );
+$_commonResponses = SwaggerManager::getCommonResponses( array(400, 401, 500) );
 
 $_eventProperties = array(
-        'event_name' => array(
-            'type'        => 'string',
-            'description' => 'The name of this event',
+    'event_name' => array(
+        'type'        => 'string',
+        'description' => 'The name of this event',
         'required'    => true,
+    ),
+    'listeners'  => array(
+        'type'        => 'array',
+        'items'       => array(
+            'type' => 'string',
         ),
-        'listeners'  => array(
-            'type'        => 'array',
-            'description' => 'An array of listeners attached to this event.',
+        'description' => 'An array of listeners attached to this event.',
         'required'    => true,
-        ),
+    ),
 );
 
 //*************************************************************************
@@ -48,9 +51,9 @@ $_event = array(
                     'summary'          => 'getEvents() - Retrieve events and registered listeners.',
                     'nickname'         => 'getEvents',
                     'type'             => 'EventCacheResponse',
-                    'event_name'       => array( '{api_name}.events.list' ),
-                    'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
-                    'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
+                    'event_name'       => array('{api_name}.events.list'),
+                    'consumes'         => array('application/json', 'application/xml', 'text/csv'),
+                    'produces'         => array('application/json', 'application/xml', 'text/csv'),
                     'parameters'       => array(
                         array(
                             'name'          => 'all_events',
@@ -76,9 +79,9 @@ $_event = array(
                     'summary'          => 'registerEvents() - Register one or more event listeners.',
                     'nickname'         => 'registerEvents',
                     'type'             => 'EventsResponse',
-                    'event_name'       => array( '{api_name}.events.create' ),
-                    'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
-                    'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
+                    'event_name'       => array('{api_name}.events.create'),
+                    'consumes'         => array('application/json', 'application/xml', 'text/csv'),
+                    'produces'         => array('application/json', 'application/xml', 'text/csv'),
                     'parameters'       => array(
                         array(
                             'name'          => 'body',
@@ -97,7 +100,7 @@ $_event = array(
                     'summary'          => 'unregisterEvents() - Delete one or more event listeners.',
                     'nickname'         => 'unregisterEvents',
                     'type'             => 'EventsResponse',
-                    'event_name'       => array( '{api_name}.events.delete' ),
+                    'event_name'       => array('{api_name}.events.delete'),
                     'parameters'       => array(
                         array(
                             'name'          => 'body',
@@ -122,7 +125,7 @@ $_event = array(
                     'summary'          => 'getEvent() - Retrieve one event.',
                     'nickname'         => 'getEvent',
                     'type'             => 'EventResponse',
-                    'event_name'       => array( '{api_name}.event.read' ),
+                    'event_name'       => array('{api_name}.event.read'),
                     'parameters'       => array(
                         array(
                             'name'          => 'event_name',
@@ -132,7 +135,7 @@ $_event = array(
                             'paramType'     => 'path',
                             'required'      => true,
                         ),
-                        ),
+                    ),
                     'responseMessages' => $_commonResponses,
                 ),
                 array(
@@ -140,9 +143,9 @@ $_event = array(
                     'summary'          => 'registerEvent() - Register one event listeners.',
                     'nickname'         => 'registerEvent',
                     'type'             => 'EventResponse',
-                    'event_name'       => array( '{api_name}.event.create' ),
-                    'consumes'         => array( 'application/json', 'application/xml', 'text/csv' ),
-                    'produces'         => array( 'application/json', 'application/xml', 'text/csv' ),
+                    'event_name'       => array('{api_name}.event.create'),
+                    'consumes'         => array('application/json', 'application/xml', 'text/csv'),
+                    'produces'         => array('application/json', 'application/xml', 'text/csv'),
                     'parameters'       => array(
                         array(
                             'name'          => 'body',
@@ -161,7 +164,7 @@ $_event = array(
                     'summary'          => 'updateEvent() - Update one listener(s) for a single event.',
                     'nickname'         => 'updateEvent',
                     'type'             => 'EventResponse',
-                    'event_name'       => array( '{api_name}.event.update' ),
+                    'event_name'       => array('{api_name}.event.update'),
                     'parameters'       => array(
                         array(
                             'name'          => 'id',
@@ -188,7 +191,7 @@ $_event = array(
                     'summary'          => 'unregisterEvent() - Delete one event.',
                     'nickname'         => 'unregisterEvent',
                     'type'             => 'EventResponse',
-                    'event_name'       => array( '{api_name}.event.delete' ),
+                    'event_name'       => array('{api_name}.event.delete'),
                     'parameters'       => array(
                         array(
                             'name'          => 'id',
@@ -231,16 +234,25 @@ $_event['models'] = array(
             ),
             'event'     => array(
                 'type'        => 'array',
+                'items'       => array(
+                    'type' => 'string',
+                ),
                 'description' => 'An array of event names triggered by this path/verb combo',
                 'required'    => true,
             ),
             'scripts'   => array(
                 'type'        => 'array',
+                'items'       => array(
+                    'type' => 'string',
+                ),
                 'description' => 'An array of scripts registered to this event',
                 'required'    => true,
             ),
             'listeners' => array(
                 'type'        => 'array',
+                'items'       => array(
+                    'type' => 'string',
+                ),
                 'description' => 'An array of listeners registered to this event',
                 'required'    => true,
             ),
@@ -285,38 +297,38 @@ $_event['models'] = array(
     ),
     //  Single event
     'EventRequest'       => array(
-            'id'         => 'EventRequest',
-            'properties' => $_eventProperties,
-        ),
+        'id'         => 'EventRequest',
+        'properties' => $_eventProperties,
+    ),
     //  Multiple events
     'EventsRequest'      => array(
-            'id'         => 'EventsRequest',
-            'properties' => array(
-                'record' => array(
-                    'type'        => 'array',
-                    'description' => 'Array of system event records.',
+        'id'         => 'EventsRequest',
+        'properties' => array(
+            'record' => array(
+                'type'        => 'array',
+                'description' => 'Array of system event records.',
                 'required'    => true,
-                    'items'       => array(
-                        '$ref' => 'EventRequest',
-                    ),
+                'items'       => array(
+                    '$ref' => 'EventRequest',
                 ),
             ),
         ),
+    ),
     //  Single event response
     'EventResponse'      => array(
-            'id'         => 'EventResponse',
-            'properties' => $_eventProperties,
-        ),
+        'id'         => 'EventResponse',
+        'properties' => $_eventProperties,
+    ),
     //  Multiple events response
     'EventsResponse'     => array(
-            'id'         => 'EventsResponse',
-            'properties' => array(
-                'record' => array(
-                    'type'        => 'array',
-                    'description' => 'Array of event records.',
+        'id'         => 'EventsResponse',
+        'properties' => array(
+            'record' => array(
+                'type'        => 'array',
+                'description' => 'Array of event records.',
                 'required'    => true,
-                    'items'       => array(
-                        '$ref' => 'EventResponse',
+                'items'       => array(
+                    '$ref' => 'EventResponse',
                 ),
             ),
         ),
