@@ -17,9 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-use DreamFactory\Yii\Utility\Pii;
 use Kisma\Core\Utility\FileSystem;
-use Kisma\Core\Utility\Log;
 use Kisma\Core\Utility\Option;
 
 $_base = require( __DIR__ . '/BasePlatformRestSvc.swagger.php' );
@@ -28,7 +26,7 @@ $_base['apis'] = array(
     array(
         'path'        => '/{api_name}',
         'operations'  => array(
-            0 => array(
+            array(
                 'method'     => 'GET',
                 'summary'    => 'getResources() - List resources available for system management.',
                 'nickname'   => 'getResources',
@@ -62,13 +60,12 @@ $_base['models'] = array(
 );
 
 //  Load resources
-$_namespaces = /*array('DreamFactory\\Platform\\Resources\\System');*/
-    Pii::app()->getResourceNamespaces();
-Log::debug( '  * Discovering resources' );
-
+$_namespaces = array('DreamFactory\\Platform\\Resources\\System'); //Pii::app()->getResourceNamespaces();
+//Log::debug( '  * Discovering resources' );
 foreach ( $_namespaces as $_namespace )
 {
-    $_resourcePath = dirname( __DIR__ ) . str_replace( 'DreamFactory/Platform', null, str_replace( '\\', DIRECTORY_SEPARATOR, $_namespace ) );
+    $_resourcePath =
+        dirname( __DIR__ ) . str_replace( 'DreamFactory' . DIRECTORY_SEPARATOR . 'Platform', null, str_replace( '\\', DIRECTORY_SEPARATOR, $_namespace ) );
 
     foreach ( FileSystem::glob( $_resourcePath . DIRECTORY_SEPARATOR . '*.swagger.php' ) as $_file )
     {
@@ -80,7 +77,7 @@ foreach ( $_namespaces as $_namespace )
         $_base['apis'] = array_merge( $_base['apis'], Option::get( $_load[$_key], 'apis', array() ) );
         $_base['models'] = array_merge( $_base['models'], Option::get( $_load[$_key], 'models', array() ) );
 
-        Log::debug( '    * Found ' . $_file );
+//        Log::debug( '    * Found ' . $_file );
         unset( $_load );
     }
 }
